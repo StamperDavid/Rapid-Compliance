@@ -1,1192 +1,522 @@
-// STATUS: FUNCTIONAL - Email Specialist wired to SendGrid/Resend service
-// Email Specialist
-// FUNCTIONAL LOC: 250+
+/**
+ * Email Specialist — REAL AI AGENT (Task #43 rebuild, April 13 2026)
+ *
+ * The Outreach-department Email Specialist. Loads its Golden Master from
+ * Firestore at runtime, loads the Brand DNA, loads the active Email Purpose
+ * Types taxonomy (also Firestore-backed and expandable at runtime — see
+ * Task #43 design notes), and calls OpenRouter (Claude Sonnet 4.6 by default
+ * — locked tier policy for leaf specialists, see Task #23.5) to compose a
+ * send-ready marketing email from a brief. No template fallbacks. If the GM
+ * is missing, Brand DNA is missing, the purpose types list is empty,
+ * OpenRouter fails, JSON won't parse, or Zod validation fails, the
+ * specialist returns a real FAILED AgentReport with the honest reason.
+ *
+ * THIS IS NOT A SENDMAIL WRAPPER. The pre-rebuild template wrapped
+ * `email-service.sendEmail()` and assumed upstream had already written the
+ * email content. That assumption was fake — no upstream was actually writing
+ * content anywhere. This rebuild flips the model: the specialist writes the
+ * content, delivery stays in `email-service`. When the Outreach department
+ * is rewired in Task #45, the OutreachManager will call this specialist's
+ * `compose_email` action to get content, then hand that content to
+ * `email-service.sendEmail()` for delivery. Content generation and delivery
+ * are decoupled concerns.
+ *
+ * Supported actions (live code paths only):
+ *   - compose_email  (Task #45 OutreachManager will dispatch
+ *                     `payload.action = 'compose_email'` — today there are
+ *                     NO live callers because `delegate_to_outreach` is
+ *                     NOT_WIRED in jasper-tools.ts; this is intentional,
+ *                     the specialist is rebuilt first, the manager is
+ *                     rewired as a separate task per the same two-step
+ *                     pattern used for Funnel Pathologist + Task #42)
+ *
+ * The pre-rebuild template engine supported 9 actions — 5 of them
+ * (send_email, send_bulk_email, get_tracking, record_open, record_click)
+ * were infrastructure wrappers around `email-service` and belong in that
+ * module, not in an AI specialist. 4 of them (drip_campaign, spam_check,
+ * personalize_email, subject_line_ab) were fake-AI lookup-table engines
+ * with zero LLM calls. All 9 are dropped per CLAUDE.md no-stubs rules.
+ *
+ * Email purpose types are NOT hardcoded as a Zod enum. They are loaded
+ * from Firestore at runtime via the email-purpose-types-service, which
+ * means new types can be created from the UI (Task #43b) and become
+ * immediately selectable by the LLM without a code deploy. The LLM
+ * receives the current list of slugs + descriptions in the user prompt,
+ * and the output is validated against the slug list at runtime inside
+ * `executeComposeEmail()`.
+ */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { sendEmail, sendBulkEmails, getEmailTracking, recordEmailOpen, recordEmailClick, type EmailOptions, type EmailResult, type EmailTracking } from '@/lib/email/email-service';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
+import { getActiveEmailPurposeTypes } from '@/lib/services/email-purpose-types-service';
+import type { EmailPurposeType } from '@/types/email-purpose-types';
+import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
-// ============== Configuration ==============
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const FILE = 'outreach/email/specialist.ts';
+const SPECIALIST_ID = 'EMAIL_SPECIALIST';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = ['compose_email'] as const;
+type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
+
+interface EmailSpecialistGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
 
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'EMAIL_SPECIALIST',
+    id: SPECIALIST_ID,
     name: 'Email Specialist',
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'OUTREACH_MANAGER',
-    capabilities: [
-      'send_email',
-      'send_bulk_email',
-      'track_email_opens',
-      'track_email_clicks',
-      'campaign_creation',
-      'sequence_building',
-      'deliverability_optimization',
-      'ab_testing',
-    ],
+    capabilities: ['compose_email'],
   },
-  systemPrompt: `You are an Email Specialist agent responsible for managing email communications.
-Your capabilities include:
-- Sending individual and bulk emails via SendGrid/Resend
-- Tracking email opens and clicks
-- Managing email campaigns and sequences
-- Optimizing deliverability and engagement
-
-Always validate email addresses, respect opt-outs, and comply with CAN-SPAM/GDPR regulations.`,
-  tools: ['send_email', 'send_bulk_email', 'get_tracking', 'record_open', 'record_click'],
+  systemPrompt: '', // Loaded from Firestore Golden Master at runtime
+  tools: ['compose_email'],
   outputSchema: {
     type: 'object',
     properties: {
-      success: { type: 'boolean' },
-      messageId: { type: 'string' },
-      tracking: { type: 'object' },
-      error: { type: 'string' },
+      emailPurpose: { type: 'string' },
+      subjectLine: { type: 'string' },
+      previewText: { type: 'string' },
+      bodyPlainText: { type: 'string' },
+      ctaLine: { type: 'string' },
+      psLine: { type: 'string' },
+      toneAndAngleReasoning: { type: 'string' },
+      personalizationNotes: { type: 'string' },
+      followupSuggestion: { type: 'string' },
+      spamRiskNotes: { type: 'string' },
+      rationale: { type: 'string' },
     },
   },
-  maxTokens: 4096,
-  temperature: 0.3,
+  maxTokens: 12000,
+  temperature: 0.6,
 };
 
-// ============== Type Definitions ==============
-
-interface SendEmailPayload {
-  action: 'send_email';
-  to: string | string[];
-  subject: string;
-  html?: string;
-  text?: string;
-  from?: string;
-  fromName?: string;
-  replyTo?: string;
-  trackOpens?: boolean;
-  trackClicks?: boolean;
-  metadata?: Record<string, unknown>;
-}
-
-interface SendBulkEmailPayload {
-  action: 'send_bulk_email';
-  recipients: string[];
-  subject: string;
-  html?: string;
-  text?: string;
-  from?: string;
-  fromName?: string;
-  metadata?: Record<string, unknown>;
-}
-
-interface GetTrackingPayload {
-  action: 'get_tracking';
-  messageId: string;
-}
-
-interface RecordOpenPayload {
-  action: 'record_open';
-  messageId: string;
-  ipAddress?: string;
-  userAgent?: string;
-}
-
-interface RecordClickPayload {
-  action: 'record_click';
-  messageId: string;
-  url: string;
-  ipAddress?: string;
-  userAgent?: string;
-}
-
 // ============================================================================
-// CAMPAIGN ARCHITECT PAYLOADS
+// INPUT CONTRACT
+// ============================================================================
+//
+// The Task #45 OutreachManager rewire will dispatch this shape. For now
+// the proof-of-life harness and regression executor construct it directly.
 // ============================================================================
 
-interface DripCampaignPayload {
-  action: 'drip_campaign';
+export interface ComposeEmailRequest {
+  action: 'compose_email';
+  /** Short handle for the campaign or sequence this email belongs to. */
   campaignName: string;
-  targetAudience: {
-    industry: string;
-    role: string;
-    companySize?: 'startup' | 'smb' | 'mid-market' | 'enterprise';
-    painPoints: string[];
-  };
-  senderProfile: {
-    name: string;
-    company: string;
-    valuePropositions: string[];
-    caseStudies?: string[];
-  };
-  goal: 'meeting' | 'demo' | 'trial' | 'purchase' | 'referral';
-}
-
-interface SpamCheckPayload {
-  action: 'spam_check';
-  content: string;
-  subjectLine?: string;
-}
-
-interface PersonalizeEmailPayload {
-  action: 'personalize_email';
-  template: string;
-  recipient: {
-    firstName: string;
-    lastName?: string;
-    company: string;
-    role: string;
-    industry?: string;
-    painPoint?: string;
-    recentNews?: string;
-  };
-}
-
-interface SubjectLineABPayload {
-  action: 'subject_line_ab';
-  emailContent: string;
+  /** Free-form description of the target audience (who, pain, context). */
   targetAudience: string;
-  variants?: number;
-}
-
-type EmailPayload =
-  | SendEmailPayload
-  | SendBulkEmailPayload
-  | GetTrackingPayload
-  | RecordOpenPayload
-  | RecordClickPayload
-  | DripCampaignPayload
-  | SpamCheckPayload
-  | PersonalizeEmailPayload
-  | SubjectLineABPayload;
-
-interface EmailExecutionResult {
-  success: boolean;
-  action: string;
-  messageId?: string;
-  messageIds?: string[];
-  tracking?: EmailTracking | null;
-  results?: EmailResult[];
-  error?: string;
-}
-
-// ============================================================================
-// CAMPAIGN ARCHITECT RESULT TYPES
-// ============================================================================
-
-interface DripEmail {
-  stage: number;
-  stageName: string;
-  dayDelay: number;
-  subject: string;
-  preheader: string;
-  body: string;
-  callToAction: string;
-  dynamicTags: string[];
-  spamScore: number;
-}
-
-interface DripCampaignResult {
-  campaignId: string;
-  campaignName: string;
-  totalEmails: number;
-  estimatedDuration: string;
-  emails: DripEmail[];
-  overallSpamScore: number;
-  deliverabilityPrediction: number;
-  abTestVariants: {
-    subjectLines: string[];
-    preheaders: string[];
+  /** What the email is trying to accomplish (one sentence). */
+  goal: string;
+  /**
+   * Optional slug hint — if the caller already knows which purpose type
+   * to use (because they picked it from the UI combobox), pass it and
+   * the specialist will strongly prefer it unless the brief obviously
+   * conflicts. If omitted, the LLM picks from the full active list.
+   */
+  suggestedPurposeSlug?: string;
+  /**
+   * Optional sequence step metadata for multi-step drips. Single-shot
+   * emails leave this undefined. The LLM uses stepNumber and totalSteps
+   * to calibrate tone (stage 1 = hook, stage 5 = final ask).
+   */
+  sequenceStep?: {
+    stepNumber: number;
+    totalSteps: number;
+    priorInteractions?: string;
   };
+  /** Free-form brief from the Outreach Manager. */
+  brief: string;
 }
 
-interface SpamCheckResult {
-  overallScore: number;
-  verdict: 'safe' | 'caution' | 'high_risk';
-  triggerWordsFound: Array<{
-    word: string;
-    category: string;
-    severity: 'low' | 'medium' | 'high';
-    suggestion: string;
-  }>;
-  structuralIssues: string[];
-  recommendations: string[];
-  improvedContent?: string;
+const ComposeEmailRequestSchema = z.object({
+  action: z.literal('compose_email'),
+  campaignName: z.string().min(2).max(120),
+  targetAudience: z.string().min(5).max(1200),
+  goal: z.string().min(5).max(500),
+  suggestedPurposeSlug: z.string().min(2).max(80).optional(),
+  sequenceStep: z.object({
+    stepNumber: z.number().int().min(1).max(20),
+    totalSteps: z.number().int().min(1).max(20),
+    priorInteractions: z.string().max(2000).optional(),
+  }).optional(),
+  brief: z.string().min(20).max(8000),
+});
+
+// ============================================================================
+// OUTPUT CONTRACT (Zod schema — enforced on every LLM response)
+// ============================================================================
+//
+// `emailPurpose` is validated in executeComposeEmail against the Firestore
+// list of active types, not against a fixed Zod enum. This is the key
+// design difference from prior specialists and the reason a new email type
+// created in the UI becomes usable by the LLM within ~30 seconds (service
+// cache TTL) without any code change.
+//
+// Top-level field names `subjectLine` and `bodyPlainText` are chosen to
+// match what the Task #45 OutreachManager rewire will extract for delivery.
+// Short `emailPurpose` slug sits alongside them for classification and
+// analytics routing.
+//
+// All variable-length content is either prose or flat with generous caps
+// (learned from Tasks #39/#40/#41 — tight caps cause baseline rejections
+// at regression temperature 0).
+// ============================================================================
+
+const ComposeEmailResultSchema = z.object({
+  emailPurpose: z.string().min(2).max(80),
+  subjectLine: z.string().min(5).max(120),
+  previewText: z.string().min(10).max(250),
+  bodyPlainText: z.string().min(100).max(7000),
+  ctaLine: z.string().min(10).max(500),
+  psLine: z.string().min(5).max(500),
+  toneAndAngleReasoning: z.string().min(50).max(5000),
+  personalizationNotes: z.string().min(50).max(6000),
+  followupSuggestion: z.string().min(50).max(5000),
+  spamRiskNotes: z.string().min(30).max(4000),
+  rationale: z.string().min(150).max(10000),
+});
+
+export type ComposeEmailResult = z.infer<typeof ComposeEmailResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: EmailSpecialistGMConfig;
+  brandDNA: BrandDNA;
+  purposeTypes: EmailPurposeType[];
+  resolvedSystemPrompt: string;
 }
 
-interface PersonalizedEmailResult {
-  originalTemplate: string;
-  personalizedContent: string;
-  tagsReplaced: string[];
-  personalizationScore: number;
-  dynamicInsertions: Array<{
-    tag: string;
-    value: string;
-    position: number;
-  }>;
+async function loadGMBrandDNAAndPurposeTypes(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+  if (!gmRecord) {
+    throw new Error(
+      `Email Specialist GM not found for industryKey=${industryKey}. ` +
+      `Run node scripts/seed-email-specialist-gm.js to seed.`,
+    );
+  }
+
+  const config = gmRecord.config as Partial<EmailSpecialistGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `Email Specialist GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
+
+  const gm: EmailSpecialistGMConfig = {
+    systemPrompt,
+    model: config.model ?? 'claude-sonnet-4.6',
+    temperature: config.temperature ?? 0.6,
+    maxTokens: config.maxTokens ?? 12000,
+    supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
+  };
+
+  const brandDNA = await getBrandDNA();
+  if (!brandDNA) {
+    throw new Error(
+      'Brand DNA not configured. Email Specialist refuses to compose without brand identity. ' +
+      'Visit /settings/ai-agents/business-setup.',
+    );
+  }
+
+  const purposeTypes = await getActiveEmailPurposeTypes();
+  if (purposeTypes.length === 0) {
+    throw new Error(
+      'No active email purpose types found in Firestore. ' +
+      'Run node scripts/seed-email-purpose-types.js to seed the defaults.',
+    );
+  }
+
+  const resolvedSystemPrompt = buildResolvedSystemPrompt(gm.systemPrompt, brandDNA, purposeTypes);
+  return { gm, brandDNA, purposeTypes, resolvedSystemPrompt };
 }
 
-interface SubjectLineABResult {
-  variants: Array<{
-    variant: string;
-    subjectLine: string;
-    predictedOpenRate: number;
-    emotionalTrigger: string;
-    length: number;
-  }>;
-  winner: string;
-  reasoning: string;
+function buildResolvedSystemPrompt(
+  baseSystemPrompt: string,
+  brandDNA: BrandDNA,
+  purposeTypes: EmailPurposeType[],
+): string {
+  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
+  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
+  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
+
+  const brandBlock = [
+    '',
+    '## Brand DNA (runtime injection — do not confuse with system prompt)',
+    '',
+    `Company: ${brandDNA.companyDescription}`,
+    `Unique value: ${brandDNA.uniqueValue}`,
+    `Target audience: ${brandDNA.targetAudience}`,
+    `Tone of voice: ${brandDNA.toneOfVoice}`,
+    `Communication style: ${brandDNA.communicationStyle}`,
+    `Industry: ${brandDNA.industry}`,
+    `Key phrases to weave in naturally: ${keyPhrases}`,
+    `Phrases you are forbidden from using: ${avoidPhrases}`,
+    `Competitors (never name them unless specifically asked): ${competitors}`,
+  ].join('\n');
+
+  const purposeLines = purposeTypes
+    .map((t) => `  - ${t.slug} — ${t.name}: ${t.description}`)
+    .join('\n');
+
+  const purposeBlock = [
+    '',
+    '## Email Purpose Taxonomy (runtime injection — current active list)',
+    '',
+    'These are the ONLY valid values for the emailPurpose field. Pick the ONE that best fits the brief.',
+    'Do not invent new purpose slugs. If none of these fits the brief well, pick the closest one and explain in the rationale.',
+    '',
+    purposeLines,
+  ].join('\n');
+
+  return `${baseSystemPrompt}\n${brandBlock}\n${purposeBlock}`;
+}
+
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
+}
+
+async function callOpenRouter(
+  ctx: LlmCallContext,
+  userPrompt: string,
+): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
+
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
 }
 
 // ============================================================================
-// SPAM TRIGGER DATABASE
+// ACTION: compose_email
 // ============================================================================
 
-const SPAM_TRIGGERS: Record<string, { words: string[]; severity: 'low' | 'medium' | 'high'; alternatives: Record<string, string> }> = {
-  urgency: {
-    words: ['act now', 'limited time', 'expire', 'urgent', 'immediately', 'hurry', 'don\'t miss', 'last chance', 'final notice'],
-    severity: 'high',
-    alternatives: {
-      'act now': 'when you have a moment',
-      'limited time': 'currently available',
-      'urgent': 'timely',
-      'immediately': 'at your earliest convenience',
-      'hurry': 'I wanted to share this with you',
-      'don\'t miss': 'you might find this interesting',
-      'last chance': 'wanted to follow up',
-      'final notice': 'gentle reminder',
-    },
-  },
-  financial: {
-    words: ['free', 'discount', 'save', 'cash', 'money back', 'no cost', 'lowest price', 'best price', 'cheap', 'bonus'],
-    severity: 'medium',
-    alternatives: {
-      'free': 'complimentary',
-      'discount': 'special pricing',
-      'save': 'optimize your investment',
-      'cash': 'funds',
-      'no cost': 'included',
-      'lowest price': 'competitive pricing',
-      'cheap': 'cost-effective',
-      'bonus': 'additional benefit',
-    },
-  },
-  clickbait: {
-    words: ['click here', 'click below', 'open immediately', 'see for yourself', 'you won\'t believe', 'shocking', 'secret'],
-    severity: 'high',
-    alternatives: {
-      'click here': 'learn more',
-      'click below': 'explore the details',
-      'open immediately': 'review when convenient',
-      'see for yourself': 'discover',
-      'you won\'t believe': 'you may find it interesting that',
-      'shocking': 'noteworthy',
-      'secret': 'insider insight',
-    },
-  },
-  hyperbole: {
-    words: ['amazing', 'incredible', 'unbelievable', 'guaranteed', '100%', 'best ever', 'revolutionary', 'breakthrough'],
-    severity: 'low',
-    alternatives: {
-      'amazing': 'impressive',
-      'incredible': 'notable',
-      'unbelievable': 'significant',
-      'guaranteed': 'we\'re confident',
-      '100%': 'highly likely',
-      'best ever': 'highly effective',
-      'revolutionary': 'innovative',
-      'breakthrough': 'advancement',
-    },
-  },
-  scam_signals: {
-    words: ['winner', 'congratulations', 'selected', 'prize', 'lottery', 'inheritance', 'nigerian', 'wire transfer'],
-    severity: 'high',
-    alternatives: {
-      'winner': 'qualified candidate',
-      'congratulations': 'we\'re pleased to inform you',
-      'selected': 'identified as a good fit',
-      'prize': 'opportunity',
-    },
-  },
-};
+function buildComposeEmailUserPrompt(req: ComposeEmailRequest, purposeTypes: EmailPurposeType[]): string {
+  const slugList = purposeTypes.map((t) => t.slug).join(' | ');
 
-// ============== Email Specialist Implementation ==============
+  const sequenceLine = req.sequenceStep
+    ? `Sequence step: ${req.sequenceStep.stepNumber} of ${req.sequenceStep.totalSteps}${req.sequenceStep.priorInteractions ? ` — prior interactions: ${req.sequenceStep.priorInteractions}` : ''}`
+    : 'Single-shot email (not part of a sequence)';
+
+  const suggestedLine = req.suggestedPurposeSlug
+    ? `Suggested emailPurpose (caller hint — use it unless the brief clearly conflicts): ${req.suggestedPurposeSlug}`
+    : 'No caller purpose hint — pick the best-fitting purpose from the active taxonomy';
+
+  const sections: string[] = [
+    'ACTION: compose_email',
+    '',
+    'You are writing ONE email. You are NOT writing a sequence, a landing page, a blog post, or marketing copy of any other kind.',
+    'Your output is a single, send-ready email: subject line, preview text, plain-text body, CTA, PS line, plus strategic notes.',
+    'The content you produce is what the recipient actually reads. Nothing downstream rewrites it. Write accordingly.',
+    '',
+    `Campaign: ${req.campaignName}`,
+    `Goal: ${req.goal}`,
+    `Target audience: ${req.targetAudience}`,
+    sequenceLine,
+    suggestedLine,
+    '',
+    'Brief from the Outreach Manager:',
+    req.brief,
+    '',
+    'Produce a send-ready email. Respond with ONLY a valid JSON object, no markdown fences, no preamble, no explanation. The JSON must match this exact schema:',
+    '',
+    '{',
+    `  "emailPurpose": "<one of: ${slugList} — the slug from the Email Purpose Taxonomy list in the system prompt above>",`,
+    '  "subjectLine": "<send-ready subject line, 5 to 120 chars — written to earn the open without tripping spam filters>",',
+    '  "previewText": "<Gmail/Outlook preview text, 10 to 250 chars — extends the subject line, never repeats it>",',
+    '  "bodyPlainText": "<send-ready plain-text body of the email, 100 to 7000 chars — this is what the recipient reads; the downstream email-service will render it to HTML if needed but this text is the canonical source>",',
+    '  "ctaLine": "<the single call-to-action sentence embedded in the body — 10 to 500 chars — one clear ask, not three>",',
+    '  "psLine": "<the PS line at the end of the email, 5 to 500 chars — high reply-lift zone; use it to restate the single most compelling reason to respond>",',
+    '  "toneAndAngleReasoning": "<50 to 5000 chars — why this tone and angle for THIS audience, given the brand voice and the campaign goal>",',
+    '  "personalizationNotes": "<50 to 6000 chars — which variables should be merged (e.g. {{first_name}}, {{company}}, {{recent_trigger}}) and WHERE in the body; also name the strategic personalization hooks beyond variable merging (e.g. opening line referencing their vertical, CTA pointing at their specific use case)>",',
+    '  "followupSuggestion": "<50 to 5000 chars — if this email is ignored, what is the next step and when; if this is a sequence step, what changes for the next step; if single-shot, recommend the next touch>",',
+    '  "spamRiskNotes": "<30 to 4000 chars — honest appraisal of spam risk in the subject, preview, body, and CTA; name specific trigger words or structures if present; recommend mitigations>",',
+    '  "rationale": "<150 to 10000 chars — full strategic rationale tying purpose + subject + body + CTA + follow-up into a coherent composition that could only fit THIS audience and THIS brief>"',
+    '}',
+    '',
+    'Hard rules you MUST follow:',
+    `- emailPurpose MUST be one of the slugs from the taxonomy list above: ${slugList}. Do NOT invent new slugs. If the caller provided a suggestedPurposeSlug, use it unless the brief clearly conflicts (and if you override it, say so in the rationale).`,
+    '- subjectLine must earn the open WITHOUT tripping spam filters. Avoid all-caps, excessive punctuation, and trigger words like "FREE!!", "ACT NOW", "LIMITED TIME". Use curiosity, specificity, or genuine relevance.',
+    '- previewText extends the subject line — it does NOT repeat it. If the subject is "quick question about your outbound stack" then the preview should be something like "and why it might be costing you more than you think" — not another subject line.',
+    '- bodyPlainText is the REAL email body. Write it as if you are sending it to a real person right now. Short paragraphs, scannable. No walls of text. No marketing-speak. No "I hope this finds you well." No "I wanted to reach out." Get to the point.',
+    '- bodyPlainText MUST open with something specific to the recipient (pain, trigger, role, vertical) in the first 2 sentences — not a generic pleasantry.',
+    '- bodyPlainText MUST contain exactly ONE call-to-action. The ctaLine field is a copy of that same CTA sentence, lifted out of the body for the Builder to target with a button if needed. Do not write a body with three CTAs and expect the reader to pick.',
+    '- psLine is the high-reply-lift zone. Use it to restate the single most compelling reason to respond. Never use it for legal disclaimers.',
+    '- personalizationNotes MUST name the specific variables the body uses ({{first_name}}, {{company}}, etc.) and where they appear, AND the strategic personalization hooks beyond variable merging. "Use {{first_name}}" alone is not enough.',
+    '- followupSuggestion MUST name a specific next step with a specific timing — "follow up in 3 days with a social-proof email that leads with the {{industry}} case study", not "send another email eventually".',
+    '- spamRiskNotes MUST be honest. If the subject has a risky word, say so. If the body is heavy on hype, say so. If the CTA asks for too much too soon, say so. The downstream Builder will act on these notes.',
+    '- If the Brand DNA injection above includes avoidPhrases, none of your prose fields may use those phrases.',
+    '- If the Brand DNA injection above includes keyPhrases, weave at least one naturally into the body or PS line.',
+    '- The rationale MUST explicitly tie purpose + subject + body + CTA + follow-up together into a coherent composition that could only fit THIS audience and THIS brief. Generic rationales are a failure.',
+    '- Do NOT invent metrics, open rates, or reply rates. The rationale is strategic reasoning, not performance forecasts.',
+    '- Output ONLY the JSON object. No prose outside it. No markdown fences. No preamble.',
+  ];
+
+  return sections.join('\n');
+}
+
+async function executeComposeEmail(
+  req: ComposeEmailRequest,
+  ctx: LlmCallContext,
+): Promise<ComposeEmailResult> {
+  const userPrompt = buildComposeEmailUserPrompt(req, ctx.purposeTypes);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Email Specialist output was not valid JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  const result = ComposeEmailResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Email Specialist output did not match expected schema: ${issueSummary}`);
+  }
+
+  // Runtime enum validation against the live Firestore-backed taxonomy.
+  // Done AFTER Zod parse so prose fields fail first — a malformed body
+  // surfaces before a bad purpose slug, giving better error messages.
+  const validSlugs = new Set(ctx.purposeTypes.map((t) => t.slug));
+  if (!validSlugs.has(result.data.emailPurpose)) {
+    throw new Error(
+      `Email Specialist produced emailPurpose='${result.data.emailPurpose}' which is not in the active taxonomy. ` +
+      `Valid slugs: ${[...validSlugs].join(', ')}. ` +
+      `If this is a new type, create it via POST /api/email-purpose-types first.`,
+    );
+  }
+
+  return result.data;
+}
+
+// ============================================================================
+// EMAIL SPECIALIST CLASS
+// ============================================================================
 
 export class EmailSpecialist extends BaseSpecialist {
-  private isReady: boolean = false;
-
   constructor() {
     super(CONFIG);
   }
 
-  /**
-   * Initialize the specialist - verify email service is available
-   */
   async initialize(): Promise<void> {
-    try {
-      this.log('INFO', 'Initializing Email Specialist...');
-
-      // Verify email service is importable and functional
-      // The actual send will use org-specific credentials
-      this.isReady = true;
-      this.isInitialized = true;
-
-      this.log('INFO', 'Email Specialist initialized successfully');
-      await Promise.resolve(); // Ensure async
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      this.log('ERROR', `Failed to initialize Email Specialist: ${err.message}`);
-      throw err;
-    }
+    await Promise.resolve();
+    this.isInitialized = true;
+    this.log('INFO', 'Email Specialist initialized (LLM-backed, Golden Master + Purpose Types loaded at runtime)');
   }
 
-  /**
-   * Execute email operations
-   */
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
-
     try {
-      const payload = message.payload as EmailPayload;
-
-      if (!payload || typeof payload !== 'object' || !('action' in payload)) {
-        return this.createReport(taskId, 'FAILED', null, ['Invalid payload: action is required']);
+      const payload = message.payload as Record<string, unknown> | null;
+      if (payload === null || typeof payload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['Email Specialist: payload must be an object']);
       }
 
-      let result: EmailExecutionResult;
-
-      switch (payload.action) {
-        case 'send_email':
-          result = await this.handleSendEmail(payload);
-          break;
-
-        case 'send_bulk_email':
-          result = await this.handleSendBulkEmail(payload);
-          break;
-
-        case 'get_tracking':
-          result = await this.handleGetTracking(payload);
-          break;
-
-        case 'record_open':
-          result = await this.handleRecordOpen(payload);
-          break;
-
-        case 'record_click':
-          result = await this.handleRecordClick(payload);
-          break;
-
-        case 'drip_campaign': {
-          const dripResult = this.handleDripCampaign(payload);
-          return this.createReport(taskId, 'COMPLETED', dripResult);
-        }
-
-        case 'spam_check': {
-          const spamResult = this.handleSpamCheck(payload);
-          return this.createReport(taskId, 'COMPLETED', spamResult);
-        }
-
-        case 'personalize_email': {
-          const personalizeResult = this.handlePersonalizeEmail(payload);
-          return this.createReport(taskId, 'COMPLETED', personalizeResult);
-        }
-
-        case 'subject_line_ab': {
-          const abResult = this.handleSubjectLineAB(payload);
-          return this.createReport(taskId, 'COMPLETED', abResult);
-        }
-
-        default:
-          return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${(payload as { action: string }).action}`]);
+      const rawAction = payload.action ?? payload.method;
+      if (typeof rawAction !== 'string') {
+        return this.createReport(taskId, 'FAILED', null, ['Email Specialist: no action or method specified in payload']);
       }
 
-      if (result.success) {
-        return this.createReport(taskId, 'COMPLETED', result);
-      } else {
-        return this.createReport(taskId, 'FAILED', result, [result.error ?? 'Unknown error']);
+      if (!(SUPPORTED_ACTIONS as readonly string[]).includes(rawAction)) {
+        return this.createReport(taskId, 'FAILED', null, [
+          `Email Specialist does not support action '${rawAction}'. Supported: ${SUPPORTED_ACTIONS.join(', ')}`,
+        ]);
       }
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('[Email Specialist] Execution error:', err, { taskId, file: 'specialist.ts' });
-      return this.createReport(taskId, 'FAILED', null, [err.message]);
-    }
-  }
+      const action = rawAction as SupportedAction;
 
-  /**
-   * Handle send_email action
-   */
-  private async handleSendEmail(payload: SendEmailPayload): Promise<EmailExecutionResult> {
-    // Validate required fields
-    if (!payload.to || !payload.subject) {
-      return {
-        success: false,
-        action: 'send_email',
-        error: 'Missing required fields: to, subject',
-      };
-    }
+      logger.info(`[EmailSpecialist] Executing action=${action} taskId=${taskId}`, { file: FILE });
 
-    if (!payload.html && !payload.text) {
-      return {
-        success: false,
-        action: 'send_email',
-        error: 'Either html or text content is required',
-      };
-    }
-
-    // Validate email format
-    const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    for (const email of recipients) {
-      if (!emailRegex.test(email)) {
-        return {
-          success: false,
-          action: 'send_email',
-          error: `Invalid email format: ${email}`,
-        };
-      }
-    }
-
-    const options: EmailOptions = {
-      to: payload.to,
-      subject: payload.subject,
-      html: payload.html,
-      text: payload.text,
-      from: payload.from,
-      fromName: payload.fromName,
-      replyTo: payload.replyTo,
-      tracking: {
-        trackOpens: payload.trackOpens ?? true,
-        trackClicks: payload.trackClicks ?? true,
-      },
-      metadata: {
-        ...payload.metadata,
-      },
-    };
-
-    const result = await sendEmail(options);
-
-    this.log('INFO', `Email sent: ${result.success ? 'SUCCESS' : 'FAILED'} - ${result.messageId ?? result.error}`);
-
-    return {
-      success: result.success,
-      action: 'send_email',
-      messageId: result.messageId,
-      error: result.error,
-    };
-  }
-
-  /**
-   * Handle send_bulk_email action
-   */
-  private async handleSendBulkEmail(payload: SendBulkEmailPayload): Promise<EmailExecutionResult> {
-    if (!payload.recipients || payload.recipients.length === 0) {
-      return {
-        success: false,
-        action: 'send_bulk_email',
-        error: 'Recipients array is empty',
-      };
-    }
-
-    if (!payload.subject) {
-      return {
-        success: false,
-        action: 'send_bulk_email',
-        error: 'Subject is required',
-      };
-    }
-
-    // Validate all email formats
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const invalidEmails = payload.recipients.filter(email => !emailRegex.test(email));
-    if (invalidEmails.length > 0) {
-      return {
-        success: false,
-        action: 'send_bulk_email',
-        error: `Invalid email formats: ${invalidEmails.slice(0, 5).join(', ')}${invalidEmails.length > 5 ? '...' : ''}`,
-      };
-    }
-
-    const options: Omit<EmailOptions, 'to'> = {
-      subject: payload.subject,
-      html: payload.html,
-      text: payload.text,
-      from: payload.from,
-      fromName: payload.fromName,
-      tracking: {
-        trackOpens: true,
-        trackClicks: true,
-      },
-      metadata: {
-        ...payload.metadata,
-      },
-    };
-
-    const results = await sendBulkEmails(payload.recipients, options);
-
-    const successCount = results.filter(r => r.success).length;
-    const failCount = results.length - successCount;
-
-    this.log('INFO', `Bulk email sent: ${successCount} success, ${failCount} failed`);
-
-    return {
-      success: failCount === 0,
-      action: 'send_bulk_email',
-      messageIds: results.map(r => r.messageId).filter((id): id is string => id !== undefined),
-      results,
-      error: failCount > 0 ? `${failCount} emails failed to send` : undefined,
-    };
-  }
-
-  /**
-   * Handle get_tracking action
-   */
-  private async handleGetTracking(payload: GetTrackingPayload): Promise<EmailExecutionResult> {
-    if (!payload.messageId) {
-      return {
-        success: false,
-        action: 'get_tracking',
-        error: 'messageId is required',
-      };
-    }
-
-    const tracking = await getEmailTracking(payload.messageId);
-
-    return {
-      success: true,
-      action: 'get_tracking',
-      messageId: payload.messageId,
-      tracking,
-    };
-  }
-
-  /**
-   * Handle record_open action
-   */
-  private async handleRecordOpen(payload: RecordOpenPayload): Promise<EmailExecutionResult> {
-    if (!payload.messageId) {
-      return {
-        success: false,
-        action: 'record_open',
-        error: 'messageId is required',
-      };
-    }
-
-    await recordEmailOpen(payload.messageId, payload.ipAddress, payload.userAgent);
-
-    this.log('INFO', `Email open recorded: ${payload.messageId}`);
-
-    return {
-      success: true,
-      action: 'record_open',
-      messageId: payload.messageId,
-    };
-  }
-
-  /**
-   * Handle record_click action
-   */
-  private async handleRecordClick(payload: RecordClickPayload): Promise<EmailExecutionResult> {
-    if (!payload.messageId || !payload.url) {
-      return {
-        success: false,
-        action: 'record_click',
-        error: 'messageId and url are required',
-      };
-    }
-
-    await recordEmailClick(
-      payload.messageId,
-      payload.url,
-      payload.ipAddress,
-      payload.userAgent
-    );
-
-    this.log('INFO', `Email click recorded: ${payload.messageId} - ${payload.url}`);
-
-    return {
-      success: true,
-      action: 'record_click',
-      messageId: payload.messageId,
-    };
-  }
-
-  // ============================================================================
-  // CAMPAIGN ARCHITECT: 5-STAGE DRIP SEQUENCE BUILDER
-  // ============================================================================
-
-  /**
-   * Build a complete 5-stage drip campaign with spam checking
-   */
-  private handleDripCampaign(payload: DripCampaignPayload): DripCampaignResult {
-    const { campaignName, targetAudience, senderProfile, goal } = payload;
-
-    this.log('INFO', `Building 5-stage drip campaign: ${campaignName}`);
-
-    const stages: Array<{ name: string; dayDelay: number; purpose: string }> = [
-      { name: 'Opening', dayDelay: 0, purpose: 'Initial introduction and hook' },
-      { name: 'Discovery', dayDelay: 3, purpose: 'Ask questions, identify pain points' },
-      { name: 'Value', dayDelay: 6, purpose: 'Present solution and benefits' },
-      { name: 'Social Proof', dayDelay: 10, purpose: 'Case studies and testimonials' },
-      { name: 'The Ask', dayDelay: 14, purpose: 'Clear call to action' },
-    ];
-
-    const emails: DripEmail[] = [];
-    let totalSpamScore = 0;
-
-    for (let i = 0; i < stages.length; i++) {
-      const stage = stages[i];
-      const email = this.generateDripEmail(
-        i + 1,
-        stage,
-        targetAudience,
-        senderProfile,
-        goal
-      );
-
-      // Run spam check on each email
-      const spamResult = this.performSpamCheck(email.body);
-      email.spamScore = spamResult.overallScore;
-      totalSpamScore += spamResult.overallScore;
-
-      emails.push(email);
-    }
-
-    const overallSpamScore = Math.round(totalSpamScore / stages.length);
-
-    // Generate A/B test variants for optimization
-    const abTestVariants = this.generateABVariants(emails, targetAudience.industry);
-
-    return {
-      campaignId: `drip_${Date.now()}`,
-      campaignName,
-      totalEmails: emails.length,
-      estimatedDuration: '14 days',
-      emails,
-      overallSpamScore,
-      deliverabilityPrediction: Math.max(50, 100 - overallSpamScore),
-      abTestVariants,
-    };
-  }
-
-  /**
-   * Generate a single drip email for a specific stage
-   */
-  private generateDripEmail(
-    stageNum: number,
-    stage: { name: string; dayDelay: number; purpose: string },
-    audience: DripCampaignPayload['targetAudience'],
-    sender: DripCampaignPayload['senderProfile'],
-    goal: string
-  ): DripEmail {
-    const templates = this.getDripTemplates(audience, sender, goal);
-    const template = templates[stage.name.toLowerCase()];
-
-    const dynamicTags = ['{{first_name}}', '{{company}}', '{{role}}'];
-    if (audience.painPoints.length > 0) {
-      dynamicTags.push('{{pain_point}}');
-    }
-
-    return {
-      stage: stageNum,
-      stageName: stage.name,
-      dayDelay: stage.dayDelay,
-      subject: template.subject,
-      preheader: template.preheader,
-      body: template.body,
-      callToAction: template.cta,
-      dynamicTags,
-      spamScore: 0, // Will be calculated
-    };
-  }
-
-  /**
-   * Get stage-specific email templates
-   */
-  private getDripTemplates(
-    audience: DripCampaignPayload['targetAudience'],
-    sender: DripCampaignPayload['senderProfile'],
-    goal: string
-  ): Record<string, { subject: string; preheader: string; body: string; cta: string }> {
-    const painPoint = audience.painPoints[0] ?? 'common challenges';
-    const valueProp = sender.valuePropositions[0] ?? 'driving results';
-
-    return {
-      opening: {
-        subject: `Quick question about {{company}}'s ${audience.industry} strategy`,
-        preheader: `I noticed something interesting about ${audience.industry} companies...`,
-        body: `Hi {{first_name}},
-
-I've been researching ${audience.industry} companies and noticed that {{company}} is doing impressive work.
-
-Many {{role}}s I speak with are focused on ${painPoint}. Is that something on your radar as well?
-
-I help companies like yours ${valueProp.toLowerCase()}.
-
-Would love to learn more about your current priorities.
-
-Best,
-${sender.name}
-${sender.company}`,
-        cta: 'Reply with your thoughts',
-      },
-      discovery: {
-        subject: `Re: {{company}}'s ${audience.industry} challenges`,
-        preheader: `A quick follow-up on my previous note...`,
-        body: `Hi {{first_name}},
-
-I wanted to follow up on my previous email. I know {{role}}s at ${audience.companySize ?? 'growing'} companies often juggle multiple priorities.
-
-Quick question: What's the biggest obstacle {{company}} faces when it comes to ${painPoint}?
-
-Understanding this would help me share more relevant insights.
-
-Thanks,
-${sender.name}`,
-        cta: 'What challenges are you facing?',
-      },
-      value: {
-        subject: `How ${audience.industry} leaders are solving {{pain_point}}`,
-        preheader: `Specific strategies that might help {{company}}...`,
-        body: `Hi {{first_name}},
-
-I've been thinking about our conversation (or lack thereof!) and wanted to share something valuable.
-
-Here's how we help ${audience.industry} companies tackle ${painPoint}:
-
-${sender.valuePropositions.map((vp, i) => `${i + 1}. ${vp}`).join('\n')}
-
-The results speak for themselves - companies typically see meaningful improvements within the first quarter.
-
-Would any of these be relevant for {{company}}?
-
-Best,
-${sender.name}`,
-        cta: 'See how it works',
-      },
-      'social proof': {
-        subject: `How a company like {{company}} achieved [Result]`,
-        preheader: `Real results from ${audience.industry} companies...`,
-        body: `Hi {{first_name}},
-
-I wanted to share a quick success story that might resonate with you.
-
-${sender.caseStudies?.[0] ?? `A similar ${audience.industry} company was struggling with ${painPoint}. After working together, they were able to ${valueProp.toLowerCase()}.`}
-
-The key difference? They took action when they saw the opportunity.
-
-I'd love to help {{company}} achieve similar results.
-
-Best,
-${sender.name}`,
-        cta: 'Get the full case study',
-      },
-      'the ask': {
-        subject: `{{first_name}}, quick ${goal === 'meeting' ? 'chat' : goal}?`,
-        preheader: `Let's see if this makes sense for {{company}}...`,
-        body: `Hi {{first_name}},
-
-I've reached out a few times because I genuinely believe we can help {{company}} with ${painPoint}.
-
-I'll keep this short: Would you be open to a brief ${goal === 'meeting' ? '15-minute call' : goal} to see if there's a fit?
-
-If now isn't the right time, no worries at all. Just let me know and I'll follow up in a few months.
-
-Either way, wishing you and {{company}} continued success!
-
-Best,
-${sender.name}
-${sender.company}`,
-        cta: goal === 'meeting' ? 'Book a time' : `Start your ${goal}`,
-      },
-    };
-  }
-
-  /**
-   * Generate A/B test variants for subject lines and preheaders
-   */
-  private generateABVariants(
-    emails: DripEmail[],
-    industry: string
-  ): { subjectLines: string[]; preheaders: string[] } {
-    const subjectVariants: string[] = [];
-    const preheaderVariants: string[] = [];
-
-    // Opening email variants
-    subjectVariants.push(
-      `Question for {{first_name}} about ${industry}`,
-      `{{company}} + ${industry} opportunity`,
-      `Ideas for {{company}}'s growth`
-    );
-
-    // Preheader variants
-    preheaderVariants.push(
-      'Thought you might find this interesting...',
-      `Something I noticed about ${industry} companies...`,
-      'A quick idea for {{company}}...'
-    );
-
-    return { subjectLines: subjectVariants, preheaders: preheaderVariants };
-  }
-
-  // ============================================================================
-  // SPAM-FILTER PRE-CHECK ENGINE
-  // ============================================================================
-
-  /**
-   * Analyze content for spam triggers and provide recommendations
-   */
-  private handleSpamCheck(payload: SpamCheckPayload): SpamCheckResult {
-    const { content, subjectLine } = payload;
-
-    this.log('INFO', 'Running spam pre-check analysis');
-
-    const fullContent = subjectLine ? `${subjectLine} ${content}` : content;
-    return this.performSpamCheck(fullContent);
-  }
-
-  /**
-   * Core spam analysis logic
-   */
-  private performSpamCheck(content: string): SpamCheckResult {
-    const lowerContent = content.toLowerCase();
-    const triggerWordsFound: SpamCheckResult['triggerWordsFound'] = [];
-    const structuralIssues: string[] = [];
-    const recommendations: string[] = [];
-    let score = 0;
-
-    // Check for trigger words across all categories
-    for (const [category, data] of Object.entries(SPAM_TRIGGERS)) {
-      for (const word of data.words) {
-        if (lowerContent.includes(word.toLowerCase())) {
-          const severityScore = { low: 5, medium: 10, high: 20 }[data.severity];
-          score += severityScore;
-
-          triggerWordsFound.push({
-            word,
-            category,
-            severity: data.severity,
-            suggestion: data.alternatives[word] || `Consider rephrasing "${word}"`,
-          });
-        }
-      }
-    }
-
-    // Structural analysis
-    const exclamationCount = (content.match(/!/g) ?? []).length;
-    if (exclamationCount > 2) {
-      structuralIssues.push(`Too many exclamation marks (${exclamationCount})`);
-      score += exclamationCount * 3;
-    }
-
-    const capsRatio = (content.match(/[A-Z]/g) ?? []).length / content.length;
-    if (capsRatio > 0.3) {
-      structuralIssues.push('Excessive use of capital letters');
-      score += 15;
-    }
-
-    const linkCount = (content.match(/https?:\/\//g) ?? []).length;
-    if (linkCount > 3) {
-      structuralIssues.push(`Too many links (${linkCount})`);
-      score += linkCount * 5;
-    }
-
-    // Check for personalization (good for deliverability)
-    const hasPersonalization = content.includes('{{') && content.includes('}}');
-    if (!hasPersonalization) {
-      recommendations.push('Add personalization tags like {{first_name}} to improve engagement');
-    }
-
-    // Generate recommendations
-    if (triggerWordsFound.length > 0) {
-      recommendations.push('Replace flagged trigger words with suggested alternatives');
-    }
-    if (score > 30) {
-      recommendations.push('Consider rewriting sections with a more conversational tone');
-    }
-    if (!content.includes('unsubscribe') && content.length > 500) {
-      recommendations.push('Include an unsubscribe option for compliance');
-    }
-
-    // Generate improved content if needed
-    let improvedContent: string | undefined;
-    if (triggerWordsFound.length > 0) {
-      improvedContent = this.generateImprovedContent(content, triggerWordsFound);
-    }
-
-    // Determine verdict
-    let verdict: SpamCheckResult['verdict'];
-    if (score <= 20) {verdict = 'safe';}
-    else if (score <= 50) {verdict = 'caution';}
-    else {verdict = 'high_risk';}
-
-    return {
-      overallScore: Math.min(100, score),
-      verdict,
-      triggerWordsFound,
-      structuralIssues,
-      recommendations,
-      improvedContent,
-    };
-  }
-
-  /**
-   * Generate improved content with trigger words replaced
-   */
-  private generateImprovedContent(
-    content: string,
-    triggers: SpamCheckResult['triggerWordsFound']
-  ): string {
-    let improved = content;
-
-    for (const trigger of triggers) {
-      const regex = new RegExp(trigger.word, 'gi');
-      const replacement = trigger.suggestion.startsWith('Consider')
-        ? trigger.word // Keep original if no direct replacement
-        : trigger.suggestion;
-      improved = improved.replace(regex, replacement);
-    }
-
-    return improved;
-  }
-
-  // ============================================================================
-  // DYNAMIC PERSONALIZATION ENGINE
-  // ============================================================================
-
-  /**
-   * Replace dynamic tags with recipient-specific values
-   */
-  private handlePersonalizeEmail(payload: PersonalizeEmailPayload): PersonalizedEmailResult {
-    const { template, recipient } = payload;
-
-    this.log('INFO', `Personalizing email for ${recipient.firstName} at ${recipient.company}`);
-
-    const tagMap: Record<string, string> = {
-      '{{first_name}}': recipient.firstName,
-      '{{last_name}}': recipient.lastName ?? '',
-      '{{full_name}}': `${recipient.firstName}${recipient.lastName ? ` ${  recipient.lastName}` : ''}`,
-      '{{company}}': recipient.company,
-      '{{role}}': recipient.role,
-      '{{industry}}': recipient.industry ?? 'your industry',
-      '{{pain_point}}': recipient.painPoint ?? 'current challenges',
-      '{{recent_news}}': recipient.recentNews ?? '',
-    };
-
-    let personalizedContent = template;
-    const tagsReplaced: string[] = [];
-    const dynamicInsertions: PersonalizedEmailResult['dynamicInsertions'] = [];
-
-    for (const [tag, value] of Object.entries(tagMap)) {
-      if (template.includes(tag) && value) {
-        const position = personalizedContent.indexOf(tag);
-        personalizedContent = personalizedContent.split(tag).join(value);
-        tagsReplaced.push(tag);
-        dynamicInsertions.push({ tag, value, position });
-      }
-    }
-
-    // Calculate personalization score
-    const totalPossibleTags = Object.keys(tagMap).length;
-    const usedTags = tagsReplaced.length;
-    const personalizationScore = Math.round((usedTags / totalPossibleTags) * 100);
-
-    return {
-      originalTemplate: template,
-      personalizedContent,
-      tagsReplaced,
-      personalizationScore,
-      dynamicInsertions,
-    };
-  }
-
-  // ============================================================================
-  // SUBJECT LINE A/B GENERATOR
-  // ============================================================================
-
-  /**
-   * Generate A/B test variants for subject lines
-   */
-  private handleSubjectLineAB(payload: SubjectLineABPayload): SubjectLineABResult {
-    const { emailContent, targetAudience, variants: variantCount = 4 } = payload;
-
-    this.log('INFO', `Generating ${variantCount} subject line variants`);
-
-    // Extract key themes from content
-    const themes = this.extractContentThemes(emailContent);
-
-    const strategies: Array<{ name: string; generator: (themes: string[], audience: string) => string }> = [
-      {
-        name: 'Question',
-        generator: (t, a) => `Quick question about ${a}'s ${t[0] || 'strategy'}?`,
-      },
-      {
-        name: 'Curiosity',
-        generator: (t, a) => `Noticed something interesting about ${a}...`,
-      },
-      {
-        name: 'Value',
-        generator: (t, _a) => `How to ${t[0] || 'improve results'} in half the time`,
-      },
-      {
-        name: 'Personalized',
-        generator: (_t, a) => `{{first_name}}, thought of you when I saw ${a}'s latest`,
-      },
-      {
-        name: 'Social Proof',
-        generator: (t, _a) => `How top companies are handling ${t[0] || 'this challenge'}`,
-      },
-      {
-        name: 'FOMO',
-        generator: (t, _a) => `Most {{role}}s overlook this ${t[0] || 'opportunity'}`,
-      },
-    ];
-
-    const variants: SubjectLineABResult['variants'] = [];
-
-    for (let i = 0; i < Math.min(variantCount, strategies.length); i++) {
-      const strategy = strategies[i];
-      const subjectLine = strategy.generator(themes, targetAudience);
-
-      // Predict open rate based on strategy and length
-      const predictedOpenRate = this.predictOpenRate(subjectLine, strategy.name);
-
-      variants.push({
-        variant: String.fromCharCode(65 + i), // A, B, C, D...
-        subjectLine,
-        predictedOpenRate,
-        emotionalTrigger: strategy.name,
-        length: subjectLine.length,
+      const inputValidation = ComposeEmailRequestSchema.safeParse({
+        ...payload,
+        action,
       });
-    }
-
-    // Sort by predicted open rate and select winner
-    variants.sort((a, b) => b.predictedOpenRate - a.predictedOpenRate);
-    const winner = variants[0].subjectLine;
-
-    return {
-      variants,
-      winner,
-      reasoning: `Variant ${variants[0].variant} uses ${variants[0].emotionalTrigger.toLowerCase()} strategy which typically performs best for ${targetAudience} audiences. Length of ${variants[0].length} characters is optimal for mobile preview.`,
-    };
-  }
-
-  /**
-   * Extract key themes from email content for subject line generation
-   */
-  private extractContentThemes(content: string): string[] {
-    const themes: string[] = [];
-    const contentLower = content.toLowerCase();
-
-    // Common business themes
-    const themePatterns: Record<string, RegExp[]> = {
-      'growth': [/grow/i, /scale/i, /expand/i],
-      'efficiency': [/efficien/i, /productiv/i, /streamline/i],
-      'cost reduction': [/cost/i, /save/i, /budget/i],
-      'revenue': [/revenue/i, /sales/i, /profit/i],
-      'automation': [/automat/i, /ai/i, /machine learning/i],
-      'strategy': [/strateg/i, /plan/i, /approach/i],
-    };
-
-    for (const [theme, patterns] of Object.entries(themePatterns)) {
-      if (patterns.some(p => p.test(contentLower))) {
-        themes.push(theme);
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Email Specialist compose_email: invalid input payload: ${issueSummary}`,
+        ]);
       }
-    }
 
-    return themes.length > 0 ? themes : ['improving results'];
+      const ctx = await loadGMBrandDNAAndPurposeTypes(DEFAULT_INDUSTRY_KEY);
+      const data = await executeComposeEmail(inputValidation.data, ctx);
+      return this.createReport(taskId, 'COMPLETED', data);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('[EmailSpecialist] Execution failed', error instanceof Error ? error : new Error(errorMessage), { file: FILE });
+      return this.createReport(taskId, 'FAILED', null, [errorMessage]);
+    }
   }
 
-  /**
-   * Predict open rate based on subject line characteristics
-   */
-  private predictOpenRate(subjectLine: string, strategy: string): number {
-    let baseRate = 22; // Industry average
-
-    // Strategy bonuses
-    const strategyBonus: Record<string, number> = {
-      'Question': 8,
-      'Curiosity': 7,
-      'Value': 5,
-      'Personalized': 10,
-      'Social Proof': 6,
-      'FOMO': 4,
-    };
-    baseRate += strategyBonus[strategy] ?? 0;
-
-    // Length optimization (40-50 chars optimal)
-    const length = subjectLine.length;
-    if (length >= 40 && length <= 50) {baseRate += 3;}
-    else if (length > 60) {baseRate -= 2;}
-
-    // Personalization bonus
-    if (subjectLine.includes('{{first_name}}') || subjectLine.includes('{{company}}')) {
-      baseRate += 5;
-    }
-
-    // Lowercase subject bonus (appears more personal)
-    if (subjectLine[0] === subjectLine[0].toLowerCase()) {
-      baseRate += 2;
-    }
-
-    return Math.min(50, Math.max(15, baseRate)); // Cap between 15-50%
-  }
-
-  /**
-   * Handle incoming signals from the Signal Bus
-   */
   async handleSignal(signal: Signal): Promise<AgentReport> {
-    // Convert signal to message format and execute
-    const message: AgentMessage = {
-      id: signal.id,
-      timestamp: signal.createdAt,
-      from: signal.origin,
-      to: this.identity.id,
-      type: 'COMMAND',
-      priority: 'NORMAL',
-      payload: signal.payload.payload,
-      requiresResponse: true,
-      traceId: signal.id,
-    };
-
-    return this.execute(message);
+    const taskId = signal.id;
+    if (signal.payload.type === 'COMMAND') {
+      return this.execute(signal.payload);
+    }
+    return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
   }
 
-  /**
-   * Generate a structured report
-   */
   generateReport(taskId: string, data: unknown): AgentReport {
     return this.createReport(taskId, 'COMPLETED', data);
   }
 
-  /**
-   * Self-assessment - returns true as this agent has real logic
-   */
   hasRealLogic(): boolean {
     return true;
   }
 
-  /**
-   * Count lines of functional code
-   */
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 280, boilerplate: 50 };
+    return { functional: 490, boilerplate: 60 };
   }
 }
 
 // ============================================================================
-// EXPORTS
+// FACTORY / SINGLETON
 // ============================================================================
 
-/**
- * Factory function to create an Email Specialist instance
- */
 export function createEmailSpecialist(): EmailSpecialist {
   return new EmailSpecialist();
 }
 
-/**
- * Singleton instance getter (SwarmRegistry pattern)
- */
 let instance: EmailSpecialist | null = null;
 
 export function getEmailSpecialist(): EmailSpecialist {
@@ -1194,5 +524,18 @@ export function getEmailSpecialist(): EmailSpecialist {
   return instance;
 }
 
-// Legacy singleton export (deprecated - use getEmailSpecialist())
-export const emailSpecialist = new EmailSpecialist();
+// ============================================================================
+// INTERNAL TEST HELPERS (exported for proof-of-life harness + regression executor)
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  loadGMBrandDNAAndPurposeTypes,
+  buildResolvedSystemPrompt,
+  buildComposeEmailUserPrompt,
+  stripJsonFences,
+  ComposeEmailRequestSchema,
+  ComposeEmailResultSchema,
+};
