@@ -4590,23 +4590,99 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       }
 
       // ═══════════════════════════════════════════════════════════════════════
-      // ARCHITECT STRATEGY EXECUTION → Redirects to AI-wired Builder
-      // delegate_to_architect and delegate_to_builder both produce landing pages
+      // ARCHITECT DEPARTMENT EXECUTION
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_architect': {
+        // Task #42 (April 13 2026): rewired from NOT_WIRED to live delegation.
+        // Architect department specialists are all real as of Task #41:
+        //   - Copy Specialist (Task #39) — strategic messaging direction
+        //   - UX/UI Specialist (Task #40) — strategic design direction
+        //   - Funnel Pathologist (Task #41) — strategic funnel diagnosis
+        // ArchitectManager.execute() parses the BlueprintRequest from payload
+        // (niche/description/targetAudience/objective/existingBrand/forceRefresh),
+        // loads Brand DNA + intelligence briefs, derives site requirements,
+        // runs the three specialists in parallel, synthesizes a SiteArchitecture
+        // blueprint, writes it to MemoryVault, and broadcasts site.blueprint_ready.
+        // The blueprint ID it produces is the input to delegate_to_builder.
         const archStart = Date.now();
         trackMissionStep(context, 'delegate_to_architect', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Architect department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_architect', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - archStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Architect department specialist rebuild is in progress. This tool will return online when the Copy Specialist, UX/UI Specialist, and Funnel Pathologist have been rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'ARCHITECT_MANAGER',
-        });
+
+        try {
+          const { ArchitectManager } = await import('@/lib/agents/architect/manager');
+          const architectMgr = new ArchitectManager();
+          await architectMgr.initialize();
+
+          // Map Jasper tool args to BlueprintRequest shape.
+          // industry is the required primary niche descriptor.
+          // funnelGoals/siteType/brandGuidelines/existingSiteUrl/competitorUrls
+          // are folded into the description field so the manager has full context
+          // when deriving site requirements alongside Brand DNA.
+          const descriptionParts: string[] = [];
+          if (args.siteType) { descriptionParts.push(`Site type: ${args.siteType}`); }
+          if (args.funnelGoals) { descriptionParts.push(`Funnel goals: ${args.funnelGoals}`); }
+          if (args.brandGuidelines) { descriptionParts.push(`Brand guidelines: ${args.brandGuidelines}`); }
+          if (args.existingSiteUrl) { descriptionParts.push(`Existing site: ${args.existingSiteUrl}`); }
+          if (args.competitorUrls) { descriptionParts.push(`Competitors: ${args.competitorUrls}`); }
+
+          // Infer BlueprintRequest.objective from funnelGoals keywords, if present.
+          // Enum values: 'leads' | 'sales' | 'bookings' | 'awareness'. Leave
+          // undefined if the caller did not give us a clear signal — the manager
+          // will fall back to Brand DNA + industry defaults.
+          const funnelGoalsLower = typeof args.funnelGoals === 'string' ? args.funnelGoals.toLowerCase() : '';
+          let objective: 'leads' | 'sales' | 'bookings' | 'awareness' | undefined;
+          if (funnelGoalsLower.includes('book') || funnelGoalsLower.includes('demo') || funnelGoalsLower.includes('appointment')) {
+            objective = 'bookings';
+          } else if (funnelGoalsLower.includes('sale') || funnelGoalsLower.includes('purchase') || funnelGoalsLower.includes('checkout') || funnelGoalsLower.includes('revenue')) {
+            objective = 'sales';
+          } else if (funnelGoalsLower.includes('lead') || funnelGoalsLower.includes('signup') || funnelGoalsLower.includes('email capture') || funnelGoalsLower.includes('trial')) {
+            objective = 'leads';
+          } else if (funnelGoalsLower.includes('awareness') || funnelGoalsLower.includes('brand') || funnelGoalsLower.includes('reach')) {
+            objective = 'awareness';
+          }
+
+          const architectPayload: Record<string, unknown> = {
+            niche: args.industry as string,
+            description: descriptionParts.length > 0 ? descriptionParts.join('. ') : undefined,
+            targetAudience: args.audience as string | undefined,
+            objective,
+            existingBrand: true,
+            forceRefresh: false,
+          };
+
+          const archResult = await withTimeout(architectMgr.execute({
+            id: `architect_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'ARCHITECT_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: architectPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Architect Manager');
+
+          const archDuration = Date.now() - archStart;
+          trackMissionStep(context, 'delegate_to_architect',
+            archResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Architect: ${archResult.status}`, durationMs: archDuration, toolResult: JSON.stringify(archResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: archResult.status,
+            data: archResult.data,
+            errors: archResult.errors,
+            manager: 'ARCHITECT_MANAGER',
+            reviewLink: getReviewLink('delegate_to_architect', context?.missionId),
+          });
+        } catch (archError: unknown) {
+          const errorMsg = archError instanceof Error ? archError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_architect', 'FAILED', {
+            summary: `Architect: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - archStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'ARCHITECT_MANAGER' });
+        }
         break;
       }
 
