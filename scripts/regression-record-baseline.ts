@@ -31,6 +31,7 @@ import { copySpecialistExecutor } from '../src/lib/regression/executors/copy-spe
 import { uxUiSpecialistExecutor } from '../src/lib/regression/executors/ux-ui-specialist-executor';
 import { funnelPathologistExecutor } from '../src/lib/regression/executors/funnel-pathologist-executor';
 import { emailSpecialistExecutor } from '../src/lib/regression/executors/email-specialist-executor';
+import { smsSpecialistExecutor } from '../src/lib/regression/executors/sms-specialist-executor';
 import {
   listActiveCasesForAgent,
   recordBaseline,
@@ -57,6 +58,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   UX_UI_SPECIALIST: uxUiSpecialistExecutor,
   FUNNEL_PATHOLOGIST: funnelPathologistExecutor,
   EMAIL_SPECIALIST: emailSpecialistExecutor,
+  SMS_SPECIALIST: smsSpecialistExecutor,
 };
 
 interface CliArgs {
