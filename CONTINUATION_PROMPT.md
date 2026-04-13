@@ -26,6 +26,29 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 ## 🚨 CURRENT PRIORITY: Agent Specialist Rebuild (BLOCKS ALL OTHER WORK)
 
+### 📌 Fresh session resume point (updated April 12, 2026 end-of-session)
+
+**If you are starting a new Claude Code session on the rebuild, read in this order:**
+1. `CLAUDE.md` — binding project rules
+2. `C:\Users\David\.claude\projects\D--Future-Rapid-Compliance\memory\MEMORY.md` — auto-memory index, paying special attention to `feedback_jasper_delegation_no_direct_llm.md`, `feedback_never_bypass_guardrails_silently.md`, `feedback_explain_before_changing.md`, `feedback_never_guess.md`, `feedback_review_code_not_docs.md`, `feedback_use_subagents_fast.md`
+3. This file's **Current Priority** section (below) + the **Agent Swarm Rebuild Tracker** + the **Task #37 detail** and **Task #38 detail** sections (the two most recent, they're self-contained by design)
+
+**State at session handoff:**
+- HEAD: `a7219e9c` on `dev` (pushed to origin). `rapid-dev` worktree synced.
+- **16 REAL / 38 candidates = 42%** scorecard.
+- Content, Marketing, Builder departments all **3/3 or 4/4** complete. `delegate_to_content`, `delegate_to_marketing`, `delegate_to_builder` all LIVE.
+- 22 TEMPLATE specialists remaining. 8 NOT_WIRED Jasper tools remaining.
+- **Next task: #39 — Rebuild Copy Specialist** (`src/lib/agents/architect/copy/specialist.ts`, 1515 LOC template). Then #40 (UX/UI Specialist) and #41 (Funnel Pathologist). When Architect dept is 3/3, rewire `delegate_to_architect` (Task #42). Once that's live and produces blueprints to MemoryVault, `delegate_to_builder` stops returning BLOCKED and starts producing full site packages end-to-end.
+
+**Proven build pattern (mirror exactly, learned across Tasks #35-37):**
+Audit current template → diagnosis+plan (ALWAYS explain before editing) → rewrite specialist.ts using the LinkedIn/UX-UI/Funnel pattern (OpenRouter + Zod + GM loader + Brand DNA + `__internal` export) → seed-GM script (CommonJS Firebase Admin) → proof-of-life harness (3 canned cases: `saas_*`, `realestate_*`, `ecommerce_*`) → regression executor (wire into `regression-record-baseline.ts` + `regression-run.ts` EXECUTOR_REGISTRY) → 3 seeded regression cases → typecheck + lint → seed GM → proof-of-life → **pirate GM-swap reality test** (`scripts/verify-<specialist>-is-real.js`) → regression baseline (3/3 schemaValid) → regression sanity run (must land PASS/WARN-only, 0 FAIL) → commit + push + sync rapid-dev.
+
+**Critical design lesson from #35-#37:** Prose fields for anything variable-length. The first rebuild (UX/UI) started with `variants: string[]` nested arrays and hit 3/3 sanity FAIL from nested-array-length jitter. The fix was collapsing to `variantsDescription: string` prose. Apply this from the start — nested arrays inside top-level array items (e.g. `nodes[].someNestedArray`) are regression-fragile because the harness uses exact-path tolerance matching (no wildcards). Every subsequent rebuild used prose fields and the Workflow Optimizer (Task #37) passed sanity first try with zero schema widening.
+
+**Trust context (matters for how to report):** April 10, 2026 the owner caught a prior Claude session that had lied about delegation tools working. Recovery strategy since then is the pirate GM-swap test — unfakeable proof that the Firestore GM is actually loaded and sent to the LLM. **Run the pirate test on every new specialist before committing.** Every rebuilt specialist from Tasks #23-37 has a matching `scripts/verify-<specialist>-is-real.js` that can be re-run at any time.
+
+---
+
 **Discovered April 10, 2026.** The agent swarm Jasper was supposed to delegate to is not real. Auditing `src/lib/agents/` revealed that only 3 files in the entire tree import any LLM infrastructure:
 
 1. `src/lib/agents/growth-strategist/specialist.ts` — uses OpenRouter
