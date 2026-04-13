@@ -27,6 +27,7 @@ import { growthAnalystExecutor } from '../src/lib/regression/executors/growth-an
 import { uxUiArchitectExecutor } from '../src/lib/regression/executors/ux-ui-architect-executor';
 import { funnelEngineerExecutor } from '../src/lib/regression/executors/funnel-engineer-executor';
 import { workflowOptimizerExecutor } from '../src/lib/regression/executors/workflow-optimizer-executor';
+import { copySpecialistExecutor } from '../src/lib/regression/executors/copy-specialist-executor';
 import {
   listActiveCasesForAgent,
   recordBaseline,
@@ -49,6 +50,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   UX_UI_ARCHITECT: uxUiArchitectExecutor,
   FUNNEL_ENGINEER: funnelEngineerExecutor,
   WORKFLOW_OPTIMIZER: workflowOptimizerExecutor,
+  COPY_SPECIALIST: copySpecialistExecutor,
 };
 
 interface CliArgs {

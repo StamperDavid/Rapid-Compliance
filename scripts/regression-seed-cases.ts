@@ -1229,6 +1229,91 @@ const WORKFLOW_OPTIMIZER_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' |
 ];
 
 // ---------------------------------------------------------------------------
+// Copy Specialist cases (Architect-layer strategic messaging picker, Task #39)
+// ---------------------------------------------------------------------------
+
+const COPY_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'copy_specialist_saas_sales_ops_landing',
+    agentId: 'COPY_SPECIALIST',
+    name: 'SaaS sales-ops cold-traffic landing (canonical)',
+    description:
+      'Canonical strategic messaging case. Exercises framework enum, CTA strategy enum, pillars count range, key objections count range, prose page messaging notes, and rationale brief-echo.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_copy', 'saas', 'landing', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.siteWideMessagingPillars.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 pillars.' },
+      { path: '$.keyObjections.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 objections.' },
+    ],
+    inputPayload: {
+      action: 'generate_copy',
+      pageType: 'landing',
+      funnelType: 'lead_generation',
+      targetAudience: 'B2B SaaS founders and revenue operators ($1M-$10M ARR) drowning in disconnected sales tools and frustrated with cold-outreach agencies that promise leads but deliver spam',
+      toneOfVoice: 'confident and direct, peer-to-peer founder voice — never corporate marketing speak',
+      industry: 'B2B SaaS — sales velocity platform',
+      brief:
+        'Build the cold-traffic landing page for SalesVelocity.ai targeting founders running their own outbound today. The page must convert problem-aware visitors who arrived from a LinkedIn ad about "stop sending more cold emails." We sell a complete sales velocity platform that pairs every client with real human specialists running their outbound, content, and pipeline — not a self-serve dashboard. Pricing is month-to-month with a 30-day results guarantee. Top objections we see in sales calls: "I just signed a 12-month agency contract three months ago," "I do not have time to onboard another tool," and "how is this different from a VA service." Brand pillars we want repeated: team-not-tools, results-before-retainer, no contracts ever.',
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole Copy Specialist surface.',
+  },
+  {
+    caseId: 'copy_specialist_realestate_luxury_homepage',
+    agentId: 'COPY_SPECIALIST',
+    name: 'Luxury real estate brokerage homepage (industry switch)',
+    description:
+      'Industry-switching stress case. Tests whether the LLM adapts framework + CTA + voice direction to a long-cycle editorial luxury market with restraint as the brand pillar.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_copy', 'real_estate', 'luxury', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.siteWideMessagingPillars.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 pillars.' },
+      { path: '$.keyObjections.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 objections.' },
+    ],
+    inputPayload: {
+      action: 'generate_copy',
+      pageType: 'homepage',
+      funnelType: 'lead_capture_long_cycle',
+      targetAudience: 'Wealth-managed individuals, family offices, and corporate executives evaluating luxury residential properties in markets with 6-18 month average sale cycles. They have seen every glossy real estate site and are skeptical of agents who lead with "exclusive" and "luxury" as adjectives.',
+      toneOfVoice: 'restrained editorial — confident without being loud, sophisticated without being stuffy. Think Wall Street Journal feature article, not yacht-broker pitch deck.',
+      industry: 'Luxury residential real estate',
+      brief:
+        'Build the homepage for a luxury real estate brokerage operating in three markets (Aspen, Naples, Hamptons). The brokerage represents a small curated portfolio of $5M-$50M residential properties. The page must establish editorial credibility and capture leads who are 6-18 months away from purchase. The lead magnet is a quarterly market intelligence report tied to wealth-preservation themes. Top objections: "every luxury agent claims discretion and access — what makes you different," "I already have a relationship with another broker in this market," and "I am not ready to look yet, I am just researching." Brand pillars: market intelligence first sales second, the curated few not the listing flood, discretion is the product.',
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns a SaaS-style aggressive lead capture instead of an editorial long-cycle authority play.',
+  },
+  {
+    caseId: 'copy_specialist_ecommerce_dtc_launch_landing',
+    agentId: 'COPY_SPECIALIST',
+    name: 'DTC sleep supplement launch landing (mobile-first)',
+    description:
+      'Complexity-stress case. Tests whether the LLM scales messaging strategy to a fast-velocity mobile-first DTC launch with real urgency and founder-led voice.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_copy', 'ecommerce', 'dtc', 'product_launch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.siteWideMessagingPillars.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 pillars.' },
+      { path: '$.keyObjections.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 objections.' },
+    ],
+    inputPayload: {
+      action: 'generate_copy',
+      pageType: 'product_launch',
+      funnelType: 'paid_traffic_to_purchase',
+      targetAudience: 'Mobile-first millennial and Gen Z lifestyle shoppers who arrived from a TikTok or Instagram ad. Decision speed is fast (60-90 seconds on the page) but they are skeptical of dropshipping fronts. They check reviews, founder stories, and shipping policy before tapping buy.',
+      toneOfVoice: 'energetic and confident with a founder-led voice. Specific product details, real founder face, no marketing-speak. The brand is small enough to be authentic, large enough to ship reliably.',
+      industry: 'DTC lifestyle products — wellness and home',
+      brief:
+        'Build the launch landing page for a new DTC sleep-supplement product (a melatonin-free magnesium-glycinate complex with L-theanine). The page must convert cold paid traffic from TikTok and Instagram in under 90 seconds on mobile. The offer is launch pricing ($39 down from $49) for the first 1,000 orders, free shipping over $35, and a 60-day money-back guarantee. Top objections: "is this just another generic supplement," "how do I know this will not just be melatonin in a fancy bottle," and "I have been burned by Instagram ads before." Brand pillars: the formula your sleep doctor would actually approve, founder is a real chronic-insomnia survivor, third-party tested every batch.',
+    },
+    notes: 'Complexity-stress regressions surface if the LLM returns a generic SaaS-style framework when the brief clearly calls for an urgency-led DTC launch strategy.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Funnel Engineer cases
 // ---------------------------------------------------------------------------
 
@@ -1461,6 +1546,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   UX_UI_ARCHITECT: UX_UI_ARCHITECT_CASES,
   FUNNEL_ENGINEER: FUNNEL_ENGINEER_CASES,
   WORKFLOW_OPTIMIZER: WORKFLOW_OPTIMIZER_CASES,
+  COPY_SPECIALIST: COPY_SPECIALIST_CASES,
 };
 
 async function main(): Promise<void> {
