@@ -4361,19 +4361,71 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ARCHITECT DEPARTMENT EXECUTION
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_builder': {
+        // Task #38 (April 12 2026): rewired from NOT_WIRED to live delegation.
+        // Builder department specialists are all real as of Task #37:
+        //   - UX/UI Architect (Task #35) — compose full design system
+        //   - Funnel Engineer (Task #36) — design conversion funnel
+        //   - Workflow Optimizer (Task #37) — compose multi-agent workflow
+        //   - Asset Generator (Task #26, shared with Content)
+        // BuilderManager.execute() reads payload.blueprintId and loads the
+        // site architecture from MemoryVault. If no blueprint exists, it
+        // returns BLOCKED with "Run ARCHITECT_MANAGER first" — that is
+        // honest prerequisite enforcement, not a stub. Real builds will
+        // succeed once the Architect department (Tasks #39-41) lands and
+        // an upstream blueprint has been produced.
         const builderStart = Date.now();
         trackMissionStep(context, 'delegate_to_builder', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Builder department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_builder', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - builderStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Builder department specialist rebuild is in progress. This tool will return online when the UX/UI Architect, Funnel Engineer, and Asset Generator (image portions) have been rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'BUILDER_MANAGER',
-        });
+
+        try {
+          const { BuilderManager } = await import('@/lib/agents/builder/manager');
+          const builderMgr = new BuilderManager();
+          await builderMgr.initialize();
+
+          const builderPayload: Record<string, unknown> = {
+            niche: args.niche as string | undefined,
+            objective: args.objective as string | undefined,
+            audience: args.audience as string | undefined,
+            pageType: args.pageType as string | undefined,
+            includeDesign: args.includeDesign === true || args.includeDesign === 'true',
+            includeFunnel: args.includeFunnel === true || args.includeFunnel === 'true',
+            includeCopy: args.includeCopy === true || args.includeCopy === 'true',
+            blueprintId: args.blueprintId as string | undefined,
+          };
+
+          const builderResult = await withTimeout(builderMgr.execute({
+            id: `builder_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'BUILDER_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: builderPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Builder Manager');
+
+          const builderDuration = Date.now() - builderStart;
+          trackMissionStep(context, 'delegate_to_builder',
+            builderResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Builder: ${builderResult.status}`, durationMs: builderDuration, toolResult: JSON.stringify(builderResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: builderResult.status,
+            data: builderResult.data,
+            errors: builderResult.errors,
+            manager: 'BUILDER_MANAGER',
+            reviewLink: getReviewLink('delegate_to_builder', context?.missionId),
+          });
+        } catch (builderError: unknown) {
+          const errorMsg = builderError instanceof Error ? builderError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_builder', 'FAILED', {
+            summary: `Builder: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - builderStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'BUILDER_MANAGER' });
+        }
         break;
       }
 
