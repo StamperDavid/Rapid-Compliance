@@ -4690,19 +4690,126 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // OUTREACH DEPARTMENT EXECUTION (Sprint 19)
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_outreach': {
+        // Task #45 (April 13 2026): rewired from NOT_WIRED to live delegation.
+        // Outreach department specialists are real as of:
+        //   - Email Specialist (Task #43) — composes send-ready emails via compose_email
+        //   - SMS Specialist (Task #44) — composes send-ready SMS via compose_sms
+        // Voice AI Specialist remains INFRA (telephony wrapper, not LLM).
+        //
+        // OPTION B (compose-only) — chosen April 13 2026: the OutreachManager's
+        // executeChannelOutreach now calls compose_email and compose_sms and
+        // returns composed content as OutreachExecutionResult.COMPOSED. Nothing
+        // is actually sent. Delivery is a separate concern that will be wired
+        // as a future send tool / review UI step. This matches every other
+        // rebuilt department (content agents produce, nothing ships
+        // automatically) and preserves the human-review gate.
+        //
+        // The Jasper tool args (sequenceType, channel, leadList, message,
+        // steps, delayBetweenSteps, complianceNotes) are mapped here into the
+        // OutreachManager's expected payload shape: an explicit `intent` that
+        // routes to executeSingleChannel (SEND_EMAIL / SEND_SMS — the legacy
+        // intent names are kept for the autonomous Event Router), an explicit
+        // `action` so the specialist sees compose_email / compose_sms, plus
+        // the ComposeEmailRequest / ComposeSmsRequest fields (campaignName,
+        // targetAudience, goal, brief). The first lead from leadList becomes
+        // the audience descriptor; if leadList is missing or invalid, a
+        // placeholder lead is used so a generic message can still be composed.
         const outreachStart = Date.now();
         trackMissionStep(context, 'delegate_to_outreach', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Outreach department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_outreach', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - outreachStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Outreach department specialist rebuild is in progress. This tool will return online when the Email Specialist, SMS Specialist, and Voice AI Specialist have been rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'OUTREACH_MANAGER',
-        });
+
+        try {
+          const { OutreachManager } = await import('@/lib/agents/outreach/manager');
+          const outreachMgr = new OutreachManager();
+          await outreachMgr.initialize();
+
+          // Parse leadList into an array. Accept JSON array, JSON single
+          // object, or empty/invalid (fall back to a placeholder lead).
+          let parsedLeads: Array<Record<string, unknown>> = [];
+          if (typeof args.leadList === 'string' && args.leadList.trim().length > 0) {
+            try {
+              const leadParsed: unknown = JSON.parse(args.leadList);
+              if (Array.isArray(leadParsed)) {
+                parsedLeads = leadParsed as Array<Record<string, unknown>>;
+              } else if (leadParsed && typeof leadParsed === 'object') {
+                parsedLeads = [leadParsed as Record<string, unknown>];
+              }
+            } catch {
+              // Leave parsedLeads empty — placeholder fallback below
+            }
+          }
+          const firstLead = parsedLeads[0] ?? {
+            leadId: `placeholder_${Date.now()}`,
+            firstName: 'Prospect',
+          };
+
+          // Map channel to manager intent + specialist action. multi_channel
+          // and auto default to email — the cheapest channel to compose for
+          // the first pass. A campaign that needs SMS too can call
+          // delegate_to_outreach again with channel='sms'.
+          const channelArg = (args.channel as string | undefined) ?? 'auto';
+          const intent: 'SEND_EMAIL' | 'SEND_SMS' = channelArg === 'sms' ? 'SEND_SMS' : 'SEND_EMAIL';
+          const composeAction: 'compose_email' | 'compose_sms' = intent === 'SEND_SMS' ? 'compose_sms' : 'compose_email';
+
+          // Build a single-sentence target audience descriptor from the lead
+          // profile fields we have. Empty fields are skipped.
+          const audienceParts: string[] = [];
+          const firstName = (firstLead.firstName as string | undefined) ?? (firstLead.name as string | undefined) ?? 'Prospect';
+          audienceParts.push(firstName);
+          if (firstLead.role) { audienceParts.push(`role: ${firstLead.role as string}`); }
+          if (firstLead.company) { audienceParts.push(`at ${firstLead.company as string}`); }
+          if (firstLead.industry) { audienceParts.push(`industry: ${firstLead.industry as string}`); }
+          const targetAudience = audienceParts.join(', ');
+
+          const sequenceType = (args.sequenceType as string | undefined) ?? 'cold_outreach';
+          const messageBrief = (args.message as string | undefined) ?? '';
+          const goal = `Compose a single ${composeAction === 'compose_sms' ? 'SMS' : 'email'} as part of a ${sequenceType} outreach to ${firstName}`;
+
+          const outreachPayload: Record<string, unknown> = {
+            intent,
+            action: composeAction,
+            campaignName: sequenceType,
+            targetAudience,
+            goal,
+            brief: messageBrief,
+            lead: firstLead,
+            // Pass through compliance notes for the specialist's brief if present.
+            ...(args.complianceNotes ? { complianceNotes: args.complianceNotes } : {}),
+          };
+
+          const outreachResult = await withTimeout(outreachMgr.execute({
+            id: `outreach_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'OUTREACH_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: outreachPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Outreach Manager');
+
+          const outreachDuration = Date.now() - outreachStart;
+          trackMissionStep(context, 'delegate_to_outreach',
+            outreachResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: outreachResult.status,
+            data: outreachResult.data,
+            errors: outreachResult.errors,
+            manager: 'OUTREACH_MANAGER',
+            reviewLink: getReviewLink('delegate_to_outreach', context?.missionId),
+          });
+        } catch (outreachError: unknown) {
+          const errorMsg = outreachError instanceof Error ? outreachError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_outreach', 'FAILED', {
+            summary: `Outreach: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - outreachStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'OUTREACH_MANAGER' });
+        }
         break;
       }
 

@@ -212,12 +212,23 @@ export interface ContentTemplate {
 
 /**
  * Outreach execution result
+ *
+ * Status semantics post-Task #45 (Option B compose-only model):
+ * - COMPOSED — Email/SMS specialist returned send-ready content. Delivery
+ *   is a separate concern handled by a downstream send tool / review UI.
+ *   The composed fields are in `composedContent`.
+ * - SENT — Voice channel only. Voice still uses queue-and-call semantics
+ *   via the telephony layer; voice is INFRA, not part of the LLM rebuild.
+ * - BLOCKED — Pre-flight gate failed (no contact info, DNC, compliance,
+ *   sentiment, missing specialist).
+ * - FAILED — Specialist call failed (LLM error, schema rejection, etc.).
+ * - QUEUED — Reserved for future async delivery flows.
  */
 export interface OutreachExecutionResult {
   success: boolean;
   channel: OutreachChannel;
-  messageId?: string;
-  status: 'SENT' | 'BLOCKED' | 'FAILED' | 'QUEUED';
+  status: 'COMPOSED' | 'SENT' | 'BLOCKED' | 'FAILED' | 'QUEUED';
+  composedContent?: Record<string, unknown>;
   blockReason?: string;
   error?: string;
   metadata?: Record<string, unknown>;
@@ -567,7 +578,7 @@ export class OutreachManager extends BaseManager {
           return this.handleAdaptiveTiming(taskId, payload, startTime);
 
         case 'START_RECOVERY_SEQUENCE':
-          return await this.handleCartRecovery(taskId, payload, startTime);
+          return this.handleCartRecovery(taskId, payload, startTime);
 
         case 'SINGLE_SPECIALIST':
         default: {
@@ -872,7 +883,18 @@ export class OutreachManager extends BaseManager {
   }
 
   /**
-   * Execute outreach via a specific channel
+   * Execute outreach via a specific channel.
+   *
+   * Task #45 (April 13 2026): EMAIL and SMS channels now COMPOSE only.
+   * The Email Specialist (Task #43) and SMS Specialist (Task #44) are
+   * content generators — they no longer wrap carrier APIs. This method
+   * builds a ComposeEmailRequest / ComposeSmsRequest from the lead +
+   * content brief, dispatches the compose action, and returns the
+   * composed content for downstream review/sending. Actual delivery is a
+   * separate concern (future send tool or review UI).
+   *
+   * VOICE channel is unchanged — voice is INFRA (telephony wrapper) and
+   * still uses the queue-and-call flow with status SENT.
    */
   private async executeChannelOutreach(
     lead: LeadProfile,
@@ -883,139 +905,24 @@ export class OutreachManager extends BaseManager {
     const startTime = Date.now();
 
     try {
-      let specialistId: string;
-      let payload: Record<string, unknown>;
-
       switch (channel) {
         case 'EMAIL':
-          specialistId = 'EMAIL_SPECIALIST';
-          if (!lead.email) {
-            return {
-              success: false,
-              channel,
-              status: 'BLOCKED',
-              blockReason: 'No email address for lead',
-            };
-          }
-          payload = {
-            action: 'send_email',
-            to: lead.email,
-            subject: content.subject ?? `Message for ${lead.firstName}`,
-            html: this.formatEmailHtml(content.message, content.sentiment),
-            text: content.message,
-            trackOpens: true,
-            trackClicks: true,
-            metadata: {
-              leadId: lead.leadId,
-              sentiment: content.sentiment,
-            },
-          };
-          break;
+          return await this.composeEmailViaSpecialist(lead, content, specialistResults, startTime);
 
         case 'SMS':
-          specialistId = 'SMS_SPECIALIST';
-          if (!lead.phone) {
-            return {
-              success: false,
-              channel,
-              status: 'BLOCKED',
-              blockReason: 'No phone number for lead',
-            };
-          }
-          payload = {
-            action: 'send_sms',
-            to: lead.phone,
-            message: content.message.slice(0, 1600), // SMS character limit
-            metadata: {
-              leadId: lead.leadId,
-              sentiment: content.sentiment,
-            },
-          };
-          break;
+          return await this.composeSmsViaSpecialist(lead, content, specialistResults, startTime);
 
         case 'VOICE':
-          specialistId = 'VOICE_AI_SPECIALIST';
-          if (!lead.phone) {
-            return {
-              success: false,
-              channel,
-              status: 'BLOCKED',
-              blockReason: 'No phone number for lead',
-            };
-          }
-          payload = {
-            action: 'make_call',
-            to: lead.phone,
-            record: true,
-            machineDetection: true,
-            metadata: {
-              leadId: lead.leadId,
-              sentiment: content.sentiment,
-              message: content.message,
-            },
-          };
-          break;
+          return await this.executeVoiceCall(lead, content, specialistResults, startTime);
 
         default:
           return {
             success: false,
             channel,
             status: 'FAILED',
-            error: `Unknown channel: ${channel}`,
+            error: `Unknown channel: ${channel as string}`,
           };
       }
-
-      const specialist = this.specialists.get(specialistId);
-      if (!specialist?.isFunctional()) {
-        return {
-          success: false,
-          channel,
-          status: 'BLOCKED',
-          blockReason: `${specialistId} not available`,
-        };
-      }
-
-      const message: AgentMessage = {
-        id: `outreach_${channel}_${Date.now()}`,
-        timestamp: new Date(),
-        from: this.identity.id,
-        to: specialistId,
-        type: 'COMMAND',
-        priority: 'NORMAL',
-        payload,
-        requiresResponse: true,
-        traceId: `trace_${Date.now()}`,
-      };
-
-      const report = await specialist.execute(message);
-      const executionTimeMs = Date.now() - startTime;
-
-      specialistResults.push({
-        specialistId,
-        status: report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
-        data: report.data,
-        errors: report.errors ?? [],
-        executionTimeMs,
-      });
-
-      if (report.status === 'COMPLETED') {
-        const data = report.data ? report.data as Record<string, unknown> : null;
-        return {
-          success: true,
-          channel,
-          messageId: data?.messageId as string | undefined,
-          status: 'SENT',
-          metadata: { executionTimeMs },
-        };
-      } else {
-        return {
-          success: false,
-          channel,
-          status: 'FAILED',
-          error: report.errors?.join('; ') ?? 'Unknown error',
-        };
-      }
-
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       return {
@@ -1025,6 +932,318 @@ export class OutreachManager extends BaseManager {
         error: errorMsg,
       };
     }
+  }
+
+  /**
+   * EMAIL channel — calls Email Specialist's compose_email action and
+   * returns the composed content as an OutreachExecutionResult.COMPOSED.
+   */
+  private async composeEmailViaSpecialist(
+    lead: LeadProfile,
+    content: { subject?: string; message: string; sentiment: LeadSentiment },
+    specialistResults: SpecialistResult[],
+    startTime: number,
+  ): Promise<OutreachExecutionResult> {
+    if (!lead.email) {
+      return {
+        success: false,
+        channel: 'EMAIL',
+        status: 'BLOCKED',
+        blockReason: 'No email address for lead',
+      };
+    }
+
+    const specialist = this.specialists.get('EMAIL_SPECIALIST');
+    if (!specialist?.isFunctional()) {
+      return {
+        success: false,
+        channel: 'EMAIL',
+        status: 'BLOCKED',
+        blockReason: 'EMAIL_SPECIALIST not available',
+      };
+    }
+
+    const composePayload: Record<string, unknown> = {
+      action: 'compose_email',
+      campaignName: this.deriveCampaignName(lead, content.sentiment),
+      targetAudience: this.deriveTargetAudience(lead),
+      goal: this.deriveGoal(content, lead, 'EMAIL'),
+      brief: content.message,
+    };
+
+    const message: AgentMessage = {
+      id: `outreach_EMAIL_${Date.now()}`,
+      timestamp: new Date(),
+      from: this.identity.id,
+      to: 'EMAIL_SPECIALIST',
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      payload: composePayload,
+      requiresResponse: true,
+      traceId: `trace_${Date.now()}`,
+    };
+
+    const report = await specialist.execute(message);
+    const executionTimeMs = Date.now() - startTime;
+
+    specialistResults.push({
+      specialistId: 'EMAIL_SPECIALIST',
+      status: report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
+      data: report.data,
+      errors: report.errors ?? [],
+      executionTimeMs,
+    });
+
+    if (report.status !== 'COMPLETED') {
+      return {
+        success: false,
+        channel: 'EMAIL',
+        status: 'FAILED',
+        error: report.errors?.join('; ') ?? 'Email Specialist returned non-COMPLETED status',
+      };
+    }
+
+    const composed = (report.data ?? null) as Record<string, unknown> | null;
+    if (!composed) {
+      return {
+        success: false,
+        channel: 'EMAIL',
+        status: 'FAILED',
+        error: 'Email Specialist returned COMPLETED with no data',
+      };
+    }
+
+    return {
+      success: true,
+      channel: 'EMAIL',
+      status: 'COMPOSED',
+      composedContent: composed,
+      metadata: {
+        executionTimeMs,
+        recipientEmail: lead.email,
+        leadId: lead.leadId,
+        sentiment: content.sentiment,
+      },
+    };
+  }
+
+  /**
+   * SMS channel — calls SMS Specialist's compose_sms action and returns
+   * the composed content as an OutreachExecutionResult.COMPOSED.
+   */
+  private async composeSmsViaSpecialist(
+    lead: LeadProfile,
+    content: { subject?: string; message: string; sentiment: LeadSentiment },
+    specialistResults: SpecialistResult[],
+    startTime: number,
+  ): Promise<OutreachExecutionResult> {
+    if (!lead.phone) {
+      return {
+        success: false,
+        channel: 'SMS',
+        status: 'BLOCKED',
+        blockReason: 'No phone number for lead',
+      };
+    }
+
+    const specialist = this.specialists.get('SMS_SPECIALIST');
+    if (!specialist?.isFunctional()) {
+      return {
+        success: false,
+        channel: 'SMS',
+        status: 'BLOCKED',
+        blockReason: 'SMS_SPECIALIST not available',
+      };
+    }
+
+    const composePayload: Record<string, unknown> = {
+      action: 'compose_sms',
+      campaignName: this.deriveCampaignName(lead, content.sentiment),
+      targetAudience: this.deriveTargetAudience(lead),
+      goal: this.deriveGoal(content, lead, 'SMS'),
+      brief: content.message,
+    };
+
+    const message: AgentMessage = {
+      id: `outreach_SMS_${Date.now()}`,
+      timestamp: new Date(),
+      from: this.identity.id,
+      to: 'SMS_SPECIALIST',
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      payload: composePayload,
+      requiresResponse: true,
+      traceId: `trace_${Date.now()}`,
+    };
+
+    const report = await specialist.execute(message);
+    const executionTimeMs = Date.now() - startTime;
+
+    specialistResults.push({
+      specialistId: 'SMS_SPECIALIST',
+      status: report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
+      data: report.data,
+      errors: report.errors ?? [],
+      executionTimeMs,
+    });
+
+    if (report.status !== 'COMPLETED') {
+      return {
+        success: false,
+        channel: 'SMS',
+        status: 'FAILED',
+        error: report.errors?.join('; ') ?? 'SMS Specialist returned non-COMPLETED status',
+      };
+    }
+
+    const composed = (report.data ?? null) as Record<string, unknown> | null;
+    if (!composed) {
+      return {
+        success: false,
+        channel: 'SMS',
+        status: 'FAILED',
+        error: 'SMS Specialist returned COMPLETED with no data',
+      };
+    }
+
+    return {
+      success: true,
+      channel: 'SMS',
+      status: 'COMPOSED',
+      composedContent: composed,
+      metadata: {
+        executionTimeMs,
+        recipientPhone: lead.phone,
+        leadId: lead.leadId,
+        sentiment: content.sentiment,
+      },
+    };
+  }
+
+  /**
+   * VOICE channel — unchanged. Voice is INFRA (telephony wrapper) and
+   * still uses queue-and-call semantics. Returns SENT on success.
+   */
+  private async executeVoiceCall(
+    lead: LeadProfile,
+    content: { subject?: string; message: string; sentiment: LeadSentiment },
+    specialistResults: SpecialistResult[],
+    startTime: number,
+  ): Promise<OutreachExecutionResult> {
+    if (!lead.phone) {
+      return {
+        success: false,
+        channel: 'VOICE',
+        status: 'BLOCKED',
+        blockReason: 'No phone number for lead',
+      };
+    }
+
+    const specialist = this.specialists.get('VOICE_AI_SPECIALIST');
+    if (!specialist?.isFunctional()) {
+      return {
+        success: false,
+        channel: 'VOICE',
+        status: 'BLOCKED',
+        blockReason: 'VOICE_AI_SPECIALIST not available',
+      };
+    }
+
+    const message: AgentMessage = {
+      id: `outreach_VOICE_${Date.now()}`,
+      timestamp: new Date(),
+      from: this.identity.id,
+      to: 'VOICE_AI_SPECIALIST',
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      payload: {
+        action: 'make_call',
+        to: lead.phone,
+        record: true,
+        machineDetection: true,
+        metadata: {
+          leadId: lead.leadId,
+          sentiment: content.sentiment,
+          message: content.message,
+        },
+      },
+      requiresResponse: true,
+      traceId: `trace_${Date.now()}`,
+    };
+
+    const report = await specialist.execute(message);
+    const executionTimeMs = Date.now() - startTime;
+
+    specialistResults.push({
+      specialistId: 'VOICE_AI_SPECIALIST',
+      status: report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
+      data: report.data,
+      errors: report.errors ?? [],
+      executionTimeMs,
+    });
+
+    if (report.status !== 'COMPLETED') {
+      return {
+        success: false,
+        channel: 'VOICE',
+        status: 'FAILED',
+        error: report.errors?.join('; ') ?? 'Voice AI Specialist returned non-COMPLETED status',
+      };
+    }
+
+    return {
+      success: true,
+      channel: 'VOICE',
+      status: 'SENT',
+      metadata: { executionTimeMs },
+    };
+  }
+
+  /**
+   * Build a campaign name slug from lead context + sentiment for the
+   * specialist's brief. Keeps composed batches groupable in analytics.
+   */
+  private deriveCampaignName(lead: LeadProfile, sentiment: LeadSentiment): string {
+    const industry = lead.industry?.toLowerCase().replace(/\s+/g, '_') ?? 'general';
+    const sentimentLabel = sentiment.toLowerCase();
+    return `outreach_${industry}_${sentimentLabel}`;
+  }
+
+  /**
+   * Build a target-audience description string from the lead profile.
+   * The Email/SMS Specialists need a single descriptive sentence, not
+   * a structured object, because their input contract takes prose for
+   * audience context.
+   */
+  private deriveTargetAudience(lead: LeadProfile): string {
+    const parts: string[] = [];
+    parts.push(`${lead.firstName}${lead.lastName ? ` ${lead.lastName}` : ''}`);
+    if (lead.role) { parts.push(`role: ${lead.role}`); }
+    if (lead.company) { parts.push(`at ${lead.company}`); }
+    if (lead.industry) { parts.push(`industry: ${lead.industry}`); }
+    if (lead.painPoints && lead.painPoints.length > 0) {
+      parts.push(`pain points: ${lead.painPoints.join(', ')}`);
+    }
+    return parts.join(', ');
+  }
+
+  /**
+   * Derive a one-sentence goal for the specialist from the inbound
+   * content brief, lead context, and channel. The specialist takes this
+   * as the "what is this message trying to accomplish" framing.
+   */
+  private deriveGoal(
+    content: { subject?: string; message: string; sentiment: LeadSentiment },
+    lead: LeadProfile,
+    channel: 'EMAIL' | 'SMS',
+  ): string {
+    const sentimentDescriptor =
+      content.sentiment === 'POSITIVE' ? 'a receptive prospect' :
+      content.sentiment === 'NEGATIVE' ? 'a guarded prospect (use gentle, value-focused tone)' :
+      content.sentiment === 'HOSTILE' ? 'a hostile prospect (do not deploy without human review)' :
+      'a neutral prospect';
+    const subjectHint = content.subject ? ` — subject hint: ${content.subject}` : '';
+    return `Compose a single ${channel.toLowerCase()} message to ${lead.firstName} (${sentimentDescriptor}) that advances the relationship per the brief${subjectHint}`;
   }
 
   // ==========================================================================
@@ -1680,21 +1899,6 @@ Best regards`;
   }
 
   /**
-   * Format email HTML with sentiment-aware styling
-   */
-  private formatEmailHtml(content: string, sentiment: LeadSentiment): string {
-    // Convert line breaks to HTML
-    const htmlContent = content.split('\n').join('<br>');
-
-    // Add gentle styling for negative sentiment
-    const style = sentiment === 'NEGATIVE'
-      ? 'font-family: Arial, sans-serif; line-height: 1.6; color: #333;'
-      : 'font-family: Arial, sans-serif; line-height: 1.6;';
-
-    return `<div style="${style}">${htmlContent}</div>`;
-  }
-
-  /**
    * Flag lead for human review
    */
   private async flagForHumanReview(
@@ -1793,7 +1997,10 @@ Best regards`;
 
       const contacts = existing?.value?.contacts ?? [];
       for (const result of status.stepResults) {
-        if (result.status === 'SENT') {
+        // Count both COMPOSED (email/sms — content ready for review/send)
+        // and SENT (voice — actually queued at telephony) as contact events
+        // for frequency tracking purposes.
+        if (result.status === 'COMPOSED' || result.status === 'SENT') {
           contacts.push({
             timestamp: new Date(),
             channel: result.channel,
@@ -2165,52 +2372,49 @@ Best regards`;
 
   /**
    * Handle cart abandonment recovery sequence.
+   *
+   * Task #45 (April 13 2026): the pre-rebuild flow dispatched
+   * `action: 'send_email'` with a hardcoded template name and a thin
+   * recipient/cartValue payload. The rebuilt Email Specialist (Task #43)
+   * accepts only `compose_email` with a structured ComposeEmailRequest
+   * (campaignName, targetAudience, goal, brief). The cart-recovery
+   * autonomous flow does not yet provide that shape — the Event Router
+   * sends raw cart data, not lead context. Wiring this end-to-end is
+   * out of scope for Task #45 and belongs in a dedicated cart-recovery
+   * autonomy task that will look up the customer profile, build a
+   * ComposeEmailRequest from cart context, call compose_email, and hand
+   * off to the (future) review/send pipeline.
+   *
+   * Until that work happens this handler returns BLOCKED honestly
+   * rather than calling a dead action that would fail at the specialist.
    */
-  private async handleCartRecovery(
+  private handleCartRecovery(
     taskId: string,
     payload: Record<string, unknown> | null,
     startTime: number
-  ): Promise<AgentReport> {
+  ): AgentReport {
     const cartId = (payload?.cartId as string) ?? '';
     const customerEmail = (payload?.customerEmail as string) ?? '';
     const cartValue = (payload?.cartValue as number) ?? 0;
 
-    this.log('INFO', `Cart recovery: ${cartId} (${customerEmail}, $${cartValue})`);
+    this.log('WARN', `Cart recovery autonomous flow not yet wired post-rebuild. cartId=${cartId} customerEmail=${customerEmail}`);
 
-    // Delegate to Email Specialist for recovery sequence
-    const recoveryMessage: AgentMessage = {
-      id: `cart_recovery_${taskId}`,
-      timestamp: new Date(),
-      from: this.identity.id,
-      to: 'EMAIL_SPECIALIST',
-      type: 'COMMAND',
-      priority: 'HIGH',
-      payload: {
-        action: 'send_email',
-        template: 'cart_abandonment_recovery',
-        recipientEmail: customerEmail,
-        variables: {
-          cartId,
-          cartValue,
-          items: payload?.items,
-        },
-      },
-      requiresResponse: true,
-      traceId: taskId,
-    };
-
-    const report = await this.delegateToSpecialist('EMAIL_SPECIALIST', recoveryMessage);
+    const blockReason =
+      'Cart recovery autonomous flow needs its own rewire post-Task-#45. ' +
+      'Email Specialist now requires a ComposeEmailRequest (campaignName, targetAudience, goal, brief), ' +
+      'and the cart recovery payload only carries raw cart data. Build a customer-lookup + compose_email ' +
+      'mapping in a dedicated cart-recovery autonomy task before re-enabling.';
 
     const durationMs = Date.now() - startTime;
 
-    return this.createReport(taskId, report.status, {
+    return this.createReport(taskId, 'BLOCKED', {
       action: 'START_RECOVERY_SEQUENCE',
       cartId,
       customerEmail,
       cartValue,
-      emailSent: report.status === 'COMPLETED',
+      blockReason,
       durationMs,
-    });
+    }, [blockReason]);
   }
 }
 
