@@ -31,6 +31,7 @@ import { funnelEngineerExecutor } from '../src/lib/regression/executors/funnel-e
 import { workflowOptimizerExecutor } from '../src/lib/regression/executors/workflow-optimizer-executor';
 import { copySpecialistExecutor } from '../src/lib/regression/executors/copy-specialist-executor';
 import { uxUiSpecialistExecutor } from '../src/lib/regression/executors/ux-ui-specialist-executor';
+import { funnelPathologistExecutor } from '../src/lib/regression/executors/funnel-pathologist-executor';
 import { runRegression, type CaseExecutor } from '../src/lib/regression/runner';
 import type { CaseDiff, DiffEntry, RegressionRun } from '../src/types/regression';
 
@@ -50,6 +51,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   WORKFLOW_OPTIMIZER: workflowOptimizerExecutor,
   COPY_SPECIALIST: copySpecialistExecutor,
   UX_UI_SPECIALIST: uxUiSpecialistExecutor,
+  FUNNEL_PATHOLOGIST: funnelPathologistExecutor,
 };
 
 interface CliArgs {

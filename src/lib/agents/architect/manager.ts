@@ -463,6 +463,18 @@ export interface SiteArchitecture {
     avoidPhrases: string[];
   };
 
+  // Funnel strategy (from Funnel Pathologist — Task #41)
+  // Optional so existing consumers of SiteArchitecture don't break when the
+  // Funnel Pathologist is missing, FAILED, or not yet wired. When present,
+  // these fields are the strategic funnel diagnosis the Builder layer reads
+  // as input to the concrete Funnel Engineer.
+  funnelStrategy?: {
+    framework: string;
+    primaryLeak: string;
+    criticalLeaks: string[];
+    recoveryPlays: string[];
+  };
+
   // Metadata
   metadata: {
     derivedFromBrandDNA: boolean;
@@ -1817,6 +1829,24 @@ DELIVERABLES:
       avoidPhrases: brandDNA?.avoidPhrases ?? [],
     };
 
+    // Derive funnel strategy from Funnel Pathologist (Task #41)
+    // Only populated when the specialist returned a usable diagnosis — if the
+    // specialist is missing or FAILED, funnelStrategy stays undefined and
+    // downstream Builder consumers fall back to their own defaults.
+    const funnelData = funnelResult?.data as Record<string, unknown> | null;
+    const funnelStrategy = funnelData !== null && funnelResult?.status === 'SUCCESS'
+      ? {
+          framework: (funnelData.funnelFramework as string) ?? funnelFlow.type,
+          primaryLeak: (funnelData.primaryConversionLeak as string) ?? 'OFFER_CLARITY',
+          criticalLeaks: Array.isArray(funnelData.criticalLeakPoints)
+            ? (funnelData.criticalLeakPoints as string[])
+            : [],
+          recoveryPlays: Array.isArray(funnelData.recoveryPlays)
+            ? (funnelData.recoveryPlays as string[])
+            : [],
+        }
+      : undefined;
+
     // Calculate metadata
     const successfulSpecialists = specialistResults.filter(r => r.status === 'SUCCESS').length;
     const confidence = successfulSpecialists / specialistResults.length;
@@ -1847,6 +1877,7 @@ DELIVERABLES:
       navigation,
       designDirection,
       contentStructure,
+      funnelStrategy,
       metadata: {
         derivedFromBrandDNA: brandDNA !== null,
         intelligenceBriefsUsed: intelligenceBriefs.map(b => b.id),

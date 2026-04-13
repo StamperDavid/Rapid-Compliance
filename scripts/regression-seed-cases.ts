@@ -1396,6 +1396,120 @@ const UX_UI_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
 ];
 
 // ---------------------------------------------------------------------------
+// Funnel Pathologist cases (Architect-layer strategic funnel diagnosis, Task #41)
+// ---------------------------------------------------------------------------
+
+const FUNNEL_PATHOLOGIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'funnel_pathologist_saas_sales_ops_free_trial',
+    agentId: 'FUNNEL_PATHOLOGIST',
+    name: 'SaaS sales-ops free-trial funnel diagnosis (canonical)',
+    description:
+      'Canonical strategic funnel diagnosis case. Exercises funnelFramework enum, primaryConversionLeak enum, critical leak points count range, recovery plays count range, key metrics count range, and rationale brief-echo.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['analyze_funnel', 'saas', 'free_trial', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.criticalLeakPoints.length', kind: 'arrayLength', min: 2, max: 6, reason: 'Schema allows 2-6 critical leak points.' },
+      { path: '$.recoveryPlays.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 recovery plays.' },
+      { path: '$.keyMetricsToWatch.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 key metrics.' },
+    ],
+    inputPayload: {
+      action: 'analyze_funnel',
+      funnelType: 'free_trial',
+      businessType: 'B2B SaaS — sales velocity platform',
+      stages: [
+        { name: 'awareness', goal: 'capture problem-aware founders from LinkedIn ads', pages: ['landing'] },
+        { name: 'trial_signup', goal: 'convert landing visitors to free trial accounts', pages: ['pricing', 'signup'] },
+        { name: 'activation', goal: 'hit first-value moment within 48 hours of signup', pages: ['onboarding', 'dashboard'] },
+        { name: 'day_14_upgrade', goal: 'trigger upgrade prompt when trial value limit is hit', pages: ['upgrade_modal'] },
+        { name: 'paid_conversion', goal: 'convert engaged trial users to paid plans', pages: ['checkout'] },
+      ],
+      conversionPoints: [
+        { location: 'landing_hero', action: 'click_start_trial', target: 'signup' },
+        { location: 'pricing_page', action: 'select_plan', target: 'signup' },
+        { location: 'day_14_upgrade_modal', action: 'click_upgrade', target: 'checkout' },
+      ],
+      brief:
+        'Diagnose the cold-traffic free-trial funnel for SalesVelocity.ai targeting founders running their own outbound today. Visitors arrive from a LinkedIn ad about "stop sending more cold emails." We sell a complete sales velocity platform that pairs every client with real human specialists running their outbound, content, and pipeline — not a self-serve dashboard. Pricing is month-to-month with a 30-day results guarantee. The page must convert problem-aware visitors who have been burned by cold-outreach agencies. Mobile traffic is roughly 40% of LinkedIn ad traffic. Previous attempts at this funnel hit trust issues on the pricing page — founders ask "how is this different from another agency that promised leads." Activation after signup requires a 30-minute onboarding call with a human specialist which is a conversion risk vs self-serve SaaS norms.',
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole Funnel Pathologist surface.',
+  },
+  {
+    caseId: 'funnel_pathologist_realestate_luxury_lead_capture',
+    agentId: 'FUNNEL_PATHOLOGIST',
+    name: 'Luxury real estate long-cycle lead capture (industry switch)',
+    description:
+      'Industry-switching stress case with a long sales cycle. Tests whether the LLM adapts funnel framework choice and leak diagnosis to an editorial luxury market with restraint as the brand pillar and 6-18 month nurture cycles.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['analyze_funnel', 'real_estate', 'luxury', 'lead_capture', 'long_cycle', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.criticalLeakPoints.length', kind: 'arrayLength', min: 2, max: 6, reason: 'Schema allows 2-6 critical leak points.' },
+      { path: '$.recoveryPlays.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 recovery plays.' },
+      { path: '$.keyMetricsToWatch.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 key metrics.' },
+    ],
+    inputPayload: {
+      action: 'analyze_funnel',
+      funnelType: 'lead_capture_long_cycle',
+      businessType: 'Luxury residential real estate',
+      stages: [
+        { name: 'editorial_awareness', goal: 'attract wealth-managed individuals via quarterly market intelligence', pages: ['homepage', 'market_report_landing'] },
+        { name: 'lead_magnet_optin', goal: 'capture email in exchange for the market intelligence report', pages: ['optin_form'] },
+        { name: 'nurture', goal: 'build authority over 6-18 months via quarterly reports and curated listings', pages: ['email_sequence', 'listings'] },
+        { name: 'broker_conversation', goal: 'convert nurtured leads into broker conversations', pages: ['broker_contact'] },
+      ],
+      conversionPoints: [
+        { location: 'homepage_hero', action: 'click_market_report_cta', target: 'optin_form' },
+        { location: 'email_sequence', action: 'click_listing_detail', target: 'listings' },
+        { location: 'listing_detail', action: 'request_private_showing', target: 'broker_contact' },
+      ],
+      brief:
+        'Diagnose the long-cycle lead-capture funnel for a luxury real estate brokerage operating in three markets (Aspen, Naples, Hamptons) representing a small curated portfolio of $5M-$50M residential properties. The funnel must establish editorial credibility with wealth-managed individuals, family offices, and corporate executives evaluating properties on 6-18 month sale cycles. The lead magnet is a quarterly market intelligence report. Visitors are skeptical of glossy real estate sites and read boldness as cheap. Desktop traffic dominates — these visitors research from desks, not phones. The biggest historical loss for this brokerage has been visitors opting into the report but never returning — the nurture sequence has not converted browsers into broker conversations. Visual restraint is the entire brand position.',
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns a FREE_TRIAL or fast-decision framework when the brief clearly calls for long-cycle editorial nurture.',
+  },
+  {
+    caseId: 'funnel_pathologist_ecommerce_dtc_launch_direct_checkout',
+    agentId: 'FUNNEL_PATHOLOGIST',
+    name: 'DTC sleep supplement launch direct-checkout funnel (mobile-first)',
+    description:
+      'Complexity-stress case with explicit checkout-dropoff history. Tests whether the LLM correctly identifies shipping-calculation friction as the primary conversion leak rather than defaulting to OFFER_CLARITY.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['analyze_funnel', 'ecommerce', 'dtc', 'direct_checkout', 'mobile_first', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.criticalLeakPoints.length', kind: 'arrayLength', min: 2, max: 6, reason: 'Schema allows 2-6 critical leak points.' },
+      { path: '$.recoveryPlays.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 recovery plays.' },
+      { path: '$.keyMetricsToWatch.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 key metrics.' },
+    ],
+    inputPayload: {
+      action: 'analyze_funnel',
+      funnelType: 'paid_traffic_to_purchase',
+      businessType: 'DTC lifestyle products — wellness and home',
+      stages: [
+        { name: 'paid_ad_click', goal: 'capture cold traffic from TikTok and Instagram ads', pages: ['landing'] },
+        { name: 'product_review', goal: 'overcome skepticism with founder story and third-party testing', pages: ['landing', 'founder_video'] },
+        { name: 'offer_decision', goal: 'convert to purchase within 90 seconds on mobile', pages: ['pricing_offer'] },
+        { name: 'checkout', goal: 'complete purchase flow with minimal friction', pages: ['cart', 'checkout', 'confirmation'] },
+      ],
+      conversionPoints: [
+        { location: 'landing_hero', action: 'click_add_to_cart', target: 'cart' },
+        { location: 'founder_video', action: 'watch_then_click_cta', target: 'pricing_offer' },
+        { location: 'cart', action: 'click_checkout', target: 'checkout' },
+        { location: 'checkout', action: 'click_complete_order', target: 'confirmation' },
+      ],
+      brief:
+        'Diagnose the direct-checkout funnel for a new DTC sleep-supplement product launch (a melatonin-free magnesium-glycinate complex with L-theanine). The funnel must convert cold paid traffic from TikTok and Instagram in under 90 seconds on mobile. Mobile traffic is 90% of total. The offer is launch pricing ($39 down from $49) for the first 1,000 orders, free shipping over $35, and a 60-day money-back guarantee. The audience is millennial and Gen Z, mobile-first, fast-decision, but skeptical of dropshipping fronts. They check reviews, founder stories, and shipping policy before tapping buy. Previous launches in this category have lost conversions at checkout when shipping costs appeared on the final step — the audience expects either free shipping or transparent upfront shipping framing. The brand has a real founder face (a chronic-insomnia survivor) and third-party batch testing — both must be visually prominent.',
+    },
+    notes: 'Complexity-stress regressions surface if the LLM picks TRUST_SIGNALS or OFFER_CLARITY when the brief explicitly names CHECKOUT_DROPOFF via shipping-calculation friction.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Funnel Engineer cases
 // ---------------------------------------------------------------------------
 
@@ -1630,6 +1744,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   WORKFLOW_OPTIMIZER: WORKFLOW_OPTIMIZER_CASES,
   COPY_SPECIALIST: COPY_SPECIALIST_CASES,
   UX_UI_SPECIALIST: UX_UI_SPECIALIST_CASES,
+  FUNNEL_PATHOLOGIST: FUNNEL_PATHOLOGIST_CASES,
 };
 
 async function main(): Promise<void> {
