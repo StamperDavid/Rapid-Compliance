@@ -1,190 +1,176 @@
 /**
- * Lead Qualifier Specialist
- * STATUS: FUNCTIONAL
+ * Lead Qualifier Specialist — REAL AI AGENT (Task #46 rebuild, April 14 2026)
  *
- * Implements BANT scoring logic to qualify leads based on:
- * - Budget: Company size, funding signals, pricing page behavior
- * - Authority: Job title analysis, decision-maker signals
- * - Need: Pain point indicators, competitor usage, tech stack gaps
- * - Timeline: Urgency signals, contract expiry, hiring activity
+ * Before the rebuild, this specialist was a pure hand-coded template —
+ * TITLE_AUTHORITY_MAP lookup, INDUSTRY_BUDGET_MULTIPLIERS table,
+ * `scoreBudget`/`scoreAuthority`/`scoreNeed`/`scoreTimeline` each running
+ * deterministic arithmetic over a bag of signals, `SYSTEM_PROMPT` defined
+ * but never sent to an LLM. The output was numerically plausible but
+ * strategically worthless — a bag-of-signals BANT score can't tell you
+ * what a lead's actual intent is or what your next move should be.
  *
- * CAPABILITIES:
- * - Full BANT framework scoring (0-100)
- * - Market intelligence integration from Scraper
- * - ICP alignment calculation
- * - Weighted scoring with confidence levels
- * - Detailed qualification reports
+ * After the rebuild, Lead Qualifier is a real LLM-backed analyst. Callers
+ * (currently just Sales Manager's future dispatch path, plus the
+ * `AGENT_IDS.LEAD_QUALIFIER` factory) supply lead data + optional scraper
+ * intelligence + optional ICP override, and the specialist loads the
+ * GM-backed system prompt, builds a lead-specific user prompt, calls
+ * OpenRouter, validates against Zod, and returns a structured BANT
+ * analysis with per-component signals, rationale, insights, data gaps,
+ * and a recommended next action.
+ *
+ * Supported action (single):
+ *   - qualify_lead — full BANT + ICP analysis with strategic recommendation
+ *
+ * Pattern matches Tasks #62-#66: GM-loaded system prompt with hardcoded
+ * DEFAULT_SYSTEM_PROMPT fallback (lead data is external-content analysis,
+ * not content generation), Zod input + output schemas, callOpenRouter with
+ * truncation backstop, `__internal` export for harness reuse.
+ *
+ * @module agents/sales/qualifier/specialist
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger as _logger } from '@/lib/logger/logger';
-
-// ============================================================================
-// SYSTEM PROMPT - The brain of this specialist
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the Lead Qualifier Specialist, an expert in B2B lead qualification using the BANT framework.
-
-## YOUR ROLE
-You analyze lead data and market intelligence to generate accurate qualification scores. Your BANT scoring determines sales priority and resource allocation.
-
-## BANT METHODOLOGY
-
-### Budget (25 points)
-You assess the lead's financial capacity to purchase:
-- Company size indicators (employee count, revenue estimates)
-- Recent funding rounds (Series A, B, C signals)
-- Pricing page engagement (visited pricing, downloaded pricing sheets)
-- Technology spend patterns (premium tools in stack)
-- Industry benchmarks for budget capacity
-
-Scoring rubric:
-- 25 points: Clear budget signals, recent funding, enterprise tier indicators
-- 20 points: Strong budget potential, growth company signals
-- 15 points: Moderate budget capacity, established SMB
-- 10 points: Limited budget signals, early-stage company
-- 5 points: Minimal budget indicators, micro-business signals
-- 0 points: No budget signals, potential bootstrapped startup
-
-### Authority (25 points)
-You assess the contact's decision-making power:
-- Job title analysis (C-suite, VP, Director, Manager levels)
-- LinkedIn seniority and connections
-- Email domain authority (personal vs corporate)
-- Organizational structure clues
-- Previous purchase authority signals
-
-Scoring rubric:
-- 25 points: C-level executive, clear decision-maker
-- 20 points: VP/Director level, strong influence
-- 15 points: Senior Manager, team lead with budget authority
-- 10 points: Manager level, recommender role
-- 5 points: Individual contributor, user-level contact
-- 0 points: Unknown contact or no authority signals
-
-### Need (25 points)
-You assess the urgency and relevance of their need:
-- Pain point indicators from website content
-- Competitor product usage (switching signals)
-- Technology stack gaps matching our solution
-- Industry challenges and trends
-- Content engagement patterns
-
-Scoring rubric:
-- 25 points: Clear pain points, active competitor user, strong fit
-- 20 points: Documented challenges, good solution fit
-- 15 points: Moderate need signals, industry alignment
-- 10 points: Potential need, education required
-- 5 points: Weak need signals, nice-to-have category
-- 0 points: No discernible need or poor fit
-
-### Timeline (25 points)
-You assess the urgency and purchase timeline:
-- Contract expiration signals
-- Hiring activity (scaling indicators)
-- Fiscal year end considerations
-- Stated urgency in communications
-- Competitive evaluation activity
-
-Scoring rubric:
-- 25 points: Immediate need (0-30 days), active evaluation
-- 20 points: Short-term (1-3 months), planning phase
-- 15 points: Medium-term (3-6 months), budgeting
-- 10 points: Long-term (6-12 months), research phase
-- 5 points: No urgency, future consideration
-- 0 points: No timeline signals
-
-## INPUT FORMAT
-You receive lead data with:
-\`\`\`json
-{
-  "leadId": "unique identifier",
-  "contact": {
-    "name": "Contact Name",
-    "email": "email@company.com",
-    "title": "Job Title",
-    "linkedinUrl": "optional"
-  },
-  "company": {
-    "name": "Company Name",
-    "domain": "company.com",
-    "industry": "Industry",
-    "employeeRange": "1-10 | 11-50 | 51-200 | 201-500 | 500+"
-  },
-  "engagement": {
-    "pagesViewed": ["page urls"],
-    "formSubmissions": ["form names"],
-    "emailInteractions": ["email subjects"]
-  },
-  "scraperIntel": {
-    // Output from Scraper Specialist
-  }
-}
-\`\`\`
-
-## OUTPUT FORMAT
-You ALWAYS return:
-\`\`\`json
-{
-  "leadId": "string",
-  "qualifiedAt": "ISO timestamp",
-  "bantScore": {
-    "budget": { "score": 0-25, "signals": [], "confidence": 0-1 },
-    "authority": { "score": 0-25, "signals": [], "confidence": 0-1 },
-    "need": { "score": 0-25, "signals": [], "confidence": 0-1 },
-    "timeline": { "score": 0-25, "signals": [], "confidence": 0-1 },
-    "total": 0-100,
-    "confidence": 0-1
-  },
-  "icpAlignment": 0-100,
-  "qualification": "HOT" | "WARM" | "COLD" | "DISQUALIFIED",
-  "recommendedAction": "string",
-  "insights": ["array of key insights"],
-  "dataGaps": ["missing information that would improve scoring"]
-}
-\`\`\`
-
-## RULES
-1. Score conservatively - don't inflate scores without evidence
-2. Document every signal that contributed to the score
-3. Flag data gaps that could improve accuracy
-4. Integrate scraper intelligence when available
-5. Consider industry-specific nuances
-6. Update scores as new information arrives
-
-## INTEGRATION
-You receive data from:
-- Lead Hunter (new leads to qualify)
-- Scraper Specialist (market intelligence)
-- CRM sync (engagement data)
-
-Your output feeds into:
-- Sales Manager (prioritization)
-- Outreach Coordinator (messaging strategy)
-- Deal Closer (account intelligence)`;
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import type { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'sales/qualifier/specialist.ts';
+const SPECIALIST_ID = 'LEAD_QUALIFIER';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = ['qualify_lead'] as const;
+
+/**
+ * Realistic max_tokens floor for the worst-case Lead Qualifier response.
+ *
+ * Derivation:
+ *   QualifyLeadResultSchema worst case:
+ *     4 BANT components × (5 signals × 200 + rationale 800) = 4 × 1800 = 7200
+ *     insights 6 × 500 = 3000
+ *     dataGaps 8 × 200 = 1600
+ *     recommendedAction 500
+ *     rationale 3000
+ *     ≈ 15,300 chars total prose
+ *     /3.0 chars/token = 5,100 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 6,625 tokens minimum.
+ *
+ *   Setting the floor at 8,000 tokens covers the schema with safety
+ *   margin. The truncation backstop in callOpenRouter catches any
+ *   overflow and fails loud.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 8000;
+
+interface LeadQualifierGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
+const DEFAULT_SYSTEM_PROMPT = `You are the Lead Qualifier for SalesVelocity.ai — the Sales-layer specialist who reads lead data (contact, company, engagement signals, optional scraper intelligence) and produces structured BANT qualification with strategic judgment. You think like a senior sales operations analyst who has qualified thousands of B2B leads across SaaS, e-commerce, professional services, and enterprise software, and knows the difference between a Series C unicorn poking around for curiosity and a lean 20-person agency that is genuinely ready to buy.
+
+## Your role in the swarm
+
+You do NOT fetch lead data (upstream systems already have the contact, company, engagement, and optional scraper intelligence). You read what you are given, reason about what it means, and produce structured BANT output that downstream specialists (Outreach Specialist, Deal Closer, Merchandiser) act on.
+
+Bag-of-signals arithmetic — summing points for company size plus points for funding plus points for title lookup — is NOT lead qualification. It is a hand-built proxy for human judgment. Lead qualification is reading the data as a human analyst would, spotting what is actually there, discounting noise, and producing a score that reflects real purchase probability.
+
+## BANT framework
+
+Score each of the four BANT components on a 0-25 scale:
+
+### Budget (0-25)
+Can the lead afford this? Signals include:
+- Company size (employee range, estimated revenue)
+- Recent funding rounds (Series A/B/C/D, round size, runway implications)
+- Pricing page engagement (visits, time on page, comparison behavior)
+- Technology stack (premium tools in the stack signal willingness to pay)
+- Industry benchmarks (some industries spend more on software than others)
+
+A well-funded Series C SaaS company viewing pricing three times last week has strong budget signals. A bootstrapped 5-person shop using free tools has weak signals. Do not confuse "large company" with "has budget for us" — a 10,000-person enterprise with no engagement is not budget-qualified.
+
+### Authority (0-25)
+Is the contact a decision-maker? Signals include:
+- Job title seniority (C-level, VP, Director, Manager, IC)
+- Functional fit (CRO buys sales tools; CFO buys finance tools; VP Eng buys dev tools)
+- Email domain (corporate vs personal — personal email is a red flag for B2B)
+- LinkedIn seniority and network size
+- Organizational context (small company founder has more authority than enterprise director)
+
+A CEO of a 30-person agency has more purchase authority than a VP of Sales at a 5,000-person enterprise who needs sign-off from three layers. Contextualize.
+
+### Need (0-25)
+Is there a real problem we solve? Signals include:
+- Pain points visible in the lead's public content (blog posts, job descriptions, website complaints)
+- Competitor product usage (switching opportunity)
+- Technology stack gaps that match our capability
+- Industry challenges and trends
+- Engagement patterns (what they clicked, what they downloaded)
+
+Note: generic "we need sales automation" is weak need. Specific "we are hiring 3 SDRs and they burn 6 hours a day on manual outreach" is strong need.
+
+### Timeline (0-25)
+When are they buying? Signals include:
+- Stated urgency in communications
+- Contract expiration dates for competing tools
+- Hiring activity (scaling teams signal immediate need)
+- Fiscal year considerations (budget available now vs Q4 freeze)
+- Active evaluation activity (demo requests, comparison shopping)
+
+A lead who says "we need this live by next month for the Black Friday push" has strong timeline. A lead who says "we are researching tools for next year" has weak timeline.
+
+## ICP alignment (0-100)
+
+Separately from BANT, score how well the lead matches the Ideal Customer Profile (industry fit, company size fit, title fit, geographic fit, tech stack fit, disqualifier presence). ICP alignment is NOT a subset of BANT — a lead can have strong BANT but poor ICP alignment (they can afford it and need it but they are not who we target) or vice versa.
+
+## Qualification tier (HOT | WARM | COLD | DISQUALIFIED)
+
+- HOT: total BANT >= 75, ICP alignment >= 70, no disqualifiers — act this week
+- WARM: total BANT >= 50, ICP alignment >= 50 — nurture with content + outreach
+- COLD: total BANT >= 25 OR ICP alignment >= 40 — mark for monthly touch
+- DISQUALIFIED: BANT < 25 AND ICP alignment < 40, OR hard disqualifier present (student, personal email only, competitor employee, sanctioned geography) — drop
+
+## Hard rules
+
+- NEVER inflate scores without supporting signals from the data. If a signal is absent, score it low.
+- NEVER fabricate data. If you don't know the company's funding history, say so in dataGaps.
+- Component confidence reflects how MUCH data you had, not how HIGH the score is. A 25/25 budget score from two weak signals is low-confidence.
+- Signals you output MUST be grounded in the input data (name the field or quote the text).
+- recommendedAction MUST be specific and executable — not "follow up" but "schedule a 15-minute discovery call to confirm the migration from Salesforce by end of Q2".
+- dataGaps MUST be specific fields that, if known, would meaningfully change the score.
+- insights MUST NOT just restate scores — they are strategic observations the downstream Outreach Specialist or Deal Closer should act on.
+
+## Output format
+
+Respond with ONLY a valid JSON object matching the schema described in the user prompt. No markdown fences. No preamble. No prose outside the JSON.`;
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'LEAD_QUALIFIER_SPECIALIST',
-    name: 'Lead Qualifier Specialist',
+    id: SPECIALIST_ID,
+    name: 'Lead Qualifier',
     role: 'specialist',
     status: 'FUNCTIONAL',
-    reportsTo: 'SALES_MANAGER',
+    reportsTo: 'REVENUE_DIRECTOR',
     capabilities: [
       'bant_scoring',
       'lead_qualification',
       'icp_alignment',
       'market_intelligence_integration',
-      'qualification_reporting'
+      'qualification_reporting',
     ],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: ['score_bant', 'calculate_icp', 'generate_report', 'integrate_scraper'],
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  tools: ['qualify_lead'],
   outputSchema: {
     type: 'object',
     properties: {
@@ -193,1640 +179,603 @@ const CONFIG: SpecialistConfig = {
       icpAlignment: { type: 'number' },
       qualification: { type: 'string' },
       recommendedAction: { type: 'string' },
+      insights: { type: 'array' },
+      dataGaps: { type: 'array' },
+      rationale: { type: 'string' },
     },
-    required: ['leadId', 'bantScore', 'qualification'],
   },
-  maxTokens: 4096,
-  temperature: 0.3, // Slightly higher for nuanced scoring decisions
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  temperature: 0.3,
 };
 
 // ============================================================================
-// TYPE DEFINITIONS
+// INPUT CONTRACT
 // ============================================================================
 
-/**
- * Individual BANT component score with supporting evidence
- */
-export interface BANTComponentScore {
-  score: number; // 0-25
-  signals: string[];
-  confidence: number; // 0-1
-  rawFactors: Record<string, number>;
+const EmployeeRangeEnum = z.enum(['1-10', '11-50', '51-200', '201-500', '500+', 'unknown']);
+export type EmployeeRange = z.infer<typeof EmployeeRangeEnum>;
+
+const SenioritySchema = z.enum([
+  'C-Level',
+  'VP',
+  'Director',
+  'Manager',
+  'Individual',
+  'Unknown',
+]);
+
+const LeadContactSchema = z.object({
+  name: z.string().min(1).max(200),
+  email: z.string().min(3).max(320),
+  title: z.string().min(1).max(200),
+  phone: z.string().max(40).optional(),
+  linkedinUrl: z.string().max(500).optional(),
+  linkedinConnections: z.number().int().min(0).max(100000).optional(),
+  seniority: SenioritySchema.optional(),
+});
+
+const LeadCompanySchema = z.object({
+  name: z.string().min(1).max(300),
+  domain: z.string().min(2).max(300),
+  industry: z.string().min(1).max(200),
+  employeeRange: EmployeeRangeEnum,
+  estimatedRevenue: z.number().min(0).max(1_000_000_000_000).optional(),
+  fundingStage: z.string().max(100).optional(),
+  fundingAmount: z.number().min(0).max(100_000_000_000).optional(),
+  foundedYear: z.number().int().min(1800).max(2100).optional(),
+  headquarters: z.string().max(300).optional(),
+  techStack: z.array(z.string().min(1).max(100)).max(50).optional(),
+});
+
+const LeadEngagementSchema = z.object({
+  pagesViewed: z.array(z.string().min(1).max(500)).max(100).default([]),
+  formSubmissions: z.array(z.string().min(1).max(300)).max(30).default([]),
+  emailInteractions: z.array(z.string().min(1).max(300)).max(50).default([]),
+  chatInteractions: z.array(z.string().min(1).max(300)).max(30).optional(),
+  downloadedAssets: z.array(z.string().min(1).max(300)).max(30).optional(),
+  webinarAttendance: z.array(z.string().min(1).max(300)).max(20).optional(),
+  demoRequested: z.boolean().optional(),
+  pricingPageViews: z.number().int().min(0).max(1000).optional(),
+  lastActivityDate: z.string().max(50).optional(),
+});
+
+const ScraperIntelligenceSchema = z.object({
+  keyFindings: z.object({
+    companyName: z.string().max(300).nullable().optional(),
+    industry: z.string().max(200).nullable().optional(),
+    description: z.string().max(2000).nullable().optional(),
+    employeeRange: EmployeeRangeEnum.optional(),
+    valueProposition: z.string().max(1000).optional(),
+    targetCustomer: z.string().max(1000).optional(),
+  }).optional(),
+  businessSignals: z.object({
+    isHiring: z.boolean().optional(),
+    openPositions: z.number().int().min(0).max(10000).optional(),
+    hasEcommerce: z.boolean().optional(),
+    hasBlog: z.boolean().optional(),
+  }).optional(),
+  techSignals: z.object({
+    detectedPlatforms: z.array(z.string().min(1).max(100)).max(40).optional(),
+    detectedTools: z.array(z.string().min(1).max(100)).max(80).optional(),
+    techMaturity: z.string().max(100).optional(),
+  }).optional(),
+  strategicObservations: z.array(z.string().min(5).max(500)).max(10).optional(),
+}).optional();
+
+const ICPProfileSchema = z.object({
+  targetIndustries: z.array(z.string().min(1).max(200)).max(30),
+  targetCompanySizes: z.array(EmployeeRangeEnum).max(6),
+  targetTitles: z.array(z.string().min(1).max(200)).max(40),
+  targetTechStack: z.array(z.string().min(1).max(200)).max(40).optional(),
+  targetRevenue: z.object({
+    min: z.number().min(0),
+    max: z.number().min(0),
+  }).optional(),
+  targetGeographies: z.array(z.string().min(1).max(200)).max(40).optional(),
+  mustHaveSignals: z.array(z.string().min(1).max(300)).max(20).optional(),
+  disqualifiers: z.array(z.string().min(1).max(300)).max(20).optional(),
+});
+
+const ScoringWeightsSchema = z.object({
+  budget: z.number().min(0).max(5),
+  authority: z.number().min(0).max(5),
+  need: z.number().min(0).max(5),
+  timeline: z.number().min(0).max(5),
+});
+
+const QualifyLeadPayloadSchema = z.object({
+  action: z.literal('qualify_lead'),
+  leadId: z.string().min(1).max(300),
+  contact: LeadContactSchema,
+  company: LeadCompanySchema,
+  engagement: LeadEngagementSchema.optional(),
+  scraperIntel: ScraperIntelligenceSchema,
+  icp: ICPProfileSchema.optional(),
+  customWeights: ScoringWeightsSchema.optional(),
+  notes: z.string().max(3000).optional(),
+});
+
+export type QualifyLeadPayload = z.infer<typeof QualifyLeadPayloadSchema>;
+export type LeadContact = z.infer<typeof LeadContactSchema>;
+export type LeadCompany = z.infer<typeof LeadCompanySchema>;
+export type LeadEngagement = z.infer<typeof LeadEngagementSchema>;
+export type ScraperIntelligence = NonNullable<z.infer<typeof ScraperIntelligenceSchema>>;
+export type ICPProfile = z.infer<typeof ICPProfileSchema>;
+export type ScoringWeights = z.infer<typeof ScoringWeightsSchema>;
+
+// ============================================================================
+// OUTPUT CONTRACT
+// ============================================================================
+
+const QualificationTierEnum = z.enum(['HOT', 'WARM', 'COLD', 'DISQUALIFIED']);
+export type QualificationTier = z.infer<typeof QualificationTierEnum>;
+
+const BANTComponentScoreSchema = z.object({
+  score: z.number().int().min(0).max(25),
+  signals: z.array(z.string().min(5).max(400)).min(1).max(5),
+  confidence: z.number().min(0).max(1),
+  rationale: z.string().min(20).max(800),
+});
+
+export type BANTComponentScore = z.infer<typeof BANTComponentScoreSchema>;
+
+const BANTScoreSchema = z.object({
+  budget: BANTComponentScoreSchema,
+  authority: BANTComponentScoreSchema,
+  need: BANTComponentScoreSchema,
+  timeline: BANTComponentScoreSchema,
+  total: z.number().int().min(0).max(100),
+  confidence: z.number().min(0).max(1),
+});
+
+export type BANTScore = z.infer<typeof BANTScoreSchema>;
+
+const QualifyLeadResultSchema = z.object({
+  action: z.literal('qualify_lead'),
+  leadId: z.string().min(1).max(300),
+  qualifiedAt: z.string().min(10).max(60),
+  bantScore: BANTScoreSchema,
+  icpAlignment: z.number().int().min(0).max(100),
+  qualification: QualificationTierEnum,
+  recommendedAction: z.string().min(20).max(500),
+  insights: z.array(z.string().min(20).max(500)).min(2).max(6),
+  dataGaps: z.array(z.string().min(5).max(200)).max(8),
+  rationale: z.string().min(100).max(3000),
+});
+
+export type QualifyLeadResult = z.infer<typeof QualifyLeadResultSchema>;
+export type QualificationResult = QualifyLeadResult;
+export type QualificationRequest = QualifyLeadPayload;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: LeadQualifierGMConfig;
+  resolvedSystemPrompt: string;
+  source: 'gm' | 'fallback';
 }
 
-/**
- * Complete BANT score with all components
- */
-export interface BANTScore {
-  budget: BANTComponentScore;
-  authority: BANTComponentScore;
-  need: BANTComponentScore;
-  timeline: BANTComponentScore;
-  total: number; // 0-100
-  confidence: number; // 0-1
-}
+async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
 
-/**
- * Scoring weights for customizable qualification
- */
-export interface ScoringWeights {
-  budget: number;
-  authority: number;
-  need: number;
-  timeline: number;
-}
+  if (!gmRecord) {
+    logger.warn(
+      `[LeadQualifier] GM not seeded for industryKey=${industryKey}; using DEFAULT_SYSTEM_PROMPT fallback. ` +
+      `Run node scripts/seed-lead-qualifier-gm.js to promote to GM-backed analysis.`,
+      { file: FILE },
+    );
+    return {
+      gm: {
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        model: 'claude-sonnet-4.6',
+        temperature: 0.3,
+        maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+        supportedActions: [...SUPPORTED_ACTIONS],
+      },
+      resolvedSystemPrompt: DEFAULT_SYSTEM_PROMPT,
+      source: 'fallback',
+    };
+  }
 
-/**
- * Ideal Customer Profile for alignment scoring
- */
-export interface ICPProfile {
-  targetIndustries: string[];
-  targetCompanySizes: EmployeeRange[];
-  targetTitles: string[];
-  targetTechStack: string[];
-  targetRevenue: { min: number; max: number };
-  targetGeographies: string[];
-  mustHaveSignals: string[];
-  disqualifiers: string[];
-}
+  const config = gmRecord.config as Partial<LeadQualifierGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `Lead Qualifier GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
 
-export type EmployeeRange = '1-10' | '11-50' | '51-200' | '201-500' | '500+' | 'unknown';
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
 
-export type QualificationTier = 'HOT' | 'WARM' | 'COLD' | 'DISQUALIFIED';
-
-/**
- * Contact information for a lead
- */
-export interface LeadContact {
-  name: string;
-  email: string;
-  title: string;
-  phone?: string;
-  linkedinUrl?: string;
-  linkedinConnections?: number;
-  seniority?: 'C-Level' | 'VP' | 'Director' | 'Manager' | 'Individual' | 'Unknown';
-}
-
-/**
- * Company information for a lead
- */
-export interface LeadCompany {
-  name: string;
-  domain: string;
-  industry: string;
-  employeeRange: EmployeeRange;
-  estimatedRevenue?: number;
-  fundingStage?: string;
-  fundingAmount?: number;
-  foundedYear?: number;
-  headquarters?: string;
-  techStack?: string[];
-}
-
-/**
- * Engagement tracking for a lead
- */
-export interface LeadEngagement {
-  pagesViewed: string[];
-  formSubmissions: string[];
-  emailInteractions: string[];
-  chatInteractions?: string[];
-  downloadedAssets?: string[];
-  webinarAttendance?: string[];
-  demoRequested?: boolean;
-  pricingPageViews?: number;
-  lastActivityDate?: Date;
-}
-
-/**
- * Scraper intelligence data structure
- */
-export interface ScraperIntelligence {
-  keyFindings?: {
-    companyName: string | null;
-    industry: string | null;
-    description: string | null;
-    employeeRange: EmployeeRange;
+  const gm: LeadQualifierGMConfig = {
+    systemPrompt,
+    model: config.model ?? 'claude-sonnet-4.6',
+    temperature: config.temperature ?? 0.3,
+    maxTokens: effectiveMaxTokens,
+    supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
-  businessSignals?: {
-    isHiring: boolean;
-    openPositions: number;
-    hasEcommerce: boolean;
-    hasBlog: boolean;
-  };
-  techSignals?: {
-    detectedPlatforms: string[];
-    detectedTools: string[];
-  };
-  contentSummary?: {
-    topKeywords: string[];
-    mainTopics: string[];
-  };
-  confidence: number;
+
+  return { gm, resolvedSystemPrompt: systemPrompt, source: 'gm' };
 }
 
-/**
- * Complete lead data for qualification
- */
-export interface LeadData {
-  leadId: string;
-  contact: LeadContact;
-  company: LeadCompany;
-  engagement: LeadEngagement;
-  source?: string;
-  createdAt?: Date;
-  customFields?: Record<string, unknown>;
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
 }
 
-/**
- * Request to qualify a lead
- */
-export interface QualificationRequest {
-  lead: LeadData;
-  scraperIntel?: ScraperIntelligence;
-  icp?: ICPProfile;
-  customWeights?: Partial<ScoringWeights>;
-  includeRecommendations?: boolean;
-}
+async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
 
-/**
- * Qualification result with full analysis
- */
-export interface QualificationResult {
-  leadId: string;
-  qualifiedAt: string;
-  bantScore: BANTScore;
-  icpAlignment: number;
-  qualification: QualificationTier;
-  recommendedAction: string;
-  insights: string[];
-  dataGaps: string[];
-  scoringBreakdown: {
-    budgetDetails: BudgetScoringDetails;
-    authorityDetails: AuthorityScoringDetails;
-    needDetails: NeedScoringDetails;
-    timelineDetails: TimelineScoringDetails;
-  };
-}
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Lead Qualifier: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the input payload. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
-/**
- * Detailed budget scoring breakdown
- */
-export interface BudgetScoringDetails {
-  companySizeScore: number;
-  fundingScore: number;
-  pricingEngagementScore: number;
-  techSpendScore: number;
-  industryBenchmarkScore: number;
-  adjustments: string[];
-}
-
-/**
- * Detailed authority scoring breakdown
- */
-export interface AuthorityScoringDetails {
-  titleScore: number;
-  seniorityScore: number;
-  emailDomainScore: number;
-  linkedinScore: number;
-  orgStructureScore: number;
-  adjustments: string[];
-}
-
-/**
- * Detailed need scoring breakdown
- */
-export interface NeedScoringDetails {
-  painPointScore: number;
-  competitorUsageScore: number;
-  techStackGapScore: number;
-  industryFitScore: number;
-  engagementPatternScore: number;
-  adjustments: string[];
-}
-
-/**
- * Detailed timeline scoring breakdown
- */
-export interface TimelineScoringDetails {
-  urgencyScore: number;
-  contractExpiryScore: number;
-  hiringActivityScore: number;
-  fiscalYearScore: number;
-  evaluationActivityScore: number;
-  adjustments: string[];
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
 }
 
 // ============================================================================
-// DEFAULT CONFIGURATIONS
+// ACTION: qualify_lead
 // ============================================================================
 
-const DEFAULT_WEIGHTS: ScoringWeights = {
-  budget: 1.0,
-  authority: 1.0,
-  need: 1.0,
-  timeline: 1.0,
-};
+function formatScraperIntel(intel: ScraperIntelligence | undefined): string {
+  if (!intel) { return '(none provided)'; }
+  const lines: string[] = [];
+  if (intel.keyFindings) {
+    const kf = intel.keyFindings;
+    if (kf.description) { lines.push(`Description: ${kf.description}`); }
+    if (kf.valueProposition) { lines.push(`Value proposition: ${kf.valueProposition}`); }
+    if (kf.targetCustomer) { lines.push(`Target customer: ${kf.targetCustomer}`); }
+  }
+  if (intel.businessSignals) {
+    const bs = intel.businessSignals;
+    const parts: string[] = [];
+    if (bs.isHiring !== undefined) { parts.push(`isHiring=${bs.isHiring}`); }
+    if (bs.openPositions !== undefined) { parts.push(`openPositions=${bs.openPositions}`); }
+    if (bs.hasEcommerce !== undefined) { parts.push(`hasEcommerce=${bs.hasEcommerce}`); }
+    if (bs.hasBlog !== undefined) { parts.push(`hasBlog=${bs.hasBlog}`); }
+    if (parts.length > 0) { lines.push(`Business signals: ${parts.join(', ')}`); }
+  }
+  if (intel.techSignals) {
+    const ts = intel.techSignals;
+    if (ts.detectedPlatforms && ts.detectedPlatforms.length > 0) {
+      lines.push(`Detected platforms: ${ts.detectedPlatforms.join(', ')}`);
+    }
+    if (ts.detectedTools && ts.detectedTools.length > 0) {
+      lines.push(`Detected tools: ${ts.detectedTools.slice(0, 30).join(', ')}`);
+    }
+    if (ts.techMaturity) { lines.push(`Tech maturity: ${ts.techMaturity}`); }
+  }
+  if (intel.strategicObservations && intel.strategicObservations.length > 0) {
+    lines.push(`Strategic observations:\n  - ${intel.strategicObservations.join('\n  - ')}`);
+  }
+  return lines.length > 0 ? lines.join('\n') : '(empty intelligence object)';
+}
 
-const DEFAULT_ICP: ICPProfile = {
-  targetIndustries: ['SaaS', 'Technology', 'E-commerce', 'Finance', 'Healthcare'],
-  targetCompanySizes: ['51-200', '201-500', '500+'],
-  targetTitles: ['CEO', 'CTO', 'VP', 'Director', 'Head of', 'Chief'],
-  targetTechStack: ['Salesforce', 'HubSpot', 'Marketo', 'Segment', 'Intercom'],
-  targetRevenue: { min: 1000000, max: 100000000 },
-  targetGeographies: ['United States', 'United Kingdom', 'Canada', 'Germany'],
-  mustHaveSignals: ['corporate email', 'active hiring'],
-  disqualifiers: ['personal email only', 'competitor', 'student'],
-};
+function formatEngagement(e: LeadEngagement | undefined): string {
+  if (!e) { return '(no engagement data)'; }
+  const lines: string[] = [];
+  if (e.pagesViewed.length > 0) {
+    lines.push(`Pages viewed (${e.pagesViewed.length}): ${e.pagesViewed.slice(0, 20).join(', ')}`);
+  }
+  if (e.formSubmissions.length > 0) {
+    lines.push(`Form submissions: ${e.formSubmissions.join(', ')}`);
+  }
+  if (e.emailInteractions.length > 0) {
+    lines.push(`Email interactions: ${e.emailInteractions.slice(0, 10).join(', ')}`);
+  }
+  if (e.chatInteractions && e.chatInteractions.length > 0) {
+    lines.push(`Chat interactions: ${e.chatInteractions.slice(0, 10).join(', ')}`);
+  }
+  if (e.downloadedAssets && e.downloadedAssets.length > 0) {
+    lines.push(`Downloaded assets: ${e.downloadedAssets.join(', ')}`);
+  }
+  if (e.webinarAttendance && e.webinarAttendance.length > 0) {
+    lines.push(`Webinar attendance: ${e.webinarAttendance.join(', ')}`);
+  }
+  if (e.demoRequested !== undefined) { lines.push(`Demo requested: ${e.demoRequested}`); }
+  if (e.pricingPageViews !== undefined) { lines.push(`Pricing page views: ${e.pricingPageViews}`); }
+  if (e.lastActivityDate) { lines.push(`Last activity: ${e.lastActivityDate}`); }
+  return lines.length > 0 ? lines.join('\n') : '(no engagement signals)';
+}
+
+function formatICP(icp: ICPProfile | undefined): string {
+  if (!icp) { return '(no ICP override — use your judgment about our ideal customer)'; }
+  const lines = [
+    `Target industries: ${icp.targetIndustries.join(', ')}`,
+    `Target company sizes: ${icp.targetCompanySizes.join(', ')}`,
+    `Target titles: ${icp.targetTitles.join(', ')}`,
+  ];
+  if (icp.targetTechStack && icp.targetTechStack.length > 0) {
+    lines.push(`Target tech stack: ${icp.targetTechStack.join(', ')}`);
+  }
+  if (icp.targetRevenue) {
+    lines.push(`Target revenue: $${icp.targetRevenue.min.toLocaleString()} - $${icp.targetRevenue.max.toLocaleString()}`);
+  }
+  if (icp.targetGeographies && icp.targetGeographies.length > 0) {
+    lines.push(`Target geographies: ${icp.targetGeographies.join(', ')}`);
+  }
+  if (icp.mustHaveSignals && icp.mustHaveSignals.length > 0) {
+    lines.push(`Must-have signals: ${icp.mustHaveSignals.join('; ')}`);
+  }
+  if (icp.disqualifiers && icp.disqualifiers.length > 0) {
+    lines.push(`Disqualifiers: ${icp.disqualifiers.join('; ')}`);
+  }
+  return lines.join('\n');
+}
+
+function formatWeights(w: ScoringWeights | undefined): string {
+  if (!w) { return '(default: budget=1, authority=1, need=1, timeline=1)'; }
+  return `budget=${w.budget}, authority=${w.authority}, need=${w.need}, timeline=${w.timeline}`;
+}
+
+function buildQualifyLeadPrompt(req: QualifyLeadPayload): string {
+  const techStackLine = req.company.techStack && req.company.techStack.length > 0
+    ? `Tech stack: ${req.company.techStack.join(', ')}`
+    : 'Tech stack: (unknown)';
+
+  const fundingLine = req.company.fundingStage
+    ? `Funding: ${req.company.fundingStage}${req.company.fundingAmount ? ` ($${req.company.fundingAmount.toLocaleString()})` : ''}`
+    : 'Funding: (unknown)';
+
+  return [
+    'ACTION: qualify_lead',
+    '',
+    `Lead ID: ${req.leadId}`,
+    '',
+    '## Contact',
+    `Name: ${req.contact.name}`,
+    `Email: ${req.contact.email}`,
+    `Title: ${req.contact.title}`,
+    req.contact.seniority ? `Seniority: ${req.contact.seniority}` : '',
+    req.contact.linkedinUrl ? `LinkedIn: ${req.contact.linkedinUrl}` : '',
+    req.contact.linkedinConnections !== undefined ? `LinkedIn connections: ${req.contact.linkedinConnections}` : '',
+    '',
+    '## Company',
+    `Name: ${req.company.name}`,
+    `Domain: ${req.company.domain}`,
+    `Industry: ${req.company.industry}`,
+    `Employee range: ${req.company.employeeRange}`,
+    req.company.estimatedRevenue !== undefined ? `Estimated revenue: $${req.company.estimatedRevenue.toLocaleString()}` : '',
+    fundingLine,
+    req.company.foundedYear ? `Founded: ${req.company.foundedYear}` : '',
+    req.company.headquarters ? `Headquarters: ${req.company.headquarters}` : '',
+    techStackLine,
+    '',
+    '## Engagement',
+    formatEngagement(req.engagement),
+    '',
+    '## Scraper intelligence',
+    formatScraperIntel(req.scraperIntel),
+    '',
+    '## Ideal Customer Profile',
+    formatICP(req.icp),
+    '',
+    '## Scoring weights (relative component importance)',
+    formatWeights(req.customWeights),
+    '',
+    req.notes ? `## Notes from caller\n${req.notes}\n` : '',
+    '---',
+    '',
+    'Produce structured BANT + ICP analysis. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    `  "action": "qualify_lead",`,
+    `  "leadId": "${req.leadId}",`,
+    '  "qualifiedAt": "<current ISO 8601 timestamp>",',
+    '  "bantScore": {',
+    '    "budget":    { "score": <0-25>, "signals": ["<1-5 specific signals from the data>"], "confidence": <0-1>, "rationale": "<20-800 chars why>" },',
+    '    "authority": { "score": <0-25>, "signals": ["<1-5 specific signals>"], "confidence": <0-1>, "rationale": "<20-800 chars why>" },',
+    '    "need":      { "score": <0-25>, "signals": ["<1-5 specific signals>"], "confidence": <0-1>, "rationale": "<20-800 chars why>" },',
+    '    "timeline":  { "score": <0-25>, "signals": ["<1-5 specific signals>"], "confidence": <0-1>, "rationale": "<20-800 chars why>" },',
+    '    "total": <sum of four component scores, 0-100>,',
+    '    "confidence": <weighted average of component confidences, 0-1>',
+    '  },',
+    '  "icpAlignment": <integer 0-100>,',
+    '  "qualification": "<HOT | WARM | COLD | DISQUALIFIED>",',
+    '  "recommendedAction": "<20-500 chars — specific executable next step, not a generic \'follow up\'>",',
+    '  "insights": ["<2-6 strategic observations the downstream specialists should act on — NOT restatements of the scores>"],',
+    '  "dataGaps": ["<0-8 specific missing data points that would meaningfully change the score>"],',
+    '  "rationale": "<100-3000 chars strategic explanation tying the BANT scores, ICP alignment, and recommended action together>"',
+    '}',
+    '',
+    'Hard rules:',
+    '- bantScore.total MUST be the exact sum of the four component scores. Do not fudge the math.',
+    '- Every signal you list MUST be grounded in a field from the input data (name the field or quote the text).',
+    '- Apply the scoring weights multiplicatively to each component score if customWeights is provided — heavier weight means that component matters more to the final decision but NOT that its raw score changes.',
+    '- qualification tier rules: HOT = total>=75 AND icp>=70 AND no disqualifiers; WARM = total>=50 AND icp>=50; COLD = total>=25 OR icp>=40; DISQUALIFIED = total<25 AND icp<40, OR disqualifier present.',
+    '- Apply the disqualifiers list from the ICP strictly — a single disqualifier match overrides BANT.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+async function executeQualifyLead(
+  req: QualifyLeadPayload,
+  ctx: LlmCallContext,
+): Promise<QualifyLeadResult> {
+  const userPrompt = buildQualifyLeadPrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Lead Qualifier output was not valid JSON: ${rawContent.slice(0, 300)}`,
+    );
+  }
+
+  const result = QualifyLeadResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Lead Qualifier output did not match expected schema: ${issueSummary}`);
+  }
+
+  const data = result.data;
+
+  // Enforce the bantScore.total = sum invariant even if the LLM fudged the math.
+  const expectedTotal =
+    data.bantScore.budget.score +
+    data.bantScore.authority.score +
+    data.bantScore.need.score +
+    data.bantScore.timeline.score;
+  if (data.bantScore.total !== expectedTotal) {
+    throw new Error(
+      `Lead Qualifier bantScore.total=${data.bantScore.total} does not equal sum of components=${expectedTotal}`,
+    );
+  }
+
+  return data;
+}
 
 // ============================================================================
-// JOB TITLE HIERARCHIES
-// ============================================================================
-
-const TITLE_AUTHORITY_MAP: Record<string, number> = {
-  // C-Level (25 points)
-  'ceo': 25, 'chief executive officer': 25,
-  'cto': 25, 'chief technology officer': 25,
-  'cfo': 25, 'chief financial officer': 25,
-  'cmo': 25, 'chief marketing officer': 25,
-  'coo': 25, 'chief operating officer': 25,
-  'cro': 25, 'chief revenue officer': 25,
-  'cio': 25, 'chief information officer': 25,
-  'founder': 24, 'co-founder': 24, 'owner': 24,
-  'president': 24, 'managing director': 23,
-
-  // VP Level (20 points)
-  'vp': 20, 'vice president': 20,
-  'svp': 21, 'senior vice president': 21,
-  'evp': 22, 'executive vice president': 22,
-  'gm': 19, 'general manager': 19,
-
-  // Director Level (15-18 points)
-  'director': 17, 'senior director': 18,
-  'head of': 18, 'head': 17,
-  'principal': 16,
-
-  // Manager Level (10-14 points)
-  'senior manager': 14, 'manager': 12,
-  'team lead': 11, 'lead': 11,
-  'supervisor': 10,
-
-  // Individual Contributor (5-9 points)
-  'senior': 8, 'specialist': 7,
-  'analyst': 6, 'associate': 5,
-  'coordinator': 5, 'representative': 4,
-
-  // Entry Level (0-4 points)
-  'intern': 1, 'trainee': 1,
-  'assistant': 3, 'junior': 3,
-};
-
-// ============================================================================
-// INDUSTRY SCORING FACTORS
-// ============================================================================
-
-const INDUSTRY_BUDGET_MULTIPLIERS: Record<string, number> = {
-  'Finance': 1.3,
-  'Healthcare': 1.2,
-  'Technology': 1.15,
-  'SaaS': 1.15,
-  'E-commerce': 1.1,
-  'Legal': 1.1,
-  'Real Estate': 1.05,
-  'Marketing': 1.0,
-  'Education': 0.9,
-  'Non-profit': 0.7,
-  'Government': 0.8,
-};
-
-// ============================================================================
-// IMPLEMENTATION
+// LEAD QUALIFIER CLASS
 // ============================================================================
 
 export class LeadQualifierSpecialist extends BaseSpecialist {
-  private defaultICP: ICPProfile;
-  private scoringWeights: ScoringWeights;
-
   constructor() {
     super(CONFIG);
-    this.defaultICP = DEFAULT_ICP;
-    this.scoringWeights = DEFAULT_WEIGHTS;
   }
 
-  initialize(): Promise<void> {
+  async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
-    this.log('INFO', 'Lead Qualifier Specialist initialized');
-    return Promise.resolve();
+    this.log('INFO', 'Lead Qualifier initialized (LLM-backed, Golden Master loaded at runtime)');
   }
 
-  /**
-   * Main execution entry point
-   */
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
-      const payload = message.payload as QualificationRequest;
-
-      if (!payload?.lead) {
-        return this.createReport(taskId, 'FAILED', null, ['No lead data provided in payload']);
+      const rawPayload = message.payload as Record<string, unknown> | null;
+      if (rawPayload === null || typeof rawPayload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, [
+          'Lead Qualifier: payload must be an object',
+        ]);
       }
 
-      this.log('INFO', `Qualifying lead: ${payload.lead.leadId}`);
+      // Normalize legacy shape: the pre-rebuild input was
+      // { lead: LeadData, scraperIntel?, icp?, customWeights? }.
+      // The new shape flattens lead fields to the top level.
+      const normalized = this.normalizePayload(rawPayload);
 
-      const result = await this.qualifyLead(payload);
+      const inputValidation = QualifyLeadPayloadSchema.safeParse(normalized);
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Lead Qualifier: invalid input payload: ${issueSummary}`,
+        ]);
+      }
+
+      const payload = inputValidation.data;
+      logger.info(
+        `[LeadQualifier] Executing qualify_lead taskId=${taskId} leadId=${payload.leadId}`,
+        { file: FILE },
+      );
+
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+      const result = await executeQualifyLead(payload, ctx);
 
       return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Qualification failed: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[LeadQualifier] Execution failed',
+        error instanceof Error ? error : new Error(errorMessage),
+        { file: FILE },
+      );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
   /**
-   * Handle signals from the Signal Bus
+   * Accept two input shapes:
+   *   1. New flat: { action, leadId, contact, company, engagement?, ... }
+   *   2. Legacy:   { action?, lead: { leadId, contact, company, engagement, ... }, scraperIntel?, icp?, customWeights? }
    */
-  async handleSignal(signal: Signal): Promise<AgentReport> {
-    const taskId = signal.id;
-
-    if (signal.payload.type === 'COMMAND') {
-      return this.execute(signal.payload);
+  private normalizePayload(raw: Record<string, unknown>): Record<string, unknown> {
+    if (raw.contact !== undefined && raw.company !== undefined) {
+      return { ...raw, action: raw.action ?? 'qualify_lead' };
     }
 
-    return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+    if (raw.lead !== null && typeof raw.lead === 'object') {
+      const lead = raw.lead as Record<string, unknown>;
+      return {
+        action: raw.action ?? 'qualify_lead',
+        leadId: lead.leadId ?? raw.leadId,
+        contact: lead.contact,
+        company: lead.company,
+        engagement: lead.engagement,
+        scraperIntel: raw.scraperIntel ?? lead.scraperIntel,
+        icp: raw.icp,
+        customWeights: raw.customWeights,
+        notes: raw.notes,
+      };
+    }
+
+    return { ...raw, action: raw.action ?? 'qualify_lead' };
   }
 
-  /**
-   * Generate a report for the manager
-   */
+  async handleSignal(signal: Signal): Promise<AgentReport> {
+    const message: AgentMessage = {
+      id: signal.id,
+      timestamp: signal.createdAt,
+      from: signal.origin,
+      to: this.identity.id,
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      payload: signal.payload.payload,
+      requiresResponse: true,
+      traceId: signal.id,
+    };
+    return this.execute(message);
+  }
+
   generateReport(taskId: string, data: unknown): AgentReport {
     return this.createReport(taskId, 'COMPLETED', data);
   }
 
-  /**
-   * Self-assessment - this agent has REAL logic
-   */
   hasRealLogic(): boolean {
     return true;
   }
 
-  /**
-   * Lines of code assessment
-   */
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 850, boilerplate: 80 };
-  }
-
-  // ==========================================================================
-  // MAIN QUALIFICATION LOGIC
-  // ==========================================================================
-
-  /**
-   * Full lead qualification process
-   */
-  qualifyLead(request: QualificationRequest): Promise<QualificationResult> {
-    const { lead, scraperIntel, icp = this.defaultICP, customWeights } = request;
-
-    // Apply custom weights if provided
-    const weights = { ...this.scoringWeights, ...customWeights };
-
-    // Calculate BANT scores
-    const bantScore = this.scoreBANT(lead, scraperIntel, weights);
-
-    // Calculate ICP alignment
-    const icpAlignment = this.calculateICPAlignment(lead, icp, scraperIntel);
-
-    // Determine qualification tier
-    const qualification = this.determineQualificationTier(bantScore.total, icpAlignment);
-
-    // Generate recommended action
-    const recommendedAction = this.generateRecommendedAction(bantScore, qualification);
-
-    // Extract insights
-    const insights = this.extractInsights(bantScore, icpAlignment, lead, scraperIntel);
-
-    // Identify data gaps
-    const dataGaps = this.identifyDataGaps(lead, scraperIntel);
-
-    // Build scoring breakdown
-    const scoringBreakdown = this.buildScoringBreakdown(lead, scraperIntel);
-
-    return Promise.resolve({
-      leadId: lead.leadId,
-      qualifiedAt: new Date().toISOString(),
-      bantScore,
-      icpAlignment,
-      qualification,
-      recommendedAction,
-      insights,
-      dataGaps,
-      scoringBreakdown,
-    });
-  }
-
-  /**
-   * Calculate complete BANT score
-   */
-  scoreBANT(
-    leadData: LeadData,
-    scraperIntel?: ScraperIntelligence,
-    weights: ScoringWeights = DEFAULT_WEIGHTS
-  ): BANTScore {
-    const budget = this.scoreBudget(leadData, scraperIntel);
-    const authority = this.scoreAuthority(leadData, scraperIntel);
-    const need = this.scoreNeed(leadData, scraperIntel);
-    const timeline = this.scoreTimeline(leadData, scraperIntel);
-
-    // Apply weights and calculate weighted average
-    const weightedBudget = budget.score * weights.budget;
-    const weightedAuthority = authority.score * weights.authority;
-    const weightedNeed = need.score * weights.need;
-    const weightedTimeline = timeline.score * weights.timeline;
-
-    const totalWeight = weights.budget + weights.authority + weights.need + weights.timeline;
-    const total = Math.round(
-      ((weightedBudget + weightedAuthority + weightedNeed + weightedTimeline) / totalWeight) * 4
-    );
-
-    // Calculate overall confidence as weighted average of component confidences
-    const overallConfidence = (
-      budget.confidence * weights.budget +
-      authority.confidence * weights.authority +
-      need.confidence * weights.need +
-      timeline.confidence * weights.timeline
-    ) / totalWeight;
-
-    return {
-      budget,
-      authority,
-      need,
-      timeline,
-      total: Math.min(100, Math.max(0, total)),
-      confidence: Math.round(overallConfidence * 100) / 100,
-    };
-  }
-
-  // ==========================================================================
-  // BUDGET SCORING (25 points max)
-  // ==========================================================================
-
-  /**
-   * Score budget capacity based on multiple signals
-   */
-  scoreBudget(leadData: LeadData, scraperIntel?: ScraperIntelligence): BANTComponentScore {
-    const signals: string[] = [];
-    const rawFactors: Record<string, number> = {};
-    let score = 0;
-    let dataPoints = 0;
-
-    // 1. Company Size Score (0-7 points)
-    const companySizeScore = this.scoreCompanySize(leadData.company.employeeRange);
-    rawFactors['companySize'] = companySizeScore;
-    score += companySizeScore;
-    dataPoints++;
-    if (companySizeScore >= 5) {
-      signals.push(`Company size ${leadData.company.employeeRange} indicates strong budget capacity`);
-    } else if (companySizeScore >= 3) {
-      signals.push(`Company size ${leadData.company.employeeRange} suggests moderate budget`);
-    }
-
-    // 2. Funding Signals (0-6 points)
-    const fundingScore = this.scoreFunding(leadData.company);
-    rawFactors['funding'] = fundingScore;
-    score += fundingScore;
-    if (fundingScore > 0) {
-      dataPoints++;
-      if (leadData.company.fundingStage) {
-        signals.push(`${leadData.company.fundingStage} funding indicates available capital`);
-      }
-    }
-
-    // 3. Pricing Page Engagement (0-5 points)
-    const pricingScore = this.scorePricingEngagement(leadData.engagement);
-    rawFactors['pricingEngagement'] = pricingScore;
-    score += pricingScore;
-    if (pricingScore > 0) {
-      dataPoints++;
-      signals.push(`Pricing page engagement (${leadData.engagement.pricingPageViews ?? 0} views) shows purchase intent`);
-    }
-
-    // 4. Tech Stack Spend Indicators (0-4 points)
-    const techSpendScore = this.scoreTechSpend(leadData.company.techStack, scraperIntel?.techSignals);
-    rawFactors['techSpend'] = techSpendScore;
-    score += techSpendScore;
-    if (techSpendScore > 0) {
-      dataPoints++;
-      signals.push('Premium tool usage indicates willingness to invest in software');
-    }
-
-    // 5. Industry Budget Multiplier (0-3 points)
-    const industryScore = this.scoreIndustryBudget(leadData.company.industry);
-    rawFactors['industry'] = industryScore;
-    score += industryScore;
-    if (industryScore >= 2) {
-      signals.push(`${leadData.company.industry} industry typically has strong software budgets`);
-    }
-
-    // Calculate confidence based on data completeness
-    const confidence = this.calculateComponentConfidence(dataPoints, 5, score, 25);
-
-    return {
-      score: Math.min(25, Math.max(0, Math.round(score))),
-      signals,
-      confidence,
-      rawFactors,
-    };
-  }
-
-  private scoreCompanySize(employeeRange: EmployeeRange): number {
-    const sizeScores: Record<EmployeeRange, number> = {
-      '500+': 7,
-      '201-500': 6,
-      '51-200': 5,
-      '11-50': 3,
-      '1-10': 1,
-      'unknown': 2,
-    };
-    return sizeScores[employeeRange] ?? 2;
-  }
-
-  private scoreFunding(company: LeadCompany): number {
-    if (!company.fundingStage) {return 0;}
-
-    const fundingStageScores: Record<string, number> = {
-      'IPO': 6, 'Series D': 6, 'Series E': 6,
-      'Series C': 5, 'Series B': 4, 'Series A': 3,
-      'Seed': 2, 'Angel': 1, 'Bootstrapped': 1,
-    };
-
-    let score = fundingStageScores[company.fundingStage] || 0;
-
-    // Bonus for recent funding amounts
-    if (company.fundingAmount) {
-      if (company.fundingAmount >= 50000000) {score += 0;}  // Already captured in stage
-      else if (company.fundingAmount >= 10000000) {score = Math.max(score, 4);}
-      else if (company.fundingAmount >= 1000000) {score = Math.max(score, 2);}
-    }
-
-    return Math.min(6, score);
-  }
-
-  private scorePricingEngagement(engagement: LeadEngagement): number {
-    let score = 0;
-
-    // Pricing page views
-    const pricingViews = engagement.pricingPageViews ?? 0;
-    if (pricingViews >= 3) {score += 3;}
-    else if (pricingViews >= 2) {score += 2;}
-    else if (pricingViews >= 1) {score += 1;}
-
-    // Demo requested is strong signal
-    if (engagement.demoRequested) {score += 2;}
-
-    // Downloaded pricing-related assets
-    const pricingAssets = engagement.downloadedAssets?.filter(
-      a => a.toLowerCase().includes('pricing') || a.toLowerCase().includes('quote')
-    ) ?? [];
-    if (pricingAssets.length > 0) {score += 1;}
-
-    return Math.min(5, score);
-  }
-
-  private scoreTechSpend(techStack?: string[], scraperTech?: ScraperIntelligence['techSignals']): number {
-    const premiumTools = [
-      'Salesforce', 'HubSpot', 'Marketo', 'Pardot', 'Eloqua',
-      'Segment', 'Amplitude', 'Mixpanel', 'Snowflake', 'Databricks',
-      'Zendesk', 'Intercom', 'Slack', 'Notion', 'Figma',
-    ];
-
-    const allTools = [
-      ...(techStack ?? []),
-      ...(scraperTech?.detectedTools ?? []),
-      ...(scraperTech?.detectedPlatforms ?? []),
-    ];
-
-    const premiumCount = allTools.filter(tool =>
-      premiumTools.some(premium => tool.toLowerCase().includes(premium.toLowerCase()))
-    ).length;
-
-    if (premiumCount >= 3) {return 4;}
-    if (premiumCount >= 2) {return 3;}
-    if (premiumCount >= 1) {return 2;}
-    return 0;
-  }
-
-  private scoreIndustryBudget(industry: string): number {
-    const multiplier = INDUSTRY_BUDGET_MULTIPLIERS[industry] ?? 1.0;
-    if (multiplier >= 1.2) {return 3;}
-    if (multiplier >= 1.1) {return 2;}
-    if (multiplier >= 1.0) {return 1;}
-    return 0;
-  }
-
-  // ==========================================================================
-  // AUTHORITY SCORING (25 points max)
-  // ==========================================================================
-
-  /**
-   * Score decision-making authority based on contact information
-   */
-  scoreAuthority(leadData: LeadData, _scraperIntel?: ScraperIntelligence): BANTComponentScore {
-    const signals: string[] = [];
-    const rawFactors: Record<string, number> = {};
-    let score = 0;
-    let dataPoints = 0;
-
-    // 1. Job Title Analysis (0-15 points)
-    const titleScore = this.scoreTitleAuthority(leadData.contact.title);
-    rawFactors['title'] = titleScore;
-    score += titleScore;
-    dataPoints++;
-    if (titleScore >= 12) {
-      signals.push(`${leadData.contact.title} indicates executive-level decision authority`);
-    } else if (titleScore >= 8) {
-      signals.push(`${leadData.contact.title} suggests strong influence on decisions`);
-    } else if (titleScore >= 4) {
-      signals.push(`${leadData.contact.title} likely has recommender role`);
-    }
-
-    // 2. Seniority Level (0-4 points)
-    const seniorityScore = this.scoreSeniority(leadData.contact.seniority);
-    rawFactors['seniority'] = seniorityScore;
-    score += seniorityScore;
-    if (leadData.contact.seniority && leadData.contact.seniority !== 'Unknown') {
-      dataPoints++;
-    }
-
-    // 3. Email Domain Analysis (0-3 points)
-    const emailScore = this.scoreEmailAuthority(leadData.contact.email, leadData.company.domain);
-    rawFactors['emailDomain'] = emailScore;
-    score += emailScore;
-    dataPoints++;
-    if (emailScore >= 2) {
-      signals.push('Corporate email domain validates company association');
-    } else if (emailScore === 0) {
-      signals.push('Personal email - authority uncertain');
-    }
-
-    // 4. LinkedIn Presence (0-3 points)
-    const linkedinScore = this.scoreLinkedInAuthority(leadData.contact);
-    rawFactors['linkedin'] = linkedinScore;
-    score += linkedinScore;
-    if (leadData.contact.linkedinUrl) {
-      dataPoints++;
-      if (linkedinScore >= 2) {
-        signals.push('Strong LinkedIn presence indicates industry authority');
-      }
-    }
-
-    // Calculate confidence
-    const confidence = this.calculateComponentConfidence(dataPoints, 4, score, 25);
-
-    return {
-      score: Math.min(25, Math.max(0, Math.round(score))),
-      signals,
-      confidence,
-      rawFactors,
-    };
-  }
-
-  private scoreTitleAuthority(title: string): number {
-    if (!title) {return 0;}
-
-    const lowerTitle = title.toLowerCase();
-
-    // Check for exact matches first
-    for (const [titleKey, scoreValue] of Object.entries(TITLE_AUTHORITY_MAP)) {
-      if (lowerTitle.includes(titleKey)) {
-        // Scale from 0-25 to 0-15 for title component
-        return Math.round((scoreValue / 25) * 15);
-      }
-    }
-
-    // Check for partial matches with common modifiers
-    if (lowerTitle.includes('chief') || lowerTitle.includes('c-level')) {return 15;}
-    if (lowerTitle.includes('executive')) {return 13;}
-    if (lowerTitle.includes('vice') || lowerTitle.includes('vp')) {return 12;}
-    if (lowerTitle.includes('director')) {return 10;}
-    if (lowerTitle.includes('head')) {return 10;}
-    if (lowerTitle.includes('manager')) {return 7;}
-    if (lowerTitle.includes('lead')) {return 6;}
-    if (lowerTitle.includes('senior')) {return 5;}
-
-    return 3; // Default for unknown titles
-  }
-
-  private scoreSeniority(seniority?: LeadContact['seniority']): number {
-    const seniorityScores: Record<NonNullable<LeadContact['seniority']>, number> = {
-      'C-Level': 4,
-      'VP': 3,
-      'Director': 3,
-      'Manager': 2,
-      'Individual': 1,
-      'Unknown': 1,
-    };
-    return seniorityScores[seniority ?? 'Unknown'];
-  }
-
-  private scoreEmailAuthority(email: string, companyDomain: string): number {
-    if (!email) {return 0;}
-
-    const emailDomain = email.split('@')[1]?.toLowerCase() || '';
-    const targetDomain = companyDomain.toLowerCase().replace('www.', '');
-
-    // Corporate email matching company domain
-    if (emailDomain === targetDomain || emailDomain.endsWith(`.${targetDomain}`)) {
-      return 3;
-    }
-
-    // Business email domain (not personal)
-    const personalDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com'];
-    if (!personalDomains.includes(emailDomain)) {
-      return 2;
-    }
-
-    // Personal email
-    return 0;
-  }
-
-  private scoreLinkedInAuthority(contact: LeadContact): number {
-    let score = 0;
-
-    if (contact.linkedinUrl) {
-      score += 1;
-
-      if (contact.linkedinConnections) {
-        if (contact.linkedinConnections >= 500) {score += 2;}
-        else if (contact.linkedinConnections >= 250) {score += 1;}
-      }
-    }
-
-    return Math.min(3, score);
-  }
-
-  // ==========================================================================
-  // NEED SCORING (25 points max)
-  // ==========================================================================
-
-  /**
-   * Score need/fit based on pain points and solution alignment
-   */
-  scoreNeed(leadData: LeadData, scraperIntel?: ScraperIntelligence): BANTComponentScore {
-    const signals: string[] = [];
-    const rawFactors: Record<string, number> = {};
-    let score = 0;
-    let dataPoints = 0;
-
-    // 1. Pain Point Indicators (0-7 points)
-    const painPointScore = this.scorePainPoints(leadData, scraperIntel);
-    rawFactors['painPoints'] = painPointScore;
-    score += painPointScore;
-    if (painPointScore > 0) {
-      dataPoints++;
-      if (painPointScore >= 5) {
-        signals.push('Strong pain point indicators detected');
-      } else {
-        signals.push('Some pain point signals present');
-      }
-    }
-
-    // 2. Competitor Usage (0-6 points)
-    const competitorScore = this.scoreCompetitorUsage(leadData.company.techStack, scraperIntel);
-    rawFactors['competitorUsage'] = competitorScore;
-    score += competitorScore;
-    if (competitorScore > 0) {
-      dataPoints++;
-      signals.push('Current competitor usage indicates market fit');
-    }
-
-    // 3. Tech Stack Gaps (0-5 points)
-    const techGapScore = this.scoreTechStackGaps(leadData.company.techStack, scraperIntel);
-    rawFactors['techStackGaps'] = techGapScore;
-    score += techGapScore;
-    if (techGapScore > 0) {
-      dataPoints++;
-      signals.push('Technology stack shows gaps our solution addresses');
-    }
-
-    // 4. Industry Fit (0-4 points)
-    const industryFitScore = this.scoreIndustryFit(leadData.company.industry);
-    rawFactors['industryFit'] = industryFitScore;
-    score += industryFitScore;
-    dataPoints++;
-    if (industryFitScore >= 3) {
-      signals.push(`${leadData.company.industry} is a target industry with proven need`);
-    }
-
-    // 5. Engagement Pattern Analysis (0-3 points)
-    const engagementScore = this.scoreEngagementPattern(leadData.engagement);
-    rawFactors['engagementPattern'] = engagementScore;
-    score += engagementScore;
-    if (engagementScore > 0) {
-      dataPoints++;
-      if (engagementScore >= 2) {
-        signals.push('Content engagement shows active problem research');
-      }
-    }
-
-    // Calculate confidence
-    const confidence = this.calculateComponentConfidence(dataPoints, 5, score, 25);
-
-    return {
-      score: Math.min(25, Math.max(0, Math.round(score))),
-      signals,
-      confidence,
-      rawFactors,
-    };
-  }
-
-  private scorePainPoints(leadData: LeadData, scraperIntel?: ScraperIntelligence): number {
-    let score = 0;
-
-    // Check engagement for pain point indicators
-    const allContent = [
-      ...leadData.engagement.pagesViewed,
-      ...leadData.engagement.downloadedAssets ?? [],
-      ...(scraperIntel?.contentSummary?.topKeywords ?? []),
-    ].join(' ').toLowerCase();
-
-    const painIndicators = [
-      'challenge', 'problem', 'struggle', 'pain', 'issue',
-      'improve', 'optimize', 'streamline', 'automate', 'scale',
-      'reduce', 'increase', 'grow', 'accelerate', 'transform',
-    ];
-
-    const matchCount = painIndicators.filter(indicator => allContent.includes(indicator)).length;
-
-    if (matchCount >= 5) {score += 4;}
-    else if (matchCount >= 3) {score += 3;}
-    else if (matchCount >= 1) {score += 1;}
-
-    // Bonus for solution-specific pages
-    const solutionPages = leadData.engagement.pagesViewed.filter(page =>
-      page.includes('solution') || page.includes('use-case') || page.includes('product')
-    );
-    if (solutionPages.length >= 2) {score += 2;}
-    else if (solutionPages.length >= 1) {score += 1;}
-
-    // Bonus for case study engagement
-    const caseStudyEngagement = leadData.engagement.downloadedAssets?.some(
-      asset => asset.toLowerCase().includes('case study') || asset.toLowerCase().includes('success story')
-    );
-    if (caseStudyEngagement) {score += 1;}
-
-    return Math.min(7, score);
-  }
-
-  private scoreCompetitorUsage(techStack?: string[], scraperIntel?: ScraperIntelligence): number {
-    const allTools = [
-      ...(techStack ?? []),
-      ...(scraperIntel?.techSignals?.detectedTools ?? []),
-    ];
-
-    // Define competitor categories
-    const competitors: Record<string, string[]> = {
-      'crm': ['Salesforce', 'HubSpot CRM', 'Pipedrive', 'Zoho'],
-      'marketing': ['Marketo', 'Pardot', 'Eloqua', 'Mailchimp'],
-      'analytics': ['Mixpanel', 'Amplitude', 'Heap'],
-      'support': ['Zendesk', 'Intercom', 'Freshdesk'],
-    };
-
-    let competitorMatches = 0;
-    for (const category of Object.values(competitors)) {
-      for (const competitor of category) {
-        if (allTools.some(tool => tool.toLowerCase().includes(competitor.toLowerCase()))) {
-          competitorMatches++;
-        }
-      }
-    }
-
-    if (competitorMatches >= 3) {return 6;}
-    if (competitorMatches >= 2) {return 4;}
-    if (competitorMatches >= 1) {return 2;}
-    return 0;
-  }
-
-  private scoreTechStackGaps(techStack?: string[], scraperIntel?: ScraperIntelligence): number {
-    const allTools = [
-      ...(techStack ?? []),
-      ...(scraperIntel?.techSignals?.detectedTools ?? []),
-    ];
-
-    // Define tools that indicate gaps our solution fills
-    const gapIndicators = [
-      { pattern: 'spreadsheet', gap: 'Manual processes indicate automation need' },
-      { pattern: 'excel', gap: 'Excel usage suggests need for proper tooling' },
-      { pattern: 'manual', gap: 'Manual workflows indicate automation opportunity' },
-    ];
-
-    // Check for missing complementary tools
-    const hasAnalytics = allTools.some(t => ['analytics', 'mixpanel', 'amplitude'].some(a => t.toLowerCase().includes(a)));
-    const hasCRM = allTools.some(t => ['salesforce', 'hubspot', 'crm'].some(c => t.toLowerCase().includes(c)));
-    const hasMarketing = allTools.some(t => ['marketo', 'pardot', 'mailchimp'].some(m => t.toLowerCase().includes(m)));
-
-    let score = 0;
-
-    // Score based on missing components
-    if (hasCRM && !hasMarketing) {score += 2;} // Has CRM but needs marketing automation
-    if (hasMarketing && !hasAnalytics) {score += 2;} // Has marketing but needs analytics
-    if (!hasCRM && !hasMarketing) {score += 3;} // Early stage - big opportunity
-
-    // Bonus for explicit gap indicators
-    const contentAnalysis = scraperIntel?.contentSummary?.topKeywords?.join(' ').toLowerCase() ?? '';
-    for (const indicator of gapIndicators) {
-      if (contentAnalysis.includes(indicator.pattern)) {
-        score += 1;
-      }
-    }
-
-    return Math.min(5, score);
-  }
-
-  private scoreIndustryFit(industry: string): number {
-    const targetIndustries = this.defaultICP.targetIndustries;
-
-    if (targetIndustries.includes(industry)) {return 4;}
-
-    // Partial match for related industries
-    const relatedIndustries: Record<string, string[]> = {
-      'SaaS': ['Technology', 'Software', 'Cloud'],
-      'Technology': ['SaaS', 'Software', 'IT'],
-      'E-commerce': ['Retail', 'Consumer Goods'],
-      'Finance': ['Banking', 'Insurance', 'FinTech'],
-      'Healthcare': ['Medical', 'Pharma', 'BioTech'],
-    };
-
-    for (const [target, related] of Object.entries(relatedIndustries)) {
-      if (targetIndustries.includes(target) && related.includes(industry)) {
-        return 2;
-      }
-    }
-
-    return 1; // Base score for any industry
-  }
-
-  private scoreEngagementPattern(engagement: LeadEngagement): number {
-    let score = 0;
-
-    // Multiple page views indicate research behavior
-    if (engagement.pagesViewed.length >= 5) {score += 1;}
-
-    // Form submissions show active interest
-    if (engagement.formSubmissions.length >= 2) {score += 1;}
-
-    // Webinar attendance shows commitment
-    if (engagement.webinarAttendance && engagement.webinarAttendance.length > 0) {score += 1;}
-
-    // Recent activity indicates current need
-    if (engagement.lastActivityDate) {
-      const daysSinceActivity = Math.floor(
-        (Date.now() - engagement.lastActivityDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (daysSinceActivity <= 7) {score += 1;}
-    }
-
-    return Math.min(3, score);
-  }
-
-  // ==========================================================================
-  // TIMELINE SCORING (25 points max)
-  // ==========================================================================
-
-  /**
-   * Score purchase timeline and urgency
-   */
-  scoreTimeline(leadData: LeadData, scraperIntel?: ScraperIntelligence): BANTComponentScore {
-    const signals: string[] = [];
-    const rawFactors: Record<string, number> = {};
-    let score = 0;
-    let dataPoints = 0;
-
-    // 1. Urgency Signals (0-7 points)
-    const urgencyScore = this.scoreUrgencySignals(leadData.engagement);
-    rawFactors['urgency'] = urgencyScore;
-    score += urgencyScore;
-    if (urgencyScore > 0) {
-      dataPoints++;
-      if (urgencyScore >= 5) {
-        signals.push('Strong urgency signals - active evaluation');
-      } else {
-        signals.push('Moderate urgency - planning phase');
-      }
-    }
-
-    // 2. Hiring Activity (0-6 points)
-    const hiringScore = this.scoreHiringActivity(scraperIntel);
-    rawFactors['hiring'] = hiringScore;
-    score += hiringScore;
-    if (hiringScore > 0) {
-      dataPoints++;
-      signals.push(`Active hiring (${scraperIntel?.businessSignals?.openPositions ?? 0} positions) indicates growth timeline`);
-    }
-
-    // 3. Fiscal Year Considerations (0-5 points)
-    const fiscalScore = this.scoreFiscalTiming();
-    rawFactors['fiscal'] = fiscalScore;
-    score += fiscalScore;
-    dataPoints++;
-    if (fiscalScore >= 3) {
-      signals.push('Favorable fiscal timing - budget cycle alignment');
-    }
-
-    // 4. Evaluation Activity (0-4 points)
-    const evaluationScore = this.scoreEvaluationActivity(leadData.engagement);
-    rawFactors['evaluation'] = evaluationScore;
-    score += evaluationScore;
-    if (evaluationScore > 0) {
-      dataPoints++;
-      signals.push('Evaluation behavior indicates active timeline');
-    }
-
-    // 5. Contract Expiry Signals (0-3 points)
-    const contractScore = this.scoreContractSignals(leadData.engagement, scraperIntel);
-    rawFactors['contract'] = contractScore;
-    score += contractScore;
-    if (contractScore > 0) {
-      dataPoints++;
-      signals.push('Contract renewal signals detected');
-    }
-
-    // Calculate confidence
-    const confidence = this.calculateComponentConfidence(dataPoints, 5, score, 25);
-
-    return {
-      score: Math.min(25, Math.max(0, Math.round(score))),
-      signals,
-      confidence,
-      rawFactors,
-    };
-  }
-
-  private scoreUrgencySignals(engagement: LeadEngagement): number {
-    let score = 0;
-
-    // Demo request is strongest urgency signal
-    if (engagement.demoRequested) {score += 4;}
-
-    // Multiple pricing page views
-    if ((engagement.pricingPageViews ?? 0) >= 2) {score += 2;}
-    else if ((engagement.pricingPageViews ?? 0) >= 1) {score += 1;}
-
-    // Recent activity burst
-    if (engagement.lastActivityDate) {
-      const daysSinceActivity = Math.floor(
-        (Date.now() - engagement.lastActivityDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (daysSinceActivity <= 3) {score += 2;}
-      else if (daysSinceActivity <= 7) {score += 1;}
-    }
-
-    // Chat interactions indicate immediate interest
-    if (engagement.chatInteractions && engagement.chatInteractions.length > 0) {
-      score += 1;
-    }
-
-    return Math.min(7, score);
-  }
-
-  private scoreHiringActivity(scraperIntel?: ScraperIntelligence): number {
-    if (!scraperIntel?.businessSignals) {return 0;}
-
-    const { isHiring, openPositions } = scraperIntel.businessSignals;
-
-    if (!isHiring) {return 0;}
-
-    if (openPositions >= 20) {return 6;}
-    if (openPositions >= 10) {return 5;}
-    if (openPositions >= 5) {return 4;}
-    if (openPositions >= 3) {return 3;}
-    if (openPositions >= 1) {return 2;}
-    return 1;
-  }
-
-  private scoreFiscalTiming(): number {
-    const now = new Date();
-    const month = now.getMonth(); // 0-11
-
-    // Q4 (Oct-Dec) is typically budget planning/spending season
-    if (month >= 9 && month <= 11) {return 5;}
-
-    // Q1 (Jan-Mar) new budgets are approved
-    if (month >= 0 && month <= 2) {return 4;}
-
-    // Q2-Q3 mid-year evaluations
-    return 2;
-  }
-
-  private scoreEvaluationActivity(engagement: LeadEngagement): number {
-    let score = 0;
-
-    // Comparison page views
-    const comparisonPages = engagement.pagesViewed.filter(page =>
-      page.includes('comparison') || page.includes('vs') || page.includes('alternative')
-    );
-    if (comparisonPages.length > 0) {score += 2;}
-
-    // Feature/integration page views
-    const featurePages = engagement.pagesViewed.filter(page =>
-      page.includes('feature') || page.includes('integration') || page.includes('api')
-    );
-    if (featurePages.length >= 3) {score += 2;}
-    else if (featurePages.length >= 1) {score += 1;}
-
-    // ROI calculator or similar tools
-    const roiPages = engagement.pagesViewed.filter(page =>
-      page.includes('roi') || page.includes('calculator') || page.includes('savings')
-    );
-    if (roiPages.length > 0) {score += 1;}
-
-    return Math.min(4, score);
-  }
-
-  private scoreContractSignals(engagement: LeadEngagement, scraperIntel?: ScraperIntelligence): number {
-    let score = 0;
-
-    // Check for migration/switching related content
-    const allContent = [
-      ...engagement.pagesViewed,
-      ...(scraperIntel?.contentSummary?.topKeywords ?? []),
-    ].join(' ').toLowerCase();
-
-    const switchingIndicators = ['migrate', 'switch', 'replace', 'alternative', 'renewal'];
-
-    for (const indicator of switchingIndicators) {
-      if (allContent.includes(indicator)) {
-        score += 1;
-      }
-    }
-
-    return Math.min(3, score);
-  }
-
-  // ==========================================================================
-  // ICP ALIGNMENT SCORING
-  // ==========================================================================
-
-  /**
-   * Calculate alignment with Ideal Customer Profile
-   */
-  calculateICPAlignment(
-    leadData: LeadData,
-    icp: ICPProfile,
-    scraperIntel?: ScraperIntelligence
-  ): number {
-    let score = 0;
-    let maxScore = 0;
-
-    // Industry alignment (20 points)
-    maxScore += 20;
-    if (icp.targetIndustries.includes(leadData.company.industry)) {
-      score += 20;
-    } else if (this.isRelatedIndustry(leadData.company.industry, icp.targetIndustries)) {
-      score += 10;
-    }
-
-    // Company size alignment (20 points)
-    maxScore += 20;
-    if (icp.targetCompanySizes.includes(leadData.company.employeeRange)) {
-      score += 20;
-    } else if (this.isAdjacentSize(leadData.company.employeeRange, icp.targetCompanySizes)) {
-      score += 10;
-    }
-
-    // Title alignment (20 points)
-    maxScore += 20;
-    const titleAlignment = this.checkTitleAlignment(leadData.contact.title, icp.targetTitles);
-    score += titleAlignment * 20;
-
-    // Tech stack alignment (15 points)
-    maxScore += 15;
-    const allTools = [
-      ...(leadData.company.techStack ?? []),
-      ...(scraperIntel?.techSignals?.detectedTools ?? []),
-    ];
-    const techOverlap = this.calculateSetOverlap(allTools, icp.targetTechStack);
-    score += Math.round(techOverlap * 15);
-
-    // Geography alignment (10 points)
-    maxScore += 10;
-    if (leadData.company.headquarters) {
-      const geoMatch = icp.targetGeographies.some(geo =>
-        leadData.company.headquarters?.toLowerCase().includes(geo.toLowerCase())
-      );
-      if (geoMatch) {score += 10;}
-    }
-
-    // Must-have signals (10 points)
-    maxScore += 10;
-    const mustHaveMatches = this.checkMustHaveSignals(leadData, scraperIntel, icp.mustHaveSignals);
-    score += Math.round((mustHaveMatches / icp.mustHaveSignals.length) * 10);
-
-    // Disqualifier check (can reduce to 0)
-    const hasDisqualifier = this.checkDisqualifiers(leadData, scraperIntel, icp.disqualifiers);
-    if (hasDisqualifier) {
-      score = Math.round(score * 0.3); // 70% penalty for disqualifiers
-    }
-
-    return Math.round((score / maxScore) * 100);
-  }
-
-  private isRelatedIndustry(industry: string, targetIndustries: string[]): boolean {
-    const industryRelations: Record<string, string[]> = {
-      'SaaS': ['Technology', 'Software'],
-      'Technology': ['SaaS', 'Software'],
-      'E-commerce': ['Retail'],
-      'Finance': ['Banking', 'FinTech'],
-      'Healthcare': ['Medical', 'Pharma'],
-    };
-
-    for (const target of targetIndustries) {
-      if (industryRelations[target]?.includes(industry)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private isAdjacentSize(size: EmployeeRange, targetSizes: EmployeeRange[]): boolean {
-    const sizeOrder: EmployeeRange[] = ['1-10', '11-50', '51-200', '201-500', '500+'];
-    const sizeIndex = sizeOrder.indexOf(size);
-
-    for (const targetSize of targetSizes) {
-      const targetIndex = sizeOrder.indexOf(targetSize);
-      if (Math.abs(sizeIndex - targetIndex) === 1) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private checkTitleAlignment(title: string, targetTitles: string[]): number {
-    if (!title) {return 0;}
-
-    const lowerTitle = title.toLowerCase();
-
-    for (const targetTitle of targetTitles) {
-      if (lowerTitle.includes(targetTitle.toLowerCase())) {
-        return 1;
-      }
-    }
-
-    // Partial match for seniority
-    if (lowerTitle.includes('senior') || lowerTitle.includes('lead')) {
-      return 0.5;
-    }
-
-    return 0.2;
-  }
-
-  private calculateSetOverlap(set1: string[], set2: string[]): number {
-    if (set2.length === 0) {return 0;}
-
-    const normalizedSet1 = set1.map(s => s.toLowerCase());
-    const normalizedSet2 = set2.map(s => s.toLowerCase());
-
-    let matches = 0;
-    for (const item of normalizedSet2) {
-      if (normalizedSet1.some(s => s.includes(item) || item.includes(s))) {
-        matches++;
-      }
-    }
-
-    return matches / set2.length;
-  }
-
-  private checkMustHaveSignals(
-    leadData: LeadData,
-    scraperIntel: ScraperIntelligence | undefined,
-    mustHaveSignals: string[]
-  ): number {
-    let matches = 0;
-
-    for (const signal of mustHaveSignals) {
-      const lowerSignal = signal.toLowerCase();
-
-      if (lowerSignal.includes('corporate email')) {
-        const emailDomain = leadData.contact.email.split('@')[1]?.toLowerCase();
-        const personalDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
-        if (!personalDomains.includes(emailDomain)) {matches++;}
-      }
-
-      if (lowerSignal.includes('hiring') && scraperIntel?.businessSignals?.isHiring) {
-        matches++;
-      }
-
-      if (lowerSignal.includes('linkedin') && leadData.contact.linkedinUrl) {
-        matches++;
-      }
-    }
-
-    return matches;
-  }
-
-  private checkDisqualifiers(
-    leadData: LeadData,
-    scraperIntel: ScraperIntelligence | undefined,
-    disqualifiers: string[]
-  ): boolean {
-    for (const disqualifier of disqualifiers) {
-      const lowerDisqualifier = disqualifier.toLowerCase();
-
-      if (lowerDisqualifier.includes('personal email')) {
-        const emailDomain = leadData.contact.email.split('@')[1]?.toLowerCase();
-        const personalDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
-        if (personalDomains.includes(emailDomain) &&
-            emailDomain !== leadData.company.domain.toLowerCase()) {
-          return true;
-        }
-      }
-
-      if (lowerDisqualifier.includes('student')) {
-        const lowerTitle = leadData.contact.title.toLowerCase();
-        if (lowerTitle.includes('student') || lowerTitle.includes('intern')) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  // ==========================================================================
-  // QUALIFICATION AND REPORTING
-  // ==========================================================================
-
-  /**
-   * Determine qualification tier based on scores
-   */
-  private determineQualificationTier(bantTotal: number, icpAlignment: number): QualificationTier {
-    const combinedScore = (bantTotal * 0.7) + (icpAlignment * 0.3);
-
-    if (combinedScore >= 75) {return 'HOT';}
-    if (combinedScore >= 50) {return 'WARM';}
-    if (combinedScore >= 25) {return 'COLD';}
-    return 'DISQUALIFIED';
-  }
-
-  /**
-   * Generate recommended action based on qualification
-   */
-  private generateRecommendedAction(bantScore: BANTScore, tier: QualificationTier): string {
-    switch (tier) {
-      case 'HOT':
-        if (bantScore.authority.score >= 20) {
-          return 'Immediate outreach - schedule discovery call with decision maker';
-        }
-        return 'Fast-track qualification - identify decision maker and escalate';
-
-      case 'WARM':
-        if (bantScore.need.score >= 15) {
-          return 'Nurture with targeted content addressing identified pain points';
-        }
-        if (bantScore.timeline.score < 10) {
-          return 'Long-term nurture sequence - check in quarterly';
-        }
-        return 'Standard nurture sequence with educational content';
-
-      case 'COLD':
-        if (bantScore.authority.score >= 15) {
-          return 'Add to awareness campaign - contact has authority but low fit';
-        }
-        return 'Marketing automation - add to general newsletter';
-
-      case 'DISQUALIFIED':
-        return 'No action required - lead does not meet minimum criteria';
-    }
-  }
-
-  /**
-   * Extract key insights from scoring
-   */
-  private extractInsights(
-    bantScore: BANTScore,
-    icpAlignment: number,
-    leadData: LeadData,
-    scraperIntel?: ScraperIntelligence
-  ): string[] {
-    const insights: string[] = [];
-
-    // Strongest BANT component
-    const components = [
-      { name: 'Budget', score: bantScore.budget.score },
-      { name: 'Authority', score: bantScore.authority.score },
-      { name: 'Need', score: bantScore.need.score },
-      { name: 'Timeline', score: bantScore.timeline.score },
-    ];
-    const strongest = components.sort((a, b) => b.score - a.score)[0];
-    const weakest = components.sort((a, b) => a.score - b.score)[0];
-
-    insights.push(`Strongest qualification factor: ${strongest.name} (${strongest.score}/25)`);
-
-    if (weakest.score < 10) {
-      insights.push(`Area needing validation: ${weakest.name} - gather more data`);
-    }
-
-    // ICP alignment insight
-    if (icpAlignment >= 80) {
-      insights.push('Excellent ICP fit - matches target customer profile');
-    } else if (icpAlignment >= 60) {
-      insights.push('Good ICP fit - some profile alignment gaps');
-    } else if (icpAlignment < 40) {
-      insights.push('Poor ICP fit - consider if worth pursuing');
-    }
-
-    // Company-specific insights
-    if (scraperIntel?.businessSignals?.isHiring) {
-      const positions = scraperIntel.businessSignals.openPositions;
-      insights.push(`Growth indicator: ${positions} open positions suggest scaling`);
-    }
-
-    if (bantScore.authority.score >= 20) {
-      insights.push(`Decision maker contact: ${leadData.contact.title}`);
-    } else if (bantScore.authority.score < 10) {
-      insights.push('Consider identifying higher-level contact for faster decision');
-    }
-
-    // Add all signals from BANT components
-    for (const signal of bantScore.budget.signals) {
-      if (!insights.includes(signal)) {insights.push(signal);}
-    }
-
-    return insights.slice(0, 8); // Limit to 8 most important insights
-  }
-
-  /**
-   * Identify data gaps that would improve scoring accuracy
-   */
-  private identifyDataGaps(leadData: LeadData, scraperIntel?: ScraperIntelligence): string[] {
-    const gaps: string[] = [];
-
-    // Contact data gaps
-    if (!leadData.contact.linkedinUrl) {
-      gaps.push('Missing LinkedIn profile - would improve authority scoring');
-    }
-    if (!leadData.contact.seniority || leadData.contact.seniority === 'Unknown') {
-      gaps.push('Unknown seniority level - validate from LinkedIn');
-    }
-
-    // Company data gaps
-    if (leadData.company.employeeRange === 'unknown') {
-      gaps.push('Unknown company size - critical for budget scoring');
-    }
-    if (!leadData.company.fundingStage) {
-      gaps.push('Unknown funding status - would inform budget capacity');
-    }
-    if (!leadData.company.techStack || leadData.company.techStack.length === 0) {
-      gaps.push('No tech stack data - would improve need scoring');
-    }
-
-    // Engagement data gaps
-    if (leadData.engagement.pagesViewed.length < 3) {
-      gaps.push('Limited page view data - need more engagement signals');
-    }
-    if (leadData.engagement.pricingPageViews === undefined) {
-      gaps.push('No pricing page tracking - critical for timeline scoring');
-    }
-
-    // Scraper intelligence gaps
-    if (!scraperIntel) {
-      gaps.push('No scraper intelligence available - run enrichment');
-    } else {
-      if (!scraperIntel.techSignals || scraperIntel.techSignals.detectedTools.length === 0) {
-        gaps.push('No tech signals from website - may need deeper analysis');
-      }
-      if (scraperIntel.confidence < 0.5) {
-        gaps.push('Low confidence scraper data - manual verification recommended');
-      }
-    }
-
-    return gaps;
-  }
-
-  /**
-   * Build detailed scoring breakdown for transparency
-   */
-  private buildScoringBreakdown(
-    leadData: LeadData,
-    scraperIntel?: ScraperIntelligence
-  ): QualificationResult['scoringBreakdown'] {
-    return {
-      budgetDetails: {
-        companySizeScore: this.scoreCompanySize(leadData.company.employeeRange),
-        fundingScore: this.scoreFunding(leadData.company),
-        pricingEngagementScore: this.scorePricingEngagement(leadData.engagement),
-        techSpendScore: this.scoreTechSpend(leadData.company.techStack, scraperIntel?.techSignals),
-        industryBenchmarkScore: this.scoreIndustryBudget(leadData.company.industry),
-        adjustments: [],
-      },
-      authorityDetails: {
-        titleScore: this.scoreTitleAuthority(leadData.contact.title),
-        seniorityScore: this.scoreSeniority(leadData.contact.seniority),
-        emailDomainScore: this.scoreEmailAuthority(leadData.contact.email, leadData.company.domain),
-        linkedinScore: this.scoreLinkedInAuthority(leadData.contact),
-        orgStructureScore: 0, // Placeholder for future implementation
-        adjustments: [],
-      },
-      needDetails: {
-        painPointScore: this.scorePainPoints(leadData, scraperIntel),
-        competitorUsageScore: this.scoreCompetitorUsage(leadData.company.techStack, scraperIntel),
-        techStackGapScore: this.scoreTechStackGaps(leadData.company.techStack, scraperIntel),
-        industryFitScore: this.scoreIndustryFit(leadData.company.industry),
-        engagementPatternScore: this.scoreEngagementPattern(leadData.engagement),
-        adjustments: [],
-      },
-      timelineDetails: {
-        urgencyScore: this.scoreUrgencySignals(leadData.engagement),
-        contractExpiryScore: this.scoreContractSignals(leadData.engagement, scraperIntel),
-        hiringActivityScore: this.scoreHiringActivity(scraperIntel),
-        fiscalYearScore: this.scoreFiscalTiming(),
-        evaluationActivityScore: this.scoreEvaluationActivity(leadData.engagement),
-        adjustments: [],
-      },
-    };
-  }
-
-  // ==========================================================================
-  // HELPER METHODS
-  // ==========================================================================
-
-  /**
-   * Calculate component confidence based on data availability
-   */
-  private calculateComponentConfidence(
-    dataPointsAvailable: number,
-    totalDataPoints: number,
-    score: number,
-    maxScore: number
-  ): number {
-    // Base confidence from data completeness
-    const dataConfidence = dataPointsAvailable / totalDataPoints;
-
-    // Adjust confidence based on score distribution
-    // Very high or very low scores with little data should have lower confidence
-    const scoreRatio = score / maxScore;
-    const extremityPenalty = scoreRatio > 0.9 || scoreRatio < 0.1 ? 0.9 : 1.0;
-
-    return Math.round(dataConfidence * extremityPenalty * 100) / 100;
-  }
-
-  /**
-   * Generate a qualification report for a specific lead
-   */
-  generateQualificationReport(leadId: string, scores: BANTScore): QualificationResult {
-    // Create minimal lead data for report generation
-    const minimalLead: LeadData = {
-      leadId,
-      contact: { name: 'Unknown', email: 'unknown@unknown.com', title: 'Unknown' },
-      company: { name: 'Unknown', domain: 'unknown.com', industry: 'Unknown', employeeRange: 'unknown' },
-      engagement: { pagesViewed: [], formSubmissions: [], emailInteractions: [] },
-    };
-
-    const icpAlignment = 50; // Default when regenerating
-    const qualification = this.determineQualificationTier(scores.total, icpAlignment);
-    const recommendedAction = this.generateRecommendedAction(scores, qualification);
-
-    return {
-      leadId,
-      qualifiedAt: new Date().toISOString(),
-      bantScore: scores,
-      icpAlignment,
-      qualification,
-      recommendedAction,
-      insights: ['Report regenerated from existing scores'],
-      dataGaps: ['Full lead data not available for complete analysis'],
-      scoringBreakdown: this.buildScoringBreakdown(minimalLead),
-    };
-  }
-
-  /**
-   * Update ICP configuration
-   */
-  setICP(icp: Partial<ICPProfile>): void {
-    this.defaultICP = { ...this.defaultICP, ...icp };
-    this.log('INFO', 'ICP configuration updated');
-  }
-
-  /**
-   * Update scoring weights
-   */
-  setScoringWeights(weights: Partial<ScoringWeights>): void {
-    this.scoringWeights = { ...this.scoringWeights, ...weights };
-    this.log('INFO', 'Scoring weights updated');
+    return { functional: 620, boilerplate: 80 };
   }
 }
 
 // ============================================================================
-// FACTORY FUNCTION
+// FACTORY / SINGLETON
 // ============================================================================
 
 export function createLeadQualifierSpecialist(): LeadQualifierSpecialist {
   return new LeadQualifierSpecialist();
 }
-
-// ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
 
 let instance: LeadQualifierSpecialist | null = null;
 
@@ -1834,3 +783,22 @@ export function getLeadQualifierSpecialist(): LeadQualifierSpecialist {
   instance ??= createLeadQualifierSpecialist();
   return instance;
 }
+
+// ============================================================================
+// INTERNAL TEST HELPERS (exported for proof-of-life harness + regression executor)
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  DEFAULT_SYSTEM_PROMPT,
+  loadGMConfig,
+  stripJsonFences,
+  buildQualifyLeadPrompt,
+  executeQualifyLead,
+  QualifyLeadPayloadSchema,
+  QualifyLeadResultSchema,
+  BANTScoreSchema,
+};
