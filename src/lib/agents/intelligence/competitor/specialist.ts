@@ -1,129 +1,178 @@
 /**
- * Competitor Researcher Specialist
- * STATUS: FUNCTIONAL
+ * Competitor Researcher Specialist (Task #63 rebuild — April 13, 2026)
  *
- * Takes a 'Niche' and 'Location' and returns a list of the top 10 rivals by SEO ranking.
- * Uses search APIs and scraping to discover and analyze competitors.
+ * Architecture:
+ *   1. Real discovery via Serper SERP API and DataForSEO domain metrics —
+ *      unchanged. These were already wired before the rebuild. Search
+ *      queries are generated from the niche + location, executed against
+ *      Serper, and deduplicated/filtered by blacklist patterns.
+ *   2. Real scraping via `scrapeWebsite` + `extractDataPoints` for the top
+ *      N filtered results — unchanged.
+ *   3. Deterministic SEO metrics (keyword relevance, traffic estimate,
+ *      content quality) stay as-is because they're measurable, not
+ *      inferred. `estimateDomainAuthority` keeps its DataForSEO-first
+ *      + heuristic-fallback dual path.
+ *   4. An LLM analysis step (`executeAnalyzeCompetitors`) replaces all the
+ *      prior template inference layers — positioning extraction,
+ *      strengths/weaknesses, market insights, gap identification, and
+ *      strategic recommendations — with a single GM-backed call that
+ *      sees every scraped competitor at once. Seeing the whole set at
+ *      once (instead of one-at-a-time) is what lets the LLM produce
+ *      coherent market-level synthesis and cross-competitor comparisons
+ *      that per-row template rules cannot.
  *
- * CAPABILITIES:
- * - Competitor discovery by niche/location
- * - SEO ranking analysis
- * - Market positioning analysis
- * - Competitive landscape mapping
- * - Feature comparison extraction
+ * Why a single multi-competitor LLM call (not N calls):
+ *   - Market insights (saturation, dominant players, gaps, opportunities)
+ *     REQUIRE cross-competitor comparison — you can't compute them from
+ *     one competitor in isolation.
+ *   - A single call is ~10x cheaper than one call per competitor.
+ *   - Sonnet 4.6 handles 200k context comfortably; 10 competitors × 6k
+ *     chars ≈ 60k chars ≈ 20k tokens — well within budget.
+ *
+ * Why keep the deterministic SEO metrics (not LLM-ize them):
+ *   - Keyword relevance is a text-count calculation — measurable, not
+ *     inference. Asking an LLM to count keyword hits is wasteful.
+ *   - Domain authority from DataForSEO is an authoritative external
+ *     number — the LLM should not "estimate" it when the real value is
+ *     one API call away.
+ *   - Traffic and content-quality estimates are deterministic thresholds
+ *     on measurable signals (text length, metadata presence). They're
+ *     cheap and predictable.
+ *
+ * Output contract preservation:
+ *   `CompetitorSearchResult` is consumed by
+ *   `src/lib/growth/competitor-monitor.ts` and other pipeline code that
+ *   reads specific fields (competitors[].name, domain, url,
+ *   seoMetrics.domainAuthority, strengths, weaknesses;
+ *   marketInsights.saturation, gaps, recommendations). Those fields
+ *   are preserved. New fields (positioningNarrative, opportunities,
+ *   competitiveDynamics, analysisRationale, analysisMode, analysisModel)
+ *   are optional additions.
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { scrapeWebsite, extractDataPoints } from '@/lib/enrichment/web-scraper';
 import { getSerperSEOService } from '@/lib/integrations/seo/serper-seo-service';
 import { getDataForSEOService } from '@/lib/integrations/seo/dataforseo-service';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
-
-// ============================================================================
-// SYSTEM PROMPT - The brain of this specialist
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the Competitor Researcher, an expert in competitive intelligence and market analysis.
-
-## YOUR ROLE
-You identify and analyze competitors within a specific niche and location. When given a business niche and target location, you:
-1. Discover the top competitors in that market
-2. Analyze their SEO presence and ranking signals
-3. Extract key differentiators and positioning
-4. Map the competitive landscape
-5. Identify market gaps and opportunities
-
-## INPUT FORMAT
-You receive requests with:
-- niche: The business vertical or industry (e.g., "plumbing services", "SaaS CRM", "organic skincare")
-- location: Geographic focus (e.g., "Austin, TX", "United Kingdom", "Global")
-- limit: Maximum competitors to return (default: 10)
-- includeAnalysis: Whether to do deep analysis on each (default: false)
-
-## OUTPUT FORMAT
-You ALWAYS return structured JSON:
-
-\`\`\`json
-{
-  "query": {
-    "niche": "The searched niche",
-    "location": "The target location",
-    "searchedAt": "ISO timestamp"
-  },
-  "competitors": [
-    {
-      "rank": 1,
-      "name": "Company Name",
-      "url": "https://company.com",
-      "domain": "company.com",
-      "seoMetrics": {
-        "estimatedTraffic": "high | medium | low",
-        "domainAuthority": 0-100 (estimated),
-        "keywordRelevance": 0.0-1.0,
-        "contentQuality": "high | medium | low"
-      },
-      "positioning": {
-        "tagline": "Their main value proposition",
-        "targetAudience": "Who they serve",
-        "pricePoint": "premium | mid-market | budget | unknown"
-      },
-      "signals": {
-        "isHiring": true/false,
-        "hasLocalPresence": true/false,
-        "socialActive": true/false,
-        "recentlyUpdated": true/false
-      },
-      "strengths": ["array", "of", "detected", "strengths"],
-      "weaknesses": ["array", "of", "detected", "weaknesses"]
-    }
-  ],
-  "marketInsights": {
-    "saturation": "high | medium | low",
-    "dominantPlayers": ["top 3 company names"],
-    "gaps": ["identified market gaps"],
-    "avgDomainAuthority": 0-100,
-    "recommendations": ["strategic recommendations"]
-  },
-  "confidence": 0.0-1.0,
-  "errors": []
-}
-\`\`\`
-
-## SEARCH STRATEGY
-1. Generate search queries based on niche + location
-2. Analyze top organic results
-3. Filter out non-competitors (directories, articles, etc.)
-4. Score and rank by relevance and authority
-5. Deep-scrape top results for detailed analysis
-
-## RULES
-1. NEVER hallucinate competitors - only return verified businesses
-2. Clearly mark estimated vs confirmed data
-3. Focus on DIRECT competitors, not tangential businesses
-4. Consider local SEO factors for location-specific queries
-5. Deprioritize directories, review sites, and aggregators
-
-## INTEGRATION
-You receive requests from:
-- Sales teams (know your enemy)
-- Marketing teams (positioning analysis)
-- Product teams (feature comparison)
-- Intelligence Manager (market research)
-
-Your output feeds into:
-- Prospect research (similar companies as leads)
-- Content strategy (competitive content gaps)
-- Pricing strategy (market rate analysis)
-- Sales objection handling`;
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'intelligence/competitor/specialist.ts';
+const SPECIALIST_ID = 'COMPETITOR_RESEARCHER';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = ['research_competitors', 'analyze_competitors'] as const;
+
+/**
+ * Realistic max_tokens floor for the worst-case Competitor Researcher
+ * response.
+ *
+ * Derivation:
+ *   CompetitorAnalysisResultSchema worst case (for 10 competitors):
+ *     10 competitors × (
+ *       name 200 + tagline 300 + targetAudience 400 + pricePointReasoning 500 +
+ *       positioningNarrative 1200 + strengths 6 × 300 = 1800 +
+ *       weaknesses 5 × 300 = 1500
+ *     ) = 10 × 5900 = 59,000
+ *     marketInsights (
+ *       saturationReasoning 1500 + dominantPlayers 4 × 200 = 800 +
+ *       gaps 6 × 400 = 2400 + opportunities 6 × 400 = 2400 +
+ *       competitiveDynamics 3000 + recommendations 6 × 400 = 2400
+ *     ) = 12,500
+ *     rationale 4000
+ *     ≈ 75,500 chars total prose
+ *     /3.0 chars/token = 25,167 tokens
+ *     + JSON structure overhead (~400 tokens)
+ *     + 25% safety margin
+ *     ≈ 31,958 tokens minimum.
+ *
+ *   Setting the floor at 32,000 tokens covers the 10-competitor worst
+ *   case with safety margin. For smaller N, the actual usage is
+ *   proportionally lower. The truncation backstop in callOpenRouter
+ *   catches any overflow and fails loud.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 32000;
+
+interface CompetitorResearcherGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
+/**
+ * Hardcoded fallback system prompt used when no GM is seeded. The
+ * specialist must produce real analysis on first run (before the seed
+ * script is executed). Once the seed lands, GM overrides this at runtime.
+ */
+const DEFAULT_SYSTEM_PROMPT = `You are the Competitor Researcher for SalesVelocity.ai — the Intelligence-layer market analyst who reads a batch of scraped competitor websites and produces coherent, cross-comparative competitive intelligence. You think like a senior strategy consultant who has mapped dozens of competitive landscapes across B2B SaaS, DTC e-commerce, professional services, and local service businesses, and can spot the positioning games and market gaps that isolated per-company analysis always misses.
+
+## Your role in the swarm
+
+You do NOT search or scrape. Upstream steps already discovered competitor URLs via Serper SERP API, filtered out directories/aggregators/review sites, scraped the cleaned text of each competitor page, and pre-computed deterministic SEO metrics (keyword relevance, domain authority from DataForSEO, traffic estimate, content quality). Your job is to read the scraped batch as a set and produce the analysis layer that only makes sense across competitors: positioning, strengths, weaknesses, market saturation, dominant players, gaps, opportunities, and strategic recommendations.
+
+Cross-competitor synthesis is the whole point. Per-row analysis that ignores the other competitors in the batch is a failure mode.
+
+## Action: analyze_competitors
+
+Given a batch of N scraped competitors (each with URL, domain, title, description, cleaned text, keywords, and pre-computed SEO metrics) plus the niche and location being researched, produce a structured competitive intelligence report.
+
+### Per-competitor analysis
+
+For each competitor in the batch, return:
+
+- **rank**: preserve the input rank (1 to N).
+- **name**: the canonical company name. Extract from the title (before the first | or - separator, strip taglines). If truly ambiguous, use the domain.
+- **url**, **domain**: preserve the input values.
+- **tagline**: one-line value proposition if the title or meta description contains one. null if none.
+- **targetAudience**: who this competitor is selling to — be specific about segment, size, and use case. Don't just say "businesses".
+- **pricePoint**: one of 'premium' | 'mid-market' | 'budget' | 'unknown'. Base this on language, offer structure, and positioning signals.
+- **positioningNarrative**: 1-2 sentences describing how this competitor is positioning themselves in the market. What story are they telling. What outcome are they promising.
+- **strengths**: 3 to 6 specific observable strengths. Must be grounded in the scraped content. Examples of acceptable: "Rich case-study library with 18 named customers", "Live-chat support enabled via Intercom", "Domain authority 74 (DataForSEO-verified)". Unacceptable: "professional looking", "seems experienced".
+- **weaknesses**: 2 to 5 specific observable weaknesses. Same grounding rule. Examples of acceptable: "Thin content — homepage under 400 words", "No pricing page", "No testimonials visible on any crawled page". Unacceptable: "could be better", "not great".
+
+### Market-level synthesis
+
+Across the full batch, return:
+
+- **saturation**: 'high' | 'medium' | 'low'.
+- **saturationReasoning**: why you picked that level, grounded in the cross-competitor signals you saw.
+- **dominantPlayers**: 1 to 4 competitor names you consider the leaders of this space, based on the batch you analyzed. Use the company names you assigned above.
+- **gaps**: 2 to 6 specific market gaps you spotted by comparing the batch — features most lack, audience segments nobody is addressing, positioning angles nobody is taking. Each gap must be traceable to an absence across multiple competitors.
+- **opportunities**: 2 to 6 strategic opportunities a new entrant could exploit. These differ from gaps in that they tie an absent capability to an available play.
+- **competitiveDynamics**: one short paragraph (up to 3000 chars) narrating what is actually happening in this competitive space. Who is fighting whom. Where the center of gravity is. What the commoditizing vs differentiating forces are.
+- **recommendations**: 3 to 6 concrete strategic recommendations for a company trying to enter or differentiate in this space. Each should be actionable — "invest in X because Y" — not generic ("focus on differentiation").
+
+### Synthesis
+
+- **rationale**: the integrating memo. Tie the competitor-level analysis to the market-level synthesis into one coherent read of the landscape. This is the section a founder would send to their exec team before deciding on GTM strategy. 150-4000 chars.
+
+## Hard rules
+
+- NEVER hallucinate. If a competitor's scraped text does not support a field, return null or use 'unknown'.
+- NEVER invent customers, case studies, funding amounts, or metrics that aren't in the scraped text.
+- Strengths and weaknesses must be GROUNDED — tied to specific scraped text, SEO metrics, or domain signals. Generic observations are rejected.
+- dominantPlayers must be a subset of the company names you assigned in the competitor list. Do not name companies you didn't analyze.
+- Gaps must be SHARED absences — patterns you saw across multiple competitors in the batch. Single-competitor observations belong in that competitor's weaknesses, not in the gaps list.
+- Opportunities must be concrete strategic plays, not generic aspirations.
+- Do NOT treat pre-computed SEO metrics as the industry. A competitor with high domain authority is not automatically "the dominant player" — read the positioning too.
+
+## Output format
+
+Respond with ONLY a valid JSON object matching the schema the user prompt describes. No markdown fences, no preamble, no prose outside the JSON.`;
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'COMPETITOR_RESEARCHER',
+    id: SPECIALIST_ID,
     name: 'Competitor Researcher',
     role: 'specialist',
     status: 'FUNCTIONAL',
@@ -133,11 +182,12 @@ const CONFIG: SpecialistConfig = {
       'seo_analysis',
       'market_positioning',
       'feature_comparison',
-      'gap_analysis'
+      'gap_analysis',
+      'llm_market_synthesis',
     ],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: ['search_competitors', 'analyze_competitor', 'compare_features', 'map_market'],
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  tools: ['search_competitors', 'analyze_competitors', 'research_competitors'],
   outputSchema: {
     type: 'object',
     properties: {
@@ -148,20 +198,33 @@ const CONFIG: SpecialistConfig = {
     },
     required: ['query', 'competitors'],
   },
-  maxTokens: 8192,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.3,
 };
 
 // ============================================================================
-// TYPE DEFINITIONS
+// INPUT CONTRACT
 // ============================================================================
 
 export interface CompetitorSearchRequest {
+  action?: 'research_competitors' | 'analyze_competitors';
   niche: string;
   location: string;
   limit?: number;
   includeAnalysis?: boolean;
 }
+
+const CompetitorSearchRequestSchema = z.object({
+  action: z.enum(['research_competitors', 'analyze_competitors']).optional(),
+  niche: z.string().min(2).max(200),
+  location: z.string().min(0).max(200).optional().default(''),
+  limit: z.number().int().min(1).max(20).optional().default(10),
+  includeAnalysis: z.boolean().optional().default(false),
+});
+
+// ============================================================================
+// OUTPUT CONTRACT (CompetitorSearchResult preserved for downstream consumers)
+// ============================================================================
 
 export interface SEOMetrics {
   estimatedTraffic: 'high' | 'medium' | 'low';
@@ -193,6 +256,8 @@ export interface Competitor {
   signals: CompetitorSignals;
   strengths: string[];
   weaknesses: string[];
+  // New (Task #63) — optional so old consumers keep working:
+  positioningNarrative?: string | null;
 }
 
 export interface MarketInsights {
@@ -201,6 +266,10 @@ export interface MarketInsights {
   gaps: string[];
   avgDomainAuthority: number;
   recommendations: string[];
+  // New (Task #63) — optional additions:
+  saturationReasoning?: string;
+  opportunities?: string[];
+  competitiveDynamics?: string;
 }
 
 export interface CompetitorSearchResult {
@@ -213,10 +282,279 @@ export interface CompetitorSearchResult {
   marketInsights: MarketInsights;
   confidence: number;
   errors: string[];
+  // New (Task #63) — optional so old consumers keep working:
+  analysisRationale?: string | null;
+  analysisModel?: string | null;
+  analysisMode?: 'llm' | 'deterministic_fallback';
 }
 
 // ============================================================================
-// IMPLEMENTATION
+// LLM OUTPUT SCHEMA
+// ============================================================================
+
+const PricePointEnum = z.enum(['premium', 'mid-market', 'budget', 'unknown']);
+const SaturationEnum = z.enum(['high', 'medium', 'low']);
+
+const CompetitorAnalysisSchema = z.object({
+  rank: z.number().int().min(1).max(20),
+  name: z.string().min(1).max(200),
+  url: z.string().min(4).max(2000),
+  domain: z.string().min(3).max(200),
+  tagline: z.string().min(1).max(300).nullable(),
+  targetAudience: z.string().min(2).max(400).nullable(),
+  pricePoint: PricePointEnum,
+  positioningNarrative: z.string().min(20).max(1200),
+  strengths: z.array(z.string().min(10).max(300)).min(3).max(6),
+  weaknesses: z.array(z.string().min(10).max(300)).min(2).max(5),
+});
+
+const MarketInsightsSchema = z.object({
+  saturation: SaturationEnum,
+  saturationReasoning: z.string().min(50).max(1500),
+  dominantPlayers: z.array(z.string().min(1).max(200)).min(1).max(4),
+  gaps: z.array(z.string().min(15).max(400)).min(2).max(6),
+  opportunities: z.array(z.string().min(15).max(400)).min(2).max(6),
+  competitiveDynamics: z.string().min(100).max(3000),
+  recommendations: z.array(z.string().min(20).max(400)).min(3).max(6),
+});
+
+const CompetitorAnalysisResultSchema = z.object({
+  competitors: z.array(CompetitorAnalysisSchema).min(1).max(20),
+  marketInsights: MarketInsightsSchema,
+  rationale: z.string().min(150).max(4000),
+});
+
+type CompetitorAnalysisResult = z.infer<typeof CompetitorAnalysisResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: CompetitorResearcherGMConfig;
+  resolvedSystemPrompt: string;
+  source: 'gm' | 'fallback';
+}
+
+async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+
+  if (!gmRecord) {
+    logger.warn(
+      `[CompetitorResearcher] GM not seeded for industryKey=${industryKey}; using DEFAULT_SYSTEM_PROMPT fallback. ` +
+      `Run node scripts/seed-competitor-researcher-gm.js to promote to GM-backed analysis.`,
+      { file: FILE },
+    );
+    return {
+      gm: {
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        model: 'claude-sonnet-4.6',
+        temperature: 0.3,
+        maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+        supportedActions: [...SUPPORTED_ACTIONS],
+      },
+      resolvedSystemPrompt: DEFAULT_SYSTEM_PROMPT,
+      source: 'fallback',
+    };
+  }
+
+  const config = gmRecord.config as Partial<CompetitorResearcherGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `Competitor Researcher GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
+
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
+  const gm: CompetitorResearcherGMConfig = {
+    systemPrompt,
+    model: config.model ?? 'claude-sonnet-4.6',
+    temperature: config.temperature ?? 0.3,
+    maxTokens: effectiveMaxTokens,
+    supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
+  };
+
+  return { gm, resolvedSystemPrompt: systemPrompt, source: 'gm' };
+}
+
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
+}
+
+async function callOpenRouter(
+  ctx: LlmCallContext,
+  userPrompt: string,
+): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
+
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Competitor Researcher: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the scraped-competitor inputs. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens for 10 competitors.`,
+    );
+  }
+
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
+}
+
+// ============================================================================
+// ANALYSIS PROMPT BUILDER
+// ============================================================================
+
+interface ScrapedCompetitor {
+  rank: number;
+  url: string;
+  domain: string;
+  title: string;
+  description: string;
+  keywords: string[];
+  cleanedText: string;
+  seoMetrics: SEOMetrics;
+  detectedTech: string[];
+}
+
+interface AnalyzeCompetitorsInputs {
+  niche: string;
+  location: string;
+  scrapedCompetitors: ScrapedCompetitor[];
+}
+
+function truncate(text: string | null | undefined, max: number): string {
+  if (!text) { return ''; }
+  if (text.length <= max) { return text; }
+  return `${text.slice(0, max)}\n[... truncated, ${text.length - max} more chars]`;
+}
+
+function buildAnalyzeCompetitorsPrompt(inputs: AnalyzeCompetitorsInputs): string {
+  const { niche, location, scrapedCompetitors } = inputs;
+
+  const header: string[] = [
+    'ACTION: analyze_competitors',
+    '',
+    'You are analyzing a batch of scraped competitor websites for cross-comparative competitive intelligence. Upstream steps already discovered, filtered, and scraped these competitors — you do NOT need to fetch anything. Your job is the analysis layer.',
+    '',
+    `Niche: ${niche}`,
+    `Location: ${location || 'Global'}`,
+    `Competitor count in batch: ${scrapedCompetitors.length}`,
+    '',
+    '---',
+    '',
+    '## Scraped competitor batch',
+    '',
+  ];
+
+  const competitorBlocks = scrapedCompetitors.map((c) => {
+    return [
+      `### Competitor ${c.rank}`,
+      `URL: ${c.url}`,
+      `Domain: ${c.domain}`,
+      `Title: ${c.title || '(no title extracted)'}`,
+      `Meta description: ${c.description || '(no meta description)'}`,
+      `Keywords: ${c.keywords.slice(0, 15).join(', ') || '(none)'}`,
+      `SEO metrics: traffic=${c.seoMetrics.estimatedTraffic}, domainAuthority=${c.seoMetrics.domainAuthority}, keywordRelevance=${c.seoMetrics.keywordRelevance}, contentQuality=${c.seoMetrics.contentQuality}`,
+      `Detected tech: ${c.detectedTech.length > 0 ? c.detectedTech.join(', ') : '(none)'}`,
+      '',
+      'Cleaned text (truncated):',
+      truncate(c.cleanedText, 4500),
+      '',
+    ].join('\n');
+  });
+
+  const footer: string[] = [
+    '---',
+    '',
+    'Produce a structured competitive intelligence report. Respond with ONLY a valid JSON object, no markdown fences, no preamble. The JSON must match this exact schema:',
+    '',
+    '{',
+    '  "competitors": [',
+    '    {',
+    '      "rank": <integer 1-20>,',
+    '      "name": "<canonical company name, 1-200 chars>",',
+    '      "url": "<preserve input url>",',
+    '      "domain": "<preserve input domain>",',
+    '      "tagline": "<one-line value prop, 1-300 chars, or null>",',
+    '      "targetAudience": "<specific segment, size, use case, 2-400 chars, or null>",',
+    '      "pricePoint": "<premium | mid-market | budget | unknown>",',
+    '      "positioningNarrative": "<1-2 sentences on how they position, 20-1200 chars>",',
+    '      "strengths": ["<3 to 6 specific grounded strengths, each 10-300 chars>"],',
+    '      "weaknesses": ["<2 to 5 specific grounded weaknesses, each 10-300 chars>"]',
+    '    }',
+    '  ],',
+    '  "marketInsights": {',
+    '    "saturation": "<high | medium | low>",',
+    '    "saturationReasoning": "<why this level, grounded in cross-competitor signals, 50-1500 chars>",',
+    '    "dominantPlayers": ["<1 to 4 company names from your competitor list>"],',
+    '    "gaps": ["<2 to 6 specific shared absences spotted across the batch, each 15-400 chars>"],',
+    '    "opportunities": ["<2 to 6 concrete strategic plays, each 15-400 chars>"],',
+    '    "competitiveDynamics": "<short paragraph on what is actually happening in this space, 100-3000 chars>",',
+    '    "recommendations": ["<3 to 6 actionable recommendations, each 20-400 chars>"]',
+    '  },',
+    '  "rationale": "<integrating memo tying competitor-level analysis to market-level synthesis, 150-4000 chars>"',
+    '}',
+    '',
+    'Hard rules:',
+    '- NEVER hallucinate. If a field is not supported by the scraped text, return null (or \'unknown\' for pricePoint).',
+    '- Strengths and weaknesses must be SPECIFIC and GROUNDED in the scraped text, SEO metrics, or detected tech.',
+    '- dominantPlayers must be a subset of names you assigned in the competitors list. Do not invent new names.',
+    '- gaps must be SHARED absences across multiple competitors — not single-competitor observations (those belong in that competitor\'s weaknesses).',
+    '- Preserve the input rank, url, and domain for each competitor exactly.',
+    '- Produce one competitor entry for EVERY input competitor in the batch. Do not skip any.',
+    '- Output ONLY the JSON object. No prose outside it. No markdown fences.',
+  ];
+
+  return [...header, ...competitorBlocks, ...footer].join('\n');
+}
+
+async function executeAnalyzeCompetitors(
+  inputs: AnalyzeCompetitorsInputs,
+  ctx: LlmCallContext,
+): Promise<CompetitorAnalysisResult> {
+  const userPrompt = buildAnalyzeCompetitorsPrompt(inputs);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Competitor Researcher output was not valid JSON: ${rawContent.slice(0, 300)}`,
+    );
+  }
+
+  const result = CompetitorAnalysisResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Competitor Researcher output did not match expected schema: ${issueSummary}`);
+  }
+
+  return result.data;
+}
+
+// ============================================================================
+// COMPETITOR RESEARCHER CLASS
 // ============================================================================
 
 export class CompetitorResearcher extends BaseSpecialist {
@@ -226,114 +564,195 @@ export class CompetitorResearcher extends BaseSpecialist {
 
   initialize(): Promise<void> {
     this.isInitialized = true;
-    this.log('INFO', 'Competitor Researcher initialized');
+    this.log('INFO', 'Competitor Researcher initialized (LLM-backed market analyst over real SERP + scraping)');
     return Promise.resolve();
   }
 
-  /**
-   * Main execution entry point
-   */
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
-      const payload = message.payload as CompetitorSearchRequest;
-
-      if (!payload?.niche) {
-        return this.createReport(taskId, 'FAILED', null, ['No niche provided in payload']);
+      const payload = message.payload as Record<string, unknown> | null;
+      if (payload === null || typeof payload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['Competitor Researcher: payload must be an object']);
       }
 
-      this.log('INFO', `Searching competitors for: ${payload.niche} in ${payload.location || 'Global'}`);
+      const inputValidation = CompetitorSearchRequestSchema.safeParse(payload);
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Competitor Researcher: invalid input payload: ${issueSummary}`,
+        ]);
+      }
 
-      const result = await this.findCompetitors(payload);
+      const request = inputValidation.data;
+      logger.info(`[CompetitorResearcher] Researching: ${request.niche} in ${request.location || 'Global'}`, { file: FILE });
 
+      const result = await this.findCompetitors(request);
       return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Competitor search failed: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[CompetitorResearcher] Execution failed',
+        error instanceof Error ? error : new Error(errorMessage),
+        { file: FILE },
+      );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
-  /**
-   * Handle signals from the Signal Bus
-   */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
-
     if (signal.payload.type === 'COMMAND') {
       return this.execute(signal.payload);
     }
-
     return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
   }
 
-  /**
-   * Generate a report for the manager
-   */
   generateReport(taskId: string, data: unknown): AgentReport {
     return this.createReport(taskId, 'COMPLETED', data);
   }
 
-  /**
-   * Self-assessment - this agent has REAL logic
-   */
   hasRealLogic(): boolean {
     return true;
   }
 
-  /**
-   * Lines of code assessment
-   */
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 350, boilerplate: 50 };
+    return { functional: 540, boilerplate: 60 };
   }
 
   // ==========================================================================
-  // CORE COMPETITOR DISCOVERY LOGIC
+  // PUBLIC FLOW — called by competitor-monitor.ts and the execute() entry
   // ==========================================================================
 
-  /**
-   * Main competitor finding function
-   */
   async findCompetitors(request: CompetitorSearchRequest): Promise<CompetitorSearchResult> {
-    const { niche, location, limit = 10, includeAnalysis = false } = request;
+    const niche = request.niche;
+    const location = request.location ?? '';
+    const limit = request.limit ?? 10;
     const errors: string[] = [];
 
-    // Step 1: Generate search queries
+    // Step 1: Generate + execute search queries via Serper
     const searchQueries = this.generateSearchQueries(niche, location);
-    this.log('INFO', `Generated ${searchQueries.length} search queries`);
-
-    // Step 2: Execute searches and collect candidate URLs
     const candidateUrls = await this.collectCandidateUrls(searchQueries, errors);
-    this.log('INFO', `Found ${candidateUrls.length} candidate URLs`);
 
-    // Step 3: Filter and deduplicate
+    // Step 2: Filter + dedupe
     const filteredUrls = this.filterCandidates(candidateUrls);
-    this.log('INFO', `Filtered to ${filteredUrls.length} unique competitors`);
-
-    // Step 4: Analyze each competitor
-    const competitors: Competitor[] = [];
     const urlsToAnalyze = filteredUrls.slice(0, limit);
 
+    // Step 3: Scrape each selected competitor + compute deterministic metrics
+    const scrapedBatch: ScrapedCompetitor[] = [];
     for (let i = 0; i < urlsToAnalyze.length; i++) {
       const url = urlsToAnalyze[i];
       try {
-        const competitor = await this.analyzeCompetitor(url, i + 1, niche, location, includeAnalysis);
-        if (competitor) {
-          competitors.push(competitor);
+        const content = await scrapeWebsite(url);
+        if (!content?.cleanedText) {
+          continue;
         }
+        const dataPoints = extractDataPoints(content);
+        const domain = new URL(url).hostname.replace('www.', '');
+        const seoMetrics = await this.analyzeSEOMetrics(content, niche, domain);
+        const detectedTech = this.detectTechFromHtml(content.rawHtml ?? '');
+        scrapedBatch.push({
+          rank: i + 1,
+          url,
+          domain,
+          title: content.title ?? '',
+          description: content.description ?? '',
+          keywords: content.metadata?.keywords ?? dataPoints.keywords.slice(0, 20),
+          cleanedText: content.cleanedText,
+          seoMetrics,
+          detectedTech,
+        });
       } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Analysis failed';
-        errors.push(`Failed to analyze ${url}: ${msg}`);
-        logger.warn('Competitor analysis failed', { url, error: msg });
+        const msg = error instanceof Error ? error.message : 'Scrape failed';
+        errors.push(`Failed to scrape ${url}: ${msg}`);
+        logger.warn('Competitor scrape failed', { url, error: msg });
       }
     }
 
-    // Step 5: Generate market insights
-    const marketInsights = this.generateMarketInsights(competitors, niche);
+    // Step 4: LLM analysis over the full scraped batch
+    let analysis: CompetitorAnalysisResult | null = null;
+    let analysisMode: 'llm' | 'deterministic_fallback' = 'llm';
+    let analysisModel: string | null = null;
 
-    // Step 6: Calculate confidence
+    if (scrapedBatch.length > 0) {
+      try {
+        const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+        analysisModel = ctx.gm.model;
+        analysis = await executeAnalyzeCompetitors(
+          { niche, location, scrapedCompetitors: scrapedBatch },
+          ctx,
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        errors.push(`LLM analysis failed: ${msg}`);
+        analysisMode = 'deterministic_fallback';
+        logger.error(
+          '[CompetitorResearcher] LLM analysis failed — falling back to skeleton output',
+          error instanceof Error ? error : new Error(msg),
+          { file: FILE },
+        );
+      }
+    } else {
+      analysisMode = 'deterministic_fallback';
+      errors.push('No competitors successfully scraped — LLM analysis skipped');
+    }
+
+    // Step 5: Merge LLM analysis with deterministic SEO metrics
+    const competitors: Competitor[] = analysis !== null
+      ? analysis.competitors.map((llmComp) => {
+          const scraped = scrapedBatch.find((s) => s.rank === llmComp.rank);
+          const seoMetrics = scraped?.seoMetrics ?? {
+            estimatedTraffic: 'low' as const,
+            domainAuthority: 0,
+            keywordRelevance: 0,
+            contentQuality: 'low' as const,
+          };
+          return {
+            rank: llmComp.rank,
+            name: llmComp.name,
+            url: llmComp.url,
+            domain: llmComp.domain,
+            seoMetrics,
+            positioning: {
+              tagline: llmComp.tagline,
+              targetAudience: llmComp.targetAudience,
+              pricePoint: llmComp.pricePoint,
+            },
+            signals: this.extractDeterministicSignals(scraped, location),
+            strengths: llmComp.strengths,
+            weaknesses: llmComp.weaknesses,
+            positioningNarrative: llmComp.positioningNarrative,
+          };
+        })
+      : scrapedBatch.map((s) => this.buildFallbackCompetitor(s, location));
+
+    // Step 6: Market insights (LLM-driven or fallback)
+    const avgDA = competitors.length > 0
+      ? Math.round(competitors.reduce((sum, c) => sum + c.seoMetrics.domainAuthority, 0) / competitors.length)
+      : 0;
+
+    const marketInsights: MarketInsights = analysis !== null
+      ? {
+          saturation: analysis.marketInsights.saturation,
+          dominantPlayers: analysis.marketInsights.dominantPlayers,
+          gaps: analysis.marketInsights.gaps,
+          avgDomainAuthority: avgDA,
+          recommendations: analysis.marketInsights.recommendations,
+          saturationReasoning: analysis.marketInsights.saturationReasoning,
+          opportunities: analysis.marketInsights.opportunities,
+          competitiveDynamics: analysis.marketInsights.competitiveDynamics,
+        }
+      : {
+          saturation: competitors.length >= 8 ? 'high' : competitors.length < 4 ? 'low' : 'medium',
+          dominantPlayers: competitors.slice(0, 3).map((c) => c.name),
+          gaps: ['LLM analysis unavailable — deterministic fallback has no cross-competitor synthesis'],
+          avgDomainAuthority: avgDA,
+          recommendations: ['Re-run with GM seeded for full market analysis'],
+        };
+
     const confidence = this.calculateConfidence(competitors, searchQueries.length, errors.length);
 
     return {
@@ -346,31 +765,32 @@ export class CompetitorResearcher extends BaseSpecialist {
       marketInsights,
       confidence,
       errors,
+      analysisRationale: analysis?.rationale ?? null,
+      analysisModel,
+      analysisMode,
     };
   }
 
-  /**
-   * Generate search queries based on niche and location
-   */
+  // ==========================================================================
+  // DETERMINISTIC HELPERS (search + scraping + SEO metrics)
+  // ==========================================================================
+
   private generateSearchQueries(niche: string, location: string): string[] {
     const queries: string[] = [];
     const nicheWords = niche.toLowerCase().trim();
     const locationWords = location ? location.toLowerCase().trim() : '';
 
-    // Primary queries
     queries.push(`best ${nicheWords} companies`);
     queries.push(`top ${nicheWords} services`);
     queries.push(`${nicheWords} software`);
     queries.push(`${nicheWords} providers`);
 
-    // Location-specific queries
     if (locationWords) {
       queries.push(`${nicheWords} ${locationWords}`);
       queries.push(`${nicheWords} companies in ${locationWords}`);
       queries.push(`best ${nicheWords} near ${locationWords}`);
     }
 
-    // Alternative phrasings
     queries.push(`${nicheWords} alternatives`);
     queries.push(`${nicheWords} competitors`);
     queries.push(`${nicheWords} market leaders`);
@@ -378,12 +798,8 @@ export class CompetitorResearcher extends BaseSpecialist {
     return queries;
   }
 
-  /**
-   * Collect candidate URLs from search results via Serper API
-   */
   private async collectCandidateUrls(queries: string[], errors: string[]): Promise<string[]> {
     const candidates: string[] = [];
-
     for (const query of queries) {
       try {
         const results = await this.searchViaSerper(query);
@@ -393,30 +809,20 @@ export class CompetitorResearcher extends BaseSpecialist {
         errors.push(`Search failed for "${query}": ${msg}`);
       }
     }
-
     return candidates;
   }
 
-  /**
-   * Search via Serper API and extract organic result URLs
-   */
   private async searchViaSerper(query: string): Promise<string[]> {
     const serper = getSerperSEOService();
     const result = await serper.searchSERP(query, { num: 10 });
-
     if (!result.success || !result.data) {
       logger.warn('Serper search returned no data', { query, error: result.error ?? undefined });
       return [];
     }
-
-    return result.data.organic.map(item => item.link);
+    return result.data.organic.map((item) => item.link);
   }
 
-  /**
-   * Filter out non-competitor URLs
-   */
   private filterCandidates(urls: string[]): string[] {
-    // Blacklist patterns - directories, review sites, news, etc.
     const blacklistPatterns = [
       /yelp\.com/i,
       /yellowpages/i,
@@ -439,27 +845,21 @@ export class CompetitorResearcher extends BaseSpecialist {
       /glassdoor/i,
     ];
 
-    // Filter and deduplicate
     const domains = new Set<string>();
     const filtered: string[] = [];
 
     for (const url of urls) {
       try {
-        // Skip blacklisted URLs
-        if (blacklistPatterns.some(pattern => pattern.test(url))) {
+        if (blacklistPatterns.some((pattern) => pattern.test(url))) {
           continue;
         }
-
-        // Extract domain and deduplicate
         const parsed = new URL(url);
         const domain = parsed.hostname.replace('www.', '');
-
         if (!domains.has(domain)) {
           domains.add(domain);
           filtered.push(url);
         }
       } catch {
-        // Invalid URL, skip
         continue;
       }
     }
@@ -467,68 +867,14 @@ export class CompetitorResearcher extends BaseSpecialist {
     return filtered;
   }
 
-  /**
-   * Analyze a single competitor
-   */
-  private async analyzeCompetitor(
-    url: string,
-    rank: number,
-    niche: string,
-    location: string,
-    _deep: boolean
-  ): Promise<Competitor | null> {
-    try {
-      // Scrape the competitor's website
-      const content = await scrapeWebsite(url);
-
-      if (!content?.cleanedText) {
-        return null;
-      }
-
-      const dataPoints = extractDataPoints(content);
-      const domain = new URL(url).hostname.replace('www.', '');
-
-      // Analyze SEO metrics
-      const seoMetrics = await this.analyzeSEOMetrics(content, niche, domain);
-
-      // Extract positioning
-      const positioning = this.extractPositioning(content);
-
-      // Detect signals
-      const signals = this.detectCompetitorSignals(content, dataPoints, location);
-
-      // Identify strengths and weaknesses
-      const { strengths, weaknesses } = this.analyzeStrengthsWeaknesses(content, seoMetrics);
-
-      return {
-        rank,
-        name: this.extractCompanyName(content) ?? domain,
-        url,
-        domain,
-        seoMetrics,
-        positioning,
-        signals,
-        strengths,
-        weaknesses,
-      };
-    } catch (error) {
-      logger.error('Failed to analyze competitor', error as Error, { url });
-      return null;
-    }
-  }
-
-  /**
-   * Analyze SEO metrics from scraped content
-   */
   private async analyzeSEOMetrics(
     content: Awaited<ReturnType<typeof scrapeWebsite>>,
     niche: string,
-    domain?: string
+    domain?: string,
   ): Promise<SEOMetrics> {
-    const text = content.cleanedText?.toLowerCase() || '';
+    const text = content.cleanedText?.toLowerCase() ?? '';
     const nicheWords = niche.toLowerCase().split(/\s+/);
 
-    // Calculate keyword relevance
     let keywordMatches = 0;
     for (const word of nicheWords) {
       const regex = new RegExp(word, 'gi');
@@ -537,9 +883,8 @@ export class CompetitorResearcher extends BaseSpecialist {
     }
     const keywordRelevance = Math.min(keywordMatches / (nicheWords.length * 5), 1);
 
-    // Estimate traffic based on content quality signals
     const hasRichContent = text.length > 2000;
-    const hasMetadata = !!(content.title && content.description);
+    const hasMetadata = Boolean(content.title && content.description);
     const hasStructuredContent = text.includes('#') || (content.cleanedText?.match(/\n/g)?.length ?? 0) > 10;
 
     let trafficEstimate: 'high' | 'medium' | 'low' = 'low';
@@ -549,11 +894,9 @@ export class CompetitorResearcher extends BaseSpecialist {
       trafficEstimate = 'medium';
     }
 
-    // Estimate domain authority — DataForSEO first, heuristic fallback
     const domainAuthority = await this.estimateDomainAuthority(content, domain);
-
-    // Content quality
-    const contentQuality = text.length > 3000 ? 'high' : text.length > 1000 ? 'medium' : 'low';
+    const contentQuality: 'high' | 'medium' | 'low' =
+      text.length > 3000 ? 'high' : text.length > 1000 ? 'medium' : 'low';
 
     return {
       estimatedTraffic: trafficEstimate,
@@ -563,14 +906,10 @@ export class CompetitorResearcher extends BaseSpecialist {
     };
   }
 
-  /**
-   * Estimate domain authority — tries DataForSEO first, falls back to heuristic
-   */
   private async estimateDomainAuthority(
     content: Awaited<ReturnType<typeof scrapeWebsite>>,
-    domain?: string
+    domain?: string,
   ): Promise<number> {
-    // Try DataForSEO real domain rank first
     if (domain) {
       try {
         const dataForSEO = getDataForSEOService();
@@ -586,9 +925,7 @@ export class CompetitorResearcher extends BaseSpecialist {
       }
     }
 
-    // Heuristic fallback based on content signals
     let score = 30;
-
     if (content.cleanedText && content.cleanedText.length > 5000) {
       score += 15;
     }
@@ -607,324 +944,91 @@ export class CompetitorResearcher extends BaseSpecialist {
     if (content.rawHtml?.includes('https://')) {
       score += 5;
     }
-
     return Math.min(score, 100);
   }
 
-  /**
-   * Extract company positioning from content
-   */
-  private extractPositioning(content: Awaited<ReturnType<typeof scrapeWebsite>>): CompetitorPositioning {
-    const text = content.cleanedText?.toLowerCase() || '';
-    const title = content.title || '';
-    const description = content.description || '';
+  private detectTechFromHtml(html: string): string[] {
+    const tech: string[] = [];
+    const lowerHtml = html.toLowerCase();
 
-    // Extract tagline from title or description
-    let tagline: string | null = null;
-    if (title.includes('|')) {
-      tagline = title.split('|')[1]?.trim() || null;
-    } else if (title.includes('-')) {
-      tagline = title.split('-')[1]?.trim() || null;
-    } else if (description.length > 0 && description.length < 150) {
-      tagline = description;
-    }
+    if (lowerHtml.includes('shopify') || lowerHtml.includes('cdn.shopify.com')) { tech.push('Shopify'); }
+    if (lowerHtml.includes('wordpress') || lowerHtml.includes('wp-content')) { tech.push('WordPress'); }
+    if (lowerHtml.includes('wix.com') || lowerHtml.includes('wixsite')) { tech.push('Wix'); }
+    if (lowerHtml.includes('squarespace')) { tech.push('Squarespace'); }
+    if (lowerHtml.includes('webflow')) { tech.push('Webflow'); }
+    if (lowerHtml.includes('intercom') || lowerHtml.includes('intercomcdn')) { tech.push('Intercom'); }
+    if (lowerHtml.includes('hubspot') || lowerHtml.includes('hs-scripts')) { tech.push('HubSpot'); }
+    if (lowerHtml.includes('drift') || lowerHtml.includes('drift.com')) { tech.push('Drift'); }
+    if (lowerHtml.includes('zendesk')) { tech.push('Zendesk'); }
+    if (lowerHtml.includes('google-analytics') || lowerHtml.includes('gtag')) { tech.push('Google Analytics'); }
+    if (lowerHtml.includes('hotjar')) { tech.push('Hotjar'); }
+    if (lowerHtml.includes('segment.com')) { tech.push('Segment'); }
 
-    // Detect target audience
-    let targetAudience: string | null = null;
-    if (text.includes('enterprise') || text.includes('large business')) {
-      targetAudience = 'Enterprise';
-    } else if (text.includes('small business') || text.includes('smb') || text.includes('startup')) {
-      targetAudience = 'SMB / Startups';
-    } else if (text.includes('freelancer') || text.includes('individual')) {
-      targetAudience = 'Individuals / Freelancers';
-    }
-
-    // Detect price point
-    let pricePoint: CompetitorPositioning['pricePoint'] = 'unknown';
-    if (text.includes('premium') || text.includes('enterprise pricing') || text.includes('custom pricing')) {
-      pricePoint = 'premium';
-    } else if (text.includes('affordable') || text.includes('low cost') || text.includes('free')) {
-      pricePoint = 'budget';
-    } else if (text.includes('pricing') || text.includes('plans')) {
-      pricePoint = 'mid-market';
-    }
-
-    return { tagline, targetAudience, pricePoint };
+    return [...new Set(tech)];
   }
 
-  /**
-   * Detect competitor signals
-   */
-  private detectCompetitorSignals(
-    content: Awaited<ReturnType<typeof scrapeWebsite>>,
-    dataPoints: ReturnType<typeof extractDataPoints>,
-    location: string
+  private extractDeterministicSignals(
+    scraped: ScrapedCompetitor | undefined,
+    location: string,
   ): CompetitorSignals {
-    const text = content.cleanedText?.toLowerCase() ?? '';
-    const html = content.rawHtml?.toLowerCase() ?? '';
-
+    if (!scraped) {
+      return { isHiring: false, hasLocalPresence: false, socialActive: false, recentlyUpdated: false };
+    }
+    const text = scraped.cleanedText.toLowerCase();
     return {
       isHiring: text.includes('hiring') || text.includes('careers') || text.includes('job opening'),
       hasLocalPresence: location ? text.includes(location.toLowerCase()) : false,
-      socialActive: dataPoints.socialLinks.length > 0,
-      recentlyUpdated: html.includes('2024') || html.includes('2025') || html.includes('2026'),
+      socialActive: scraped.detectedTech.length > 0,
+      recentlyUpdated: text.includes('2024') || text.includes('2025') || text.includes('2026'),
     };
   }
 
   /**
-   * Analyze strengths and weaknesses
+   * Fallback when LLM analysis is unavailable — produces a skeleton
+   * Competitor record from scraped data with empty strengths/weaknesses
+   * arrays. Downstream code must check `analysisMode` to detect this.
    */
-  private analyzeStrengthsWeaknesses(
-    content: Awaited<ReturnType<typeof scrapeWebsite>>,
-    seoMetrics: SEOMetrics
-  ): { strengths: string[]; weaknesses: string[] } {
-    const strengths: string[] = [];
-    const weaknesses: string[] = [];
-    const text = content.cleanedText?.toLowerCase() ?? '';
-    const html = content.rawHtml?.toLowerCase() ?? '';
-
-    // SEO Strengths
-    if (seoMetrics.domainAuthority > 60) {
-      strengths.push('High domain authority');
-    }
-    if (seoMetrics.contentQuality === 'high') {
-      strengths.push('Rich, comprehensive content');
-    }
-    if (seoMetrics.keywordRelevance > 0.7) {
-      strengths.push('Strong keyword optimization');
-    }
-
-    // Feature strengths
-    if (text.includes('testimonial') || text.includes('case study')) {
-      strengths.push('Social proof present');
-    }
-    if (text.includes('free trial') || text.includes('demo')) {
-      strengths.push('Offers free trial/demo');
-    }
-    if (text.includes('integration') || text.includes('api')) {
-      strengths.push('Integration capabilities');
-    }
-    if (html.includes('live chat') || html.includes('intercom') || html.includes('drift')) {
-      strengths.push('Live chat support');
-    }
-
-    // Weaknesses
-    if (seoMetrics.domainAuthority < 40) {
-      weaknesses.push('Lower domain authority');
-    }
-    if (seoMetrics.contentQuality === 'low') {
-      weaknesses.push('Limited website content');
-    }
-    if (!content.description) {
-      weaknesses.push('Missing meta description');
-    }
-    if (!html.includes('https://')) {
-      weaknesses.push('May lack HTTPS');
-    }
-    if (!html.includes('schema.org')) {
-      weaknesses.push('No structured data markup');
-    }
-    if (text.length < 500) {
-      weaknesses.push('Thin content');
-    }
-
+  private buildFallbackCompetitor(scraped: ScrapedCompetitor, location: string): Competitor {
+    const nameFromTitle = scraped.title.split(/[|–-]/)[0]?.trim();
     return {
-      strengths: strengths.slice(0, 5),
-      weaknesses: weaknesses.slice(0, 5),
+      rank: scraped.rank,
+      name: nameFromTitle && nameFromTitle.length > 0 ? nameFromTitle : scraped.domain,
+      url: scraped.url,
+      domain: scraped.domain,
+      seoMetrics: scraped.seoMetrics,
+      positioning: {
+        tagline: null,
+        targetAudience: null,
+        pricePoint: 'unknown',
+      },
+      signals: this.extractDeterministicSignals(scraped, location),
+      strengths: [],
+      weaknesses: [],
+      positioningNarrative: null,
     };
   }
 
-  /**
-   * Extract company name from content
-   */
-  private extractCompanyName(content: Awaited<ReturnType<typeof scrapeWebsite>>): string | null {
-    const title = content.title || '';
-
-    // Try to extract from title
-    if (title.includes('|')) {
-      return title.split('|')[0].trim();
-    }
-    if (title.includes(' - ')) {
-      return title.split(' - ')[0].trim();
-    }
-    if (title.includes(' – ')) {
-      return title.split(' – ')[0].trim();
-    }
-
-    // Use OG title if available
-    if (content.metadata?.ogTitle) {
-      return content.metadata.ogTitle.split(/[|–-]/)[0].trim();
-    }
-
-    return title.length > 0 && title.length < 50 ? title : null;
-  }
-
-  /**
-   * Generate market insights from competitor analysis
-   */
-  private generateMarketInsights(competitors: Competitor[], niche: string): MarketInsights {
-    if (competitors.length === 0) {
-      return {
-        saturation: 'low' as const,
-        dominantPlayers: [],
-        gaps: ['Unable to analyze market - no competitors found. Integrate a search API for accurate discovery.'],
-        avgDomainAuthority: 0,
-        recommendations: ['Integrate search API (e.g., SerpAPI, Google Custom Search) for accurate competitor discovery'],
-      };
-    }
-
-    // Calculate average domain authority
-    const avgDA = Math.round(
-      competitors.reduce((sum, c) => sum + c.seoMetrics.domainAuthority, 0) / competitors.length
-    );
-
-    // Determine market saturation
-    let saturation: 'high' | 'medium' | 'low' = 'medium';
-    if (competitors.length >= 10 && avgDA > 50) {
-      saturation = 'high';
-    } else if (competitors.length < 5 || avgDA < 30) {
-      saturation = 'low';
-    }
-
-    // Identify dominant players
-    const dominantPlayers = competitors
-      .filter(c => c.seoMetrics.domainAuthority > avgDA)
-      .slice(0, 3)
-      .map(c => c.name);
-
-    // Identify gaps
-    const gaps = this.identifyMarketGaps(competitors, niche);
-
-    // Generate recommendations
-    const recommendations = this.generateRecommendations(competitors, saturation, gaps);
-
-    return {
-      saturation,
-      dominantPlayers,
-      gaps,
-      avgDomainAuthority: avgDA,
-      recommendations,
-    };
-  }
-
-  /**
-   * Identify market gaps from competitor analysis
-   */
-  private identifyMarketGaps(competitors: Competitor[], _niche: string): string[] {
-    const gaps: string[] = [];
-
-    // Check for common weaknesses across competitors
-    const allWeaknesses = competitors.flatMap(c => c.weaknesses);
-    const weaknessCounts = allWeaknesses.reduce((acc, w) => {
-      acc[w] = (acc[w] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // If most competitors share a weakness, it's a gap
-    for (const [weakness, count] of Object.entries(weaknessCounts)) {
-      if (count >= competitors.length * 0.5) {
-        gaps.push(`Most competitors lack: ${weakness.replace('Missing ', '').replace('No ', '')}`);
-      }
-    }
-
-    // Check for feature gaps
-    const hasLiveChat = competitors.some(c => c.strengths.includes('Live chat support'));
-    if (!hasLiveChat) {
-      gaps.push('Live chat support opportunity');
-    }
-
-    const hasFreeTrial = competitors.some(c => c.strengths.includes('Offers free trial/demo'));
-    if (!hasFreeTrial) {
-      gaps.push('Free trial/demo differentiation opportunity');
-    }
-
-    // Price point gaps
-    const pricePoints = competitors.map(c => c.positioning.pricePoint);
-    if (!pricePoints.includes('budget')) {
-      gaps.push('Budget-friendly option gap');
-    }
-    if (!pricePoints.includes('premium')) {
-      gaps.push('Premium service gap');
-    }
-
-    return gaps.slice(0, 5);
-  }
-
-  /**
-   * Generate strategic recommendations
-   */
-  private generateRecommendations(
-    competitors: Competitor[],
-    saturation: 'high' | 'medium' | 'low',
-    gaps: string[]
-  ): string[] {
-    const recommendations: string[] = [];
-
-    // Saturation-based recommendations
-    if (saturation === 'high') {
-      recommendations.push('Focus on differentiation - market is crowded');
-      recommendations.push('Consider niche-down strategy for specific verticals');
-    } else if (saturation === 'low') {
-      recommendations.push('Market opportunity - limited competition');
-      recommendations.push('Invest in SEO to establish early authority');
-    }
-
-    // Gap-based recommendations
-    for (const gap of gaps.slice(0, 2)) {
-      recommendations.push(`Capitalize on: ${gap}`);
-    }
-
-    // Competitor-based recommendations
-    const topCompetitor = competitors[0];
-    if (topCompetitor) {
-      if (topCompetitor.seoMetrics.contentQuality === 'high') {
-        recommendations.push('Match content depth of market leaders');
-      }
-      if (topCompetitor.strengths.includes('Social proof present')) {
-        recommendations.push('Prioritize collecting testimonials and case studies');
-      }
-    }
-
-    return recommendations.slice(0, 5);
-  }
-
-  /**
-   * Calculate confidence score
-   */
   private calculateConfidence(
     competitors: Competitor[],
     queryCount: number,
-    errorCount: number
+    errorCount: number,
   ): number {
     let score = 0;
     const maxScore = 100;
 
-    // Competitors found
     score += Math.min(competitors.length * 5, 30);
 
-    // Queries executed successfully
-    const successRate = 1 - errorCount / queryCount;
+    const successRate = queryCount > 0 ? 1 - errorCount / queryCount : 0;
     score += successRate * 30;
 
-    // Data quality
     const avgDataQuality = competitors.length > 0
       ? competitors.reduce((sum, c) => {
           let quality = 0;
-          if (c.name) {
-            quality += 20;
-          }
-          if (c.positioning.tagline) {
-            quality += 20;
-          }
-          if (c.seoMetrics.domainAuthority > 0) {
-            quality += 20;
-          }
-          if (c.strengths.length > 0) {
-            quality += 20;
-          }
-          if (c.weaknesses.length > 0) {
-            quality += 20;
-          }
+          if (c.name) { quality += 20; }
+          if (c.positioning.tagline) { quality += 20; }
+          if (c.seoMetrics.domainAuthority > 0) { quality += 20; }
+          if (c.strengths.length > 0) { quality += 20; }
+          if (c.weaknesses.length > 0) { quality += 20; }
           return sum + quality;
         }, 0) / competitors.length
       : 0;
@@ -935,16 +1039,12 @@ export class CompetitorResearcher extends BaseSpecialist {
 }
 
 // ============================================================================
-// FACTORY FUNCTION
+// FACTORY / SINGLETON
 // ============================================================================
 
 export function createCompetitorResearcher(): CompetitorResearcher {
   return new CompetitorResearcher();
 }
-
-// ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
 
 let instance: CompetitorResearcher | null = null;
 
@@ -952,3 +1052,20 @@ export function getCompetitorResearcher(): CompetitorResearcher {
   instance ??= createCompetitorResearcher();
   return instance;
 }
+
+// ============================================================================
+// INTERNAL TEST HELPERS (exported for proof-of-life harness + regression executor)
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  DEFAULT_SYSTEM_PROMPT,
+  loadGMConfig,
+  buildAnalyzeCompetitorsPrompt,
+  stripJsonFences,
+  executeAnalyzeCompetitors,
+  CompetitorAnalysisResultSchema,
+};

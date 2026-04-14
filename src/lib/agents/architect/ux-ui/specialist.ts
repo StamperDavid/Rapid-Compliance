@@ -51,7 +51,7 @@ import { logger } from '@/lib/logger/logger';
 // ============================================================================
 
 const FILE = 'architect/ux-ui/specialist.ts';
-const SPECIALIST_ID = 'UX_UI_SPECIALIST';
+const SPECIALIST_ID = 'UX_UI_STRATEGIST';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['design_page'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
@@ -100,7 +100,7 @@ interface UXUISpecialistGMConfig {
 const CONFIG: SpecialistConfig = {
   identity: {
     id: SPECIALIST_ID,
-    name: 'UX/UI Specialist',
+    name: 'UX/UI Strategist',
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'ARCHITECT_MANAGER',

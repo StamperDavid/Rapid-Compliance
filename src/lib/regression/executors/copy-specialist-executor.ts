@@ -26,7 +26,7 @@ import {
 } from '@/types/regression';
 import { captureSingleShot, type InvariantCheck } from '../capture/single-shot-capture';
 
-const SPECIALIST_ID = 'COPY_SPECIALIST';
+const SPECIALIST_ID = 'COPY_STRATEGIST';
 const MAX_TOKENS = 8000;
 
 const VALID_FRAMEWORKS = ['PAS', 'AIDA', 'BAB', 'FAB', 'FOUR_PS', 'STORYBRAND'] as const;

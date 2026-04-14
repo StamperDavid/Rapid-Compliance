@@ -49,7 +49,7 @@
       "level": "L2",
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/architect/manager.ts",
-      "specialists": ["UX_UI_SPECIALIST", "FUNNEL_PATHOLOGIST", "COPY_SPECIALIST"],
+      "specialists": ["UX_UI_STRATEGIST", "FUNNEL_STRATEGIST", "COPY_STRATEGIST"],
       "functionalLOC": 2100,
       "note": "Strategic Infrastructure Commander - Brand DNA integration, MemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis"
     },
@@ -214,7 +214,7 @@
       "verdict": "HIRED",
       "jasperTool": "delegate_to_builder"
     },
-    "UX_UI_SPECIALIST": {
+    "UX_UI_STRATEGIST": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/architect/ux-ui/specialist.ts",
       "reportsTo": "ARCHITECT_MANAGER",
@@ -224,7 +224,7 @@
       "jasperTool": "delegate_to_architect",
       "systemPrompt": "COMPONENT_SCHEMAS library (10 categories) + COLOR_PSYCHOLOGY library (10 industries with psychology-based palettes)"
     },
-    "FUNNEL_PATHOLOGIST": {
+    "FUNNEL_STRATEGIST": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/architect/funnel/specialist.ts",
       "reportsTo": "ARCHITECT_MANAGER",
@@ -234,7 +234,7 @@
       "jasperTool": "delegate_to_architect",
       "systemPrompt": "THE SQUEEZE: Lead Magnet (8 types) -> Tripwire ($7-47) -> Core Offer ($197-1997) -> Upsell (5 types). 8 business templates"
     },
-    "COPY_SPECIALIST": {
+    "COPY_STRATEGIST": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/architect/copy/specialist.ts",
       "reportsTo": "ARCHITECT_MANAGER",
@@ -475,9 +475,9 @@
     "LINKEDIN_EXPERT",
     "SEO_EXPERT",
     "ARCHITECT_MANAGER",
-    "UX_UI_SPECIALIST",
-    "FUNNEL_PATHOLOGIST",
-    "COPY_SPECIALIST",
+    "UX_UI_STRATEGIST",
+    "FUNNEL_STRATEGIST",
+    "COPY_STRATEGIST",
     "BUILDER_MANAGER",
     "UX_UI_ARCHITECT",
     "FUNNEL_ENGINEER",
@@ -545,7 +545,7 @@
         "status": "CONNECTED",
         "input": "{ niche, objective?, audience?, pageType?, includeDesign?, includeFunnel?, includeCopy? }",
         "output": "{ siteMap, funnelFlow, delegations[], confidence, warnings }",
-        "delegates_to": ["UX_UI_SPECIALIST", "FUNNEL_PATHOLOGIST", "COPY_SPECIALIST"]
+        "delegates_to": ["UX_UI_STRATEGIST", "FUNNEL_STRATEGIST", "COPY_STRATEGIST"]
       }
     },
     "builderTools": {

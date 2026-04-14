@@ -146,9 +146,9 @@ const AGENT_FACTORY_REGISTRY: Record<AgentId, AgentGetter> = {
   [AGENT_IDS.WORKFLOW_OPTIMIZER]: getWorkflowOptimizer,
 
   // Architect Specialists (L3)
-  [AGENT_IDS.UX_UI_SPECIALIST]: getUXUISpecialist,
-  [AGENT_IDS.FUNNEL_PATHOLOGIST]: getFunnelPathologist,
-  [AGENT_IDS.COPY_SPECIALIST]: getCopySpecialist,
+  [AGENT_IDS.UX_UI_STRATEGIST]: getUXUISpecialist,
+  [AGENT_IDS.FUNNEL_STRATEGIST]: getFunnelPathologist,
+  [AGENT_IDS.COPY_STRATEGIST]: getCopySpecialist,
 
   // Commerce Specialists (L3)
   [AGENT_IDS.PRICING_STRATEGIST]: getPricingStrategist,
@@ -253,9 +253,9 @@ export function getAgentIdsByTier(tier: 'L1' | 'L2' | 'L3'): AgentId[] {
       AGENT_IDS.ASSET_GENERATOR,
       AGENT_IDS.WORKFLOW_OPTIMIZER,
       // Architect
-      AGENT_IDS.UX_UI_SPECIALIST,
-      AGENT_IDS.FUNNEL_PATHOLOGIST,
-      AGENT_IDS.COPY_SPECIALIST,
+      AGENT_IDS.UX_UI_STRATEGIST,
+      AGENT_IDS.FUNNEL_STRATEGIST,
+      AGENT_IDS.COPY_STRATEGIST,
       // Commerce
       AGENT_IDS.PRICING_STRATEGIST,
       AGENT_IDS.INVENTORY_MANAGER,

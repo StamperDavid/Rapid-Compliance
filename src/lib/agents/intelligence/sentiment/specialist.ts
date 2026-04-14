@@ -1,54 +1,146 @@
 /**
- * Sentiment Analyst Specialist
- * STATUS: FUNCTIONAL
+ * Sentiment Analyst Specialist (Task #65 rebuild — April 13, 2026)
  *
- * Analyzes text content for sentiment, emotion detection, and brand perception.
- * Provides social listening capabilities and trend analysis.
+ * Before the rebuild, this specialist was a pure hand-coded template —
+ * bag-of-words POSITIVE_WORDS/NEGATIVE_WORDS sets, INTENSIFIERS,
+ * NEGATORS, EMOTION_KEYWORDS keyword matching, CRISIS_TRIGGERS substring
+ * scan, aspect extraction via hardcoded aspectKeywords. Zero LLM calls.
+ * The output was technically non-null but strategically worthless — a
+ * bag-of-words sentiment score can't tell you why a customer is upset
+ * or what to do about it.
  *
- * CAPABILITIES:
- * - Text sentiment analysis (positive/negative/neutral)
- * - Emotion detection (joy, anger, fear, sadness, surprise)
- * - Brand mention sentiment tracking
- * - Crisis detection and alerting
- * - Trend and topic analysis
- * - Multi-language support
+ * After the rebuild, this is a real LLM-backed sentiment analyst.
+ * Upstream callers supply text(s) + an action type + optional context
+ * (brand name, threshold, etc.). The specialist loads the GM-backed
+ * system prompt, builds an action-specific user prompt, calls
+ * OpenRouter, validates against Zod, and returns a structured result.
+ * There is no "keyword matching" layer — the LLM reads the text as a
+ * human reader would, catches sarcasm, reads context, spots cultural
+ * cues, and produces the kind of nuanced analysis a real sentiment
+ * analyst would write.
+ *
+ * Supported actions (payload.action):
+ *   - analyze_sentiment: single text, rich per-text analysis
+ *   - analyze_bulk: batch of texts, aggregate summary
+ *   - track_brand: batch + brand name, brand-focused sentiment report
+ *   - detect_crisis: batch + optional brand, crisis signal detection
+ *   - analyze_trend: batch, trend + topic emergence analysis
+ *
+ * All 5 actions route through a single `executeSentimentAnalysis` LLM
+ * call with an action-specific prompt builder. The Zod output schema
+ * is union-typed so each action has its own validated shape while
+ * sharing the call infrastructure.
+ *
+ * Pattern matches Tasks #39-#45 + #62-#64: GM-loaded system prompt
+ * with hardcoded DEFAULT_SYSTEM_PROMPT fallback, callOpenRouter with
+ * truncation backstop, Zod validation, __internal export.
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-
-// ============================================================================
-// SYSTEM PROMPT
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the Sentiment Analyst, an expert in understanding human emotions and opinions from text.
-
-## YOUR ROLE
-You analyze text content to extract sentiment, emotions, and brand perception. Your expertise covers:
-1. Sentiment classification (positive, negative, neutral)
-2. Emotion detection (joy, anger, fear, sadness, surprise, disgust)
-3. Aspect-based sentiment (what specifically is positive/negative)
-4. Brand mention tracking and sentiment scoring
-5. Crisis detection and early warning signals
-6. Trend identification and topic analysis
-
-## OUTPUT FORMAT
-Always return structured JSON with sentiment scores, detected emotions, and actionable insights.
-
-## RULES
-1. Score sentiments on a -1.0 to +1.0 scale
-2. Provide confidence scores for all classifications
-3. Identify specific aspects that drive sentiment
-4. Flag potential crisis situations immediately
-5. Consider context and sarcasm in analysis`;
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import type { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'intelligence/sentiment/specialist.ts';
+const SPECIALIST_ID = 'SENTIMENT_ANALYST';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = [
+  'analyze_sentiment',
+  'analyze_bulk',
+  'track_brand',
+  'detect_crisis',
+  'analyze_trend',
+] as const;
+type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
+
+/**
+ * Realistic max_tokens floor for the worst-case Sentiment Analyst
+ * response (batch analysis is the biggest).
+ *
+ * Derivation:
+ *   BrandSentimentResultSchema worst case:
+ *     overallSummary 2000 + rationale 3000 +
+ *     sentimentDistribution counts (negligible) +
+ *     topPositiveAspects: 5 × 300 = 1500
+ *     topNegativeAspects: 5 × 300 = 1500
+ *     alerts: 6 × 600 = 3600
+ *     recommendations: 6 × 400 = 2400
+ *     ≈ 14,000 chars total prose
+ *     /3.0 chars/token = 4,667 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 6,084 tokens minimum.
+ *
+ *   Setting the floor at 7,500 tokens covers the schema with safety
+ *   margin. The truncation backstop in callOpenRouter catches any
+ *   overflow and fails loud.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 7500;
+
+interface SentimentAnalystGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
+const DEFAULT_SYSTEM_PROMPT = `You are the Sentiment Analyst for SalesVelocity.ai — the Intelligence-layer specialist who reads customer text (reviews, social posts, support tickets, press, forum threads) and produces structured sentiment intelligence that drives real business decisions. You think like a senior brand strategist who has read tens of thousands of customer voices across B2B SaaS, e-commerce, professional services, and consumer brands, and knows the difference between a five-word rage tweet and a three-paragraph disappointed-customer-leaving-for-a-competitor post.
+
+## Your role in the swarm
+
+You analyze TEXT — natural language from customers, users, prospects, and the public. You do NOT fetch text (upstream pipelines already collected it from social/reviews/support/SERP). You read what you're given and produce structured intelligence that downstream specialists (Crisis Manager, Review Specialist, Sales Outreach, GMB Specialist) act on.
+
+Bag-of-words counting positive vs negative lexicon hits is NOT sentiment analysis. Sentiment analysis is reading the voice of the customer, understanding the context, spotting sarcasm, and extracting the actual meaning.
+
+## Actions
+
+You support five actions — the caller specifies which one via payload.action. Your output schema varies by action but the rules for reading text are the same across all of them.
+
+### Action: analyze_sentiment (single text)
+Read ONE text carefully. Return structured per-text analysis.
+
+### Action: analyze_bulk (multiple texts)
+Read a batch of texts. Return per-text results plus an aggregate summary across the batch.
+
+### Action: track_brand (multiple texts, brand name)
+Focus the analysis specifically on how the brand is being discussed. Aggregate positive/negative aspects tied to the brand. Identify which mentions are praise vs complaint vs neutral. Spot patterns in what customers love or hate about the brand.
+
+### Action: detect_crisis (multiple texts, optional brand, optional threshold)
+Scan the batch for signals of an active or emerging crisis — lawsuits, data breaches, product failures, public outrage, viral backlash. Classify severity (critical | warning | watch | none). Produce actionable recommendations specific to the crisis type.
+
+### Action: analyze_trend (multiple texts)
+Identify emerging themes and topic shifts in the batch. Compute average sentiment across the batch. Identify which topics are gaining or losing volume. Spot emerging themes that may predict future narrative shifts.
+
+## Hard rules
+
+- NEVER count keywords. Read the text.
+- Detect sarcasm — "Oh great, another outage" is negative, not positive.
+- Consider context — "bug" in a discussion of pest control is not a software complaint.
+- For crisis detection, classify severity based on BOTH sentiment intensity and trigger keyword presence. Don't call a 5-negative-words tweet a crisis; don't ignore a single calm mention of "class-action lawsuit".
+- Aspect-based sentiment means what SPECIFICALLY is positive or negative — "customer support was slow" (aspect: customer support, sentiment: negative) not "customer support" as a generic positive.
+- Language detection: return ISO 639-1 code (en, es, fr, de, pt, it, etc.).
+- For brand tracking, only analyze texts that actually mention the brand — don't pad the analysis with irrelevant texts.
+- If the batch is small (< 3 texts) say so in your rationale — small-sample analyses are less statistically meaningful.
+- Sentiment scores are -1.0 to +1.0. Confidence is 0.0 to 1.0.
+- emotions enum: joy | anger | fear | sadness | surprise | disgust | neutral.
+- sentiment label: positive | negative | neutral.
+
+## Output format
+
+Respond with ONLY a valid JSON object matching the action-specific schema described in the user prompt. No markdown fences. No preamble. No prose outside the JSON.`;
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'SENTIMENT_ANALYST',
+    id: SPECIALIST_ID,
     name: 'Sentiment Analyst',
     role: 'specialist',
     status: 'FUNCTIONAL',
@@ -62,169 +154,487 @@ const CONFIG: SpecialistConfig = {
       'aspect_extraction',
     ],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: ['analyze_sentiment', 'detect_emotions', 'track_brand', 'detect_crisis'],
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  tools: ['analyze_sentiment', 'analyze_bulk', 'track_brand', 'detect_crisis', 'analyze_trend'],
   outputSchema: {
     type: 'object',
     properties: {
+      action: { type: 'string' },
       sentiment: { type: 'object' },
       emotions: { type: 'array' },
       aspects: { type: 'array' },
       alerts: { type: 'array' },
     },
   },
-  maxTokens: 4096,
-  temperature: 0.2,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  temperature: 0.3,
 };
 
 // ============================================================================
-// TYPE DEFINITIONS
+// INPUT CONTRACT
 // ============================================================================
 
-interface AnalyzeSentimentPayload {
-  action: 'analyze_sentiment';
-  text: string;
-  context?: string;
+const AnalyzeSentimentPayloadSchema = z.object({
+  action: z.literal('analyze_sentiment'),
+  text: z.string().min(1).max(20000),
+  context: z.string().max(500).optional(),
+});
+
+const AnalyzeBulkPayloadSchema = z.object({
+  action: z.literal('analyze_bulk'),
+  texts: z.array(z.string().min(1).max(20000)).min(1).max(50),
+  context: z.string().max(500).optional(),
+});
+
+const TrackBrandPayloadSchema = z.object({
+  action: z.literal('track_brand'),
+  brandName: z.string().min(1).max(200),
+  texts: z.array(z.string().min(1).max(20000)).min(1).max(50),
+});
+
+const DetectCrisisPayloadSchema = z.object({
+  action: z.literal('detect_crisis'),
+  texts: z.array(z.string().min(1).max(20000)).min(1).max(50),
+  brandName: z.string().min(1).max(200).optional(),
+  threshold: z.number().min(-1).max(0).optional(),
+});
+
+const AnalyzeTrendPayloadSchema = z.object({
+  action: z.literal('analyze_trend'),
+  texts: z.array(z.string().min(1).max(20000)).min(1).max(50),
+  timeWindow: z.string().max(100).optional(),
+});
+
+const SentimentPayloadSchema = z.discriminatedUnion('action', [
+  AnalyzeSentimentPayloadSchema,
+  AnalyzeBulkPayloadSchema,
+  TrackBrandPayloadSchema,
+  DetectCrisisPayloadSchema,
+  AnalyzeTrendPayloadSchema,
+]);
+
+export type AnalyzeSentimentPayload = z.infer<typeof AnalyzeSentimentPayloadSchema>;
+export type AnalyzeBulkPayload = z.infer<typeof AnalyzeBulkPayloadSchema>;
+export type TrackBrandPayload = z.infer<typeof TrackBrandPayloadSchema>;
+export type DetectCrisisPayload = z.infer<typeof DetectCrisisPayloadSchema>;
+export type AnalyzeTrendPayload = z.infer<typeof AnalyzeTrendPayloadSchema>;
+export type SentimentPayload = z.infer<typeof SentimentPayloadSchema>;
+
+// ============================================================================
+// OUTPUT CONTRACT (per-action Zod schemas)
+// ============================================================================
+
+const SentimentLabelEnum = z.enum(['positive', 'negative', 'neutral']);
+const EmotionEnum = z.enum(['joy', 'anger', 'fear', 'sadness', 'surprise', 'disgust', 'neutral']);
+const SeverityEnum = z.enum(['critical', 'warning', 'watch', 'none']);
+const TrendDirectionEnum = z.enum(['improving', 'declining', 'stable']);
+const VolumeTrendEnum = z.enum(['increasing', 'decreasing', 'stable']);
+
+const SentimentScoreSchema = z.object({
+  score: z.number().min(-1).max(1),
+  label: SentimentLabelEnum,
+  confidence: z.number().min(0).max(1),
+});
+
+const EmotionScoreSchema = z.object({
+  emotion: EmotionEnum,
+  score: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1),
+});
+
+const AspectSentimentSchema = z.object({
+  aspect: z.string().min(1).max(200),
+  sentiment: SentimentScoreSchema,
+  mentions: z.number().int().min(1),
+});
+
+const CrisisAlertSchema = z.object({
+  severity: SeverityEnum,
+  trigger: z.string().min(1).max(300),
+  context: z.string().min(1).max(600),
+  recommendedAction: z.string().min(10).max(500),
+});
+
+const AnalyzeSentimentResultSchema = z.object({
+  action: z.literal('analyze_sentiment'),
+  text: z.string().max(300),
+  sentiment: SentimentScoreSchema,
+  emotions: z.array(EmotionScoreSchema).min(1).max(4),
+  aspects: z.array(AspectSentimentSchema).max(8),
+  keywords: z.array(z.string().min(1).max(60)).max(12),
+  language: z.string().min(2).max(5),
+  rationale: z.string().min(30).max(1500),
+});
+
+const AnalyzeBulkResultSchema = z.object({
+  action: z.literal('analyze_bulk'),
+  results: z.array(
+    z.object({
+      index: z.number().int().min(0),
+      text: z.string().max(300),
+      sentiment: SentimentScoreSchema,
+      emotions: z.array(EmotionScoreSchema).min(1).max(4),
+      keywords: z.array(z.string().min(1).max(60)).max(8),
+    }),
+  ).min(1).max(50),
+  summary: z.object({
+    totalTexts: z.number().int().min(1),
+    averageSentiment: z.number().min(-1).max(1),
+    distribution: z.object({
+      positive: z.number().int().min(0),
+      negative: z.number().int().min(0),
+      neutral: z.number().int().min(0),
+    }),
+    dominantEmotion: EmotionEnum,
+    observations: z.array(z.string().min(15).max(400)).min(1).max(5),
+  }),
+  rationale: z.string().min(50).max(2500),
+});
+
+const BrandSentimentResultSchema = z.object({
+  action: z.literal('track_brand'),
+  brand: z.string().min(1).max(200),
+  mentionCount: z.number().int().min(0),
+  overallSentiment: SentimentScoreSchema,
+  sentimentDistribution: z.object({
+    positive: z.number().int().min(0),
+    negative: z.number().int().min(0),
+    neutral: z.number().int().min(0),
+  }),
+  topPositiveAspects: z.array(z.string().min(3).max(300)).max(5),
+  topNegativeAspects: z.array(z.string().min(3).max(300)).max(5),
+  recentTrend: TrendDirectionEnum,
+  alerts: z.array(CrisisAlertSchema).max(6),
+  keyObservations: z.array(z.string().min(15).max(400)).min(1).max(5),
+  rationale: z.string().min(50).max(3000),
+});
+
+const CrisisDetectionResultSchema = z.object({
+  action: z.literal('detect_crisis'),
+  crisisDetected: z.boolean(),
+  severity: SeverityEnum,
+  alerts: z.array(CrisisAlertSchema).max(10),
+  summary: z.string().min(30).max(2000),
+  recommendations: z.array(z.string().min(15).max(400)).min(1).max(6),
+  rationale: z.string().min(50).max(2500),
+});
+
+const TrendAnalysisResultSchema = z.object({
+  action: z.literal('analyze_trend'),
+  period: z.string().min(1).max(100),
+  averageSentiment: z.number().min(-1).max(1),
+  sentimentTrend: TrendDirectionEnum,
+  topTopics: z.array(
+    z.object({
+      topic: z.string().min(1).max(200),
+      sentiment: z.number().min(-1).max(1),
+      volume: z.number().int().min(1),
+    }),
+  ).min(1).max(10),
+  emergingThemes: z.array(z.string().min(3).max(300)).max(5),
+  volumeTrend: VolumeTrendEnum,
+  rationale: z.string().min(50).max(2500),
+});
+
+const SentimentAnalysisResultSchema = z.discriminatedUnion('action', [
+  AnalyzeSentimentResultSchema,
+  AnalyzeBulkResultSchema,
+  BrandSentimentResultSchema,
+  CrisisDetectionResultSchema,
+  TrendAnalysisResultSchema,
+]);
+
+export type SentimentAnalysisResult = z.infer<typeof SentimentAnalysisResultSchema>;
+export type SentimentResult = z.infer<typeof AnalyzeSentimentResultSchema>;
+export type BrandSentimentResult = z.infer<typeof BrandSentimentResultSchema>;
+export type CrisisDetectionResult = z.infer<typeof CrisisDetectionResultSchema>;
+export type TrendAnalysisResult = z.infer<typeof TrendAnalysisResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: SentimentAnalystGMConfig;
+  resolvedSystemPrompt: string;
+  source: 'gm' | 'fallback';
 }
 
-interface AnalyzeBulkPayload {
-  action: 'analyze_bulk';
-  texts: string[];
-  context?: string;
-}
+async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
 
-interface TrackBrandPayload {
-  action: 'track_brand';
-  brandName: string;
-  texts: string[];
-}
+  if (!gmRecord) {
+    logger.warn(
+      `[SentimentAnalyst] GM not seeded for industryKey=${industryKey}; using DEFAULT_SYSTEM_PROMPT fallback. ` +
+      `Run node scripts/seed-sentiment-analyst-gm.js to promote to GM-backed analysis.`,
+      { file: FILE },
+    );
+    return {
+      gm: {
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        model: 'claude-sonnet-4.6',
+        temperature: 0.3,
+        maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+        supportedActions: [...SUPPORTED_ACTIONS],
+      },
+      resolvedSystemPrompt: DEFAULT_SYSTEM_PROMPT,
+      source: 'fallback',
+    };
+  }
 
-interface DetectCrisisPayload {
-  action: 'detect_crisis';
-  texts: string[];
-  brandName?: string;
-  threshold?: number;
-}
+  const config = gmRecord.config as Partial<SentimentAnalystGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `Sentiment Analyst GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
 
-interface AnalyzeTrendPayload {
-  action: 'analyze_trend';
-  texts: string[];
-  timeWindow?: string;
-}
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
 
-type SentimentPayload =
-  | AnalyzeSentimentPayload
-  | AnalyzeBulkPayload
-  | TrackBrandPayload
-  | DetectCrisisPayload
-  | AnalyzeTrendPayload;
-
-interface SentimentScore {
-  score: number; // -1.0 to +1.0
-  label: 'positive' | 'negative' | 'neutral';
-  confidence: number; // 0.0 to 1.0
-}
-
-interface EmotionScore {
-  emotion: 'joy' | 'anger' | 'fear' | 'sadness' | 'surprise' | 'disgust' | 'neutral';
-  score: number;
-  confidence: number;
-}
-
-interface AspectSentiment {
-  aspect: string;
-  sentiment: SentimentScore;
-  mentions: number;
-}
-
-interface SentimentResult {
-  text: string;
-  sentiment: SentimentScore;
-  emotions: EmotionScore[];
-  aspects: AspectSentiment[];
-  keywords: string[];
-  language: string;
-}
-
-interface BrandSentimentResult {
-  brand: string;
-  overallSentiment: SentimentScore;
-  mentionCount: number;
-  sentimentDistribution: {
-    positive: number;
-    negative: number;
-    neutral: number;
+  const gm: SentimentAnalystGMConfig = {
+    systemPrompt,
+    model: config.model ?? 'claude-sonnet-4.6',
+    temperature: config.temperature ?? 0.3,
+    maxTokens: effectiveMaxTokens,
+    supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
-  topPositiveAspects: string[];
-  topNegativeAspects: string[];
-  recentTrend: 'improving' | 'declining' | 'stable';
-  alerts: CrisisAlert[];
+
+  return { gm, resolvedSystemPrompt: systemPrompt, source: 'gm' };
 }
 
-interface CrisisAlert {
-  severity: 'critical' | 'warning' | 'watch';
-  trigger: string;
-  context: string;
-  recommendedAction: string;
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
 }
 
-interface TrendAnalysis {
-  period: string;
-  averageSentiment: number;
-  sentimentTrend: 'improving' | 'declining' | 'stable';
-  topTopics: { topic: string; sentiment: number; volume: number }[];
-  emergingThemes: string[];
-  volumeTrend: 'increasing' | 'decreasing' | 'stable';
+async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
+
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Sentiment Analyst: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the input text batch. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
+
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
 }
 
 // ============================================================================
-// SENTIMENT LEXICONS
+// ACTION-SPECIFIC PROMPT BUILDERS
 // ============================================================================
 
-const POSITIVE_WORDS = new Set([
-  'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'awesome',
-  'love', 'best', 'perfect', 'happy', 'pleased', 'satisfied', 'recommend',
-  'helpful', 'friendly', 'professional', 'quality', 'reliable', 'efficient',
-  'innovative', 'outstanding', 'exceptional', 'impressive', 'brilliant',
-  'delighted', 'thrilled', 'appreciate', 'grateful', 'enjoy', 'like',
-]);
+function truncate(text: string, max: number): string {
+  if (text.length <= max) { return text; }
+  return `${text.slice(0, max)}...[truncated, ${text.length - max} more chars]`;
+}
 
-const NEGATIVE_WORDS = new Set([
-  'bad', 'terrible', 'awful', 'horrible', 'worst', 'hate', 'disappointing',
-  'poor', 'slow', 'broken', 'useless', 'waste', 'scam', 'fraud', 'angry',
-  'frustrated', 'annoyed', 'upset', 'unhappy', 'dissatisfied', 'complaint',
-  'problem', 'issue', 'fail', 'failure', 'mistake', 'error', 'bug',
-  'rude', 'unprofessional', 'expensive', 'overpriced', 'confusing',
-]);
+function formatTextBatch(texts: string[], maxPerText = 1500): string {
+  return texts
+    .map((t, i) => `[${i}] ${truncate(t, maxPerText)}`)
+    .join('\n\n');
+}
 
-const INTENSIFIERS = new Set([
-  'very', 'extremely', 'incredibly', 'absolutely', 'completely', 'totally',
-  'really', 'so', 'highly', 'exceptionally', 'remarkably',
-]);
+function buildAnalyzeSentimentPrompt(req: AnalyzeSentimentPayload): string {
+  return [
+    'ACTION: analyze_sentiment (single text)',
+    '',
+    req.context ? `Context: ${req.context}` : '',
+    '',
+    '## Text',
+    truncate(req.text, 8000),
+    '',
+    '---',
+    '',
+    'Produce a structured per-text sentiment analysis. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "action": "analyze_sentiment",',
+    '  "text": "<first 300 chars of the analyzed text as a string preview>",',
+    '  "sentiment": { "score": <-1 to 1>, "label": "<positive | negative | neutral>", "confidence": <0-1> },',
+    '  "emotions": [{ "emotion": "<joy|anger|fear|sadness|surprise|disgust|neutral>", "score": <0-1>, "confidence": <0-1> }] (1-4 dominant emotions),',
+    '  "aspects": [{ "aspect": "<what specifically is being evaluated>", "sentiment": { same shape }, "mentions": <integer> }] (up to 8),',
+    '  "keywords": ["<up to 12 content keywords>"],',
+    '  "language": "<ISO 639-1 code>",',
+    '  "rationale": "<why you scored it this way, 30-1500 chars — reference specific phrases>"',
+    '}',
+  ].filter((line) => line !== '').join('\n');
+}
 
-const NEGATORS = new Set([
-  'not', "n't", 'no', 'never', 'none', 'nothing', 'nowhere', 'neither',
-  'without', 'hardly', 'barely', 'scarcely',
-]);
+function buildAnalyzeBulkPrompt(req: AnalyzeBulkPayload): string {
+  return [
+    'ACTION: analyze_bulk (multi-text)',
+    '',
+    req.context ? `Context: ${req.context}` : '',
+    '',
+    `## Batch of ${req.texts.length} texts`,
+    formatTextBatch(req.texts),
+    '',
+    '---',
+    '',
+    'Produce per-text results PLUS an aggregate summary across the batch. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "action": "analyze_bulk",',
+    '  "results": [',
+    '    { "index": <integer>, "text": "<preview>", "sentiment": {...}, "emotions": [...], "keywords": [...] }',
+    '  ],',
+    '  "summary": {',
+    '    "totalTexts": <integer>,',
+    '    "averageSentiment": <-1 to 1>,',
+    '    "distribution": { "positive": <count>, "negative": <count>, "neutral": <count> },',
+    '    "dominantEmotion": "<enum>",',
+    '    "observations": ["<1-5 specific cross-batch observations>"]',
+    '  },',
+    '  "rationale": "<50-2500 chars synthesizing the batch>"',
+    '}',
+    '',
+    'Every input text must have a corresponding entry in results. Do not skip any.',
+  ].filter((line) => line !== '').join('\n');
+}
 
-const EMOTION_KEYWORDS: Record<string, string[]> = {
-  joy: ['happy', 'joy', 'excited', 'thrilled', 'delighted', 'pleased', 'glad', 'love', 'wonderful', 'fantastic'],
-  anger: ['angry', 'furious', 'outraged', 'mad', 'annoyed', 'frustrated', 'irritated', 'hate', 'disgusted'],
-  fear: ['afraid', 'scared', 'worried', 'anxious', 'nervous', 'concerned', 'terrified', 'panic'],
-  sadness: ['sad', 'disappointed', 'upset', 'unhappy', 'depressed', 'heartbroken', 'miserable', 'sorry'],
-  surprise: ['surprised', 'shocked', 'amazed', 'astonished', 'unexpected', 'stunning', 'wow'],
-  disgust: ['disgusted', 'gross', 'revolting', 'sick', 'nasty', 'horrible', 'awful'],
-};
+function buildTrackBrandPrompt(req: TrackBrandPayload): string {
+  return [
+    'ACTION: track_brand',
+    '',
+    `Brand: ${req.brandName}`,
+    '',
+    `## Batch of ${req.texts.length} texts`,
+    formatTextBatch(req.texts),
+    '',
+    '---',
+    '',
+    `Analyze how "${req.brandName}" is being discussed across the batch. Focus on texts that actually mention the brand. Respond with ONLY a valid JSON object:`,
+    '',
+    '{',
+    `  "action": "track_brand",`,
+    `  "brand": "${req.brandName}",`,
+    '  "mentionCount": <integer>,',
+    '  "overallSentiment": { "score": <-1 to 1>, "label": "<enum>", "confidence": <0-1> },',
+    '  "sentimentDistribution": { "positive": <count>, "negative": <count>, "neutral": <count> },',
+    '  "topPositiveAspects": ["<up to 5 specific positive themes>"],',
+    '  "topNegativeAspects": ["<up to 5 specific negative themes>"],',
+    '  "recentTrend": "<improving | declining | stable>",',
+    '  "alerts": [{ "severity": "<critical|warning|watch|none>", "trigger": "<specific trigger>", "context": "<quoted or paraphrased>", "recommendedAction": "<specific action>" }],',
+    '  "keyObservations": ["<1-5 specific brand-relevant observations>"],',
+    '  "rationale": "<50-3000 chars synthesis>"',
+    '}',
+  ].filter((line) => line !== '').join('\n');
+}
 
-const CRISIS_TRIGGERS = [
-  'lawsuit', 'legal action', 'sue', 'scandal', 'fraud', 'scam', 'criminal',
-  'boycott', 'protest', 'outrage', 'viral', 'trending', 'breaking',
-  'recall', 'safety', 'danger', 'harm', 'injury', 'death',
-  'data breach', 'hack', 'leaked', 'privacy', 'security',
-];
+function buildDetectCrisisPrompt(req: DetectCrisisPayload): string {
+  const threshold = req.threshold ?? -0.5;
+  return [
+    'ACTION: detect_crisis',
+    '',
+    req.brandName ? `Brand: ${req.brandName}` : '',
+    `Negative sentiment threshold: ${threshold}`,
+    '',
+    `## Batch of ${req.texts.length} texts`,
+    formatTextBatch(req.texts),
+    '',
+    '---',
+    '',
+    'Scan the batch for signals of an active or emerging crisis. Classify severity based on BOTH sentiment intensity and specific crisis indicators (lawsuits, data breaches, viral complaints, product failures, public outrage, PR incidents). Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "action": "detect_crisis",',
+    '  "crisisDetected": <true | false>,',
+    '  "severity": "<critical | warning | watch | none>",',
+    '  "alerts": [{ "severity": "<enum>", "trigger": "<what triggered this alert>", "context": "<quoted or paraphrased>", "recommendedAction": "<specific actionable recommendation>" }],',
+    '  "summary": "<30-2000 chars describing what you found>",',
+    '  "recommendations": ["<1-6 specific actionable recommendations, each tied to what you observed>"],',
+    '  "rationale": "<50-2500 chars explaining your severity call>"',
+    '}',
+    '',
+    'Severity rules: critical = active PR emergency (viral backlash, confirmed breach, lawsuit); warning = escalating negative pattern; watch = isolated but concerning signals; none = normal baseline.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+function buildAnalyzeTrendPrompt(req: AnalyzeTrendPayload): string {
+  return [
+    'ACTION: analyze_trend',
+    '',
+    `Time window: ${req.timeWindow ?? 'recent'}`,
+    '',
+    `## Batch of ${req.texts.length} texts`,
+    formatTextBatch(req.texts),
+    '',
+    '---',
+    '',
+    'Identify emerging themes and topic patterns across the batch. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "action": "analyze_trend",',
+    `  "period": "${req.timeWindow ?? 'recent'}",`,
+    '  "averageSentiment": <-1 to 1>,',
+    '  "sentimentTrend": "<improving | declining | stable>",',
+    '  "topTopics": [{ "topic": "<topic name>", "sentiment": <-1 to 1>, "volume": <integer count of mentions> }],',
+    '  "emergingThemes": ["<up to 5 new/growing themes>"],',
+    '  "volumeTrend": "<increasing | decreasing | stable>",',
+    '  "rationale": "<50-2500 chars synthesis of what is happening>"',
+    '}',
+  ].filter((line) => line !== '').join('\n');
+}
+
+function buildUserPrompt(payload: SentimentPayload): string {
+  switch (payload.action) {
+    case 'analyze_sentiment': return buildAnalyzeSentimentPrompt(payload);
+    case 'analyze_bulk': return buildAnalyzeBulkPrompt(payload);
+    case 'track_brand': return buildTrackBrandPrompt(payload);
+    case 'detect_crisis': return buildDetectCrisisPrompt(payload);
+    case 'analyze_trend': return buildAnalyzeTrendPrompt(payload);
+  }
+}
+
+async function executeSentimentAnalysis(
+  payload: SentimentPayload,
+  ctx: LlmCallContext,
+): Promise<SentimentAnalysisResult> {
+  const userPrompt = buildUserPrompt(payload);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Sentiment Analyst output was not valid JSON: ${rawContent.slice(0, 300)}`,
+    );
+  }
+
+  const result = SentimentAnalysisResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Sentiment Analyst output did not match expected schema: ${issueSummary}`);
+  }
+
+  return result.data;
+}
 
 // ============================================================================
-// IMPLEMENTATION
+// SENTIMENT ANALYST CLASS
 // ============================================================================
 
 export class SentimentAnalyst extends BaseSpecialist {
@@ -235,554 +645,55 @@ export class SentimentAnalyst extends BaseSpecialist {
   async initialize(): Promise<void> {
     await Promise.resolve();
     this.isInitialized = true;
-    this.log('INFO', 'Sentiment Analyst initialized');
+    this.log('INFO', 'Sentiment Analyst initialized (LLM-backed, Golden Master loaded at runtime)');
   }
 
-  /**
-   * Main execution entry point
-   */
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
-    await Promise.resolve(); // Required by BaseSpecialist async interface
 
     try {
-      const payload = message.payload as SentimentPayload;
-
-      if (!payload || typeof payload !== 'object' || !('action' in payload)) {
-        return this.createReport(taskId, 'FAILED', null, ['Invalid payload: action is required']);
+      const payload = message.payload as Record<string, unknown> | null;
+      if (payload === null || typeof payload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['Sentiment Analyst: payload must be an object']);
       }
 
-      let result: unknown;
-
-      switch (payload.action) {
-        case 'analyze_sentiment':
-          result = this.handleAnalyzeSentiment(payload);
-          break;
-
-        case 'analyze_bulk':
-          result = this.handleAnalyzeBulk(payload);
-          break;
-
-        case 'track_brand':
-          result = this.handleTrackBrand(payload);
-          break;
-
-        case 'detect_crisis':
-          result = this.handleDetectCrisis(payload);
-          break;
-
-        case 'analyze_trend':
-          result = this.handleAnalyzeTrend(payload);
-          break;
-
-        default:
-          return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${(payload as { action: string }).action}`]);
+      const rawAction = payload.action;
+      if (typeof rawAction !== 'string') {
+        return this.createReport(taskId, 'FAILED', null, ['Sentiment Analyst: payload.action is required']);
+      }
+      if (!(SUPPORTED_ACTIONS as readonly string[]).includes(rawAction)) {
+        return this.createReport(taskId, 'FAILED', null, [
+          `Sentiment Analyst does not support action '${rawAction}'. Supported: ${SUPPORTED_ACTIONS.join(', ')}`,
+        ]);
       }
 
+      const inputValidation = SentimentPayloadSchema.safeParse(payload);
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Sentiment Analyst: invalid input payload: ${issueSummary}`,
+        ]);
+      }
+
+      const action = rawAction as SupportedAction;
+      logger.info(`[SentimentAnalyst] Executing action=${action} taskId=${taskId}`, { file: FILE });
+
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+      const result = await executeSentimentAnalysis(inputValidation.data, ctx);
       return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Sentiment analysis failed: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[SentimentAnalyst] Execution failed',
+        error instanceof Error ? error : new Error(errorMessage),
+        { file: FILE },
+      );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
-  /**
-   * Analyze sentiment of a single text
-   */
-  private handleAnalyzeSentiment(payload: AnalyzeSentimentPayload): SentimentResult {
-    const { text, context } = payload;
-
-    this.log('INFO', `Analyzing sentiment for text (${text.length} chars)`);
-
-    const sentiment = this.calculateSentiment(text);
-    const emotions = this.detectEmotions(text);
-    const aspects = this.extractAspects(text, context);
-    const keywords = this.extractKeywords(text);
-    const language = this.detectLanguage(text);
-
-    return {
-      text: text.substring(0, 200) + (text.length > 200 ? '...' : ''),
-      sentiment,
-      emotions,
-      aspects,
-      keywords,
-      language,
-    };
-  }
-
-  /**
-   * Analyze sentiment of multiple texts
-   */
-  private handleAnalyzeBulk(payload: AnalyzeBulkPayload): {
-    results: SentimentResult[];
-    summary: {
-      totalTexts: number;
-      averageSentiment: number;
-      distribution: { positive: number; negative: number; neutral: number };
-    };
-  } {
-    const { texts, context } = payload;
-
-    this.log('INFO', `Bulk analyzing ${texts.length} texts`);
-
-    const results: SentimentResult[] = [];
-    let totalScore = 0;
-    const distribution = { positive: 0, negative: 0, neutral: 0 };
-
-    for (const text of texts) {
-      const result = this.handleAnalyzeSentiment({
-        action: 'analyze_sentiment',
-        text,
-        context,
-      });
-      results.push(result);
-      totalScore += result.sentiment.score;
-      distribution[result.sentiment.label]++;
-    }
-
-    return {
-      results,
-      summary: {
-        totalTexts: texts.length,
-        averageSentiment: Math.round((totalScore / texts.length) * 100) / 100,
-        distribution,
-      },
-    };
-  }
-
-  /**
-   * Track brand sentiment across multiple texts
-   */
-  private handleTrackBrand(payload: TrackBrandPayload): BrandSentimentResult {
-    const { brandName, texts } = payload;
-    const brandLower = brandName.toLowerCase();
-
-    this.log('INFO', `Tracking brand "${brandName}" across ${texts.length} texts`);
-
-    const mentionTexts = texts.filter(t => t.toLowerCase().includes(brandLower));
-    const sentiments: SentimentScore[] = [];
-    const aspects: AspectSentiment[] = [];
-    const alerts: CrisisAlert[] = [];
-
-    for (const text of mentionTexts) {
-      const sentiment = this.calculateSentiment(text);
-      sentiments.push(sentiment);
-
-      const textAspects = this.extractAspects(text, brandName);
-      aspects.push(...textAspects);
-
-      // Check for crisis triggers
-      const crisisCheck = this.checkForCrisis(text, brandName);
-      if (crisisCheck) {
-        alerts.push(crisisCheck);
-      }
-    }
-
-    const distribution = { positive: 0, negative: 0, neutral: 0 };
-    let totalScore = 0;
-
-    for (const s of sentiments) {
-      distribution[s.label]++;
-      totalScore += s.score;
-    }
-
-    const avgScore = sentiments.length > 0 ? totalScore / sentiments.length : 0;
-
-    // Aggregate aspects
-    const positiveAspects = aspects
-      .filter(a => a.sentiment.score > 0.2)
-      .map(a => a.aspect);
-    const negativeAspects = aspects
-      .filter(a => a.sentiment.score < -0.2)
-      .map(a => a.aspect);
-
-    return {
-      brand: brandName,
-      overallSentiment: {
-        score: Math.round(avgScore * 100) / 100,
-        label: avgScore > 0.1 ? 'positive' : avgScore < -0.1 ? 'negative' : 'neutral',
-        confidence: 0.8,
-      },
-      mentionCount: mentionTexts.length,
-      sentimentDistribution: distribution,
-      topPositiveAspects: [...new Set(positiveAspects)].slice(0, 5),
-      topNegativeAspects: [...new Set(negativeAspects)].slice(0, 5),
-      recentTrend: 'stable', // Would need time-series data for real trend
-      alerts,
-    };
-  }
-
-  /**
-   * Detect potential crisis situations
-   */
-  private handleDetectCrisis(payload: DetectCrisisPayload): {
-    crisisDetected: boolean;
-    severity: 'critical' | 'warning' | 'watch' | 'none';
-    alerts: CrisisAlert[];
-    summary: string;
-    recommendations: string[];
-  } {
-    const { texts, brandName, threshold = -0.5 } = payload;
-
-    this.log('INFO', `Scanning ${texts.length} texts for crisis signals`);
-
-    const alerts: CrisisAlert[] = [];
-    let negativeSentimentCount = 0;
-    let crisisKeywordCount = 0;
-
-    for (const text of texts) {
-      const sentiment = this.calculateSentiment(text);
-      if (sentiment.score < threshold) {
-        negativeSentimentCount++;
-      }
-
-      const crisisAlert = this.checkForCrisis(text, brandName);
-      if (crisisAlert) {
-        alerts.push(crisisAlert);
-        crisisKeywordCount++;
-      }
-    }
-
-    const negativeRatio = texts.length > 0 ? negativeSentimentCount / texts.length : 0;
-    const crisisRatio = texts.length > 0 ? crisisKeywordCount / texts.length : 0;
-
-    let severity: 'critical' | 'warning' | 'watch' | 'none' = 'none';
-    if (crisisRatio > 0.1 || negativeRatio > 0.5) {
-      severity = 'critical';
-    } else if (crisisRatio > 0.05 || negativeRatio > 0.3) {
-      severity = 'warning';
-    } else if (crisisRatio > 0.01 || negativeRatio > 0.2) {
-      severity = 'watch';
-    }
-
-    const recommendations: string[] = [];
-    if (severity !== 'none') {
-      recommendations.push('Monitor social media channels closely');
-      recommendations.push('Prepare response statements for common concerns');
-      if (severity === 'critical') {
-        recommendations.push('Escalate to PR/Communications team immediately');
-        recommendations.push('Consider proactive public statement');
-      }
-    }
-
-    return {
-      crisisDetected: severity !== 'none',
-      severity,
-      alerts: alerts.slice(0, 10),
-      summary: `Analyzed ${texts.length} texts: ${negativeSentimentCount} negative (${Math.round(negativeRatio * 100)}%), ${crisisKeywordCount} crisis triggers`,
-      recommendations,
-    };
-  }
-
-  /**
-   * Analyze sentiment trends over time
-   */
-  private handleAnalyzeTrend(payload: AnalyzeTrendPayload): TrendAnalysis {
-    const { texts, timeWindow = 'recent' } = payload;
-
-    this.log('INFO', `Analyzing trends across ${texts.length} texts`);
-
-    let totalSentiment = 0;
-    const topicMap = new Map<string, { count: number; sentiment: number }>();
-
-    for (const text of texts) {
-      const sentiment = this.calculateSentiment(text);
-      totalSentiment += sentiment.score;
-
-      const keywords = this.extractKeywords(text);
-      for (const keyword of keywords) {
-        const existing = topicMap.get(keyword) ?? { count: 0, sentiment: 0 };
-        existing.count++;
-        existing.sentiment += sentiment.score;
-        topicMap.set(keyword, existing);
-      }
-    }
-
-    const avgSentiment = texts.length > 0 ? totalSentiment / texts.length : 0;
-
-    // Sort topics by volume
-    const sortedTopics = Array.from(topicMap.entries())
-      .map(([topic, data]) => ({
-        topic,
-        sentiment: Math.round((data.sentiment / data.count) * 100) / 100,
-        volume: data.count,
-      }))
-      .sort((a, b) => b.volume - a.volume)
-      .slice(0, 10);
-
-    // Identify emerging themes (topics with high recent mentions)
-    const emergingThemes = sortedTopics
-      .filter(t => t.volume >= 2)
-      .slice(0, 5)
-      .map(t => t.topic);
-
-    return {
-      period: timeWindow,
-      averageSentiment: Math.round(avgSentiment * 100) / 100,
-      sentimentTrend: 'stable', // Would need historical data for real trend
-      topTopics: sortedTopics,
-      emergingThemes,
-      volumeTrend: 'stable',
-    };
-  }
-
-  // ==========================================================================
-  // CORE ANALYSIS METHODS
-  // ==========================================================================
-
-  /**
-   * Calculate sentiment score for text
-   */
-  private calculateSentiment(text: string): SentimentScore {
-    const words = text.toLowerCase().split(/\s+/);
-    let score = 0;
-    let wordCount = 0;
-    let isNegated = false;
-    let intensifier = 1;
-
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i].replace(/[^a-z]/g, '');
-
-      // Check for negators
-      if (NEGATORS.has(word)) {
-        isNegated = true;
-        continue;
-      }
-
-      // Check for intensifiers
-      if (INTENSIFIERS.has(word)) {
-        intensifier = 1.5;
-        continue;
-      }
-
-      // Score positive words
-      if (POSITIVE_WORDS.has(word)) {
-        const wordScore = isNegated ? -1 : 1;
-        score += wordScore * intensifier;
-        wordCount++;
-      }
-
-      // Score negative words
-      if (NEGATIVE_WORDS.has(word)) {
-        const wordScore = isNegated ? 1 : -1;
-        score += wordScore * intensifier;
-        wordCount++;
-      }
-
-      // Reset modifiers after scoring a word
-      isNegated = false;
-      intensifier = 1;
-    }
-
-    // Normalize score to -1 to 1 range
-    const normalizedScore = wordCount > 0 ? Math.max(-1, Math.min(1, score / wordCount)) : 0;
-
-    // Calculate confidence based on evidence
-    const confidence = Math.min(0.95, 0.5 + (wordCount / 20));
-
-    return {
-      score: Math.round(normalizedScore * 100) / 100,
-      label: normalizedScore > 0.1 ? 'positive' : normalizedScore < -0.1 ? 'negative' : 'neutral',
-      confidence: Math.round(confidence * 100) / 100,
-    };
-  }
-
-  /**
-   * Detect emotions in text
-   */
-  private detectEmotions(text: string): EmotionScore[] {
-    const lowerText = text.toLowerCase();
-    const emotions: EmotionScore[] = [];
-
-    for (const [emotion, keywords] of Object.entries(EMOTION_KEYWORDS)) {
-      let matches = 0;
-      for (const keyword of keywords) {
-        if (lowerText.includes(keyword)) {
-          matches++;
-        }
-      }
-
-      if (matches > 0) {
-        const score = Math.min(1, matches / 3);
-        emotions.push({
-          emotion: emotion as EmotionScore['emotion'],
-          score: Math.round(score * 100) / 100,
-          confidence: Math.min(0.9, 0.5 + (matches / 5)),
-        });
-      }
-    }
-
-    // Sort by score descending
-    emotions.sort((a, b) => b.score - a.score);
-
-    // If no emotions detected, return neutral
-    if (emotions.length === 0) {
-      emotions.push({
-        emotion: 'neutral',
-        score: 0.5,
-        confidence: 0.6,
-      });
-    }
-
-    return emotions.slice(0, 3);
-  }
-
-  /**
-   * Extract aspect-based sentiments
-   */
-  private extractAspects(text: string, context?: string): AspectSentiment[] {
-    const aspects: AspectSentiment[] = [];
-    const lowerText = text.toLowerCase();
-
-    // Common aspect categories
-    const aspectKeywords: Record<string, string[]> = {
-      'customer service': ['service', 'support', 'help', 'team', 'staff', 'response'],
-      'product quality': ['quality', 'product', 'build', 'design', 'material'],
-      'pricing': ['price', 'cost', 'expensive', 'cheap', 'value', 'worth'],
-      'delivery': ['shipping', 'delivery', 'arrived', 'fast', 'slow', 'package'],
-      'usability': ['easy', 'intuitive', 'confusing', 'user-friendly', 'interface'],
-    };
-
-    for (const [aspect, keywords] of Object.entries(aspectKeywords)) {
-      for (const keyword of keywords) {
-        if (lowerText.includes(keyword)) {
-          // Find sentences containing this keyword and analyze sentiment
-          const sentences = text.split(/[.!?]+/);
-          for (const sentence of sentences) {
-            if (sentence.toLowerCase().includes(keyword)) {
-              const sentiment = this.calculateSentiment(sentence);
-              aspects.push({
-                aspect,
-                sentiment,
-                mentions: 1,
-              });
-              break;
-            }
-          }
-          break;
-        }
-      }
-    }
-
-    // Add context-specific aspect if provided
-    if (context && lowerText.includes(context.toLowerCase())) {
-      const contextSentiment = this.calculateSentiment(text);
-      aspects.push({
-        aspect: context,
-        sentiment: contextSentiment,
-        mentions: 1,
-      });
-    }
-
-    return aspects;
-  }
-
-  /**
-   * Extract keywords from text
-   */
-  private extractKeywords(text: string): string[] {
-    const words = text.toLowerCase()
-      .replace(/[^a-z\s]/g, '')
-      .split(/\s+/)
-      .filter(w => w.length > 3);
-
-    // Remove common stop words
-    const stopWords = new Set([
-      'the', 'this', 'that', 'with', 'have', 'from', 'they', 'been',
-      'were', 'will', 'what', 'when', 'where', 'which', 'their', 'there',
-      'about', 'would', 'could', 'should', 'just', 'also', 'some', 'more',
-    ]);
-
-    const filtered = words.filter(w => !stopWords.has(w));
-
-    // Count word frequency
-    const frequency = new Map<string, number>();
-    for (const word of filtered) {
-      frequency.set(word, (frequency.get(word) ?? 0) + 1);
-    }
-
-    // Return top keywords by frequency
-    return Array.from(frequency.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([word]) => word);
-  }
-
-  /**
-   * Simple language detection
-   */
-  private detectLanguage(text: string): string {
-    // Simple heuristic - check for common words in different languages
-    const lowerText = text.toLowerCase();
-
-    if (lowerText.match(/\b(el|la|los|las|de|en|que)\b/)) {
-      return 'es';
-    }
-    if (lowerText.match(/\b(le|la|les|de|en|que|et)\b/) && !lowerText.match(/\bthe\b/)) {
-      return 'fr';
-    }
-    if (lowerText.match(/\b(der|die|das|und|ist|nicht)\b/)) {
-      return 'de';
-    }
-
-    return 'en';
-  }
-
-  /**
-   * Check for crisis triggers
-   */
-  private checkForCrisis(text: string, _brandName?: string): CrisisAlert | null {
-    const lowerText = text.toLowerCase();
-
-    for (const trigger of CRISIS_TRIGGERS) {
-      if (lowerText.includes(trigger)) {
-        const sentiment = this.calculateSentiment(text);
-
-        let severity: CrisisAlert['severity'] = 'watch';
-        if (sentiment.score < -0.5 || trigger.match(/lawsuit|fraud|scam|death|breach/)) {
-          severity = 'critical';
-        } else if (sentiment.score < -0.3) {
-          severity = 'warning';
-        }
-
-        return {
-          severity,
-          trigger,
-          context: text.substring(0, 150) + (text.length > 150 ? '...' : ''),
-          recommendedAction: this.getCrisisRecommendation(trigger, severity),
-        };
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Get crisis recommendation based on trigger
-   */
-  private getCrisisRecommendation(trigger: string, severity: string): string {
-    if (trigger.match(/lawsuit|legal|sue/)) {
-      return 'Immediately notify legal team and prepare no-comment response';
-    }
-    if (trigger.match(/fraud|scam|criminal/)) {
-      return 'Escalate to executive team; prepare factual response statement';
-    }
-    if (trigger.match(/data breach|hack|leaked/)) {
-      return 'Activate incident response plan; notify affected users if confirmed';
-    }
-    if (trigger.match(/boycott|protest|outrage/)) {
-      return 'Monitor closely; prepare empathetic public response';
-    }
-    if (severity === 'critical') {
-      return 'Escalate immediately to crisis management team';
-    }
-    return 'Continue monitoring; prepare response if situation escalates';
-  }
-
-  /**
-   * Handle signals from the Signal Bus
-   */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const message: AgentMessage = {
       id: signal.id,
@@ -795,7 +706,6 @@ export class SentimentAnalyst extends BaseSpecialist {
       requiresResponse: true,
       traceId: signal.id,
     };
-
     return this.execute(message);
   }
 
@@ -808,12 +718,12 @@ export class SentimentAnalyst extends BaseSpecialist {
   }
 
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 450, boilerplate: 50 };
+    return { functional: 520, boilerplate: 60 };
   }
 }
 
 // ============================================================================
-// EXPORTS
+// FACTORY / SINGLETON
 // ============================================================================
 
 export function createSentimentAnalyst(): SentimentAnalyst {
@@ -826,3 +736,21 @@ export function getSentimentAnalyst(): SentimentAnalyst {
   instance ??= createSentimentAnalyst();
   return instance;
 }
+
+// ============================================================================
+// INTERNAL TEST HELPERS (exported for proof-of-life harness + regression executor)
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  DEFAULT_SYSTEM_PROMPT,
+  loadGMConfig,
+  buildUserPrompt,
+  stripJsonFences,
+  executeSentimentAnalysis,
+  SentimentAnalysisResultSchema,
+  SentimentPayloadSchema,
+};

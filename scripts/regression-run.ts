@@ -51,9 +51,9 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   UX_UI_ARCHITECT: uxUiArchitectExecutor,
   FUNNEL_ENGINEER: funnelEngineerExecutor,
   WORKFLOW_OPTIMIZER: workflowOptimizerExecutor,
-  COPY_SPECIALIST: copySpecialistExecutor,
-  UX_UI_SPECIALIST: uxUiSpecialistExecutor,
-  FUNNEL_PATHOLOGIST: funnelPathologistExecutor,
+  COPY_STRATEGIST: copySpecialistExecutor,
+  UX_UI_STRATEGIST: uxUiSpecialistExecutor,
+  FUNNEL_STRATEGIST: funnelPathologistExecutor,
   EMAIL_SPECIALIST: emailSpecialistExecutor,
   SMS_SPECIALIST: smsSpecialistExecutor,
 };

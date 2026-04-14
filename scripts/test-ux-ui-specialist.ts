@@ -98,7 +98,7 @@ async function main(): Promise<void> {
     id: `harness_${caseName}_${Date.now()}`,
     timestamp: new Date(),
     from: 'HARNESS',
-    to: 'UX_UI_SPECIALIST',
+    to: 'UX_UI_STRATEGIST',
     type: 'COMMAND',
     priority: 'NORMAL',
     payload: input,
