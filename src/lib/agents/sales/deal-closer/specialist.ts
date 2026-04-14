@@ -39,7 +39,6 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -296,7 +295,6 @@ export type ClosingEmail = z.infer<typeof ClosingEmailSchema>;
 
 interface LlmCallContext {
   gm: DealCloserGMConfig;
-  brandDNA: BrandDNA;
   resolvedSystemPrompt: string;
 }
 
@@ -318,15 +316,6 @@ async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
 
   const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
   const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error(
-      'Brand DNA not configured. Deal Closer refuses to generate closing scripts without brand identity. ' +
-      'Visit /settings/ai-agents/business-setup to configure.',
-    );
-  }
-
   return {
     gm: {
       systemPrompt,
@@ -335,32 +324,8 @@ async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
       maxTokens: effectiveMaxTokens,
       supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
     },
-    brandDNA,
-    resolvedSystemPrompt: buildResolvedSystemPrompt(systemPrompt, brandDNA),
+    resolvedSystemPrompt: systemPrompt,
   };
-}
-
-function buildResolvedSystemPrompt(baseSystemPrompt: string, brandDNA: BrandDNA): string {
-  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
-  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
-  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
-
-  const brandBlock = [
-    '',
-    '## Brand DNA (runtime injection — the tenant-specific identity)',
-    '',
-    `Company: ${brandDNA.companyDescription}`,
-    `Unique value: ${brandDNA.uniqueValue}`,
-    `Target audience: ${brandDNA.targetAudience}`,
-    `Tone of voice: ${brandDNA.toneOfVoice}`,
-    `Communication style: ${brandDNA.communicationStyle}`,
-    `Industry: ${brandDNA.industry}`,
-    `Key phrases to weave in naturally: ${keyPhrases}`,
-    `Phrases you are forbidden from using: ${avoidPhrases}`,
-    `Competitors (never name them unless specifically asked): ${competitors}`,
-  ].join('\n');
-
-  return `${baseSystemPrompt}\n${brandBlock}`;
 }
 
 function stripJsonFences(raw: string): string {

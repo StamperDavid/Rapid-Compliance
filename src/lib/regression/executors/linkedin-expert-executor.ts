@@ -19,7 +19,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import {
   __internal as linkedinInternal,
 } from '@/lib/agents/marketing/linkedin/specialist';
@@ -360,13 +359,8 @@ export async function linkedinExpertExecutor(args: {
   if (baseSystemPrompt.length < 100) {
     throw new Error(`[linkedin-expert-executor] GM ${gmRecord.id} systemPrompt too short (${baseSystemPrompt.length} chars)`);
   }
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error('[linkedin-expert-executor] Brand DNA not configured');
-  }
-
-  const resolvedSystemPrompt = linkedinInternal.buildResolvedSystemPrompt(baseSystemPrompt, brandDNA);
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt IS the resolved prompt.
+  const resolvedSystemPrompt = baseSystemPrompt;
 
   const req: Parameters<typeof linkedinInternal.buildGenerateContentUserPrompt>[0] = {
     action: 'generate_content',

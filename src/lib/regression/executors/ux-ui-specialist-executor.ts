@@ -21,7 +21,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { __internal as uxUiInternal } from '@/lib/agents/architect/ux-ui/specialist';
 import {
   REGRESSION_TEMPERATURE,
@@ -254,13 +253,8 @@ export async function uxUiSpecialistExecutor(args: {
   if (baseSystemPrompt.length < 100) {
     throw new Error(`[ux-ui-specialist-executor] GM systemPrompt too short`);
   }
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error('[ux-ui-specialist-executor] Brand DNA not configured');
-  }
-
-  const resolvedSystemPrompt = uxUiInternal.buildResolvedSystemPrompt(baseSystemPrompt, brandDNA);
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt IS the resolved prompt.
+  const resolvedSystemPrompt = baseSystemPrompt;
 
   const req: Parameters<typeof uxUiInternal.buildDesignPageUserPrompt>[0] = {
     action: 'design_page',

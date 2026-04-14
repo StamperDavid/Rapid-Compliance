@@ -11,7 +11,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import {
   __internal as growthInternal,
 } from '@/lib/agents/marketing/growth-analyst/specialist';
@@ -209,10 +208,8 @@ export async function growthAnalystExecutor(args: {
   const baseSystemPrompt = typeof gmConfig.systemPrompt === 'string' ? gmConfig.systemPrompt : '';
   if (baseSystemPrompt.length < 100) {throw new Error(`[growth-analyst-executor] GM systemPrompt too short`);}
 
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {throw new Error('[growth-analyst-executor] Brand DNA not configured');}
-
-  const resolvedSystemPrompt = growthInternal.buildResolvedSystemPrompt(baseSystemPrompt, brandDNA);
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt IS the resolved prompt.
+  const resolvedSystemPrompt = baseSystemPrompt;
 
   const req: Parameters<typeof growthInternal.buildGenerateContentUserPrompt>[0] = {
     action: 'generate_content', topic: parsed.topic, contentType: parsed.contentType,

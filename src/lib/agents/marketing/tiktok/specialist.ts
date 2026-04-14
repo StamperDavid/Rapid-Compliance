@@ -28,7 +28,6 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -174,11 +173,10 @@ export type TikTokContentResult = z.infer<typeof TikTokContentResultSchema>;
 
 interface LlmCallContext {
   gm: TikTokExpertGMConfig;
-  brandDNA: BrandDNA;
   resolvedSystemPrompt: string;
 }
 
-async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
+async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
   const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
   if (!gmRecord) {
     throw new Error(
@@ -208,40 +206,8 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error(
-      'Brand DNA not configured. TikTok Expert refuses to generate content without brand identity. ' +
-      'Visit /settings/ai-agents/business-setup.',
-    );
-  }
-
-  const resolvedSystemPrompt = buildResolvedSystemPrompt(gm.systemPrompt, brandDNA);
-  return { gm, brandDNA, resolvedSystemPrompt };
-}
-
-function buildResolvedSystemPrompt(baseSystemPrompt: string, brandDNA: BrandDNA): string {
-  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
-  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
-  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
-
-  const brandBlock = [
-    '',
-    '## Brand DNA (runtime injection — do not confuse with system prompt)',
-    '',
-    `Company: ${brandDNA.companyDescription}`,
-    `Unique value: ${brandDNA.uniqueValue}`,
-    `Target audience: ${brandDNA.targetAudience}`,
-    `Tone of voice: ${brandDNA.toneOfVoice}`,
-    `Communication style: ${brandDNA.communicationStyle}`,
-    `Industry: ${brandDNA.industry}`,
-    `Key phrases to weave in naturally: ${keyPhrases}`,
-    `Phrases you are forbidden from using: ${avoidPhrases}`,
-    `Competitors (never name them unless specifically asked): ${competitors}`,
-  ].join('\n');
-
-  return `${baseSystemPrompt}\n${brandBlock}`;
+  const resolvedSystemPrompt = gm.systemPrompt;
+  return { gm, resolvedSystemPrompt };
 }
 
 function stripJsonFences(raw: string): string {
@@ -466,7 +432,7 @@ export class TikTokExpert extends BaseSpecialist {
         ]);
       }
 
-      const ctx = await loadGMAndBrandDNA(DEFAULT_INDUSTRY_KEY);
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
 
       const data = await executeGenerateContent(inputValidation.data, ctx);
       return this.createReport(taskId, 'COMPLETED', data);
@@ -522,8 +488,7 @@ export const __internal = {
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
   MIN_OUTPUT_TOKENS_FOR_SCHEMA,
-  loadGMAndBrandDNA,
-  buildResolvedSystemPrompt,
+  loadGMConfig,
   buildGenerateContentUserPrompt,
   stripJsonFences,
   GenerateContentRequestSchema,

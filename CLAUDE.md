@@ -2,7 +2,46 @@
 
 > **Scope:** All Claude Code sessions in this project
 > **Branch:** dev
-> **Last Updated:** March 30, 2026
+> **Last Updated:** April 14, 2026 (Brand DNA + Golden Master standing rule)
+
+---
+
+## 🔴 STANDING RULE: Every LLM agent spawns from its Golden Master, Brand DNA baked in
+
+This rule is absolute and applies to every specialist, manager, orchestrator, and any agent
+that calls an LLM. No exceptions, no fallbacks, no runtime merging.
+
+1. **Every LLM agent has a Golden Master doc in Firestore.** The GM doc's `config.systemPrompt`
+   field holds the complete agent prompt the LLM sees. At runtime, the agent loads ONE doc
+   (the GM) and sends that systemPrompt to the LLM. No second Firestore call for Brand DNA.
+
+2. **Brand DNA is BAKED INTO the GM at seed time, not merged at runtime.** Every seed script
+   uses `scripts/lib/brand-dna-helper.js` to fetch Brand DNA from the org doc and merge it
+   into the `systemPrompt` field before writing the GM. The runtime specialist code has NO
+   `getBrandDNA()` call and NO `buildResolvedSystemPrompt` helper.
+
+3. **This applies to every agent that calls an LLM.** Content generators (Copywriter, Alex),
+   analytical agents (Lead Qualifier, Sentiment Analyst), research agents (Scraper,
+   Competitor Researcher), scrapers — every single one. Even an agent whose job is to
+   scrape a webpage benefits from knowing who it is working for, because it knows which
+   information matters and why.
+
+4. **When Brand DNA is edited**, every GM must be reseeded so the new values get baked in.
+   Run `node scripts/reseed-all-gms.js` after every Brand DNA edit. (A UI button that does
+   this with one click is on the roadmap.)
+
+5. **Definition of done for any new agent rebuild:**
+   - Specialist code reads `gm.systemPrompt` and uses it verbatim — no runtime Brand DNA loading.
+   - Seed script uses `scripts/lib/brand-dna-helper.js` and writes the merged prompt to `config.systemPrompt`.
+   - tsc + lint clean.
+   - Seed script has been RUN against dev Firestore (not "I'll run it later").
+   - `scripts/verify-brand-dna-injection.ts` shows the specialist's GM has Brand DNA baked in.
+   - Only THEN is the agent rebuild complete.
+
+6. **Violations of this rule cost months.** Agents without Brand DNA produce generic output
+   that doesn't match the tenant's voice. Runtime-merged Brand DNA makes Training Lab
+   editing confusing and breaks versioning. A "partially working" agent is worse than no
+   agent because it hides the problem.
 
 ---
 

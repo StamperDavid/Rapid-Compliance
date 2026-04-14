@@ -26,7 +26,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import {
   __internal as assetInternal,
   type GenerateAssetPackageRequest,
@@ -409,13 +408,8 @@ export async function assetGeneratorExecutor(args: {
   if (baseSystemPrompt.length < 100) {
     throw new Error(`[asset-generator-executor] GM ${gmRecord.id} systemPrompt too short (${baseSystemPrompt.length} chars)`);
   }
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error('[asset-generator-executor] Brand DNA not configured');
-  }
-
-  const resolvedSystemPrompt = assetInternal.buildResolvedSystemPrompt(baseSystemPrompt, brandDNA);
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt IS the resolved prompt.
+  const resolvedSystemPrompt = baseSystemPrompt;
   const userPrompt = assetInternal.buildGenerateAssetPackageUserPrompt(parsed.input);
   const schema: ZodTypeAny = assetInternal.AssetPackagePlanSchema;
   const invariants = invariantsForCase(args.caseDoc);

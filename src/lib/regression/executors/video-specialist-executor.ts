@@ -20,7 +20,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import {
   __internal as videoInternal,
   type ScriptToStoryboardRequest,
@@ -224,13 +223,8 @@ export async function videoSpecialistExecutor(args: {
   if (baseSystemPrompt.length < 100) {
     throw new Error(`[video-specialist-executor] GM ${gmRecord.id} systemPrompt too short (${baseSystemPrompt.length} chars)`);
   }
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error('[video-specialist-executor] Brand DNA not configured');
-  }
-
-  const resolvedSystemPrompt = videoInternal.buildResolvedSystemPrompt(baseSystemPrompt, brandDNA);
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt IS the resolved prompt.
+  const resolvedSystemPrompt = baseSystemPrompt;
   const userPrompt = videoInternal.buildScriptToStoryboardUserPrompt(parsed.input);
   const schema: ZodTypeAny = videoInternal.StoryboardResultSchema;
   const invariants = invariantsForCase(args.caseDoc.caseId);

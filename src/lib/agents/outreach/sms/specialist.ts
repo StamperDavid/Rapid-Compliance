@@ -47,7 +47,6 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
 import { getActiveSmsPurposeTypes } from '@/lib/services/sms-purpose-types-service';
 import { getSmsSettings } from '@/lib/services/sms-settings-service';
 import type { SmsPurposeType } from '@/types/sms-purpose-types';
@@ -213,7 +212,6 @@ export type ComposeSmsResult = z.infer<typeof ComposeSmsResultSchema>;
 
 interface LlmCallContext {
   gm: SmsSpecialistGMConfig;
-  brandDNA: BrandDNA;
   purposeTypes: SmsPurposeType[];
   smsSettings: SmsSettings;
   resolvedSystemPrompt: string;
@@ -250,15 +248,6 @@ async function loadRuntimeContext(industryKey: string): Promise<LlmCallContext> 
     maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error(
-      'Brand DNA not configured. SMS Specialist refuses to compose without brand identity. ' +
-      'Visit /settings/ai-agents/business-setup.',
-    );
-  }
-
   const purposeTypes = await getActiveSmsPurposeTypes();
   if (purposeTypes.length === 0) {
     throw new Error(
@@ -269,35 +258,18 @@ async function loadRuntimeContext(industryKey: string): Promise<LlmCallContext> 
 
   const smsSettings = await getSmsSettings();
 
-  const resolvedSystemPrompt = buildResolvedSystemPrompt(gm.systemPrompt, brandDNA, purposeTypes, smsSettings);
-  return { gm, brandDNA, purposeTypes, smsSettings, resolvedSystemPrompt };
+  // Brand DNA is baked into gm.systemPrompt at seed time. Only the
+  // dynamic sms-purpose-taxonomy + sms-settings get injected at runtime
+  // here because operators can change them from the UI between seeds.
+  const resolvedSystemPrompt = appendPurposeAndSettings(gm.systemPrompt, purposeTypes, smsSettings);
+  return { gm, purposeTypes, smsSettings, resolvedSystemPrompt };
 }
 
-function buildResolvedSystemPrompt(
+function appendPurposeAndSettings(
   baseSystemPrompt: string,
-  brandDNA: BrandDNA,
   purposeTypes: SmsPurposeType[],
   smsSettings: SmsSettings,
 ): string {
-  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
-  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
-  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
-
-  const brandBlock = [
-    '',
-    '## Brand DNA (runtime injection — do not confuse with system prompt)',
-    '',
-    `Company: ${brandDNA.companyDescription}`,
-    `Unique value: ${brandDNA.uniqueValue}`,
-    `Target audience: ${brandDNA.targetAudience}`,
-    `Tone of voice: ${brandDNA.toneOfVoice}`,
-    `Communication style: ${brandDNA.communicationStyle}`,
-    `Industry: ${brandDNA.industry}`,
-    `Key phrases to weave in naturally: ${keyPhrases}`,
-    `Phrases you are forbidden from using: ${avoidPhrases}`,
-    `Competitors (never name them unless specifically asked): ${competitors}`,
-  ].join('\n');
-
   const purposeLines = purposeTypes
     .map((t) => `  - ${t.slug} — ${t.name}: ${t.description}`)
     .join('\n');
@@ -340,7 +312,7 @@ function buildResolvedSystemPrompt(
     `Target the smallest segment strategy that fits the content. NEVER exceed the ${smsSettings.maxCharCap} char cap.`,
   ].join('\n');
 
-  return `${baseSystemPrompt}\n${brandBlock}\n${purposeBlock}\n${settingsBlock}`;
+  return `${baseSystemPrompt}\n${purposeBlock}\n${settingsBlock}`;
 }
 
 function stripJsonFences(raw: string): string {
@@ -454,8 +426,8 @@ function buildComposeSmsUserPrompt(
     '- followupSuggestion MUST name specific next step and timing. "Send another SMS eventually" is a failure.',
     '- complianceRisks MUST be honest and region-specific. US: TCPA consent proof, time-of-day restrictions, shortcode vs long code rules. EU: GDPR double opt-in, explicit unsubscribe. Carrier filtering: avoid prohibited categories (cannabis, payday loans, some health) unless the account is certified for them.',
     '- Do NOT invent metrics or delivery rates. The rationale is strategic reasoning, not performance forecasts.',
-    '- If brandDNA.avoidPhrases contains a phrase, never use it in primaryMessage or ctaText.',
-    '- If brandDNA.keyPhrases are provided, weave at least one naturally into primaryMessage if it fits within the character cap — but skip it if the cap is tight.',
+    '- If the Brand DNA section of your system prompt lists avoid phrases, never use them in primaryMessage or ctaText.',
+    '- If the Brand DNA section lists key phrases, weave at least one naturally into primaryMessage if it fits within the character cap — but skip it if the cap is tight.',
     '- The rationale MUST tie purpose + segment strategy + message + CTA + follow-up together into a coherent composition that could only fit THIS audience and THIS brief. Generic rationales are a failure.',
     '- Output ONLY the JSON object. No prose outside it. No markdown fences. No preamble.',
   ];
@@ -607,7 +579,7 @@ export const __internal = {
   SUPPORTED_ACTIONS,
   MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadRuntimeContext,
-  buildResolvedSystemPrompt,
+  appendPurposeAndSettings,
   buildComposeSmsUserPrompt,
   stripJsonFences,
   ComposeSmsRequestSchema,
