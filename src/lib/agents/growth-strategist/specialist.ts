@@ -499,12 +499,27 @@ export class GrowthStrategist extends BaseSpecialist {
     snapshot: BusinessSnapshot
   ): Promise<Record<string, unknown>> {
     // ------------------------------------------------------------------
-    // Primary path: AI-generated deep demographic persona via OpenRouter
+    // Primary path: AI-generated deep demographic persona via OpenRouter.
+    // Per the standing rule (CLAUDE.md), Brand DNA is baked into the
+    // Growth Strategist's Golden Master at seed time — we load ONE doc
+    // from Firestore, not two.
     // ------------------------------------------------------------------
     try {
-      // Dynamic import so the module is only loaded when this task runs
-      const { getBrandDNA } = await import('@/lib/brand/brand-dna-service');
-      const brandDNA = await getBrandDNA();
+      // Load the GM — Brand DNA is already baked into gmRecord.config.systemPrompt
+      const { getActiveSpecialistGMByIndustry } = await import('@/lib/training/specialist-golden-master-service');
+      const gmRecord = await getActiveSpecialistGMByIndustry('GROWTH_STRATEGIST', 'saas_sales_ops');
+      if (!gmRecord) {
+        throw new Error(
+          'Growth Strategist GM not found. Run: node scripts/seed-growth-strategist-gm.js to seed.',
+        );
+      }
+      const gmConfig = gmRecord.config as { systemPrompt?: string } | undefined;
+      const resolvedSystemPrompt = gmConfig?.systemPrompt ?? gmRecord.systemPromptSnapshot ?? '';
+      if (resolvedSystemPrompt.length < 100) {
+        throw new Error(
+          `Growth Strategist GM ${gmRecord.id} has no usable systemPrompt (length=${resolvedSystemPrompt.length}).`,
+        );
+      }
 
       // Build a rich context block to ground the AI analysis
       const snapshotContext = JSON.stringify({
@@ -549,30 +564,10 @@ export class GrowthStrategist extends BaseSpecialist {
         },
       }, null, 2);
 
-      const brandContext = brandDNA
-        ? JSON.stringify({
-            companyDescription: brandDNA.companyDescription,
-            uniqueValue: brandDNA.uniqueValue,
-            targetAudience: brandDNA.targetAudience,
-            toneOfVoice: brandDNA.toneOfVoice,
-            communicationStyle: brandDNA.communicationStyle,
-            industry: brandDNA.industry,
-            keyPhrases: brandDNA.keyPhrases,
-            avoidPhrases: brandDNA.avoidPhrases,
-            competitors: brandDNA.competitors,
-          }, null, 2)
-        : 'No Brand DNA configured yet.';
+      // Brand DNA is already in resolvedSystemPrompt (baked in at seed time) —
+      // no need to rebuild a brandContext block in the user prompt.
 
-      const systemPrompt = `You are an expert CMO and market research analyst. Your job is to synthesize business data and brand identity into a precise, actionable marketing persona that a growth team can immediately act on.
-
-You think in audience segments, buying psychology, media consumption habits, and cultural context. Your recommendations are specific, never vague.
-
-You MUST respond with a single valid JSON object matching the exact schema provided. Do not include any text outside the JSON object.`;
-
-      const userPrompt = `Analyze the following business data and brand identity to generate a comprehensive marketing persona.
-
-## BRAND IDENTITY
-${brandContext}
+      const userPrompt = `Analyze the following business data to generate a comprehensive marketing persona. Use the Brand DNA section of your system prompt for tenant-specific identity.
 
 ## BUSINESS SNAPSHOT (Last 30 Days)
 ${snapshotContext}
@@ -640,7 +635,7 @@ Respond with ONLY a JSON object with these exact fields:
       const response = await provider.chat({
         model: 'claude-sonnet-4.6',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: resolvedSystemPrompt },
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.4,

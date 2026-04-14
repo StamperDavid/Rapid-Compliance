@@ -252,7 +252,10 @@ async function chatWithFallback<T>(
 const orchestratorChatSchema = z.object({
   message: z.string().min(1, 'message is required'),
   context: z.enum(['admin', 'merchant']),
-  systemPrompt: z.string().min(1, 'systemPrompt is required'),
+  // systemPrompt from frontend is now ignored — Jasper reads its system prompt
+  // from the Golden Master in Firestore (Brand DNA baked in at seed time).
+  // Field kept as optional for legacy frontend compatibility; value is discarded.
+  systemPrompt: z.string().optional(),
   conversationHistory: z.array(
     z.object({
       role: z.enum(['user', 'assistant', 'system']),
@@ -350,7 +353,7 @@ export async function POST(request: NextRequest) {
     const {
       message,
       context,
-      systemPrompt,
+      // systemPrompt from frontend is ignored — Jasper uses his Golden Master prompt
       conversationHistory,
       adminStats,
       merchantInfo,
@@ -400,14 +403,39 @@ export async function POST(request: NextRequest) {
       // Non-critical — Jasper will discover missing keys via tool errors
     }
 
-    // Load Jasper's Golden Master if available — otherwise fall back to frontend prompt
+    // Load Jasper's Golden Master. The GM is REQUIRED — Brand DNA is baked
+    // into the GM at seed time per the standing rule in CLAUDE.md, so there
+    // is no legitimate fallback path. If the GM is missing or empty, fail
+    // loudly so the problem is fixed at the source (re-run the seed script)
+    // rather than silently serving a stale frontend-sent prompt.
     const jasperGM = await getActiveJasperGoldenMaster();
     const gmPrompt = jasperGM?.systemPrompt;
-    const useGMPrompt = typeof gmPrompt === 'string' && gmPrompt.length > 100;
-    const basePrompt = useGMPrompt ? gmPrompt : systemPrompt;
+    const hasValidGM = typeof gmPrompt === 'string' && gmPrompt.length > 100;
 
-    logger.info('[RequestTrace] Prompt source resolved', {
-      source: useGMPrompt ? 'GOLDEN_MASTER' : 'AD_HOC_FRONTEND',
+    if (!hasValidGM) {
+      logger.error(
+        '[Jasper] No valid Golden Master found — cannot serve chat request',
+        new Error('Jasper GM missing or empty'),
+        {
+          gmId: jasperGM?.id ?? 'none',
+          promptLength: gmPrompt?.length ?? 0,
+          remediation: 'Run: npx tsx scripts/seed-jasper-orchestrator-gm.ts --force',
+        },
+      );
+      return NextResponse.json(
+        {
+          error: 'Jasper is not available — Golden Master not configured',
+          detail: 'Run `npx tsx scripts/seed-jasper-orchestrator-gm.ts --force` to seed Jasper\'s Golden Master with Brand DNA baked in, then retry.',
+        },
+        { status: 503 },
+      );
+    }
+
+    // Brand DNA is already baked into gmPrompt at seed time — no runtime merge.
+    const basePrompt = gmPrompt;
+
+    logger.info('[RequestTrace] Jasper GM loaded', {
+      source: 'GOLDEN_MASTER',
       gmId: jasperGM?.id,
       gmVersion: jasperGM?.version,
       promptLength: basePrompt.length,

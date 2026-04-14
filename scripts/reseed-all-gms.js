@@ -43,12 +43,17 @@ const SCRIPTS = [
   'seed-copy-strategist-gm.js',
   'seed-ux-ui-strategist-gm.js',
   'seed-funnel-strategist-gm.js',
+  'seed-growth-strategist-gm.js',
 ];
 
 const SCRIPTS_DIR = path.resolve(__dirname);
 
 async function main() {
-  console.log(`Reseeding ${SCRIPTS.length} Golden Masters with Brand DNA baked in...\n`);
+  // Total includes the Jasper orchestrator GM which lives in the Training Lab
+  // `goldenMasters` collection (separate from `specialistGoldenMasters`) and
+  // is reseeded via a TypeScript entrypoint.
+  const totalCount = SCRIPTS.length + 1;
+  console.log(`Reseeding ${totalCount} Golden Masters with Brand DNA baked in...\n`);
   const results = [];
   const startedAt = Date.now();
 
@@ -63,6 +68,25 @@ async function main() {
     const marker = ok ? '✓' : '✗';
     const lastLine = (proc.stdout || '').trim().split('\n').slice(-2, -1)[0] || '';
     console.log(`  ${marker} ${script.padEnd(38)} ${lastLine}`);
+    if (!ok) {
+      console.log(`    stderr: ${(proc.stderr || '').trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+
+  // Reseed Jasper's orchestrator GM (Training Lab collection — different path,
+  // TypeScript entrypoint because it imports the live TS prompt files).
+  {
+    const jasperScript = 'seed-jasper-orchestrator-gm.ts';
+    const proc = spawnSync('npx', ['tsx', path.join(SCRIPTS_DIR, jasperScript), '--force'], {
+      cwd: path.resolve(__dirname, '..'),
+      encoding: 'utf-8',
+      shell: true,
+    });
+    const ok = proc.status === 0;
+    results.push({ script: jasperScript, ok, stdout: proc.stdout, stderr: proc.stderr });
+    const marker = ok ? '✓' : '✗';
+    const lastLine = (proc.stdout || '').trim().split('\n').slice(-2, -1)[0] || '';
+    console.log(`  ${marker} ${jasperScript.padEnd(38)} ${lastLine}`);
     if (!ok) {
       console.log(`    stderr: ${(proc.stderr || '').trim().split('\n').slice(-3).join(' | ')}`);
     }
