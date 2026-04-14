@@ -88,7 +88,7 @@ async function main(): Promise<void> {
   console.log(`  companyDescription: ${brandDNA.companyDescription.slice(0, 80)}...`);
   console.log();
 
-  // Query all active Golden Masters
+  // Query all active specialist Golden Masters (the 35 LLM specialists)
   const gmsSnap = await db
     .collection(`organizations/${PLATFORM_ID}/specialistGoldenMasters`)
     .where('isActive', '==', true)
@@ -101,6 +101,25 @@ async function main(): Promise<void> {
     activeGMs.push({
       specialistId: (data.specialistId as string | undefined) ?? 'unknown',
       industryKey: (data.industryKey as string | undefined) ?? 'unknown',
+      docId: doc.id,
+      systemPrompt,
+    });
+  });
+
+  // Also check Jasper's orchestrator GM (lives in the Training Lab goldenMasters
+  // collection under agentType='orchestrator' — separate from specialistGoldenMasters).
+  const jasperSnap = await db
+    .collection(`organizations/${PLATFORM_ID}/goldenMasters`)
+    .where('agentType', '==', 'orchestrator')
+    .where('isActive', '==', true)
+    .get();
+
+  jasperSnap.forEach((doc) => {
+    const data = doc.data();
+    const systemPrompt = (data.systemPrompt as string | undefined) ?? '';
+    activeGMs.push({
+      specialistId: 'JASPER_ORCHESTRATOR',
+      industryKey: 'saas_sales_ops',
       docId: doc.id,
       systemPrompt,
     });
