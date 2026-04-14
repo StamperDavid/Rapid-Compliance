@@ -4435,17 +4435,58 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_sales': {
         const salesStart = Date.now();
         trackMissionStep(context, 'delegate_to_sales', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Sales department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_sales', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - salesStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Sales department delegation is currently disabled because its specialists (Lead Qualifier, Outreach Specialist, Merchandiser, Deal Closer, Objection Handler) are still template engines with zero LLM calls. The Revenue Director manager routes correctly but terminates at hand-coded lookup tables, not real AI — presenting that output as department analysis would be a lie. This tool returns online when these 5 specialists are rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'REVENUE_DIRECTOR',
-        });
+
+        try {
+          const { RevenueDirector } = await import('@/lib/agents/sales/revenue/manager');
+          const salesMgr = new RevenueDirector();
+          await salesMgr.initialize();
+
+          const salesPayload: Record<string, unknown> = {
+            action: (args.action as string | undefined) ?? 'EVALUATE_TRANSITION',
+            leadData: args.leadData,
+            objection: args.objection,
+            options: args.options,
+          };
+
+          const salesResult = await withTimeout(salesMgr.execute({
+            id: `sales_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'REVENUE_DIRECTOR',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: salesPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Revenue Director');
+
+          const salesDuration = Date.now() - salesStart;
+          trackMissionStep(context, 'delegate_to_sales',
+            salesResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Sales: ${salesResult.status}`, durationMs: salesDuration, toolResult: JSON.stringify(salesResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: salesResult.status,
+            data: salesResult.data,
+            errors: salesResult.errors,
+            manager: 'REVENUE_DIRECTOR',
+            reviewLink: getReviewLink('delegate_to_sales', context?.missionId),
+          });
+        } catch (salesError: unknown) {
+          const errorMsg = salesError instanceof Error ? salesError.message : 'Unknown error';
+          const salesDuration = Date.now() - salesStart;
+          trackMissionStep(context, 'delegate_to_sales', 'FAILED', {
+            summary: `Sales error: ${errorMsg}`,
+            durationMs: salesDuration,
+            error: errorMsg,
+          });
+          content = JSON.stringify({
+            status: 'FAILED',
+            error: errorMsg,
+            manager: 'REVENUE_DIRECTOR',
+          });
+        }
         break;
       }
 
