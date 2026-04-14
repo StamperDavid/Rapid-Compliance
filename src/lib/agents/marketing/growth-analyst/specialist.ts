@@ -34,6 +34,48 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['generate_content'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Growth Analyst response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   GrowthAnalysisResultSchema worst case (after the kpiTargets and
+ *   contentStrategy cap widenings — see schema comments below):
+ *     analysis.currentState 3000 + opportunities (8 × 500 = 4,000) +
+ *     risks (5 × 500 = 2,500) + competitiveInsight 2000 = 11,500
+ *     experiments: 7 × (name 200 + hypothesis 600 + channel 100 +
+ *     effort 10 + impact 10 + timeframe 200 + successMetric 300 +
+ *     JSON 30) = 7 × 1,450 = 10,150
+ *     prioritizedActions: 7 × (action 300 + priority 10 + rationale 500
+ *     + JSON 30) = 7 × 840 = 5,880
+ *     kpiTargets: 8 × (metric 300 + currentEstimate 300 + target 300 +
+ *     timeframe 300 + JSON 30) = 8 × 1,230 = 9,840  ← all 4 caps widened
+ *     contentStrategy 6000                            ← cap widened
+ *     ≈ 43,370 chars total prose
+ *     /3.0 chars/token = 14,457 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 18,321 tokens minimum.
+ *
+ *   The prior 8,192 was less than half the required budget. Setting the
+ *   floor at 19,000 covers the widened schema with safety margin. The
+ *   truncation backstop in callOpenRouter catches any overflow.
+ *
+ *   The kpiTargets.* (100/200 → 300 across all four entry fields) and
+ *   contentStrategy (4000 → 6000) caps were widened in this commit
+ *   because the Growth Analyst pirate test surfaced verbose pirate-
+ *   dialect KPI metadata and content strategies exceeding the original
+ *   Task #33 caps. Same lesson as Email Specialist Task #43. The first
+ *   widening pass only touched the fields proven failing in pirate-test
+ *   run #1, but run #2 surfaced the remaining KPI fields under different
+ *   LLM verbosity — all four entry fields needed the same headroom.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 19000;
+
 interface GrowthAnalystGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -61,7 +103,7 @@ const CONFIG: SpecialistConfig = {
       contentStrategy: { type: 'string' },
     },
   },
-  maxTokens: 8192,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.7,
 };
 
@@ -131,13 +173,25 @@ const GrowthAnalysisResultSchema = z.object({
     priority: z.enum(['critical', 'high', 'medium', 'low']),
     rationale: z.string().min(20).max(500),
   })).min(3).max(7),
+  // Caps widened across ALL four kpiTargets entry fields (April 13 2026
+  // cross-cutting fix): metric/timeframe 100 → 300, currentEstimate/target
+  // 200 → 300, contentStrategy 4000 → 6000. Original Task #33 caps were
+  // too tight for verbose briefs — the Growth Analyst pirate test
+  // surfaced this when pirate-dialect KPI metadata ("Sail this course
+  // over the next 90 days, me hearties, while we plunder...") exceeded
+  // the original ceilings. First widening pass only touched the fields
+  // proven failing in run #1 (timeframe, metric) but the second run
+  // failed on currentEstimate and target too — all four KPI-entry fields
+  // are in the same class and need the same headroom for verbose styles.
+  // Same lesson learned at Email Specialist Task #43. Worst-case schema
+  // math in MIN_OUTPUT_TOKENS_FOR_SCHEMA accounts for all the widened caps.
   kpiTargets: z.array(z.object({
-    metric: z.string().min(3).max(100),
-    currentEstimate: z.string().min(2).max(200),
-    target: z.string().min(2).max(200),
-    timeframe: z.string().min(3).max(100),
+    metric: z.string().min(3).max(300),
+    currentEstimate: z.string().min(2).max(300),
+    target: z.string().min(2).max(300),
+    timeframe: z.string().min(3).max(300),
   })).min(3).max(8),
-  contentStrategy: z.string().min(50).max(4000),
+  contentStrategy: z.string().min(50).max(6000),
 });
 
 export type GrowthAnalysisResult = z.infer<typeof GrowthAnalysisResultSchema>;
@@ -169,11 +223,17 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: GrowthAnalystGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
-    maxTokens: config.maxTokens ?? 8192,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -230,6 +290,20 @@ async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Growth Analyst: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -452,6 +526,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildGenerateContentUserPrompt,
