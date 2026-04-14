@@ -57,6 +57,38 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['analyze_funnel'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Funnel Pathologist response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   AnalyzeFunnelResultSchema worst case:
+ *     funnelFramework enum 30 + frameworkReasoning 2500 = 2,530
+ *     primaryConversionLeak enum 30 + leakDiagnosis 5000 = 5,030
+ *     stageRiskProfile 10000 (the largest single field — scales with
+ *     stage count)
+ *     criticalLeakPoints: 6 × 1000 = 6,000
+ *     trustSignalStrategy 5000 + pricingPsychologyDirection 5000 +
+ *     urgencyAndScarcityDirection 5000 = 15,000
+ *     recoveryPlays: 7 × 1000 = 7,000
+ *     keyMetricsToWatch: 7 × 300 = 2,100
+ *     rationale 6000
+ *     ≈ 53,660 chars total prose
+ *     /3.0 chars/token = 17,887 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 22,608 tokens minimum.
+ *
+ *   The prior 12,000 was below the schema worst case. Setting the floor
+ *   at 23,000 covers the schema with safety margin. The truncation
+ *   backstop in callOpenRouter catches any overflow.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 23000;
+
 interface FunnelPathologistGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -92,7 +124,7 @@ const CONFIG: SpecialistConfig = {
       rationale: { type: 'string' },
     },
   },
-  maxTokens: 12000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.6,
 };
 
@@ -212,11 +244,17 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: FunnelPathologistGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.6,
-    maxTokens: config.maxTokens ?? 12000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -276,6 +314,20 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Funnel Pathologist: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -507,6 +559,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildAnalyzeFunnelUserPrompt,
