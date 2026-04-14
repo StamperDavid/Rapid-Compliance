@@ -52,7 +52,7 @@ import { logger } from '@/lib/logger/logger';
 // ============================================================================
 
 const FILE = 'architect/copy/specialist.ts';
-const SPECIALIST_ID = 'COPY_SPECIALIST';
+const SPECIALIST_ID = 'COPY_STRATEGIST';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['generate_copy'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
@@ -99,7 +99,7 @@ interface CopySpecialistGMConfig {
 const CONFIG: SpecialistConfig = {
   identity: {
     id: SPECIALIST_ID,
-    name: 'Copy Specialist',
+    name: 'Copy Strategist',
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'ARCHITECT_MANAGER',

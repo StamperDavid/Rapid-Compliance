@@ -209,13 +209,13 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | ASSET_GENERATOR | *(shared with Content — see above)* | — | ✅ REAL | Copy portions = Task #26 DONE |
 | WORKFLOW_OPTIMIZER | `src/lib/agents/builder/workflow/specialist.ts` | 473 | ✅ REAL | **Task #37 — DONE.** Single action: `compose_workflow`. GM `sgm_workflow_optimizer_saas_sales_ops_v1`. Output: workflowSummary + nodes[3..12] with prose inputs/outputs/depends + executionPattern + parallelizationNotes + criticalPathDescription + estimatedTotalDurationSeconds + riskMitigation + successCriteria + rationale. 5 dead actions dropped (optimize_chain/execute_workflow/analyze_performance/list_workflows/get_workflow — orchestration/CRUD primitives that need a durable engine and storage that don't exist). Pirate GM-swap PASSED. |
 
-**Architect department (3 specialists — ALL TEMPLATE):**
+**Architect department (3 specialists — 3/3 REAL, all renamed to `*_STRATEGIST` per Task #61):**
 
 | ID | File | LOC | Verdict | Task |
 |---|---|---|---|---|
-| COPY_SPECIALIST | `src/lib/agents/architect/copy/specialist.ts` | 475 | ✅ REAL | **Task #39 — DONE.** Single action: `generate_copy`. Strategic-only output (framework+CTA enums + voice direction + pillars + objections + page notes + headline direction + rationale). NOT the Content-layer Copywriter — different file, different layer. GM `sgm_copy_specialist_saas_sales_ops_v1`. Pirate test PASSED. Regression 2P/1W/0F. Architect dept 1/3. |
-| UX_UI_SPECIALIST | `src/lib/agents/architect/ux-ui/specialist.ts` | 510 | ✅ REAL | **Task #40 — DONE.** Single action: `design_page`. Strategic-only output (colorPsychology+typographyStyle short labels + extended direction prose for color/typography/component/layout/responsive/accessibility + design principles + key decisions + rationale). NOT the Builder-layer UX/UI Architect — different file, different layer. GM `sgm_ux_ui_specialist_saas_sales_ops_v1` (maxTokens 12000). Pirate test PASSED. Regression 3P/0W/0F. Architect dept 2/3. |
-| FUNNEL_PATHOLOGIST | `src/lib/agents/architect/funnel/specialist.ts` | 520 | ✅ REAL | **Task #41 — DONE.** Single action: `analyze_funnel`. Strategic-only output (funnelFramework+primaryConversionLeak enums + leakDiagnosis + stageRiskProfile + criticalLeakPoints[2..6] + trustSignalStrategy + pricingPsychologyDirection + urgencyAndScarcityDirection + recoveryPlays[3..7] + keyMetricsToWatch[3..7] + rationale). NOT the Builder-layer Funnel Engineer — different file, different layer. GM `sgm_funnel_pathologist_saas_sales_ops_v1` (maxTokens 12000). One-time manager extraction block added at manager.ts:1820-1835 + new `funnelStrategy` field on SiteArchitecture interface. Pirate test PASSED. Regression 1P/2W/0F. Architect dept 3/3 COMPLETE. |
+| COPY_STRATEGIST | `src/lib/agents/architect/copy/specialist.ts` | 475 | ✅ REAL | **Task #39 — DONE.** Single action: `generate_copy`. Strategic-only output (framework+CTA enums + voice direction + pillars + objections + page notes + headline direction + rationale). NOT the Content-layer Copywriter — different file, different layer. GM `sgm_copy_strategist_saas_sales_ops_v1` (renamed from `sgm_copy_specialist_*` in Task #61). Pirate test PASSED. Regression 2P/1W/0F. Architect dept 1/3. |
+| UX_UI_STRATEGIST | `src/lib/agents/architect/ux-ui/specialist.ts` | 510 | ✅ REAL | **Task #40 — DONE.** Single action: `design_page`. Strategic-only output (colorPsychology+typographyStyle short labels + extended direction prose for color/typography/component/layout/responsive/accessibility + design principles + key decisions + rationale). NOT the Builder-layer UX/UI Architect — different file, different layer. GM `sgm_ux_ui_strategist_saas_sales_ops_v1` (renamed from `sgm_ux_ui_specialist_*` in Task #61, maxTokens 22000 after Task #45.2). Pirate test PASSED. Regression 3P/0W/0F. Architect dept 2/3. |
+| FUNNEL_STRATEGIST | `src/lib/agents/architect/funnel/specialist.ts` | 520 | ✅ REAL | **Task #41 — DONE.** Single action: `analyze_funnel`. Strategic-only output (funnelFramework+primaryConversionLeak enums + leakDiagnosis + stageRiskProfile + criticalLeakPoints[2..6] + trustSignalStrategy + pricingPsychologyDirection + urgencyAndScarcityDirection + recoveryPlays[3..7] + keyMetricsToWatch[3..7] + rationale). NOT the Builder-layer Funnel Engineer — different file, different layer. GM `sgm_funnel_strategist_saas_sales_ops_v1` (renamed from `sgm_funnel_pathologist_*` in Task #61, maxTokens 23000 after Task #45.2). One-time manager extraction block added at manager.ts:1820-1835 + new `funnelStrategy` field on SiteArchitecture interface. Pirate test PASSED. Regression 1P/2W/0F. Architect dept 3/3 COMPLETE. |
 
 **Outreach department (3 specialists — 2 TEMPLATE + 1 INFRA):**
 
@@ -229,11 +229,11 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 
 | ID | File | LOC | Verdict | Task |
 |---|---|---|---|---|
-| SCRAPER_SPECIALIST | `src/lib/agents/intelligence/scraper/specialist.ts` | 695 | ❌ TEMPLATE | Task #41 |
-| COMPETITOR_RESEARCHER | `src/lib/agents/intelligence/competitor/specialist.ts` | 954 | ❌ TEMPLATE | Task #42 |
-| TECHNOGRAPHIC_SCOUT | `src/lib/agents/intelligence/technographic/specialist.ts` | 1136 | ❌ TEMPLATE | Task #43 |
-| SENTIMENT_ANALYST | `src/lib/agents/intelligence/sentiment/specialist.ts` | 828 | ❌ TEMPLATE | Task #44 |
-| TREND_SCOUT | `src/lib/agents/intelligence/trend/specialist.ts` | 1808 | ❌ TEMPLATE | Task #45 |
+| SCRAPER_SPECIALIST | `src/lib/agents/intelligence/scraper/specialist.ts` | 695 | ❌ TEMPLATE | Task #62 (re-audit — already imports real scrapers, half-wired) |
+| COMPETITOR_RESEARCHER | `src/lib/agents/intelligence/competitor/specialist.ts` | 954 | ❌ TEMPLATE | Task #63 |
+| TECHNOGRAPHIC_SCOUT | `src/lib/agents/intelligence/technographic/specialist.ts` | 1136 | ❌ TEMPLATE | Task #64 |
+| SENTIMENT_ANALYST | `src/lib/agents/intelligence/sentiment/specialist.ts` | 828 | ❌ TEMPLATE | Task #65 |
+| TREND_SCOUT | `src/lib/agents/intelligence/trend/specialist.ts` | 1808 | ❌ TEMPLATE | Task #66 |
 
 **Sales department (5 specialists — ALL TEMPLATE):**
 

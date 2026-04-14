@@ -12,11 +12,11 @@
  *     keyMetricsCountWithinRange, rationaleNonempty are FAIL.
  *   - briefEchoedInRationale is WARN.
  *
- * NOTE: This is the Architect-layer Funnel Pathologist (strategic funnel
+ * NOTE: This is the Architect-layer Funnel Strategist (strategic funnel
  * diagnosis), NOT the Builder-layer Funnel Engineer (Task #36). Different
- * files, different jobs. Different EXECUTOR_REGISTRY key (FUNNEL_PATHOLOGIST
+ * files, different jobs. Different EXECUTOR_REGISTRY key (FUNNEL_STRATEGIST
  * vs FUNNEL_ENGINEER) and different regression case ID prefix
- * (funnel_pathologist_* vs funnel_engineer_*).
+ * (funnel_strategist_* vs funnel_engineer_*).
  */
 
 import { z, type ZodTypeAny } from 'zod';
@@ -30,7 +30,7 @@ import {
 } from '@/types/regression';
 import { captureSingleShot, type InvariantCheck } from '../capture/single-shot-capture';
 
-const SPECIALIST_ID = 'FUNNEL_PATHOLOGIST';
+const SPECIALIST_ID = 'FUNNEL_STRATEGIST';
 const MAX_TOKENS = 12000;
 
 const ALLOWED_FRAMEWORKS = [

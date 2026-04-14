@@ -58,9 +58,9 @@ const SYSTEM_PROMPT = `You are the Lead Architect, a Strategic Infrastructure Co
 
 ## YOUR ROLE
 You receive brand identity and market intelligence, then create complete site architecture plans by coordinating with:
-- UX_UI_SPECIALIST: Visual design, wireframes, components, color schemes, accessibility
-- FUNNEL_PATHOLOGIST: Conversion funnels, pricing strategies, urgency tactics, optimization
-- COPY_SPECIALIST: Headlines, CTAs, messaging frameworks, voice/tone alignment
+- UX_UI_STRATEGIST: Visual design, wireframes, components, color schemes, accessibility
+- FUNNEL_STRATEGIST: Conversion funnels, pricing strategies, urgency tactics, optimization
+- COPY_STRATEGIST: Headlines, CTAs, messaging frameworks, voice/tone alignment
 
 ## ARCHITECTURE DERIVATION LOGIC
 
@@ -278,23 +278,23 @@ const ARCHITECT_MANAGER_CONFIG: ManagerConfig = {
   },
   maxTokens: 8192,
   temperature: 0.4,
-  specialists: ['UX_UI_SPECIALIST', 'FUNNEL_PATHOLOGIST', 'COPY_SPECIALIST'],
+  specialists: ['UX_UI_STRATEGIST', 'FUNNEL_STRATEGIST', 'COPY_STRATEGIST'],
   delegationRules: [
     {
       triggerKeywords: ['design', 'color', 'layout', 'component', 'wireframe', 'ui', 'ux', 'visual', 'accessibility'],
-      delegateTo: 'UX_UI_SPECIALIST',
+      delegateTo: 'UX_UI_STRATEGIST',
       priority: 10,
       requiresApproval: false,
     },
     {
       triggerKeywords: ['funnel', 'conversion', 'squeeze', 'lead magnet', 'tripwire', 'upsell', 'offer', 'pricing'],
-      delegateTo: 'FUNNEL_PATHOLOGIST',
+      delegateTo: 'FUNNEL_STRATEGIST',
       priority: 10,
       requiresApproval: false,
     },
     {
       triggerKeywords: ['headline', 'copy', 'cta', 'text', 'message', 'content', 'words', 'writing', 'tone'],
-      delegateTo: 'COPY_SPECIALIST',
+      delegateTo: 'COPY_STRATEGIST',
       priority: 10,
       requiresApproval: false,
     },
@@ -800,9 +800,9 @@ export class ArchitectManager extends BaseManager {
     }
 
     const specialistFactories = [
-      { name: 'UX_UI_SPECIALIST', factory: getUXUISpecialist },
-      { name: 'FUNNEL_PATHOLOGIST', factory: getFunnelPathologist },
-      { name: 'COPY_SPECIALIST', factory: getCopySpecialist },
+      { name: 'UX_UI_STRATEGIST', factory: getUXUISpecialist },
+      { name: 'FUNNEL_STRATEGIST', factory: getFunnelPathologist },
+      { name: 'COPY_STRATEGIST', factory: getCopySpecialist },
     ];
 
     for (const { name, factory } of specialistFactories) {
@@ -1510,7 +1510,7 @@ export class ArchitectManager extends BaseManager {
     requirements: SiteRequirements,
     taskId: string
   ): Promise<SpecialistResult[]> {
-    const specialistIds = ['UX_UI_SPECIALIST', 'FUNNEL_PATHOLOGIST', 'COPY_SPECIALIST'];
+    const specialistIds = ['UX_UI_STRATEGIST', 'FUNNEL_STRATEGIST', 'COPY_STRATEGIST'];
 
     const executionPromises = specialistIds.map(async (specialistId): Promise<SpecialistResult> => {
       const startTime = Date.now();
@@ -1611,7 +1611,7 @@ export class ArchitectManager extends BaseManager {
     let payload: Record<string, unknown>;
 
     switch (specialistId) {
-      case 'UX_UI_SPECIALIST':
+      case 'UX_UI_STRATEGIST':
         payload = {
           action: 'design_page',
           pageType: 'landing',
@@ -1623,7 +1623,7 @@ export class ArchitectManager extends BaseManager {
         };
         break;
 
-      case 'FUNNEL_PATHOLOGIST':
+      case 'FUNNEL_STRATEGIST':
         payload = {
           action: 'analyze_funnel',
           funnelType: funnelFlow.type,
@@ -1634,7 +1634,7 @@ export class ArchitectManager extends BaseManager {
         };
         break;
 
-      case 'COPY_SPECIALIST':
+      case 'COPY_STRATEGIST':
         payload = {
           action: 'generate_copy',
           pageType: 'landing',
@@ -1771,9 +1771,9 @@ DELIVERABLES:
       }
 
       const contributionMap: Record<string, string[]> = {
-        UX_UI_SPECIALIST: ['designDirection', 'accessibility'],
-        FUNNEL_PATHOLOGIST: ['funnelFlow', 'conversionOptimization'],
-        COPY_SPECIALIST: ['contentStructure', 'messaging'],
+        UX_UI_STRATEGIST: ['designDirection', 'accessibility'],
+        FUNNEL_STRATEGIST: ['funnelFlow', 'conversionOptimization'],
+        COPY_STRATEGIST: ['contentStructure', 'messaging'],
       };
 
       return {
@@ -1806,9 +1806,9 @@ DELIVERABLES:
     const blueprintId = `blueprint_${PLATFORM_ID}_${Date.now()}`;
 
     // Extract specialist contributions
-    const uxResult = specialistResults.find(r => r.specialistId === 'UX_UI_SPECIALIST');
-    const funnelResult = specialistResults.find(r => r.specialistId === 'FUNNEL_PATHOLOGIST');
-    const copyResult = specialistResults.find(r => r.specialistId === 'COPY_SPECIALIST');
+    const uxResult = specialistResults.find(r => r.specialistId === 'UX_UI_STRATEGIST');
+    const funnelResult = specialistResults.find(r => r.specialistId === 'FUNNEL_STRATEGIST');
+    const copyResult = specialistResults.find(r => r.specialistId === 'COPY_STRATEGIST');
 
     // Derive design direction from UX specialist or defaults
     const uxData = uxResult?.data as Record<string, unknown> | null;
@@ -1882,9 +1882,9 @@ DELIVERABLES:
         derivedFromBrandDNA: brandDNA !== null,
         intelligenceBriefsUsed: intelligenceBriefs.map(b => b.id),
         specialistContributions: {
-          UX_UI_SPECIALIST: uxResult?.status === 'SUCCESS',
-          FUNNEL_PATHOLOGIST: funnelResult?.status === 'SUCCESS',
-          COPY_SPECIALIST: copyResult?.status === 'SUCCESS',
+          UX_UI_STRATEGIST: uxResult?.status === 'SUCCESS',
+          FUNNEL_STRATEGIST: funnelResult?.status === 'SUCCESS',
+          COPY_STRATEGIST: copyResult?.status === 'SUCCESS',
         },
         confidence,
         warnings,

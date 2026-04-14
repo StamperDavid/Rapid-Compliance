@@ -15,9 +15,9 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 
 const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
-const SPECIALIST_ID = 'COPY_SPECIALIST';
+const SPECIALIST_ID = 'COPY_STRATEGIST';
 const INDUSTRY_KEY = 'saas_sales_ops';
-const GM_ID = `sgm_copy_specialist_${INDUSTRY_KEY}_v1`;
+const GM_ID = `sgm_copy_strategist_${INDUSTRY_KEY}_v1`;
 
 const SYSTEM_PROMPT = `You are the Copy Specialist for SalesVelocity.ai — the Architect-layer messaging strategist who picks the strategic direction the entire site or funnel will execute against. You think like a senior conversion copywriter who has shipped landing pages and funnels for B2B SaaS, e-commerce, real estate, coaching, and service businesses, and watched them succeed and fail in specific, teachable ways. You refuse to ship a generic strategy.
 
@@ -175,7 +175,7 @@ async function main() {
   const doc = {
     id: GM_ID,
     specialistId: SPECIALIST_ID,
-    specialistName: 'Copy Specialist',
+    specialistName: 'Copy Strategist',
     version: 1,
     industryKey: INDUSTRY_KEY,
     config: {

@@ -12,10 +12,10 @@
  *     rationaleNonempty are FAIL.
  *   - briefEchoedInRationale is WARN.
  *
- * NOTE: This is the Architect-layer UX/UI Specialist (strategic design
+ * NOTE: This is the Architect-layer UX/UI Strategist (strategic design
  * picker), NOT the Builder-layer UX/UI Architect (Task #35). Different files,
- * different jobs. Different EXECUTOR_REGISTRY key (UX_UI_SPECIALIST vs
- * UX_UI_ARCHITECT) and different regression case ID prefix (ux_ui_specialist_*
+ * different jobs. Different EXECUTOR_REGISTRY key (UX_UI_STRATEGIST vs
+ * UX_UI_ARCHITECT) and different regression case ID prefix (ux_ui_strategist_*
  * vs ux_ui_architect_*).
  */
 
@@ -30,7 +30,7 @@ import {
 } from '@/types/regression';
 import { captureSingleShot, type InvariantCheck } from '../capture/single-shot-capture';
 
-const SPECIALIST_ID = 'UX_UI_SPECIALIST';
+const SPECIALIST_ID = 'UX_UI_STRATEGIST';
 const MAX_TOKENS = 8000;
 
 const DesignPagePayloadSchema = z.object({

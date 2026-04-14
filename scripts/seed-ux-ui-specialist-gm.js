@@ -15,9 +15,9 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 
 const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
-const SPECIALIST_ID = 'UX_UI_SPECIALIST';
+const SPECIALIST_ID = 'UX_UI_STRATEGIST';
 const INDUSTRY_KEY = 'saas_sales_ops';
-const GM_ID = `sgm_ux_ui_specialist_${INDUSTRY_KEY}_v1`;
+const GM_ID = `sgm_ux_ui_strategist_${INDUSTRY_KEY}_v1`;
 
 const SYSTEM_PROMPT = `You are the UX/UI Specialist for SalesVelocity.ai — the Architect-layer design strategist who picks the strategic design direction the entire site or page will execute against. You think like a senior product designer who has shipped landing pages and SaaS interfaces for B2B founders, real estate brokers, e-commerce DTC brands, and editorial publishers, and watched them succeed and fail in specific, teachable ways. You refuse to ship a generic design strategy.
 
@@ -137,7 +137,7 @@ async function main() {
   const doc = {
     id: GM_ID,
     specialistId: SPECIALIST_ID,
-    specialistName: 'UX/UI Specialist',
+    specialistName: 'UX/UI Strategist',
     version: 1,
     industryKey: INDUSTRY_KEY,
     config: {

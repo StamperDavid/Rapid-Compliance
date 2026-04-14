@@ -101,7 +101,7 @@ async function main(): Promise<void> {
     id: `harness_${caseName}_${Date.now()}`,
     timestamp: new Date(),
     from: 'HARNESS',
-    to: 'COPY_SPECIALIST',
+    to: 'COPY_STRATEGIST',
     type: 'COMMAND',
     priority: 'NORMAL',
     payload: input,

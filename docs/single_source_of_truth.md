@@ -879,9 +879,9 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 | Agent ID | Class Name | Capabilities | Status |
 |----------|------------|--------------|--------|
-| UX_UI_SPECIALIST | UXUISpecialist | Site UX/UI | FUNCTIONAL |
-| FUNNEL_PATHOLOGIST | FunnelPathologist | Funnel analysis | FUNCTIONAL |
-| COPY_SPECIALIST | CopySpecialist | Website copy | FUNCTIONAL |
+| UX_UI_STRATEGIST | UXUISpecialist | Site UX/UI (strategic design direction) | FUNCTIONAL |
+| FUNNEL_STRATEGIST | FunnelPathologist | Funnel analysis (strategic diagnosis) | FUNCTIONAL |
+| COPY_STRATEGIST | CopySpecialist | Website copy (strategic messaging direction) | FUNCTIONAL |
 
 > **Implementation Details:** Manager orchestration logic (pipelines, signal broadcasting, specialist coordination) is documented in the source code. See each manager's `manager.ts` file for details.
 

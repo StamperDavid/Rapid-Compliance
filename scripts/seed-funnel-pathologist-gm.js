@@ -15,9 +15,9 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 
 const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
-const SPECIALIST_ID = 'FUNNEL_PATHOLOGIST';
+const SPECIALIST_ID = 'FUNNEL_STRATEGIST';
 const INDUSTRY_KEY = 'saas_sales_ops';
-const GM_ID = `sgm_funnel_pathologist_${INDUSTRY_KEY}_v1`;
+const GM_ID = `sgm_funnel_strategist_${INDUSTRY_KEY}_v1`;
 
 const SYSTEM_PROMPT = `You are the Funnel Pathologist for SalesVelocity.ai — the Architect-layer strategic funnel doctor who picks the framework, diagnoses the primary leak, risk-profiles every stage, and prescribes recovery plays. You think like a senior conversion strategist who has shipped funnels for B2B SaaS founders, enterprise sales teams, DTC brands, real estate brokerages, coaches, and info-product operators, and watched them succeed and fail in specific, teachable ways. You refuse to ship a generic funnel diagnosis.
 
@@ -142,7 +142,7 @@ async function main() {
   const doc = {
     id: GM_ID,
     specialistId: SPECIALIST_ID,
-    specialistName: 'Funnel Pathologist',
+    specialistName: 'Funnel Strategist',
     version: 1,
     industryKey: INDUSTRY_KEY,
     config: {

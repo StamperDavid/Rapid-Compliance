@@ -52,7 +52,7 @@ import { logger } from '@/lib/logger/logger';
 // ============================================================================
 
 const FILE = 'architect/funnel/specialist.ts';
-const SPECIALIST_ID = 'FUNNEL_PATHOLOGIST';
+const SPECIALIST_ID = 'FUNNEL_STRATEGIST';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['analyze_funnel'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
@@ -100,7 +100,7 @@ interface FunnelPathologistGMConfig {
 const CONFIG: SpecialistConfig = {
   identity: {
     id: SPECIALIST_ID,
-    name: 'Funnel Pathologist',
+    name: 'Funnel Strategist',
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'ARCHITECT_MANAGER',

@@ -1232,10 +1232,10 @@ const WORKFLOW_OPTIMIZER_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' |
 // Copy Specialist cases (Architect-layer strategic messaging picker, Task #39)
 // ---------------------------------------------------------------------------
 
-const COPY_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+const COPY_STRATEGIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
   {
     caseId: 'copy_specialist_saas_sales_ops_landing',
-    agentId: 'COPY_SPECIALIST',
+    agentId: 'COPY_STRATEGIST',
     name: 'SaaS sales-ops cold-traffic landing (canonical)',
     description:
       'Canonical strategic messaging case. Exercises framework enum, CTA strategy enum, pillars count range, key objections count range, prose page messaging notes, and rationale brief-echo.',
@@ -1261,7 +1261,7 @@ const COPY_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
   },
   {
     caseId: 'copy_specialist_realestate_luxury_homepage',
-    agentId: 'COPY_SPECIALIST',
+    agentId: 'COPY_STRATEGIST',
     name: 'Luxury real estate brokerage homepage (industry switch)',
     description:
       'Industry-switching stress case. Tests whether the LLM adapts framework + CTA + voice direction to a long-cycle editorial luxury market with restraint as the brand pillar.',
@@ -1287,7 +1287,7 @@ const COPY_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
   },
   {
     caseId: 'copy_specialist_ecommerce_dtc_launch_landing',
-    agentId: 'COPY_SPECIALIST',
+    agentId: 'COPY_STRATEGIST',
     name: 'DTC sleep supplement launch landing (mobile-first)',
     description:
       'Complexity-stress case. Tests whether the LLM scales messaging strategy to a fast-velocity mobile-first DTC launch with real urgency and founder-led voice.',
@@ -1317,10 +1317,10 @@ const COPY_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
 // UX/UI Specialist cases (Architect-layer strategic design picker, Task #40)
 // ---------------------------------------------------------------------------
 
-const UX_UI_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+const UX_UI_STRATEGIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
   {
     caseId: 'ux_ui_specialist_saas_sales_ops_landing',
-    agentId: 'UX_UI_SPECIALIST',
+    agentId: 'UX_UI_STRATEGIST',
     name: 'SaaS sales-ops cold-traffic landing (canonical)',
     description:
       'Canonical strategic design direction case. Exercises colorPsychology + typographyStyle short labels, design principles count range, key design decisions count range, prose direction fields, and rationale brief-echo.',
@@ -1345,7 +1345,7 @@ const UX_UI_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
   },
   {
     caseId: 'ux_ui_specialist_realestate_luxury_homepage',
-    agentId: 'UX_UI_SPECIALIST',
+    agentId: 'UX_UI_STRATEGIST',
     name: 'Luxury real estate brokerage homepage (industry switch + editorial)',
     description:
       'Industry-switching stress case. Tests whether the LLM adapts color palette + typography + layout direction to a long-cycle editorial luxury market with restraint as the brand pillar.',
@@ -1370,7 +1370,7 @@ const UX_UI_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
   },
   {
     caseId: 'ux_ui_specialist_ecommerce_dtc_launch_landing',
-    agentId: 'UX_UI_SPECIALIST',
+    agentId: 'UX_UI_STRATEGIST',
     name: 'DTC sleep supplement launch landing (mobile-first)',
     description:
       'Complexity-stress case. Tests whether the LLM scales design strategy to a fast-velocity mobile-first DTC launch with founder-led personality and aggressive conversion focus.',
@@ -1556,10 +1556,10 @@ const EMAIL_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
 // Funnel Pathologist cases (Architect-layer strategic funnel diagnosis, Task #41)
 // ---------------------------------------------------------------------------
 
-const FUNNEL_PATHOLOGIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+const FUNNEL_STRATEGIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
   {
     caseId: 'funnel_pathologist_saas_sales_ops_free_trial',
-    agentId: 'FUNNEL_PATHOLOGIST',
+    agentId: 'FUNNEL_STRATEGIST',
     name: 'SaaS sales-ops free-trial funnel diagnosis (canonical)',
     description:
       'Canonical strategic funnel diagnosis case. Exercises funnelFramework enum, primaryConversionLeak enum, critical leak points count range, recovery plays count range, key metrics count range, and rationale brief-echo.',
@@ -1595,7 +1595,7 @@ const FUNNEL_PATHOLOGIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' |
   },
   {
     caseId: 'funnel_pathologist_realestate_luxury_lead_capture',
-    agentId: 'FUNNEL_PATHOLOGIST',
+    agentId: 'FUNNEL_STRATEGIST',
     name: 'Luxury real estate long-cycle lead capture (industry switch)',
     description:
       'Industry-switching stress case with a long sales cycle. Tests whether the LLM adapts funnel framework choice and leak diagnosis to an editorial luxury market with restraint as the brand pillar and 6-18 month nurture cycles.',
@@ -1630,7 +1630,7 @@ const FUNNEL_PATHOLOGIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' |
   },
   {
     caseId: 'funnel_pathologist_ecommerce_dtc_launch_direct_checkout',
-    agentId: 'FUNNEL_PATHOLOGIST',
+    agentId: 'FUNNEL_STRATEGIST',
     name: 'DTC sleep supplement launch direct-checkout funnel (mobile-first)',
     description:
       'Complexity-stress case with explicit checkout-dropoff history. Tests whether the LLM correctly identifies shipping-calculation friction as the primary conversion leak rather than defaulting to OFFER_CLARITY.',
@@ -1899,9 +1899,9 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   UX_UI_ARCHITECT: UX_UI_ARCHITECT_CASES,
   FUNNEL_ENGINEER: FUNNEL_ENGINEER_CASES,
   WORKFLOW_OPTIMIZER: WORKFLOW_OPTIMIZER_CASES,
-  COPY_SPECIALIST: COPY_SPECIALIST_CASES,
-  UX_UI_SPECIALIST: UX_UI_SPECIALIST_CASES,
-  FUNNEL_PATHOLOGIST: FUNNEL_PATHOLOGIST_CASES,
+  COPY_STRATEGIST: COPY_STRATEGIST_CASES,
+  UX_UI_STRATEGIST: UX_UI_STRATEGIST_CASES,
+  FUNNEL_STRATEGIST: FUNNEL_STRATEGIST_CASES,
   EMAIL_SPECIALIST: EMAIL_SPECIALIST_CASES,
   SMS_SPECIALIST: SMS_SPECIALIST_CASES,
 };

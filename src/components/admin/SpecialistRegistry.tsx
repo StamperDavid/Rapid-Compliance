@@ -510,8 +510,8 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
 
   // Architect Category (3 specialists)
   {
-    id: 'ARCHITECT_COPY_SPECIALIST',
-    name: 'Architect Copy Specialist',
+    id: 'ARCHITECT_COPY_STRATEGIST',
+    name: 'Architect Copy Strategist',
     category: 'intelligence',
     status: 'FUNCTIONAL',
     description: 'Provides high-level copywriting strategy and oversight',
@@ -525,8 +525,8 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     managerId: 'ARCHITECT',
   },
   {
-    id: 'ARCHITECT_FUNNEL_SPECIALIST',
-    name: 'Architect Funnel Specialist',
+    id: 'ARCHITECT_FUNNEL_STRATEGIST',
+    name: 'Architect Funnel Strategist',
     category: 'intelligence',
     status: 'FUNCTIONAL',
     description: 'Designs comprehensive funnel strategies and architectures',
@@ -540,8 +540,8 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     managerId: 'ARCHITECT',
   },
   {
-    id: 'ARCHITECT_UX_UI_SPECIALIST',
-    name: 'Architect UX/UI Specialist',
+    id: 'ARCHITECT_UX_UI_STRATEGIST',
+    name: 'Architect UX/UI Strategist',
     category: 'intelligence',
     status: 'FUNCTIONAL',
     description: 'Establishes UX/UI standards and design systems',
