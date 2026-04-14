@@ -4817,19 +4817,68 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // INTELLIGENCE DEPARTMENT EXECUTION (Sprint 19)
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_intelligence': {
+        // Task #66 (April 14, 2026): rewired from NOT_WIRED to live delegation.
+        // Intelligence department specialists are all real as of Task #66:
+        //   - Scraper Specialist (Task #62) — hybrid LLM + real scrapers
+        //   - Competitor Researcher (Task #63) — hybrid LLM + Serper/DataForSEO
+        //   - Technographic Scout (Task #64) — hybrid LLM + 60-signature regex db
+        //   - Sentiment Analyst (Task #65) — pure LLM rebuild, 5 actions
+        //   - Trend Scout (Task #66) — hybrid LLM synthesis + real collectors
+        // IntelligenceManager.execute() parses both the canonical
+        // IntelligenceRequest field names AND the Jasper tool-call field
+        // names (researchType, targets, industry, depth, focusAreas,
+        // timeframe), detects intent, runs specialists in parallel with
+        // graceful degradation, synthesizes an IntelligenceBrief, and
+        // writes insights to MemoryVault for cross-agent access.
         const intelStart = Date.now();
         trackMissionStep(context, 'delegate_to_intelligence', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Intelligence department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_intelligence', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - intelStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Intelligence department delegation is currently disabled because its specialists (Scraper Specialist, Competitor Researcher, Technographic Scout, Sentiment Analyst, Trend Scout) are still template engines with zero LLM calls. The Intelligence Manager routes correctly but terminates at hand-coded lookup tables, not real AI — presenting that output as research findings would be a lie. This tool returns online when these 5 specialists are rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'INTELLIGENCE_MANAGER',
-        });
+
+        try {
+          const { IntelligenceManager } = await import('@/lib/agents/intelligence/manager');
+          const intelMgr = new IntelligenceManager();
+          await intelMgr.initialize();
+
+          const intelResult = await withTimeout(intelMgr.execute({
+            id: `intel_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'INTELLIGENCE_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: {
+              researchType: args.researchType as string,
+              targets: args.targets as string,
+              industry: args.industry as string | undefined,
+              depth: args.depth as string | undefined,
+              focusAreas: args.focusAreas as string | undefined,
+              timeframe: args.timeframe as string | undefined,
+            },
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Intelligence Manager');
+
+          const intelDuration = Date.now() - intelStart;
+          trackMissionStep(context, 'delegate_to_intelligence',
+            intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: intelResult.status,
+            data: intelResult.data,
+            errors: intelResult.errors,
+            manager: 'INTELLIGENCE_MANAGER',
+            reviewLink: getReviewLink('delegate_to_intelligence', context?.missionId),
+          });
+        } catch (intelError: unknown) {
+          const errorMsg = intelError instanceof Error ? intelError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_intelligence', 'FAILED', {
+            summary: `Intelligence: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - intelStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'INTELLIGENCE_MANAGER' });
+        }
         break;
       }
 

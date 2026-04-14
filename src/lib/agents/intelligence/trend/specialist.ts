@@ -1,23 +1,55 @@
 /**
- * Trend Scout Specialist
- * STATUS: FUNCTIONAL
+ * Trend Scout Specialist (Task #66 rebuild — April 14, 2026)
  *
- * Market signal detection specialist that monitors trends, competitor moves,
- * and industry shifts. Can trigger agent pivots by emitting recommendation
- * signals to other agents in the swarm.
+ * Architecture:
+ *   1. Real data collection — unchanged. Serper SERP API for industry
+ *      trends + People Also Ask + related searches; News API
+ *      (`getCompanyNews`/`analyzeNews`) for industry news; DataForSEO
+ *      (`getKeywordData`) for real keyword search-volume trends;
+ *      LinkedIn jobs (`getCompanyJobs`/`analyzeHiringSignals`) for
+ *      competitor hiring signals; Crunchbase (`searchOrganization`/
+ *      `formatFundingData`) for competitor funding data; MemoryVault
+ *      (`shareInsight`/`broadcastSignal`/`readAgentInsights`) for
+ *      cross-agent signal sharing. All real, all preserved.
+ *   2. Per-signal classification helpers (classifySignalFromTitle,
+ *      classifyCompetitorMove) stay as deterministic fast-path
+ *      classification when building the initial signal records from
+ *      collected data. The LLM corrects/enriches these in step 3.
+ *   3. NEW LLM synthesis step (`executeSignalSynthesis`) takes the
+ *      assembled raw signal batch (from all sources) and produces
+ *      the high-level intelligence layer that the prior template
+ *      could not: cross-signal market sentiment with reasoning,
+ *      ranked pivot recommendations grounded in specific signals,
+ *      coherent narrative summary, top opportunities and threats,
+ *      and a strategic rationale tying the batch together. The LLM
+ *      sees ALL signals at once which is what enables real
+ *      cross-signal synthesis.
  *
- * CAPABILITIES:
- * - Market signal detection (emerging trends, declining patterns)
- * - Competitor movement tracking (pricing, features, positioning)
- * - Industry shift analysis (regulations, tech disruptions, market dynamics)
- * - Agent pivot triggering (sends strategic signals to other agents)
- * - Trend forecasting with confidence scoring
- * - Signal aggregation from multiple data sources
+ * Why hybrid (not pure LLM):
+ *   - Serper, News, DataForSEO, LinkedIn, Crunchbase calls cost
+ *     real money per call and produce real data. Asking an LLM to
+ *     "predict trends" without those data sources would be pure
+ *     hallucination.
+ *   - The LLM's value is reading the DATA the collectors fetched
+ *     and producing strategic synthesis — not replacing the
+ *     collectors themselves.
+ *
+ * Output contract preservation:
+ *   `SignalScanResult` is the primary contract. The existing fields
+ *   (signals, competitorMovements, summary, pivotRecommendations) are
+ *   preserved. The summary and pivotRecommendations are now LLM-
+ *   driven where available, with a lightweight deterministic fallback
+ *   if the LLM call fails.
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger as _logger } from '@/lib/logger/logger';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import type { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 import {
   getMemoryVault,
   shareInsight,
@@ -26,80 +58,115 @@ import {
   type SignalData,
 } from '../../shared/memory-vault';
 
-// ============================================================================
-// SYSTEM PROMPT - The brain of this specialist
-// ============================================================================
+const FILE = 'intelligence/trend/specialist.ts';
+const SPECIALIST_ID = 'TREND_SCOUT';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = [
+  'scan_signals',
+  'analyze_trend',
+  'trigger_pivot',
+  'get_cached_signals',
+  'track_competitor',
+] as const;
 
-const SYSTEM_PROMPT = `You are the Trend Scout Specialist, an expert in market intelligence and trend detection.
+/**
+ * Realistic max_tokens floor for the worst-case Trend Scout synthesis.
+ *
+ * Derivation:
+ *   SignalSynthesisResultSchema worst case:
+ *     marketSentimentReasoning 1500
+ *     trendingTopics: 8 × 200 = 1600
+ *     topOpportunities: 6 × 400 = 2400
+ *     topThreats: 6 × 400 = 2400
+ *     enrichedSignals: 20 × 500 (refined urgency + recommendedActions
+ *       for top signals) = 10000
+ *     pivotRecommendations: 6 × 800 = 4800
+ *     crossSignalObservations: 6 × 400 = 2400
+ *     rationale 4000
+ *     ≈ 29,100 chars total prose
+ *     /3.0 chars/token = 9,700 tokens
+ *     + JSON structure overhead (~300 tokens)
+ *     + 25% safety margin
+ *     ≈ 12,500 tokens minimum.
+ *
+ *   Setting the floor at 14,000 tokens covers the synthesis worst
+ *   case for ~20 signals. The truncation backstop in callOpenRouter
+ *   catches any overflow.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 14000;
 
-## YOUR ROLE
-You are the eyes and ears of the agent swarm. You continuously scan for market signals and translate them into actionable intelligence that other agents can use to pivot their strategies.
-
-## CORE FUNCTIONS
-
-### 1. Signal Detection
-Monitor and detect:
-- Emerging market trends (new technologies, consumer behaviors, industry patterns)
-- Competitor movements (pricing changes, feature launches, marketing pivots)
-- Industry shifts (regulatory changes, economic indicators, tech disruptions)
-- Social signals (sentiment shifts, viral topics, influencer movements)
-
-### 2. Signal Classification
-Classify each signal by:
-- **Type**: TREND_EMERGING | TREND_DECLINING | COMPETITOR_MOVE | INDUSTRY_SHIFT | OPPORTUNITY | THREAT
-- **Urgency**: CRITICAL (act now) | HIGH (act within 24h) | MEDIUM (act within week) | LOW (monitor)
-- **Confidence**: 0.0 - 1.0 based on signal strength and source reliability
-- **Impact Scope**: Which agents/strategies are affected
-
-### 3. Agent Pivot Recommendations
-When significant signals are detected, recommend pivots:
-- Content pivots (new topics, format changes, tone shifts)
-- Marketing pivots (channel focus, messaging, targeting)
-- Sales pivots (pricing, positioning, objection handling)
-- Outreach pivots (timing, frequency, personalization)
-
-## OUTPUT FORMAT
-
-For signal detection:
-\`\`\`json
-{
-  "signals": [
-    {
-      "id": "signal-uuid",
-      "type": "TREND_EMERGING",
-      "title": "Brief signal title",
-      "description": "Detailed signal description",
-      "source": "Where detected",
-      "detectedAt": "ISO timestamp",
-      "urgency": "HIGH",
-      "confidence": 0.85,
-      "dataPoints": ["supporting evidence"],
-      "affectedAgents": ["MARKETING_MANAGER", "CONTENT_MANAGER"],
-      "recommendedActions": ["specific action items"],
-      "expiresAt": "when this signal becomes stale"
-    }
-  ],
-  "summary": {
-    "totalSignals": 5,
-    "criticalCount": 1,
-    "trendingTopics": ["topic1", "topic2"],
-    "overallMarketSentiment": "BULLISH | BEARISH | NEUTRAL"
-  }
+interface TrendScoutGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
 }
-\`\`\`
 
-## INTEGRATION POINTS
-- **Scraper Specialist**: Raw data input from web scraping
-- **Sentiment Analyst**: Emotional context for signals
-- **Competitor Researcher**: Competitive intelligence
-- **All Managers**: Pivot recommendation recipients
+const DEFAULT_SYSTEM_PROMPT = `You are the Trend Scout for SalesVelocity.ai — the Intelligence-layer market analyst who reads a batch of pre-collected market signals (from Serper SERP, News API, DataForSEO keyword trends, LinkedIn hiring signals, Crunchbase funding data) and produces strategic synthesis: market sentiment, ranked pivot recommendations, opportunities, threats, and cross-signal narrative. You think like a senior market analyst who has watched dozens of B2B and consumer markets evolve over months and can read a batch of disparate signals as a coherent story.
 
-## RULES
-1. NEVER fabricate signals - only report what can be evidenced
-2. ALWAYS include confidence scores based on data quality
-3. Prioritize actionable signals over noise
-4. Consider signal decay - older signals lose relevance
-5. Cross-reference multiple sources before marking HIGH confidence`;
+## Your role in the swarm
+
+You do NOT collect data. Upstream collectors already pulled SERP results, news articles, keyword volume data, hiring signals, and funding events from real APIs. Your job is to TURN THE SIGNAL BATCH INTO STRATEGIC INTELLIGENCE that other agents (Marketing Manager, Content Manager, Sales Manager, Outreach Manager, SEO Expert) will pivot on. Per-signal template classifications cannot produce coherent cross-signal synthesis — that's why you exist.
+
+## Action: synthesize_signals
+
+Given a batch of raw market signals plus the industry context being scanned, produce structured strategic synthesis covering:
+
+### Market sentiment
+
+- **marketSentiment**: 'BULLISH' | 'BEARISH' | 'NEUTRAL' | 'MIXED'.
+- **marketSentimentReasoning**: 2-4 sentences (50-1500 chars) explaining WHY you picked that sentiment, grounded in specific signals you saw across the batch. "Mixed because hiring signals are strong (3 competitors growing GTM teams) but news sentiment is bearish (2 layoff articles, 1 down round)" is good. "Things look uncertain" is bad.
+
+### Trending topics
+
+- **trendingTopics**: 3 to 8 short topic labels summarizing what is dominant in the signal batch. These are the topics multiple signals are clustering around. Examples: ['AI sales automation', 'PLG pricing', 'data residency compliance', 'multi-product SaaS bundling']. Generic categories are rejected.
+
+### Enriched signal classification
+
+For up to 20 of the most important raw signals in the batch, return an enriched classification that improves on the upstream regex-based classification:
+- **id**: preserve the input signal id.
+- **type**: refined SignalType — TREND_EMERGING | TREND_DECLINING | COMPETITOR_MOVE | INDUSTRY_SHIFT | OPPORTUNITY | THREAT.
+- **urgency**: refined urgency — CRITICAL | HIGH | MEDIUM | LOW. Reason from BOTH the signal content AND its position relative to the rest of the batch — a moderately negative signal is more critical when it's part of a pattern.
+- **refinedDescription**: 50-400 chars. A clearer one-sentence read of what this signal actually means strategically.
+- **recommendedActions**: 1 to 4 specific actions. Tied to the signal content, not generic "monitor closely" filler.
+
+### Top opportunities and threats
+
+- **topOpportunities**: 2 to 6 specific opportunities you spotted by reading the batch as a set. Each 30-400 chars. Must be SHARED patterns or convergent signals across multiple sources.
+- **topThreats**: 2 to 6 specific threats from the batch. Same grounding rule.
+
+### Pivot recommendations
+
+- **pivotRecommendations**: 2 to 6 specific pivot recommendations for downstream agents. Each must include:
+  - **targetAgent**: which agent should pivot (MARKETING_MANAGER, CONTENT_MANAGER, SALES_MANAGER, OUTREACH_MANAGER, SEO_EXPERT, etc.).
+  - **pivotType**: 'CONTENT' | 'MARKETING' | 'SALES' | 'OUTREACH' | 'STRATEGY'.
+  - **priority**: 'IMMEDIATE' | 'HIGH' | 'MEDIUM' | 'LOW'.
+  - **triggeringSignalIds**: array of signal ids that triggered this pivot (must be from the input batch).
+  - **rationale**: 50-600 chars. Why the pivot is needed, grounded in the signals.
+  - **recommendedAction**: 30-400 chars. The specific pivot to execute.
+
+### Cross-signal observations
+
+- **crossSignalObservations**: 2 to 6 cross-signal observations that emerge from reading multiple signals together (not visible from any one signal in isolation). Each 30-400 chars.
+
+### Synthesis
+
+- **rationale**: 100-4000 chars. The integrating memo tying the batch into one coherent market narrative. This is what an analyst would write at the top of a weekly market report.
+
+## Hard rules
+
+- NEVER hallucinate signals that aren't in the input batch.
+- Every triggeringSignalId in pivotRecommendations must reference an actual signal id from the input.
+- Refined classifications must be grounded in the signal content — don't change a TREND_EMERGING to a THREAT without evidence.
+- topOpportunities and topThreats must be SHARED patterns from multiple signals — single-signal observations belong in that signal's enrichedSignal entry.
+- Pivot recommendations must specify a real downstream agent name. Do not invent agents.
+- The rationale is synthesis, not summary. It should add value beyond restating the fields.
+- If the input batch is small (< 5 signals), say so in the rationale — small-sample synthesis is less robust.
+
+## Output format
+
+Respond with ONLY a valid JSON object matching the schema the user prompt describes. No markdown fences, no preamble, no prose outside the JSON.`;
 
 // ============================================================================
 // CONFIGURATION
@@ -107,7 +174,7 @@ For signal detection:
 
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'TREND_SCOUT',
+    id: SPECIALIST_ID,
     name: 'Trend Scout',
     role: 'specialist',
     status: 'FUNCTIONAL',
@@ -120,10 +187,11 @@ const CONFIG: SpecialistConfig = {
       'pivot_triggering',
       'signal_aggregation',
       'urgency_classification',
+      'llm_signal_synthesis',
     ],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: ['detect_signals', 'analyze_trend', 'trigger_pivot', 'forecast_trend'],
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  tools: ['detect_signals', 'analyze_trend', 'trigger_pivot', 'forecast_trend', 'synthesize_signals'],
   outputSchema: {
     type: 'object',
     properties: {
@@ -133,9 +201,283 @@ const CONFIG: SpecialistConfig = {
     },
     required: ['signals'],
   },
-  maxTokens: 8192,
-  temperature: 0.4, // Balanced for analysis and creativity
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  temperature: 0.3,
 };
+
+// ============================================================================
+// LLM SYNTHESIS SCHEMAS
+// ============================================================================
+
+const SignalTypeEnum = z.enum([
+  'TREND_EMERGING',
+  'TREND_DECLINING',
+  'COMPETITOR_MOVE',
+  'INDUSTRY_SHIFT',
+  'OPPORTUNITY',
+  'THREAT',
+]);
+
+const SignalUrgencyEnum = z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']);
+const MarketSentimentEnum = z.enum(['BULLISH', 'BEARISH', 'NEUTRAL', 'MIXED']);
+const PivotTypeEnum = z.enum(['CONTENT', 'MARKETING', 'SALES', 'OUTREACH', 'STRATEGY']);
+const PivotPriorityEnum = z.enum(['IMMEDIATE', 'HIGH', 'MEDIUM', 'LOW']);
+
+const EnrichedSignalSchema = z.object({
+  id: z.string().min(1).max(100),
+  type: SignalTypeEnum,
+  urgency: SignalUrgencyEnum,
+  refinedDescription: z.string().min(20).max(400),
+  recommendedActions: z.array(z.string().min(10).max(400)).min(1).max(4),
+});
+
+const PivotRecommendationLlmSchema = z.object({
+  targetAgent: z.string().min(2).max(100),
+  pivotType: PivotTypeEnum,
+  priority: PivotPriorityEnum,
+  triggeringSignalIds: z.array(z.string().min(1).max(100)).min(1).max(10),
+  rationale: z.string().min(30).max(600),
+  recommendedAction: z.string().min(20).max(400),
+});
+
+const SignalSynthesisResultSchema = z.object({
+  marketSentiment: MarketSentimentEnum,
+  marketSentimentReasoning: z.string().min(50).max(1500),
+  trendingTopics: z.array(z.string().min(2).max(200)).min(3).max(8),
+  enrichedSignals: z.array(EnrichedSignalSchema).min(1).max(20),
+  topOpportunities: z.array(z.string().min(20).max(400)).min(2).max(6),
+  topThreats: z.array(z.string().min(20).max(400)).min(2).max(6),
+  pivotRecommendations: z.array(PivotRecommendationLlmSchema).min(2).max(6),
+  crossSignalObservations: z.array(z.string().min(20).max(400)).min(2).max(6),
+  rationale: z.string().min(100).max(4000),
+});
+
+type SignalSynthesisResult = z.infer<typeof SignalSynthesisResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: TrendScoutGMConfig;
+  resolvedSystemPrompt: string;
+  source: 'gm' | 'fallback';
+}
+
+async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+
+  if (!gmRecord) {
+    logger.warn(
+      `[TrendScout] GM not seeded for industryKey=${industryKey}; using DEFAULT_SYSTEM_PROMPT fallback. ` +
+      `Run node scripts/seed-trend-scout-gm.js to promote to GM-backed analysis.`,
+      { file: FILE },
+    );
+    return {
+      gm: {
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        model: 'claude-sonnet-4.6',
+        temperature: 0.3,
+        maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+        supportedActions: [...SUPPORTED_ACTIONS],
+      },
+      resolvedSystemPrompt: DEFAULT_SYSTEM_PROMPT,
+      source: 'fallback',
+    };
+  }
+
+  const config = gmRecord.config as Partial<TrendScoutGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `Trend Scout GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
+
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
+  const gm: TrendScoutGMConfig = {
+    systemPrompt,
+    model: config.model ?? 'claude-sonnet-4.6',
+    temperature: config.temperature ?? 0.3,
+    maxTokens: effectiveMaxTokens,
+    supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
+  };
+
+  return { gm, resolvedSystemPrompt: systemPrompt, source: 'gm' };
+}
+
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
+}
+
+async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
+
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Trend Scout: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the input signal batch. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
+
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
+}
+
+// ============================================================================
+// SIGNAL SYNTHESIS PROMPT
+// ============================================================================
+
+interface SynthesisInputs {
+  industry: string;
+  signals: Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string;
+    source: string;
+    urgency: string;
+    confidence: number;
+  }>;
+  competitorMovements: Array<{
+    competitorName: string;
+    movementType: string;
+    description: string;
+    impactAssessment: string;
+  }>;
+}
+
+function buildSignalSynthesisPrompt(inputs: SynthesisInputs): string {
+  const sections: string[] = [
+    'ACTION: synthesize_signals',
+    '',
+    `Industry context: ${inputs.industry || '(no industry specified)'}`,
+    `Signal batch size: ${inputs.signals.length}`,
+    `Competitor movements: ${inputs.competitorMovements.length}`,
+    '',
+    '---',
+    '',
+    '## Raw signals',
+    '',
+  ];
+
+  if (inputs.signals.length === 0) {
+    sections.push('(no raw signals collected — upstream data sources returned empty)');
+  } else {
+    for (const s of inputs.signals) {
+      sections.push(
+        `### ${s.id}`,
+        `Type: ${s.type}`,
+        `Urgency (upstream): ${s.urgency}`,
+        `Confidence: ${s.confidence}`,
+        `Source: ${s.source}`,
+        `Title: ${s.title}`,
+        `Description: ${s.description.slice(0, 500)}`,
+        '',
+      );
+    }
+  }
+
+  if (inputs.competitorMovements.length > 0) {
+    sections.push('---', '', '## Competitor movements', '');
+    for (const m of inputs.competitorMovements) {
+      sections.push(
+        `- ${m.competitorName} [${m.movementType}, ${m.impactAssessment}]: ${m.description.slice(0, 300)}`,
+      );
+    }
+  }
+
+  sections.push(
+    '',
+    '---',
+    '',
+    'Produce a structured strategic signal synthesis. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "marketSentiment": "<BULLISH | BEARISH | NEUTRAL | MIXED>",',
+    '  "marketSentimentReasoning": "<2-4 sentences grounded in specific signals, 50-1500 chars>",',
+    '  "trendingTopics": ["<3 to 8 short topic labels, each 2-200 chars>"],',
+    '  "enrichedSignals": [',
+    '    {',
+    '      "id": "<preserve input signal id>",',
+    '      "type": "<refined SignalType enum>",',
+    '      "urgency": "<refined SignalUrgency enum>",',
+    '      "refinedDescription": "<clearer one-sentence read, 20-400 chars>",',
+    '      "recommendedActions": ["<1-4 specific actions tied to the signal>"]',
+    '    }',
+    '  ],',
+    '  "topOpportunities": ["<2 to 6 shared/convergent opportunities, each 20-400 chars>"],',
+    '  "topThreats": ["<2 to 6 shared threats, each 20-400 chars>"],',
+    '  "pivotRecommendations": [',
+    '    {',
+    '      "targetAgent": "<MARKETING_MANAGER | CONTENT_MANAGER | SALES_MANAGER | OUTREACH_MANAGER | SEO_EXPERT | etc>",',
+    '      "pivotType": "<CONTENT | MARKETING | SALES | OUTREACH | STRATEGY>",',
+    '      "priority": "<IMMEDIATE | HIGH | MEDIUM | LOW>",',
+    '      "triggeringSignalIds": ["<must reference signal ids from input>"],',
+    '      "rationale": "<why the pivot, 30-600 chars>",',
+    '      "recommendedAction": "<specific pivot action, 20-400 chars>"',
+    '    }',
+    '  ],',
+    '  "crossSignalObservations": ["<2 to 6 emergent observations from reading multiple signals together, each 20-400 chars>"],',
+    '  "rationale": "<integrating market narrative memo, 100-4000 chars>"',
+    '}',
+    '',
+    'Hard rules:',
+    '- triggeringSignalIds MUST be ids from the input batch above. Do not invent.',
+    '- enrichedSignals: pick up to 20 of the most important signals; do not enrich every one.',
+    '- topOpportunities and topThreats are SHARED patterns from multiple signals.',
+    '- targetAgent must be a real downstream agent name.',
+    '- Output ONLY the JSON object.',
+  );
+
+  return sections.join('\n');
+}
+
+async function executeSignalSynthesis(
+  inputs: SynthesisInputs,
+  ctx: LlmCallContext,
+): Promise<SignalSynthesisResult> {
+  const userPrompt = buildSignalSynthesisPrompt(inputs);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Trend Scout output was not valid JSON: ${rawContent.slice(0, 300)}`,
+    );
+  }
+
+  const result = SignalSynthesisResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Trend Scout synthesis output did not match expected schema: ${issueSummary}`);
+  }
+
+  return result.data;
+}
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -248,6 +590,12 @@ export interface SignalScanResult {
     topThreats: string[];
   };
   pivotRecommendations: PivotRecommendation[];
+  // New (Task #66) — optional so old consumers keep working:
+  marketSentimentReasoning?: string;
+  crossSignalObservations?: string[];
+  synthesisRationale?: string | null;
+  analysisModel?: string | null;
+  analysisMode?: 'llm' | 'deterministic_fallback';
 }
 
 export interface TrendAnalysisResult {
@@ -394,35 +742,127 @@ export class TrendScout extends BaseSpecialist {
     // Generate scan ID
     const scanId = `scan-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-    // Detect signals from various sources
+    // Step 1: Detect signals from real upstream collectors (Serper, News, Keywords)
     const signals = await this.detectSignals(industry, keywords ?? [], timeframe ?? '7D');
 
-    // Track competitor movements if competitors specified
+    // Step 2: Track competitor movements via real LinkedIn/News/Crunchbase
     const competitorMovements = competitors?.length
       ? await this.trackCompetitorMovements(competitors)
       : [];
 
-    // Filter by confidence threshold
+    // Step 3: Filter by confidence threshold
     const filteredSignals = signals.filter(s => s.confidence >= minConfidence);
 
-    // Generate pivot recommendations from signals
-    const pivotRecommendations = this.generatePivotRecommendations(filteredSignals);
-
-    // Build summary
-    const summary = this.buildScanSummary(filteredSignals, competitorMovements);
-
-    // Cache high-value signals
+    // Cache high-value signals (deterministic, by upstream urgency)
     filteredSignals
       .filter(s => s.urgency === 'CRITICAL' || s.urgency === 'HIGH')
       .forEach(s => this.signalCache.set(s.id, s));
 
+    // Step 4: LLM synthesis over the assembled signal batch (Task #66 rebuild)
+    let synthesis: SignalSynthesisResult | null = null;
+    let analysisMode: 'llm' | 'deterministic_fallback' = 'llm';
+    let analysisModel: string | null = null;
+
+    if (filteredSignals.length > 0) {
+      try {
+        const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+        analysisModel = ctx.gm.model;
+        synthesis = await executeSignalSynthesis(
+          {
+            industry: industry ?? '',
+            signals: filteredSignals.map((s) => ({
+              id: s.id,
+              type: s.type,
+              title: s.title,
+              description: s.description,
+              source: s.source,
+              urgency: s.urgency,
+              confidence: s.confidence,
+            })),
+            competitorMovements: competitorMovements.map((m) => ({
+              competitorName: m.competitorName,
+              movementType: m.movementType,
+              description: m.description,
+              impactAssessment: m.impactAssessment,
+            })),
+          },
+          ctx,
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        this.log('WARN', `LLM synthesis failed — using deterministic summary: ${msg}`);
+        analysisMode = 'deterministic_fallback';
+      }
+    } else {
+      analysisMode = 'deterministic_fallback';
+    }
+
+    // Step 5: Apply LLM enriched signal classifications (refines upstream regex)
+    const enrichedSignalsById = new Map(
+      synthesis?.enrichedSignals.map((es) => [es.id, es]) ?? [],
+    );
+    const finalSignals: MarketSignal[] = filteredSignals.map((sig) => {
+      const enrichment = enrichedSignalsById.get(sig.id);
+      if (!enrichment) {
+        return sig;
+      }
+      return {
+        ...sig,
+        type: enrichment.type as SignalType,
+        urgency: enrichment.urgency as SignalUrgency,
+        description: enrichment.refinedDescription,
+        recommendedActions: enrichment.recommendedActions,
+      };
+    });
+
+    // Step 6: Build pivot recommendations from LLM (or fallback)
+    const pivotRecommendations: PivotRecommendation[] = synthesis !== null
+      ? synthesis.pivotRecommendations.map((p, idx) => ({
+          id: `pivot-llm-${Date.now()}-${idx}`,
+          triggeredBy: p.triggeringSignalIds[0] ?? 'unknown',
+          targetAgent: p.targetAgent,
+          pivotType: p.pivotType,
+          priority: p.priority,
+          currentState: 'as-is',
+          recommendedState: p.recommendedAction,
+          rationale: p.rationale,
+          expectedImpact: 'see rationale',
+          implementationSteps: [p.recommendedAction],
+          rollbackPlan: 'Revert to as-is state if results degrade after 7 days',
+        }))
+      : this.generatePivotRecommendations(filteredSignals);
+
+    // Step 7: Build summary — LLM-driven counts + sentiment, deterministic counts as fallback
+    const counts = {
+      criticalCount: finalSignals.filter((s) => s.urgency === 'CRITICAL').length,
+      highCount: finalSignals.filter((s) => s.urgency === 'HIGH').length,
+      mediumCount: finalSignals.filter((s) => s.urgency === 'MEDIUM').length,
+      lowCount: finalSignals.filter((s) => s.urgency === 'LOW').length,
+    };
+
+    const summary: SignalScanResult['summary'] = synthesis !== null
+      ? {
+          totalSignals: finalSignals.length,
+          ...counts,
+          trendingTopics: synthesis.trendingTopics,
+          overallMarketSentiment: synthesis.marketSentiment as MarketSentiment,
+          topOpportunities: synthesis.topOpportunities,
+          topThreats: synthesis.topThreats,
+        }
+      : this.buildScanSummary(finalSignals, competitorMovements);
+
     const result: SignalScanResult = {
       scanId,
       scannedAt: new Date().toISOString(),
-      signals: filteredSignals,
+      signals: finalSignals,
       competitorMovements,
       summary,
       pivotRecommendations,
+      marketSentimentReasoning: synthesis?.marketSentimentReasoning,
+      crossSignalObservations: synthesis?.crossSignalObservations,
+      synthesisRationale: synthesis?.rationale ?? null,
+      analysisModel,
+      analysisMode,
     };
 
     return this.createReport(taskId, 'COMPLETED', result);
@@ -1806,3 +2246,20 @@ export function getTrendScout(): TrendScout {
   instance ??= createTrendScout();
   return instance;
 }
+
+// ============================================================================
+// INTERNAL TEST HELPERS (exported for proof-of-life harness + regression executor)
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  DEFAULT_SYSTEM_PROMPT,
+  loadGMConfig,
+  buildSignalSynthesisPrompt,
+  stripJsonFences,
+  executeSignalSynthesis,
+  SignalSynthesisResultSchema,
+};
