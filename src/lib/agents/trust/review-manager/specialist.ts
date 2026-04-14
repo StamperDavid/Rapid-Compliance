@@ -1,503 +1,648 @@
 /**
- * Review Manager Specialist
- * STATUS: FUNCTIONAL
+ * Review Manager Specialist (REV_MGR) — REAL AI AGENT (Task #53 rebuild, April 14 2026)
  *
- * Expert in automated sentiment analysis and SEO-optimized review response generation.
- * Implements reputation management with brand-specific keyword injection.
+ * Before the rebuild, this specialist was a 1400-LOC hardcoded sentiment
+ * analysis + response generation engine. SENTIMENT_LEXICON with weighted
+ * word lists, EMOTION_PATTERNS keyword matching, TOPIC_PATTERNS keyword
+ * libraries, SEO_RESPONSE_TEMPLATES with `{rating}`/`{reviewerName}`
+ * placeholder interpolation. Zero LLM calls.
  *
- * CAPABILITIES:
- * - Review scanning and analysis
- * - Sentiment classification with confidence scoring
- * - SEO-optimized response generation with keyword injection
- * - Review request campaign generation
- * - Brand voice consistency
- * - Reputation trend analysis
+ * Pre-rebuild specialist has NO live `.execute()` callers — only
+ * referenced by `agent-factory.ts` and `index.ts` exports. Forward-only
+ * rebuild, full freedom over the input/output shape.
  *
- * PENTHOUSE: All operations use PLATFORM_ID
+ * Note: This is NOT the Review Specialist (Task #51), which is called by
+ * the Reputation Manager. This is a SEPARATE bulk-analysis + campaign
+ * generation specialist with different scope. Task #51 handles a single
+ * review with public reply; Task #53 handles bulk analysis, review-
+ * request campaign generation, and trend reports across a batch.
+ *
+ * Supported actions (discriminated union on `action`):
+ *   - analyze_reviews — sentiment + topic + emotion analysis (single or batch)
+ *   - generate_campaign — review solicitation campaign plan
+ *   - trend_report — period-over-period reputation trend analysis
+ *
+ * Pattern matches Task #52 GMB Specialist (multi-action via
+ * discriminatedUnion) + Task #51 Review Specialist (REQUIRED GM).
+ *
+ * @module agents/trust/review-manager/specialist
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { adminDal } from '@/lib/firebase/admin-dal';
-
-// ============================================================================
-// CORE TYPES & INTERFACES
-// ============================================================================
-
-interface BusinessContext {
-  brandName: string;
-  industry: string;
-  keywords: string[];
-  brandVoice: BrandVoice;
-  responseSettings: ResponseSettings;
-  seoKeywords: string[];
-  competitorNames: string[];
-}
-
-interface BrandVoice {
-  tone: 'professional' | 'friendly' | 'casual' | 'luxury' | 'technical';
-  personality: string[];
-  avoidWords: string[];
-  preferredPhrases: string[];
-  signatureStyle: string;
-}
-
-interface ResponseSettings {
-  autoRespond: boolean;
-  minRatingForAutoResponse: number;
-  requireApprovalBelow: number;
-  includeCallToAction: boolean;
-  maxResponseLength: number;
-  includeOwnerName: boolean;
-  ownerName?: string;
-}
-
-type SentimentLevel = 'VERY_NEGATIVE' | 'NEGATIVE' | 'NEUTRAL' | 'POSITIVE' | 'VERY_POSITIVE';
-type ReviewPlatform = 'google' | 'yelp' | 'facebook' | 'trustpilot' | 'g2' | 'capterra' | 'tripadvisor' | 'bbb';
-
-interface IncomingReview {
-  id: string;
-  platform: ReviewPlatform;
-  rating: number;
-  text: string;
-  reviewerName: string;
-  reviewDate: Date;
-  verified: boolean;
-  photos?: string[];
-  helpfulVotes?: number;
-}
-
-interface SentimentAnalysisResult {
-  level: SentimentLevel;
-  score: number;
-  confidence: number;
-  emotions: EmotionDetection[];
-  topics: TopicExtraction[];
-  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  keywords: {
-    positive: string[];
-    negative: string[];
-    neutral: string[];
-  };
-  actionableInsights: string[];
-}
-
-interface EmotionDetection {
-  emotion: string;
-  intensity: number;
-  triggers: string[];
-}
-
-interface TopicExtraction {
-  topic: string;
-  sentiment: 'positive' | 'negative' | 'neutral';
-  mentions: number;
-  keywords: string[];
-}
-
-interface OptimizedResponse {
-  responseText: string;
-  seoScore: number;
-  keywordsInjected: string[];
-  brandVoiceScore: number;
-  personalizedElements: string[];
-  callToAction?: string;
-  metadata: ResponseMetadata;
-}
-
-interface ResponseMetadata {
-  generatedAt: Date;
-  reviewId: string;
-  platform: ReviewPlatform;
-  requiresApproval: boolean;
-  estimatedImpact: 'LOW' | 'MEDIUM' | 'HIGH';
-}
-
-interface ReviewRequestCampaign {
-  campaignId: string;
-  name: string;
-  targetAudience: CampaignAudience;
-  channels: CampaignChannel[];
-  templates: CampaignTemplate[];
-  schedule: CampaignSchedule;
-  tracking: CampaignTracking;
-  seoOptimization: SEOOptimization;
-}
-
-interface CampaignAudience {
-  criteria: string[];
-  excludeCriteria: string[];
-  estimatedSize: number;
-  segmentName: string;
-}
-
-interface CampaignChannel {
-  type: 'email' | 'sms' | 'in_app' | 'qr_code' | 'receipt';
-  enabled: boolean;
-  timing: string;
-  frequency: string;
-}
-
-interface CampaignTemplate {
-  channelType: CampaignChannel['type'];
-  subject?: string;
-  body: string;
-  reviewLinks: ReviewLinkConfig[];
-  personalizations: string[];
-}
-
-interface ReviewLinkConfig {
-  platform: ReviewPlatform;
-  url: string;
-  priority: number;
-}
-
-interface CampaignSchedule {
-  startDate: Date;
-  endDate?: Date;
-  sendTimes: string[];
-  timezone: string;
-  delayAfterService: number; // hours
-}
-
-interface CampaignTracking {
-  openRate: number;
-  clickRate: number;
-  conversionRate: number;
-  reviewsGenerated: number;
-  averageRating: number;
-}
-
-interface SEOOptimization {
-  targetKeywords: string[];
-  localSEOTerms: string[];
-  serviceKeywords: string[];
-  locationTerms: string[];
-  naturalLanguageGoals: string[];
-}
-
-interface ReviewManagerRequest {
-  action: 'ANALYZE' | 'RESPOND' | 'CAMPAIGN' | 'BULK_ANALYZE' | 'TREND_REPORT';
-  businessContext: BusinessContext;
-  payload: ReviewPayload;
-}
-
-type ReviewPayload =
-  | { type: 'single_review'; review: IncomingReview }
-  | { type: 'bulk_reviews'; reviews: IncomingReview[] }
-  | { type: 'campaign_request'; campaignConfig: Partial<ReviewRequestCampaign> }
-  | { type: 'trend_request'; dateRange: { start: Date; end: Date } };
-
-// ============================================================================
-// SENTIMENT ANALYSIS ENGINE
-// ============================================================================
-
-const SENTIMENT_LEXICON = {
-  veryPositive: {
-    words: ['excellent', 'amazing', 'outstanding', 'exceptional', 'perfect', 'fantastic', 'wonderful', 'incredible', 'phenomenal', 'superb', 'best', 'love', 'loved'],
-    weight: 2.0,
-  },
-  positive: {
-    words: ['good', 'great', 'nice', 'pleasant', 'helpful', 'friendly', 'professional', 'satisfied', 'recommend', 'happy', 'pleased', 'enjoy', 'enjoyed', 'quality'],
-    weight: 1.0,
-  },
-  neutral: {
-    words: ['okay', 'fine', 'average', 'decent', 'adequate', 'acceptable', 'standard', 'normal', 'typical', 'expected'],
-    weight: 0.0,
-  },
-  negative: {
-    words: ['bad', 'poor', 'disappointing', 'slow', 'rude', 'unhelpful', 'problem', 'issue', 'wait', 'waited', 'wrong', 'mistake', 'lacking'],
-    weight: -1.0,
-  },
-  veryNegative: {
-    words: ['terrible', 'horrible', 'awful', 'worst', 'never', 'hate', 'disgusting', 'unacceptable', 'nightmare', 'disaster', 'scam', 'fraud', 'avoid'],
-    weight: -2.0,
-  },
-};
-
-const EMOTION_PATTERNS = {
-  frustration: ['frustrated', 'annoyed', 'irritated', 'fed up', 'tired of', 'sick of'],
-  anger: ['angry', 'furious', 'livid', 'outraged', 'upset'],
-  disappointment: ['disappointed', 'let down', 'expected more', 'underwhelmed'],
-  satisfaction: ['satisfied', 'content', 'pleased', 'happy with'],
-  delight: ['delighted', 'thrilled', 'ecstatic', 'overjoyed', 'blown away'],
-  gratitude: ['grateful', 'thankful', 'appreciate', 'appreciated'],
-  trust: ['trust', 'reliable', 'dependable', 'honest', 'transparent'],
-  concern: ['concerned', 'worried', 'uncertain', 'hesitant'],
-};
-
-const TOPIC_PATTERNS: Record<string, string[]> = {
-  service_quality: ['service', 'staff', 'team', 'employee', 'representative', 'customer service'],
-  product_quality: ['product', 'quality', 'material', 'build', 'durability', 'craftsmanship'],
-  pricing: ['price', 'cost', 'expensive', 'cheap', 'value', 'worth', 'affordable', 'overpriced'],
-  wait_time: ['wait', 'waited', 'waiting', 'slow', 'quick', 'fast', 'prompt', 'delay'],
-  cleanliness: ['clean', 'dirty', 'hygiene', 'sanitary', 'neat', 'tidy', 'spotless'],
-  communication: ['communication', 'response', 'replied', 'answered', 'called back', 'follow up'],
-  professionalism: ['professional', 'unprofessional', 'courteous', 'polite', 'respectful', 'rude'],
-  location: ['location', 'parking', 'accessible', 'convenient', 'hard to find'],
-  atmosphere: ['atmosphere', 'ambiance', 'environment', 'vibe', 'decor', 'comfortable'],
-  expertise: ['expert', 'knowledgeable', 'skilled', 'experienced', 'competent', 'qualified'],
-};
-
-// ============================================================================
-// SEO KEYWORD INJECTION PATTERNS
-// ============================================================================
-
-const SEO_RESPONSE_TEMPLATES: Record<SentimentLevel, string[]> = {
-  VERY_POSITIVE: [
-    'Thank you so much for this amazing {rating}-star review, {reviewerName}! We\'re thrilled that you had such a wonderful experience with {brandName}. {topicResponse} {seoKeywordSentence} {callToAction}',
-    '{reviewerName}, your {rating}-star review made our day at {brandName}! {topicResponse} We take pride in {seoKeyword1} and {seoKeyword2}. {callToAction}',
-    'Wow, thank you {reviewerName}! We\'re so grateful for your {rating}-star review of {brandName}. {topicResponse} {seoKeywordSentence} {callToAction}',
-  ],
-  POSITIVE: [
-    'Thank you for your {rating}-star review, {reviewerName}! We\'re glad you enjoyed your experience with {brandName}. {topicResponse} {seoKeywordSentence} {callToAction}',
-    '{reviewerName}, we appreciate you taking the time to review {brandName}! {topicResponse} Our team strives for {seoKeyword1} every day. {callToAction}',
-    'Thanks for the great feedback, {reviewerName}! At {brandName}, {topicResponse} {seoKeywordSentence} {callToAction}',
-  ],
-  NEUTRAL: [
-    'Thank you for your feedback, {reviewerName}. At {brandName}, we\'re always looking to improve. {topicResponse} {improvementCommitment} {callToAction}',
-    '{reviewerName}, we appreciate your honest review. {topicResponse} We\'d love to hear more about how {brandName} can better serve you. {callToAction}',
-    'Thanks for sharing your experience, {reviewerName}. {topicResponse} At {brandName}, we\'re committed to {seoKeyword1}. {callToAction}',
-  ],
-  NEGATIVE: [
-    '{reviewerName}, we\'re sorry to hear about your experience. At {brandName}, {topicResponse} We take your feedback seriously and would like to make things right. {resolutionOffer} {callToAction}',
-    'Thank you for bringing this to our attention, {reviewerName}. {topicResponse} This isn\'t the standard we hold ourselves to at {brandName}. {resolutionOffer}',
-    '{reviewerName}, we apologize for falling short of your expectations. {topicResponse} {resolutionOffer} {callToAction}',
-  ],
-  VERY_NEGATIVE: [
-    '{reviewerName}, we are deeply sorry for this experience. This is not representative of the {seoKeyword1} we strive to provide at {brandName}. {topicResponse} {escalationOffer}',
-    'We sincerely apologize, {reviewerName}. Your experience is unacceptable and we take full responsibility. {topicResponse} Our management team would like to speak with you directly. {escalationOffer}',
-    '{reviewerName}, thank you for your feedback, and we are truly sorry. {topicResponse} {escalationOffer}',
-  ],
-};
-
-// ============================================================================
-// REVIEW REQUEST CAMPAIGN TEMPLATES
-// ============================================================================
-
-const CAMPAIGN_EMAIL_TEMPLATES = {
-  postPurchase: {
-    subject: 'How was your experience with {brandName}?',
-    body: `Hi {customerName},
-
-Thank you for choosing {brandName}! We hope you're enjoying {productOrService}.
-
-Your feedback helps us improve and helps others discover {brandName}. Would you take a moment to share your experience?
-
-{reviewLink}
-
-It only takes a minute, and we truly appreciate it!
-
-{seoKeywordSentence}
-
-Best regards,
-{ownerName}
-{brandName}`,
-  },
-  followUp: {
-    subject: 'We\'d love to hear from you, {customerName}',
-    body: `Hi {customerName},
-
-A few days ago, you visited {brandName}. We hope everything went well!
-
-If you have a moment, we'd really appreciate hearing about your experience. Your review helps us continue providing {seoKeyword1} to our community.
-
-{reviewLink}
-
-Thank you for being part of the {brandName} family!
-
-{ownerName}`,
-  },
-  loyalCustomer: {
-    subject: '{customerName}, your opinion matters to us!',
-    body: `Hi {customerName},
-
-As one of our valued customers, your feedback is incredibly important to us at {brandName}.
-
-We noticed you've been with us for a while, and we'd love to hear about your experiences. Your review helps others discover the {seoKeyword1} we work hard to provide.
-
-{reviewLink}
-
-As a thank you, {incentiveOffer}
-
-With gratitude,
-{ownerName}
-{brandName}`,
-  },
-};
-
-const CAMPAIGN_SMS_TEMPLATES = {
-  simple: '{brandName}: Thanks for your visit! We\'d love your feedback: {shortLink}',
-  friendly: 'Hi {customerName}! How was your experience at {brandName}? Share your thoughts: {shortLink}',
-  withIncentive: '{brandName}: Rate us & get {incentive}! {shortLink}',
-};
-
-// ============================================================================
-// SYSTEM PROMPT
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the Review Manager Specialist, an expert in reputation management and SEO-optimized review responses.
-
-## YOUR ROLE
-You analyze incoming reviews, perform sentiment analysis, and generate brand-consistent, SEO-optimized responses. You also create review request campaigns to build positive reputation.
-
-## PENTHOUSE AWARENESS
-All operations use the default organization (PLATFORM_ID):
-- Brand name and voice must match the organization
-- SEO keywords are organization-specific
-- Response tone matches the organization's brand personality
-- All data queries use PLATFORM_ID
-
-## SENTIMENT ANALYSIS
-- Analyze text for emotional indicators
-- Extract topics and specific feedback
-- Determine urgency level for response
-- Identify actionable insights
-
-## SEO OPTIMIZATION
-For every response, inject:
-- Primary business keyword (e.g., "{location} {service}")
-- Secondary keywords naturally
-- Local SEO terms when applicable
-- Never keyword stuff - maintain natural flow
-
-## RESPONSE GENERATION RULES
-1. ALWAYS personalize with reviewer name
-2. ALWAYS inject brand name naturally
-3. INJECT SEO keywords without being obvious
-4. MATCH tone to brand voice settings
-5. ADDRESS specific topics mentioned
-6. INCLUDE call-to-action when appropriate
-7. FOR negative reviews: offer resolution path
-
-## CAMPAIGN GENERATION
-- Target satisfied customers for review requests
-- Optimize timing (24-72 hours post-service)
-- A/B test subject lines and messaging
-- Track conversion rates by channel`;
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import type { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'trust/review-manager/specialist.ts';
+const SPECIALIST_ID = 'REV_MGR';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = ['analyze_reviews', 'generate_campaign', 'trend_report'] as const;
+
+/**
+ * Realistic max_tokens floor — `analyze_reviews` batch is the largest case.
+ *
+ *   perReviewAnalyses: 30 × (sentiment 200 + emotions 150 + topics 250 + rationale 400) = 30k
+ *   aggregate 2500
+ *   recommendations 6 × 400 = 2400
+ *   rationale 3000
+ *   ≈ 38,000 chars / 3 = 12,667 tokens + overhead + margin ≈ 16,000.
+ *
+ *   Floor: 18,000 tokens.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 18000;
+
+interface ReviewManagerGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'REV_MGR',
+    id: SPECIALIST_ID,
     name: 'Review Manager',
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'REPUTATION_MANAGER',
     capabilities: [
-      'sentiment_analysis',
-      'seo_response_generation',
-      'review_campaign_creation',
-      'brand_voice_consistency',
-      'reputation_management',
-      'trend_analysis',
+      'bulk_sentiment_analysis',
+      'review_campaign_generation',
+      'trend_reporting',
+      'brand_voice_alignment',
+      'topic_extraction',
     ],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: [
-    'analyze_sentiment',
-    'generate_response',
-    'create_campaign',
-    'inject_seo_keywords',
-    'match_brand_voice',
-    'track_reputation',
-  ],
+  systemPrompt: '',
+  tools: ['analyze_reviews', 'generate_campaign', 'trend_report'],
   outputSchema: {
     type: 'object',
-    properties: {
-      result: { type: 'object' },
-      metadata: { type: 'object' },
-    },
-    required: ['result'],
+    properties: { action: { type: 'string' }, data: { type: 'object' } },
   },
-  maxTokens: 4096,
-  temperature: 0.6,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  temperature: 0.3,
 };
 
 // ============================================================================
-// IMPLEMENTATION
+// INPUT CONTRACT
+// ============================================================================
+
+const PlatformEnum = z.enum([
+  'google',
+  'yelp',
+  'facebook',
+  'trustpilot',
+  'g2',
+  'capterra',
+  'tripadvisor',
+  'bbb',
+]);
+
+const IncomingReviewSchema = z.object({
+  id: z.string().min(1).max(300),
+  platform: PlatformEnum,
+  rating: z.number().int().min(1).max(5),
+  text: z.string().min(1).max(5000),
+  reviewerName: z.string().min(1).max(200),
+  reviewDate: z.union([z.string(), z.date()]),
+  verified: z.boolean().optional(),
+  photos: z.array(z.string()).max(20).optional(),
+  helpfulVotes: z.number().int().min(0).max(10000).optional(),
+});
+
+const BusinessContextSchema = z.object({
+  brandName: z.string().min(1).max(300),
+  industry: z.string().min(1).max(200),
+  keywords: z.array(z.string().min(1).max(100)).max(30).optional(),
+  brandVoice: z.object({
+    tone: z.enum(['professional', 'friendly', 'casual', 'luxury', 'technical']),
+    personality: z.array(z.string().min(1).max(100)).max(10).optional(),
+    avoidWords: z.array(z.string().min(1).max(100)).max(20).optional(),
+    preferredPhrases: z.array(z.string().min(1).max(200)).max(20).optional(),
+    signatureStyle: z.string().max(500).optional(),
+  }).optional(),
+  seoKeywords: z.array(z.string().min(1).max(100)).max(30).optional(),
+  competitorNames: z.array(z.string().min(1).max(200)).max(10).optional(),
+});
+
+const AnalyzeReviewsPayloadSchema = z.object({
+  action: z.literal('analyze_reviews'),
+  businessContext: BusinessContextSchema,
+  reviews: z.array(IncomingReviewSchema).min(1).max(30),
+});
+
+const GenerateCampaignPayloadSchema = z.object({
+  action: z.literal('generate_campaign'),
+  businessContext: BusinessContextSchema,
+  campaignConfig: z.object({
+    targetAudience: z.string().min(3).max(500),
+    goal: z.enum(['volume', 'quality', 'recency', 'competitor_defense', 'new_location']),
+    channels: z.array(z.enum(['email', 'sms', 'qr_code', 'receipt', 'post_purchase', 'review_widget'])).min(1).max(6),
+    incentive: z.string().max(500).optional(),
+    durationDays: z.number().int().min(1).max(90).optional().default(30),
+  }),
+});
+
+const TrendReportPayloadSchema = z.object({
+  action: z.literal('trend_report'),
+  businessContext: BusinessContextSchema,
+  reviewsByPeriod: z.array(z.object({
+    periodLabel: z.string().min(1).max(100),
+    reviewCount: z.number().int().min(0),
+    averageRating: z.number().min(0).max(5),
+    sentimentScore: z.number().min(-1).max(1).optional(),
+    topThemes: z.array(z.string().min(1).max(200)).max(10).optional(),
+  })).min(2).max(12),
+});
+
+const ReviewManagerPayloadSchema = z.discriminatedUnion('action', [
+  AnalyzeReviewsPayloadSchema,
+  GenerateCampaignPayloadSchema,
+  TrendReportPayloadSchema,
+]);
+
+export type ReviewManagerPayload = z.infer<typeof ReviewManagerPayloadSchema>;
+export type BusinessContext = z.infer<typeof BusinessContextSchema>;
+export type IncomingReview = z.infer<typeof IncomingReviewSchema>;
+export type ReviewManagerRequest = ReviewManagerPayload;
+
+// ============================================================================
+// OUTPUT CONTRACT
+// ============================================================================
+
+const SentimentLevelEnum = z.enum(['VERY_NEGATIVE', 'NEGATIVE', 'NEUTRAL', 'POSITIVE', 'VERY_POSITIVE']);
+const UrgencyEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
+
+const PerReviewAnalysisSchema = z.object({
+  reviewId: z.string().min(1).max(300),
+  sentiment: z.object({
+    level: SentimentLevelEnum,
+    score: z.number().min(-1).max(1),
+    confidence: z.number().min(0).max(1),
+  }),
+  urgency: UrgencyEnum,
+  dominantEmotion: z.enum([
+    'frustration',
+    'anger',
+    'disappointment',
+    'satisfaction',
+    'delight',
+    'gratitude',
+    'trust',
+    'concern',
+    'neutral',
+  ]),
+  topics: z.array(z.object({
+    topic: z.string().min(2).max(100),
+    sentiment: SentimentLevelEnum,
+    excerpt: z.string().min(5).max(400),
+  })).min(1).max(6),
+  rationale: z.string().min(20).max(600),
+});
+
+const AnalyzeReviewsResultSchema = z.object({
+  action: z.literal('analyze_reviews'),
+  perReviewAnalyses: z.array(PerReviewAnalysisSchema).min(1).max(30),
+  aggregate: z.object({
+    averageSentimentScore: z.number().min(-1).max(1),
+    sentimentDistribution: z.object({
+      VERY_NEGATIVE: z.number().int().min(0),
+      NEGATIVE: z.number().int().min(0),
+      NEUTRAL: z.number().int().min(0),
+      POSITIVE: z.number().int().min(0),
+      VERY_POSITIVE: z.number().int().min(0),
+    }),
+    topTopics: z.array(z.object({
+      topic: z.string().min(2).max(100),
+      mentions: z.number().int().min(1),
+      averageSentiment: z.number().min(-1).max(1),
+    })).max(8),
+    criticalReviewsCount: z.number().int().min(0),
+  }),
+  recommendations: z.array(z.string().min(15).max(400)).min(2).max(6),
+  rationale: z.string().min(100).max(3000),
+});
+
+const CampaignStepSchema = z.object({
+  day: z.number().int().min(0).max(90),
+  channel: z.enum(['email', 'sms', 'qr_code', 'receipt', 'post_purchase', 'review_widget']),
+  messageTitle: z.string().min(3).max(200),
+  messageBody: z.string().min(20).max(1500),
+  callToAction: z.string().min(3).max(200),
+  rationale: z.string().min(10).max(400),
+});
+
+const GenerateCampaignResultSchema = z.object({
+  action: z.literal('generate_campaign'),
+  campaignName: z.string().min(5).max(200),
+  targetCount: z.object({
+    low: z.number().int().min(1),
+    mid: z.number().int().min(1),
+    high: z.number().int().min(1),
+  }),
+  expectedResponseRate: z.object({
+    min: z.number().min(0).max(1),
+    max: z.number().min(0).max(1),
+  }),
+  steps: z.array(CampaignStepSchema).min(2).max(6),
+  successMetrics: z.array(z.string().min(10).max(300)).min(2).max(5),
+  riskFactors: z.array(z.string().min(10).max(300)).max(5),
+  rationale: z.string().min(100).max(3000),
+});
+
+const TrendReportResultSchema = z.object({
+  action: z.literal('trend_report'),
+  trendDirection: z.enum(['improving', 'declining', 'stable', 'volatile']),
+  periodOverPeriod: z.array(z.object({
+    periodLabel: z.string().min(1).max(100),
+    averageRatingDelta: z.number().min(-5).max(5),
+    sentimentDelta: z.number().min(-2).max(2),
+    keyShifts: z.array(z.string().min(5).max(300)).max(3),
+  })),
+  emergingThemes: z.array(z.string().min(5).max(300)).max(5),
+  regressingThemes: z.array(z.string().min(5).max(300)).max(5),
+  executiveSummary: z.string().min(100).max(2500),
+  actionItems: z.array(z.string().min(15).max(400)).min(2).max(6),
+  rationale: z.string().min(100).max(3000),
+});
+
+const ReviewManagerResultSchema = z.discriminatedUnion('action', [
+  AnalyzeReviewsResultSchema,
+  GenerateCampaignResultSchema,
+  TrendReportResultSchema,
+]);
+
+export type ReviewManagerResult = z.infer<typeof ReviewManagerResultSchema>;
+export type AnalyzeReviewsResult = z.infer<typeof AnalyzeReviewsResultSchema>;
+export type GenerateCampaignResult = z.infer<typeof GenerateCampaignResultSchema>;
+export type TrendReportResult = z.infer<typeof TrendReportResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: ReviewManagerGMConfig;
+  resolvedSystemPrompt: string;
+}
+
+async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+  if (!gmRecord) {
+    throw new Error(
+      `Review Manager GM not found for industryKey=${industryKey}. ` +
+      `Run node scripts/seed-review-manager-gm.js to seed.`,
+    );
+  }
+
+  const config = gmRecord.config as Partial<ReviewManagerGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(`Review Manager GM ${gmRecord.id} has no usable systemPrompt`);
+  }
+
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
+  return {
+    gm: {
+      systemPrompt,
+      model: config.model ?? 'claude-sonnet-4.6',
+      temperature: config.temperature ?? 0.3,
+      maxTokens: effectiveMaxTokens,
+      supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
+    },
+    resolvedSystemPrompt: systemPrompt,
+  };
+}
+
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
+}
+
+async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
+
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Review Manager: LLM response truncated at maxTokens=${ctx.gm.maxTokens} (finish_reason='length')`,
+    );
+  }
+
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
+}
+
+// ============================================================================
+// PROMPT BUILDERS
+// ============================================================================
+
+function formatBusinessContext(ctx: BusinessContext): string {
+  const lines = [
+    `Brand: ${ctx.brandName}`,
+    `Industry: ${ctx.industry}`,
+  ];
+  if (ctx.keywords && ctx.keywords.length > 0) {
+    lines.push(`Brand keywords: ${ctx.keywords.join(', ')}`);
+  }
+  if (ctx.seoKeywords && ctx.seoKeywords.length > 0) {
+    lines.push(`SEO keywords: ${ctx.seoKeywords.join(', ')}`);
+  }
+  if (ctx.brandVoice) {
+    lines.push(`Brand voice: ${ctx.brandVoice.tone}${ctx.brandVoice.personality ? ` (${ctx.brandVoice.personality.join(', ')})` : ''}`);
+    if (ctx.brandVoice.avoidWords && ctx.brandVoice.avoidWords.length > 0) {
+      lines.push(`Avoid words: ${ctx.brandVoice.avoidWords.join(', ')}`);
+    }
+  }
+  if (ctx.competitorNames && ctx.competitorNames.length > 0) {
+    lines.push(`Competitors: ${ctx.competitorNames.join(', ')}`);
+  }
+  return lines.join('\n');
+}
+
+function buildAnalyzeReviewsPrompt(req: z.infer<typeof AnalyzeReviewsPayloadSchema>): string {
+  return [
+    'ACTION: analyze_reviews',
+    '',
+    '## Business context',
+    formatBusinessContext(req.businessContext),
+    '',
+    `## ${req.reviews.length} reviews to analyze`,
+    req.reviews
+      .map((r) => `[${r.id}] ${r.platform} ${r.rating}★ by ${r.reviewerName}: "${r.text.slice(0, 600)}"`)
+      .join('\n'),
+    '',
+    '---',
+    '',
+    'Analyze sentiment, emotions, topics across all reviews. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "action": "analyze_reviews",',
+    '  "perReviewAnalyses": [',
+    '    { "reviewId", "sentiment": { "level": "<VERY_NEGATIVE|NEGATIVE|NEUTRAL|POSITIVE|VERY_POSITIVE>", "score": <-1 to 1>, "confidence": <0-1> }, "urgency": "<LOW|MEDIUM|HIGH|CRITICAL>", "dominantEmotion": "<frustration|anger|disappointment|satisfaction|delight|gratitude|trust|concern|neutral>", "topics": [{ "topic", "sentiment", "excerpt" }], "rationale" }',
+    '  ],',
+    '  "aggregate": { "averageSentimentScore", "sentimentDistribution": { "VERY_NEGATIVE", "NEGATIVE", "NEUTRAL", "POSITIVE", "VERY_POSITIVE" }, "topTopics": [{ "topic", "mentions", "averageSentiment" }], "criticalReviewsCount" },',
+    '  "recommendations": ["<2-6 specific actions the business should take based on this batch>"],',
+    '  "rationale": "<100-3000 chars synthesizing the batch>"',
+    '}',
+    '',
+    `Hard rules: perReviewAnalyses MUST have exactly ${req.reviews.length} entries. Every reviewId MUST appear. sentimentDistribution sum MUST equal ${req.reviews.length}.`,
+  ].join('\n');
+}
+
+function buildGenerateCampaignPrompt(req: z.infer<typeof GenerateCampaignPayloadSchema>): string {
+  return [
+    'ACTION: generate_campaign',
+    '',
+    '## Business context',
+    formatBusinessContext(req.businessContext),
+    '',
+    '## Campaign config',
+    `Target audience: ${req.campaignConfig.targetAudience}`,
+    `Goal: ${req.campaignConfig.goal}`,
+    `Channels: ${req.campaignConfig.channels.join(', ')}`,
+    req.campaignConfig.incentive ? `Incentive: ${req.campaignConfig.incentive}` : 'No incentive',
+    `Duration: ${req.campaignConfig.durationDays} days`,
+    '',
+    '---',
+    '',
+    'Design a review solicitation campaign. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "action": "generate_campaign",',
+    '  "campaignName": "<specific name>",',
+    '  "targetCount": { "low", "mid", "high" },',
+    '  "expectedResponseRate": { "min": <0-1>, "max": <0-1> },',
+    '  "steps": [2-6 { "day" (0-90), "channel": "<from channels list>", "messageTitle", "messageBody" (plain text, actual brand name — NO placeholders), "callToAction", "rationale" }],',
+    '  "successMetrics": ["<2-5 measurable KPIs>"],',
+    '  "riskFactors": ["<0-5 risks — TOS violations, response fatigue, wrong timing>"],',
+    '  "rationale": "<100-3000 chars>"',
+    '}',
+    '',
+    'Hard rules: Plain text in messageBody, no markdown. Step channels MUST be from the input channels list. Use actual brand name. Respect platform TOS — never offer incentives explicitly tied to positive reviews (use "for your honest feedback" framing).',
+  ].join('\n');
+}
+
+function buildTrendReportPrompt(req: z.infer<typeof TrendReportPayloadSchema>): string {
+  return [
+    'ACTION: trend_report',
+    '',
+    '## Business context',
+    formatBusinessContext(req.businessContext),
+    '',
+    '## Historical period data',
+    req.reviewsByPeriod
+      .map((p) => `  - ${p.periodLabel}: ${p.reviewCount} reviews, avg rating ${p.averageRating}, sentiment ${p.sentimentScore ?? 'n/a'}, themes: ${p.topThemes?.join(', ') ?? 'n/a'}`)
+      .join('\n'),
+    '',
+    '---',
+    '',
+    'Analyze reputation trends across periods. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "action": "trend_report",',
+    '  "trendDirection": "<improving|declining|stable|volatile>",',
+    '  "periodOverPeriod": [{ "periodLabel", "averageRatingDelta", "sentimentDelta", "keyShifts": [] }],',
+    '  "emergingThemes": ["<0-5 themes growing in frequency or intensity>"],',
+    '  "regressingThemes": ["<0-5 themes fading>"],',
+    '  "executiveSummary": "<100-2500 chars, C-suite audience>",',
+    '  "actionItems": ["<2-6 specific actions>"],',
+    '  "rationale": "<100-3000 chars>"',
+    '}',
+  ].join('\n');
+}
+
+function buildUserPrompt(payload: ReviewManagerPayload): string {
+  switch (payload.action) {
+    case 'analyze_reviews': return buildAnalyzeReviewsPrompt(payload);
+    case 'generate_campaign': return buildGenerateCampaignPrompt(payload);
+    case 'trend_report': return buildTrendReportPrompt(payload);
+  }
+}
+
+async function executeReviewManagerAction(
+  payload: ReviewManagerPayload,
+  ctx: LlmCallContext,
+): Promise<ReviewManagerResult> {
+  const userPrompt = buildUserPrompt(payload);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Review Manager output was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = ReviewManagerResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Review Manager output did not match expected schema: ${issueSummary}`);
+  }
+
+  const data = result.data;
+
+  // Enforce analyze_reviews batch-count invariant
+  if (payload.action === 'analyze_reviews' && data.action === 'analyze_reviews') {
+    if (data.perReviewAnalyses.length !== payload.reviews.length) {
+      throw new Error(
+        `Review Manager: perReviewAnalyses has ${data.perReviewAnalyses.length} entries but expected ${payload.reviews.length}`,
+      );
+    }
+    const distSum =
+      data.aggregate.sentimentDistribution.VERY_NEGATIVE +
+      data.aggregate.sentimentDistribution.NEGATIVE +
+      data.aggregate.sentimentDistribution.NEUTRAL +
+      data.aggregate.sentimentDistribution.POSITIVE +
+      data.aggregate.sentimentDistribution.VERY_POSITIVE;
+    if (distSum !== payload.reviews.length) {
+      throw new Error(
+        `Review Manager: aggregate.sentimentDistribution sums to ${distSum} but expected ${payload.reviews.length}`,
+      );
+    }
+  }
+
+  return data;
+}
+
+// ============================================================================
+// REVIEW MANAGER CLASS
 // ============================================================================
 
 export class ReviewManagerSpecialist extends BaseSpecialist {
-  private responseCache: Map<string, OptimizedResponse>;
-  private brandVoiceCache: Map<string, BrandVoice>;
-
   constructor() {
     super(CONFIG);
-    this.responseCache = new Map();
-    this.brandVoiceCache = new Map();
   }
 
   async initialize(): Promise<void> {
-    await Promise.resolve(); // Async boundary for interface compliance
-    this.log('INFO', 'Initializing Review Manager Specialist');
-    this.log('INFO', `Loaded ${Object.keys(SENTIMENT_LEXICON).length} sentiment categories`);
-    this.log('INFO', `Loaded ${Object.keys(TOPIC_PATTERNS).length} topic patterns`);
-    this.log('INFO', `Loaded ${Object.keys(CAMPAIGN_EMAIL_TEMPLATES).length} campaign templates`);
+    await Promise.resolve();
     this.isInitialized = true;
+    this.log('INFO', 'Review Manager initialized (LLM-backed, Golden Master loaded at runtime)');
   }
 
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
-      const request = message.payload as ReviewManagerRequest;
-
-      if (!request?.businessContext) {
-        return this.createReport(taskId, 'FAILED', null, ['Missing business context']);
+      const rawPayload = message.payload as Record<string, unknown> | null;
+      if (rawPayload === null || typeof rawPayload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['Review Manager: payload must be an object']);
       }
 
-      this.log('INFO', `Processing ${request.action} for organization: ${PLATFORM_ID}`);
+      const normalized = this.normalizePayload(rawPayload);
 
-      let result: unknown;
-
-      switch (request.action) {
-        case 'ANALYZE':
-          if (request.payload.type === 'single_review') {
-            result = await this.analyzeAndRespond(request.payload.review, request.businessContext);
-          }
-          break;
-        case 'RESPOND':
-          if (request.payload.type === 'single_review') {
-            result = await this.generateOptimizedResponse(request.payload.review, request.businessContext);
-          }
-          break;
-        case 'CAMPAIGN':
-          if (request.payload.type === 'campaign_request') {
-            result = await this.createReviewCampaign(request.payload.campaignConfig, request.businessContext);
-          }
-          break;
-        case 'BULK_ANALYZE':
-          if (request.payload.type === 'bulk_reviews') {
-            result = await this.bulkAnalyze(request.payload.reviews, request.businessContext);
-          }
-          break;
-        case 'TREND_REPORT':
-          if (request.payload.type === 'trend_request') {
-            result = await this.generateTrendReport(request.payload.dateRange, request.businessContext);
-          }
-          break;
-        default:
-          return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${request.action}`]);
+      const inputValidation = ReviewManagerPayloadSchema.safeParse(normalized);
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Review Manager: invalid input payload: ${issueSummary}`,
+        ]);
       }
+
+      const payload = inputValidation.data;
+      logger.info(
+        `[ReviewManager] Executing action=${payload.action} taskId=${taskId}`,
+        { file: FILE },
+      );
+
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+      const result = await executeReviewManagerAction(payload, ctx);
 
       return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Review Manager failed: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[ReviewManager] Execution failed',
+        error instanceof Error ? error : new Error(errorMessage),
+        { file: FILE },
+      );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
-  async handleSignal(signal: Signal): Promise<AgentReport> {
-    if (signal.payload.type === 'COMMAND') {
-      return this.execute(signal.payload);
+  /**
+   * Accept legacy pre-rebuild payload shape:
+   *   { action: 'ANALYZE'|'RESPOND'|'CAMPAIGN'|'BULK_ANALYZE'|'TREND_REPORT', businessContext, payload }
+   * Map to new discriminatedUnion actions.
+   */
+  private normalizePayload(raw: Record<string, unknown>): Record<string, unknown> {
+    const legacyMap: Record<string, 'analyze_reviews' | 'generate_campaign' | 'trend_report'> = {
+      'ANALYZE': 'analyze_reviews',
+      'BULK_ANALYZE': 'analyze_reviews',
+      'RESPOND': 'analyze_reviews', // Response generation moved to REVIEW_SPECIALIST (Task #51)
+      'CAMPAIGN': 'generate_campaign',
+      'TREND_REPORT': 'trend_report',
+      'analyze_reviews': 'analyze_reviews',
+      'generate_campaign': 'generate_campaign',
+      'trend_report': 'trend_report',
+    };
+
+    const rawAction = typeof raw.action === 'string' ? raw.action : 'analyze_reviews';
+    const mappedAction = legacyMap[rawAction] ?? 'analyze_reviews';
+
+    // Legacy payload-within-payload shape
+    const nestedPayload = (raw.payload !== null && typeof raw.payload === 'object') ? raw.payload as Record<string, unknown> : {};
+    const businessContext = raw.businessContext ?? raw.business_context;
+
+    if (mappedAction === 'analyze_reviews') {
+      const reviews = nestedPayload.reviews ?? (nestedPayload.review ? [nestedPayload.review] : raw.reviews);
+      return { action: 'analyze_reviews', businessContext, reviews };
     }
-    return this.createReport(signal.id, 'COMPLETED', { acknowledged: true });
+    if (mappedAction === 'generate_campaign') {
+      return {
+        action: 'generate_campaign',
+        businessContext,
+        campaignConfig: nestedPayload.campaignConfig ?? raw.campaignConfig,
+      };
+    }
+    return {
+      action: 'trend_report',
+      businessContext,
+      reviewsByPeriod: nestedPayload.reviewsByPeriod ?? raw.reviewsByPeriod,
+    };
+  }
+
+  async handleSignal(signal: Signal): Promise<AgentReport> {
+    const message: AgentMessage = {
+      id: signal.id,
+      timestamp: signal.createdAt,
+      from: signal.origin,
+      to: this.identity.id,
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      payload: signal.payload.payload,
+      requiresResponse: true,
+      traceId: signal.id,
+    };
+    return this.execute(message);
   }
 
   generateReport(taskId: string, data: unknown): AgentReport {
@@ -509,864 +654,17 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
   }
 
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 750, boilerplate: 80 };
-  }
-
-  // ==========================================================================
-  // CORE SENTIMENT ANALYSIS
-  // ==========================================================================
-
-  analyzeSentiment(text: string): SentimentAnalysisResult {
-    const words = text.toLowerCase().split(/\s+/);
-    let sentimentScore = 0;
-    let wordCount = 0;
-
-    const positiveKeywords: string[] = [];
-    const negativeKeywords: string[] = [];
-    const neutralKeywords: string[] = [];
-
-    // Calculate sentiment score
-    words.forEach((word) => {
-      const cleanWord = word.replace(/[^a-z]/g, '');
-
-      for (const [_category, data] of Object.entries(SENTIMENT_LEXICON)) {
-        if (data.words.includes(cleanWord)) {
-          sentimentScore += data.weight;
-          wordCount++;
-
-          if (data.weight > 0) {
-            positiveKeywords.push(cleanWord);
-          } else if (data.weight < 0) {
-            negativeKeywords.push(cleanWord);
-          } else {
-            neutralKeywords.push(cleanWord);
-          }
-        }
-      }
-    });
-
-    // Normalize score
-    const normalizedScore = wordCount > 0 ? sentimentScore / wordCount : 0;
-
-    // Determine sentiment level
-    const level = this.scoreToLevel(normalizedScore);
-
-    // Detect emotions
-    const emotions = this.detectEmotions(text);
-
-    // Extract topics
-    const topics = this.extractTopics(text);
-
-    // Calculate urgency
-    const urgency = this.calculateUrgency(level, emotions, text);
-
-    // Generate insights
-    const actionableInsights = this.generateInsights(level, topics, emotions);
-
-    // Calculate confidence
-    const confidence = Math.min(wordCount / 5, 1);
-
-    return {
-      level,
-      score: normalizedScore,
-      confidence,
-      emotions,
-      topics,
-      urgency,
-      keywords: {
-        positive: [...new Set(positiveKeywords)],
-        negative: [...new Set(negativeKeywords)],
-        neutral: [...new Set(neutralKeywords)],
-      },
-      actionableInsights,
-    };
-  }
-
-  private scoreToLevel(score: number): SentimentLevel {
-    if (score >= 1.5) {return 'VERY_POSITIVE';}
-    if (score >= 0.5) {return 'POSITIVE';}
-    if (score >= -0.5) {return 'NEUTRAL';}
-    if (score >= -1.5) {return 'NEGATIVE';}
-    return 'VERY_NEGATIVE';
-  }
-
-  private detectEmotions(text: string): EmotionDetection[] {
-    const emotions: EmotionDetection[] = [];
-    const lowerText = text.toLowerCase();
-
-    for (const [emotion, patterns] of Object.entries(EMOTION_PATTERNS)) {
-      const triggers: string[] = [];
-      let intensity = 0;
-
-      patterns.forEach((pattern) => {
-        if (lowerText.includes(pattern)) {
-          triggers.push(pattern);
-          intensity += 1;
-        }
-      });
-
-      if (triggers.length > 0) {
-        emotions.push({
-          emotion,
-          intensity: Math.min(intensity / patterns.length, 1),
-          triggers,
-        });
-      }
-    }
-
-    return emotions.sort((a, b) => b.intensity - a.intensity);
-  }
-
-  private extractTopics(text: string): TopicExtraction[] {
-    const topics: TopicExtraction[] = [];
-    const lowerText = text.toLowerCase();
-
-    for (const [topic, keywords] of Object.entries(TOPIC_PATTERNS)) {
-      const foundKeywords: string[] = [];
-
-      keywords.forEach((keyword) => {
-        if (lowerText.includes(keyword)) {
-          foundKeywords.push(keyword);
-        }
-      });
-
-      if (foundKeywords.length > 0) {
-        // Determine topic sentiment
-        const topicSentiment = this.getTopicSentiment(text, foundKeywords);
-
-        topics.push({
-          topic,
-          sentiment: topicSentiment,
-          mentions: foundKeywords.length,
-          keywords: foundKeywords,
-        });
-      }
-    }
-
-    return topics.sort((a, b) => b.mentions - a.mentions);
-  }
-
-  private getTopicSentiment(text: string, keywords: string[]): 'positive' | 'negative' | 'neutral' {
-    // Check context around keywords
-    const lowerText = text.toLowerCase();
-    let positiveContext = 0;
-    let negativeContext = 0;
-
-    keywords.forEach((keyword) => {
-      const index = lowerText.indexOf(keyword);
-      if (index !== -1) {
-        const context = lowerText.substring(Math.max(0, index - 30), index + keyword.length + 30);
-
-        SENTIMENT_LEXICON.veryPositive.words.concat(SENTIMENT_LEXICON.positive.words).forEach((word) => {
-          if (context.includes(word)) {positiveContext++;}
-        });
-
-        SENTIMENT_LEXICON.veryNegative.words.concat(SENTIMENT_LEXICON.negative.words).forEach((word) => {
-          if (context.includes(word)) {negativeContext++;}
-        });
-      }
-    });
-
-    if (positiveContext > negativeContext) {return 'positive';}
-    if (negativeContext > positiveContext) {return 'negative';}
-    return 'neutral';
-  }
-
-  private calculateUrgency(
-    level: SentimentLevel,
-    emotions: EmotionDetection[],
-    text: string
-  ): SentimentAnalysisResult['urgency'] {
-    // Very negative = critical
-    if (level === 'VERY_NEGATIVE') {return 'CRITICAL';}
-
-    // Check for urgency indicators
-    const urgencyIndicators = ['immediately', 'urgent', 'asap', 'right now', 'never again', 'report', 'legal'];
-    const hasUrgencyIndicator = urgencyIndicators.some((ind) => text.toLowerCase().includes(ind));
-
-    if (hasUrgencyIndicator) {return 'CRITICAL';}
-
-    // Check emotions
-    const hasAnger = emotions.some((e) => e.emotion === 'anger' && e.intensity > 0.5);
-    if (hasAnger) {return 'HIGH';}
-
-    if (level === 'NEGATIVE') {return 'MEDIUM';}
-
-    return 'LOW';
-  }
-
-  private generateInsights(
-    level: SentimentLevel,
-    topics: TopicExtraction[],
-    emotions: EmotionDetection[]
-  ): string[] {
-    const insights: string[] = [];
-
-    // Level-based insights
-    if (level === 'VERY_POSITIVE' || level === 'POSITIVE') {
-      insights.push('Consider requesting a referral or testimonial from this satisfied customer');
-      if (topics.some((t) => t.topic === 'service_quality' && t.sentiment === 'positive')) {
-        insights.push('Service quality highlighted - share with team for recognition');
-      }
-    }
-
-    if (level === 'NEGATIVE' || level === 'VERY_NEGATIVE') {
-      insights.push('Prioritize immediate response to prevent reputation damage');
-
-      const negativeTopics = topics.filter((t) => t.sentiment === 'negative');
-      negativeTopics.forEach((topic) => {
-        insights.push(`Address ${topic.topic.replace('_', ' ')} concerns specifically`);
-      });
-
-      if (emotions.some((e) => e.emotion === 'frustration')) {
-        insights.push('Show empathy for customer frustration in response');
-      }
-    }
-
-    // Topic-based insights
-    if (topics.some((t) => t.topic === 'wait_time')) {
-      insights.push('Review operational efficiency for wait time concerns');
-    }
-
-    if (topics.some((t) => t.topic === 'pricing' && t.sentiment === 'negative')) {
-      insights.push('Consider communicating value proposition more clearly');
-    }
-
-    return insights.slice(0, 5);
-  }
-
-  // ==========================================================================
-  // SEO-OPTIMIZED RESPONSE GENERATION
-  // ==========================================================================
-
-  async generateOptimizedResponse(
-    review: IncomingReview,
-    businessContext: BusinessContext
-  ): Promise<OptimizedResponse> {
-    await Promise.resolve(); // Async boundary for interface compliance
-    // Analyze sentiment first
-    const sentiment = this.analyzeSentiment(review.text);
-
-    // Get appropriate template
-    const templates = SEO_RESPONSE_TEMPLATES[sentiment.level];
-    const template = templates[Math.floor(Math.random() * templates.length)];
-
-    // Generate topic response
-    const topicResponse = this.generateTopicResponse(sentiment.topics, businessContext);
-
-    // Build SEO keyword sentence
-    const seoKeywordSentence = this.buildSEOSentence(businessContext);
-
-    // Generate call to action
-    const callToAction = this.generateCallToAction(sentiment.level, businessContext);
-
-    // Build resolution/escalation offers for negative reviews
-    const resolutionOffer = sentiment.level === 'NEGATIVE'
-      ? `Please contact us at your convenience so we can make this right.`
-      : '';
-    const escalationOffer = sentiment.level === 'VERY_NEGATIVE'
-      ? `Please contact our management team directly at [contact] - we want to resolve this personally.`
-      : '';
-    const improvementCommitment = sentiment.level === 'NEUTRAL'
-      ? `We're committed to continuous improvement.`
-      : '';
-
-    // Inject all variables
-    let responseText = template
-      .replace(/{rating}/g, String(review.rating))
-      .replace(/{reviewerName}/g, review.reviewerName)
-      .replace(/{brandName}/g, businessContext.brandName)
-      .replace(/{topicResponse}/g, topicResponse)
-      .replace(/{seoKeywordSentence}/g, seoKeywordSentence)
-      .replace(/{seoKeyword1}/g, businessContext.seoKeywords[0] ?? 'excellent service')
-      .replace(/{seoKeyword2}/g, businessContext.seoKeywords[1] ?? 'customer satisfaction')
-      .replace(/{callToAction}/g, businessContext.responseSettings.includeCallToAction ? callToAction : '')
-      .replace(/{resolutionOffer}/g, resolutionOffer)
-      .replace(/{escalationOffer}/g, escalationOffer)
-      .replace(/{improvementCommitment}/g, improvementCommitment);
-
-    // Apply brand voice
-    responseText = this.applyBrandVoice(responseText, businessContext.brandVoice);
-
-    // Trim to max length
-    if (responseText.length > businessContext.responseSettings.maxResponseLength) {
-      responseText = `${responseText.substring(0, businessContext.responseSettings.maxResponseLength - 3)  }...`;
-    }
-
-    // Calculate SEO score
-    const seoScore = this.calculateSEOScore(responseText, businessContext);
-
-    // Calculate brand voice score
-    const brandVoiceScore = this.calculateBrandVoiceScore(responseText, businessContext.brandVoice);
-
-    // Determine if approval required
-    const requiresApproval = review.rating < businessContext.responseSettings.requireApprovalBelow;
-
-    return {
-      responseText,
-      seoScore,
-      keywordsInjected: this.getInjectedKeywords(responseText, businessContext),
-      brandVoiceScore,
-      personalizedElements: [review.reviewerName, businessContext.brandName, ...sentiment.topics.map((t) => t.topic)],
-      callToAction: businessContext.responseSettings.includeCallToAction ? callToAction : undefined,
-      metadata: {
-        generatedAt: new Date(),
-        reviewId: review.id,
-        platform: review.platform,
-        requiresApproval,
-        estimatedImpact: this.estimateResponseImpact(sentiment.level, review.verified),
-      },
-    };
-  }
-
-  private generateTopicResponse(topics: TopicExtraction[], businessContext: BusinessContext): string {
-    if (topics.length === 0) {return '';}
-
-    const topTopic = topics[0];
-    const responses: Record<string, Record<string, string>> = {
-      service_quality: {
-        positive: `Our team at ${businessContext.brandName} takes pride in delivering exceptional service.`,
-        negative: `We apologize that our service didn't meet your expectations.`,
-        neutral: `We're always working to improve our service standards.`,
-      },
-      product_quality: {
-        positive: `We're glad you noticed the quality we put into everything we do.`,
-        negative: `We're sorry the quality wasn't up to par - this isn't our standard.`,
-        neutral: `Quality is something we continuously strive to improve.`,
-      },
-      pricing: {
-        positive: `We work hard to provide great value for our customers.`,
-        negative: `We understand value is important and always aim to provide fair pricing.`,
-        neutral: `We're committed to transparent and competitive pricing.`,
-      },
-      wait_time: {
-        positive: `We're glad we could serve you efficiently!`,
-        negative: `We apologize for any delays you experienced.`,
-        neutral: `We're always looking to improve our response times.`,
-      },
-      professionalism: {
-        positive: `Professionalism is at the core of what we do at ${businessContext.brandName}.`,
-        negative: `This behavior doesn't reflect our values, and we're addressing it.`,
-        neutral: `We hold ourselves to high professional standards.`,
-      },
-    };
-
-    const topicResponses = responses[topTopic.topic];
-    if (topicResponses) {
-      return topicResponses[topTopic.sentiment] ?? '';
-    }
-
-    return '';
-  }
-
-  private buildSEOSentence(businessContext: BusinessContext): string {
-    const keywords = businessContext.seoKeywords;
-    if (keywords.length === 0) {return '';}
-
-    const templates = [
-      `At ${businessContext.brandName}, we're dedicated to providing ${keywords[0]}.`,
-      `Thank you for choosing ${businessContext.brandName} for your ${keywords[0]} needs.`,
-      `We're proud to offer ${keywords[0]} in ${businessContext.industry}.`,
-    ];
-
-    return templates[Math.floor(Math.random() * templates.length)];
-  }
-
-  private generateCallToAction(level: SentimentLevel, businessContext: BusinessContext): string {
-    if (level === 'VERY_POSITIVE' || level === 'POSITIVE') {
-      return `We'd love to serve you again at ${businessContext.brandName}!`;
-    }
-    if (level === 'NEUTRAL') {
-      return `Visit us again and experience the best of ${businessContext.brandName}.`;
-    }
-    return `We hope to have another opportunity to serve you better.`;
-  }
-
-  private applyBrandVoice(text: string, brandVoice: BrandVoice): string {
-    let result = text;
-
-    // Replace avoid words
-    brandVoice.avoidWords.forEach((word) => {
-      const regex = new RegExp(`\\b${word}\\b`, 'gi');
-      result = result.replace(regex, '');
-    });
-
-    // Apply tone adjustments
-    if (brandVoice.tone === 'luxury') {
-      result = result.replace(/great/gi, 'exceptional');
-      result = result.replace(/good/gi, 'outstanding');
-    } else if (brandVoice.tone === 'casual') {
-      result = result.replace(/We are/g, "We're");
-      result = result.replace(/you are/gi, "you're");
-    }
-
-    return result.trim().replace(/\s+/g, ' ');
-  }
-
-  private calculateSEOScore(text: string, businessContext: BusinessContext): number {
-    let score = 0;
-    const lowerText = text.toLowerCase();
-
-    // Brand name present
-    if (lowerText.includes(businessContext.brandName.toLowerCase())) {
-      score += 30;
-    }
-
-    // SEO keywords present
-    businessContext.seoKeywords.forEach((keyword, index) => {
-      if (lowerText.includes(keyword.toLowerCase())) {
-        score += 20 - index * 5; // First keyword worth more
-      }
-    });
-
-    // Natural language (not keyword stuffed)
-    const wordCount = text.split(/\s+/).length;
-    const keywordDensity = businessContext.seoKeywords.filter((k) => lowerText.includes(k.toLowerCase())).length / wordCount;
-
-    if (keywordDensity < 0.1) {
-      score += 20; // Good - not stuffed
-    } else if (keywordDensity < 0.15) {
-      score += 10;
-    }
-
-    // Length appropriate
-    if (wordCount >= 30 && wordCount <= 150) {
-      score += 20;
-    } else if (wordCount >= 20 && wordCount <= 200) {
-      score += 10;
-    }
-
-    return Math.min(score, 100);
-  }
-
-  private calculateBrandVoiceScore(text: string, brandVoice: BrandVoice): number {
-    let score = 70; // Base score
-
-    // Check for avoid words
-    const avoidWordsFound = brandVoice.avoidWords.filter((word) =>
-      text.toLowerCase().includes(word.toLowerCase())
-    ).length;
-    score -= avoidWordsFound * 10;
-
-    // Check for preferred phrases
-    const preferredFound = brandVoice.preferredPhrases.filter((phrase) =>
-      text.toLowerCase().includes(phrase.toLowerCase())
-    ).length;
-    score += preferredFound * 10;
-
-    return Math.max(0, Math.min(100, score));
-  }
-
-  private getInjectedKeywords(text: string, businessContext: BusinessContext): string[] {
-    const lowerText = text.toLowerCase();
-    return businessContext.seoKeywords.filter((keyword) =>
-      lowerText.includes(keyword.toLowerCase())
-    );
-  }
-
-  private estimateResponseImpact(
-    level: SentimentLevel,
-    verified: boolean
-  ): 'LOW' | 'MEDIUM' | 'HIGH' {
-    if (level === 'VERY_NEGATIVE' && verified) {return 'HIGH';}
-    if (level === 'NEGATIVE') {return 'MEDIUM';}
-    if (level === 'VERY_POSITIVE' && verified) {return 'HIGH';}
-    return 'LOW';
-  }
-
-  // ==========================================================================
-  // ANALYZE AND RESPOND (COMBINED)
-  // ==========================================================================
-
-  private async analyzeAndRespond(
-    review: IncomingReview,
-    businessContext: BusinessContext
-  ): Promise<{ sentiment: SentimentAnalysisResult; response: OptimizedResponse }> {
-    const sentiment = this.analyzeSentiment(review.text);
-    const response = await this.generateOptimizedResponse(review, businessContext);
-
-    return { sentiment, response };
-  }
-
-  // ==========================================================================
-  // BULK ANALYSIS
-  // ==========================================================================
-
-  private async bulkAnalyze(
-    reviews: IncomingReview[],
-    businessContext: BusinessContext
-  ): Promise<{
-    analyses: Array<{ reviewId: string; sentiment: SentimentAnalysisResult; response?: OptimizedResponse }>;
-    summary: BulkAnalysisSummary;
-  }> {
-    const analyses = await Promise.all(
-      reviews.map(async (review) => {
-        const sentiment = this.analyzeSentiment(review.text);
-        const response = businessContext.responseSettings.autoRespond && review.rating >= businessContext.responseSettings.minRatingForAutoResponse
-          ? await this.generateOptimizedResponse(review, businessContext)
-          : undefined;
-
-        return { reviewId: review.id, sentiment, response };
-      })
-    );
-
-    // Generate summary
-    const summary = this.generateBulkSummary(analyses);
-
-    return { analyses, summary };
-  }
-
-  private generateBulkSummary(
-    analyses: Array<{ reviewId: string; sentiment: SentimentAnalysisResult }>
-  ): BulkAnalysisSummary {
-    const total = analyses.length;
-    const sentimentCounts: Record<SentimentLevel, number> = {
-      VERY_POSITIVE: 0,
-      POSITIVE: 0,
-      NEUTRAL: 0,
-      NEGATIVE: 0,
-      VERY_NEGATIVE: 0,
-    };
-
-    const topicCounts: Record<string, { positive: number; negative: number; neutral: number }> = {};
-
-    analyses.forEach(({ sentiment }) => {
-      sentimentCounts[sentiment.level]++;
-
-      sentiment.topics.forEach((topic) => {
-        if (!topicCounts[topic.topic]) {
-          topicCounts[topic.topic] = { positive: 0, negative: 0, neutral: 0 };
-        }
-        topicCounts[topic.topic][topic.sentiment]++;
-      });
-    });
-
-    const avgScore = analyses.reduce((acc, a) => acc + a.sentiment.score, 0) / total;
-
-    return {
-      totalReviews: total,
-      sentimentDistribution: sentimentCounts,
-      averageSentimentScore: avgScore,
-      topTopics: Object.entries(topicCounts)
-        .sort((a, b) => {
-          const aTotal = a[1].positive + a[1].negative + a[1].neutral;
-          const bTotal = b[1].positive + b[1].negative + b[1].neutral;
-          return bTotal - aTotal;
-        })
-        .slice(0, 5)
-        .map(([topic, counts]) => ({ topic, ...counts })),
-      criticalReviews: analyses.filter((a) => a.sentiment.urgency === 'CRITICAL').map((a) => a.reviewId),
-      recommendations: this.generateBulkRecommendations(sentimentCounts, topicCounts),
-    };
-  }
-
-  private generateBulkRecommendations(
-    sentimentCounts: Record<SentimentLevel, number>,
-    topicCounts: Record<string, { positive: number; negative: number; neutral: number }>
-  ): string[] {
-    const recommendations: string[] = [];
-
-    // Sentiment-based recommendations
-    const negativeRatio = (sentimentCounts.NEGATIVE + sentimentCounts.VERY_NEGATIVE) /
-      Object.values(sentimentCounts).reduce((a, b) => a + b, 0);
-
-    if (negativeRatio > 0.3) {
-      recommendations.push('High negative review ratio - prioritize service quality improvements');
-    }
-
-    if (sentimentCounts.VERY_POSITIVE > sentimentCounts.POSITIVE) {
-      recommendations.push('Strong positive sentiment - consider launching a referral program');
-    }
-
-    // Topic-based recommendations
-    Object.entries(topicCounts).forEach(([topic, counts]) => {
-      if (counts.negative > counts.positive) {
-        recommendations.push(`Address recurring ${topic.replace('_', ' ')} concerns`);
-      }
-    });
-
-    return recommendations.slice(0, 5);
-  }
-
-  // ==========================================================================
-  // REVIEW REQUEST CAMPAIGN
-  // ==========================================================================
-
-  async createReviewCampaign(
-    config: Partial<ReviewRequestCampaign>,
-    businessContext: BusinessContext
-  ): Promise<ReviewRequestCampaign> {
-    await Promise.resolve(); // Async boundary for interface compliance
-    const campaignId = `campaign_${Date.now()}`;
-
-    // Build default audience
-    const audience: CampaignAudience = config.targetAudience ?? {
-      criteria: ['purchased_last_30_days', 'no_review_submitted'],
-      excludeCriteria: ['opted_out', 'previous_complaint'],
-      estimatedSize: 0, // Would be calculated from actual data
-      segmentName: 'Recent Satisfied Customers',
-    };
-
-    // Build channels
-    const channels: CampaignChannel[] = config.channels ?? [
-      { type: 'email', enabled: true, timing: '48_hours_post_service', frequency: 'once' },
-      { type: 'sms', enabled: false, timing: '24_hours_post_service', frequency: 'once' },
-    ];
-
-    // Build templates with business context personalization
-    const templates = this.buildCampaignTemplates(businessContext, channels);
-
-    // Build schedule
-    const schedule: CampaignSchedule = config.schedule ?? {
-      startDate: new Date(),
-      sendTimes: ['10:00', '14:00'],
-      timezone: 'America/New_York',
-      delayAfterService: 48,
-    };
-
-    // Initialize tracking
-    const tracking: CampaignTracking = {
-      openRate: 0,
-      clickRate: 0,
-      conversionRate: 0,
-      reviewsGenerated: 0,
-      averageRating: 0,
-    };
-
-    // Build SEO optimization
-    const seoOptimization: SEOOptimization = {
-      targetKeywords: businessContext.seoKeywords,
-      localSEOTerms: this.generateLocalSEOTerms(businessContext),
-      serviceKeywords: this.generateServiceKeywords(businessContext),
-      locationTerms: [],
-      naturalLanguageGoals: [
-        'Encourage authentic detailed reviews',
-        'Guide reviewers to mention specific services',
-        'Prompt location-specific mentions',
-      ],
-    };
-
-    return {
-      campaignId,
-      name: config.name ?? `Review Campaign - ${new Date().toLocaleDateString()}`,
-      targetAudience: audience,
-      channels,
-      templates,
-      schedule,
-      tracking,
-      seoOptimization,
-    };
-  }
-
-  private buildCampaignTemplates(
-    businessContext: BusinessContext,
-    channels: CampaignChannel[]
-  ): CampaignTemplate[] {
-    const templates: CampaignTemplate[] = [];
-
-    channels.forEach((channel) => {
-      if (!channel.enabled) {return;}
-
-      if (channel.type === 'email') {
-        const emailTemplate = CAMPAIGN_EMAIL_TEMPLATES.postPurchase;
-        templates.push({
-          channelType: 'email',
-          subject: emailTemplate.subject
-            .replace(/{brandName}/g, businessContext.brandName),
-          body: emailTemplate.body
-            .replace(/{brandName}/g, businessContext.brandName)
-            .replace(/{ownerName}/g, businessContext.responseSettings.ownerName ?? 'The Team')
-            .replace(/{seoKeywordSentence}/g, this.buildSEOSentence(businessContext))
-            .replace(/{seoKeyword1}/g, businessContext.seoKeywords[0] ?? 'excellent service'),
-          reviewLinks: this.buildReviewLinks(businessContext),
-          personalizations: ['customerName', 'productOrService', 'reviewLink'],
-        });
-      }
-
-      if (channel.type === 'sms') {
-        const smsTemplate = CAMPAIGN_SMS_TEMPLATES.friendly;
-        templates.push({
-          channelType: 'sms',
-          body: smsTemplate
-            .replace(/{brandName}/g, businessContext.brandName),
-          reviewLinks: this.buildReviewLinks(businessContext),
-          personalizations: ['customerName', 'shortLink'],
-        });
-      }
-    });
-
-    return templates;
-  }
-
-  private buildReviewLinks(_businessContext: BusinessContext): ReviewLinkConfig[] {
-    // In production, these would come from organization configuration
-    return [
-      { platform: 'google', url: `https://g.page/${PLATFORM_ID}/review`, priority: 1 },
-      { platform: 'facebook', url: `https://facebook.com/${PLATFORM_ID}/reviews`, priority: 2 },
-      { platform: 'yelp', url: `https://yelp.com/biz/${PLATFORM_ID}`, priority: 3 },
-    ];
-  }
-
-  private generateLocalSEOTerms(businessContext: BusinessContext): string[] {
-    return [
-      `${businessContext.brandName} reviews`,
-      `${businessContext.industry} near me`,
-      `best ${businessContext.industry}`,
-    ];
-  }
-
-  private generateServiceKeywords(businessContext: BusinessContext): string[] {
-    return businessContext.keywords.slice(0, 5);
-  }
-
-  // ==========================================================================
-  // TREND REPORT
-  // ==========================================================================
-
-  private async generateTrendReport(
-    dateRange: { start: Date; end: Date },
-    _businessContext: BusinessContext
-  ): Promise<TrendReport> {
-    interface ReviewDocument {
-      rating?: number;
-      reviewDate?: { toDate?: () => Date } | string | number;
-      createdAt?: { toDate?: () => Date } | string | number;
-      respondedAt?: { toDate?: () => Date } | string | number;
-      responseTime?: number;
-    }
-
-    const toReviewDate = (
-      value: { toDate?: () => Date } | string | number | undefined
-    ): Date | null => {
-      if (!value) { return null; }
-      if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
-        return value.toDate();
-      }
-      const d = new Date(value as string | number);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    if (!adminDal) {
-      return {
-        dateRange,
-        generatedAt: new Date(),
-        metrics: { totalReviews: 0, averageRating: 0, responseRate: 0, averageResponseTime: 0 },
-        sentimentTrend: [],
-        topTopics: [],
-        recommendations: ['No reviews found. Connect a review source in Settings.'],
-      };
-    }
-
-    let reviews: ReviewDocument[] = [];
-    try {
-      const colRef = adminDal.getPlatformCollection('reviews');
-      const snapshot = await colRef
-        .where('reviewDate', '>=', dateRange.start)
-        .where('reviewDate', '<=', dateRange.end)
-        .get();
-      reviews = snapshot.docs.map((doc) => doc.data() as ReviewDocument);
-    } catch {
-      // Collection may not exist yet — fall through to zero-metrics response
-    }
-
-    if (reviews.length === 0) {
-      return {
-        dateRange,
-        generatedAt: new Date(),
-        metrics: { totalReviews: 0, averageRating: 0, responseRate: 0, averageResponseTime: 0 },
-        sentimentTrend: [],
-        topTopics: [],
-        recommendations: ['No reviews found. Connect a review source in Settings.'],
-      };
-    }
-
-    const totalReviews = reviews.length;
-    const ratingSum = reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0);
-    const averageRating = totalReviews > 0 ? ratingSum / totalReviews : 0;
-
-    const respondedCount = reviews.filter((r) => r.respondedAt != null).length;
-    const responseRate = totalReviews > 0 ? (respondedCount / totalReviews) * 100 : 0;
-
-    const responseTimes = reviews
-      .filter((r) => r.responseTime != null)
-      .map((r) => r.responseTime as number);
-    const averageResponseTime =
-      responseTimes.length > 0
-        ? responseTimes.reduce((sum, t) => sum + t, 0) / responseTimes.length
-        : 0;
-
-    // Build daily sentiment trend from ratings (5-point scale mapped to -1..+1)
-    const dayMap = new Map<string, { scoreSum: number; count: number }>();
-    reviews.forEach((r) => {
-      const dateVal = r.reviewDate ?? r.createdAt;
-      const d = toReviewDate(dateVal);
-      if (!d) { return; }
-      const key = d.toISOString().split('T')[0];
-      const normalizedScore = ((r.rating ?? 3) - 3) / 2; // maps 1–5 → -1..+1
-      const existing = dayMap.get(key) ?? { scoreSum: 0, count: 0 };
-      dayMap.set(key, { scoreSum: existing.scoreSum + normalizedScore, count: existing.count + 1 });
-    });
-    const sentimentTrend = Array.from(dayMap.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, { scoreSum, count }]) => ({ date, score: count > 0 ? scoreSum / count : 0 }));
-
-    return {
-      dateRange,
-      generatedAt: new Date(),
-      metrics: {
-        totalReviews,
-        averageRating: Math.round(averageRating * 100) / 100,
-        responseRate: Math.round(responseRate * 100) / 100,
-        averageResponseTime: Math.round(averageResponseTime),
-      },
-      sentimentTrend,
-      topTopics: [],
-      recommendations:
-        responseRate < 90
-          ? ['Response rate is below 90%. Prioritize responding to unanswered reviews.']
-          : ['Continue monitoring sentiment trends', 'Maintain response rate above 90%'],
-    };
+    return { functional: 640, boilerplate: 90 };
   }
 }
 
 // ============================================================================
-// ADDITIONAL TYPES
-// ============================================================================
-
-interface BulkAnalysisSummary {
-  totalReviews: number;
-  sentimentDistribution: Record<SentimentLevel, number>;
-  averageSentimentScore: number;
-  topTopics: Array<{ topic: string; positive: number; negative: number; neutral: number }>;
-  criticalReviews: string[];
-  recommendations: string[];
-}
-
-interface TrendReport {
-  dateRange: { start: Date; end: Date };
-  generatedAt: Date;
-  metrics: {
-    totalReviews: number;
-    averageRating: number;
-    responseRate: number;
-    averageResponseTime: number;
-  };
-  sentimentTrend: Array<{ date: string; score: number }>;
-  topTopics: Array<{ topic: string; count: number; sentiment: string }>;
-  recommendations: string[];
-}
-
-// ============================================================================
-// FACTORY FUNCTION
+// FACTORY / SINGLETON
 // ============================================================================
 
 export function createReviewManagerSpecialist(): ReviewManagerSpecialist {
   return new ReviewManagerSpecialist();
 }
-
-// ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
 
 let instance: ReviewManagerSpecialist | null = null;
 
@@ -1376,25 +674,18 @@ export function getReviewManagerSpecialist(): ReviewManagerSpecialist {
 }
 
 // ============================================================================
-// EXPORTS
+// INTERNAL TEST HELPERS
 // ============================================================================
 
-export {
-  SENTIMENT_LEXICON,
-  EMOTION_PATTERNS,
-  TOPIC_PATTERNS,
-  SEO_RESPONSE_TEMPLATES,
-  CAMPAIGN_EMAIL_TEMPLATES,
-  CAMPAIGN_SMS_TEMPLATES,
-};
-
-export type {
-  BusinessContext,
-  BrandVoice,
-  IncomingReview,
-  SentimentAnalysisResult,
-  OptimizedResponse,
-  ReviewRequestCampaign,
-  ReviewManagerRequest,
-  SentimentLevel,
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  loadGMConfig,
+  stripJsonFences,
+  buildUserPrompt,
+  executeReviewManagerAction,
+  ReviewManagerPayloadSchema,
+  ReviewManagerResultSchema,
 };
