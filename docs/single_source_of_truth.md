@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** April 11, 2026 (Task #25 — Calendar Coordinator rebuilt as real LLM specialist on Sonnet 4.6 with dual date mode input; ContentManager shape-mismatch bug fixed; regression harness gains tolerance-aware non-determinism check)
+**Last Updated:** April 14, 2026 (Tasks #61-#66 — Architect-layer specialists renamed to `*_STRATEGIST` suffix; entire Intelligence department rebuilt as real LLM specialists: Scraper Specialist (#62), Competitor Researcher (#63), Technographic Scout (#64), Sentiment Analyst (#65), Trend Scout (#66). `delegate_to_intelligence` rewired from NOT_WIRED to LIVE. 26 of 38 swarm specialists are now real (68%); 6 of 11 Jasper department delegations are LIVE.)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -849,11 +849,11 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 | Agent ID | Class Name | Capabilities | Status |
 |----------|------------|--------------|--------|
-| COMPETITOR_RESEARCHER | CompetitorResearcher | Competitor analysis, SWOT | FUNCTIONAL |
-| SENTIMENT_ANALYST | SentimentAnalyst | Sentiment scoring, trend detection | FUNCTIONAL |
-| TECHNOGRAPHIC_SCOUT | TechnographicScout | Tech stack analysis | FUNCTIONAL |
-| SCRAPER_SPECIALIST | ScraperSpecialist | Web scraping, data extraction | FUNCTIONAL |
-| TREND_SCOUT | TrendScout | Market trends, emerging patterns | FUNCTIONAL |
+| COMPETITOR_RESEARCHER | CompetitorResearcher | Cross-comparative competitive intelligence (real Serper SERP + DataForSEO + scraper, single multi-competitor LLM synthesis) | FUNCTIONAL — Task #63 rebuild |
+| SENTIMENT_ANALYST | SentimentAnalyst | 5-action LLM sentiment analyst (analyze_sentiment, analyze_bulk, track_brand, detect_crisis, analyze_trend) via discriminated union schemas | FUNCTIONAL — Task #65 rebuild |
+| TECHNOGRAPHIC_SCOUT | TechnographicScout | Hybrid 60-signature regex tech detection + LLM strategic interpretation (maturity, spend estimation, integration opportunities, sales intelligence) | FUNCTIONAL — Task #64 rebuild |
+| SCRAPER_SPECIALIST | ScraperSpecialist | Hybrid LLM analyst over real `scrapeWebsite`/`scrapeAboutPage`/`scrapeCareersPage` collectors; produces structured ScrapeAnalysisResult (industry, valueProposition, targetCustomer, strategicObservations) | FUNCTIONAL — Task #62 rebuild |
+| TREND_SCOUT | TrendScout | Hybrid LLM signal synthesis on top of real Serper/News/DataForSEO/LinkedIn/Crunchbase collectors; produces market sentiment + ranked pivot recommendations grounded in specific signal IDs | FUNCTIONAL — Task #66 rebuild |
 
 #### Marketing Domain (6)
 

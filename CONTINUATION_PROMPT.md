@@ -6,7 +6,94 @@
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
 Last Updated: April 14, 2026 (Tasks #61-#66 — Architect rename + entire Intelligence department rebuilt: Scraper Specialist (#62), Competitor Researcher (#63), Technographic Scout (#64), Sentiment Analyst (#65), Trend Scout (#66). All 5 use hybrid LLM + real-collector pattern (or pure LLM in the case of Sentiment Analyst which had no real infrastructure). delegate_to_intelligence rewired from NOT_WIRED to LIVE. Intelligence dept 5/5 COMPLETE. 26 total REAL specialists, 68% done. 6 of 11 Jasper delegations now live.)
-**Status: AGENT SPECIALIST REBUILD IN PROGRESS — Copywriter (Task #23), Video Specialist (Task #24), and Calendar Coordinator (Task #25) proven real; Task #26 (Asset Generator copy portions) is next**
+**Status: AGENT SPECIALIST REBUILD — 26/38 REAL (68%). Intelligence department COMPLETE (5/5, `delegate_to_intelligence` LIVE). 6 of 11 Jasper delegations live. 12 specialists + Alex remain.**
+
+---
+
+## FRESH SESSION RESUME POINT (April 14, 2026)
+
+> **Read this section first if you are starting a new Claude Code session on the rebuild.** It tells you exactly where the prior session left off, what to do next, and what the user needs to run manually.
+
+### What just happened (this session, April 13-14, 2026)
+
+Six commits landed on `origin/dev` in one session. The whole Intelligence department went from 0/5 REAL → 5/5 REAL in one push, and the Architect-layer specialists got renamed to make the layer boundary visible from the identifier:
+
+| # | Commit | Task | Summary |
+|---|---|---|---|
+| 1 | `e3fceb70` | Task #61 | Renamed Architect-layer specialists to `*_STRATEGIST` suffix: `COPY_SPECIALIST`→`COPY_STRATEGIST`, `UX_UI_SPECIALIST`→`UX_UI_STRATEGIST`, `FUNNEL_PATHOLOGIST`→`FUNNEL_STRATEGIST`. 23 files touched (specialists, manager, registry, factory, JSON, executors, scripts, SSOT). Class names + file paths + factory function names unchanged — only IDs, display names, and Firestore GM IDs renamed. |
+| 2 | `211ba802` | Task #62 | Scraper Specialist rebuilt as hybrid LLM + real-scraper agent. Real `scrapeWebsite`/`scrapeAboutPage`/`scrapeCareersPage` collectors unchanged. New LLM analysis layer (`executeAnalyzeScrape`, action `analyze_scrape`) produces `ScrapeAnalysisResult` (industry, valueProposition, targetCustomer, strategicObservations). `ScrapeResult` shape preserved for Sales Outreach consumer. |
+| 3 | `ec04cb76` | Task #63 | Competitor Researcher rebuilt as hybrid LLM + real Serper/DataForSEO/scraper agent. Single multi-competitor LLM call enables cross-comparative synthesis (gaps must be SHARED absences across the batch, dominantPlayers must be subset of named competitors). `CompetitorSearchResult` shape preserved for `competitor-monitor.ts` consumer. |
+| 4 | `a5fd51e5` | Task #64 | Technographic Scout rebuilt as hybrid: existing 60-signature regex tech detection database UNCHANGED (Shopify, WordPress, GA4, HubSpot, Intercom, Stripe, etc.), new LLM interpretation layer replaces hardcoded `generateSummary` + `estimateToolCost` with strategic synthesis (techMaturity + reasoning, monthly spend min/max + reasoning, integration opportunities, sales intelligence memo). `TechScanResult` shape preserved. |
+| 5 | `d04ffc70` | Task #65 | Sentiment Analyst — pure LLM rebuild (was 100% template — bag-of-words lexicons, keyword-match emotion detection, substring crisis triggers). All 5 actions preserved (`analyze_sentiment`, `analyze_bulk`, `track_brand`, `detect_crisis`, `analyze_trend`) via Zod `discriminatedUnion` on `action` for both payload and result schemas. Single GM-backed system prompt, action-specific user prompts. |
+| 6 | `cd0cd1e7` | Task #66 + intelligence rewire | Trend Scout rebuilt as hybrid LLM synthesis on top of existing real Serper/News/DataForSEO/LinkedIn/Crunchbase/MemoryVault collectors. Single multi-signal `executeSignalSynthesis` call produces market sentiment + reasoning, refined per-signal classifications, top opportunities/threats, ranked pivot recommendations grounded in specific signal IDs. **Same commit also rewired `delegate_to_intelligence` from NOT_WIRED to LIVE in `jasper-tools.ts` since Intelligence is now 5/5 REAL.** |
+
+Each rebuild followed the same pattern: GM-backed prompt with hardcoded `DEFAULT_SYSTEM_PROMPT` fallback, Zod input + output validation, `callOpenRouter` truncation backstop on `finishReason === 'length'`, `__internal` export for harness reuse. Each commit added a `scripts/seed-{name}-gm.js` script.
+
+### MANUAL ACTION REQUIRED before runtime tests
+
+**The user must run 5 seed scripts against dev Firestore** to flip the new specialists from hardcoded-fallback mode to GM-backed mode:
+
+```bash
+node scripts/seed-scraper-specialist-gm.js
+node scripts/seed-competitor-researcher-gm.js
+node scripts/seed-technographic-scout-gm.js
+node scripts/seed-sentiment-analyst-gm.js
+node scripts/seed-trend-scout-gm.js
+```
+
+Plus the 3 Architect rename seed scripts (Task #61 changed their `specialistId` field, so the old GM docs are now orphaned and the queries return null until the new docs are seeded):
+
+```bash
+node scripts/seed-copy-specialist-gm.js --force
+node scripts/seed-ux-ui-specialist-gm.js --force
+node scripts/seed-funnel-pathologist-gm.js --force
+```
+
+Until these run, the specialists log a warning and use their hardcoded fallback prompts. Pirate verifier scripts and regression executors for Tasks #62-#66 are deferred as `Task #6X.x` follow-ups.
+
+### Where to pick up next session
+
+The owner agreed to do all remaining specialists. **Three departments + Alex remain (12 specialists + 1 customer-facing template).** Recommended order from prior planning:
+
+1. **Task #59 — Alex / `AI_CHAT_SALES_AGENT`** at `src/lib/agents/sales-chat/specialist.ts` (501 LOC). **Highest external risk.** Customer-facing — runs on the website chat widget AND Facebook Messenger. Has a fully-written `SYSTEM_PROMPT` constant that never reaches an LLM. Customers currently interact with a template engine pretending to be an AI sales agent. Audit finding #3 says this should be rebuilt before Sales department per business risk ranking.
+2. **Sales department (5 specialists)** — Tasks #46-#50:
+   - `LEAD_QUALIFIER` (`src/lib/agents/sales/qualifier/specialist.ts`, 1836 LOC)
+   - `OUTREACH_SPECIALIST` sales (`src/lib/agents/sales/outreach/specialist.ts`, 2005 LOC) — *imports `ScrapeResult` from the rebuilt Scraper Specialist; new fields are optional so backward-compat holds*
+   - `MERCHANDISER` (`src/lib/agents/sales/merchandiser/specialist.ts`, 1585 LOC)
+   - `DEAL_CLOSER` (`src/lib/agents/sales/deal-closer/specialist.ts`, 1289 LOC)
+   - `OBJ_HANDLER` (`src/lib/agents/sales/objection-handler/specialist.ts`, 1471 LOC)
+   - When 5/5, rewire `delegate_to_sales` from NOT_WIRED to LIVE.
+3. **Trust department (4 specialists)** — Tasks #51-#54: `REVIEW_SPECIALIST`, `GMB_SPECIALIST`, `REV_MGR`, `CASE_STUDY`. When 4/4, rewire `delegate_to_trust`.
+4. **Commerce department (4 specialists)** — Tasks #55-#58: `PAYMENT_SPECIALIST` (note: Stripe integration is code-only, LLM rebuild may be narrow), `CATALOG_MANAGER`, `PRICING_STRATEGIST`, `INVENTORY_MANAGER`. When 4/4, rewire `delegate_to_commerce`.
+
+After all that, the only NOT_WIRED Jasper tools left are `produce_video` and `orchestrate_campaign`, which are downstream pipeline orchestration — not specialist rebuilds.
+
+### Pattern reference for the next rebuild
+
+The cleanest example to copy is **Task #62 Scraper Specialist** (`src/lib/agents/intelligence/scraper/specialist.ts`) for hybrid (real collectors + LLM analysis on top), or **Task #65 Sentiment Analyst** (`src/lib/agents/intelligence/sentiment/specialist.ts`) for pure LLM with multiple actions via Zod `discriminatedUnion`. The Copy Strategist (`src/lib/agents/architect/copy/specialist.ts`) is the canonical single-action GM-backed pattern.
+
+Every rebuild needs:
+1. New imports: `z`, `OpenRouterProvider`, `PLATFORM_ID`, `getActiveSpecialistGMByIndustry`, `ModelName`, `logger`.
+2. Constants: `FILE`, `SPECIALIST_ID`, `DEFAULT_INDUSTRY_KEY`, `SUPPORTED_ACTIONS`, `MIN_OUTPUT_TOKENS_FOR_SCHEMA` (derived from schema worst-case prose budget).
+3. `DEFAULT_SYSTEM_PROMPT` (hardcoded fallback when GM not seeded yet — **only acceptable for specialists analyzing external content, not for content-generating ones**).
+4. Zod input + output schemas. Output schema must be tight enough to reject hallucinations.
+5. `loadGMConfig` helper that uses `Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA)` so old GM docs honor new budgets.
+6. `callOpenRouter` helper with `finishReason === 'length'` truncation backstop (post-Task-#45 provider-honesty contract).
+7. `executeXxx` per action with JSON parse + Zod validate.
+8. `__internal` export for regression executor + pirate harness reuse.
+9. Class boilerplate: `execute()` validates payload via schema, dispatches to the right `executeXxx`, wraps in `createReport`.
+10. Seed script at `scripts/seed-{name}-gm.js` modeled after `seed-scraper-specialist-gm.js`.
+11. Tracker update in CONTINUATION_PROMPT.md (REAL count + dept progress + detailed row entry).
+12. Commit + push.
+
+### What NOT to do
+
+- Do not skip the Zod output schema. The truncation lie that cost months of debugging (Task #45) was caught by Zod failing parse — it's the only safety net.
+- Do not seed Firestore yourself. The user runs seed scripts against dev Firestore. Tell them which command to run; do not run it from a Claude session.
+- Do not add pirate verifiers / regression executors in the same commit as the rebuild — those are explicitly deferred follow-ups (`Task #6X.x`). They balloon the commit and slow momentum. Add them as a separate commit batch when the user asks.
+- Do not modify the eslint or tsconfig rules, do not add `eslint-disable`, do not add `@ts-ignore`. Memory file `feedback_never_bypass_guardrails_silently.md` is the binding rule.
+
+---
 
 ## Mission
 
