@@ -115,6 +115,30 @@ interface ProviderResult {
   apiKey: string;
 }
 
+/**
+ * Map an OpenRouter `finish_reason` string to the typed `ChatResponse.finishReason`
+ * union (`'stop' | 'length' | 'function_call' | 'content_filter'`).
+ *
+ * Known OpenRouter values:
+ *   - 'stop' → end of response per model
+ *   - 'length' → hit the max_tokens ceiling (TRUNCATED — caller must handle)
+ *   - 'tool_calls' → model wants to call tools (mapped to 'function_call' here)
+ *   - 'function_call' → legacy OpenAI variant
+ *   - 'content_filter' → safety filter blocked output
+ *
+ * Anything unknown is mapped to 'stop' but logged so unmapped reasons are
+ * visible. We deliberately do NOT silently swallow 'length' — it must reach
+ * the caller as the literal `'length'` value.
+ */
+function mapFinishReason(raw: string | undefined): 'stop' | 'length' | 'function_call' | 'content_filter' {
+  if (raw === 'length') { return 'length'; }
+  if (raw === 'content_filter') { return 'content_filter'; }
+  if (raw === 'function_call' || raw === 'tool_calls') { return 'function_call'; }
+  if (raw === 'stop' || raw == null) { return 'stop'; }
+  logger.warn(`[OpenRouter] Unmapped finish_reason='${raw}' — defaulting to 'stop'`, { file: 'openrouter-provider.ts' });
+  return 'stop';
+}
+
 export class OpenRouterProvider {
   private apiKey: string | null = null;
   private baseURL: string;
@@ -190,7 +214,8 @@ export class OpenRouterProvider {
     }
 
     const data = await response.json() as OpenRouterAPIResponse;
-    logger.debug(`[OpenRouter] Response received from model: ${data.model}`, { file: 'openrouter-provider.ts' });
+    const rawFinishReason = data.choices[0]?.finish_reason;
+    logger.debug(`[OpenRouter] Response received from model: ${data.model} (finish_reason=${rawFinishReason ?? 'undefined'})`, { file: 'openrouter-provider.ts' });
 
     const responseContent = data.choices[0]?.message?.content ?? '';
     const promptTokens = data.usage?.prompt_tokens ?? 0;
@@ -206,7 +231,17 @@ export class OpenRouterProvider {
       },
       model: data.model as ModelName,
       provider: 'openrouter',
-      finishReason: 'stop' as const,
+      // HONESTY RULE (Task #45 follow-up, April 13 2026): surface the REAL
+      // finish_reason returned by the model. The prior version of this
+      // method hardcoded `'stop' as const`, silently lying about truncation.
+      // That lie meant every callsite of `chat()` would treat a length-
+      // truncated response as if it had finished cleanly, leading to
+      // "JSON parse failed" errors that hid the true root cause (response
+      // ran out of max_tokens mid-string). The Email Specialist's pirate
+      // test caught this. The same silent lie was almost certainly the
+      // cause of months of mysterious "LLM produced bad JSON" reports
+      // across every other specialist that uses chat().
+      finishReason: mapFinishReason(rawFinishReason),
       responseTime: Date.now() - startTime,
       timestamp: new Date().toISOString(),
     };

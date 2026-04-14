@@ -68,6 +68,36 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['compose_email'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Schema-derived minimum max_tokens for the worst-case ComposeEmailResult.
+ *
+ * Derivation (Task #45 follow-up, April 13 2026):
+ *   Sum of every prose field's max() in ComposeEmailResultSchema:
+ *     emailPurpose 80 + subjectLine 120 + previewText 250 +
+ *     bodyPlainText 7000 + ctaLine 500 + psLine 500 +
+ *     toneAndAngleReasoning 5000 + personalizationNotes 6000 +
+ *     followupSuggestion 5000 + spamRiskNotes 4000 + rationale 10000
+ *   = 38,450 chars worst-case prose.
+ *
+ *   Conservative tokenization: 3.0 chars/token for English with punctuation
+ *   = 12,816 tokens for prose alone.
+ *   + JSON structure (keys, quotes, brackets, commas) ≈ 200 tokens.
+ *   Floor: ~13,016 tokens.
+ *   + 25% safety margin for tokenization variance and verbose styles
+ *   (pirate dialect, dense rationales): 16,270 tokens.
+ *   Round to a clean ceiling: 17,000 tokens.
+ *
+ * Why this matters: the prior 12,000-token request was below the schema's
+ * own worst case, so the LLM would silently truncate mid-string when fields
+ * ran long. Truncation manifested as "JSON parse failed" errors that hid
+ * the true root cause. The Email Specialist's pirate test (Task #45)
+ * surfaced the bug. Aligning maxTokens with the schema's actual prose
+ * budget is the structural fix; truncation detection in callOpenRouter
+ * is the defensive backstop. If this constant is ever changed, the schema
+ * caps in ComposeEmailResultSchema MUST be re-totaled and re-derived.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 17000;
+
 interface EmailSpecialistGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -103,7 +133,7 @@ const CONFIG: SpecialistConfig = {
       rationale: { type: 'string' },
     },
   },
-  maxTokens: 12000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.6,
 };
 
@@ -222,11 +252,18 @@ async function loadGMBrandDNAAndPurposeTypes(industryKey: string): Promise<LlmCa
     );
   }
 
+  // Use max() of the GM-stored value and the schema-derived minimum so the
+  // worst-case schema budget is always honored even when the GM doc was
+  // seeded before the cap widenings of Task #43. This ALWAYS trends toward
+  // the larger value; we never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: EmailSpecialistGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.6,
-    maxTokens: config.maxTokens ?? 12000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -312,6 +349,22 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (Task #45 follow-up). The provider was previously
+  // hardcoding finishReason='stop', which silently masked length-based
+  // truncation. With the provider fix in place, a 'length' finishReason
+  // means the LLM hit our max_tokens ceiling mid-response and the JSON is
+  // incomplete. Fail loudly with the diagnostic information needed to fix
+  // the root cause (raise maxTokens or shorten the brief), instead of
+  // letting the JSON parser surface a confusing "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Email Specialist: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Schema worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -532,6 +585,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMBrandDNAAndPurposeTypes,
   buildResolvedSystemPrompt,
   buildComposeEmailUserPrompt,
