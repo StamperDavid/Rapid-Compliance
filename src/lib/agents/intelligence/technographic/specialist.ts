@@ -51,6 +51,7 @@ import { scrapeWebsite } from '@/lib/enrichment/web-scraper';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -282,12 +283,21 @@ type TechStackAnalysisResult = z.infer<typeof TechStackAnalysisResultSchema>;
 
 interface LlmCallContext {
   gm: TechnographicScoutGMConfig;
+  brandDNA: BrandDNA;
   resolvedSystemPrompt: string;
   source: 'gm' | 'fallback';
 }
 
 async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
   const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+
+  const brandDNA = await getBrandDNA();
+  if (!brandDNA) {
+    throw new Error(
+      'Brand DNA not configured. Technographic Scout refuses to run without brand identity. ' +
+      'Visit /settings/ai-agents/business-setup to configure.',
+    );
+  }
 
   if (!gmRecord) {
     logger.warn(
@@ -303,7 +313,8 @@ async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
         maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
         supportedActions: [...SUPPORTED_ACTIONS],
       },
-      resolvedSystemPrompt: DEFAULT_SYSTEM_PROMPT,
+      brandDNA,
+      resolvedSystemPrompt: buildResolvedSystemPrompt(DEFAULT_SYSTEM_PROMPT, brandDNA),
       source: 'fallback',
     };
   }
@@ -327,7 +338,35 @@ async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
-  return { gm, resolvedSystemPrompt: systemPrompt, source: 'gm' };
+  return {
+    gm,
+    brandDNA,
+    resolvedSystemPrompt: buildResolvedSystemPrompt(systemPrompt, brandDNA),
+    source: 'gm',
+  };
+}
+
+function buildResolvedSystemPrompt(baseSystemPrompt: string, brandDNA: BrandDNA): string {
+  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
+  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
+  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
+
+  const brandBlock = [
+    '',
+    '## Brand DNA (runtime injection — the tenant-specific identity)',
+    '',
+    `Company: ${brandDNA.companyDescription}`,
+    `Unique value: ${brandDNA.uniqueValue}`,
+    `Target audience: ${brandDNA.targetAudience}`,
+    `Tone of voice: ${brandDNA.toneOfVoice}`,
+    `Communication style: ${brandDNA.communicationStyle}`,
+    `Industry: ${brandDNA.industry}`,
+    `Key phrases to weave in naturally: ${keyPhrases}`,
+    `Phrases you are forbidden from using: ${avoidPhrases}`,
+    `Competitors (never name them unless specifically asked): ${competitors}`,
+  ].join('\n');
+
+  return `${baseSystemPrompt}\n${brandBlock}`;
 }
 
 function stripJsonFences(raw: string): string {
