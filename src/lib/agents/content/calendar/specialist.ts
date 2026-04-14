@@ -48,6 +48,38 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['plan_calendar'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Calendar Coordinator response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   ScheduleEntrySchema bounds rationale at min(20).max(300) chars.
+ *   PlanCalendarResultSchema bounds schedule at min(3).max(200) entries.
+ *   The prompt further clamps the realistic target to [10, 80] entries
+ *   via the `targetMin`/`targetMax` clamping in buildPlanCalendarUserPrompt.
+ *
+ *   80-entry worst case (verbose rationales):
+ *     per entry: contentId 30 + platform 30 + date 10 + time 5 +
+ *                rationale 300 + JSON keys/quotes/commas ~50 = 425 chars
+ *     80 × 425 = 34,000 chars
+ *     + frequencyRecommendation (~6 platforms × 150 chars) = 900
+ *     ≈ 34,900 chars total prose
+ *     /3.0 chars/token = 11,633 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 14,791 tokens minimum.
+ *
+ *   The prior 12,000 was below the realistic 80-entry worst case. Setting
+ *   the floor at 15,000 tokens covers the prompt-clamped maximum with a
+ *   small safety margin. The truncation backstop in callOpenRouter
+ *   catches anything that overflows.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 15000;
+
 interface CalendarCoordinatorGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -74,7 +106,7 @@ const CONFIG: SpecialistConfig = {
       frequencyRecommendation: { type: 'object' },
     },
   },
-  maxTokens: 12000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.7,
 };
 
@@ -222,13 +254,19 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: CalendarCoordinatorGMConfig = {
     systemPrompt,
     // Default to Sonnet 4.6 (locked tier policy for leaf specialists —
     // see Task #23.5). The GM can override this per-industry if needed.
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
-    maxTokens: config.maxTokens ?? 12000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -288,6 +326,20 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Calendar Coordinator: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -512,6 +564,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildPlanCalendarUserPrompt,
