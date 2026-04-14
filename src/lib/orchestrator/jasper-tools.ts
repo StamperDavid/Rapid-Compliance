@@ -4554,17 +4554,59 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_trust': {
         const trustStart = Date.now();
         trackMissionStep(context, 'delegate_to_trust', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Trust & Reputation department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_trust', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - trustStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Trust & Reputation department delegation is currently disabled because its specialists (Review Specialist, GMB Specialist, Review Manager, Case Study Specialist) are still template engines with zero LLM calls. The Reputation Manager routes correctly but terminates at hand-coded lookup tables, not real AI — presenting that output as department analysis would be a lie. This tool returns online when these 4 specialists are rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'REPUTATION_MANAGER',
-        });
+
+        try {
+          const { ReputationManager } = await import('@/lib/agents/trust/reputation/manager');
+          const trustMgr = new ReputationManager();
+          await trustMgr.initialize();
+
+          const trustPayload: Record<string, unknown> = {
+            action: (args.action as string | undefined) ?? 'ANALYZE_SENTIMENT',
+            reviewData: args.reviewData,
+            gmbData: args.gmbData,
+            saleData: args.saleData,
+            signals: args.signals,
+          };
+
+          const trustResult = await withTimeout(trustMgr.execute({
+            id: `trust_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'REPUTATION_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: trustPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Reputation Manager');
+
+          const trustDuration = Date.now() - trustStart;
+          trackMissionStep(context, 'delegate_to_trust',
+            trustResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: trustResult.status,
+            data: trustResult.data,
+            errors: trustResult.errors,
+            manager: 'REPUTATION_MANAGER',
+            reviewLink: getReviewLink('delegate_to_trust', context?.missionId),
+          });
+        } catch (trustError: unknown) {
+          const errorMsg = trustError instanceof Error ? trustError.message : 'Unknown error';
+          const trustDuration = Date.now() - trustStart;
+          trackMissionStep(context, 'delegate_to_trust', 'FAILED', {
+            summary: `Trust error: ${errorMsg}`,
+            durationMs: trustDuration,
+            error: errorMsg,
+          });
+          content = JSON.stringify({
+            status: 'FAILED',
+            error: errorMsg,
+            manager: 'REPUTATION_MANAGER',
+          });
+        }
         break;
       }
 
