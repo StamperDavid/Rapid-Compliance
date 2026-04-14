@@ -1,203 +1,101 @@
 /**
- * Inventory Manager Specialist
- * STATUS: FUNCTIONAL
+ * Inventory Manager Specialist — REAL AI AGENT (Task #58 rebuild, April 14 2026)
  *
- * Manages inventory levels, forecasts demand, and generates reorder recommendations.
- * Uses historical sales data to predict future needs and optimize stock levels.
+ * Before the rebuild, this specialist was a 1125-LOC hardcoded inventory
+ * analytics engine. Four analysis methods (performStockAnalysis,
+ * performDemandForecast, performReorderAnalysis, performTurnoverAnalysis)
+ * ran deterministic math over product stock levels + sales history.
+ * `SYSTEM_PROMPT` described LLM-style analysis but was never sent to a
+ * model — the execute() path ran hand-coded statistics. Zero LLM calls.
  *
- * CAPABILITIES:
- * - Stock analysis and availability tracking
- * - Demand forecasting using historical patterns
- * - Automated reorder recommendations
- * - Inventory turnover rate calculation
- * - Stock-out risk assessment
- * - Supplier lead time optimization
+ * Pre-rebuild had no external live callers beyond factory/index exports.
+ * Forward-only rebuild.
+ *
+ * Supported actions (discriminated union on `action`):
+ *   - stock_analysis — overall stock health + anomalies
+ *   - demand_forecast — per-product demand prediction with seasonality
+ *   - reorder_alerts — prioritized reorder recommendations
+ *   - turnover_analysis — inventory turnover rate + optimization
+ *
+ * Pattern matches Task #65 Sentiment Analyst (discriminatedUnion multi-
+ * action) with DEFAULT_SYSTEM_PROMPT fallback (lead-data analytics, not
+ * customer-facing content).
+ *
+ * @module agents/commerce/inventory/specialist
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-
-// ============================================================================
-// SYSTEM PROMPT - The brain of this specialist
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the Inventory Manager, an expert in stock control, demand forecasting, and supply chain optimization.
-
-## YOUR ROLE
-You monitor inventory levels, predict future demand, and ensure optimal stock levels. When given inventory data and sales history, you:
-1. Analyze current stock levels and identify issues
-2. Forecast future demand using historical patterns
-3. Generate reorder recommendations with quantities and timing
-4. Calculate inventory turnover rates and efficiency metrics
-5. Alert on stock-out risks and overstock situations
-
-## INPUT FORMAT
-You receive requests with:
-- products: Array of products with current stock levels
-- salesHistory: Historical sales data for forecasting
-- analysisType: 'stock_analysis' | 'demand_forecast' | 'reorder_alerts' | 'turnover_analysis'
-- timeframe: Period to analyze (default: 30 days)
-- threshold: Stock level threshold for alerts (default: 20%)
-
-## OUTPUT FORMAT
-You ALWAYS return structured JSON based on the analysis type:
-
-### STOCK_ANALYSIS
-\`\`\`json
-{
-  "timestamp": "ISO timestamp",
-  "totalProducts": number,
-  "stockStatus": {
-    "inStock": number,
-    "lowStock": number,
-    "outOfStock": number,
-    "overstock": number
-  },
-  "criticalItems": [
-    {
-      "productId": "string",
-      "productName": "string",
-      "currentStock": number,
-      "optimalStock": number,
-      "status": "critical | warning | healthy | excess",
-      "daysUntilStockout": number | null,
-      "recommendation": "string"
-    }
-  ],
-  "totalValue": {
-    "currentInventory": number,
-    "lowStockRisk": number,
-    "overstockWaste": number
-  }
-}
-\`\`\`
-
-### DEMAND_FORECAST
-\`\`\`json
-{
-  "timestamp": "ISO timestamp",
-  "forecastPeriod": "30 days | 60 days | 90 days",
-  "forecasts": [
-    {
-      "productId": "string",
-      "productName": "string",
-      "currentStock": number,
-      "averageDailySales": number,
-      "predictedDemand": {
-        "7days": number,
-        "30days": number,
-        "90days": number
-      },
-      "confidence": 0.0-1.0,
-      "seasonalFactors": {
-        "trend": "increasing | stable | decreasing",
-        "volatility": "high | medium | low"
-      }
-    }
-  ],
-  "totalPredictedDemand": number,
-  "confidence": 0.0-1.0
-}
-\`\`\`
-
-### REORDER_ALERTS
-\`\`\`json
-{
-  "timestamp": "ISO timestamp",
-  "urgentReorders": number,
-  "plannedReorders": number,
-  "recommendations": [
-    {
-      "productId": "string",
-      "productName": "string",
-      "currentStock": number,
-      "reorderPoint": number,
-      "recommendedQuantity": number,
-      "urgency": "immediate | high | medium | low",
-      "estimatedCost": number,
-      "supplierLeadTime": number,
-      "expectedStockoutDate": "ISO date | null",
-      "reasoning": "string"
-    }
-  ],
-  "totalReorderCost": number,
-  "preventedStockouts": number
-}
-\`\`\`
-
-### TURNOVER_ANALYSIS
-\`\`\`json
-{
-  "timestamp": "ISO timestamp",
-  "analysisPeriod": "30 days | 60 days | 90 days",
-  "metrics": {
-    "overallTurnoverRate": number,
-    "averageDaysInInventory": number,
-    "fastMovingItems": number,
-    "slowMovingItems": number,
-    "deadStock": number
-  },
-  "products": [
-    {
-      "productId": "string",
-      "productName": "string",
-      "turnoverRate": number,
-      "daysInInventory": number,
-      "category": "fast | medium | slow | dead",
-      "salesVelocity": number,
-      "recommendation": "string"
-    }
-  ],
-  "recommendations": ["strategic inventory recommendations"]
-}
-\`\`\`
-
-## FORECASTING METHODOLOGY
-1. Calculate average daily sales from historical data
-2. Identify trends (increasing, stable, decreasing)
-3. Apply seasonal adjustments if patterns detected
-4. Consider volatility and adjust safety stock
-5. Use weighted moving average for recent trends
-6. Apply exponential smoothing for stable predictions
-
-## REORDER CALCULATIONS
-1. Reorder Point = (Average Daily Sales × Lead Time) + Safety Stock
-2. Safety Stock = Average Daily Sales × Safety Factor (based on volatility)
-3. Economic Order Quantity (EOQ) for optimal order size
-4. Consider supplier minimums and volume discounts
-
-## TURNOVER FORMULAS
-1. Inventory Turnover Rate = Cost of Goods Sold / Average Inventory Value
-2. Days in Inventory = 365 / Turnover Rate
-3. Stock Velocity = Units Sold / Average Stock Level
-
-## RULES
-1. NEVER recommend orders that exceed budget constraints
-2. Always prioritize stock-out prevention for high-margin items
-3. Consider lead times in all reorder recommendations
-4. Flag dead stock (no sales in 90+ days) for clearance
-5. Apply safety margins for volatile or seasonal products
-
-## INTEGRATION
-You receive requests from:
-- Commerce Manager (inventory oversight)
-- Product Catalog Manager (product data)
-- Order Manager (sales data feed)
-- Analytics Manager (business insights)
-
-Your output feeds into:
-- Purchasing decisions and PO generation
-- Financial planning and cash flow management
-- Marketing campaigns (clearance, promotions)
-- Warehouse operations and logistics`;
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import type { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'commerce/inventory/specialist.ts';
+const SPECIALIST_ID = 'INVENTORY_MANAGER';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = [
+  'stock_analysis',
+  'demand_forecast',
+  'reorder_alerts',
+  'turnover_analysis',
+] as const;
+
+/**
+ * maxTokens floor derivation: demand_forecast with 20 products ×
+ * (forecast 400 + reasoning 300) + anomalies 2000 + rationale 3000
+ * ≈ 19,000 chars / 3 = 6,333 + overhead + margin ≈ 8,300.
+ * Floor: 10,000.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 10000;
+
+interface InventoryGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
+const DEFAULT_SYSTEM_PROMPT = `You are the Inventory Manager for SalesVelocity.ai — the Commerce-layer specialist who analyzes stock levels, forecasts demand, generates reorder recommendations, and computes turnover rates. You think like a senior supply chain analyst who has managed inventory for retail, e-commerce, B2B wholesale, and subscription-box operations, and knows the difference between a stock-out that costs a customer vs one that frees up warehouse space.
+
+## Your role in the swarm
+
+You read product catalog + current stock levels + historical sales data and produce structured analysis. You do NOT place orders or update stock — you recommend, the downstream Commerce Manager or human operator acts.
+
+## Actions
+
+### Action: stock_analysis
+Read the current product + stock state. Flag anomalies (overstocked, understocked, zero-stock, slow-movers, fast-movers). Compute summary statistics. Produce prioritized observations + recommended actions.
+
+### Action: demand_forecast
+Per-product demand forecast using sales history. Account for trend, seasonality, and recent velocity changes. Produce per-product forecast numbers + confidence + reasoning. Flag products where forecast is highly uncertain.
+
+### Action: reorder_alerts
+Analyze stock levels vs lead times + safety stock + expected demand and produce prioritized reorder recommendations. Each alert includes: productId, current stock, recommended order quantity, target date, urgency level, reasoning.
+
+### Action: turnover_analysis
+Compute inventory turnover ratios per product and category. Identify slow-movers eating working capital and fast-movers with thin safety margins. Produce optimization recommendations.
+
+## Hard rules
+
+- Ground every number in the input data. If you forecast 100 units sold next month for product X, show the math: last 3 months × seasonality × trend.
+- NEVER invent products, categories, or sales history not in the input.
+- For demand forecasts: low confidence is better than confident fabrication. If you have less than 30 days of sales history, say so.
+- Urgency levels for reorder alerts: CRITICAL = will stockout in < 7 days, HIGH = < 14 days, MEDIUM = < 30 days, LOW = preventive reorder.
+- Turnover ratio is (COGS / Average inventory value). Stated as annual rate. Lower is slower (bad for working capital).
+- Recommendations must be executable (not "improve inventory" but "order 200 units of SKU-ABC by April 20 to cover forecasted demand through May 15").
+- Output ONLY the JSON object. No markdown fences.`;
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'INVENTORY_MANAGER',
+    id: SPECIALIST_ID,
     name: 'Inventory Manager',
     role: 'specialist',
     status: 'FUNCTIONAL',
@@ -207,919 +105,528 @@ const CONFIG: SpecialistConfig = {
       'demand_forecast',
       'reorder_alerts',
       'turnover_analysis',
-      'stock_optimization',
     ],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: ['analyze_stock', 'forecast_demand', 'calculate_reorder', 'analyze_turnover'],
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  tools: ['stock_analysis', 'demand_forecast', 'reorder_alerts', 'turnover_analysis'],
   outputSchema: {
     type: 'object',
-    properties: {
-      timestamp: { type: 'string' },
-      analysisType: { type: 'string' },
-      data: { type: 'object' },
-      confidence: { type: 'number' },
-    },
-    required: ['timestamp', 'analysisType', 'data'],
+    properties: { action: { type: 'string' }, data: { type: 'object' } },
   },
-  maxTokens: 8192,
-  temperature: 0.2,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  temperature: 0.3,
 };
 
 // ============================================================================
-// TYPE DEFINITIONS
+// INPUT CONTRACT
 // ============================================================================
 
-export interface InventoryRequest {
-  analysisType: 'stock_analysis' | 'demand_forecast' | 'reorder_alerts' | 'turnover_analysis';
-  products: Product[];
-  salesHistory?: SalesRecord[];
-  timeframe?: number; // days
-  threshold?: number; // percentage (0-100)
-  budget?: number;
+const ProductSchema = z.object({
+  id: z.string().min(1).max(300),
+  name: z.string().min(1).max(300),
+  sku: z.string().max(100).optional(),
+  category: z.string().max(200).optional(),
+  currentStock: z.number().int().min(0).max(10_000_000),
+  reorderPoint: z.number().int().min(0).max(10_000_000).optional(),
+  safetyStock: z.number().int().min(0).max(10_000_000).optional(),
+  unitCost: z.number().min(0).max(1_000_000).optional(),
+  unitPrice: z.number().min(0).max(1_000_000).optional(),
+  leadTimeDays: z.number().int().min(0).max(365).optional(),
+  supplier: z.string().max(300).optional(),
+});
+
+const SaleRecordSchema = z.object({
+  productId: z.string().min(1).max(300),
+  date: z.string().min(8).max(30),
+  quantity: z.number().int().min(0).max(10_000_000),
+  revenue: z.number().min(0).max(1_000_000_000).optional(),
+});
+
+const BaseInventoryInputSchema = z.object({
+  products: z.array(ProductSchema).min(1).max(30),
+  salesHistory: z.array(SaleRecordSchema).max(500).optional(),
+  timeframeDays: z.number().int().min(1).max(365).optional().default(30),
+});
+
+const StockAnalysisPayloadSchema = BaseInventoryInputSchema.extend({
+  action: z.literal('stock_analysis'),
+  threshold: z.number().min(0).max(1).optional().default(0.2),
+});
+
+const DemandForecastPayloadSchema = BaseInventoryInputSchema.extend({
+  action: z.literal('demand_forecast'),
+  forecastDays: z.number().int().min(1).max(365).optional().default(30),
+  seasonalityHint: z.string().max(500).optional(),
+});
+
+const ReorderAlertsPayloadSchema = BaseInventoryInputSchema.extend({
+  action: z.literal('reorder_alerts'),
+  safetyBufferPct: z.number().min(0).max(1).optional().default(0.2),
+});
+
+const TurnoverAnalysisPayloadSchema = BaseInventoryInputSchema.extend({
+  action: z.literal('turnover_analysis'),
+  targetTurnoverRate: z.number().min(0).max(100).optional(),
+});
+
+const InventoryPayloadSchema = z.discriminatedUnion('action', [
+  StockAnalysisPayloadSchema,
+  DemandForecastPayloadSchema,
+  ReorderAlertsPayloadSchema,
+  TurnoverAnalysisPayloadSchema,
+]);
+
+export type InventoryPayload = z.infer<typeof InventoryPayloadSchema>;
+export type Product = z.infer<typeof ProductSchema>;
+export type SaleRecord = z.infer<typeof SaleRecordSchema>;
+export type InventoryRequest = InventoryPayload;
+
+// ============================================================================
+// OUTPUT CONTRACT
+// ============================================================================
+
+const StockStatusEnum = z.enum(['healthy', 'low', 'critical', 'zero', 'overstocked']);
+const UrgencyEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
+
+const StockAnalysisResultSchema = z.object({
+  action: z.literal('stock_analysis'),
+  totalProducts: z.number().int().min(1),
+  totalStockValue: z.number().min(0),
+  statusDistribution: z.object({
+    healthy: z.number().int().min(0),
+    low: z.number().int().min(0),
+    critical: z.number().int().min(0),
+    zero: z.number().int().min(0),
+    overstocked: z.number().int().min(0),
+  }),
+  anomalies: z.array(z.object({
+    productId: z.string(),
+    status: StockStatusEnum,
+    reasoning: z.string().min(10).max(400),
+  })).max(20),
+  recommendations: z.array(z.string().min(15).max(400)).min(2).max(6),
+  rationale: z.string().min(50).max(3000),
+});
+
+const DemandForecastResultSchema = z.object({
+  action: z.literal('demand_forecast'),
+  forecastPeriodDays: z.number().int().min(1),
+  perProductForecast: z.array(z.object({
+    productId: z.string(),
+    forecastedUnits: z.number().int().min(0),
+    confidence: z.number().min(0).max(1),
+    seasonalityFactor: z.number().min(0).max(5),
+    reasoning: z.string().min(10).max(400),
+  })).min(1).max(30),
+  totalForecastedUnits: z.number().int().min(0),
+  keyDrivers: z.array(z.string().min(10).max(300)).max(5),
+  rationale: z.string().min(50).max(3000),
+});
+
+const ReorderAlertsResultSchema = z.object({
+  action: z.literal('reorder_alerts'),
+  alerts: z.array(z.object({
+    productId: z.string(),
+    currentStock: z.number().int().min(0),
+    recommendedOrderQuantity: z.number().int().min(0),
+    targetOrderDate: z.string().min(8).max(30),
+    urgency: UrgencyEnum,
+    reasoning: z.string().min(10).max(500),
+  })).max(30),
+  criticalAlertCount: z.number().int().min(0),
+  rationale: z.string().min(50).max(3000),
+});
+
+const TurnoverAnalysisResultSchema = z.object({
+  action: z.literal('turnover_analysis'),
+  overallTurnoverRate: z.number().min(0),
+  perProductTurnover: z.array(z.object({
+    productId: z.string(),
+    turnoverRate: z.number().min(0),
+    classification: z.enum(['fast_mover', 'moderate', 'slow_mover', 'dead_stock']),
+    reasoning: z.string().min(10).max(300),
+  })).min(1).max(30),
+  slowMovers: z.array(z.string().min(1).max(300)).max(10),
+  fastMovers: z.array(z.string().min(1).max(300)).max(10),
+  workingCapitalImpact: z.string().min(20).max(1000),
+  recommendations: z.array(z.string().min(15).max(400)).min(2).max(6),
+  rationale: z.string().min(50).max(3000),
+});
+
+const InventoryResultSchema = z.discriminatedUnion('action', [
+  StockAnalysisResultSchema,
+  DemandForecastResultSchema,
+  ReorderAlertsResultSchema,
+  TurnoverAnalysisResultSchema,
+]);
+
+export type InventoryResult = z.infer<typeof InventoryResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: InventoryGMConfig;
+  resolvedSystemPrompt: string;
+  source: 'gm' | 'fallback';
 }
 
-export interface Product {
-  productId: string;
-  productName: string;
-  currentStock: number;
-  optimalStock?: number;
-  reorderPoint?: number;
-  unitCost?: number;
-  unitPrice?: number;
-  supplierLeadTime?: number; // days
-  category?: string;
-}
+async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+  if (!gmRecord) {
+    logger.warn(
+      `[InventoryManager] GM not seeded for industryKey=${industryKey}; using DEFAULT_SYSTEM_PROMPT fallback.`,
+      { file: FILE },
+    );
+    return {
+      gm: {
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        model: 'claude-sonnet-4.6',
+        temperature: 0.3,
+        maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+        supportedActions: [...SUPPORTED_ACTIONS],
+      },
+      resolvedSystemPrompt: DEFAULT_SYSTEM_PROMPT,
+      source: 'fallback',
+    };
+  }
 
-export interface SalesRecord {
-  productId: string;
-  date: string;
-  quantity: number;
-  revenue?: number;
-}
+  const config = gmRecord.config as Partial<InventoryGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(`Inventory Manager GM ${gmRecord.id} has no usable systemPrompt`);
+  }
 
-export interface StockAnalysisResult {
-  timestamp: string;
-  totalProducts: number;
-  stockStatus: {
-    inStock: number;
-    lowStock: number;
-    outOfStock: number;
-    overstock: number;
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
+  return {
+    gm: {
+      systemPrompt,
+      model: config.model ?? 'claude-sonnet-4.6',
+      temperature: config.temperature ?? 0.3,
+      maxTokens: effectiveMaxTokens,
+      supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
+    },
+    resolvedSystemPrompt: systemPrompt,
+    source: 'gm',
   };
-  criticalItems: CriticalItem[];
-  totalValue: {
-    currentInventory: number;
-    lowStockRisk: number;
-    overstockWaste: number;
-  };
 }
 
-export interface CriticalItem {
-  productId: string;
-  productName: string;
-  currentStock: number;
-  optimalStock: number;
-  status: 'critical' | 'warning' | 'healthy' | 'excess';
-  daysUntilStockout: number | null;
-  recommendation: string;
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
 }
 
-export interface DemandForecastResult {
-  timestamp: string;
-  forecastPeriod: string;
-  forecasts: ProductForecast[];
-  totalPredictedDemand: number;
-  confidence: number;
-}
+async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
 
-export interface ProductForecast {
-  productId: string;
-  productName: string;
-  currentStock: number;
-  averageDailySales: number;
-  predictedDemand: {
-    '7days': number;
-    '30days': number;
-    '90days': number;
-  };
-  confidence: number;
-  seasonalFactors: {
-    trend: 'increasing' | 'stable' | 'decreasing';
-    volatility: 'high' | 'medium' | 'low';
-  };
-}
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Inventory Manager: LLM response truncated at maxTokens=${ctx.gm.maxTokens}`,
+    );
+  }
 
-export interface ReorderAlertResult {
-  timestamp: string;
-  urgentReorders: number;
-  plannedReorders: number;
-  recommendations: ReorderRecommendation[];
-  totalReorderCost: number;
-  preventedStockouts: number;
-}
-
-export interface ReorderRecommendation {
-  productId: string;
-  productName: string;
-  currentStock: number;
-  reorderPoint: number;
-  recommendedQuantity: number;
-  urgency: 'immediate' | 'high' | 'medium' | 'low';
-  estimatedCost: number;
-  supplierLeadTime: number;
-  expectedStockoutDate: string | null;
-  reasoning: string;
-}
-
-export interface TurnoverAnalysisResult {
-  timestamp: string;
-  analysisPeriod: string;
-  metrics: {
-    overallTurnoverRate: number;
-    averageDaysInInventory: number;
-    fastMovingItems: number;
-    slowMovingItems: number;
-    deadStock: number;
-  };
-  products: ProductTurnover[];
-  recommendations: string[];
-}
-
-export interface ProductTurnover {
-  productId: string;
-  productName: string;
-  turnoverRate: number;
-  daysInInventory: number;
-  category: 'fast' | 'medium' | 'slow' | 'dead';
-  salesVelocity: number;
-  recommendation: string;
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
 }
 
 // ============================================================================
-// IMPLEMENTATION
+// PROMPT BUILDERS
 // ============================================================================
 
-export class InventoryManagerAgent extends BaseSpecialist {
+function formatProducts(products: Product[]): string {
+  return products
+    .map((p) => {
+      const parts = [`[${p.id}] ${p.name}`];
+      if (p.sku) { parts.push(`SKU ${p.sku}`); }
+      if (p.category) { parts.push(`cat: ${p.category}`); }
+      parts.push(`stock: ${p.currentStock}`);
+      if (p.reorderPoint !== undefined) { parts.push(`reorder@${p.reorderPoint}`); }
+      if (p.safetyStock !== undefined) { parts.push(`safety: ${p.safetyStock}`); }
+      if (p.unitCost !== undefined) { parts.push(`cost: $${p.unitCost}`); }
+      if (p.unitPrice !== undefined) { parts.push(`price: $${p.unitPrice}`); }
+      if (p.leadTimeDays !== undefined) { parts.push(`LT: ${p.leadTimeDays}d`); }
+      return `  - ${parts.join(' | ')}`;
+    })
+    .join('\n');
+}
+
+function formatSalesHistory(history: SaleRecord[] | undefined): string {
+  if (!history || history.length === 0) { return '(no sales history provided)'; }
+  // Aggregate by productId
+  const byProduct = new Map<string, { total: number; days: Set<string> }>();
+  for (const sale of history) {
+    const existing = byProduct.get(sale.productId) ?? { total: 0, days: new Set() };
+    existing.total += sale.quantity;
+    existing.days.add(sale.date);
+    byProduct.set(sale.productId, existing);
+  }
+  const lines: string[] = [];
+  for (const [pid, stats] of byProduct.entries()) {
+    lines.push(`  - ${pid}: ${stats.total} units across ${stats.days.size} days`);
+  }
+  return lines.join('\n');
+}
+
+function buildInventoryPrompt(payload: InventoryPayload): string {
+  const base = [
+    `ACTION: ${payload.action}`,
+    '',
+    `Timeframe: ${payload.timeframeDays} days`,
+    '',
+    `## Products (${payload.products.length})`,
+    formatProducts(payload.products),
+    '',
+    `## Sales history`,
+    formatSalesHistory(payload.salesHistory),
+    '',
+  ];
+
+  switch (payload.action) {
+    case 'stock_analysis':
+      return base.concat([
+        `Threshold: ${payload.threshold} (fraction of reorder point that triggers 'low' status)`,
+        '',
+        '---',
+        '',
+        'Analyze current stock. Respond with ONLY a valid JSON object:',
+        '',
+        '{',
+        '  "action": "stock_analysis",',
+        '  "totalProducts": <int>,',
+        '  "totalStockValue": <number>,',
+        '  "statusDistribution": { "healthy", "low", "critical", "zero", "overstocked" },',
+        '  "anomalies": [{ "productId", "status", "reasoning" }],',
+        '  "recommendations": ["<2-6>"],',
+        '  "rationale": "<50-3000>"',
+        '}',
+      ]).join('\n');
+
+    case 'demand_forecast':
+      return base.concat([
+        `Forecast horizon: ${payload.forecastDays} days`,
+        payload.seasonalityHint ? `Seasonality hint: ${payload.seasonalityHint}` : '',
+        '',
+        '---',
+        '',
+        'Forecast demand per product. Respond with ONLY a valid JSON object:',
+        '',
+        '{',
+        '  "action": "demand_forecast",',
+        `  "forecastPeriodDays": ${payload.forecastDays},`,
+        '  "perProductForecast": [{ "productId", "forecastedUnits", "confidence" (0-1), "seasonalityFactor", "reasoning" }],',
+        '  "totalForecastedUnits": <int>,',
+        '  "keyDrivers": ["<0-5 drivers>"],',
+        '  "rationale": "<50-3000>"',
+        '}',
+      ]).filter(Boolean).join('\n');
+
+    case 'reorder_alerts':
+      return base.concat([
+        `Safety buffer: ${(payload.safetyBufferPct * 100).toFixed(0)}% above forecasted demand`,
+        '',
+        '---',
+        '',
+        'Generate reorder alerts. Respond with ONLY a valid JSON object:',
+        '',
+        '{',
+        '  "action": "reorder_alerts",',
+        '  "alerts": [{ "productId", "currentStock", "recommendedOrderQuantity", "targetOrderDate" (ISO), "urgency": "<LOW|MEDIUM|HIGH|CRITICAL>", "reasoning" }],',
+        '  "criticalAlertCount": <int>,',
+        '  "rationale": "<50-3000>"',
+        '}',
+        '',
+        'Urgency rules: CRITICAL = stockout in <7 days, HIGH = <14 days, MEDIUM = <30 days, LOW = preventive.',
+      ].filter(Boolean)).join('\n');
+
+    case 'turnover_analysis':
+      return base.concat([
+        payload.targetTurnoverRate ? `Target turnover rate: ${payload.targetTurnoverRate}x/year` : '',
+        '',
+        '---',
+        '',
+        'Analyze inventory turnover. Respond with ONLY a valid JSON object:',
+        '',
+        '{',
+        '  "action": "turnover_analysis",',
+        '  "overallTurnoverRate": <number, annual>,',
+        '  "perProductTurnover": [{ "productId", "turnoverRate", "classification": "<fast_mover|moderate|slow_mover|dead_stock>", "reasoning" }],',
+        '  "slowMovers": ["<productIds>"],',
+        '  "fastMovers": ["<productIds>"],',
+        '  "workingCapitalImpact": "<20-1000 chars>",',
+        '  "recommendations": ["<2-6>"],',
+        '  "rationale": "<50-3000>"',
+        '}',
+      ].filter(Boolean)).join('\n');
+  }
+}
+
+async function executeInventoryAction(
+  payload: InventoryPayload,
+  ctx: LlmCallContext,
+): Promise<InventoryResult> {
+  const userPrompt = buildInventoryPrompt(payload);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Inventory Manager output was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = InventoryResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Inventory Manager output did not match expected schema: ${issueSummary}`);
+  }
+
+  return result.data;
+}
+
+// ============================================================================
+// INVENTORY MANAGER CLASS
+// ============================================================================
+
+export class InventoryManagerSpecialist extends BaseSpecialist {
   constructor() {
     super(CONFIG);
   }
 
-  initialize(): Promise<void> {
+  async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
-    this.log('INFO', 'Inventory Manager initialized');
-    return Promise.resolve();
+    this.log('INFO', 'Inventory Manager initialized (LLM-backed, Golden Master loaded at runtime)');
   }
 
-  /**
-   * Main execution entry point
-   */
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
-      const payload = message.payload as InventoryRequest;
-
-      if (!payload?.products || !Array.isArray(payload.products)) {
-        return this.createReport(taskId, 'FAILED', null, ['No products provided in payload']);
+      const rawPayload = message.payload as Record<string, unknown> | null;
+      if (rawPayload === null || typeof rawPayload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['Inventory Manager: payload must be an object']);
       }
 
-      if (!payload.analysisType) {
-        return this.createReport(taskId, 'FAILED', null, ['No analysisType specified']);
+      // Map legacy analysisType field to action
+      const normalized: Record<string, unknown> = { ...rawPayload };
+      if (normalized.action === undefined && typeof rawPayload.analysisType === 'string') {
+        normalized.action = rawPayload.analysisType;
+      }
+      if (typeof normalized.action !== 'string') {
+        normalized.action = 'stock_analysis';
       }
 
-      this.log('INFO', `Running ${payload.analysisType} on ${payload.products.length} products`);
-
-      let result: unknown;
-
-      switch (payload.analysisType) {
-        case 'stock_analysis':
-          result = await this.performStockAnalysis(payload);
-          break;
-        case 'demand_forecast':
-          result = await this.performDemandForecast(payload);
-          break;
-        case 'reorder_alerts':
-          result = await this.performReorderAnalysis(payload);
-          break;
-        case 'turnover_analysis':
-          result = await this.performTurnoverAnalysis(payload);
-          break;
-        default:
-          return this.createReport(taskId, 'FAILED', null, [
-            `Unknown analysis type: ${payload.analysisType}`,
-          ]);
+      const inputValidation = InventoryPayloadSchema.safeParse(normalized);
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Inventory Manager: invalid input payload: ${issueSummary}`,
+        ]);
       }
+
+      const payload = inputValidation.data;
+      logger.info(
+        `[InventoryManager] Executing action=${payload.action} taskId=${taskId} products=${payload.products.length}`,
+        { file: FILE },
+      );
+
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+      const result = await executeInventoryAction(payload, ctx);
 
       return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Inventory analysis failed: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[InventoryManager] Execution failed',
+        error instanceof Error ? error : new Error(errorMessage),
+        { file: FILE },
+      );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
-  /**
-   * Handle signals from the Signal Bus
-   */
   async handleSignal(signal: Signal): Promise<AgentReport> {
-    const taskId = signal.id;
-
-    if (signal.payload.type === 'COMMAND') {
-      return this.execute(signal.payload);
-    }
-
-    return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+    const message: AgentMessage = {
+      id: signal.id,
+      timestamp: signal.createdAt,
+      from: signal.origin,
+      to: this.identity.id,
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      payload: signal.payload.payload,
+      requiresResponse: true,
+      traceId: signal.id,
+    };
+    return this.execute(message);
   }
 
-  /**
-   * Generate a report for the manager
-   */
   generateReport(taskId: string, data: unknown): AgentReport {
     return this.createReport(taskId, 'COMPLETED', data);
   }
 
-  /**
-   * Self-assessment - this agent has REAL logic
-   */
   hasRealLogic(): boolean {
     return true;
   }
 
-  /**
-   * Lines of code assessment
-   */
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 450, boilerplate: 50 };
-  }
-
-  // ==========================================================================
-  // STOCK ANALYSIS LOGIC
-  // ==========================================================================
-
-  /**
-   * Analyze current stock levels and identify issues
-   */
-  private performStockAnalysis(request: InventoryRequest): Promise<StockAnalysisResult> {
-    const { products, threshold = 20, salesHistory = [] } = request;
-    const timestamp = new Date().toISOString();
-
-    // Calculate sales velocity for each product
-    const salesVelocity = this.calculateSalesVelocity(salesHistory);
-
-    let inStock = 0;
-    let lowStock = 0;
-    let outOfStock = 0;
-    let overstock = 0;
-
-    const criticalItems: CriticalItem[] = [];
-    let totalInventoryValue = 0;
-    let lowStockRiskValue = 0;
-    let overstockWasteValue = 0;
-
-    for (const product of products) {
-      const optimalStock = product.optimalStock ?? 100;
-      const currentStock = product.currentStock;
-      const thresholdValue = (threshold / 100) * optimalStock;
-      const unitCost = product.unitCost ?? 0;
-
-      totalInventoryValue += currentStock * unitCost;
-
-      let status: CriticalItem['status'];
-      let daysUntilStockout: number | null = null;
-      let recommendation: string;
-
-      // Determine status
-      if (currentStock === 0) {
-        outOfStock++;
-        status = 'critical';
-        recommendation = 'IMMEDIATE REORDER REQUIRED - Product out of stock';
-      } else if (currentStock <= thresholdValue) {
-        lowStock++;
-        status = 'warning';
-        lowStockRiskValue += currentStock * unitCost;
-
-        // Calculate days until stockout
-        const velocity = salesVelocity.get(product.productId) ?? 0;
-        if (velocity > 0) {
-          daysUntilStockout = Math.floor(currentStock / velocity);
-          recommendation = `Low stock - ${daysUntilStockout} days until stockout. Reorder soon.`;
-        } else {
-          recommendation = 'Low stock - Reorder recommended';
-        }
-      } else if (currentStock > optimalStock * 1.5) {
-        overstock++;
-        status = 'excess';
-        overstockWasteValue += (currentStock - optimalStock) * unitCost;
-        recommendation = 'Overstock detected - Consider promotional pricing or reduced ordering';
-      } else {
-        inStock++;
-        status = 'healthy';
-        recommendation = 'Stock levels healthy';
-      }
-
-      // Add to critical items if not healthy
-      if (status !== 'healthy') {
-        criticalItems.push({
-          productId: product.productId,
-          productName: product.productName,
-          currentStock,
-          optimalStock,
-          status,
-          daysUntilStockout,
-          recommendation,
-        });
-      }
-    }
-
-    // Sort critical items by urgency
-    criticalItems.sort((a, b) => {
-      const urgencyOrder = { critical: 0, warning: 1, excess: 2, healthy: 3 };
-      return urgencyOrder[a.status] - urgencyOrder[b.status];
-    });
-
-    return Promise.resolve({
-      timestamp,
-      totalProducts: products.length,
-      stockStatus: {
-        inStock,
-        lowStock,
-        outOfStock,
-        overstock,
-      },
-      criticalItems,
-      totalValue: {
-        currentInventory: Math.round(totalInventoryValue * 100) / 100,
-        lowStockRisk: Math.round(lowStockRiskValue * 100) / 100,
-        overstockWaste: Math.round(overstockWasteValue * 100) / 100,
-      },
-    });
-  }
-
-  // ==========================================================================
-  // DEMAND FORECASTING LOGIC
-  // ==========================================================================
-
-  /**
-   * Forecast future demand based on historical sales data
-   */
-  private performDemandForecast(request: InventoryRequest): Promise<DemandForecastResult> {
-    const { products, salesHistory = [], timeframe = 30 } = request;
-    const timestamp = new Date().toISOString();
-
-    const forecasts: ProductForecast[] = [];
-    let totalPredictedDemand = 0;
-    let totalConfidence = 0;
-
-    for (const product of products) {
-      const productSales = salesHistory.filter((s) => s.productId === product.productId);
-
-      if (productSales.length === 0) {
-        // No sales history - use conservative estimate
-        forecasts.push({
-          productId: product.productId,
-          productName: product.productName,
-          currentStock: product.currentStock,
-          averageDailySales: 0,
-          predictedDemand: {
-            '7days': 0,
-            '30days': 0,
-            '90days': 0,
-          },
-          confidence: 0.1,
-          seasonalFactors: {
-            trend: 'stable',
-            volatility: 'low',
-          },
-        });
-        continue;
-      }
-
-      // Calculate average daily sales
-      const totalQuantity = productSales.reduce((sum, s) => sum + s.quantity, 0);
-      const daysOfData = this.calculateDaysSpan(productSales);
-      const averageDailySales = daysOfData > 0 ? totalQuantity / daysOfData : 0;
-
-      // Analyze trend
-      const trend = this.analyzeTrend(productSales);
-      const volatility = this.analyzeVolatility(productSales, averageDailySales);
-
-      // Calculate forecast with trend adjustment
-      const trendMultiplier = trend === 'increasing' ? 1.15 : trend === 'decreasing' ? 0.85 : 1.0;
-      const safetyMultiplier = volatility === 'high' ? 1.2 : volatility === 'medium' ? 1.1 : 1.0;
-
-      const predicted7days = Math.ceil(averageDailySales * 7 * trendMultiplier * safetyMultiplier);
-      const predicted30days = Math.ceil(averageDailySales * 30 * trendMultiplier * safetyMultiplier);
-      const predicted90days = Math.ceil(averageDailySales * 90 * trendMultiplier * safetyMultiplier);
-
-      totalPredictedDemand += predicted30days;
-
-      // Calculate confidence based on data quality
-      const confidence = this.calculateForecastConfidence(productSales, daysOfData, volatility);
-      totalConfidence += confidence;
-
-      forecasts.push({
-        productId: product.productId,
-        productName: product.productName,
-        currentStock: product.currentStock,
-        averageDailySales: Math.round(averageDailySales * 100) / 100,
-        predictedDemand: {
-          '7days': predicted7days,
-          '30days': predicted30days,
-          '90days': predicted90days,
-        },
-        confidence: Math.round(confidence * 100) / 100,
-        seasonalFactors: {
-          trend,
-          volatility,
-        },
-      });
-    }
-
-    const overallConfidence = forecasts.length > 0 ? totalConfidence / forecasts.length : 0;
-
-    return Promise.resolve({
-      timestamp,
-      forecastPeriod: `${timeframe} days`,
-      forecasts,
-      totalPredictedDemand,
-      confidence: Math.round(overallConfidence * 100) / 100,
-    });
-  }
-
-  // ==========================================================================
-  // REORDER ANALYSIS LOGIC
-  // ==========================================================================
-
-  /**
-   * Generate reorder recommendations
-   */
-  private performReorderAnalysis(request: InventoryRequest): Promise<ReorderAlertResult> {
-    const { products, salesHistory = [], budget } = request;
-    const timestamp = new Date().toISOString();
-
-    const salesVelocity = this.calculateSalesVelocity(salesHistory);
-    const recommendations: ReorderRecommendation[] = [];
-
-    let urgentReorders = 0;
-    let plannedReorders = 0;
-    let totalReorderCost = 0;
-    let preventedStockouts = 0;
-
-    for (const product of products) {
-      const velocity = salesVelocity.get(product.productId) ?? 0;
-      const leadTime = product.supplierLeadTime ?? 7;
-      const unitCost = product.unitCost ?? 0;
-      const currentStock = product.currentStock;
-
-      // Calculate reorder point: (daily sales × lead time) + safety stock
-      const safetyStock = Math.ceil(velocity * 3); // 3 days of safety stock
-      const reorderPoint = Math.ceil(velocity * leadTime + safetyStock);
-
-      // Skip if stock is above reorder point
-      if (currentStock > reorderPoint && currentStock > 0) {
-        continue;
-      }
-
-      // Calculate recommended order quantity (EOQ simplified)
-      const optimalStock = product.optimalStock ?? Math.ceil(velocity * 30); // 30 days of stock
-      const recommendedQuantity = Math.max(optimalStock - currentStock, Math.ceil(velocity * 14));
-
-      // Calculate urgency
-      let urgency: ReorderRecommendation['urgency'];
-      let expectedStockoutDate: string | null = null;
-
-      if (currentStock === 0) {
-        urgency = 'immediate';
-        urgentReorders++;
-        preventedStockouts++;
-        expectedStockoutDate = new Date().toISOString();
-      } else if (velocity > 0) {
-        const daysUntilStockout = currentStock / velocity;
-
-        if (daysUntilStockout <= leadTime) {
-          urgency = 'immediate';
-          urgentReorders++;
-          preventedStockouts++;
-        } else if (daysUntilStockout <= leadTime * 1.5) {
-          urgency = 'high';
-          preventedStockouts++;
-        } else if (daysUntilStockout <= leadTime * 2) {
-          urgency = 'medium';
-        } else {
-          urgency = 'low';
-        }
-
-        const stockoutDate = new Date();
-        stockoutDate.setDate(stockoutDate.getDate() + Math.floor(daysUntilStockout));
-        expectedStockoutDate = stockoutDate.toISOString();
-      } else {
-        urgency = 'low';
-      }
-
-      if (urgency !== 'low') {
-        plannedReorders++;
-      }
-
-      const estimatedCost = recommendedQuantity * unitCost;
-      totalReorderCost += estimatedCost;
-
-      // Generate reasoning
-      const reasoning = this.generateReorderReasoning(
-        currentStock,
-        reorderPoint,
-        velocity,
-        leadTime,
-        urgency
-      );
-
-      recommendations.push({
-        productId: product.productId,
-        productName: product.productName,
-        currentStock,
-        reorderPoint,
-        recommendedQuantity,
-        urgency,
-        estimatedCost: Math.round(estimatedCost * 100) / 100,
-        supplierLeadTime: leadTime,
-        expectedStockoutDate,
-        reasoning,
-      });
-    }
-
-    // Sort by urgency
-    const urgencyOrder = { immediate: 0, high: 1, medium: 2, low: 3 };
-    recommendations.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
-
-    // If budget constraint, filter recommendations
-    if (budget) {
-      let runningTotal = 0;
-      const filteredRecs = recommendations.filter((rec) => {
-        if (runningTotal + rec.estimatedCost <= budget || rec.urgency === 'immediate') {
-          runningTotal += rec.estimatedCost;
-          return true;
-        }
-        return false;
-      });
-
-      totalReorderCost = runningTotal;
-      return Promise.resolve({
-        timestamp,
-        urgentReorders,
-        plannedReorders,
-        recommendations: filteredRecs,
-        totalReorderCost: Math.round(totalReorderCost * 100) / 100,
-        preventedStockouts,
-      });
-    }
-
-    return Promise.resolve({
-      timestamp,
-      urgentReorders,
-      plannedReorders,
-      recommendations,
-      totalReorderCost: Math.round(totalReorderCost * 100) / 100,
-      preventedStockouts,
-    });
-  }
-
-  // ==========================================================================
-  // TURNOVER ANALYSIS LOGIC
-  // ==========================================================================
-
-  /**
-   * Analyze inventory turnover rates
-   */
-  private performTurnoverAnalysis(request: InventoryRequest): Promise<TurnoverAnalysisResult> {
-    const { products, salesHistory = [], timeframe = 30 } = request;
-    const timestamp = new Date().toISOString();
-
-    const productTurnovers: ProductTurnover[] = [];
-    let totalTurnover = 0;
-    let totalDaysInInventory = 0;
-    let fastMovingCount = 0;
-    let slowMovingCount = 0;
-    let deadStockCount = 0;
-
-    for (const product of products) {
-      const productSales = salesHistory.filter((s) => s.productId === product.productId);
-      const totalSold = productSales.reduce((sum, s) => sum + s.quantity, 0);
-      const currentStock = product.currentStock;
-      const avgStock = (currentStock + totalSold) / 2;
-
-      // Calculate turnover rate
-      const turnoverRate = avgStock > 0 ? totalSold / avgStock : 0;
-      const daysInInventory = turnoverRate > 0 ? timeframe / turnoverRate : 999;
-
-      // Calculate sales velocity
-      const daysOfData = this.calculateDaysSpan(productSales);
-      const salesVelocity = daysOfData > 0 ? totalSold / daysOfData : 0;
-
-      // Categorize product
-      let category: ProductTurnover['category'];
-      let recommendation: string;
-
-      if (totalSold === 0 && currentStock > 0) {
-        category = 'dead';
-        deadStockCount++;
-        recommendation = 'Dead stock - Consider clearance sale or product discontinuation';
-      } else if (daysInInventory <= 30) {
-        category = 'fast';
-        fastMovingCount++;
-        recommendation = 'Fast-moving item - Ensure adequate stock levels and monitor closely';
-      } else if (daysInInventory <= 60) {
-        category = 'medium';
-        recommendation = 'Average turnover - Maintain current stock strategy';
-      } else {
-        category = 'slow';
-        slowMovingCount++;
-        recommendation = 'Slow-moving item - Reduce stock levels and consider promotions';
-      }
-
-      totalTurnover += turnoverRate;
-      totalDaysInInventory += daysInInventory;
-
-      productTurnovers.push({
-        productId: product.productId,
-        productName: product.productName,
-        turnoverRate: Math.round(turnoverRate * 100) / 100,
-        daysInInventory: Math.round(daysInInventory),
-        category,
-        salesVelocity: Math.round(salesVelocity * 100) / 100,
-        recommendation,
-      });
-    }
-
-    const overallTurnoverRate =
-      products.length > 0 ? totalTurnover / products.length : 0;
-    const averageDaysInInventory =
-      products.length > 0 ? totalDaysInInventory / products.length : 0;
-
-    // Generate strategic recommendations
-    const recommendations = this.generateTurnoverRecommendations(
-      fastMovingCount,
-      slowMovingCount,
-      deadStockCount,
-      products.length
-    );
-
-    return Promise.resolve({
-      timestamp,
-      analysisPeriod: `${timeframe} days`,
-      metrics: {
-        overallTurnoverRate: Math.round(overallTurnoverRate * 100) / 100,
-        averageDaysInInventory: Math.round(averageDaysInInventory),
-        fastMovingItems: fastMovingCount,
-        slowMovingItems: slowMovingCount,
-        deadStock: deadStockCount,
-      },
-      products: productTurnovers,
-      recommendations,
-    });
-  }
-
-  // ==========================================================================
-  // HELPER FUNCTIONS
-  // ==========================================================================
-
-  /**
-   * Calculate sales velocity for each product (units per day)
-   */
-  private calculateSalesVelocity(salesHistory: SalesRecord[]): Map<string, number> {
-    const velocityMap = new Map<string, number>();
-
-    const productGroups = salesHistory.reduce(
-      (acc, sale) => {
-        if (!acc[sale.productId]) {
-          acc[sale.productId] = [];
-        }
-        acc[sale.productId].push(sale);
-        return acc;
-      },
-      {} as Record<string, SalesRecord[]>
-    );
-
-    for (const [productId, sales] of Object.entries(productGroups)) {
-      const totalQuantity = sales.reduce((sum, s) => sum + s.quantity, 0);
-      const daysSpan = this.calculateDaysSpan(sales);
-      const velocity = daysSpan > 0 ? totalQuantity / daysSpan : 0;
-      velocityMap.set(productId, velocity);
-    }
-
-    return velocityMap;
-  }
-
-  /**
-   * Calculate the number of days spanned by sales records
-   */
-  private calculateDaysSpan(sales: SalesRecord[]): number {
-    if (sales.length === 0) {
-      return 0;
-    }
-
-    const dates = sales.map((s) => new Date(s.date).getTime());
-    const minDate = Math.min(...dates);
-    const maxDate = Math.max(...dates);
-    const diffDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
-
-    return Math.max(diffDays, 1);
-  }
-
-  /**
-   * Analyze sales trend
-   */
-  private analyzeTrend(sales: SalesRecord[]): 'increasing' | 'stable' | 'decreasing' {
-    if (sales.length < 3) {
-      return 'stable';
-    }
-
-    // Sort by date
-    const sorted = [...sales].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    // Compare first half vs second half
-    const midpoint = Math.floor(sorted.length / 2);
-    const firstHalf = sorted.slice(0, midpoint);
-    const secondHalf = sorted.slice(midpoint);
-
-    const firstAvg = firstHalf.reduce((sum, s) => sum + s.quantity, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((sum, s) => sum + s.quantity, 0) / secondHalf.length;
-
-    const change = (secondAvg - firstAvg) / firstAvg;
-
-    if (change > 0.15) {
-      return 'increasing';
-    }
-    if (change < -0.15) {
-      return 'decreasing';
-    }
-    return 'stable';
-  }
-
-  /**
-   * Analyze sales volatility
-   */
-  private analyzeVolatility(
-    sales: SalesRecord[],
-    average: number
-  ): 'high' | 'medium' | 'low' {
-    if (sales.length < 2) {
-      return 'low';
-    }
-
-    // Calculate standard deviation
-    const variance =
-      sales.reduce((sum, s) => sum + Math.pow(s.quantity - average, 2), 0) / sales.length;
-    const stdDev = Math.sqrt(variance);
-
-    // Calculate coefficient of variation
-    const cv = average > 0 ? stdDev / average : 0;
-
-    if (cv > 0.5) {
-      return 'high';
-    }
-    if (cv > 0.25) {
-      return 'medium';
-    }
-    return 'low';
-  }
-
-  /**
-   * Calculate forecast confidence
-   */
-  private calculateForecastConfidence(
-    sales: SalesRecord[],
-    daysOfData: number,
-    volatility: 'high' | 'medium' | 'low'
-  ): number {
-    let confidence = 0.5; // Base confidence
-
-    // More data = higher confidence
-    if (daysOfData >= 90) {
-      confidence += 0.3;
-    } else if (daysOfData >= 30) {
-      confidence += 0.2;
-    } else if (daysOfData >= 14) {
-      confidence += 0.1;
-    }
-
-    // More sales records = higher confidence
-    if (sales.length >= 30) {
-      confidence += 0.1;
-    } else if (sales.length >= 10) {
-      confidence += 0.05;
-    }
-
-    // Lower volatility = higher confidence
-    if (volatility === 'low') {
-      confidence += 0.1;
-    } else if (volatility === 'high') {
-      confidence -= 0.1;
-    }
-
-    return Math.max(0.1, Math.min(1.0, confidence));
-  }
-
-  /**
-   * Generate reasoning for reorder recommendation
-   */
-  private generateReorderReasoning(
-    currentStock: number,
-    reorderPoint: number,
-    velocity: number,
-    leadTime: number,
-    urgency: string
-  ): string {
-    if (currentStock === 0) {
-      return 'Product out of stock. Immediate reorder required to prevent lost sales.';
-    }
-
-    const daysLeft = velocity > 0 ? Math.floor(currentStock / velocity) : 999;
-
-    if (urgency === 'immediate') {
-      return `Current stock (${currentStock}) will deplete in ${daysLeft} days, which is less than supplier lead time (${leadTime} days). Immediate reorder required.`;
-    }
-
-    if (urgency === 'high') {
-      return `Stock below reorder point (${reorderPoint}). With ${leadTime}-day lead time and current velocity, reorder now to prevent stockout.`;
-    }
-
-    if (urgency === 'medium') {
-      return `Stock approaching reorder point. Plan reorder to maintain optimal inventory levels.`;
-    }
-
-    return `Stock levels acceptable but approaching reorder point. Consider placing order soon.`;
-  }
-
-  /**
-   * Generate strategic turnover recommendations
-   */
-  private generateTurnoverRecommendations(
-    fastMoving: number,
-    slowMoving: number,
-    deadStock: number,
-    total: number
-  ): string[] {
-    const recommendations: string[] = [];
-
-    const fastPercent = (fastMoving / total) * 100;
-    const slowPercent = (slowMoving / total) * 100;
-    const deadPercent = (deadStock / total) * 100;
-
-    if (deadPercent > 20) {
-      recommendations.push(
-        `High dead stock (${deadPercent.toFixed(1)}%) - Implement aggressive clearance strategy`
-      );
-    } else if (deadPercent > 10) {
-      recommendations.push(`${deadPercent.toFixed(1)}% dead stock - Review product mix and discontinue poor performers`);
-    }
-
-    if (slowPercent > 40) {
-      recommendations.push(
-        'Over 40% slow-moving inventory - Reduce purchasing and focus on fast movers'
-      );
-    }
-
-    if (fastPercent > 50) {
-      recommendations.push(
-        'Strong fast-moving inventory ratio - Ensure adequate stock levels for top performers'
-      );
-    } else if (fastPercent < 20) {
-      recommendations.push(
-        'Low fast-moving inventory - Investigate product demand and market fit'
-      );
-    }
-
-    if (slowMoving > 0 || deadStock > 0) {
-      recommendations.push(
-        'Consider bundling slow-moving items with fast movers or running targeted promotions'
-      );
-    }
-
-    recommendations.push(
-      'Monitor turnover rates weekly and adjust purchasing strategy accordingly'
-    );
-
-    return recommendations.slice(0, 5);
+    return { functional: 560, boilerplate: 90 };
   }
 }
 
 // ============================================================================
-// FACTORY FUNCTION
+// FACTORY / SINGLETON
 // ============================================================================
 
-export function createInventoryManager(): InventoryManagerAgent {
-  return new InventoryManagerAgent();
+export function createInventoryManagerSpecialist(): InventoryManagerSpecialist {
+  return new InventoryManagerSpecialist();
 }
 
-// ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
+let instance: InventoryManagerSpecialist | null = null;
 
-let instance: InventoryManagerAgent | null = null;
-
-export function getInventoryManager(): InventoryManagerAgent {
-  instance ??= createInventoryManager();
+export function getInventoryManagerSpecialist(): InventoryManagerSpecialist {
+  instance ??= createInventoryManagerSpecialist();
   return instance;
 }
+
+// Backward-compat aliases for agent-factory / index.ts / commerce/manager.ts callers
+export { InventoryManagerSpecialist as InventoryManagerAgent };
+export const getInventoryManager = getInventoryManagerSpecialist;
+
+// ============================================================================
+// INTERNAL TEST HELPERS
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  DEFAULT_SYSTEM_PROMPT,
+  loadGMConfig,
+  stripJsonFences,
+  buildInventoryPrompt,
+  executeInventoryAction,
+  InventoryPayloadSchema,
+  InventoryResultSchema,
+};
