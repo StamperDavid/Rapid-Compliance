@@ -152,9 +152,12 @@ function makeReport(overrides: Partial<AgentReport> = {}): AgentReport {
 // ---------------------------------------------------------------------------
 
 class TestManager extends BaseManager {
-  // Promote protected methods to public for direct testing
-  public reviewOutput(_report: AgentReport): ReviewResult {
-    return { approved: true, feedback: [], severity: 'PASS', qualityScore: 100 };
+  // Promote protected methods to public for direct testing.
+  // Override the real LLM-backed reviewOutput with a synchronous pass-through
+  // so unit tests don't require Firestore or OpenRouter. Tests that need to
+  // exercise the real review path use the non-overridden BaseManager.
+  public async reviewOutput(_report: AgentReport): Promise<ReviewResult> {
+    return Promise.resolve({ approved: true, feedback: [], severity: 'PASS', qualityScore: 100 });
   }
 
   public findDelegationTargetPublic(message: AgentMessage): string | null {
@@ -586,16 +589,16 @@ describe('BaseManager', () => {
       // We use a flag-based approach to approve only after at least one rejection,
       // verifying that execute() is invoked more than once.
       let gateApproved = false;
-      jest.spyOn(manager, 'reviewOutput').mockImplementation((): ReviewResult => {
+      jest.spyOn(manager, 'reviewOutput').mockImplementation((): Promise<ReviewResult> => {
         if (!gateApproved) {
           // Reject the first time the gate evaluates a real report, then approve.
-          // We approve on the second call that arrives with report data (the gate
-          // is called in the feedback-injection branch too, but that branch fires
-          // before the second execute(), so by the second gate check we flip).
+          // The review cache in BaseManager keys on the AgentReport object, so
+          // successive calls with DIFFERENT report objects (one per retry) each
+          // re-enter this mock and flip the flag.
           gateApproved = true;
-          return { approved: false, feedback: ['Too short'], severity: 'MAJOR', qualityScore: 40 };
+          return Promise.resolve({ approved: false, feedback: ['Too short'], severity: 'MAJOR', qualityScore: 40 });
         }
-        return { approved: true, feedback: [], severity: 'PASS', qualityScore: 90 };
+        return Promise.resolve({ approved: true, feedback: [], severity: 'PASS', qualityScore: 90 });
       });
 
       manager.registerSpecialist(functionalSpecialist);
@@ -608,7 +611,7 @@ describe('BaseManager', () => {
     });
 
     it('escalates to Jasper via MemoryVault after exhausting all retries', async () => {
-      jest.spyOn(manager, 'reviewOutput').mockReturnValue({
+      jest.spyOn(manager, 'reviewOutput').mockResolvedValue({
         approved: false,
         feedback: ['Does not meet quality bar'],
         severity: 'BLOCK',

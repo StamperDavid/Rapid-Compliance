@@ -915,7 +915,7 @@ export class MarketingManager extends BaseManager {
             specialistId,
             { action: 'FETCH_POST_METRICS' }
           );
-          await specialist.execute(listenMessage);
+          await this.delegateWithReview(specialistId, listenMessage);
           results.push({ specialist: specialistId, status: 'completed' });
         } else {
           results.push({ specialist: specialistId, status: 'not_registered' });
@@ -944,18 +944,21 @@ export class MarketingManager extends BaseManager {
     }
 
     // Aggregate metrics
-    await growthAnalyst.execute(
-      this.createDelegationMessage(`${taskId}_aggregate`, 'GROWTH_ANALYST', { action: 'AGGREGATE_METRICS' })
+    await this.delegateWithReview(
+      'GROWTH_ANALYST',
+      this.createDelegationMessage(`${taskId}_aggregate`, 'GROWTH_ANALYST', { action: 'AGGREGATE_METRICS' }),
     );
 
     // Calculate KPIs
-    await growthAnalyst.execute(
-      this.createDelegationMessage(`${taskId}_kpis`, 'GROWTH_ANALYST', { action: 'CALCULATE_KPIS' })
+    await this.delegateWithReview(
+      'GROWTH_ANALYST',
+      this.createDelegationMessage(`${taskId}_kpis`, 'GROWTH_ANALYST', { action: 'CALCULATE_KPIS' }),
     );
 
     // Identify patterns
-    const patternReport = await growthAnalyst.execute(
-      this.createDelegationMessage(`${taskId}_patterns`, 'GROWTH_ANALYST', { action: 'IDENTIFY_PATTERNS' })
+    const patternReport = await this.delegateWithReview(
+      'GROWTH_ANALYST',
+      this.createDelegationMessage(`${taskId}_patterns`, 'GROWTH_ANALYST', { action: 'IDENTIFY_PATTERNS' }),
     );
 
     const patternData = patternReport?.data as Record<string, unknown> | undefined;
@@ -976,8 +979,9 @@ export class MarketingManager extends BaseManager {
       return { directivesGenerated: 0, directives: [] };
     }
 
-    const mutationReport = await growthAnalyst.execute(
-      this.createDelegationMessage(`${taskId}_mutations`, 'GROWTH_ANALYST', { action: 'GENERATE_MUTATIONS' })
+    const mutationReport = await this.delegateWithReview(
+      'GROWTH_ANALYST',
+      this.createDelegationMessage(`${taskId}_mutations`, 'GROWTH_ANALYST', { action: 'GENERATE_MUTATIONS' }),
     );
 
     const mutationData = mutationReport?.data as Record<string, unknown> | undefined;
@@ -1349,7 +1353,7 @@ export class MarketingManager extends BaseManager {
         traceId: taskId,
       };
 
-      const report = await seoSpecialist.execute(seoMessage);
+      const report = await this.delegateWithReview('SEO_EXPERT', seoMessage);
 
       const executionTimeMs = Date.now() - startTime;
 
@@ -1911,7 +1915,7 @@ export class MarketingManager extends BaseManager {
           traceId: taskId,
         };
 
-        const report = await specialist.execute(message);
+        const report = await this.delegateWithReview(specialistId, message);
         const executionTimeMs = Date.now() - startTime;
 
         // Map AgentReport status to DelegationResult status

@@ -1754,7 +1754,7 @@ export class RevenueDirector extends BaseManager {
     };
 
     try {
-      const report = await this.delegateToSpecialist(delegation.specialist, message);
+      const report = await this.delegateWithReview(delegation.specialist, message);
       return {
         specialist: delegation.specialist,
         status: report.status,
@@ -2735,7 +2735,7 @@ export class RevenueDirector extends BaseManager {
     let battlecardUpdated = false;
     if (!isWon && lossReason && this.objectionHandlerInstance) {
       try {
-        await this.delegateToSpecialist('OBJ_HANDLER', {
+        await this.delegateWithReview('OBJ_HANDLER', {
           id: `battlecard_update_${taskId}`,
           timestamp: new Date(),
           from: this.identity.id,

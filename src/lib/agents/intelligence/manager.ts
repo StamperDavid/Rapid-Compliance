@@ -683,8 +683,8 @@ export class IntelligenceManager extends BaseManager {
           request
         );
 
-        // Execute the specialist
-        const report = await specialist.execute(specialistMessage);
+        // Execute the specialist through the review gate (Phase 1 manager rebuild)
+        const report = await this.delegateWithReview(specialistId, specialistMessage);
 
         const executionTimeMs = Date.now() - startTime;
 
@@ -1341,7 +1341,7 @@ export class IntelligenceManager extends BaseManager {
         traceId: `sweep_${Date.now()}`,
       };
 
-      const report = await specialist.execute(message);
+      const report = await this.delegateWithReview('COMPETITOR_RESEARCHER', message);
       const signals = this.parseCompetitorSignals(report.data);
 
       return {
@@ -1398,7 +1398,7 @@ export class IntelligenceManager extends BaseManager {
         traceId: `sweep_${Date.now()}`,
       };
 
-      const report = await specialist.execute(message);
+      const report = await this.delegateWithReview('TREND_SCOUT', message);
       const signals = this.parseTrendSignals(report.data);
 
       return {
@@ -1455,7 +1455,7 @@ export class IntelligenceManager extends BaseManager {
         traceId: `sweep_${Date.now()}`,
       };
 
-      const report = await specialist.execute(message);
+      const report = await this.delegateWithReview('SENTIMENT_ANALYST', message);
       const signals = this.parseSentimentSignals(report.data);
 
       return {
@@ -1512,7 +1512,7 @@ export class IntelligenceManager extends BaseManager {
         traceId: `sweep_${Date.now()}`,
       };
 
-      const report = await specialist.execute(message);
+      const report = await this.delegateWithReview('TECHNOGRAPHIC_SCOUT', message);
       const signals = this.parseTechnographicSignals(report.data);
 
       return {
