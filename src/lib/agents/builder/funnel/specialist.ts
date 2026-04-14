@@ -43,6 +43,44 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['design_funnel'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Funnel Engineer response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   FunnelDesignResultSchema is dominated by the stages array (3-7 entries
+ *   with prose-heavy tactics/kpi/optimization fields summing to ~6,240
+ *   chars at theoretical max per stage).
+ *
+ *   Theoretical worst case (7 stages, every prose field at .max()):
+ *     funnelSummary: 2,300
+ *     stages: 7 × (name 80 + purpose 600 + tacticsDescription 2500 +
+ *     kpiDescription 1500 + bottleneckRisk enum 10 + optimizationNotes
+ *     1500 + JSON 50) = 7 × 6,240 = 43,680
+ *     estimatedCpa 2000 + keyBottleneckRisks (5 × 800 = 4,000)
+ *     abTestRoadmap: 6 × (testName 200 + hypothesis 800 + successMetric
+ *     400 + priority 10 + JSON 30) = 6 × 1,440 = 8,640
+ *     recommendations 6000 + rationale 6000
+ *     ≈ 72,630 chars total at theoretical maximum
+ *     /3.0 chars/token = 24,210 tokens
+ *     + JSON overhead + 25% safety ≈ 30,500 tokens.
+ *
+ *   The LLM does not actually fill every field to .max() in practice.
+ *   Realistic worst case (5 stages, ~60% prose fill):
+ *     stages: 5 × ~3,800 = 19,000
+ *     + summary + abTests + cpa + bottlenecks + recommendations + rationale
+ *     ≈ 45,000 chars → ~15,000 tokens + safety = ~19,000.
+ *
+ *   Setting the floor at 22,000 covers realistic worst with comfortable
+ *   headroom and is comfortably above the prior 10,000 baseline. Cases
+ *   that approach the theoretical max trigger the truncation backstop.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 22000;
+
 interface FunnelEngineerGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -75,7 +113,7 @@ const CONFIG: SpecialistConfig = {
       rationale: { type: 'string' },
     },
   },
-  maxTokens: 10000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.6,
 };
 
@@ -182,11 +220,17 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: FunnelEngineerGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.6,
-    maxTokens: config.maxTokens ?? 10000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -243,6 +287,20 @@ async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Funnel Engineer: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -462,6 +520,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildDesignFunnelUserPrompt,

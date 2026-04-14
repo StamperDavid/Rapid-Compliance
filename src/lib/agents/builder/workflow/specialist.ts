@@ -48,6 +48,46 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['compose_workflow'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Workflow Optimizer response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   ComposeWorkflowResultSchema is dominated by the nodes array (3-12
+ *   entries with prose-heavy purpose/inputs/outputs/depends fields
+ *   summing to ~4,970 chars per node at theoretical max).
+ *
+ *   Theoretical worst case (12 nodes, every prose field at .max()):
+ *     workflowSummary: 2,500
+ *     nodes: 12 × (id 60 + agentId 120 + action 120 + purpose 800 +
+ *     inputsDescription 1500 + outputsDescription 1500 +
+ *     estimatedDurationSeconds 5 + dependsOnDescription 800 +
+ *     retryStrategy enum 15 + JSON 50) = 12 × 4,970 = 59,640
+ *     executionPattern enum 15
+ *     parallelizationNotes 3000 + criticalPathDescription 3000
+ *     estimatedTotalDurationSeconds 10
+ *     riskMitigation 5 × 800 = 4,000
+ *     successCriteria 2500 + rationale 6000
+ *     ≈ 80,665 chars total at theoretical maximum
+ *     /3.0 chars/token = 26,888 tokens
+ *     + JSON overhead + 25% safety ≈ 33,800 tokens.
+ *
+ *   Realistic worst case (8 nodes, ~60% prose fill):
+ *     nodes: 8 × ~3,000 = 24,000
+ *     + summary + execution + parallel + critical + risks +
+ *     criteria + rationale ≈ 19,000
+ *     ≈ 43,000 chars → ~14,333 tokens + safety ≈ ~18,000.
+ *
+ *   Setting the floor at 24,000 covers realistic worst with comfortable
+ *   headroom. Matches UX/UI Architect for consistency. Cases that
+ *   approach the theoretical max trigger the truncation backstop.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 24000;
+
 interface WorkflowOptimizerGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -81,7 +121,7 @@ const CONFIG: SpecialistConfig = {
       rationale: { type: 'string' },
     },
   },
-  maxTokens: 10000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.6,
 };
 
@@ -184,11 +224,17 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: WorkflowOptimizerGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.6,
-    maxTokens: config.maxTokens ?? 10000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -245,6 +291,20 @@ async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Workflow Optimizer: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -472,6 +532,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildComposeWorkflowUserPrompt,
