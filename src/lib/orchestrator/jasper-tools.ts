@@ -4971,17 +4971,60 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_commerce': {
         const commerceStart = Date.now();
         trackMissionStep(context, 'delegate_to_commerce', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Commerce department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_commerce', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - commerceStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Commerce department delegation is currently disabled because its specialists (Payment Specialist, Catalog Manager, Pricing Strategist, Inventory Manager) are still template engines with zero LLM calls. The Commerce Manager routes correctly but terminates at hand-coded lookup tables, not real AI — presenting that output as department analysis would be a lie. This tool returns online when these 4 specialists are rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'COMMERCE_MANAGER',
-        });
+
+        try {
+          const { CommerceManager } = await import('@/lib/agents/commerce/manager');
+          const commerceMgr = new CommerceManager();
+          await commerceMgr.initialize();
+
+          const commercePayload: Record<string, unknown> = {
+            action: (args.action as string | undefined) ?? 'stock_analysis',
+            products: args.products,
+            items: args.items,
+            customer: args.customer,
+            salesHistory: args.salesHistory,
+            options: args.options,
+          };
+
+          const commerceResult = await withTimeout(commerceMgr.execute({
+            id: `commerce_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'COMMERCE_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: commercePayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Commerce Manager');
+
+          const commerceDuration = Date.now() - commerceStart;
+          trackMissionStep(context, 'delegate_to_commerce',
+            commerceResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: commerceResult.status,
+            data: commerceResult.data,
+            errors: commerceResult.errors,
+            manager: 'COMMERCE_MANAGER',
+            reviewLink: getReviewLink('delegate_to_commerce', context?.missionId),
+          });
+        } catch (commerceError: unknown) {
+          const errorMsg = commerceError instanceof Error ? commerceError.message : 'Unknown error';
+          const commerceDuration = Date.now() - commerceStart;
+          trackMissionStep(context, 'delegate_to_commerce', 'FAILED', {
+            summary: `Commerce error: ${errorMsg}`,
+            durationMs: commerceDuration,
+            error: errorMsg,
+          });
+          content = JSON.stringify({
+            status: 'FAILED',
+            error: errorMsg,
+            manager: 'COMMERCE_MANAGER',
+          });
+        }
         break;
       }
 
