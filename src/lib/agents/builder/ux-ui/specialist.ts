@@ -42,6 +42,50 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['generate_design_system'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case UX/UI Architect response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   DesignSystemResultSchema is one of the heaviest schemas in the rebuild
+ *   — driven by componentGuidelines (4-8 entries, each with 5 prose fields
+ *   summing to ~8,310 chars at theoretical max).
+ *
+ *   Theoretical worst case (8 components, every prose field at .max()):
+ *     componentGuidelines: 8 × (name 60 + purpose 1200 +
+ *     variantsDescription 2500 + statesCoveredDescription 2500 +
+ *     accessibilityNotes 2000 + JSON 50) = 8 × 8,310 = 66,480
+ *     tokens (colors 6,390 + typography 1,875 + spacing 250 +
+ *     radius 80 + shadows 1,200 + breakpoints 80) = 9,875
+ *     designPrinciples: 6 × 500 = 3,000
+ *     accessibilityStrategy 5000
+ *     rationale 6000
+ *     ≈ 90,355 chars total at theoretical maximum
+ *     /3.0 chars/token = 30,118 tokens
+ *     + JSON overhead + 25% safety ≈ 37,900 tokens.
+ *
+ *   That theoretical maximum assumes every component has 2,500-char
+ *   variantsDescription AND 2,500-char statesCoveredDescription AND
+ *   2,000-char accessibilityNotes — which the LLM does not actually
+ *   produce in normal use. Empirical baselining at Task #35 widened
+ *   maxTokens from 8,000 to 12,000 to fit the LLM's actual typical
+ *   output. The realistic worst case is ~50-60% of theoretical:
+ *     componentGuidelines: 8 × ~5,000 = ~40,000
+ *     + tokens + principles + accessibility + rationale ≈ 60-65k chars
+ *     ≈ 21,000 tokens at the realistic worst.
+ *
+ *   Setting the floor at 24,000 covers realistic worst with safety
+ *   margin and is comfortably above the empirical 12,000 baseline.
+ *   Pathological cases that approach the theoretical 38,000-token max
+ *   will still hit the truncation backstop in callOpenRouter with a
+ *   clear diagnostic.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 24000;
+
 interface UxUiArchitectGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -71,7 +115,7 @@ const CONFIG: SpecialistConfig = {
       rationale: { type: 'string' },
     },
   },
-  maxTokens: 10000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.5,
 };
 
@@ -240,11 +284,17 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: UxUiArchitectGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.5,
-    maxTokens: config.maxTokens ?? 10000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -301,6 +351,21 @@ async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `UX/UI Architect: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens; ` +
+      `theoretical schema max is ~38,000 tokens but the LLM rarely fills all componentGuidelines to .max() in practice.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -536,6 +601,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildGenerateDesignSystemUserPrompt,
