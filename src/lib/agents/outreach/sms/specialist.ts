@@ -65,6 +65,35 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['compose_sms'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Schema-derived minimum max_tokens for the worst-case ComposeSmsResult.
+ *
+ * Derivation (Task #45 follow-up, April 13 2026):
+ *   Sum of every prose/value field's max() in ComposeSmsResultSchema:
+ *     smsPurpose 80 + segmentStrategy enum ~30 + primaryMessage 1600 +
+ *     charCount number ~10 + ctaText 120 + complianceFooter 200 +
+ *     linkPlacementNotes 3000 + personalizationNotes 3500 +
+ *     toneAndAngleReasoning 3500 + followupSuggestion 3500 +
+ *     complianceRisks 3000 + rationale 6000
+ *   = 24,540 chars worst-case prose.
+ *
+ *   Conservative tokenization: 3.0 chars/token for English with punctuation
+ *   = 8,180 tokens for prose alone.
+ *   + JSON structure overhead ≈ 200 tokens.
+ *   Floor: ~8,380 tokens.
+ *   + 25% safety margin for tokenization variance and verbose styles
+ *   (pirate dialect, dense rationales): 10,475 tokens.
+ *   Round to a clean ceiling: 11,000 tokens.
+ *
+ * The prior 8,000 max_tokens was below the schema's worst case. SMS
+ * happened to pass the Task #45 front-door pirate test because the LLM
+ * filled fields under their max — that was luck, not robustness. Fixing
+ * the structural budget here removes the latent truncation bug. Same
+ * defensive backstop in callOpenRouter as the Email Specialist. If this
+ * constant changes, ComposeSmsResultSchema caps must be re-totaled.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 11000;
+
 interface SmsSpecialistGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -101,7 +130,7 @@ const CONFIG: SpecialistConfig = {
       rationale: { type: 'string' },
     },
   },
-  maxTokens: 8000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.6,
 };
 
@@ -207,11 +236,18 @@ async function loadRuntimeContext(industryKey: string): Promise<LlmCallContext> 
     );
   }
 
+  // Use max() of the GM-stored value and the schema-derived minimum so the
+  // worst-case schema budget is always honored even when the GM doc was
+  // seeded before the cap-derivation work of Task #45 follow-up. We never
+  // silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: SmsSpecialistGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.6,
-    maxTokens: config.maxTokens ?? 8000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -328,6 +364,18 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (Task #45 follow-up). Mirrors the Email Specialist
+  // backstop. If the LLM ran out of max_tokens mid-response, fail loudly
+  // with the actual cause instead of letting JSON.parse blame "invalid JSON".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `SMS Specialist: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Schema worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -557,6 +605,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadRuntimeContext,
   buildResolvedSystemPrompt,
   buildComposeSmsUserPrompt,
