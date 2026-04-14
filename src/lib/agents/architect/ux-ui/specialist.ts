@@ -208,8 +208,8 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
   const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
   if (!gmRecord) {
     throw new Error(
-      `UX/UI Specialist GM not found for industryKey=${industryKey}. ` +
-      `Run node scripts/seed-ux-ui-specialist-gm.js to seed.`,
+      `UX/UI Strategist GM not found for industryKey=${industryKey}. ` +
+      `Run node scripts/seed-ux-ui-strategist-gm.js to seed.`,
     );
   }
 

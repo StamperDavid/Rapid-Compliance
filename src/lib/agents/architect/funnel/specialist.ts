@@ -231,8 +231,8 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
   const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
   if (!gmRecord) {
     throw new Error(
-      `Funnel Pathologist GM not found for industryKey=${industryKey}. ` +
-      `Run node scripts/seed-funnel-pathologist-gm.js to seed.`,
+      `Funnel Strategist GM not found for industryKey=${industryKey}. ` +
+      `Run node scripts/seed-funnel-strategist-gm.js to seed.`,
     );
   }
 

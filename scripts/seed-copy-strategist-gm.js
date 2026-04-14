@@ -1,11 +1,16 @@
 /**
- * Seed Copy Specialist Golden Master v1 (saas_sales_ops) — direct Firestore admin
+ * Seed Copy Strategist Golden Master v1 (saas_sales_ops) — direct Firestore admin
  *
- * Usage: node scripts/seed-copy-specialist-gm.js [--force]
+ * Usage: node scripts/seed-copy-strategist-gm.js [--force]
  *
- * NOTE: This is the Architect-layer Copy Specialist (strategic messaging picker),
+ * NOTE: This is the Architect-layer Copy Strategist (strategic messaging picker),
  * NOT the Content-layer Copywriter (Task #23). Different files, different jobs.
  * See src/lib/agents/architect/copy/specialist.ts header for the full distinction.
+ *
+ * RENAME HISTORY: Task #61 (April 14, 2026) renamed this specialist from
+ * COPY_SPECIALIST → COPY_STRATEGIST. The `--force` branch below also deactivates
+ * any orphaned docs under the legacy COPY_SPECIALIST id so reseeding leaves a
+ * clean collection with no stale duplicates.
  */
 
 const admin = require('firebase-admin');
@@ -16,6 +21,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
 const SPECIALIST_ID = 'COPY_STRATEGIST';
+const LEGACY_SPECIALIST_IDS = ['COPY_SPECIALIST']; // Task #61 rename
 const INDUSTRY_KEY = 'saas_sales_ops';
 const GM_ID = `sgm_copy_strategist_${INDUSTRY_KEY}_v1`;
 
@@ -158,17 +164,48 @@ async function main() {
     .get();
 
   if (!existing.empty && !force) {
-    console.log(`✓ Copy Specialist GM already active: ${existing.docs[0].id} — skipping (pass --force to overwrite)`);
+    console.log(`✓ Copy Strategist GM already active: ${existing.docs[0].id} — skipping (pass --force to overwrite)`);
     process.exit(0);
   }
 
-  if (force && !existing.empty) {
+  if (force) {
     const batch = db.batch();
+    const now = new Date().toISOString();
+    let deactivatedCount = 0;
+
+    // Deactivate any existing doc under the current specialistId.
     for (const doc of existing.docs) {
-      batch.update(doc.ref, { isActive: false });
+      batch.update(doc.ref, {
+        isActive: false,
+        deactivatedAt: now,
+        deactivatedReason: 'superseded by --force reseed',
+      });
+      deactivatedCount++;
     }
-    await batch.commit();
-    console.log(`  deactivated ${existing.docs.length} existing doc(s)`);
+
+    // Deactivate any orphan docs left over from the Task #61 rename
+    // (COPY_SPECIALIST → COPY_STRATEGIST). Without this cleanup, the old
+    // id's doc stays active in parallel and Training Lab shows duplicates.
+    for (const legacyId of LEGACY_SPECIALIST_IDS) {
+      const legacySnap = await db.collection(COLLECTION)
+        .where('specialistId', '==', legacyId)
+        .where('industryKey', '==', INDUSTRY_KEY)
+        .where('isActive', '==', true)
+        .get();
+      for (const doc of legacySnap.docs) {
+        batch.update(doc.ref, {
+          isActive: false,
+          deactivatedAt: now,
+          deactivatedReason: `Task #61 rename: ${legacyId} → ${SPECIALIST_ID}`,
+        });
+        deactivatedCount++;
+      }
+    }
+
+    if (deactivatedCount > 0) {
+      await batch.commit();
+      console.log(`  deactivated ${deactivatedCount} existing doc(s) (current + legacy-ID orphans)`);
+    }
   }
 
   const now = new Date().toISOString();
