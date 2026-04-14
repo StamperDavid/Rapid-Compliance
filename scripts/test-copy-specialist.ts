@@ -87,7 +87,7 @@ async function main(): Promise<void> {
   console.log(`\n${hr}\nCOPY SPECIALIST PROOF OF LIFE — ${caseName}\n${hr}`);
 
   const gmRecord = await getActiveSpecialistGMByIndustry(__internal.SPECIALIST_ID, __internal.DEFAULT_INDUSTRY_KEY);
-  if (!gmRecord) { fail('Load GM', new Error('No active GM. Run node scripts/seed-copy-specialist-gm.js')); }
+  if (!gmRecord) { fail('Load GM', new Error('No active GM. Run node scripts/seed-copy-strategist-gm.js')); }
   console.log(`  ✓ GM: ${gmRecord.id}, v${gmRecord.version}`);
 
   const brandDNA = await getBrandDNA();

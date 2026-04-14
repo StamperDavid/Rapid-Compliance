@@ -1,11 +1,16 @@
 /**
- * Seed Funnel Pathologist Golden Master v1 (saas_sales_ops) — direct Firestore admin
+ * Seed Funnel Strategist Golden Master v1 (saas_sales_ops) — direct Firestore admin
  *
- * Usage: node scripts/seed-funnel-pathologist-gm.js [--force]
+ * Usage: node scripts/seed-funnel-strategist-gm.js [--force]
  *
- * NOTE: This is the Architect-layer Funnel Pathologist (strategic funnel diagnosis),
+ * NOTE: This is the Architect-layer Funnel Strategist (strategic funnel diagnosis),
  * NOT the Builder-layer Funnel Engineer (Task #36). Different files, different jobs.
  * See src/lib/agents/architect/funnel/specialist.ts header for the full distinction.
+ *
+ * RENAME HISTORY: Task #61 (April 14, 2026) renamed this specialist from
+ * FUNNEL_PATHOLOGIST → FUNNEL_STRATEGIST. The `--force` branch below also
+ * deactivates any orphaned docs under the legacy FUNNEL_PATHOLOGIST id so
+ * reseeding leaves a clean collection with no stale duplicates.
  */
 
 const admin = require('firebase-admin');
@@ -16,6 +21,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
 const SPECIALIST_ID = 'FUNNEL_STRATEGIST';
+const LEGACY_SPECIALIST_IDS = ['FUNNEL_PATHOLOGIST']; // Task #61 rename
 const INDUSTRY_KEY = 'saas_sales_ops';
 const GM_ID = `sgm_funnel_strategist_${INDUSTRY_KEY}_v1`;
 
@@ -125,17 +131,47 @@ async function main() {
     .get();
 
   if (!existing.empty && !force) {
-    console.log(`✓ Funnel Pathologist GM already active: ${existing.docs[0].id} — skipping (pass --force to overwrite)`);
+    console.log(`✓ Funnel Strategist GM already active: ${existing.docs[0].id} — skipping (pass --force to overwrite)`);
     process.exit(0);
   }
 
-  if (force && !existing.empty) {
+  if (force) {
     const batch = db.batch();
+    const deactivatedAt = new Date().toISOString();
+    let deactivatedCount = 0;
+
+    // Deactivate any existing doc under the current specialistId.
     for (const doc of existing.docs) {
-      batch.update(doc.ref, { isActive: false });
+      batch.update(doc.ref, {
+        isActive: false,
+        deactivatedAt,
+        deactivatedReason: 'superseded by --force reseed',
+      });
+      deactivatedCount++;
     }
-    await batch.commit();
-    console.log(`  deactivated ${existing.docs.length} existing doc(s)`);
+
+    // Deactivate any orphan docs left over from the Task #61 rename
+    // (FUNNEL_PATHOLOGIST → FUNNEL_STRATEGIST).
+    for (const legacyId of LEGACY_SPECIALIST_IDS) {
+      const legacySnap = await db.collection(COLLECTION)
+        .where('specialistId', '==', legacyId)
+        .where('industryKey', '==', INDUSTRY_KEY)
+        .where('isActive', '==', true)
+        .get();
+      for (const doc of legacySnap.docs) {
+        batch.update(doc.ref, {
+          isActive: false,
+          deactivatedAt,
+          deactivatedReason: `Task #61 rename: ${legacyId} → ${SPECIALIST_ID}`,
+        });
+        deactivatedCount++;
+      }
+    }
+
+    if (deactivatedCount > 0) {
+      await batch.commit();
+      console.log(`  deactivated ${deactivatedCount} existing doc(s) (current + legacy-ID orphans)`);
+    }
   }
 
   const now = new Date().toISOString();

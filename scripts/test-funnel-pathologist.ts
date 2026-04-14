@@ -110,7 +110,7 @@ async function main(): Promise<void> {
   console.log(`\n${hr}\nFUNNEL PATHOLOGIST PROOF OF LIFE — ${caseName}\n${hr}`);
 
   const gmRecord = await getActiveSpecialistGMByIndustry(__internal.SPECIALIST_ID, __internal.DEFAULT_INDUSTRY_KEY);
-  if (!gmRecord) { fail('Load GM', new Error('No active GM. Run node scripts/seed-funnel-pathologist-gm.js')); }
+  if (!gmRecord) { fail('Load GM', new Error('No active GM. Run node scripts/seed-funnel-strategist-gm.js')); }
   console.log(`  ✓ GM: ${gmRecord.id}, v${gmRecord.version}`);
 
   const brandDNA = await getBrandDNA();

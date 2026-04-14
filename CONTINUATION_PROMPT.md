@@ -41,10 +41,10 @@ node scripts/seed-technographic-scout-gm.js
 node scripts/seed-sentiment-analyst-gm.js
 node scripts/seed-trend-scout-gm.js
 
-# Task #61 — Architect rename (carryover, --force because specialistId changed)
-node scripts/seed-copy-specialist-gm.js --force
-node scripts/seed-ux-ui-specialist-gm.js --force
-node scripts/seed-funnel-pathologist-gm.js --force
+# Task #61 — Architect rename (force-reseed from renamed scripts)
+node scripts/seed-copy-strategist-gm.js --force
+node scripts/seed-ux-ui-strategist-gm.js --force
+node scripts/seed-funnel-strategist-gm.js --force
 ```
 
 **Alex is special**: unlike the Intelligence specialists, Alex REQUIRES the GM. He refuses to run until the seed script is executed. Until then, every `routeSalesChatAgent` call from Jasper will return a FAILED AgentReport with "GM not found". The website chat widget and Facebook Messenger routes are UNAFFECTED — they use the separate Training Lab GM path (still seeded via the `/api/training/seed-sales-chat-gm` API route).

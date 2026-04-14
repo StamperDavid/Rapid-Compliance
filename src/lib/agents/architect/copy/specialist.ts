@@ -209,8 +209,8 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
   const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
   if (!gmRecord) {
     throw new Error(
-      `Copy Specialist GM not found for industryKey=${industryKey}. ` +
-      `Run node scripts/seed-copy-specialist-gm.js to seed.`,
+      `Copy Strategist GM not found for industryKey=${industryKey}. ` +
+      `Run node scripts/seed-copy-strategist-gm.js to seed.`,
     );
   }
 
