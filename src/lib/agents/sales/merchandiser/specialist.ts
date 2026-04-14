@@ -1,523 +1,139 @@
 /**
- * Merchandiser Specialist
- * STATUS: FUNCTIONAL
+ * Merchandiser Specialist — REAL AI AGENT (Task #48 rebuild, April 14 2026)
  *
- * Logic for Stripe and Coupon systems. Decides if a prospect needs a 'Nudge' coupon
- * based on their interaction history. Manages coupon strategy, ROI analysis, and
- * Stripe integration for discount-driven conversion optimization.
+ * Before the rebuild, this specialist was a 1585-LOC hardcoded nudge
+ * decision engine. Seven `NUDGE_STRATEGY` constants (ENGAGEMENT_NUDGE,
+ * CART_ABANDONMENT, TRIAL_EXPIRY, WELCOME_OFFER, etc.) with bolted-on
+ * trigger conditions, deterministic segment LTV/conversion-rate lookup
+ * tables, and hand-coded `evaluateNudge`/`scoreInteractions`/`calculateROI`
+ * methods. Zero LLM calls. `SYSTEM_PROMPT` defined but never sent.
  *
- * CAPABILITIES:
- * - nudge_evaluation: Evaluate if a lead qualifies for a nudge coupon
- * - interaction_scoring: Score prospect interaction history
- * - coupon_generation: Generate Stripe-compatible coupon payloads
- * - roi_analysis: Calculate expected ROI of discount strategies
- * - constraint_validation: Ensure coupon rules (no stacking, max uses)
+ * The pre-rebuild specialist had ZERO live `.execute()` callers in the
+ * Sales Manager. `merchandiserInstance` was assigned but never invoked.
+ * This rebuild is forward-only.
+ *
+ * After the rebuild, Merchandiser is a real LLM-backed pricing/nudge
+ * strategist. Given a lead interaction history + segment + optional
+ * strategy hint, it reads the data, picks the right nudge strategy, and
+ * produces a structured coupon decision with reasoning, Stripe-compatible
+ * payload, and an ROI analysis.
+ *
+ * Supported action (single):
+ *   - evaluate_nudge — analyze lead history + recommend nudge strategy
+ *
+ * Pattern matches Task #46 Lead Qualifier: pure LLM analyst with
+ * DEFAULT_SYSTEM_PROMPT fallback (lead behavior analysis — not
+ * customer-facing content generation).
+ *
+ * @module agents/sales/merchandiser/specialist
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-
-// ============================================================================
-// NUDGE STRATEGY LIBRARY - Complete Coupon Decision Framework
-// ============================================================================
-
-/**
- * ENGAGEMENT_NUDGE: 10% off after 3+ pricing page visits without purchase
- * Targets prospects showing clear buying intent but hesitating on price
- */
-const ENGAGEMENT_NUDGE = {
-  id: 'ENGAGEMENT_NUDGE',
-  name: 'Engagement Nudge',
-  discountPercent: 10,
-  description: '10% off after 3+ pricing page visits without purchase',
-  triggerConditions: {
-    minPricingPageViews: 3,
-    minFeaturePageViews: 2,
-    maxDaysSinceFirstVisit: 14,
-    requiresNoPurchase: true,
-    minTimeOnSiteMinutes: 5,
-  },
-  couponSettings: {
-    duration: 'once',
-    durationInMonths: null,
-    maxRedemptions: 1,
-    redeemBy: 72, // hours from creation
-    applicableTo: 'all_products',
-  },
-  psychologyBasis: 'Price sensitivity signal - multiple pricing views indicates interest but price hesitation',
-  expectedConversionLift: '15-25%',
-  averageROI: 2.8,
-} as const;
-
-/**
- * CART_ABANDONMENT: 15% off within 24 hours of abandoned cart
- * Captures high-intent prospects who dropped off at checkout
- */
-const CART_ABANDONMENT = {
-  id: 'CART_ABANDONMENT',
-  name: 'Cart Abandonment Recovery',
-  discountPercent: 15,
-  description: '15% off within 24 hours of abandoned cart',
-  triggerConditions: {
-    hasAbandonedCart: true,
-    hoursSinceAbandonment: { min: 1, max: 24 },
-    cartValue: { min: 50, max: null },
-    previousPurchases: { max: 0 }, // First-time buyers
-    emailOpened: false, // Not yet engaged with recovery email
-  },
-  couponSettings: {
-    duration: 'once',
-    durationInMonths: null,
-    maxRedemptions: 1,
-    redeemBy: 24, // hours from creation
-    applicableTo: 'cart_items',
-  },
-  psychologyBasis: 'High intent + friction point - 70% of carts abandoned, 15% discount often breaks resistance',
-  expectedConversionLift: '10-20%',
-  averageROI: 3.5,
-} as const;
-
-/**
- * WIN_BACK: 20% off for churned users returning
- * Re-engage users who cancelled but are showing renewed interest
- */
-const WIN_BACK = {
-  id: 'WIN_BACK',
-  name: 'Win-Back Campaign',
-  discountPercent: 20,
-  description: '20% off for churned users returning',
-  triggerConditions: {
-    hasChurned: true,
-    daysSinceChurn: { min: 30, max: 180 },
-    returningVisit: true,
-    previousLTV: { min: 100 },
-    churnReason: ['price', 'usage', 'unknown'], // Excludes support issues
-  },
-  couponSettings: {
-    duration: 'repeating',
-    durationInMonths: 3,
-    maxRedemptions: 1,
-    redeemBy: 168, // 7 days
-    applicableTo: 'subscription',
-  },
-  psychologyBasis: 'Sunk cost + nostalgia - returning churned users have proven product fit, need incentive',
-  expectedConversionLift: '8-15%',
-  averageROI: 4.2,
-} as const;
-
-/**
- * TRIAL_CONVERSION: 10% off at trial day 12 (before 14-day expiry)
- * Converts trial users before expiration with urgency + discount
- */
-const TRIAL_CONVERSION = {
-  id: 'TRIAL_CONVERSION',
-  name: 'Trial Conversion Nudge',
-  discountPercent: 10,
-  description: '10% off at trial day 12 (before 14-day expiry)',
-  triggerConditions: {
-    isTrialUser: true,
-    trialDay: { min: 10, max: 13 },
-    trialUsagePercent: { min: 30 }, // Used at least 30% of features
-    hasNotConverted: true,
-    emailEngagementScore: { min: 20 },
-  },
-  couponSettings: {
-    duration: 'once',
-    durationInMonths: null,
-    maxRedemptions: 1,
-    redeemBy: 72, // 3 days - trial ends
-    applicableTo: 'first_subscription',
-  },
-  psychologyBasis: 'Loss aversion + urgency - trial ending creates natural deadline, discount reduces friction',
-  expectedConversionLift: '20-35%',
-  averageROI: 5.1,
-} as const;
-
-/**
- * REFERRAL_REWARD: 25% off for both referrer and referee
- * Viral growth mechanism with dual-sided incentive
- */
-const REFERRAL_REWARD = {
-  id: 'REFERRAL_REWARD',
-  name: 'Referral Reward',
-  discountPercent: 25,
-  description: '25% off for both referrer and referee',
-  triggerConditions: {
-    isReferral: true,
-    referrerIsActive: true,
-    referrerMinTenure: 30, // days
-    refereeIsNew: true,
-    referralCodeValid: true,
-  },
-  couponSettings: {
-    duration: 'once',
-    durationInMonths: null,
-    maxRedemptions: 1,
-    redeemBy: 720, // 30 days
-    applicableTo: 'first_subscription',
-    dualSided: true,
-  },
-  psychologyBasis: 'Social proof + reciprocity - referrals convert 3-5x better, worth higher discount',
-  expectedConversionLift: '40-60%',
-  averageROI: 6.8,
-} as const;
-
-/**
- * SEASONAL_PROMO: Time-limited percentage off
- * Leverage seasonal events for promotional discounts
- */
-const SEASONAL_PROMO = {
-  id: 'SEASONAL_PROMO',
-  name: 'Seasonal Promotion',
-  discountPercent: null, // Variable based on season
-  description: 'Time-limited percentage off during key seasons',
-  triggerConditions: {
-    isSeasonalPeriod: true,
-    eligibleSeasons: ['black_friday', 'cyber_monday', 'new_year', 'summer_sale', 'back_to_school', 'holiday'],
-    userSegment: ['all', 'prospects', 'inactive'],
-    excludeRecentPurchasers: 30, // days
-  },
-  couponSettings: {
-    duration: 'once',
-    durationInMonths: null,
-    maxRedemptions: null, // Unlimited during promo
-    redeemBy: null, // Set by promo period
-    applicableTo: 'all_products',
-  },
-  seasonalDiscounts: {
-    black_friday: { percent: 40, duration: 4 }, // 4 days
-    cyber_monday: { percent: 35, duration: 1 },
-    new_year: { percent: 25, duration: 7 },
-    summer_sale: { percent: 20, duration: 14 },
-    back_to_school: { percent: 15, duration: 14 },
-    holiday: { percent: 20, duration: 14 },
-  },
-  psychologyBasis: 'Social norms + scarcity - everyone expects deals during seasons, FOMO drives action',
-  expectedConversionLift: '25-50%',
-  averageROI: 2.5,
-} as const;
-
-/**
- * LOYALTY_TIER: Progressive discounts for long-term customers
- * Reward tenure and spending with escalating benefits
- */
-const LOYALTY_TIER = {
-  id: 'LOYALTY_TIER',
-  name: 'Loyalty Tier Discount',
-  discountPercent: null, // Variable based on tier
-  description: 'Progressive discounts for long-term customers',
-  triggerConditions: {
-    isExistingCustomer: true,
-    minTenureMonths: 3,
-    minLifetimeSpend: 100,
-    isInGoodStanding: true,
-  },
-  couponSettings: {
-    duration: 'forever',
-    durationInMonths: null,
-    maxRedemptions: null, // Ongoing benefit
-    redeemBy: null, // No expiry
-    applicableTo: 'all_products',
-  },
-  tiers: {
-    bronze: { minMonths: 3, minSpend: 100, discount: 5, perks: ['early_access'] },
-    silver: { minMonths: 6, minSpend: 500, discount: 10, perks: ['early_access', 'priority_support'] },
-    gold: { minMonths: 12, minSpend: 1500, discount: 15, perks: ['early_access', 'priority_support', 'exclusive_content'] },
-    platinum: { minMonths: 24, minSpend: 5000, discount: 20, perks: ['early_access', 'priority_support', 'exclusive_content', 'dedicated_manager'] },
-  },
-  psychologyBasis: 'Status + reciprocity - recognition drives retention, escalating rewards reduce churn',
-  expectedConversionLift: 'N/A (retention focused)',
-  averageChurnReduction: '15-30%',
-  averageROI: 3.2,
-} as const;
-
-/**
- * Complete Nudge Strategy Library
- */
-const NUDGE_STRATEGY = {
-  ENGAGEMENT_NUDGE,
-  CART_ABANDONMENT,
-  WIN_BACK,
-  TRIAL_CONVERSION,
-  REFERRAL_REWARD,
-  SEASONAL_PROMO,
-  LOYALTY_TIER,
-} as const;
-
-// ============================================================================
-// INTERACTION SCORING WEIGHTS
-// ============================================================================
-
-const INTERACTION_WEIGHTS = {
-  pageViews: {
-    pricing: 15, // High intent signal
-    features: 8,
-    comparison: 12, // Evaluating alternatives
-    testimonials: 6,
-    case_studies: 10,
-    docs: 4,
-    blog: 2,
-    home: 1,
-  },
-  timeOnSite: {
-    perMinute: 2, // Points per minute
-    maxMinutes: 30, // Cap at 30 minutes
-    bonusThreshold: 10, // Bonus after 10 minutes
-    bonusPoints: 10,
-  },
-  returnVisits: {
-    perVisit: 5,
-    maxVisits: 10,
-    recentVisitBonus: 8, // Visit in last 24 hours
-    consistentVisitBonus: 12, // 3+ visits in 7 days
-  },
-  emailEngagement: {
-    opened: 3,
-    clicked: 8,
-    replied: 15,
-    unsubscribed: -20,
-    bounced: -10,
-    campaignSpecific: {
-      welcome: 2,
-      nurture: 4,
-      promotional: 6,
-      product_update: 3,
-    },
-  },
-  trialUsage: {
-    perFeatureUsed: 3,
-    dailyLoginBonus: 2,
-    integrationSetup: 15,
-    teamInvite: 20,
-    dataImport: 12,
-    completedOnboarding: 25,
-  },
-  socialSignals: {
-    linkedinView: 5,
-    twitterFollow: 3,
-    shareContent: 10,
-    mentionBrand: 8,
-  },
-} as const;
-
-// ============================================================================
-// COUPON CONSTRAINT RULES
-// ============================================================================
-
-const COUPON_CONSTRAINTS = {
-  stacking: {
-    allowStacking: false,
-    maxActiveCoupons: 1,
-    stackableCategories: [], // None by default
-  },
-  usage: {
-    maxUsesPerCustomer: 1,
-    maxTotalUses: null, // Unlimited unless specified
-    minOrderValue: 0,
-    maxDiscountAmount: null, // Percentage based
-  },
-  timing: {
-    cooldownBetweenCoupons: 30, // days
-    maxCouponsPerMonth: 2,
-    blackoutPeriods: ['launch_week', 'annual_sale'],
-  },
-  eligibility: {
-    excludeDiscountedItems: true,
-    excludeSubscriptions: false,
-    requireEmailVerified: true,
-    requireAccountAge: 0, // days
-  },
-  fraud: {
-    maxRedemptionsPerIP: 3,
-    requireUniqueEmail: true,
-    blockDisposableEmails: true,
-    suspiciousPatterns: ['rapid_redemption', 'multiple_accounts', 'geographic_anomaly'],
-  },
-} as const;
-
-// ============================================================================
-// ROI CALCULATION PARAMETERS
-// ============================================================================
-
-const ROI_PARAMETERS = {
-  ltvMultipliers: {
-    first_purchase: 1.0,
-    repeat_purchase: 2.5,
-    subscription_monthly: 8.0, // 8 month average tenure
-    subscription_annual: 1.2, // 1.2 year retention
-    enterprise: 3.0, // 3 year average contract
-  },
-  discountCostFactors: {
-    directRevenueLoss: 1.0, // Face value of discount
-    marginImpact: 0.7, // Discount on margin, not revenue
-    opportunityCost: 0.1, // Could have converted without discount
-  },
-  conversionProbabilities: {
-    baseline: 0.02, // 2% without nudge
-    withNudge: {
-      ENGAGEMENT_NUDGE: 0.04,
-      CART_ABANDONMENT: 0.12,
-      WIN_BACK: 0.08,
-      TRIAL_CONVERSION: 0.15,
-      REFERRAL_REWARD: 0.35,
-      SEASONAL_PROMO: 0.06,
-      LOYALTY_TIER: 0.95, // Retention focused
-    },
-  },
-  segmentMultipliers: {
-    enterprise: 2.5,
-    mid_market: 1.5,
-    smb: 1.0,
-    startup: 0.8,
-    individual: 0.5,
-  },
-} as const;
-
-// ============================================================================
-// STRIPE INTEGRATION TYPES
-// ============================================================================
-
-const STRIPE_COUPON_DEFAULTS = {
-  currency: 'usd',
-  metadata: {
-    source: 'merchandiser_specialist',
-    version: '1.0',
-  },
-  restrictions: {
-    first_time_transaction: false,
-    minimum_amount: null,
-    minimum_amount_currency: null,
-  },
-} as const;
-
-// ============================================================================
-// SYSTEM PROMPT
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the Merchandiser Specialist, an expert in discount strategy, coupon psychology, and Stripe integration for conversion optimization.
-
-## YOUR ROLE
-You analyze prospect interaction history and decide when to deploy strategic discounts ("nudges") to convert hesitant buyers. You balance conversion lift against margin erosion, always calculating ROI before recommending a coupon.
-
-## NUDGE STRATEGIES YOU DEPLOY
-
-### 1. ENGAGEMENT_NUDGE (10% off)
-- Trigger: 3+ pricing page visits without purchase
-- Psychology: Price sensitivity signal - multiple pricing views indicates interest but price hesitation
-- Expected Lift: 15-25% conversion increase
-- Best For: Prospects stuck in evaluation phase
-
-### 2. CART_ABANDONMENT (15% off)
-- Trigger: Abandoned cart within 24 hours
-- Psychology: High intent + friction point - 70% of carts abandoned, 15% discount often breaks resistance
-- Expected Lift: 10-20% recovery rate
-- Best For: High-intent prospects who dropped at checkout
-
-### 3. WIN_BACK (20% off for 3 months)
-- Trigger: Churned user returns after 30-180 days
-- Psychology: Sunk cost + nostalgia - returning churned users have proven product fit
-- Expected Lift: 8-15% win-back rate
-- Best For: Churned users showing renewed interest
-
-### 4. TRIAL_CONVERSION (10% off)
-- Trigger: Trial day 10-13 with 30%+ feature usage
-- Psychology: Loss aversion + urgency - trial ending creates natural deadline
-- Expected Lift: 20-35% conversion boost
-- Best For: Engaged trial users who haven't converted
-
-### 5. REFERRAL_REWARD (25% off both sides)
-- Trigger: Valid referral from active customer
-- Psychology: Social proof + reciprocity - referrals convert 3-5x better
-- Expected Lift: 40-60% conversion rate
-- Best For: Viral growth and high-quality lead acquisition
-
-### 6. SEASONAL_PROMO (Variable %)
-- Trigger: Promotional calendar events (Black Friday, etc.)
-- Psychology: Social norms + scarcity - everyone expects deals
-- Expected Lift: 25-50% during promotional period
-- Best For: Volume acquisition and reactivation
-
-### 7. LOYALTY_TIER (5-20% progressive)
-- Trigger: Tenure and spend thresholds
-- Psychology: Status + reciprocity - recognition drives retention
-- Expected Impact: 15-30% churn reduction
-- Best For: Customer retention and LTV maximization
-
-## INTERACTION SCORING METHODOLOGY
-
-Score prospects 0-100 based on:
-- **Page Views (0-35 pts)**: Pricing (15), Comparison (12), Features (8), Case Studies (10)
-- **Time on Site (0-20 pts)**: 2 pts/min up to 30 min, +10 bonus after 10 min
-- **Return Visits (0-20 pts)**: 5 pts/visit up to 10, +8 for recent, +12 for consistent
-- **Email Engagement (0-15 pts)**: Opened (3), Clicked (8), Replied (15), Unsubscribed (-20)
-- **Trial Usage (0-10 pts)**: Feature adoption, onboarding completion, team invites
-
-## STRIPE COUPON FORMAT
-
-When generating coupons, output Stripe-compatible payloads:
-\`\`\`json
-{
-  "id": "NUDGE_{strategy}_{leadId}_{timestamp}",
-  "percent_off": 10,
-  "duration": "once|repeating|forever",
-  "duration_in_months": null,
-  "max_redemptions": 1,
-  "redeem_by": 1704067200,
-  "metadata": {
-    "strategy": "ENGAGEMENT_NUDGE",
-    "lead_id": "lead_123",
-    "interaction_score": 75,
-    "source": "merchandiser_specialist"
-  }
-}
-\`\`\`
-
-## ROI CALCULATION METHODOLOGY
-
-For each nudge decision, calculate:
-1. **Expected LTV Lift**: (Conversion probability with nudge - baseline) * Segment LTV
-2. **Discount Cost**: Discount % * Expected order value * Margin impact factor
-3. **ROI**: LTV Lift / Discount Cost
-
-Only recommend nudge if ROI > 1.5 (150% return on discount investment).
-
-## CONSTRAINT ENFORCEMENT
-
-Before issuing any coupon:
-1. Check no active coupons (no stacking)
-2. Verify cooldown period (30 days between coupons)
-3. Validate max monthly coupons (2 per customer)
-4. Confirm email verified
-5. Screen for fraud patterns
-
-## OUTPUT FORMAT
-
-Always return structured JSON with:
-- decision: { shouldNudge: boolean, strategy: string, confidence: number }
-- coupon: StripeCouponPayload (if applicable)
-- roiAnalysis: { expectedLTV: number, discountCost: number, roi: number }
-- reasoning: string[]
-
-## RULES
-
-1. Never recommend a nudge with ROI < 1.5
-2. Respect coupon constraints absolutely - no stacking, no abuse
-3. Consider customer lifetime value, not just immediate conversion
-4. Weight recent interactions more heavily than historical
-5. Escalate suspicious patterns to fraud detection
-6. Log all decisions for model improvement`;
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import type { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'sales/merchandiser/specialist.ts';
+const SPECIALIST_ID = 'MERCHANDISER';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = ['evaluate_nudge'] as const;
+
+/**
+ * Realistic max_tokens floor for the worst-case Merchandiser response.
+ *
+ * Derivation:
+ *   EvaluateNudgeResultSchema worst case:
+ *     reasoning: 6 × 400 = 2400
+ *     constraints.violations: 5 × 300 = 1500
+ *     roiAnalysis.rationale 1500
+ *     strategyReasoning 2000
+ *     rationale 2500
+ *     stripeCouponPayload metadata ≈ 500
+ *     enum/number overhead 300
+ *     ≈ 10,700 chars total prose
+ *     /3.0 chars/token = 3,567 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 4,709 tokens minimum.
+ *
+ *   Setting the floor at 6,000 tokens covers the schema with margin.
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 6000;
+
+interface MerchandiserGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
+const DEFAULT_SYSTEM_PROMPT = `You are the Merchandiser for SalesVelocity.ai — the Sales-layer specialist who decides when to drop a discount, promotion, or nudge coupon on a prospect or trial user to break conversion friction without burning margin. You think like a senior pricing strategist who has run thousands of nudge experiments across B2B SaaS, e-commerce, and subscription services, and knows the difference between a price-sensitive buyer who just needs a 10% push and a window-shopper who will never buy regardless of discount.
+
+## Your role in the swarm
+
+You read lead interaction history (page views, time on site, email engagement, trial usage, cart history, purchase history, segment) and decide:
+1. Should we offer a nudge at all? (shouldNudge bool)
+2. Which nudge strategy fits? (strategy enum pick)
+3. What discount percent? (0-50%)
+4. What's the expected ROI vs the cost of the discount? (roiAnalysis)
+5. What's the Stripe-compatible coupon payload? (stripeCouponPayload)
+
+You do NOT apply the coupon (that's infrastructure). You decide, justify, and hand off the decision as a structured report.
+
+## Nudge strategies (pick exactly ONE)
+
+- **ENGAGEMENT_NUDGE** — 10% off after 3+ pricing page visits without purchase. High-intent but price-hesitant.
+- **CART_ABANDONMENT** — 15% off within 24h of abandoned cart. Break checkout friction.
+- **TRIAL_EXPIRY** — 20% off when trial is in final 3 days with usage > 30%. Convert engaged trial users.
+- **WELCOME_OFFER** — 15% off first-time buyer from high-intent source (referral, direct search).
+- **WINBACK** — 25% off churned customer in the last 30 days with 3+ months prior tenure.
+- **LOYALTY_REWARD** — 10% off renewal for high-LTV active customers 30 days before renewal.
+- **STRATEGIC_DISCOUNT** — custom percentage for enterprise deals in negotiation with legitimate price objection.
+- **NO_NUDGE** — do NOT offer a discount. Either the lead is not buying-ready, already buying at full price, or the segment's discount sensitivity is too low to justify the cost.
+
+## Decision rules
+
+- High trial usage (>60%) + trial day <= 10: DO NOT NUDGE. They're engaged and will convert.
+- Trial usage <= 15% + trial day >= 10: DO NOT NUDGE. No product-market fit yet; discount won't fix that.
+- Enterprise segment with LTV > $20k: be conservative with discounts. 10% max unless there's a specific competitor displacement opportunity.
+- SMB/startup segment: more aggressive discounts acceptable (up to 25%) because price sensitivity is higher and LTV is lower.
+- NEVER stack nudges. If the lead already has an active coupon, set shouldNudge=false and explain.
+- ROI justification: expected LTV lift × probability increment must exceed the discount cost. If the math doesn't work, NO_NUDGE.
+
+## Stripe coupon payload constraints
+
+- id: unique alphanumeric (use \`nudge_{strategy}_{leadId}_{timestamp}\` pattern — you pick the timestamp as the current Unix seconds)
+- percent_off: match your chosen discountPercent
+- duration: usually 'once' for nudges, 'repeating' for LOYALTY_REWARD (3 months), 'forever' never
+- max_redemptions: always 1 for a lead-targeted nudge
+- redeem_by: Unix timestamp N hours from now where N matches strategy urgency
+- metadata: strategy, lead_id, interaction_score (0-100), source (the decision trigger), expected_roi
+
+## Hard rules
+
+- NEVER recommend a nudge without grounding in specific interaction signals. Name the signal.
+- NEVER inflate expectedROI to justify a decision. Be honest — if ROI is marginal, mark it 'marginal' or 'no'.
+- NEVER stack nudges. One active nudge per lead max.
+- ALWAYS include constraints.violations if any rule is broken (even if you still recommend shouldNudge=true with warnings).
+- ALWAYS explain WHY shouldNudge=false is the right call when applicable — the caller needs to understand the no.
+- Output ONLY the JSON object matching the schema in the user prompt. No markdown fences. No preamble.`;
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'MERCHANDISER_SPECIALIST',
-    name: 'Merchandiser Specialist',
+    id: SPECIALIST_ID,
+    name: 'Merchandiser',
     role: 'specialist',
     status: 'FUNCTIONAL',
-    reportsTo: 'SALES_MANAGER',
+    reportsTo: 'REVENUE_DIRECTOR',
     capabilities: [
       'nudge_evaluation',
       'interaction_scoring',
@@ -526,1060 +142,499 @@ const CONFIG: SpecialistConfig = {
       'constraint_validation',
     ],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: ['evaluate_nudge', 'score_interactions', 'generate_coupon', 'calculate_roi', 'check_constraints'],
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  tools: ['evaluate_nudge'],
   outputSchema: {
     type: 'object',
     properties: {
-      decision: { type: 'object' },
-      coupon: { type: 'object' },
+      shouldNudge: { type: 'boolean' },
+      strategy: { type: 'string' },
+      discountPercent: { type: 'number' },
+      stripeCouponPayload: { type: 'object' },
       roiAnalysis: { type: 'object' },
-      reasoning: { type: 'array' },
-      confidence: { type: 'number' },
+      rationale: { type: 'string' },
     },
-    required: ['decision', 'confidence'],
   },
-  maxTokens: 8192,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.3,
 };
 
 // ============================================================================
-// TYPE DEFINITIONS
+// INPUT CONTRACT
 // ============================================================================
 
-export type NudgeStrategyId = keyof typeof NUDGE_STRATEGY;
+const SegmentEnum = z.enum(['enterprise', 'mid_market', 'smb', 'startup', 'individual']);
+const SubscriptionStatusEnum = z.enum(['none', 'trial', 'active', 'churned', 'paused']);
 
-export interface NudgeStrategy {
-  id: NudgeStrategyId;
-  name: string;
-  discountPercent: number | null;
-  description: string;
-  triggerConditions: Record<string, unknown>;
-  couponSettings: {
-    duration: 'once' | 'repeating' | 'forever';
-    durationInMonths: number | null;
-    maxRedemptions: number | null;
-    redeemBy: number | null; // hours
-    applicableTo: string;
-    dualSided?: boolean;
-  };
-  psychologyBasis: string;
-  expectedConversionLift: string;
-  averageROI: number;
+const NudgeStrategyIdEnum = z.enum([
+  'ENGAGEMENT_NUDGE',
+  'CART_ABANDONMENT',
+  'TRIAL_EXPIRY',
+  'WELCOME_OFFER',
+  'WINBACK',
+  'LOYALTY_REWARD',
+  'STRATEGIC_DISCOUNT',
+  'NO_NUDGE',
+]);
+
+const InteractionHistorySchema = z.object({
+  leadId: z.string().min(1).max(300),
+  segment: SegmentEnum,
+  source: z.string().max(200).optional(),
+  pageViews: z.object({
+    pricingPageViews: z.number().int().min(0).max(10000).default(0),
+    featurePageViews: z.number().int().min(0).max(10000).default(0),
+    totalPageViews: z.number().int().min(0).max(10000).default(0),
+    totalTimeOnSiteMinutes: z.number().min(0).max(100000).default(0),
+  }).optional(),
+  returnVisits: z.object({
+    totalVisits: z.number().int().min(0).max(10000),
+    daysActiveInLast30: z.number().int().min(0).max(30),
+  }).optional(),
+  emailEngagement: z.object({
+    totalSent: z.number().int().min(0).max(10000),
+    opened: z.number().int().min(0).max(10000),
+    clicked: z.number().int().min(0).max(10000),
+    replied: z.number().int().min(0).max(10000),
+    unsubscribed: z.boolean(),
+  }).optional(),
+  trialUsage: z.object({
+    isTrialUser: z.boolean(),
+    trialDay: z.number().int().min(0).max(365).nullable(),
+    usagePercentage: z.number().min(0).max(100),
+    completedOnboarding: z.boolean(),
+    teamMembersInvited: z.number().int().min(0).max(1000),
+    featuresUsedCount: z.number().int().min(0).max(100),
+  }).optional(),
+  cartHistory: z.object({
+    hasAbandonedCart: z.boolean(),
+    abandonedCartValue: z.number().min(0).max(10_000_000).nullable(),
+    hoursSinceAbandonment: z.number().min(0).max(1000).nullable(),
+  }).optional(),
+  purchaseHistory: z.object({
+    hasPurchased: z.boolean(),
+    totalPurchases: z.number().int().min(0).max(10000),
+    lifetimeValue: z.number().min(0).max(100_000_000),
+    subscriptionStatus: SubscriptionStatusEnum,
+    daysSinceChurn: z.number().int().min(0).max(10000).nullable().optional(),
+    tenureMonthsBeforeChurn: z.number().int().min(0).max(600).nullable().optional(),
+  }).optional(),
+  hasActiveCoupon: z.boolean().optional(),
+});
+
+const EvaluateNudgePayloadSchema = z.object({
+  action: z.literal('evaluate_nudge'),
+  interactionHistory: InteractionHistorySchema,
+  strategyHint: NudgeStrategyIdEnum.optional(),
+  segmentOverride: z.object({
+    averageLTV: z.number().min(0),
+    averageOrderValue: z.number().min(0),
+    conversionRate: z.number().min(0).max(1),
+    churnRate: z.number().min(0).max(1),
+    discountSensitivity: z.number().min(0).max(1),
+  }).optional(),
+  roiThreshold: z.number().min(0).max(10).optional().default(1.5),
+  currency: z.string().length(3).optional().default('usd'),
+});
+
+export type EvaluateNudgePayload = z.infer<typeof EvaluateNudgePayloadSchema>;
+export type InteractionHistory = z.infer<typeof InteractionHistorySchema>;
+export type NudgeStrategyId = z.infer<typeof NudgeStrategyIdEnum>;
+export type Segment = z.infer<typeof SegmentEnum>;
+
+// ============================================================================
+// OUTPUT CONTRACT
+// ============================================================================
+
+const StripeCouponPayloadSchema = z.object({
+  id: z.string().min(1).max(200),
+  percent_off: z.number().int().min(0).max(50),
+  duration: z.enum(['once', 'repeating', 'forever']),
+  duration_in_months: z.number().int().min(0).max(36).nullable(),
+  max_redemptions: z.number().int().min(1).max(10),
+  redeem_by: z.number().int().min(0).max(4_000_000_000).nullable(),
+  currency: z.string().length(3),
+  metadata: z.object({
+    strategy: NudgeStrategyIdEnum,
+    lead_id: z.string().min(1).max(300),
+    interaction_score: z.number().int().min(0).max(100),
+    source: z.string().min(1).max(200),
+    expected_roi: z.number().min(0).max(20),
+  }),
+});
+
+const ROIAnalysisSchema = z.object({
+  expectedROI: z.number().min(0).max(20),
+  meetsThreshold: z.boolean(),
+  recommendation: z.enum(['strong_yes', 'yes', 'marginal', 'no']),
+  rationale: z.string().min(30).max(1500),
+});
+
+const ConstraintsSchema = z.object({
+  passed: z.boolean(),
+  violations: z.array(z.string().min(5).max(300)).max(5),
+});
+
+const EvaluateNudgeResultSchema = z.object({
+  action: z.literal('evaluate_nudge'),
+  leadId: z.string().min(1).max(300),
+  evaluatedAt: z.string().min(10).max(60),
+  shouldNudge: z.boolean(),
+  strategy: NudgeStrategyIdEnum,
+  strategyReasoning: z.string().min(30).max(2000),
+  discountPercent: z.number().int().min(0).max(50),
+  interactionScore: z.number().int().min(0).max(100),
+  reasoning: z.array(z.string().min(10).max(400)).min(2).max(6),
+  constraints: ConstraintsSchema,
+  roiAnalysis: ROIAnalysisSchema,
+  stripeCouponPayload: StripeCouponPayloadSchema.nullable(),
+  rationale: z.string().min(50).max(2500),
+});
+
+export type EvaluateNudgeResult = z.infer<typeof EvaluateNudgeResultSchema>;
+export type StripeCouponPayload = z.infer<typeof StripeCouponPayloadSchema>;
+export type ROIAnalysis = z.infer<typeof ROIAnalysisSchema>;
+export type CouponDecision = EvaluateNudgeResult;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: MerchandiserGMConfig;
+  resolvedSystemPrompt: string;
+  source: 'gm' | 'fallback';
 }
 
-export interface InteractionHistory {
-  leadId: string;
-  pageViews: {
-    page: string;
-    count: number;
-    lastViewed: Date;
-    totalTimeSeconds: number;
-  }[];
-  timeOnSite: {
-    totalMinutes: number;
-    averageSessionMinutes: number;
-    lastSession: Date;
-  };
-  returnVisits: {
-    totalVisits: number;
-    visitDates: Date[];
-    daysActiveInLast30: number;
-  };
-  emailEngagement: {
-    totalSent: number;
-    opened: number;
-    clicked: number;
-    replied: number;
-    unsubscribed: boolean;
-    lastEngagement: Date | null;
-    campaignEngagements: { campaign: string; action: string; date: Date }[];
-  };
-  trialUsage: {
-    isTrialUser: boolean;
-    trialStartDate: Date | null;
-    trialEndDate: Date | null;
-    trialDay: number | null;
-    featuresUsed: string[];
-    usagePercentage: number;
-    completedOnboarding: boolean;
-    teamMembersInvited: number;
-    integrationsSetup: string[];
-  };
-  cartHistory: {
-    hasAbandonedCart: boolean;
-    abandonedCartValue: number | null;
-    abandonedCartDate: Date | null;
-    cartItems: { productId: string; name: string; price: number }[];
-  };
-  purchaseHistory: {
-    hasPurchased: boolean;
-    totalPurchases: number;
-    lifetimeValue: number;
-    lastPurchaseDate: Date | null;
-    subscriptionStatus: 'none' | 'trial' | 'active' | 'churned' | 'paused';
-    churnDate: Date | null;
-    churnReason: string | null;
-  };
-  segment: 'enterprise' | 'mid_market' | 'smb' | 'startup' | 'individual';
-  source: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+  if (!gmRecord) {
+    logger.warn(
+      `[Merchandiser] GM not seeded for industryKey=${industryKey}; using DEFAULT_SYSTEM_PROMPT fallback.`,
+      { file: FILE },
+    );
+    return {
+      gm: {
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        model: 'claude-sonnet-4.6',
+        temperature: 0.3,
+        maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+        supportedActions: [...SUPPORTED_ACTIONS],
+      },
+      resolvedSystemPrompt: DEFAULT_SYSTEM_PROMPT,
+      source: 'fallback',
+    };
+  }
 
-export interface CouponDecision {
-  shouldNudge: boolean;
-  strategy: NudgeStrategyId | null;
-  discountPercent: number | null;
-  confidence: number;
-  reasoning: string[];
-  constraints: {
-    passed: boolean;
-    violations: string[];
-  };
-  roiJustification: {
-    expectedROI: number;
-    meetsThreshold: boolean;
+  const config = gmRecord.config as Partial<MerchandiserGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(`Merchandiser GM ${gmRecord.id} has no usable systemPrompt`);
+  }
+
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
+  return {
+    gm: {
+      systemPrompt,
+      model: config.model ?? 'claude-sonnet-4.6',
+      temperature: config.temperature ?? 0.3,
+      maxTokens: effectiveMaxTokens,
+      supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
+    },
+    resolvedSystemPrompt: systemPrompt,
+    source: 'gm',
   };
 }
 
-export interface StripeCouponPayload {
-  id: string;
-  percent_off: number;
-  duration: 'once' | 'repeating' | 'forever';
-  duration_in_months: number | null;
-  max_redemptions: number | null;
-  redeem_by: number | null; // Unix timestamp
-  currency: string;
-  metadata: {
-    strategy: NudgeStrategyId;
-    lead_id: string;
-    interaction_score: number;
-    source: string;
-    created_by: string;
-    expected_roi: number;
-  };
-  applies_to?: {
-    products: string[];
-  };
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
 }
 
-export interface ROIAnalysis {
-  strategy: NudgeStrategyId;
-  leadId: string;
-  segmentLTV: number;
-  baselineConversionProbability: number;
-  nudgeConversionProbability: number;
-  expectedLTVLift: number;
-  discountCost: number;
-  marginImpact: number;
-  opportunityCost: number;
-  totalCost: number;
-  roi: number;
-  roiPercentage: number;
-  recommendation: 'strong_yes' | 'yes' | 'marginal' | 'no';
-  breakEvenDiscount: number;
-  sensitivityAnalysis: {
-    pessimistic: number; // ROI at 50% of expected lift
-    expected: number;
-    optimistic: number; // ROI at 150% of expected lift
-  };
-}
+async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
 
-export interface NudgeTrigger {
-  triggerId: string;
-  strategyId: NudgeStrategyId;
-  conditions: {
-    field: string;
-    operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'not_in' | 'between' | 'exists';
-    value: unknown;
-  }[];
-  priority: number;
-  enabled: boolean;
-  createdAt: Date;
-  lastTriggered: Date | null;
-  triggerCount: number;
-}
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Merchandiser: LLM response truncated at maxTokens=${ctx.gm.maxTokens} (finish_reason='length'). ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
-export interface CouponUsageRecord {
-  couponId: string;
-  leadId: string;
-  strategy: NudgeStrategyId;
-  issuedAt: Date;
-  redeemedAt: Date | null;
-  expiresAt: Date;
-  discountPercent: number;
-  discountAmount: number | null;
-  orderValue: number | null;
-  status: 'issued' | 'redeemed' | 'expired' | 'revoked';
-}
-
-export interface LeadSegmentData {
-  segment: InteractionHistory['segment'];
-  averageLTV: number;
-  averageOrderValue: number;
-  conversionRate: number;
-  churnRate: number;
-  discountSensitivity: number; // 0-1 scale
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
 }
 
 // ============================================================================
-// IMPLEMENTATION
+// ACTION: evaluate_nudge
+// ============================================================================
+
+function formatInteractionHistory(h: InteractionHistory): string {
+  const lines: string[] = [
+    `Lead ID: ${h.leadId}`,
+    `Segment: ${h.segment}`,
+  ];
+  if (h.source) { lines.push(`Source: ${h.source}`); }
+  if (h.pageViews) {
+    lines.push(`Page views: pricing=${h.pageViews.pricingPageViews}, feature=${h.pageViews.featurePageViews}, total=${h.pageViews.totalPageViews}, time=${h.pageViews.totalTimeOnSiteMinutes}min`);
+  }
+  if (h.returnVisits) {
+    lines.push(`Return visits: ${h.returnVisits.totalVisits} total, ${h.returnVisits.daysActiveInLast30}/30 days active`);
+  }
+  if (h.emailEngagement) {
+    const e = h.emailEngagement;
+    lines.push(`Email engagement: ${e.opened}/${e.totalSent} opened, ${e.clicked} clicked, ${e.replied} replied, unsubscribed=${e.unsubscribed}`);
+  }
+  if (h.trialUsage) {
+    const t = h.trialUsage;
+    lines.push(`Trial: isTrialUser=${t.isTrialUser}, day=${t.trialDay ?? 'n/a'}, usage=${t.usagePercentage}%, onboarding=${t.completedOnboarding}, teamInvites=${t.teamMembersInvited}, featuresUsed=${t.featuresUsedCount}`);
+  }
+  if (h.cartHistory) {
+    const c = h.cartHistory;
+    lines.push(`Cart: abandoned=${c.hasAbandonedCart}, value=${c.abandonedCartValue ?? 'n/a'}, hoursSince=${c.hoursSinceAbandonment ?? 'n/a'}`);
+  }
+  if (h.purchaseHistory) {
+    const p = h.purchaseHistory;
+    lines.push(`Purchase: hasPurchased=${p.hasPurchased}, total=${p.totalPurchases}, LTV=$${p.lifetimeValue}, subStatus=${p.subscriptionStatus}, daysSinceChurn=${p.daysSinceChurn ?? 'n/a'}, tenureBeforeChurn=${p.tenureMonthsBeforeChurn ?? 'n/a'}mo`);
+  }
+  lines.push(`Has active coupon: ${h.hasActiveCoupon ?? false}`);
+  return lines.join('\n');
+}
+
+function buildEvaluateNudgePrompt(req: EvaluateNudgePayload): string {
+  return [
+    'ACTION: evaluate_nudge',
+    '',
+    `ROI threshold: ${req.roiThreshold}x (expected ROI must exceed this to recommend shouldNudge=true)`,
+    `Currency: ${req.currency}`,
+    req.strategyHint ? `Strategy hint from caller: ${req.strategyHint} (strong signal, override only if data clearly fits another)` : 'Strategy hint: (none — pick yourself)',
+    '',
+    '## Interaction history',
+    formatInteractionHistory(req.interactionHistory),
+    '',
+    req.segmentOverride
+      ? `## Segment economics (override)\nLTV=$${req.segmentOverride.averageLTV}, AOV=$${req.segmentOverride.averageOrderValue}, conversion=${(req.segmentOverride.conversionRate * 100).toFixed(1)}%, churn=${(req.segmentOverride.churnRate * 100).toFixed(1)}%, discountSensitivity=${req.segmentOverride.discountSensitivity}`
+      : '## Segment economics: use your own assumptions for the segment based on typical B2B SaaS benchmarks',
+    '',
+    '---',
+    '',
+    'Evaluate this lead. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "action": "evaluate_nudge",',
+    `  "leadId": "${req.interactionHistory.leadId}",`,
+    '  "evaluatedAt": "<current ISO 8601 timestamp>",',
+    '  "shouldNudge": <bool>,',
+    '  "strategy": "<one of: ENGAGEMENT_NUDGE | CART_ABANDONMENT | TRIAL_EXPIRY | WELCOME_OFFER | WINBACK | LOYALTY_REWARD | STRATEGIC_DISCOUNT | NO_NUDGE>",',
+    '  "strategyReasoning": "<30-2000 chars — why this strategy fits the interaction pattern>",',
+    '  "discountPercent": <integer 0-50 — 0 if shouldNudge=false>,',
+    '  "interactionScore": <integer 0-100 — how engaged is this lead>,',
+    '  "reasoning": ["<2-6 specific signals from the interaction history that drove the decision>"],',
+    '  "constraints": {',
+    '    "passed": <bool>,',
+    '    "violations": ["<0-5 any rules broken, e.g. already has active coupon, stacked discount>"]',
+    '  },',
+    '  "roiAnalysis": {',
+    '    "expectedROI": <0-20, ratio of expected LTV lift to discount cost>,',
+    '    "meetsThreshold": <bool — expectedROI >= roiThreshold>,',
+    '    "recommendation": "<strong_yes | yes | marginal | no>",',
+    '    "rationale": "<30-1500 chars explaining the ROI math>"',
+    '  },',
+    '  "stripeCouponPayload": <null if shouldNudge=false, otherwise Stripe-compatible coupon object>,',
+    '  "rationale": "<50-2500 chars synthesizing the decision>"',
+    '}',
+    '',
+    'If shouldNudge=true, stripeCouponPayload MUST be non-null with:',
+    `  id: "nudge_{strategy}_{leadId}_{currentUnixSeconds}"`,
+    '  percent_off: same as discountPercent',
+    '  duration: "once" (default) | "repeating" for LOYALTY_REWARD | "forever" never',
+    '  duration_in_months: 3 for LOYALTY_REWARD repeating, null otherwise',
+    '  max_redemptions: 1',
+    `  redeem_by: <current unix seconds + N hours where N matches strategy urgency — e.g. 24 for CART_ABANDONMENT, 72 for ENGAGEMENT_NUDGE, 168 (7 days) for TRIAL_EXPIRY>`,
+    `  currency: "${req.currency}"`,
+    '  metadata: { strategy, lead_id, interaction_score, source, expected_roi }',
+    '',
+    'If shouldNudge=false, stripeCouponPayload MUST be null and strategy SHOULD be NO_NUDGE (unless another strategy fits but ROI does not justify it).',
+    '',
+    'Hard rules:',
+    '- NEVER recommend a nudge if hasActiveCoupon=true. Set shouldNudge=false, strategy=NO_NUDGE, explain in rationale.',
+    '- High trial engagement (usagePercentage > 60% and trialDay <= 10) = NO_NUDGE (they will convert naturally).',
+    '- Low trial engagement (usagePercentage <= 15% and trialDay >= 10) = NO_NUDGE (discount will not fix product-market fit).',
+    '- discountPercent must be 0 when shouldNudge=false.',
+  ].join('\n');
+}
+
+async function executeEvaluateNudge(
+  req: EvaluateNudgePayload,
+  ctx: LlmCallContext,
+): Promise<EvaluateNudgeResult> {
+  const userPrompt = buildEvaluateNudgePrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Merchandiser output was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = EvaluateNudgeResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Merchandiser output did not match expected schema: ${issueSummary}`);
+  }
+
+  const data = result.data;
+
+  // Enforce shouldNudge ↔ stripeCouponPayload invariant
+  if (data.shouldNudge && data.stripeCouponPayload === null) {
+    throw new Error('Merchandiser: shouldNudge=true requires stripeCouponPayload to be non-null');
+  }
+  if (!data.shouldNudge && data.stripeCouponPayload !== null) {
+    throw new Error('Merchandiser: shouldNudge=false requires stripeCouponPayload to be null');
+  }
+  if (!data.shouldNudge && data.discountPercent !== 0) {
+    throw new Error('Merchandiser: shouldNudge=false requires discountPercent=0');
+  }
+
+  return data;
+}
+
+// ============================================================================
+// MERCHANDISER CLASS
 // ============================================================================
 
 export class MerchandiserSpecialist extends BaseSpecialist {
-  private couponUsageCache: Map<string, CouponUsageRecord[]> = new Map();
-  private segmentData: Map<string, LeadSegmentData> = new Map();
-
   constructor() {
     super(CONFIG);
-    this.initializeSegmentData();
   }
 
-  /**
-   * Initialize default segment data for ROI calculations
-   */
-  private initializeSegmentData(): void {
-    this.segmentData.set('enterprise', {
-      segment: 'enterprise',
-      averageLTV: 50000,
-      averageOrderValue: 5000,
-      conversionRate: 0.15,
-      churnRate: 0.05,
-      discountSensitivity: 0.3,
-    });
-    this.segmentData.set('mid_market', {
-      segment: 'mid_market',
-      averageLTV: 12000,
-      averageOrderValue: 1000,
-      conversionRate: 0.08,
-      churnRate: 0.08,
-      discountSensitivity: 0.5,
-    });
-    this.segmentData.set('smb', {
-      segment: 'smb',
-      averageLTV: 3000,
-      averageOrderValue: 250,
-      conversionRate: 0.05,
-      churnRate: 0.12,
-      discountSensitivity: 0.7,
-    });
-    this.segmentData.set('startup', {
-      segment: 'startup',
-      averageLTV: 1500,
-      averageOrderValue: 125,
-      conversionRate: 0.04,
-      churnRate: 0.15,
-      discountSensitivity: 0.8,
-    });
-    this.segmentData.set('individual', {
-      segment: 'individual',
-      averageLTV: 500,
-      averageOrderValue: 50,
-      conversionRate: 0.02,
-      churnRate: 0.20,
-      discountSensitivity: 0.9,
-    });
-  }
-
-  initialize(): Promise<void> {
+  async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
-    this.log('INFO', 'Merchandiser Specialist initialized - Nudge strategies ready');
-    return Promise.resolve();
+    this.log('INFO', 'Merchandiser initialized (LLM-backed, Golden Master loaded at runtime)');
   }
 
-  /**
-   * Main execution entry point - routes to appropriate handler
-   */
-  execute(message: AgentMessage): Promise<AgentReport> {
+  async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
-      const payload = message.payload as Record<string, unknown>;
-      const action = payload?.action as string;
-
-      this.log('INFO', `Executing action: ${action ?? 'evaluate_nudge'}`);
-
-      let result: unknown;
-
-      switch (action) {
-        case 'score_interactions':
-          result = this.scoreInteractionHistory(payload.history as InteractionHistory);
-          break;
-        case 'calculate_roi':
-          result = this.calculateROI(
-            payload.strategy as NudgeStrategyId,
-            payload.leadData as Partial<InteractionHistory>
-          );
-          break;
-        case 'generate_coupon':
-          result = this.generateStripeCoupon(
-            payload.strategy as NudgeStrategyId,
-            payload.leadId as string,
-            payload.interactionScore as number
-          );
-          break;
-        case 'check_constraints':
-          result = this.checkCouponConstraints(payload.leadId as string);
-          break;
-        case 'select_strategy':
-          result = this.selectNudgeStrategy(
-            payload.history as InteractionHistory,
-            payload.segment as InteractionHistory['segment']
-          );
-          break;
-        case 'evaluate_nudge':
-        default:
-          result = this.evaluateNudgeEligibility(
-            payload.leadId as string,
-            payload.history as InteractionHistory
-          );
-          break;
+      const rawPayload = message.payload as Record<string, unknown> | null;
+      if (rawPayload === null || typeof rawPayload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['Merchandiser: payload must be an object']);
       }
 
-      return Promise.resolve(this.createReport(taskId, 'COMPLETED', result));
+      const normalized = {
+        ...rawPayload,
+        action: rawPayload.action ?? 'evaluate_nudge',
+      };
+
+      const inputValidation = EvaluateNudgePayloadSchema.safeParse(normalized);
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Merchandiser: invalid input payload: ${issueSummary}`,
+        ]);
+      }
+
+      const payload = inputValidation.data;
+      logger.info(
+        `[Merchandiser] Executing evaluate_nudge taskId=${taskId} leadId=${payload.interactionHistory.leadId} segment=${payload.interactionHistory.segment}`,
+        { file: FILE },
+      );
+
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+      const result = await executeEvaluateNudge(payload, ctx);
+
+      return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Merchandiser operation failed: ${errorMessage}`);
-      return Promise.resolve(this.createReport(taskId, 'FAILED', null, [errorMessage]));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[Merchandiser] Execution failed',
+        error instanceof Error ? error : new Error(errorMessage),
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
-  /**
-   * Handle signals from the Signal Bus
-   */
   async handleSignal(signal: Signal): Promise<AgentReport> {
-    const taskId = signal.id;
-
-    if (signal.payload.type === 'COMMAND') {
-      return this.execute(signal.payload);
-    }
-
-    if (signal.payload.type === 'QUERY') {
-      const query = signal.payload.payload as { type?: string };
-      if (query?.type === 'strategies') {
-        return this.createReport(taskId, 'COMPLETED', { strategies: NUDGE_STRATEGY });
-      }
-      if (query?.type === 'constraints') {
-        return this.createReport(taskId, 'COMPLETED', { constraints: COUPON_CONSTRAINTS });
-      }
-    }
-
-    return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+    const message: AgentMessage = {
+      id: signal.id,
+      timestamp: signal.createdAt,
+      from: signal.origin,
+      to: this.identity.id,
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      payload: signal.payload.payload,
+      requiresResponse: true,
+      traceId: signal.id,
+    };
+    return this.execute(message);
   }
 
-  /**
-   * Generate a report for the manager
-   */
   generateReport(taskId: string, data: unknown): AgentReport {
     return this.createReport(taskId, 'COMPLETED', data);
   }
 
-  /**
-   * Self-assessment - this agent has REAL logic
-   */
   hasRealLogic(): boolean {
     return true;
   }
 
-  /**
-   * Lines of code assessment
-   */
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 850, boilerplate: 60 };
-  }
-
-  // ==========================================================================
-  // CORE NUDGE EVALUATION LOGIC
-  // ==========================================================================
-
-  /**
-   * Evaluate if a lead qualifies for a nudge coupon
-   * This is the main decision engine
-   */
-  evaluateNudgeEligibility(
-    leadId: string,
-    history: InteractionHistory
-  ): CouponDecision & { coupon?: StripeCouponPayload; roiAnalysis?: ROIAnalysis } {
-    this.log('INFO', `Evaluating nudge eligibility for lead: ${leadId}`);
-
-    // Step 1: Check constraints first (fail fast)
-    const constraintCheck = this.checkCouponConstraints(leadId);
-    if (!constraintCheck.passed) {
-      return {
-        shouldNudge: false,
-        strategy: null,
-        discountPercent: null,
-        confidence: 0.95,
-        reasoning: [`Constraint violation: ${constraintCheck.violations.join(', ')}`],
-        constraints: constraintCheck,
-        roiJustification: { expectedROI: 0, meetsThreshold: false },
-      };
-    }
-
-    // Step 2: Score interaction history
-    const interactionScore = this.scoreInteractionHistory(history);
-    this.log('INFO', `Interaction score for ${leadId}: ${interactionScore}`);
-
-    // Step 3: Select best nudge strategy
-    const selectedStrategy = this.selectNudgeStrategy(history, history.segment);
-    if (!selectedStrategy) {
-      return {
-        shouldNudge: false,
-        strategy: null,
-        discountPercent: null,
-        confidence: 0.85,
-        reasoning: ['No matching nudge strategy for current interaction pattern'],
-        constraints: constraintCheck,
-        roiJustification: { expectedROI: 0, meetsThreshold: false },
-      };
-    }
-
-    // Step 4: Calculate ROI
-    const roiAnalysis = this.calculateROI(selectedStrategy.id, history);
-    const meetsROIThreshold = roiAnalysis.roi >= 1.5;
-
-    // Step 5: Make final decision
-    if (!meetsROIThreshold) {
-      return {
-        shouldNudge: false,
-        strategy: selectedStrategy.id,
-        discountPercent: selectedStrategy.discountPercent,
-        confidence: 0.80,
-        reasoning: [
-          `ROI of ${roiAnalysis.roi.toFixed(2)} does not meet 1.5 threshold`,
-          `Expected LTV lift: $${roiAnalysis.expectedLTVLift.toFixed(2)}`,
-          `Discount cost: $${roiAnalysis.totalCost.toFixed(2)}`,
-        ],
-        constraints: constraintCheck,
-        roiJustification: { expectedROI: roiAnalysis.roi, meetsThreshold: false },
-        roiAnalysis,
-      };
-    }
-
-    // Step 6: Generate coupon
-    const coupon = this.generateStripeCoupon(selectedStrategy.id, leadId, interactionScore);
-
-    // Step 7: Build reasoning
-    const reasoning = this.buildDecisionReasoning(history, selectedStrategy, roiAnalysis, interactionScore);
-
-    // Step 8: Calculate confidence
-    const confidence = this.calculateDecisionConfidence(interactionScore, roiAnalysis, constraintCheck);
-
-    return {
-      shouldNudge: true,
-      strategy: selectedStrategy.id,
-      discountPercent: selectedStrategy.discountPercent,
-      confidence,
-      reasoning,
-      constraints: constraintCheck,
-      roiJustification: { expectedROI: roiAnalysis.roi, meetsThreshold: true },
-      coupon,
-      roiAnalysis,
-    };
-  }
-
-  /**
-   * Score interaction history (0-100 scale)
-   */
-  scoreInteractionHistory(history: InteractionHistory): number {
-    let score = 0;
-
-    // Score page views (max 35 points)
-    let pageViewScore = 0;
-    for (const pageView of history.pageViews) {
-      const weight = INTERACTION_WEIGHTS.pageViews[pageView.page as keyof typeof INTERACTION_WEIGHTS.pageViews] || 1;
-      pageViewScore += Math.min(pageView.count * weight, weight * 3); // Cap at 3x weight per page
-    }
-    score += Math.min(pageViewScore, 35);
-
-    // Score time on site (max 20 points)
-    const timeScore = Math.min(
-      history.timeOnSite.totalMinutes * INTERACTION_WEIGHTS.timeOnSite.perMinute,
-      INTERACTION_WEIGHTS.timeOnSite.maxMinutes * INTERACTION_WEIGHTS.timeOnSite.perMinute
-    );
-    const timeBonus = history.timeOnSite.totalMinutes >= INTERACTION_WEIGHTS.timeOnSite.bonusThreshold
-      ? INTERACTION_WEIGHTS.timeOnSite.bonusPoints
-      : 0;
-    score += Math.min(timeScore + timeBonus, 20);
-
-    // Score return visits (max 20 points)
-    let visitScore = Math.min(
-      history.returnVisits.totalVisits * INTERACTION_WEIGHTS.returnVisits.perVisit,
-      INTERACTION_WEIGHTS.returnVisits.maxVisits * INTERACTION_WEIGHTS.returnVisits.perVisit
-    );
-    // Recent visit bonus
-    const lastVisit = history.returnVisits.visitDates[history.returnVisits.visitDates.length - 1];
-    if (lastVisit && this.isWithinHours(lastVisit, 24)) {
-      visitScore += INTERACTION_WEIGHTS.returnVisits.recentVisitBonus;
-    }
-    // Consistent visit bonus
-    if (history.returnVisits.daysActiveInLast30 >= 3) {
-      visitScore += INTERACTION_WEIGHTS.returnVisits.consistentVisitBonus;
-    }
-    score += Math.min(visitScore, 20);
-
-    // Score email engagement (max 15 points)
-    let emailScore = 0;
-    emailScore += history.emailEngagement.opened * INTERACTION_WEIGHTS.emailEngagement.opened;
-    emailScore += history.emailEngagement.clicked * INTERACTION_WEIGHTS.emailEngagement.clicked;
-    emailScore += history.emailEngagement.replied * INTERACTION_WEIGHTS.emailEngagement.replied;
-    if (history.emailEngagement.unsubscribed) {
-      emailScore += INTERACTION_WEIGHTS.emailEngagement.unsubscribed;
-    }
-    score += Math.max(Math.min(emailScore, 15), -10); // Floor at -10 for unsubscribed
-
-    // Score trial usage (max 10 points)
-    if (history.trialUsage.isTrialUser) {
-      let trialScore = 0;
-      trialScore += history.trialUsage.featuresUsed.length * INTERACTION_WEIGHTS.trialUsage.perFeatureUsed;
-      trialScore += history.trialUsage.integrationsSetup.length * INTERACTION_WEIGHTS.trialUsage.integrationSetup;
-      trialScore += history.trialUsage.teamMembersInvited * INTERACTION_WEIGHTS.trialUsage.teamInvite;
-      if (history.trialUsage.completedOnboarding) {
-        trialScore += INTERACTION_WEIGHTS.trialUsage.completedOnboarding;
-      }
-      score += Math.min(trialScore, 10);
-    }
-
-    return Math.max(Math.min(Math.round(score), 100), 0);
-  }
-
-  /**
-   * Select the best nudge strategy based on interaction history
-   */
-  selectNudgeStrategy(
-    history: InteractionHistory,
-    _segment: InteractionHistory['segment']
-  ): NudgeStrategy | null {
-    const eligibleStrategies: { strategy: NudgeStrategy; priority: number; matchScore: number }[] = [];
-
-    // Check CART_ABANDONMENT (highest priority for immediate revenue)
-    if (this.matchesCartAbandonment(history)) {
-      eligibleStrategies.push({
-        strategy: CART_ABANDONMENT as unknown as NudgeStrategy,
-        priority: 1,
-        matchScore: this.calculateMatchScore(history, 'CART_ABANDONMENT'),
-      });
-    }
-
-    // Check TRIAL_CONVERSION (high priority - time sensitive)
-    if (this.matchesTrialConversion(history)) {
-      eligibleStrategies.push({
-        strategy: TRIAL_CONVERSION as unknown as NudgeStrategy,
-        priority: 2,
-        matchScore: this.calculateMatchScore(history, 'TRIAL_CONVERSION'),
-      });
-    }
-
-    // Check WIN_BACK (returning churned users)
-    if (this.matchesWinBack(history)) {
-      eligibleStrategies.push({
-        strategy: WIN_BACK as unknown as NudgeStrategy,
-        priority: 3,
-        matchScore: this.calculateMatchScore(history, 'WIN_BACK'),
-      });
-    }
-
-    // Check REFERRAL_REWARD (viral growth)
-    if (this.matchesReferral(history)) {
-      eligibleStrategies.push({
-        strategy: REFERRAL_REWARD as unknown as NudgeStrategy,
-        priority: 4,
-        matchScore: this.calculateMatchScore(history, 'REFERRAL_REWARD'),
-      });
-    }
-
-    // Check ENGAGEMENT_NUDGE (general interest signal)
-    if (this.matchesEngagementNudge(history)) {
-      eligibleStrategies.push({
-        strategy: ENGAGEMENT_NUDGE as unknown as NudgeStrategy,
-        priority: 5,
-        matchScore: this.calculateMatchScore(history, 'ENGAGEMENT_NUDGE'),
-      });
-    }
-
-    // Check LOYALTY_TIER (existing customers)
-    if (this.matchesLoyaltyTier(history)) {
-      const tier = this.determineLoyaltyTier(history);
-      if (tier) {
-        const loyaltyStrategy: NudgeStrategy = {
-          ...(LOYALTY_TIER as unknown as NudgeStrategy),
-          discountPercent: tier.discount,
-        };
-        eligibleStrategies.push({
-          strategy: loyaltyStrategy,
-          priority: 6,
-          matchScore: this.calculateMatchScore(history, 'LOYALTY_TIER'),
-        });
-      }
-    }
-
-    // Sort by priority (lowest first) then by match score
-    eligibleStrategies.sort((a, b) => {
-      if (a.priority !== b.priority) {return a.priority - b.priority;}
-      return b.matchScore - a.matchScore;
-    });
-
-    return eligibleStrategies.length > 0 ? eligibleStrategies[0].strategy : null;
-  }
-
-  /**
-   * Generate a Stripe-compatible coupon payload
-   */
-  generateStripeCoupon(
-    strategy: NudgeStrategyId,
-    leadId: string,
-    interactionScore: number
-  ): StripeCouponPayload {
-    const strategyConfig = NUDGE_STRATEGY[strategy];
-    const timestamp = Date.now();
-
-    // Calculate discount percent
-    let discountPercent: number;
-    if (strategyConfig.discountPercent !== null) {
-      discountPercent = strategyConfig.discountPercent;
-    } else if (strategy === 'SEASONAL_PROMO') {
-      // Default to 20% for seasonal if no active season
-      discountPercent = 20;
-    } else if (strategy === 'LOYALTY_TIER') {
-      // Default to bronze tier
-      discountPercent = LOYALTY_TIER.tiers.bronze.discount;
-    } else {
-      discountPercent = 10;
-    }
-
-    // Calculate redeem_by timestamp
-    const redeemByHours = strategyConfig.couponSettings.redeemBy ?? 72;
-    const redeemByTimestamp = Math.floor((timestamp + redeemByHours * 60 * 60 * 1000) / 1000);
-
-    // Calculate expected ROI for metadata
-    const expectedROI = strategyConfig.averageROI ?? 2.0;
-
-    return {
-      id: `NUDGE_${strategy}_${leadId}_${timestamp}`,
-      percent_off: discountPercent,
-      duration: strategyConfig.couponSettings.duration,
-      duration_in_months: strategyConfig.couponSettings.durationInMonths,
-      max_redemptions: strategyConfig.couponSettings.maxRedemptions,
-      redeem_by: redeemByTimestamp,
-      currency: STRIPE_COUPON_DEFAULTS.currency,
-      metadata: {
-        strategy,
-        lead_id: leadId,
-        interaction_score: interactionScore,
-        source: STRIPE_COUPON_DEFAULTS.metadata.source,
-        created_by: 'merchandiser_specialist',
-        expected_roi: expectedROI,
-      },
-    };
-  }
-
-  /**
-   * Calculate ROI for a nudge strategy
-   */
-  calculateROI(
-    strategy: NudgeStrategyId,
-    leadData: Partial<InteractionHistory>
-  ): ROIAnalysis {
-    const segment = leadData.segment ?? 'smb';
-    const segmentInfoResult = this.segmentData.get(segment) ?? this.segmentData.get('smb');
-    const segmentInfo = segmentInfoResult ?? { averageLTV: 3000, averageOrderValue: 250, conversionRate: 0.05, churnRate: 0.12, discountSensitivity: 0.7, segment: 'smb' as const };
-    const strategyConfig = NUDGE_STRATEGY[strategy];
-
-    // Get segment LTV
-    const segmentLTV = segmentInfo.averageLTV * ROI_PARAMETERS.segmentMultipliers[segment];
-
-    // Get conversion probabilities
-    const baselineProb = ROI_PARAMETERS.conversionProbabilities.baseline;
-    const nudgeProb = ROI_PARAMETERS.conversionProbabilities.withNudge[strategy] ?? baselineProb * 2;
-
-    // Calculate expected LTV lift
-    const conversionLift = nudgeProb - baselineProb;
-    const expectedLTVLift = conversionLift * segmentLTV;
-
-    // Calculate discount cost
-    const discountPercent = strategyConfig.discountPercent ?? 10;
-    const discountDecimal = discountPercent / 100;
-    const orderValue = segmentInfo.averageOrderValue;
-
-    const directRevenueLoss = orderValue * discountDecimal * ROI_PARAMETERS.discountCostFactors.directRevenueLoss;
-    const marginImpact = directRevenueLoss * ROI_PARAMETERS.discountCostFactors.marginImpact;
-    const opportunityCost = orderValue * discountDecimal * ROI_PARAMETERS.discountCostFactors.opportunityCost;
-    const totalCost = marginImpact + opportunityCost;
-
-    // Calculate ROI
-    const roi = totalCost > 0 ? expectedLTVLift / totalCost : 0;
-    const roiPercentage = roi * 100;
-
-    // Determine recommendation
-    let recommendation: ROIAnalysis['recommendation'];
-    if (roi >= 3.0) {
-      recommendation = 'strong_yes';
-    } else if (roi >= 2.0) {
-      recommendation = 'yes';
-    } else if (roi >= 1.5) {
-      recommendation = 'marginal';
-    } else {
-      recommendation = 'no';
-    }
-
-    // Calculate break-even discount
-    const breakEvenDiscount = (expectedLTVLift / (orderValue * ROI_PARAMETERS.discountCostFactors.marginImpact)) * 100;
-
-    // Sensitivity analysis
-    const sensitivityAnalysis = {
-      pessimistic: (conversionLift * 0.5 * segmentLTV) / totalCost,
-      expected: roi,
-      optimistic: (conversionLift * 1.5 * segmentLTV) / totalCost,
-    };
-
-    return {
-      strategy,
-      leadId: leadData.leadId ?? 'unknown',
-      segmentLTV,
-      baselineConversionProbability: baselineProb,
-      nudgeConversionProbability: nudgeProb,
-      expectedLTVLift,
-      discountCost: directRevenueLoss,
-      marginImpact,
-      opportunityCost,
-      totalCost,
-      roi,
-      roiPercentage,
-      recommendation,
-      breakEvenDiscount,
-      sensitivityAnalysis,
-    };
-  }
-
-  /**
-   * Check coupon constraints for a lead
-   */
-  checkCouponConstraints(leadId: string): { passed: boolean; violations: string[] } {
-    const violations: string[] = [];
-    const usageHistory = this.couponUsageCache.get(leadId) ?? [];
-
-    // Check no stacking (no active coupons)
-    const activeCoupons = usageHistory.filter(c => c.status === 'issued' && new Date(c.expiresAt) > new Date());
-    if (activeCoupons.length >= COUPON_CONSTRAINTS.stacking.maxActiveCoupons) {
-      violations.push(`Active coupon limit reached (${activeCoupons.length}/${COUPON_CONSTRAINTS.stacking.maxActiveCoupons})`);
-    }
-
-    // Check cooldown period
-    const lastCoupon = usageHistory
-      .filter(c => c.status === 'redeemed' || c.status === 'expired')
-      .sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime())[0];
-
-    if (lastCoupon) {
-      const daysSinceLastCoupon = this.daysBetween(new Date(lastCoupon.issuedAt), new Date());
-      if (daysSinceLastCoupon < COUPON_CONSTRAINTS.timing.cooldownBetweenCoupons) {
-        violations.push(`Cooldown period not met (${daysSinceLastCoupon}/${COUPON_CONSTRAINTS.timing.cooldownBetweenCoupons} days)`);
-      }
-    }
-
-    // Check max coupons per month
-    const couponsThisMonth = usageHistory.filter(c => {
-      const issuedDate = new Date(c.issuedAt);
-      const now = new Date();
-      return issuedDate.getMonth() === now.getMonth() && issuedDate.getFullYear() === now.getFullYear();
-    });
-
-    if (couponsThisMonth.length >= COUPON_CONSTRAINTS.timing.maxCouponsPerMonth) {
-      violations.push(`Monthly coupon limit reached (${couponsThisMonth.length}/${COUPON_CONSTRAINTS.timing.maxCouponsPerMonth})`);
-    }
-
-    // Check blackout periods
-    const currentPeriod = this.getCurrentBlackoutPeriod();
-    if (currentPeriod && (COUPON_CONSTRAINTS.timing.blackoutPeriods as readonly string[]).includes(currentPeriod)) {
-      violations.push(`Blackout period active: ${currentPeriod}`);
-    }
-
-    return {
-      passed: violations.length === 0,
-      violations,
-    };
-  }
-
-  // ==========================================================================
-  // STRATEGY MATCHING HELPERS
-  // ==========================================================================
-
-  private matchesCartAbandonment(history: InteractionHistory): boolean {
-    if (!history.cartHistory.hasAbandonedCart) {return false;}
-    if (!history.cartHistory.abandonedCartDate) {return false;}
-
-    const hoursSinceAbandonment = this.hoursBetween(
-      new Date(history.cartHistory.abandonedCartDate),
-      new Date()
-    );
-
-    return (
-      hoursSinceAbandonment >= CART_ABANDONMENT.triggerConditions.hoursSinceAbandonment.min &&
-      hoursSinceAbandonment <= CART_ABANDONMENT.triggerConditions.hoursSinceAbandonment.max &&
-      (history.cartHistory.abandonedCartValue ?? 0) >= CART_ABANDONMENT.triggerConditions.cartValue.min &&
-      history.purchaseHistory.totalPurchases <= (CART_ABANDONMENT.triggerConditions.previousPurchases.max ?? 0)
-    );
-  }
-
-  private matchesTrialConversion(history: InteractionHistory): boolean {
-    if (!history.trialUsage.isTrialUser) {return false;}
-    if (history.trialUsage.trialDay === null) {return false;}
-
-    const trialDay = history.trialUsage.trialDay;
-    const usagePercent = history.trialUsage.usagePercentage;
-    const emailScore = this.calculateEmailEngagementScore(history.emailEngagement);
-
-    return (
-      trialDay >= TRIAL_CONVERSION.triggerConditions.trialDay.min &&
-      trialDay <= TRIAL_CONVERSION.triggerConditions.trialDay.max &&
-      usagePercent >= TRIAL_CONVERSION.triggerConditions.trialUsagePercent.min &&
-      emailScore >= TRIAL_CONVERSION.triggerConditions.emailEngagementScore.min &&
-      !history.purchaseHistory.hasPurchased
-    );
-  }
-
-  private matchesWinBack(history: InteractionHistory): boolean {
-    if (history.purchaseHistory.subscriptionStatus !== 'churned') {return false;}
-    if (!history.purchaseHistory.churnDate) {return false;}
-
-    const daysSinceChurn = this.daysBetween(
-      new Date(history.purchaseHistory.churnDate),
-      new Date()
-    );
-
-    const churnDate = history.purchaseHistory.churnDate;
-    const hasReturningVisit = churnDate ? history.returnVisits.visitDates.some(
-      date => new Date(date) > new Date(churnDate)
-    ) : false;
-
-    return (
-      daysSinceChurn >= WIN_BACK.triggerConditions.daysSinceChurn.min &&
-      daysSinceChurn <= WIN_BACK.triggerConditions.daysSinceChurn.max &&
-      hasReturningVisit &&
-      history.purchaseHistory.lifetimeValue >= WIN_BACK.triggerConditions.previousLTV.min
-    );
-  }
-
-  private matchesReferral(_history: InteractionHistory): boolean {
-    // This would check referral code in history - simplified for now
-    return false; // Referrals handled through separate flow
-  }
-
-  private matchesEngagementNudge(history: InteractionHistory): boolean {
-    const pricingViews = history.pageViews.find(p => p.page === 'pricing')?.count ?? 0;
-    const featureViews = history.pageViews.find(p => p.page === 'features')?.count ?? 0;
-
-    const firstVisit = history.returnVisits.visitDates[0];
-    const daysSinceFirstVisit = firstVisit ? this.daysBetween(new Date(firstVisit), new Date()) : 999;
-
-    return (
-      pricingViews >= ENGAGEMENT_NUDGE.triggerConditions.minPricingPageViews &&
-      featureViews >= ENGAGEMENT_NUDGE.triggerConditions.minFeaturePageViews &&
-      daysSinceFirstVisit <= ENGAGEMENT_NUDGE.triggerConditions.maxDaysSinceFirstVisit &&
-      !history.purchaseHistory.hasPurchased &&
-      history.timeOnSite.totalMinutes >= ENGAGEMENT_NUDGE.triggerConditions.minTimeOnSiteMinutes
-    );
-  }
-
-  private matchesLoyaltyTier(history: InteractionHistory): boolean {
-    if (!history.purchaseHistory.hasPurchased) {return false;}
-    if (history.purchaseHistory.subscriptionStatus !== 'active') {return false;}
-
-    const firstPurchase = history.purchaseHistory.lastPurchaseDate;
-    if (!firstPurchase) {return false;}
-
-    const tenureMonths = this.monthsBetween(new Date(firstPurchase), new Date());
-    const lifetimeSpend = history.purchaseHistory.lifetimeValue;
-
-    return (
-      tenureMonths >= LOYALTY_TIER.triggerConditions.minTenureMonths &&
-      lifetimeSpend >= LOYALTY_TIER.triggerConditions.minLifetimeSpend
-    );
-  }
-
-  private determineLoyaltyTier(history: InteractionHistory): { minMonths: number; minSpend: number; discount: number; perks: readonly string[] } | null {
-    const firstPurchase = history.purchaseHistory.lastPurchaseDate;
-    if (!firstPurchase) {return null;}
-
-    const tenureMonths = this.monthsBetween(new Date(firstPurchase), new Date());
-    const lifetimeSpend = history.purchaseHistory.lifetimeValue;
-
-    const tiers = LOYALTY_TIER.tiers;
-
-    if (tenureMonths >= tiers.platinum.minMonths && lifetimeSpend >= tiers.platinum.minSpend) {
-      return tiers.platinum;
-    }
-    if (tenureMonths >= tiers.gold.minMonths && lifetimeSpend >= tiers.gold.minSpend) {
-      return tiers.gold;
-    }
-    if (tenureMonths >= tiers.silver.minMonths && lifetimeSpend >= tiers.silver.minSpend) {
-      return tiers.silver;
-    }
-    if (tenureMonths >= tiers.bronze.minMonths && lifetimeSpend >= tiers.bronze.minSpend) {
-      return tiers.bronze;
-    }
-
-    return null;
-  }
-
-  private calculateMatchScore(history: InteractionHistory, strategy: NudgeStrategyId): number {
-    // Higher score = better match
-    let score = 0;
-
-    switch (strategy) {
-      case 'CART_ABANDONMENT':
-        score = Math.min((history.cartHistory.abandonedCartValue ?? 0) / 100, 100);
-        break;
-      case 'TRIAL_CONVERSION':
-        score = history.trialUsage.usagePercentage;
-        break;
-      case 'WIN_BACK':
-        score = Math.min(history.purchaseHistory.lifetimeValue / 100, 100);
-        break;
-      case 'ENGAGEMENT_NUDGE': {
-        const pricingViews = history.pageViews.find(p => p.page === 'pricing')?.count ?? 0;
-        score = Math.min(pricingViews * 20, 100);
-        break;
-      }
-      case 'LOYALTY_TIER':
-        score = Math.min(history.purchaseHistory.lifetimeValue / 50, 100);
-        break;
-      default:
-        score = 50;
-    }
-
-    return score;
-  }
-
-  // ==========================================================================
-  // UTILITY HELPERS
-  // ==========================================================================
-
-  private isWithinHours(date: Date, hours: number): boolean {
-    const now = new Date();
-    const diffMs = now.getTime() - new Date(date).getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    return diffHours <= hours;
-  }
-
-  private hoursBetween(date1: Date, date2: Date): number {
-    const diffMs = Math.abs(new Date(date2).getTime() - new Date(date1).getTime());
-    return diffMs / (1000 * 60 * 60);
-  }
-
-  private daysBetween(date1: Date, date2: Date): number {
-    const diffMs = Math.abs(new Date(date2).getTime() - new Date(date1).getTime());
-    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  }
-
-  private monthsBetween(date1: Date, date2: Date): number {
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
-    return (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
-  }
-
-  private calculateEmailEngagementScore(engagement: InteractionHistory['emailEngagement']): number {
-    let score = 0;
-    score += engagement.opened * 3;
-    score += engagement.clicked * 8;
-    score += engagement.replied * 15;
-    if (engagement.unsubscribed) {score -= 20;}
-    return Math.max(score, 0);
-  }
-
-  private getCurrentBlackoutPeriod(): string | null {
-    // Simplified - would check actual calendar events
-    const now = new Date();
-    const month = now.getMonth();
-    const day = now.getDate();
-
-    // Example: launch week in January
-    if (month === 0 && day >= 1 && day <= 7) {
-      return 'launch_week';
-    }
-
-    return null;
-  }
-
-  private buildDecisionReasoning(
-    history: InteractionHistory,
-    strategy: NudgeStrategy,
-    roiAnalysis: ROIAnalysis,
-    interactionScore: number
-  ): string[] {
-    const reasoning: string[] = [];
-
-    reasoning.push(`Strategy selected: ${strategy.name} (${strategy.discountPercent}% off)`);
-    reasoning.push(`Interaction score: ${interactionScore}/100`);
-    reasoning.push(`Segment: ${history.segment} (LTV: $${roiAnalysis.segmentLTV.toFixed(0)})`);
-    reasoning.push(`Expected ROI: ${roiAnalysis.roi.toFixed(2)}x (${roiAnalysis.roiPercentage.toFixed(0)}%)`);
-    reasoning.push(`Psychology: ${strategy.psychologyBasis}`);
-    reasoning.push(`Expected conversion lift: ${strategy.expectedConversionLift}`);
-
-    if (roiAnalysis.recommendation === 'strong_yes') {
-      reasoning.push('Strong recommendation - ROI significantly exceeds threshold');
-    } else if (roiAnalysis.recommendation === 'marginal') {
-      reasoning.push('Marginal recommendation - ROI meets threshold but with limited buffer');
-    }
-
-    return reasoning;
-  }
-
-  private calculateDecisionConfidence(
-    interactionScore: number,
-    roiAnalysis: ROIAnalysis,
-    constraints: { passed: boolean; violations: string[] }
-  ): number {
-    let confidence = 0.5;
-
-    // Interaction score contribution (up to 0.25)
-    confidence += (interactionScore / 100) * 0.25;
-
-    // ROI contribution (up to 0.2)
-    confidence += Math.min(roiAnalysis.roi / 5, 0.2);
-
-    // Constraints clean (0.05)
-    if (constraints.passed) {
-      confidence += 0.05;
-    }
-
-    return Math.min(Math.round(confidence * 100) / 100, 0.99);
+    return { functional: 480, boilerplate: 80 };
   }
 }
 
 // ============================================================================
-// FACTORY FUNCTION
+// FACTORY / SINGLETON
 // ============================================================================
 
-/**
- * Create a new MerchandiserSpecialist instance
- */
 export function createMerchandiserSpecialist(): MerchandiserSpecialist {
   return new MerchandiserSpecialist();
 }
 
-// ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
-
 let instance: MerchandiserSpecialist | null = null;
 
-/**
- * Get the singleton MerchandiserSpecialist instance
- */
 export function getMerchandiserSpecialist(): MerchandiserSpecialist {
   instance ??= createMerchandiserSpecialist();
   return instance;
 }
 
 // ============================================================================
-// EXPORT CONSTANTS FOR EXTERNAL USE
+// INTERNAL TEST HELPERS
 // ============================================================================
 
-export {
-  NUDGE_STRATEGY,
-  INTERACTION_WEIGHTS,
-  COUPON_CONSTRAINTS,
-  ROI_PARAMETERS,
-  STRIPE_COUPON_DEFAULTS,
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  DEFAULT_SYSTEM_PROMPT,
+  loadGMConfig,
+  stripJsonFences,
+  buildEvaluateNudgePrompt,
+  executeEvaluateNudge,
+  EvaluateNudgePayloadSchema,
+  EvaluateNudgeResultSchema,
 };
