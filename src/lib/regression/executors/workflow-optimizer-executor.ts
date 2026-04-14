@@ -14,7 +14,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { __internal as workflowInternal } from '@/lib/agents/builder/workflow/specialist';
 import {
   REGRESSION_TEMPERATURE,
@@ -320,13 +319,8 @@ export async function workflowOptimizerExecutor(args: {
   if (baseSystemPrompt.length < 100) {
     throw new Error(`[workflow-optimizer-executor] GM systemPrompt too short`);
   }
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error('[workflow-optimizer-executor] Brand DNA not configured');
-  }
-
-  const resolvedSystemPrompt = workflowInternal.buildResolvedSystemPrompt(baseSystemPrompt, brandDNA);
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt IS the resolved prompt.
+  const resolvedSystemPrompt = baseSystemPrompt;
 
   const req: Parameters<typeof workflowInternal.buildComposeWorkflowUserPrompt>[0] = {
     action: 'compose_workflow',

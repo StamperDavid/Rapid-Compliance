@@ -11,7 +11,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import {
   __internal as facebookInternal,
 } from '@/lib/agents/marketing/facebook/specialist';
@@ -239,10 +238,8 @@ export async function facebookAdsExpertExecutor(args: {
   const baseSystemPrompt = typeof gmConfig.systemPrompt === 'string' ? gmConfig.systemPrompt : '';
   if (baseSystemPrompt.length < 100) {throw new Error(`[facebook-ads-expert-executor] GM systemPrompt too short`);}
 
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {throw new Error('[facebook-ads-expert-executor] Brand DNA not configured');}
-
-  const resolvedSystemPrompt = facebookInternal.buildResolvedSystemPrompt(baseSystemPrompt, brandDNA);
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt IS the resolved prompt.
+  const resolvedSystemPrompt = baseSystemPrompt;
 
   const req: Parameters<typeof facebookInternal.buildGenerateContentUserPrompt>[0] = {
     action: 'generate_content',

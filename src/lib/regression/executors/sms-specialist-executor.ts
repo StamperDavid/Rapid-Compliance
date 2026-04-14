@@ -20,7 +20,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { getActiveSmsPurposeTypes } from '@/lib/services/sms-purpose-types-service';
 import { getSmsSettings } from '@/lib/services/sms-settings-service';
 import { __internal as smsInternal } from '@/lib/agents/outreach/sms/specialist';
@@ -290,11 +289,8 @@ export async function smsSpecialistExecutor(args: {
     throw new Error(`[sms-specialist-executor] GM systemPrompt too short`);
   }
 
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error('[sms-specialist-executor] Brand DNA not configured');
-  }
-
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt already has it.
+  // Only purposeTypes + smsSettings need runtime injection (editable via UI between seeds).
   const purposeTypes = await getActiveSmsPurposeTypes();
   if (purposeTypes.length === 0) {
     throw new Error('[sms-specialist-executor] No active SMS purpose types — run scripts/seed-sms-purpose-types.js');
@@ -303,9 +299,8 @@ export async function smsSpecialistExecutor(args: {
 
   const smsSettings = await getSmsSettings();
 
-  const resolvedSystemPrompt = smsInternal.buildResolvedSystemPrompt(
+  const resolvedSystemPrompt = smsInternal.appendPurposeAndSettings(
     baseSystemPrompt,
-    brandDNA,
     purposeTypes,
     smsSettings,
   );

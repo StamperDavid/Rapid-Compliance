@@ -19,7 +19,6 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { getActiveEmailPurposeTypes } from '@/lib/services/email-purpose-types-service';
 import { __internal as emailInternal } from '@/lib/agents/outreach/email/specialist';
 import {
@@ -275,18 +274,15 @@ export async function emailSpecialistExecutor(args: {
     throw new Error(`[email-specialist-executor] GM systemPrompt too short`);
   }
 
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error('[email-specialist-executor] Brand DNA not configured');
-  }
-
+  // Brand DNA is baked into the GM at seed time; baseSystemPrompt already has it.
+  // Only purposeTypes need runtime injection because they can change via UI between seeds.
   const purposeTypes = await getActiveEmailPurposeTypes();
   if (purposeTypes.length === 0) {
     throw new Error('[email-specialist-executor] No active email purpose types — run scripts/seed-email-purpose-types.js');
   }
   const validSlugs = new Set(purposeTypes.map((t) => t.slug));
 
-  const resolvedSystemPrompt = emailInternal.buildResolvedSystemPrompt(baseSystemPrompt, brandDNA, purposeTypes);
+  const resolvedSystemPrompt = emailInternal.appendPurposeTaxonomy(baseSystemPrompt, purposeTypes);
 
   const req: Parameters<typeof emailInternal.buildComposeEmailUserPrompt>[0] = {
     action: 'compose_email',

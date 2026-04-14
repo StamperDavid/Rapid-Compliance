@@ -52,7 +52,6 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
-import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
 import { getActiveEmailPurposeTypes } from '@/lib/services/email-purpose-types-service';
 import type { EmailPurposeType } from '@/types/email-purpose-types';
 import type { ModelName } from '@/types/ai-models';
@@ -230,7 +229,6 @@ export type ComposeEmailResult = z.infer<typeof ComposeEmailResultSchema>;
 
 interface LlmCallContext {
   gm: EmailSpecialistGMConfig;
-  brandDNA: BrandDNA;
   purposeTypes: EmailPurposeType[];
   resolvedSystemPrompt: string;
 }
@@ -266,15 +264,6 @@ async function loadGMBrandDNAAndPurposeTypes(industryKey: string): Promise<LlmCa
     maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
-
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
-    throw new Error(
-      'Brand DNA not configured. Email Specialist refuses to compose without brand identity. ' +
-      'Visit /settings/ai-agents/business-setup.',
-    );
-  }
-
   const purposeTypes = await getActiveEmailPurposeTypes();
   if (purposeTypes.length === 0) {
     throw new Error(
@@ -283,34 +272,17 @@ async function loadGMBrandDNAAndPurposeTypes(industryKey: string): Promise<LlmCa
     );
   }
 
-  const resolvedSystemPrompt = buildResolvedSystemPrompt(gm.systemPrompt, brandDNA, purposeTypes);
-  return { gm, brandDNA, purposeTypes, resolvedSystemPrompt };
+  // Brand DNA is baked into gm.systemPrompt at seed time. Only the
+  // dynamic email-purpose-taxonomy gets injected at runtime here because
+  // operators can add/remove purpose types from the UI between seeds.
+  const resolvedSystemPrompt = appendPurposeTaxonomy(gm.systemPrompt, purposeTypes);
+  return { gm, purposeTypes, resolvedSystemPrompt };
 }
 
-function buildResolvedSystemPrompt(
+function appendPurposeTaxonomy(
   baseSystemPrompt: string,
-  brandDNA: BrandDNA,
   purposeTypes: EmailPurposeType[],
 ): string {
-  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
-  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
-  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
-
-  const brandBlock = [
-    '',
-    '## Brand DNA (runtime injection — do not confuse with system prompt)',
-    '',
-    `Company: ${brandDNA.companyDescription}`,
-    `Unique value: ${brandDNA.uniqueValue}`,
-    `Target audience: ${brandDNA.targetAudience}`,
-    `Tone of voice: ${brandDNA.toneOfVoice}`,
-    `Communication style: ${brandDNA.communicationStyle}`,
-    `Industry: ${brandDNA.industry}`,
-    `Key phrases to weave in naturally: ${keyPhrases}`,
-    `Phrases you are forbidden from using: ${avoidPhrases}`,
-    `Competitors (never name them unless specifically asked): ${competitors}`,
-  ].join('\n');
-
   const purposeLines = purposeTypes
     .map((t) => `  - ${t.slug} — ${t.name}: ${t.description}`)
     .join('\n');
@@ -325,7 +297,7 @@ function buildResolvedSystemPrompt(
     purposeLines,
   ].join('\n');
 
-  return `${baseSystemPrompt}\n${brandBlock}\n${purposeBlock}`;
+  return `${baseSystemPrompt}\n${purposeBlock}`;
 }
 
 function stripJsonFences(raw: string): string {
@@ -587,7 +559,7 @@ export const __internal = {
   SUPPORTED_ACTIONS,
   MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMBrandDNAAndPurposeTypes,
-  buildResolvedSystemPrompt,
+  appendPurposeTaxonomy,
   buildComposeEmailUserPrompt,
   stripJsonFences,
   ComposeEmailRequestSchema,

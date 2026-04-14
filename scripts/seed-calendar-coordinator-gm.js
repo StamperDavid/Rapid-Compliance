@@ -12,6 +12,7 @@
 
 const admin = require('firebase-admin');
 const path = require('path');
+const { fetchBrandDNA, mergeBrandDNAIntoSystemPrompt } = require('./lib/brand-dna-helper');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 
@@ -121,6 +122,11 @@ const db = admin.firestore();
 async function main() {
   const force = process.argv.includes('--force');
 
+  // Bake Brand DNA into the GM at seed time — single source of truth, no
+  // runtime merging. See scripts/lib/brand-dna-helper.js for the standing rule.
+  const brandDNA = await fetchBrandDNA(db, PLATFORM_ID);
+  const resolvedSystemPrompt = mergeBrandDNAIntoSystemPrompt(SYSTEM_PROMPT, brandDNA);
+
   const existing = await db.collection(COLLECTION)
     .where('specialistId', '==', SPECIALIST_ID)
     .where('industryKey', '==', INDUSTRY_KEY)
@@ -150,13 +156,14 @@ async function main() {
     version: 1,
     industryKey: INDUSTRY_KEY,
     config: {
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: resolvedSystemPrompt,
       model: 'claude-sonnet-4.6',
       temperature: 0.7,
       maxTokens: 12000,
       supportedActions: ['plan_calendar'],
     },
-    systemPromptSnapshot: SYSTEM_PROMPT,
+    systemPromptSnapshot: resolvedSystemPrompt,
+    brandDNASnapshot: brandDNA,
     sourceImprovementRequestId: null,
     changesApplied: [],
     isActive: true,
@@ -169,7 +176,8 @@ async function main() {
   await db.collection(COLLECTION).doc(GM_ID).set(doc);
   console.log(`✓ Seeded ${GM_ID}`);
   console.log(`  Collection: ${COLLECTION}`);
-  console.log(`  Prompt length: ${SYSTEM_PROMPT.length} chars`);
+  console.log(`  Industry prompt length: ${SYSTEM_PROMPT.length} chars`);
+  console.log(`  Resolved prompt length: ${resolvedSystemPrompt.length} chars (industry + Brand DNA)`);
   process.exit(0);
 }
 
