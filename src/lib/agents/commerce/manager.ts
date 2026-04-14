@@ -434,7 +434,7 @@ export class CommerceManager extends BaseManager {
           // Fall back to delegation rules
           const target = this.findDelegationTarget(message);
           if (target) {
-            return await this.delegateToSpecialist(target, message);
+            return await this.delegateWithReview(target, message);
           }
           return this.createReport(taskId, 'FAILED', null, ['Could not determine commerce action']);
         }

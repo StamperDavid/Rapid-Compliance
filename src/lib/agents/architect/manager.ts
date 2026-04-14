@@ -1548,8 +1548,8 @@ export class ArchitectManager extends BaseManager {
           taskId
         );
 
-        // Execute the specialist
-        const report = await specialist.execute(message);
+        // Execute the specialist through the review gate (Phase 1 manager rebuild)
+        const report = await this.delegateWithReview(specialistId, message);
         const executionTimeMs = Date.now() - startTime;
 
         if (report.status === 'COMPLETED') {

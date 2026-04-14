@@ -1292,7 +1292,7 @@ export class ReputationManager extends BaseManager {
     };
 
     try {
-      const report = await this.delegateToSpecialist('REVIEW_SPECIALIST', message);
+      const report = await this.delegateWithReview('REVIEW_SPECIALIST', message);
       delegations.push({
         specialist: 'REVIEW_SPECIALIST',
         action: `Respond to ${reviewData.rating}-star review on ${reviewData.platform}`,
@@ -1340,7 +1340,7 @@ export class ReputationManager extends BaseManager {
     };
 
     try {
-      const report = await this.delegateToSpecialist('GMB_SPECIALIST', message);
+      const report = await this.delegateWithReview('GMB_SPECIALIST', message);
       delegations.push({
         specialist: 'GMB_SPECIALIST',
         action: `Address ${gmbData.issue} for ${gmbData.location}`,
@@ -1420,7 +1420,7 @@ export class ReputationManager extends BaseManager {
     const delegations: DelegationRecommendation[] = [];
 
     try {
-      const report = await this.delegateToSpecialist('REVIEW_SPECIALIST', message);
+      const report = await this.delegateWithReview('REVIEW_SPECIALIST', message);
 
       const responseData = report.data as ReviewResponse | null;
       const requiresApproval = reviewData.rating <= 3; // Negative reviews require human approval
@@ -1507,7 +1507,7 @@ export class ReputationManager extends BaseManager {
         traceId: taskId,
       };
 
-      const sentimentReport = await this.delegateToSpecialist('SENTIMENT_ANALYST', sentimentMessage);
+      const sentimentReport = await this.delegateWithReview('SENTIMENT_ANALYST', sentimentMessage);
       delegations.push({
         specialist: 'SENTIMENT_ANALYST',
         action: 'Deep sentiment analysis',
@@ -1706,7 +1706,7 @@ export class ReputationManager extends BaseManager {
     };
 
     try {
-      const report = await this.delegateToSpecialist('GMB_SPECIALIST', message);
+      const report = await this.delegateWithReview('GMB_SPECIALIST', message);
       delegations.push({
         specialist: 'GMB_SPECIALIST',
         action: `${gmbData.action ?? 'update'} for ${gmbData.location}`,
@@ -1946,7 +1946,7 @@ export class ReputationManager extends BaseManager {
     };
 
     try {
-      const report = await this.delegateToSpecialist('REVIEW_SPECIALIST', message);
+      const report = await this.delegateWithReview('REVIEW_SPECIALIST', message);
       return { data: report.data, executionTimeMs: Date.now() - start };
     } catch {
       // Return null instead of fabricated review metrics
@@ -1974,7 +1974,7 @@ export class ReputationManager extends BaseManager {
     };
 
     try {
-      const report = await this.delegateToSpecialist('SENTIMENT_ANALYST', message);
+      const report = await this.delegateWithReview('SENTIMENT_ANALYST', message);
       return { data: report.data, executionTimeMs: Date.now() - start };
     } catch {
       // Return null instead of fabricated sentiment scores
@@ -2002,7 +2002,7 @@ export class ReputationManager extends BaseManager {
     };
 
     try {
-      const report = await this.delegateToSpecialist('GMB_SPECIALIST', message);
+      const report = await this.delegateWithReview('GMB_SPECIALIST', message);
       return { data: report.data, executionTimeMs: Date.now() - start };
     } catch {
       // Return null instead of fabricated GMB metrics

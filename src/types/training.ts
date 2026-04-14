@@ -460,6 +460,44 @@ export interface SpecialistGoldenMaster {
 }
 
 // ============================================================================
+// MANAGER GOLDEN MASTERS
+// ============================================================================
+
+/**
+ * Versioned Golden Master snapshot for a Manager agent.
+ *
+ * Parallel to `SpecialistGoldenMaster` but for the 10 manager agents that
+ * review and approve specialist output before it leaves a department. The
+ * manager's `config.systemPrompt` contains the review criteria prompt (with
+ * Brand DNA baked in at seed time per the standing rule) that the LLM uses
+ * to grade specialist output.
+ *
+ * Collection: `organizations/{orgId}/managerGoldenMasters`
+ * Doc IDs:    `mgm_{managerId}_{industryKey}_v{version}`
+ *
+ * Managers are identified by their `identity.id` constant (e.g.
+ * 'CONTENT_MANAGER', 'COMMERCE_MANAGER', 'REVENUE_DIRECTOR').
+ */
+export interface ManagerGoldenMaster {
+  id: string;                                      // "mgm_{managerId}_{industryKey}_v{version}"
+  managerId: string;                               // "CONTENT_MANAGER", "REVENUE_DIRECTOR", etc.
+  managerName: string;
+  version: number;                                 // 1, 2, 3...
+  industryKey: string;                             // "saas_sales_ops", "real_estate", etc.
+  config: Record<string, unknown>;                 // Full config snapshot (systemPrompt, model, temperature, maxTokens)
+  systemPromptSnapshot?: string;                   // Convenience copy of config.systemPrompt
+  brandDNASnapshot?: Record<string, unknown>;      // Brand DNA baked in at seed time (audit trail)
+  sourceImprovementRequestId: string | null;       // null for v1 (seed)
+  changesApplied: ProposedSpecialistChange[];      // Reuses the specialist change type
+  isActive: boolean;
+  deployedAt?: string;
+  createdAt: string;
+  createdBy: string;
+  notes?: string;
+  previousVersion?: number;
+}
+
+// ============================================================================
 // AGENT-TYPE TRAINING CONFIGURATION
 // ============================================================================
 

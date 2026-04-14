@@ -1126,7 +1126,7 @@ export class BuilderManager extends BaseManager {
     const promises = tasks.map(async (task) => {
       const startTime = Date.now();
       try {
-        const report = await this.delegateToSpecialist(task.id, task.message);
+        const report = await this.delegateWithReview(task.id, task.message);
         return {
           specialistId: task.id,
           status: report.status === 'COMPLETED' ? 'SUCCESS' : report.status === 'BLOCKED' ? 'BLOCKED' : 'FAILED',

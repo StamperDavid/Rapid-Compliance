@@ -16,6 +16,10 @@ import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { isManagerPaused } from '@/lib/orchestration/swarm-control';
 import { recordExecution } from './shared/performance-tracker';
 import { logger } from '@/lib/logger/logger';
+import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import type { ModelName } from '@/types/ai-models';
 
 // ============================================================================
 // TYPES FOR MANAGER AUTHORITY
@@ -263,23 +267,234 @@ export abstract class BaseManager extends BaseSpecialist {
   // PHASE 2a: REVIEW BEFORE EXECUTE (Quality Gate)
   // ==========================================================================
 
+  /** Default industry key used when loading a manager's Golden Master. */
+  protected static readonly DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+
+  /** Per-report review cache so retries + escalation reuse the same LLM result. */
+  private reviewResultCache: WeakMap<AgentReport, ReviewResult> = new WeakMap();
+
   /**
    * Review specialist output before it leaves the department.
    *
-   * Override in concrete Managers to implement domain-specific checks:
-   * - Marketing: Brand DNA compliance, spam score < 20
-   * - Outreach: DNC compliance, send frequency limits
-   * - Revenue: BANT validation, outreach personalization
+   * Loads the manager's Golden Master from Firestore and asks the LLM to
+   * grade the specialist's output against the department-specific review
+   * criteria in the GM's systemPrompt. Brand DNA is baked into that prompt
+   * at seed time per the standing rule — no runtime merge.
    *
-   * Default implementation approves everything (passthrough).
+   * Caching: results are memoized per AgentReport object so the same report
+   * is not re-reviewed across retries and the escalation record path. When
+   * delegateWithReview passes the SAME report object into this method a
+   * second time, we return the cached result without another LLM call.
+   *
+   * Failure modes:
+   * - No GM seeded yet (Phase 1 before manager GMs exist) → safe pass-through
+   *   (approved=true) so the system still works before Phase 2 seeds. Logged
+   *   once per run so operators know the review gate is dormant.
+   * - Corrupt GM (no usable systemPrompt) → safe pass-through with WARN log.
+   * - LLM call throws → return BLOCK with the error in feedback. The retry
+   *   loop will attempt 2 more times, then escalate to Jasper. A broken
+   *   reviewer IS a production incident worth surfacing loudly.
+   * - LLM response unparseable → BLOCK with raw content in feedback.
    */
-  protected reviewOutput(_report: AgentReport): ReviewResult {
-    return {
-      approved: true,
-      feedback: [],
-      severity: 'PASS',
-      qualityScore: 100,
-    };
+  protected async reviewOutput(report: AgentReport): Promise<ReviewResult> {
+    const cached = this.reviewResultCache.get(report);
+    if (cached) { return cached; }
+
+    const result = await this.performLlmReview(report);
+    this.reviewResultCache.set(report, result);
+    return result;
+  }
+
+  /**
+   * Raw LLM review implementation. Separate from `reviewOutput` so the
+   * caching layer can wrap a single method. Do not call directly — always
+   * go through `reviewOutput` so retries don't double-bill the LLM.
+   */
+  private async performLlmReview(report: AgentReport): Promise<ReviewResult> {
+    // 1. Load the manager's GM
+    const gm = await getActiveManagerGMByIndustry(
+      this.identity.id,
+      BaseManager.DEFAULT_INDUSTRY_KEY,
+    );
+
+    if (!gm) {
+      // No GM seeded yet — Phase 1 pass-through. This is expected until
+      // Phase 2 of the manager rebuild seeds the 10 manager GMs.
+      this.log(
+        'INFO',
+        `No active Manager GM for ${this.identity.id}:${BaseManager.DEFAULT_INDUSTRY_KEY} — review gate dormant (pass-through)`,
+      );
+      return { approved: true, feedback: [], severity: 'PASS', qualityScore: 100 };
+    }
+
+    // 2. Extract the review criteria prompt from the GM
+    const config = gm.config as Partial<{
+      systemPrompt: string;
+      model: ModelName;
+      temperature: number;
+      maxTokens: number;
+    }>;
+    const reviewPrompt = config.systemPrompt ?? gm.systemPromptSnapshot ?? '';
+    if (reviewPrompt.length < 100) {
+      this.log(
+        'WARN',
+        `Manager GM ${gm.id} has no usable systemPrompt (length=${reviewPrompt.length}) — pass-through`,
+      );
+      return { approved: true, feedback: [], severity: 'PASS', qualityScore: 100 };
+    }
+
+    // 3. Build the user prompt containing the specialist output to review
+    const userPrompt = this.buildReviewUserPrompt(report);
+
+    // 4. Call OpenRouter
+    try {
+      const provider = new OpenRouterProvider(PLATFORM_ID);
+      const response = await provider.chat({
+        model: config.model ?? 'claude-sonnet-4.6',
+        messages: [
+          { role: 'system', content: reviewPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: config.temperature ?? 0.3,
+        maxTokens: config.maxTokens ?? 1500,
+      });
+
+      if (response.finishReason === 'length') {
+        return {
+          approved: false,
+          feedback: [
+            `Manager review truncated at maxTokens=${config.maxTokens ?? 1500}. Raise maxTokens in the GM or shorten the specialist output being reviewed.`,
+          ],
+          severity: 'BLOCK',
+          qualityScore: 0,
+        };
+      }
+
+      const raw = (response.content ?? '').trim();
+      if (raw.length === 0) {
+        return {
+          approved: false,
+          feedback: ['Manager review returned empty response'],
+          severity: 'BLOCK',
+          qualityScore: 0,
+        };
+      }
+
+      return this.parseReviewResponse(raw);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.log('ERROR', `Manager review LLM call failed: ${errMsg}`);
+      return {
+        approved: false,
+        feedback: [`Manager review LLM error: ${errMsg}`],
+        severity: 'BLOCK',
+        qualityScore: 0,
+      };
+    }
+  }
+
+  /**
+   * Build the user prompt for the review LLM call. Includes the specialist
+   * identity, the task ID, the output data, and the instructions to return
+   * a strict JSON review verdict.
+   */
+  private buildReviewUserPrompt(report: AgentReport): string {
+    const dataBlock = (() => {
+      try {
+        return JSON.stringify(report.data, null, 2);
+      } catch {
+        return String(report.data);
+      }
+    })();
+
+    const truncated = dataBlock.length > 12000
+      ? `${dataBlock.slice(0, 12000)}\n...[truncated, ${dataBlock.length - 12000} more chars]`
+      : dataBlock;
+
+    return [
+      'You are reviewing a specialist output from your department.',
+      '',
+      `SPECIALIST: ${report.agentId}`,
+      `TASK ID: ${report.taskId}`,
+      `STATUS: ${report.status}`,
+      '',
+      '--- SPECIALIST OUTPUT (JSON) ---',
+      truncated,
+      '--- END OUTPUT ---',
+      '',
+      'Grade this output against your review criteria in the system prompt above. Respond with ONLY a valid JSON object, no markdown fences, no preamble, no prose outside the JSON:',
+      '',
+      '{',
+      '  "approved": <boolean — true if the output meets the bar, false if it needs revision>,',
+      '  "severity": "<PASS | MINOR | MAJOR | BLOCK — PASS on approval; MINOR for cosmetic issues; MAJOR for substantive gaps; BLOCK for Brand DNA violations or unsafe output>",',
+      '  "qualityScore": <integer 0-100 — your overall confidence the output is shippable>,',
+      '  "feedback": [<0-5 specific actionable feedback items as strings — empty array if approved; each item 10-500 chars and phrased as a direct instruction to the specialist for how to improve on retry>]',
+      '}',
+      '',
+      'Hard rules:',
+      '- approved must match severity: approved=true requires severity=PASS; approved=false requires severity in [MINOR, MAJOR, BLOCK].',
+      '- feedback items must be ACTIONABLE instructions, not just descriptions of the problem. "Add specific platform names and time ranges" is actionable; "too vague" is not.',
+      '- If the output clearly meets the bar, approve it with an empty feedback array. Do not invent minor nitpicks just to justify rejection.',
+      '- If the output contains forbidden Brand DNA phrases or violates department rules, severity MUST be BLOCK.',
+    ].join('\n');
+  }
+
+  /**
+   * Parse the LLM review response into a ReviewResult. Strict validation on
+   * severity, qualityScore, and feedback shape. Falls back to a BLOCK result
+   * if parsing fails so a malformed review is never silently treated as PASS.
+   */
+  private parseReviewResponse(raw: string): ReviewResult {
+    const stripped = raw
+      .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+      .replace(/\n?\s*```[\s\S]*$/i, '')
+      .trim();
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stripped);
+    } catch {
+      return {
+        approved: false,
+        feedback: [`Review response was not valid JSON: ${raw.slice(0, 300)}`],
+        severity: 'BLOCK',
+        qualityScore: 0,
+      };
+    }
+
+    if (typeof parsed !== 'object' || parsed === null) {
+      return {
+        approved: false,
+        feedback: ['Review response was not a JSON object'],
+        severity: 'BLOCK',
+        qualityScore: 0,
+      };
+    }
+
+    const obj = parsed as Record<string, unknown>;
+    const approved = obj.approved === true;
+    const severityRaw = typeof obj.severity === 'string' ? obj.severity.toUpperCase() : '';
+    const severity: ReviewResult['severity'] =
+      severityRaw === 'PASS' || severityRaw === 'MINOR' || severityRaw === 'MAJOR' || severityRaw === 'BLOCK'
+        ? severityRaw
+        : 'BLOCK';
+    const qualityScoreRaw = typeof obj.qualityScore === 'number' ? obj.qualityScore : 0;
+    const qualityScore = Math.max(0, Math.min(100, Math.round(qualityScoreRaw)));
+    const feedback = Array.isArray(obj.feedback)
+      ? obj.feedback.filter((f): f is string => typeof f === 'string' && f.length > 0).slice(0, 5)
+      : [];
+
+    // Coherence check: approved=true requires severity=PASS
+    if (approved && severity !== 'PASS') {
+      return {
+        approved: false,
+        feedback: [`Review response is incoherent: approved=true but severity=${severity}. Treating as BLOCK.`],
+        severity: 'BLOCK',
+        qualityScore,
+      };
+    }
+
+    return { approved, feedback, severity, qualityScore };
   }
 
   /**
@@ -292,6 +507,7 @@ export abstract class BaseManager extends BaseSpecialist {
     message: AgentMessage
   ): Promise<AgentReport> {
     let lastReport: AgentReport | null = null;
+    let lastReview: ReviewResult | null = null;
     let retries = 0;
     const startTime = Date.now();
 
@@ -306,9 +522,7 @@ export abstract class BaseManager extends BaseSpecialist {
               ...(typeof message.payload === 'object' && message.payload !== null
                 ? message.payload as Record<string, unknown>
                 : {}),
-              _reviewFeedback: lastReport
-                ? this.reviewOutput(lastReport).feedback
-                : [],
+              _reviewFeedback: lastReview?.feedback ?? [],
               _retryAttempt: retries,
             },
           };
@@ -317,43 +531,51 @@ export abstract class BaseManager extends BaseSpecialist {
 
       // If specialist failed outright, record and return
       if (report.status === 'FAILED' || report.status === 'BLOCKED') {
-        this.recordPerformanceEntry(report, { approved: false, feedback: ['Specialist failed outright'], severity: 'BLOCK', qualityScore: 0 }, retries, startTime, report.status === 'FAILED' ? 'outright_failure' : 'blocked');
+        this.recordPerformanceEntry(
+          report,
+          { approved: false, feedback: ['Specialist failed outright'], severity: 'BLOCK', qualityScore: 0 },
+          retries,
+          startTime,
+          report.status === 'FAILED' ? 'outright_failure' : 'blocked',
+        );
         return report;
       }
 
-      // Run quality gate
-      const review = this.reviewOutput(report);
+      // Run quality gate (cached per report — safe to call multiple times)
+      const review = await this.reviewOutput(report);
 
       if (review.approved) {
-        // Record successful execution
         this.recordPerformanceEntry(report, review, retries, startTime);
         return report;
       }
 
-      this.log('WARN', `Quality gate ${review.severity}: ${review.feedback.join(', ')} (attempt ${retries + 1})`);
+      this.log(
+        'WARN',
+        `Quality gate ${review.severity}: ${review.feedback.join(', ')} (attempt ${retries + 1})`,
+      );
       lastReport = report;
+      lastReview = review;
       retries++;
     }
 
     // Max retries exhausted — escalate to Jasper
     this.log('WARN', `Escalating to Jasper after ${BaseManager.MAX_REVIEW_RETRIES} failed reviews`);
 
-    // Record the failed escalation performance entry
-    if (lastReport) {
-      const lastReview = this.reviewOutput(lastReport);
+    if (lastReport && lastReview) {
       this.recordPerformanceEntry(lastReport, lastReview, retries, startTime, 'quality_gate_escalation');
     }
 
+    const escalationFeedback = lastReview?.feedback ?? [];
     const escalationReport = this.createReport(
       message.id,
       'BLOCKED',
       {
         reason: 'QUALITY_GATE_ESCALATION',
         specialistId,
-        lastReviewFeedback: lastReport ? this.reviewOutput(lastReport).feedback : [],
+        lastReviewFeedback: escalationFeedback,
         requiresHumanReview: true,
       },
-      ['Output failed quality review after maximum retries — escalated to Jasper']
+      ['Output failed quality review after maximum retries — escalated to Jasper'],
     );
 
     // Write escalation to MemoryVault for Jasper to pick up
@@ -370,17 +592,20 @@ export abstract class BaseManager extends BaseSpecialist {
           body: {
             specialistId,
             originalTask: message.payload,
-            reviewFeedback: lastReport ? this.reviewOutput(lastReport).feedback : [],
+            reviewFeedback: escalationFeedback,
             retryCount: BaseManager.MAX_REVIEW_RETRIES,
           },
           requiresResponse: true,
           responded: false,
         },
         this.identity.id,
-        { priority: 'HIGH', tags: ['escalation', 'quality-gate'] }
+        { priority: 'HIGH', tags: ['escalation', 'quality-gate'] },
       );
     } catch (error) {
-      this.log('ERROR', `Failed to write escalation to MemoryVault: ${error instanceof Error ? error.message : String(error)}`);
+      this.log(
+        'ERROR',
+        `Failed to write escalation to MemoryVault: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
 
     return escalationReport;
