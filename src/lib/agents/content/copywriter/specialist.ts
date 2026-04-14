@@ -38,6 +38,45 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['generate_page_copy', 'generate_proposal'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Copywriter response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   PageCopyResultSchema has NO .max() constraints (only .min(1)) so the
+ *   bound has to come from the user prompt guidance, not Zod. The user
+ *   prompt instructs:
+ *     - h1: 6-12 words (~60 chars)
+ *     - h2 array: one per section, each ~60 chars
+ *     - sections: each with heading (~60) + content (40-120 words, cap
+ *       ~720 chars) + optional cta (~200 chars) = ~980 chars per section
+ *     - metadata: title 60 + description 160 + keywords ~150 + ogTitle 60
+ *       + ogDescription 160 = ~590 chars
+ *
+ *   Realistic worst case (8-section page):
+ *     8 × 980 + h1 60 + h2 array 480 + metadata 590 = ~8,970 chars prose
+ *     /3.0 chars/token = 2,990 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin for tokenization variance and verbose styles
+ *     ≈ 4,000 tokens minimum.
+ *
+ *   The prior 4,096 was right at the realistic floor with zero headroom.
+ *   ProposalResultSchema is smaller (~5,100 chars worst case ≈ 1,900
+ *   tokens) so generate_proposal fit comfortably; generate_page_copy did
+ *   not. Setting the floor at 8,000 tokens = 2× the realistic max with
+ *   room for verbose styles (pirate dialect, dense rationales) and any
+ *   future schema growth. The truncation backstop in callOpenRouter
+ *   catches anything that still overflows.
+ *
+ * If this constant ever changes, the prompt guidance in
+ * buildPageCopyUserPrompt and buildProposalUserPrompt MUST be re-audited.
+ * Cross-cutting context: this is part of the Task #45 follow-up
+ * specialist audit (Email + SMS Specialists were fixed first; the same
+ * latent bug existed across every Tasks #23-#41 specialist that calls
+ * provider.chat() — the OpenRouter provider was hardcoding
+ * finishReason='stop' and silently masking length-truncated responses).
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 8000;
+
 interface CopywriterGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -66,7 +105,7 @@ const CONFIG: SpecialistConfig = {
       visuals: { type: 'array' },
     },
   },
-  maxTokens: 4096,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.7,
 };
 
@@ -177,13 +216,19 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: CopywriterGMConfig = {
     systemPrompt,
     // Default to Sonnet 4.6 (proved safe by the regression harness on
     // April 11 2026). The GM can override this per-industry if needed.
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
-    maxTokens: config.maxTokens ?? 4096,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -243,6 +288,22 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. With the provider fix in place, a 'length'
+  // finish_reason means the LLM hit max_tokens mid-response and the JSON
+  // is incomplete. Fail loudly with the diagnostic information needed to
+  // fix the root cause, instead of letting JSON.parse surface a confusing
+  // "unexpected end of input" error.
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Copywriter: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -560,6 +621,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildPageCopyUserPrompt,

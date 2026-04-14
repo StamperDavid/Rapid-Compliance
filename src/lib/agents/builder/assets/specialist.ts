@@ -43,6 +43,44 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['generate_asset_package'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Asset Generator response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   AssetPackagePlanSchema is heavily bounded with explicit .max() caps.
+ *   Per-variation cap: prompt 1200 + altText 200 + rationale 200 + name/
+ *   dimensions/layout overhead ~50 = ~1,650-1,690 chars per variation.
+ *   Per-section strategy: max 1500 chars.
+ *
+ *   Realistic worst case (typical 6-page site, 8 social variations, 3
+ *   banners — well within prompt-stated minimums and architectural norms):
+ *     logo: 3 × ~1,650 = ~4,950 chars
+ *     favicons (single plan): 1500 + 1200 + 200 + 30 = ~2,930
+ *     heroes: 1500 strategy + 6 × ~1,690 = ~11,640
+ *     socialGraphics: 1500 strategy + 8 × ~1,680 = ~14,940
+ *     banners: 1500 strategy + 3 × ~1,660 = ~6,480
+ *     logo strategy: 1500
+ *     ≈ 42,440 chars total prose
+ *     /3.0 chars/token = 14,147 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 17,934 tokens minimum.
+ *
+ *   The prior 6,000 was massively undersized — it would have truncated
+ *   any non-trivial site's asset package, with the response running
+ *   30,000-50,000+ chars. Setting the floor at 18,000 tokens covers the
+ *   typical 6-page case with comfortable headroom. Truly massive sites
+ *   (10+ pages, 12+ social variations) may still hit the truncation
+ *   backstop — at which point the operator needs to either split the
+ *   request or raise the GM-stored maxTokens.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 18000;
+
 interface AssetGeneratorGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -73,7 +111,7 @@ const CONFIG: SpecialistConfig = {
       variations: { type: 'array' },
     },
   },
-  maxTokens: 6000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.7,
 };
 
@@ -337,11 +375,17 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: AssetGeneratorGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
-    maxTokens: config.maxTokens ?? 6000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -401,6 +445,20 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Asset Generator: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or split the asset package into smaller batches. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens for a typical 6-page site.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -787,6 +845,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildGenerateAssetPackageUserPrompt,

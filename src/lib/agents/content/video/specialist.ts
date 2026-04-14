@@ -53,6 +53,45 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['script_to_storyboard'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Video Specialist response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   StoryboardResultSchema enforces only title.max(120) plus enum fields;
+ *   the per-scene prose fields (visualDescription, scriptText,
+ *   backgroundPrompt, onScreenText) are unbounded. The realistic bound
+ *   comes from the user prompt + the schema's max scene count of 12.
+ *
+ *   Per-scene realistic worst case (15-second scene, verbose style):
+ *     title ≤6 words (~40 chars)
+ *     visualDescription "cinematographer-ready" (~300 chars)
+ *     scriptText voiceover @ ~3-4 words/sec × 15 sec (~360 chars)
+ *     backgroundPrompt "text-to-image hint" (~200 chars)
+ *     onScreenText caption (~100 chars)
+ *     ≈ 1,000 chars per scene
+ *
+ *   12-scene worst case:
+ *     12 × 1,000 = 12,000 chars
+ *     + title 60 + productionNotes 6 × 200 = 1,200 + callToAction 150
+ *     ≈ 13,400 chars total prose
+ *     /3.0 chars/token = 4,467 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 5,833 tokens minimum.
+ *
+ *   The prior 6,000 was right at the realistic floor with effectively
+ *   zero headroom for verbose styles. Setting the floor at 10,000 tokens
+ *   gives ~70% headroom over the realistic worst case while staying
+ *   comfortably under model output ceilings. The truncation backstop
+ *   in callOpenRouter catches anything that still overflows.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 10000;
+
 interface VideoSpecialistGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -85,7 +124,7 @@ const CONFIG: SpecialistConfig = {
       callToAction: { type: 'string' },
     },
   },
-  maxTokens: 6000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.7,
 };
 
@@ -215,13 +254,19 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: VideoSpecialistGMConfig = {
     systemPrompt,
     // Default to Sonnet 4.6 (locked tier policy for leaf specialists —
     // see Task #23.5). The GM can override this per-industry if needed.
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
-    maxTokens: config.maxTokens ?? 6000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -281,6 +326,21 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, a 'length'
+  // finish_reason means the LLM hit max_tokens mid-response and the JSON
+  // is incomplete. Fail loudly instead of letting JSON.parse surface a
+  // confusing "unexpected end of input" error.
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Video Specialist: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -518,6 +578,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   PLATFORMS,
   STYLES,
   SHOT_TYPES,
