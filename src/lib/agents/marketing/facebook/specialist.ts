@@ -36,6 +36,41 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['generate_content'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case Facebook Ads Expert response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   AdVariationSchema worst case:
+ *     headline 100 + primaryText 2000 + description 300 + callToAction 50
+ *     + angle 300 = 2,750 chars per variation
+ *
+ *   FacebookAdContentResultSchema worst case (primary + 4 alternates):
+ *     adCreative.primary: 2,750
+ *     adCreative.variations: 4 × 2,750 = 11,000
+ *     targetingRecommendation 4000
+ *     adFormatRecommendation 3000
+ *     estimatedPerformance enum 15
+ *     bestPlacement 3000
+ *     budgetGuidance 3000
+ *     contentStrategy 4000
+ *     ≈ 30,765 chars total prose
+ *     /3.0 chars/token = 10,255 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 13,069 tokens minimum.
+ *
+ *   The prior 8,192 was way below the schema worst case for 4-variation
+ *   ad creative. Setting the floor at 13,500 covers the schema with
+ *   safety margin. The truncation backstop in callOpenRouter catches
+ *   any overflow.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 13500;
+
 interface FacebookAdsExpertGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -62,7 +97,7 @@ const CONFIG: SpecialistConfig = {
       contentStrategy: { type: 'string' },
     },
   },
-  maxTokens: 8192,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.7,
 };
 
@@ -159,11 +194,17 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: FacebookAdsExpertGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
-    maxTokens: config.maxTokens ?? 8192,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -223,6 +264,20 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Facebook Ads Expert: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens.`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -446,6 +501,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildGenerateContentUserPrompt,

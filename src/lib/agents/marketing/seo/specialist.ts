@@ -37,6 +37,38 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['keyword_research', 'domain_analysis'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
+/**
+ * Realistic max_tokens floor for the worst-case SEO Expert response.
+ *
+ * Derivation (cross-cutting fix, April 13 2026):
+ *   The specialist supports two actions with different schemas. Computed
+ *   the larger of the two and used it as the floor.
+ *
+ *   KeywordResearchResultSchema worst case (30 keywords):
+ *     30 × (keyword ~50 + enums ~35 + contentRecommendation 300 + JSON 30)
+ *     = 30 × 415 = 12,450 chars + strategy 2000 = ~14,450 chars
+ *
+ *   DomainAnalysisResultSchema worst case (LARGER):
+ *     summary 3000 + technicalHealth (10 × 300 issues + 10 × 300 strengths
+ *     = 6010) + contentGaps (15 × 390 = 5850) + recommendations
+ *     (10 × 750 = 7500) + competitivePosition 3000
+ *     ≈ 25,360 chars
+ *     /3.0 chars/token = 8,453 tokens
+ *     + JSON structure overhead (~200 tokens)
+ *     + 25% safety margin
+ *     ≈ 10,816 tokens minimum.
+ *
+ *   The prior 6,000 was below the domain_analysis worst case. Setting the
+ *   floor at 11,500 tokens covers both action paths with safety margin.
+ *   The truncation backstop in callOpenRouter catches any overflow.
+ *
+ * Cross-cutting context: this is part of the Task #45 follow-up audit
+ * after the OpenRouter provider was caught hardcoding finishReason='stop'
+ * and silently masking length-truncated responses across every Tasks
+ * #23-#41 specialist that calls provider.chat().
+ */
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 11500;
+
 interface SEOExpertGMConfig {
   systemPrompt: string;
   model: ModelName;
@@ -63,7 +95,7 @@ const CONFIG: SpecialistConfig = {
       strategy: { type: 'string' },
     },
   },
-  maxTokens: 6000,
+  maxTokens: MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   temperature: 0.7,
 };
 
@@ -99,7 +131,14 @@ const KeywordResearchResultSchema = z.object({
     estimatedVolume: z.enum(['low', 'medium', 'high', 'very_high']),
     contentRecommendation: z.string().min(20).max(300),
   })).min(5).max(30),
-  strategy: z.string().min(50).max(2000),
+  // Cap widened from 2000 → 4000 (April 13 2026 cross-cutting fix). The
+  // 2000-char cap was a Task #28 guess and was too tight for verbose
+  // briefs (the SEO Expert pirate test surfaced this — pirate dialect
+  // strategies legitimately exceeded 2000 chars). Same lesson the Email
+  // Specialist learned at Task #43 when prose caps were widened from
+  // their original guesses. Worst-case schema math in
+  // MIN_OUTPUT_TOKENS_FOR_SCHEMA already accounts for the widened caps.
+  strategy: z.string().min(50).max(4000),
 }).superRefine((data, ctx) => {
   const seen = new Set<string>();
   for (let i = 0; i < data.keywords.length; i++) {
@@ -168,11 +207,17 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
     );
   }
 
+  // Take max() of GM-stored value and the schema-derived minimum so old
+  // GM docs honor the worst-case budget without requiring a Firestore
+  // migration. We never silently downsize a GM-configured ceiling.
+  const gmMaxTokens = config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_SCHEMA;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, MIN_OUTPUT_TOKENS_FOR_SCHEMA);
+
   const gm: SEOExpertGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
-    maxTokens: config.maxTokens ?? 6000,
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
 
@@ -232,6 +277,20 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+
+  // Truncation detection (cross-cutting fix). The OpenRouter provider was
+  // hardcoding finishReason='stop' for months, silently masking length-
+  // truncated responses. Now that the provider is honest, fail loudly on
+  // any 'length' finish_reason instead of feeding incomplete JSON to
+  // JSON.parse and surfacing a misleading "unexpected end of input".
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `SEO Expert: LLM response truncated at maxTokens=${ctx.gm.maxTokens} ` +
+      `(finish_reason='length'). The response is incomplete and cannot be parsed. ` +
+      `Either raise maxTokens above ${ctx.gm.maxTokens} or shorten the brief. ` +
+      `Realistic worst-case budget is ${MIN_OUTPUT_TOKENS_FOR_SCHEMA} tokens (driven by domain_analysis).`,
+    );
+  }
 
   const rawContent = response.content ?? '';
   if (rawContent.trim().length === 0) {
@@ -524,6 +583,7 @@ export const __internal = {
   SPECIALIST_ID,
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
+  MIN_OUTPUT_TOKENS_FOR_SCHEMA,
   loadGMAndBrandDNA,
   buildResolvedSystemPrompt,
   buildKeywordResearchUserPrompt,
