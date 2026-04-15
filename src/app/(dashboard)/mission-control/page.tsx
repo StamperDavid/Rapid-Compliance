@@ -23,6 +23,7 @@ import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
 import MissionGradeCard from './_components/MissionGradeCard';
 import StepGradeWidget from './_components/StepGradeWidget';
+import SpecialistVersionHistory from './_components/SpecialistVersionHistory';
 import ScheduleMissionDialog from './_components/ScheduleMissionDialog';
 import { getDashboardLink, getStepReviewLink, formatToolName } from './_components/dashboard-links';
 import { PageTitle } from '@/components/ui/typography';
@@ -913,6 +914,9 @@ function StepDetailPanel({
   const showingApproval = approvalStep && (!step || step.stepId === approvalStep.stepId);
   const displayStep = showingApproval ? approvalStep : step;
 
+  // M2d — which specialist's version history is currently open (null = none)
+  const [historyForSpecialist, setHistoryForSpecialist] = useState<string | null>(null);
+
   if (!displayStep && !approvalStep) {
     return (
       <div style={{
@@ -1128,6 +1132,53 @@ function StepDetailPanel({
                 specialistsUsed={displayStep.specialistsUsed}
                 existingGrade={stepGrades[displayStep.stepId]}
               />
+
+              {/* M2d — version history + rollback entry points (one per specialist used) */}
+              {displayStep.specialistsUsed && displayStep.specialistsUsed.length > 0 && (
+                <div style={{
+                  marginTop: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem',
+                }}>
+                  <div style={{
+                    fontSize: '0.625rem',
+                    color: 'var(--color-text-disabled)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}>
+                    Specialists used
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                    {displayStep.specialistsUsed.map((sid) => (
+                      <button
+                        key={sid}
+                        type="button"
+                        onClick={() => setHistoryForSpecialist(historyForSpecialist === sid ? null : sid)}
+                        style={{
+                          fontSize: '0.6875rem',
+                          padding: '0.1875rem 0.5rem',
+                          color: historyForSpecialist === sid
+                            ? 'var(--color-primary)'
+                            : 'var(--color-text-secondary)',
+                          background: 'var(--color-surface)',
+                          border: `1px solid ${historyForSpecialist === sid ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {sid} — history
+                      </button>
+                    ))}
+                  </div>
+                  {historyForSpecialist && (
+                    <SpecialistVersionHistory
+                      specialistId={historyForSpecialist}
+                      onClose={() => setHistoryForSpecialist(null)}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
 
