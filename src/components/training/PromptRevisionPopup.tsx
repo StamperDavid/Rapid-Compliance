@@ -3,36 +3,82 @@
 /**
  * PromptRevisionPopup
  *
- * A modal that shows a before/after diff of a proposed agent prompt revision.
- * Used across Mission Control, Campaign Review, and Training Center.
+ * Modal that lets an operator review a prompt revision proposal from the
+ * Prompt Engineer and make one of three choices:
  *
- * Features:
- * - Side-by-side diff panels (red = current, green = proposed)
- * - Optional clarifying question from the Prompt Engineer
- * - Approve / Reject / Edit Manually actions
- * - Manual edit mode replaces the right panel with an editable textarea
- * - Escape key closes the modal
- * - Body scroll is locked while open
+ *   1. Keep current       — no Golden Master change (honors standing rule
+ *                           "no grades = no GM changes")
+ *   2. Agent's suggestion — accept the Prompt Engineer's proposed rewrite
+ *   3. My rewrite         — write your own replacement text in a textarea
+ *
+ * Each choice is a radio button at the top of its own box. The box with the
+ * active radio gets a visible primary-ring outline so the operator can see
+ * what they're submitting. Bottom action bar has a single Submit button —
+ * the radio decides what Submit does.
+ *
+ * Used by:
+ *   - src/app/(dashboard)/mission-control/_components/MissionGradeCard.tsx
+ *     (existing consumer — grades Jasper / orchestrator GM)
+ *   - Step-level grading via StepGradeWidget (Phase M2 — not yet wired)
+ *
+ * Props interface is BACKWARD-COMPATIBLE with the old 2-panel version —
+ * MissionGradeCard does not need any changes to pick up this rewrite. The
+ * onApprove callback gains an OPTIONAL third parameter `source` that tells
+ * the caller whether the agent's suggestion or the user's rewrite was
+ * chosen; callers that don't care about the distinction can ignore it.
+ *
+ * Replaces the old 2-panel diff popup with "Edit Manually" toggle button.
+ * See git history for the old shape if rollback is ever needed.
+ *
+ * Rewritten April 15, 2026 as part of the Mission Control rebuild (Phase M1).
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface PromptRevisionPopupProps {
+type RevisionChoice = 'keep' | 'agent' | 'user';
+
+export interface PromptRevisionPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onApprove: (fullRevisedPrompt: string, changeDescription: string) => void;
+  /**
+   * Called when the operator submits the "Agent's suggestion" or "My rewrite"
+   * radio. The third `source` parameter is optional — existing callers that
+   * only care about (fullRevisedPrompt, changeDescription) can ignore it.
+   */
+  onApprove: (
+    fullRevisedPrompt: string,
+    changeDescription: string,
+    source?: 'agent' | 'user',
+  ) => void;
+  /**
+   * Called when the operator submits the "Keep current" radio OR closes the
+   * popup without selecting anything. Honors the standing rule: no grades =
+   * no GM changes. Rejecting a proposed edit is a non-event for the target
+   * agent's Golden Master.
+   */
   onReject: () => void;
   agentType: string;
+  /** The current text of the prompt section the Prompt Engineer targeted. */
   beforeSection: string;
+  /** The Prompt Engineer's proposed replacement for that section. */
   afterSection: string;
+  /** Optional clarifying question the Prompt Engineer wants the operator to answer. */
   clarifyingQuestion?: string;
+  /** Short summary from the Prompt Engineer of WHY this edit addresses the grade. */
   changeDescription: string;
+  /**
+   * The full agent Golden Master prompt with afterSection already substituted
+   * in. If the operator picks "My rewrite", we substitute userRewrite into
+   * this full prompt at the afterSection position before calling onApprove.
+   */
   fullRevisedPrompt: string;
+  /** Shows a spinner on the Submit button while the caller is applying the edit. */
   isApplying?: boolean;
 }
 
@@ -53,14 +99,18 @@ export function PromptRevisionPopup({
   fullRevisedPrompt,
   isApplying = false,
 }: PromptRevisionPopupProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedAfterSection, setEditedAfterSection] = useState(afterSection);
+  // Default to "agent" on open — the Prompt Engineer's suggestion is the
+  // recommended path, and picking it requires zero operator action beyond
+  // clicking Submit. Operators who want "Keep current" or "My rewrite" change
+  // the radio explicitly.
+  const [selected, setSelected] = useState<RevisionChoice>('agent');
+  const [userRewrite, setUserRewrite] = useState('');
 
-  // Reset editing state and synced text whenever the afterSection prop changes.
+  // Reset selection and user text whenever a new proposal arrives.
   useEffect(() => {
-    setEditedAfterSection(afterSection);
-    setIsEditing(false);
-  }, [afterSection]);
+    setSelected('agent');
+    setUserRewrite('');
+  }, [afterSection, beforeSection]);
 
   // Lock body scroll while open.
   useEffect(() => {
@@ -93,167 +143,212 @@ export function PromptRevisionPopup({
     };
   }, [isOpen, handleKeyDown]);
 
-  // Early exit — render nothing when closed.
   if (!isOpen) {
     return null;
   }
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // ── Submit logic ──────────────────────────────────────────────────────────
 
-  function handleEnterEditMode() {
-    setIsEditing(true);
-  }
+  const userRewriteTrimmed = userRewrite.trim();
+  const userRewriteValid = userRewriteTrimmed.length >= 10;
+  const canSubmit = selected === 'keep' || selected === 'agent' || (selected === 'user' && userRewriteValid);
 
-  function handleSaveEdit() {
-    // Replace the beforeSection with the manually edited text inside the full prompt.
-    // If beforeSection appears verbatim, do a single replacement; otherwise fall back
-    // to swapping afterSection with the edited text inside fullRevisedPrompt.
-    let newFullRevisedPrompt: string;
-
-    if (fullRevisedPrompt.includes(afterSection)) {
-      newFullRevisedPrompt = fullRevisedPrompt.replace(afterSection, editedAfterSection);
-    } else if (fullRevisedPrompt.includes(beforeSection)) {
-      newFullRevisedPrompt = fullRevisedPrompt.replace(beforeSection, editedAfterSection);
-    } else {
-      // Cannot locate a unique substitution point — append edited section as override note.
-      newFullRevisedPrompt = `${fullRevisedPrompt}\n\n[Manual edit override]\n${editedAfterSection}`;
+  function handleSubmit() {
+    if (selected === 'keep') {
+      // Standing rule #2 — no grades = no GM changes. Rejecting proposed edit
+      // means zero Firestore writes to the target agent's GM.
+      onReject();
+      return;
     }
 
-    onApprove(newFullRevisedPrompt, changeDescription);
+    if (selected === 'agent') {
+      onApprove(fullRevisedPrompt, changeDescription, 'agent');
+      return;
+    }
+
+    // selected === 'user' — substitute the operator's text into the full
+    // prompt at the same position the agent's suggestion would have gone.
+    let newFullRevisedPrompt: string;
+    if (fullRevisedPrompt.includes(afterSection)) {
+      newFullRevisedPrompt = fullRevisedPrompt.replace(afterSection, userRewriteTrimmed);
+    } else if (fullRevisedPrompt.includes(beforeSection)) {
+      newFullRevisedPrompt = fullRevisedPrompt.replace(beforeSection, userRewriteTrimmed);
+    } else {
+      // Neither afterSection nor beforeSection appears verbatim in the full
+      // prompt — something upstream is off. Fall back to appending the user's
+      // rewrite as an override block so no data is lost. The backend deploy
+      // path will reject this if the currentText verbatim check fails, which
+      // is the correct loud-failure behavior.
+      newFullRevisedPrompt = `${fullRevisedPrompt}\n\n[Manual operator rewrite]\n${userRewriteTrimmed}`;
+    }
+    onApprove(newFullRevisedPrompt, changeDescription, 'user');
   }
 
-  function handleApprove() {
-    onApprove(fullRevisedPrompt, changeDescription);
+  // ── Render helpers ────────────────────────────────────────────────────────
+
+  function boxClassName(choice: RevisionChoice): string {
+    const base = 'flex flex-col rounded-lg border p-3 transition-all';
+    const active = selected === choice
+      ? 'border-primary ring-2 ring-primary bg-surface-elevated'
+      : 'border-border bg-card hover:border-border-strong';
+    return `${base} ${active}`;
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  function radioId(choice: RevisionChoice): string {
+    return `prompt-revision-radio-${choice}`;
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    /* Overlay */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={`Prompt Revision — ${agentType}`}
     >
-      {/* Modal content — stop click propagation so overlay click doesn't fire from inside */}
       <div
-        className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-card rounded-2xl shadow-2xl max-w-7xl w-full max-h-[92vh] overflow-hidden flex flex-col border border-border-strong"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-            Prompt Revision&nbsp;&mdash;&nbsp;
-            <span className="text-indigo-600 dark:text-indigo-400">{agentType}</span>
-          </h2>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div className="flex flex-col">
+            <h2 className="text-base font-semibold text-foreground">
+              Prompt Revision &mdash; <span className="text-primary">{agentType}</span>
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pick one option and click Submit. Close without submitting to leave the Golden Master unchanged.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* ── Diff Panels ─────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-auto p-6">
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            {/* Left — Current */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400 mb-2">
-                Current
+        {/* 3-box picker */}
+        <div className="flex-1 overflow-auto p-6 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Box 1 — Keep current */}
+            <div className={boxClassName('keep')}>
+              <label htmlFor={radioId('keep')} className="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  id={radioId('keep')}
+                  type="radio"
+                  name="promptRevisionChoice"
+                  value="keep"
+                  checked={selected === 'keep'}
+                  onChange={() => setSelected('keep')}
+                  className="w-4 h-4 accent-primary cursor-pointer"
+                />
+                <span className="text-sm font-semibold text-foreground">Keep current</span>
+              </label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Nothing changes. {agentType}&apos;s Golden Master stays exactly as it is.
               </p>
-              <pre className="font-mono text-sm whitespace-pre-wrap overflow-auto max-h-[50vh] p-4 rounded bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-gray-800 dark:text-gray-200">
+              <pre className="flex-1 font-mono text-xs whitespace-pre-wrap overflow-auto min-h-[200px] max-h-[45vh] p-3 rounded bg-surface-elevated border border-border text-foreground">
                 {beforeSection}
               </pre>
             </div>
 
-            {/* Right — Proposed (or editable textarea in edit mode) */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-green-600 dark:text-green-400 mb-2">
-                {isEditing ? 'Edit Manually' : 'Proposed'}
-              </p>
-              {isEditing ? (
-                <textarea
-                  value={editedAfterSection}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setEditedAfterSection(e.target.value)
-                  }
-                  className="font-mono text-sm w-full p-4 rounded border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-green-500/50"
-                  style={{ minHeight: '200px', maxHeight: '50vh' }}
-                  aria-label="Edit the proposed section"
+            {/* Box 2 — Agent's suggestion */}
+            <div className={boxClassName('agent')}>
+              <label htmlFor={radioId('agent')} className="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  id={radioId('agent')}
+                  type="radio"
+                  name="promptRevisionChoice"
+                  value="agent"
+                  checked={selected === 'agent'}
+                  onChange={() => setSelected('agent')}
+                  className="w-4 h-4 accent-primary cursor-pointer"
                 />
-              ) : (
-                <pre className="font-mono text-sm whitespace-pre-wrap overflow-auto max-h-[50vh] p-4 rounded bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 text-gray-800 dark:text-gray-200">
-                  {afterSection}
-                </pre>
+                <span className="text-sm font-semibold text-foreground">Agent&apos;s suggestion</span>
+              </label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Replace the current section with what the Prompt Engineer proposed.
+              </p>
+              <pre className="flex-1 font-mono text-xs whitespace-pre-wrap overflow-auto min-h-[200px] max-h-[45vh] p-3 rounded bg-surface-elevated border border-border text-foreground">
+                {afterSection}
+              </pre>
+            </div>
+
+            {/* Box 3 — My rewrite */}
+            <div className={boxClassName('user')}>
+              <label htmlFor={radioId('user')} className="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  id={radioId('user')}
+                  type="radio"
+                  name="promptRevisionChoice"
+                  value="user"
+                  checked={selected === 'user'}
+                  onChange={() => setSelected('user')}
+                  className="w-4 h-4 accent-primary cursor-pointer"
+                />
+                <span className="text-sm font-semibold text-foreground">My rewrite</span>
+              </label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Write your own replacement for the current section. Minimum 10 characters.
+              </p>
+              <textarea
+                value={userRewrite}
+                onChange={(e) => {
+                  setUserRewrite(e.target.value);
+                  if (selected !== 'user') { setSelected('user'); }
+                }}
+                placeholder="Write your replacement for the highlighted section here..."
+                className="flex-1 font-mono text-xs w-full p-3 rounded bg-surface-elevated border border-border text-foreground min-h-[200px] max-h-[45vh] resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                aria-label="Write your own replacement"
+              />
+              {selected === 'user' && !userRewriteValid && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {userRewriteTrimmed.length} / 10 characters minimum
+                </p>
               )}
             </div>
           </div>
 
-          {/* ── Clarifying Question ───────────────────────────────────── */}
+          {/* Clarifying question — shown when the Prompt Engineer asked for more context */}
           {clarifyingQuestion && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3 rounded mb-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 mb-1">
-                Clarifying Question
+            <div className="rounded-lg border border-border-strong bg-surface-elevated p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-foreground mb-1">
+                Clarifying question from the Prompt Engineer
               </p>
-              <p className="text-sm text-amber-800 dark:text-amber-300">{clarifyingQuestion}</p>
+              <p className="text-sm text-muted-foreground">{clarifyingQuestion}</p>
             </div>
           )}
 
-          {/* ── Change Description ────────────────────────────────────── */}
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-medium text-gray-800 dark:text-gray-200">Summary:&nbsp;</span>
-            {changeDescription}
-          </p>
+          {/* Change description — what the Prompt Engineer says the edit fixes */}
+          <div className="rounded-lg border border-border bg-card p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-foreground mb-1">
+              What this edit fixes
+            </p>
+            <p className="text-sm text-muted-foreground">{changeDescription}</p>
+          </div>
         </div>
 
-        {/* ── Action Bar ──────────────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-          {/* Reject */}
-          <button
-            type="button"
-            onClick={onReject}
-            disabled={isApplying}
-            className="px-4 py-2 rounded-md font-medium text-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 transition-colors"
-          >
-            Reject
-          </button>
-
-          {/* Edit Manually / Save Edit */}
-          {isEditing ? (
-            <button
-              type="button"
-              onClick={handleSaveEdit}
-              disabled={isApplying}
-              className="px-4 py-2 rounded-md font-medium text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 transition-colors"
-            >
-              Save Edit
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleEnterEditMode}
-              disabled={isApplying}
-              className="px-4 py-2 rounded-md font-medium text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 transition-colors"
-            >
-              Edit Manually
-            </button>
-          )}
-
-          {/* Approve */}
-          <button
-            type="button"
-            onClick={handleApprove}
-            disabled={isApplying || isEditing}
-            className="px-4 py-2 rounded-md font-medium text-sm bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 transition-colors flex items-center gap-2"
-          >
-            {isApplying && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isApplying ? 'Applying...' : 'Approve'}
-          </button>
+        {/* Action bar — single Submit button. The radio decides what Submit does. */}
+        <div className="shrink-0 flex items-center justify-between gap-3 px-6 py-4 border-t border-border">
+          <p className="text-xs text-muted-foreground">
+            {selected === 'keep' && 'No change will be saved. Golden Master stays as-is.'}
+            {selected === 'agent' && 'The Prompt Engineer\u2019s suggestion will become the new Golden Master version.'}
+            {selected === 'user' && 'Your rewrite will become the new Golden Master version.'}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onClose} disabled={isApplying}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isApplying || !canSubmit}>
+              {isApplying && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {isApplying ? 'Applying...' : 'Submit'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
