@@ -2,11 +2,11 @@
 
 > **Scope:** All Claude Code sessions in this project
 > **Branch:** dev
-> **Last Updated:** April 14, 2026 (Brand DNA + Golden Master standing rule)
+> **Last Updated:** April 15, 2026 (Phase 1-4 manager rebuild + training loop complete)
 
 ---
 
-## 🔴 STANDING RULE: Every LLM agent spawns from its Golden Master, Brand DNA baked in
+## 🔴 STANDING RULE #1: Every LLM agent spawns from its Golden Master, Brand DNA baked in
 
 This rule is absolute and applies to every specialist, manager, orchestrator, and any agent
 that calls an LLM. No exceptions, no fallbacks, no runtime merging.
@@ -42,6 +42,82 @@ that calls an LLM. No exceptions, no fallbacks, no runtime merging.
    that doesn't match the tenant's voice. Runtime-merged Brand DNA makes Training Lab
    editing confusing and breaks versioning. A "partially working" agent is worse than no
    agent because it hides the problem.
+
+---
+
+## 🔴 STANDING RULE #2: No grades = no Golden Master changes
+
+This rule is absolute. The Golden Master for any specialist (or manager) is NEVER modified
+unless a human operator explicitly submitted a grade/correction on a specific output.
+
+1. **The only path by which a specialist GM can be edited in production is:**
+   human submits a grade → `TrainingFeedback` record created → Prompt Engineer produces
+   a surgical edit proposal → human approves → `createIndustryGMVersionFromEdit` creates
+   a new versioned GM → `deployIndustryGMVersion` activates it atomically.
+
+2. **There is no automated self-improvement path anywhere in the code.** Specialists do not
+   edit their own prompts. Managers do not edit their specialists' prompts based on
+   aggregated metrics. There is no background job that "learns from usage patterns."
+   Prompts change ONLY when a human types a correction.
+
+3. **The Prompt Engineer rewrites ONE section surgically** — never appends, never stacks,
+   never adds new sections, never touches Brand DNA. It identifies the root-cause section,
+   rewrites it in place, and returns a before/after diff for human approval.
+
+4. **If an operator never grades anything, the swarm is frozen at its seeded state** —
+   that is the correct and intended behavior. The system is not broken; it's waiting for
+   human direction.
+
+5. **Safety nets verify this rule at runtime:**
+   - `scripts/verify-no-grades-no-changes.ts` — runs N real specialist executions,
+     asserts zero GM / TrainingFeedback state changes.
+   - `scripts/verify-prompt-edit-changes-behavior.ts` — proves the full grade → edit →
+     new-version → changed-output loop with before/after comparison.
+
+6. **Definition of done for any training-loop change:**
+   - `scripts/verify-no-grades-no-changes.ts` passes (zero state drift on normal usage)
+   - `scripts/verify-prompt-edit-changes-behavior.ts` passes (edits change behavior)
+   - Rollback path always works (tests include rollback in a finally block)
+
+7. **Violations of this rule destroy trust.** An agent that edits itself without the
+   operator's knowledge is the scariest possible failure mode of an AI system. Prompt
+   drift without human review is a trust-breaking violation, not a shortcut.
+
+---
+
+## Manager Rebuild — Phase 1-4 complete (April 15, 2026)
+
+The 10 managers are no longer pure dispatchers. Each specialist call in 9 of the 10
+managers (Master Orchestrator skipped by design) now flows through `delegateWithReview`,
+which loads the manager's own Golden Master and asks the LLM to grade the specialist's
+output against the manager's review criteria before it leaves the department.
+
+- **`src/lib/agents/base-manager.ts`** — `reviewOutput()` is a real LLM call that loads
+  the manager's GM from Firestore. Per-report WeakMap cache prevents double-billing on
+  retries. Graceful pass-through when no manager GM is seeded yet (Phase 1 wire-up behavior).
+- **`src/lib/training/manager-golden-master-service.ts`** — parallel service to the
+  specialist service. Collection: `managerGoldenMasters`.
+- **`scripts/seed-{manager}-manager-gm.js`** — 9 manager seed scripts, each with department-
+  specific review criteria + Brand DNA baked in at seed time.
+- **`src/lib/agents/prompt-engineer/specialist.ts`** — the meta-specialist that translates
+  human corrections into surgical prompt edits. Model: Claude Opus 4.6.
+- **`src/lib/training/grade-submission-service.ts`** — orchestrates the grade → edit →
+  approve → deploy pipeline. Every write is gated on a `TrainingFeedback` record.
+- **`src/types/training.ts`** — `TrainingFeedback` and `ManagerGoldenMaster` types.
+
+End-to-end verified via:
+- `scripts/verify-managers-review.ts` — 4 managers × 2 fixtures = 8/8 passing
+- `scripts/verify-content-manager-review.ts` — Content Manager good/bad fixtures
+- `scripts/verify-prompt-engineer.ts` — full grade → edit → deploy round-trip
+- `scripts/verify-no-grades-no-changes.ts` — standing rule runtime proof
+- `scripts/verify-prompt-edit-changes-behavior.ts` — behavioral proof that edits actually
+  change specialist output, not just GM bytes
+
+**What's NOT done yet (Phase 3 frontend, future work):**
+- API routes for `/api/training/grade`, `/api/training/approve-edit`, `/api/training/reject-edit`
+- 3-panel Prompt Revision Popup UI (Current | Proposed | Chat with Prompt Engineer)
+- Version history list with one-click rollback UI
+- Training Lab page integration
 
 ---
 
