@@ -19,7 +19,10 @@ import { useMissionStream } from '@/hooks/useMissionStream';
 import MissionSidebar from './_components/MissionSidebar';
 import MissionTimeline from './_components/MissionTimeline';
 import PlanReviewPanel from './_components/PlanReviewPanel';
-import ApprovalCard from './_components/ApprovalCard';
+// Note: ApprovalCard was deleted from _components in M3.9. The legacy
+// approval card was orphaned (its approve button called a route that
+// had nothing to do with mission steps). The mission-halt fallback is
+// now a simple inline alert — see StepDetailPanel below.
 import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
 import MissionGradeCard from './_components/MissionGradeCard';
@@ -899,15 +902,11 @@ function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
 function StepDetailPanel({
   step,
   approvalStep,
-  approvalId,
-  onApprovalDecision,
   missionId,
   stepGrades,
 }: {
   step: MissionStep | null;
   approvalStep: MissionStep | null;
-  approvalId: string | undefined;
-  onApprovalDecision: () => void;
   missionId: string | undefined;
   stepGrades: Record<string, GradeEntry>;
 }) {
@@ -936,30 +935,42 @@ function StepDetailPanel({
   const reviewLink = displayStep ? getStepReviewLink(missionId, displayStep.stepId) : null;
   const statusColor = displayStep ? getStepStatusColor(displayStep.status) : 'var(--color-text-disabled)';
 
-  // M3.6: per-step approval gate was removed. The legacy ApprovalCard
-  // is kept as the "needs your attention" surface ONLY for the
-  // mission-halt case (mission status AWAITING_APPROVAL with a FAILED
-  // step). It still calls the dead /api/orchestrator/approvals
-  // endpoint, which is wrong, so its approve button does nothing
-  // useful — but the visual signal "this mission needs your attention"
-  // is correct. Operator should rerun the failed step from the step
-  // detail view rather than clicking ApprovalCard's approve button.
-  // The post-M3 cleanup task will delete ApprovalCard entirely and
-  // replace this with a dedicated halt-review surface.
+  // M3.9: simple inline alert for the mission-halt case. Replaces the
+  // orphaned ApprovalCard component (which called a route unrelated to
+  // mission steps). Operator reruns the failed step from the step
+  // detail panel below — the alert just makes the halt visible.
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Mission halted at a failed step — show the legacy ApprovalCard
-          as a placeholder for "needs your attention". To be replaced
-          with a proper halt-review surface in the post-M3 cleanup. */}
       {approvalStep && (
-        <ApprovalCard
-          approvalId={approvalId ?? approvalStep.stepId}
-          description={`Mission halted at a failed step: ${formatToolName(approvalStep.toolName)}. Open the step below to rerun or scrap.`}
-          urgency="high"
-          requestedBy={approvalStep.delegatedTo}
-          onDecision={onApprovalDecision}
-        />
+        <div
+          style={{
+            padding: '0.875rem 1rem',
+            backgroundColor: 'rgba(var(--color-warning-rgb), 0.1)',
+            border: '1px solid var(--color-warning)',
+            borderRadius: '0.5rem',
+          }}
+        >
+          <div style={{
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: 'var(--color-warning)',
+            marginBottom: '0.25rem',
+          }}>
+            Mission halted — needs your attention
+          </div>
+          <div style={{
+            fontSize: '0.8125rem',
+            color: 'var(--color-text-primary)',
+            lineHeight: 1.5,
+          }}>
+            {formatToolName(approvalStep.toolName)} failed twice and the runner stopped.
+            Review the step below and choose: rerun (with edited args if you want), or
+            scrap the mission.
+          </div>
+        </div>
       )}
 
       {/* Step detail content */}
@@ -1858,10 +1869,6 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
             <StepDetailPanel
               step={selectedStep}
               approvalStep={approvalStep}
-              approvalId={selectedMission.approvalId}
-              onApprovalDecision={() => {
-                void fetchMissions();
-              }}
               missionId={selectedMission.missionId}
               stepGrades={missionGrades}
             />
