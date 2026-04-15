@@ -19,6 +19,7 @@ import { useMissionStream } from '@/hooks/useMissionStream';
 import MissionSidebar from './_components/MissionSidebar';
 import MissionTimeline from './_components/MissionTimeline';
 import PlanReviewPanel from './_components/PlanReviewPanel';
+import StepPauseReviewCard from './_components/StepPauseReviewCard';
 import ApprovalCard from './_components/ApprovalCard';
 import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
@@ -902,6 +903,7 @@ function StepDetailPanel({
   approvalId,
   onApprovalDecision,
   missionId,
+  mission,
   stepGrades,
 }: {
   step: MissionStep | null;
@@ -909,6 +911,7 @@ function StepDetailPanel({
   approvalId: string | undefined;
   onApprovalDecision: () => void;
   missionId: string | undefined;
+  mission: Mission | null;
   stepGrades: Record<string, GradeEntry>;
 }) {
   // If the selected step is the approval step, show the approval card prominently
@@ -936,10 +939,35 @@ function StepDetailPanel({
   const reviewLink = displayStep ? getStepReviewLink(missionId, displayStep.stepId) : null;
   const statusColor = displayStep ? getStepStatusColor(displayStep.status) : 'var(--color-text-disabled)';
 
+  // M3: distinguish plan-based missions (drafted via propose_mission_plan)
+  // from legacy direct-tool missions. Plan-based missions use the new
+  // StepPauseReviewCard which calls /steps/[stepId]/approve|rerun. Legacy
+  // missions fall back to the old ApprovalCard which is wired to the dead
+  // command-authority queue and won't trigger in practice.
+  const isPlanBasedMission = mission?.plannedAt !== undefined;
+  const planStepIndex = approvalStep && mission
+    ? mission.steps.findIndex((s) => s.stepId === approvalStep.stepId) + 1
+    : 0;
+  const planTotalSteps = mission?.steps.length ?? 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Approval card at top if there's an approval-waiting step */}
-      {approvalStep && (
+      {/* M3 — inline review card for plan-based mission steps that paused */}
+      {approvalStep && isPlanBasedMission && missionId && (
+        <StepPauseReviewCard
+          missionId={missionId}
+          step={approvalStep}
+          stepIndex={planStepIndex}
+          totalSteps={planTotalSteps}
+          onChanged={onApprovalDecision}
+        />
+      )}
+
+      {/* Legacy approval card — only renders for non-plan missions (in
+          practice never, since the dead JasperCommandAuthority queue
+          doesn't surface mission steps). Kept until the post-M3 cleanup
+          deletes the dead system entirely. */}
+      {approvalStep && !isPlanBasedMission && (
         <ApprovalCard
           approvalId={approvalId ?? approvalStep.stepId}
           description={`${formatToolName(approvalStep.toolName)} requires your approval before proceeding`}
@@ -1845,6 +1873,7 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
                 void fetchMissions();
               }}
               missionId={selectedMission.missionId}
+              mission={selectedMission}
               stepGrades={missionGrades}
             />
           ) : (
