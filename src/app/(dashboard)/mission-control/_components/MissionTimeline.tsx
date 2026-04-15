@@ -49,10 +49,10 @@ function computeMissionProgress(mission: Mission): {
 function getStepProgressPercent(status: MissionStepStatus): number {
   switch (status) {
     case 'PENDING': return 0;
+    case 'PROPOSED': return 0;
     case 'RUNNING': return -1; // -1 signals indeterminate
     case 'COMPLETED': return 100;
     case 'FAILED': return 100;
-    case 'AWAITING_APPROVAL': return 75;
     default: return 0;
   }
 }
@@ -60,10 +60,10 @@ function getStepProgressPercent(status: MissionStepStatus): number {
 function getStepProgressColor(status: MissionStepStatus): string {
   switch (status) {
     case 'PENDING': return 'var(--color-text-disabled)';
+    case 'PROPOSED': return 'var(--color-text-secondary)';
     case 'RUNNING': return 'var(--color-primary)';
     case 'COMPLETED': return 'var(--color-success)';
     case 'FAILED': return 'var(--color-error)';
-    case 'AWAITING_APPROVAL': return 'var(--color-warning)';
     default: return 'var(--color-text-disabled)';
   }
 }
@@ -71,10 +71,10 @@ function getStepProgressColor(status: MissionStepStatus): string {
 function getStatusLabel(status: MissionStepStatus): string {
   switch (status) {
     case 'PENDING': return 'Pending';
+    case 'PROPOSED': return 'Proposed';
     case 'RUNNING': return 'Running';
     case 'COMPLETED': return 'Complete';
     case 'FAILED': return 'Failed';
-    case 'AWAITING_APPROVAL': return 'Awaiting Approval';
     default: return status;
   }
 }

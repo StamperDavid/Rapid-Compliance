@@ -1,12 +1,15 @@
 /**
  * PlanReviewPanel — Mission Control panel for reviewing a draft mission plan
  *
- * Renders when a Mission is in PLAN_PENDING_APPROVAL status (M4). Lets the
- * operator edit each step's summary and tool args, reorder the steps,
- * delete a step, approve the whole plan to start execution, or reject
- * the plan to scrap the mission entirely.
+ * Renders when a Mission is in PLAN_PENDING_APPROVAL status (M4 + M3.7).
+ * Operator must individually approve every step (or click "Approve all
+ * steps") before the "Run plan" button becomes enabled. Per-step actions:
+ * approve, edit, delete. Whole-plan actions: approve all, run, scrap.
  *
  * Calls these endpoints:
+ *   POST /api/orchestrator/missions/{missionId}/plan/approve-step
+ *   POST /api/orchestrator/missions/{missionId}/plan/unapprove-step
+ *   POST /api/orchestrator/missions/{missionId}/plan/approve-all-steps
  *   POST /api/orchestrator/missions/{missionId}/plan/edit-step
  *   POST /api/orchestrator/missions/{missionId}/plan/reorder
  *   POST /api/orchestrator/missions/{missionId}/plan/delete-step
@@ -154,6 +157,46 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
     }
   }, [authFetch, confirmDeleteStepId, mission.missionId, toast, onPlanChanged]);
 
+  const handleStepApproveToggle = useCallback(async (stepId: string, currentlyApproved: boolean) => {
+    setBusy(true);
+    try {
+      const endpoint = currentlyApproved ? 'unapprove-step' : 'approve-step';
+      const res = await authFetch(`/api/orchestrator/missions/${mission.missionId}/plan/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stepId }),
+      });
+      const body = (await res.json()) as { success: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        toast.error(body.error ?? `${currentlyApproved ? 'Unapprove' : 'Approve'} failed: HTTP ${res.status}`);
+        return;
+      }
+      onPlanChanged();
+    } finally {
+      setBusy(false);
+    }
+  }, [authFetch, mission.missionId, toast, onPlanChanged]);
+
+  const handleApproveAllSteps = useCallback(async () => {
+    setBusy(true);
+    try {
+      const res = await authFetch(`/api/orchestrator/missions/${mission.missionId}/plan/approve-all-steps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const body = (await res.json()) as { success: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        toast.error(body.error ?? `Approve all failed: HTTP ${res.status}`);
+        return;
+      }
+      toast.success('All steps approved');
+      onPlanChanged();
+    } finally {
+      setBusy(false);
+    }
+  }, [authFetch, mission.missionId, toast, onPlanChanged]);
+
   const handleApprove = useCallback(async () => {
     setBusy(true);
     try {
@@ -162,12 +205,17 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      const body = (await res.json()) as { success: boolean; error?: string; status?: string };
+      const body = (await res.json()) as {
+        success: boolean;
+        error?: string;
+        finalStatus?: string;
+        unapprovedStepIds?: string[];
+      };
       if (!res.ok || !body.success) {
-        toast.error(body.error ?? `Approve failed: HTTP ${res.status}`);
+        toast.error(body.error ?? `Run failed: HTTP ${res.status}`);
         return;
       }
-      toast.success(`Plan approved — mission ${body.status?.toLowerCase() ?? 'finished'}`);
+      toast.success(`Mission ${body.finalStatus?.toLowerCase() ?? 'finished'}`);
       setConfirmApproveOpen(false);
       onPlanChanged();
     } finally {
@@ -197,24 +245,45 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
     }
   }, [authFetch, mission.missionId, rejectReason, toast, onPlanChanged]);
 
+  const approvedCount = mission.steps.filter((s) => s.operatorApproved === true).length;
+  const totalCount = mission.steps.length;
+  const allApproved = approvedCount === totalCount && totalCount > 0;
+
   return (
     <div className="p-4 space-y-4">
       <Card className="border-warning border-2">
         <CardHeader>
           <CardTitle className="text-lg">Draft Plan — Needs Your Review</CardTitle>
           <CardDescription>
-            Jasper has drafted {mission.steps.length} step{mission.steps.length === 1 ? '' : 's'} for this mission.
-            Review each step, edit anything you want changed, reorder if needed, then approve to start execution.
-            Nothing has run yet.
+            Jasper has drafted {totalCount} step{totalCount === 1 ? '' : 's'} for this mission.
+            Approve each step (or click &ldquo;Approve all steps&rdquo;), edit or delete anything you want changed,
+            then click &ldquo;Run plan&rdquo; to start execution. Nothing has run yet.
           </CardDescription>
         </CardHeader>
+        <CardContent className="pt-0 pb-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-sm font-semibold text-foreground">
+              {approvedCount} of {totalCount} step{totalCount === 1 ? '' : 's'} approved
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy || allApproved}
+              onClick={() => void handleApproveAllSteps()}
+            >
+              {allApproved ? 'All approved' : 'Approve all steps'}
+            </Button>
+          </div>
+        </CardContent>
       </Card>
 
       <div className="space-y-3">
         {mission.steps.map((step, idx) => {
           const isEditing = editingStepId === step.stepId;
+          const isApproved = step.operatorApproved === true;
           return (
-            <Card key={step.stepId} className="border-border-strong">
+            <Card key={step.stepId} className={isApproved ? 'border-success border-2' : 'border-border-strong'}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -229,6 +298,17 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      type="button"
+                      variant={isApproved ? 'default' : 'outline'}
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void handleStepApproveToggle(step.stepId, isApproved)}
+                      title={isApproved ? 'Click to unapprove this step' : 'Approve this step'}
+                      className={isApproved ? 'bg-success text-white hover:bg-success/90' : ''}
+                    >
+                      {isApproved ? '✓ Approved' : 'Approve'}
+                    </Button>
                     <Button
                       type="button"
                       variant="ghost"
@@ -345,10 +425,13 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
               </Button>
               <Button
                 type="button"
-                disabled={busy}
+                disabled={busy || !allApproved}
                 onClick={() => setConfirmApproveOpen(true)}
+                title={!allApproved ? `Approve every step first (${approvedCount} of ${totalCount} done)` : ''}
               >
-                Approve plan and run all {mission.steps.length} step{mission.steps.length === 1 ? '' : 's'}
+                {allApproved
+                  ? `Run plan (${totalCount} step${totalCount === 1 ? '' : 's'})`
+                  : `Run plan — ${totalCount - approvedCount} step${totalCount - approvedCount === 1 ? '' : 's'} not yet approved`}
               </Button>
             </div>
           ) : (

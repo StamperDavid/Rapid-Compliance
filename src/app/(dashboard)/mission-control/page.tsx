@@ -19,7 +19,6 @@ import { useMissionStream } from '@/hooks/useMissionStream';
 import MissionSidebar from './_components/MissionSidebar';
 import MissionTimeline from './_components/MissionTimeline';
 import PlanReviewPanel from './_components/PlanReviewPanel';
-import StepPauseReviewCard from './_components/StepPauseReviewCard';
 import ApprovalCard from './_components/ApprovalCard';
 import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
@@ -903,7 +902,6 @@ function StepDetailPanel({
   approvalId,
   onApprovalDecision,
   missionId,
-  mission,
   stepGrades,
 }: {
   step: MissionStep | null;
@@ -911,7 +909,6 @@ function StepDetailPanel({
   approvalId: string | undefined;
   onApprovalDecision: () => void;
   missionId: string | undefined;
-  mission: Mission | null;
   stepGrades: Record<string, GradeEntry>;
 }) {
   // If the selected step is the approval step, show the approval card prominently
@@ -939,39 +936,27 @@ function StepDetailPanel({
   const reviewLink = displayStep ? getStepReviewLink(missionId, displayStep.stepId) : null;
   const statusColor = displayStep ? getStepStatusColor(displayStep.status) : 'var(--color-text-disabled)';
 
-  // M3: distinguish plan-based missions (drafted via propose_mission_plan)
-  // from legacy direct-tool missions. Plan-based missions use the new
-  // StepPauseReviewCard which calls /steps/[stepId]/approve|rerun. Legacy
-  // missions fall back to the old ApprovalCard which is wired to the dead
-  // command-authority queue and won't trigger in practice.
-  const isPlanBasedMission = mission?.plannedAt !== undefined;
-  const planStepIndex = approvalStep && mission
-    ? mission.steps.findIndex((s) => s.stepId === approvalStep.stepId) + 1
-    : 0;
-  const planTotalSteps = mission?.steps.length ?? 0;
+  // M3.6: per-step approval gate was removed. The legacy ApprovalCard
+  // is kept as the "needs your attention" surface ONLY for the
+  // mission-halt case (mission status AWAITING_APPROVAL with a FAILED
+  // step). It still calls the dead /api/orchestrator/approvals
+  // endpoint, which is wrong, so its approve button does nothing
+  // useful — but the visual signal "this mission needs your attention"
+  // is correct. Operator should rerun the failed step from the step
+  // detail view rather than clicking ApprovalCard's approve button.
+  // The post-M3 cleanup task will delete ApprovalCard entirely and
+  // replace this with a dedicated halt-review surface.
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* M3 — inline review card for plan-based mission steps that paused */}
-      {approvalStep && isPlanBasedMission && missionId && (
-        <StepPauseReviewCard
-          missionId={missionId}
-          step={approvalStep}
-          stepIndex={planStepIndex}
-          totalSteps={planTotalSteps}
-          onChanged={onApprovalDecision}
-        />
-      )}
-
-      {/* Legacy approval card — only renders for non-plan missions (in
-          practice never, since the dead JasperCommandAuthority queue
-          doesn't surface mission steps). Kept until the post-M3 cleanup
-          deletes the dead system entirely. */}
-      {approvalStep && !isPlanBasedMission && (
+      {/* Mission halted at a failed step — show the legacy ApprovalCard
+          as a placeholder for "needs your attention". To be replaced
+          with a proper halt-review surface in the post-M3 cleanup. */}
+      {approvalStep && (
         <ApprovalCard
           approvalId={approvalId ?? approvalStep.stepId}
-          description={`${formatToolName(approvalStep.toolName)} requires your approval before proceeding`}
-          urgency="medium"
+          description={`Mission halted at a failed step: ${formatToolName(approvalStep.toolName)}. Open the step below to rerun or scrap.`}
+          urgency="high"
           requestedBy={approvalStep.delegatedTo}
           onDecision={onApprovalDecision}
         />
@@ -1230,10 +1215,10 @@ function StepDetailPanel({
 function getStepStatusColor(status: MissionStep['status']): string {
   switch (status) {
     case 'PENDING': return 'var(--color-text-disabled)';
+    case 'PROPOSED': return 'var(--color-text-secondary)';
     case 'RUNNING': return 'var(--color-primary)';
     case 'COMPLETED': return 'var(--color-success)';
     case 'FAILED': return 'var(--color-error)';
-    case 'AWAITING_APPROVAL': return 'var(--color-warning)';
     default: return 'var(--color-text-disabled)';
   }
 }
@@ -1241,10 +1226,10 @@ function getStepStatusColor(status: MissionStep['status']): string {
 function getStepStatusLabel(status: MissionStep['status']): string {
   switch (status) {
     case 'PENDING': return 'Pending';
+    case 'PROPOSED': return 'Proposed';
     case 'RUNNING': return 'Running';
     case 'COMPLETED': return 'Complete';
     case 'FAILED': return 'Failed';
-    case 'AWAITING_APPROVAL': return 'Awaiting Approval';
     default: return status;
   }
 }
@@ -1476,9 +1461,14 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
   }, [clearingAll, authFetch, fetchMissions]);
 
   // ── Find approval step if any ──────────────────────────────────────
-  const approvalStep = selectedMission?.steps.find(
-    (s) => s.status === 'AWAITING_APPROVAL'
-  ) ?? null;
+  // Note: post-M3.6, individual steps no longer use AWAITING_APPROVAL.
+  // Mission-level AWAITING_APPROVAL means the mission halted at a
+  // failed step; the failed step itself is in FAILED status. We surface
+  // the FAILED step as the "needs your attention" focal point so the
+  // operator can rerun it from the step detail panel.
+  const approvalStep = selectedMission?.status === 'AWAITING_APPROVAL'
+    ? selectedMission.steps.find((s) => s.status === 'FAILED') ?? null
+    : null;
 
   // Is mission active (cancellable)?
   const isMissionActive = selectedMission?.status === 'IN_PROGRESS'
@@ -1873,7 +1863,6 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
                 void fetchMissions();
               }}
               missionId={selectedMission.missionId}
-              mission={selectedMission}
               stepGrades={missionGrades}
             />
           ) : (
