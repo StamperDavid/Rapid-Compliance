@@ -1125,6 +1125,7 @@ function StepDetailPanel({
               <StepGradeWidget
                 missionId={missionId}
                 stepId={displayStep.stepId}
+                specialistsUsed={displayStep.specialistsUsed}
                 existingGrade={stepGrades[displayStep.stepId]}
               />
             </div>

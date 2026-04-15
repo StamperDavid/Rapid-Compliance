@@ -48,13 +48,22 @@ export interface PromptRevisionPopupProps {
   onClose: () => void;
   /**
    * Called when the operator submits the "Agent's suggestion" or "My rewrite"
-   * radio. The third `source` parameter is optional — existing callers that
-   * only care about (fullRevisedPrompt, changeDescription) can ignore it.
+   * radio. Extra params are optional — existing callers that only care about
+   * (fullRevisedPrompt, changeDescription) can ignore them.
+   *
+   * - `source` tells the caller which radio was selected ('agent' or 'user')
+   * - `newProposedText` is the resolved section-level text that will become
+   *   the new Golden Master section. When source='agent' it equals the
+   *   original afterSection; when source='user' it equals the operator's
+   *   rewrite. Callers that need to POST to /api/training/grade-specialist/
+   *   [id]/approve can use this directly as approvedEdit.proposedText
+   *   without having to parse it back out of fullRevisedPrompt.
    */
   onApprove: (
     fullRevisedPrompt: string,
     changeDescription: string,
     source?: 'agent' | 'user',
+    newProposedText?: string,
   ) => void;
   /**
    * Called when the operator submits the "Keep current" radio OR closes the
@@ -162,7 +171,8 @@ export function PromptRevisionPopup({
     }
 
     if (selected === 'agent') {
-      onApprove(fullRevisedPrompt, changeDescription, 'agent');
+      // newProposedText = the agent's original suggestion (afterSection).
+      onApprove(fullRevisedPrompt, changeDescription, 'agent', afterSection);
       return;
     }
 
@@ -181,7 +191,7 @@ export function PromptRevisionPopup({
       // is the correct loud-failure behavior.
       newFullRevisedPrompt = `${fullRevisedPrompt}\n\n[Manual operator rewrite]\n${userRewriteTrimmed}`;
     }
-    onApprove(newFullRevisedPrompt, changeDescription, 'user');
+    onApprove(newFullRevisedPrompt, changeDescription, 'user', userRewriteTrimmed);
   }
 
   // ── Render helpers ────────────────────────────────────────────────────────
