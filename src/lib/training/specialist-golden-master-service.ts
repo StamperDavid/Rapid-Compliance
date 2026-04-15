@@ -347,6 +347,39 @@ export function invalidateIndustryGMCache(specialistId: string, industryKey: str
   industryGMCache.delete(gmCacheKey(specialistId, industryKey));
 }
 
+/**
+ * List all Golden Master versions for an industry-scoped specialist,
+ * sorted newest-first by version number. Includes both active and
+ * deactivated versions so the rollback UI can show the full history.
+ *
+ * M2c (April 15, 2026) — backs the version history panel and the
+ * rollback API (`/api/training/grade-specialist/[specialistId]/versions`).
+ * Operators use this to undo a Prompt Engineer edit if the new version
+ * hurts specialist performance.
+ *
+ * Note on the query shape: we do NOT add a Firestore `orderBy('version')`
+ * clause because it would require a composite index (specialistId +
+ * industryKey + version) that has to be created manually in the Firebase
+ * console. Specialists typically have a single-digit number of versions,
+ * so sorting client-side is trivial cost and avoids the deploy friction.
+ */
+export async function listIndustryGMVersions(
+  specialistId: string,
+  industryKey: string,
+): Promise<SpecialistGoldenMaster[]> {
+  if (!adminDb) { return []; }
+
+  const snapshot = await adminDb
+    .collection(getGMCollectionPath())
+    .where('specialistId', '==', specialistId)
+    .where('industryKey', '==', industryKey)
+    .get();
+
+  const versions = snapshot.docs.map((doc) => doc.data() as SpecialistGoldenMaster);
+  versions.sort((a, b) => b.version - a.version);
+  return versions;
+}
+
 // ============================================================================
 // INDUSTRY-SCOPED VERSIONING (Phase 3 grade-to-edit pipeline)
 // ============================================================================
