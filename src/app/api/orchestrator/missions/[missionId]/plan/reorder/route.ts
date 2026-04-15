@@ -1,0 +1,65 @@
+/**
+ * Plan Reorder Endpoint (M4)
+ *
+ * POST /api/orchestrator/missions/[missionId]/plan/reorder
+ *
+ * Reorders the steps in a draft plan. Body must include the FULL list
+ * of stepIds in the new order — every existing step must appear exactly
+ * once. Partial reorders are rejected to prevent accidental step loss.
+ *
+ * Body: { newOrder: string[] }
+ *
+ * Gated by requireRole(['owner', 'admin']).
+ */
+
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { requireRole } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
+import { reorderPlannedSteps } from '@/lib/orchestrator/mission-persistence';
+
+export const dynamic = 'force-dynamic';
+
+const ReorderSchema = z.object({
+  newOrder: z.array(z.string().min(1).max(200)).min(1).max(50),
+});
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ missionId: string }> },
+) {
+  const authResult = await requireRole(request, ['owner', 'admin']);
+  if (authResult instanceof NextResponse) { return authResult; }
+
+  try {
+    const { missionId } = await params;
+    if (!missionId) {
+      return NextResponse.json({ success: false, error: 'missionId is required' }, { status: 400 });
+    }
+
+    const body: unknown = await request.json();
+    const parsed = ReorderSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request body', details: parsed.error.flatten() },
+        { status: 422 },
+      );
+    }
+
+    const ok = await reorderPlannedSteps(missionId, parsed.data.newOrder);
+    if (!ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Could not reorder — mission may not be in plan-review status, or the new order does not contain every existing step exactly once.',
+        },
+        { status: 409 },
+      );
+    }
+
+    return NextResponse.json({ success: true, missionId, stepCount: parsed.data.newOrder.length });
+  } catch (err) {
+    logger.error('[PlanAPI] reorder failed', err instanceof Error ? err : undefined);
+    return NextResponse.json({ success: false, error: 'Failed to reorder steps' }, { status: 500 });
+  }
+}

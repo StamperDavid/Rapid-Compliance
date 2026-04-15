@@ -139,6 +139,7 @@ function formatFinalDuration(mission: Mission): string {
 function MissionStatusBadge({ status }: { status: Mission['status'] }) {
   const configs: Record<Mission['status'], { label: string; color: string; bg: string }> = {
     PENDING: { label: 'Queued', color: 'var(--color-text-secondary)', bg: 'rgba(var(--color-text-disabled-rgb), 0.15)' },
+    PLAN_PENDING_APPROVAL: { label: 'Plan Needs Review', color: 'var(--color-warning)', bg: 'rgba(var(--color-warning-rgb), 0.15)' },
     IN_PROGRESS: { label: 'In Progress', color: 'var(--color-success)', bg: 'rgba(var(--color-success-rgb), 0.15)' },
     AWAITING_APPROVAL: { label: 'Needs Approval', color: 'var(--color-warning)', bg: 'rgba(var(--color-warning-rgb), 0.15)' },
     COMPLETED: { label: 'Completed', color: 'var(--color-primary)', bg: 'rgba(var(--color-primary-rgb), 0.15)' },

@@ -31,6 +31,12 @@ const STATUS_CONFIG: Record<MissionStatus, {
     bg: 'rgba(158,158,158,0.15)',
     pulseColor: null,
   },
+  PLAN_PENDING_APPROVAL: {
+    label: 'Plan Needs Review',
+    color: 'var(--color-warning)',
+    bg: 'rgba(255,152,0,0.15)',
+    pulseColor: '#f59e0b',
+  },
   IN_PROGRESS: {
     label: 'Active',
     color: 'var(--color-success)',
