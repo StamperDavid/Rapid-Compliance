@@ -1,20 +1,22 @@
 /**
- * Per-Step Rerun Endpoint (M3 — per-step pause)
+ * Per-Step Rerun Endpoint (M3.6 — corrected design)
  *
  * POST /api/orchestrator/missions/[missionId]/steps/[stepId]/rerun
  *
- * The operator rejected a step's result and wants to retry. They
- * optionally edit the tool args first. This endpoint:
- *   1. Resets the step to PROPOSED via rerunMissionStep, optionally
- *      replacing its toolArgs
- *   2. Calls the shared step runner — the step transitions through
- *      RUNNING and ends back in AWAITING_APPROVAL with a fresh result
+ * The operator wants to retry a step. Two cases:
  *
- * The step ID stays the same — rerunning is an in-place retry, not a
- * new step. The history of prior runs is NOT preserved (the prior
- * toolResult/error/durationMs fields are stripped) because that lives
- * in the operator's head and the audit log; keeping every retry in the
- * step record would clutter the UI.
+ *   - The mission halted at this step (mission status AWAITING_APPROVAL,
+ *     step status FAILED). Operator clicks rerun. We reset the step to
+ *     PROPOSED, optionally with edited args, then call the runner to
+ *     RESUME the mission from there. If the rerun succeeds and there
+ *     are more steps after it, those run automatically too. If the
+ *     rerun fails twice, the mission halts again.
+ *
+ *   - The mission already finished (status COMPLETED) and the operator
+ *     is unhappy with one specific step's result. They click rerun.
+ *     The step resets, runs again, and if successful the mission
+ *     finalizes COMPLETED again. Other completed steps are not
+ *     re-executed — only the one the operator chose.
  *
  * Body: { newToolArgs?: Record<string, unknown> }
  *
@@ -29,7 +31,7 @@ import {
   rerunMissionStep,
   getMission,
 } from '@/lib/orchestrator/mission-persistence';
-import { runOneStep } from '@/lib/orchestrator/step-runner';
+import { runMissionToCompletion } from '@/lib/orchestrator/step-runner';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +56,6 @@ export async function POST(
       );
     }
 
-    // Body is optional — operator may rerun with no edits.
     let parsed: { newToolArgs?: Record<string, unknown> } = {};
     try {
       const body: unknown = await request.json();
@@ -65,9 +66,8 @@ export async function POST(
     }
 
     // Phase 1: reset the step to PROPOSED (with edited args if provided).
-    // rerunMissionStep refuses if the step is not currently in
-    // AWAITING_APPROVAL or FAILED — anything else means the rerun is
-    // out of order and we should reject it.
+    // rerunMissionStep refuses if the step is not currently FAILED or
+    // COMPLETED — those are the only states a rerun makes sense from.
     const reset = await rerunMissionStep(missionId, stepId, {
       ...(parsed.newToolArgs ? { newToolArgs: parsed.newToolArgs } : {}),
     });
@@ -75,14 +75,19 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: 'Could not rerun step — it may not exist, or may not be in AWAITING_APPROVAL or FAILED status',
+          error: 'Could not rerun step — it may not exist or may not be in a rerunnable status',
         },
         { status: 409 },
       );
     }
 
-    // Phase 2: load the mission so we have conversationId + userPrompt
-    // for the runner context.
+    // The reset step is PROPOSED with its existing operatorApproved
+    // flag preserved. Since this step has already run before (was in
+    // FAILED or COMPLETED), its operatorApproved was true at execution
+    // time. rerunMissionStep doesn't touch that flag, so the runner
+    // will pick the step up automatically.
+
+    // Phase 2: load the mission for runner context, then run.
     const mission = await getMission(missionId);
     if (!mission) {
       return NextResponse.json(
@@ -91,30 +96,26 @@ export async function POST(
       );
     }
 
-    // Phase 3: run the step. Same shared runner — RUNNING → execute →
-    // AWAITING_APPROVAL with the new result.
-    const runResult = await runOneStep({
+    // Phase 3: run the mission to completion. The runner picks up at
+    // the first runnable PROPOSED step (which is the one we just
+    // reset) and continues from there. If there are additional
+    // unrun-or-FAILED steps after the reset one, they run too.
+    const runResult = await runMissionToCompletion({
       missionId,
-      stepId,
       userId: user.uid,
       conversationId: mission.conversationId,
       userPrompt: mission.userPrompt,
     });
 
-    if (!runResult.success && !runResult.mission) {
-      return NextResponse.json(
-        { success: false, error: runResult.error ?? 'Step runner failed during rerun' },
-        { status: 500 },
-      );
-    }
-
     return NextResponse.json({
-      success: true,
+      success: runResult.success,
       missionId,
       stepId,
-      missionStatus: 'AWAITING_APPROVAL',
-      stepStatus: runResult.success ? 'AWAITING_APPROVAL' : 'AWAITING_APPROVAL_WITH_ERROR',
-      ...(runResult.error ? { stepError: runResult.error } : {}),
+      finalStatus: runResult.finalStatus,
+      stepsRun: runResult.stepsRun,
+      stepsFailed: runResult.stepsFailed,
+      ...(runResult.haltedAtStepId ? { haltedAtStepId: runResult.haltedAtStepId } : {}),
+      ...(runResult.error ? { error: runResult.error } : {}),
     });
   } catch (err) {
     logger.error('[StepAPI] rerun failed', err instanceof Error ? err : undefined);

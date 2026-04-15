@@ -32,8 +32,11 @@ export type MissionStepStatus =
   | 'PROPOSED'
   | 'RUNNING'
   | 'COMPLETED'
-  | 'FAILED'
-  | 'AWAITING_APPROVAL';
+  | 'FAILED';
+// Note: M3 used to include 'AWAITING_APPROVAL' as a step status for
+// the per-step pause gate. The user reverted that design: steps now
+// run sequentially without blocking. Mission-level AWAITING_APPROVAL
+// (different field) is still used for the halt-on-double-failure case.
 
 export interface MissionStep {
   stepId: string;
@@ -56,6 +59,14 @@ export interface MissionStep {
    * a direct tool call, or a pre-M2a legacy step.
    */
   specialistsUsed?: string[];
+  /**
+   * Operator's per-step approval flag (M3.7). Steps drafted by Jasper
+   * land with this undefined/false. The operator must explicitly
+   * approve each step (or click "approve all") in the plan review
+   * screen before /plan/approve will accept the request. The runner
+   * skips steps where this is not true.
+   */
+  operatorApproved?: boolean;
 }
 
 export interface Mission {
@@ -220,14 +231,10 @@ export async function addMissionStep(missionId: string, step: MissionStep): Prom
     const { FieldValue } = await import('firebase-admin/firestore');
     const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
 
-    const newStatus: MissionStatus =
-      step.status === 'AWAITING_APPROVAL' ? 'AWAITING_APPROVAL' : 'IN_PROGRESS';
-
     await docRef.update({
       steps: FieldValue.arrayUnion(step),
-      status: newStatus,
+      status: 'IN_PROGRESS' as MissionStatus,
       updatedAt: new Date().toISOString(),
-      ...(step.status === 'AWAITING_APPROVAL' ? { approvalRequired: true } : {}),
     });
 
     logger.info('[MissionPersistence] Step added', {
@@ -678,16 +685,49 @@ export async function rejectPlan(missionId: string, reason?: string): Promise<bo
 // must not import jasper-tools (circular dependency).
 
 /**
- * Find the next PROPOSED step in a mission. Returns null if there are
- * no more proposed steps (mission can finalize). Used by the per-step
- * runner after a step is approved to figure out what to run next.
+ * M3.6 BRIDGE — auto-approve every PROPOSED step in a draft plan.
  *
- * "Next" means the first step in the current array order whose status
- * is still PROPOSED. After a step is rerun, its status flips back to
- * PROPOSED, so this naturally re-picks the rerun step.
+ * The /plan/approve endpoint calls this immediately before flipping
+ * the mission to IN_PROGRESS. It exists because M3.7 will introduce
+ * per-step approval gates in the plan view UI but until that ships
+ * the operator has only one button ("Approve plan") and we infer
+ * per-step approval from that single click.
+ *
+ * REMOVE WHEN M3.7 SHIPS — once the operator can individually approve
+ * steps in the plan view, this implicit approval should fail closed
+ * (refuse to run the mission if any step is still unapproved).
  */
-export function findNextProposedStep(mission: Mission): MissionStep | null {
-  return mission.steps.find((s) => s.status === 'PROPOSED') ?? null;
+export async function approveAllPlanStepsTemporary(missionId: string): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status !== 'PLAN_PENDING_APPROVAL') { return; }
+
+      const newSteps = mission.steps.map((s) =>
+        s.status === 'PROPOSED' ? { ...s, operatorApproved: true } : s,
+      );
+
+      transaction.update(docRef, {
+        steps: newSteps,
+        updatedAt: new Date().toISOString(),
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] approveAllPlanStepsTemporary failed', err instanceof Error ? err : undefined, {
+      missionId, error: errorMsg,
+    });
+    return false;
+  }
 }
 
 /**
@@ -737,18 +777,23 @@ export async function markStepRunning(missionId: string, stepId: string): Promis
 }
 
 /**
- * Park a step in AWAITING_APPROVAL after it finished running. Records
- * the duration, the tool result, and any error. Mission status flips
- * to AWAITING_APPROVAL too so the operator's Mission Control sidebar
- * shows the mission as needing attention.
+ * Mark a step done after it finished running. Records the duration, the
+ * tool result, and any error. The step transitions from RUNNING into
+ * either COMPLETED (success) or FAILED (error). The mission status
+ * stays IN_PROGRESS — the runner is responsible for finalizing.
  *
- * Called by the route handler after executeToolCall returns. The step
- * stays in AWAITING_APPROVAL until the operator approves or reruns it.
+ * Called by the step runner after executeToolCall returns.
+ *
+ * Replaces the M3-prototype parkStepAwaitingApproval — the user
+ * corrected the design so steps no longer pause for human gating
+ * between executions. They run sequentially to completion, the
+ * operator reviews and grades after the fact via the existing
+ * StepGradeWidget infrastructure (M2b).
  */
-export async function parkStepAwaitingApproval(
+export async function markStepDone(
   missionId: string,
   stepId: string,
-  result: { toolResult: string; durationMs: number; error?: string },
+  result: { status: 'COMPLETED' | 'FAILED'; toolResult: string; durationMs: number; error?: string },
 ): Promise<boolean> {
   if (!adminDb) { return false; }
   try {
@@ -767,7 +812,7 @@ export async function parkStepAwaitingApproval(
       const newSteps = [...mission.steps];
       newSteps[stepIndex] = {
         ...newSteps[stepIndex],
-        status: 'AWAITING_APPROVAL',
+        status: result.status,
         completedAt: new Date().toISOString(),
         durationMs: result.durationMs,
         toolResult: result.toolResult,
@@ -776,8 +821,6 @@ export async function parkStepAwaitingApproval(
 
       transaction.update(docRef, {
         steps: newSteps,
-        status: 'AWAITING_APPROVAL' as MissionStatus,
-        approvalRequired: true,
         updatedAt: new Date().toISOString(),
       });
       success = true;
@@ -786,7 +829,7 @@ export async function parkStepAwaitingApproval(
     return success;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    logger.error('[MissionPersistence] parkStepAwaitingApproval failed', err instanceof Error ? err : undefined, {
+    logger.error('[MissionPersistence] markStepDone failed', err instanceof Error ? err : undefined, {
       missionId, stepId, error: errorMsg,
     });
     return false;
@@ -794,69 +837,44 @@ export async function parkStepAwaitingApproval(
 }
 
 /**
- * Mark a step COMPLETED after the operator approved it. Returns the
- * mission so the route handler can find the next PROPOSED step (if any)
- * to run.
+ * Halt a mission because a step failed twice in a row. Flips mission
+ * status to AWAITING_APPROVAL so the operator's Mission Control
+ * sidebar shows it as needing attention. The failed step stays in
+ * FAILED status. The operator can rerun the step (which will resume
+ * the mission) or scrap the mission entirely.
  *
- * Step must be in AWAITING_APPROVAL. Mission must be in either
- * IN_PROGRESS or AWAITING_APPROVAL (the latter is the normal case
- * because parkStepAwaitingApproval flipped both step and mission status).
+ * NOTE: this is the only place AWAITING_APPROVAL is set on a mission
+ * post-M3.6. The step-status AWAITING_APPROVAL was removed entirely;
+ * mission-status AWAITING_APPROVAL means "halted at a failed step".
  */
-export async function markStepApproved(missionId: string, stepId: string): Promise<Mission | null> {
-  if (!adminDb) { return null; }
+export async function haltMissionAtFailedStep(missionId: string): Promise<boolean> {
+  if (!adminDb) { return false; }
   try {
     const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
-    let updatedMission: Mission | null = null;
-
-    await adminDb.runTransaction(async (transaction) => {
-      const doc = await transaction.get(docRef);
-      if (!doc.exists) { return; }
-      const mission = doc.data() as Mission;
-
-      const stepIndex = mission.steps.findIndex((s) => s.stepId === stepId);
-      if (stepIndex === -1) { return; }
-      if (mission.steps[stepIndex].status !== 'AWAITING_APPROVAL') { return; }
-
-      const newSteps = [...mission.steps];
-      newSteps[stepIndex] = {
-        ...newSteps[stepIndex],
-        status: 'COMPLETED',
-      };
-
-      // Mission stays IN_PROGRESS while there are more proposed steps.
-      // The route handler is responsible for finalizing if no more steps.
-      const stillProposed = newSteps.some((s) => s.status === 'PROPOSED');
-      const newMissionStatus: MissionStatus = stillProposed ? 'IN_PROGRESS' : 'IN_PROGRESS';
-
-      transaction.update(docRef, {
-        steps: newSteps,
-        status: newMissionStatus,
-        approvalRequired: false,
-        updatedAt: new Date().toISOString(),
-      });
-
-      updatedMission = { ...mission, steps: newSteps, status: newMissionStatus };
+    await docRef.update({
+      status: 'AWAITING_APPROVAL' as MissionStatus,
+      approvalRequired: true,
+      updatedAt: new Date().toISOString(),
     });
-
-    return updatedMission;
+    return true;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    logger.error('[MissionPersistence] markStepApproved failed', err instanceof Error ? err : undefined, {
-      missionId, stepId, error: errorMsg,
+    logger.error('[MissionPersistence] haltMissionAtFailedStep failed', err instanceof Error ? err : undefined, {
+      missionId, error: errorMsg,
     });
-    return null;
+    return false;
   }
 }
 
 /**
  * Reset a step to PROPOSED so it can be rerun. Optionally edits the
- * step's tool args first (used when the operator rejects a result and
- * wants to retry with different inputs). Returns the updated step or
- * null on failure.
+ * step's tool args first (used when the operator wants to retry with
+ * different inputs). Returns the updated step or null on failure.
  *
- * Step must be in AWAITING_APPROVAL (the only state from which rerun
- * makes sense — proposed steps haven't run yet, completed steps are
- * locked, failed steps need rerun via this same path).
+ * Step must be in FAILED or COMPLETED — operator can rerun a failed
+ * step after the mission halted, or rerun a completed step they're
+ * unhappy with even after the mission finished. Both cases also flip
+ * the mission status back to IN_PROGRESS so the runner can pick it up.
  */
 export async function rerunMissionStep(
   missionId: string,
@@ -876,7 +894,7 @@ export async function rerunMissionStep(
       const stepIndex = mission.steps.findIndex((s) => s.stepId === stepId);
       if (stepIndex === -1) { return; }
       const current = mission.steps[stepIndex];
-      if (current.status !== 'AWAITING_APPROVAL' && current.status !== 'FAILED') { return; }
+      if (current.status !== 'FAILED' && current.status !== 'COMPLETED') { return; }
 
       const reset: MissionStep = {
         ...current,

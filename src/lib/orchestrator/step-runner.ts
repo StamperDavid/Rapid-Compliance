@@ -1,16 +1,19 @@
 /**
- * step-runner — runs a single approved mission step through the per-step
- * pause execution model (M3).
+ * step-runner — runs an approved mission plan to completion (M3.6 design)
  *
- * The runner stitches together three things that have to live in
- * different files:
- *   - persistence state-machine moves (mission-persistence.ts)
- *   - the actual tool execution (jasper-tools.ts → executeToolCall)
- *   - the route handler (api/orchestrator/missions/[id]/...)
+ * The runner walks a mission's PROPOSED steps in order, executes each
+ * one via the real tool dispatcher, and either finishes the mission
+ * (every step COMPLETED) or halts it at a failed step (the operator
+ * can rerun or scrap from Mission Control).
  *
- * It can't go in mission-persistence.ts because importing jasper-tools
- * from there would create a circular dependency. It can't go inside a
- * route handler because three routes need to call it. So it sits here.
+ * Failure handling: each step gets ONE automatic retry on failure. If
+ * the second attempt also fails, the runner stops, marks the mission
+ * AWAITING_APPROVAL, and returns. The operator decides what to do.
+ *
+ * No per-step pause for human approval. The user reverted that earlier
+ * design — gating between every step turned automation into a chore.
+ * Operator review and grading happens after the fact via the existing
+ * StepGradeWidget infrastructure (M2b shipped that).
  *
  * @module orchestrator/step-runner
  */
@@ -18,84 +21,69 @@
 import {
   getMission,
   markStepRunning,
-  parkStepAwaitingApproval,
+  markStepDone,
+  haltMissionAtFailedStep,
+  finalizeMission,
   type Mission,
+  type MissionStep,
 } from './mission-persistence';
 import { executeToolCall, type ToolCallContext } from './jasper-tools';
 import type { ToolCall } from '@/lib/ai/openrouter-provider';
 import { logger } from '@/lib/logger/logger';
 
-export interface RunOneStepInput {
+export interface RunMissionInput {
   missionId: string;
-  stepId: string;
   userId: string;
   conversationId: string;
   userPrompt: string;
 }
 
-export interface RunOneStepResult {
+export interface RunMissionResult {
   success: boolean;
-  /**
-   * The mission state after the step finished, with the step parked in
-   * AWAITING_APPROVAL. Null if the step couldn't be run for any reason
-   * (mission missing, step missing, step in wrong status, executeToolCall
-   * threw before persistence completed).
-   */
-  mission: Mission | null;
+  /** Final mission status — COMPLETED, AWAITING_APPROVAL (halted), or FAILED */
+  finalStatus: 'COMPLETED' | 'AWAITING_APPROVAL' | 'FAILED';
+  stepsRun: number;
+  stepsFailed: number;
+  haltedAtStepId?: string;
+  error?: string;
+}
+
+interface StepRunOutcome {
+  status: 'COMPLETED' | 'FAILED';
+  toolResult: string;
+  durationMs: number;
   error?: string;
 }
 
 /**
- * Run one mission step end-to-end and park it in AWAITING_APPROVAL.
+ * Run one step end-to-end and return the outcome. Does NOT advance to
+ * the next step. Caller is responsible for the loop.
  *
  * Sequence:
- *   1. markStepRunning — flips PROPOSED → RUNNING. Returns false if
- *      the step doesn't exist or isn't proposed.
- *   2. Read the mission to grab the step's toolName + toolArgs (the
- *      operator may have edited the args during plan review).
- *   3. Build a synthetic ToolCall and dispatch via executeToolCall.
- *      The tool result content is the raw JSON the tool returned.
- *   4. parkStepAwaitingApproval — flips RUNNING → AWAITING_APPROVAL
- *      with the result captured. Mission flips to AWAITING_APPROVAL
- *      too so the operator's sidebar shows it as needing attention.
+ *   1. markStepRunning — flips PROPOSED → RUNNING
+ *   2. Build a synthetic ToolCall, dispatch via executeToolCall
+ *   3. markStepDone with COMPLETED or FAILED based on the result
  *
- * If executeToolCall throws, the catch path still calls parkStepAwaiting
- * Approval with the error so the operator can see what went wrong instead
- * of finding a step stuck in RUNNING forever. Either way the function
- * returns the new mission state.
+ * If executeToolCall throws, the step is still marked FAILED (with the
+ * error captured) so it doesn't get stuck in RUNNING.
  */
-export async function runOneStep(input: RunOneStepInput): Promise<RunOneStepResult> {
-  const { missionId, stepId, userId, conversationId, userPrompt } = input;
-
-  // Phase 1 — flip step status to RUNNING (and mission to IN_PROGRESS).
-  // Refuses if the step is not currently PROPOSED, which is intentional —
-  // the route handler should only call this on a step it has just reset
-  // or one that came out of plan approval.
-  const ranOk = await markStepRunning(missionId, stepId);
+async function runOneStepInternal(
+  missionId: string,
+  step: MissionStep,
+  context: ToolCallContext,
+): Promise<StepRunOutcome> {
+  const ranOk = await markStepRunning(missionId, step.stepId);
   if (!ranOk) {
     return {
-      success: false,
-      mission: null,
-      error: 'Could not start step — it may not exist or may not be in proposed status',
+      status: 'FAILED',
+      toolResult: JSON.stringify({ error: 'Could not start step — wrong status or missing' }),
+      durationMs: 0,
+      error: 'Could not start step',
     };
   }
 
-  // Phase 2 — read the mission so we can grab the step's tool name +
-  // args. We re-read instead of relying on a snapshot from before
-  // markStepRunning because the operator may have edited args between
-  // approving the plan and when this code runs (in the rerun path).
-  const mission = await getMission(missionId);
-  if (!mission) {
-    return { success: false, mission: null, error: 'Mission disappeared' };
-  }
-  const step = mission.steps.find((s) => s.stepId === stepId);
-  if (!step) {
-    return { success: false, mission, error: 'Step disappeared after start' };
-  }
-
-  // Phase 3 — dispatch the actual tool call.
   const syntheticToolCall: ToolCall = {
-    id: `m3run_${stepId}`,
+    id: `m3run_${step.stepId}`,
     type: 'function',
     function: {
       name: step.toolName,
@@ -103,26 +91,21 @@ export async function runOneStep(input: RunOneStepInput): Promise<RunOneStepResu
     },
   };
 
-  const toolContext: ToolCallContext = {
-    conversationId,
-    missionId,
-    userPrompt,
-    userId,
-  };
-
   const stepStart = Date.now();
   let toolResult = '';
   let stepError: string | undefined;
+  let stepStatus: 'COMPLETED' | 'FAILED' = 'COMPLETED';
 
   try {
-    const result = await executeToolCall(syntheticToolCall, toolContext);
+    const result = await executeToolCall(syntheticToolCall, context);
     toolResult = result.content;
-    // Detect tool-level errors via the convention used everywhere else
-    // in the codebase: top-level `error` field in JSON content.
+    // Tool-level errors come back as JSON with a top-level `error` field
+    // — same convention every other dispatcher in the codebase uses.
     try {
       const parsed = JSON.parse(result.content) as Record<string, unknown>;
       if (typeof parsed.error === 'string' && parsed.error.length > 0) {
         stepError = parsed.error;
+        stepStatus = 'FAILED';
       }
     } catch {
       // Non-JSON tool result — treat as success
@@ -130,37 +113,194 @@ export async function runOneStep(input: RunOneStepInput): Promise<RunOneStepResu
   } catch (err: unknown) {
     stepError = err instanceof Error ? err.message : String(err);
     toolResult = JSON.stringify({ error: stepError });
+    stepStatus = 'FAILED';
     logger.error('[StepRunner] executeToolCall threw', err instanceof Error ? err : undefined, {
-      missionId, stepId, toolName: step.toolName,
+      missionId, stepId: step.stepId, toolName: step.toolName,
     });
   }
 
-  const stepDuration = Date.now() - stepStart;
+  const durationMs = Date.now() - stepStart;
 
-  // Phase 4 — park the step in AWAITING_APPROVAL with the captured
-  // result. parkStepAwaitingApproval refuses if the step is not in
-  // RUNNING — which it should be from Phase 1 — but we still check the
-  // return value.
-  const parkedOk = await parkStepAwaitingApproval(missionId, stepId, {
+  await markStepDone(missionId, step.stepId, {
+    status: stepStatus,
     toolResult,
-    durationMs: stepDuration,
+    durationMs,
     ...(stepError ? { error: stepError } : {}),
   });
 
-  if (!parkedOk) {
+  return {
+    status: stepStatus,
+    toolResult,
+    durationMs,
+    ...(stepError ? { error: stepError } : {}),
+  };
+}
+
+/**
+ * Reset a FAILED step back to PROPOSED for the auto-retry path. Does
+ * NOT touch toolArgs — that's reserved for the operator-driven manual
+ * rerun (rerunMissionStep). Auto-retry is an in-place "try the same
+ * thing again because the failure might be transient (network, rate
+ * limit, brief outage)".
+ */
+async function resetForAutoRetry(missionId: string, stepId: string): Promise<boolean> {
+  const { rerunMissionStep } = await import('./mission-persistence');
+  const result = await rerunMissionStep(missionId, stepId);
+  return result !== null;
+}
+
+/**
+ * Run an approved mission plan from wherever it currently is to
+ * completion. Picks up at the first PROPOSED step (and skips steps the
+ * operator hasn't approved yet — see findRunnableProposedStep).
+ *
+ * Loop:
+ *   1. Find the next runnable step (PROPOSED + operatorApproved=true)
+ *   2. If none, finalize the mission and return
+ *   3. Run the step
+ *   4. If success, loop
+ *   5. If failure, auto-retry once
+ *   6. If retry also fails, halt the mission and return
+ *
+ * Used by:
+ *   - POST /api/orchestrator/missions/[id]/plan/approve (after the
+ *     operator approves the plan, kicks off execution from step 1)
+ *   - POST /api/orchestrator/missions/[id]/steps/[stepId]/rerun (after
+ *     the operator reruns a failed or completed step, picks up from
+ *     wherever the runner can find a PROPOSED step — usually the one
+ *     just reset, then any unfinished steps after it)
+ */
+export async function runMissionToCompletion(input: RunMissionInput): Promise<RunMissionResult> {
+  const { missionId, userId, conversationId, userPrompt } = input;
+  const toolContext: ToolCallContext = { conversationId, missionId, userPrompt, userId };
+
+  let stepsRun = 0;
+  let stepsFailed = 0;
+
+  // Hard upper bound on iterations to prevent infinite loops if the
+  // step status state machine somehow gets stuck. The plan should
+  // never have more than ~50 steps in practice.
+  const MAX_STEPS = 100;
+
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const mission = await getMission(missionId);
+    if (!mission) {
+      return {
+        success: false,
+        finalStatus: 'FAILED',
+        stepsRun,
+        stepsFailed,
+        error: 'Mission disappeared mid-execution',
+      };
+    }
+
+    const nextStep = findRunnableProposedStep(mission);
+    if (!nextStep) {
+      // No more runnable steps. Decide whether the mission is done or
+      // partially done. If any step is FAILED, the mission failed.
+      // Otherwise it's COMPLETED.
+      const anyFailed = mission.steps.some((s) => s.status === 'FAILED');
+      const finalStatus: 'COMPLETED' | 'FAILED' = anyFailed ? 'FAILED' : 'COMPLETED';
+      await finalizeMission(missionId, finalStatus);
+      return {
+        success: !anyFailed,
+        finalStatus,
+        stepsRun,
+        stepsFailed,
+      };
+    }
+
+    // First attempt
+    const firstAttempt = await runOneStepInternal(missionId, nextStep, toolContext);
+    stepsRun++;
+
+    if (firstAttempt.status === 'COMPLETED') {
+      continue; // Loop to next step
+    }
+
+    // First attempt failed. Auto-retry once.
+    logger.info('[StepRunner] Step failed on first attempt — retrying once', {
+      missionId,
+      stepId: nextStep.stepId,
+      toolName: nextStep.toolName,
+      error: firstAttempt.error,
+    });
+
+    const resetOk = await resetForAutoRetry(missionId, nextStep.stepId);
+    if (!resetOk) {
+      // Couldn't reset for retry — halt the mission with the failure visible
+      stepsFailed++;
+      await haltMissionAtFailedStep(missionId);
+      return {
+        success: false,
+        finalStatus: 'AWAITING_APPROVAL',
+        stepsRun,
+        stepsFailed,
+        haltedAtStepId: nextStep.stepId,
+        error: 'Could not reset step for auto-retry',
+      };
+    }
+
+    // Re-read the step — its IDs are the same but state was just reset.
+    // We pass the same step object since toolName/toolArgs are unchanged.
+    const secondAttempt = await runOneStepInternal(missionId, nextStep, toolContext);
+    stepsRun++;
+
+    if (secondAttempt.status === 'COMPLETED') {
+      logger.info('[StepRunner] Step succeeded on auto-retry', {
+        missionId, stepId: nextStep.stepId,
+      });
+      continue;
+    }
+
+    // Both attempts failed. Halt the mission.
+    stepsFailed++;
+    logger.warn('[StepRunner] Step failed twice — halting mission', {
+      missionId,
+      stepId: nextStep.stepId,
+      toolName: nextStep.toolName,
+      firstError: firstAttempt.error,
+      secondError: secondAttempt.error,
+    });
+    await haltMissionAtFailedStep(missionId);
     return {
       success: false,
-      mission,
-      error: 'Step ran but could not be parked in AWAITING_APPROVAL — Firestore inconsistency',
+      finalStatus: 'AWAITING_APPROVAL',
+      stepsRun,
+      stepsFailed,
+      haltedAtStepId: nextStep.stepId,
+      error: secondAttempt.error ?? 'Step failed twice',
     };
   }
 
-  // Re-read mission to return the up-to-date state to the caller.
-  const finalMission = await getMission(missionId);
-
+  // Hit the iteration limit — something is wrong with the state machine
+  await haltMissionAtFailedStep(missionId);
   return {
-    success: stepError === undefined,
-    mission: finalMission,
-    ...(stepError ? { error: stepError } : {}),
+    success: false,
+    finalStatus: 'AWAITING_APPROVAL',
+    stepsRun,
+    stepsFailed,
+    error: `Hit MAX_STEPS=${MAX_STEPS} iteration limit`,
   };
+}
+
+/**
+ * Find the next step the runner is allowed to execute. Returns null
+ * if there are no runnable steps left (mission is done or stuck).
+ *
+ * A step is runnable when:
+ *   - status === 'PROPOSED'
+ *   - operatorApproved === true (M3.7)
+ *
+ * Steps that are still PROPOSED but operator-unapproved get skipped —
+ * they stay in the plan but don't run. Once M3.7's hard gate is in
+ * place (every step must be approved or deleted before /plan/approve
+ * accepts the call) this skip path will rarely fire in practice, but
+ * we keep the filter for robustness in case a step somehow slips
+ * through.
+ */
+function findRunnableProposedStep(mission: Mission): MissionStep | null {
+  return mission.steps.find(
+    (s) => s.status === 'PROPOSED' && s.operatorApproved === true,
+  ) ?? null;
 }
