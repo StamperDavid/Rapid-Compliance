@@ -113,11 +113,56 @@ End-to-end verified via:
 - `scripts/verify-prompt-edit-changes-behavior.ts` — behavioral proof that edits actually
   change specialist output, not just GM bytes
 
-**What's NOT done yet (Phase 3 frontend, future work):**
-- API routes for `/api/training/grade`, `/api/training/approve-edit`, `/api/training/reject-edit`
-- 3-panel Prompt Revision Popup UI (Current | Proposed | Chat with Prompt Engineer)
-- Version history list with one-click rollback UI
-- Training Lab page integration
+**Phase 3 frontend — DONE (April 15, 2026)**
+- 4 API routes at `/api/training/grade-specialist` + `/api/training/feedback/[id]/approve|reject` (the route collision was fixed in this same session)
+- 3-box `PromptRevisionPopup` (Keep current / Agent's suggestion / My rewrite) — rewritten in M1
+- Version history + one-click rollback UI inline on the Mission Control step detail panel (M2c + M2d)
+- Step-level grading routes to the actual specialist that produced the work, not Jasper (M2b)
+- Per-mission step `specialistsUsed` accumulator in BaseManager (M2a)
+
+---
+
+## Mission Control Rebuild — M3-M8 COMPLETE (April 15, 2026)
+
+The Mission Control rebuild is fully shipped. Plan-pre-approval, sequential auto-execute
+with retry, downstream-changed flag, manual edit path, and inline scrap buttons all
+ship in this session.
+
+**M4 — Plan pre-approval.** Jasper now drafts a plan via `propose_mission_plan` instead
+of running tools directly. Mission lands in `PLAN_PENDING_APPROVAL`. Operator reviews,
+edits any step's args / summary, reorders, deletes, then approves to start execution.
+
+**M3.6/M3.7 — Sequential auto-execute with hard per-step approval gate.** After the
+operator approves the plan, the runner walks every approved step in order, sequentially,
+without pausing for human gates between steps. Each step gets one auto-retry on failure.
+Second failure halts the mission to `AWAITING_APPROVAL` with the failed step in `FAILED`
+status. The operator must individually approve every step (or click "Approve all steps")
+in the plan view before `/plan/approve` will accept the call.
+
+**M5 — Downstream-changed flag.** When a step is rerun, every downstream step gets an
+`upstreamChanged` flag. Operator clears the flag with "Still good — keep this output" or
+reruns the step with the new upstream context.
+
+**M6 — Quick manual edit path.** "Edit output directly" button on every COMPLETED/FAILED
+step lets the operator overwrite the agent's output without firing the Prompt Engineer.
+New `manuallyEdited` audit flag.
+
+**M7 — Inline scrap.** Plan review, in-flight, and halted-step views all have a scrap
+button. Halt alert in the step detail panel includes a scrap-the-mission button next to
+the rerun option.
+
+**M8 — Cleanup.** Deleted `/settings/ai-agents/swarm-training` (the standalone grading
+page that was built in error). All inline grading happens in Mission Control via the
+existing M2b `StepGradeWidget` and M2d `SpecialistVersionHistory`.
+
+**Verified end-to-end on real Firestore via three scripts:**
+- `scripts/verify-mission-plan-lifecycle.ts` — M4 plan editing (22 assertions)
+- `scripts/verify-mission-execution-lifecycle.ts` — M3.6/M3.7 sequential + retry + halt + resume (32 assertions)
+- `scripts/verify-upstream-changed-flag.ts` — M5 downstream flag propagation (14 assertions)
+
+**Standing rules respected throughout** — no Brand DNA edits, no specialist GM edits
+without a human grade, Jasper still delegates to managers only, plain English in every
+user-facing message.
 
 ---
 
