@@ -436,6 +436,234 @@ export async function finalizeMission(
   }
 }
 
+// ============================================================================
+// PLAN EDITING HELPERS (M4 — plan pre-approval lifecycle)
+// ============================================================================
+//
+// All four helpers below operate on a mission in PLAN_PENDING_APPROVAL
+// status. They reject the operation (return false) if the mission is in
+// any other status — once execution starts (IN_PROGRESS) the operator
+// can no longer edit the plan, only the individual steps as they pause.
+// Plan editing is allowed only while the operator is reviewing the draft.
+
+/**
+ * Update a single step in a draft plan (summary or tool args).
+ * Used by POST /api/orchestrator/missions/[missionId]/plan/edit-step.
+ *
+ * Mission must be in PLAN_PENDING_APPROVAL status. Step must be in
+ * PROPOSED status. Updates outside {summary, toolArgs} are silently
+ * dropped — operators can only edit what they own at plan time.
+ */
+export async function updatePlannedStep(
+  missionId: string,
+  stepId: string,
+  updates: { summary?: string; toolArgs?: Record<string, unknown> },
+): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status !== 'PLAN_PENDING_APPROVAL') { return; }
+
+      const stepIndex = mission.steps.findIndex((s) => s.stepId === stepId);
+      if (stepIndex === -1) { return; }
+      if (mission.steps[stepIndex].status !== 'PROPOSED') { return; }
+
+      const updatedStep = { ...mission.steps[stepIndex] };
+      if (updates.summary !== undefined) { updatedStep.summary = updates.summary; }
+      if (updates.toolArgs !== undefined) { updatedStep.toolArgs = updates.toolArgs; }
+      const newSteps = [...mission.steps];
+      newSteps[stepIndex] = updatedStep;
+
+      transaction.update(docRef, {
+        steps: newSteps,
+        updatedAt: new Date().toISOString(),
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] updatePlannedStep failed', err instanceof Error ? err : undefined, {
+      missionId, stepId, error: errorMsg,
+    });
+    return false;
+  }
+}
+
+/**
+ * Reorder the steps in a draft plan. Caller passes the new order as a
+ * full list of stepIds. Every existing step must appear exactly once in
+ * the new order — partial reorders are rejected to prevent accidental
+ * step loss. Used by POST /plan/reorder.
+ */
+export async function reorderPlannedSteps(
+  missionId: string,
+  newOrder: string[],
+): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status !== 'PLAN_PENDING_APPROVAL') { return; }
+
+      // Every existing step must appear exactly once in newOrder
+      const existingIds = new Set(mission.steps.map((s) => s.stepId));
+      const newIds = new Set(newOrder);
+      if (existingIds.size !== newIds.size) { return; }
+      for (const id of existingIds) {
+        if (!newIds.has(id)) { return; }
+      }
+
+      const stepMap = new Map(mission.steps.map((s) => [s.stepId, s]));
+      const reorderedSteps = newOrder.map((id) => stepMap.get(id)).filter((s): s is MissionStep => s !== undefined);
+      if (reorderedSteps.length !== mission.steps.length) { return; }
+
+      transaction.update(docRef, {
+        steps: reorderedSteps,
+        updatedAt: new Date().toISOString(),
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] reorderPlannedSteps failed', err instanceof Error ? err : undefined, {
+      missionId, error: errorMsg,
+    });
+    return false;
+  }
+}
+
+/**
+ * Remove a single step from a draft plan. Used by POST /plan/delete-step.
+ * Mission must be in PLAN_PENDING_APPROVAL status. Cannot delete the last
+ * remaining step — an empty plan would fail to execute. Operator should
+ * scrap the whole mission instead via the reject endpoint.
+ */
+export async function deletePlannedStep(missionId: string, stepId: string): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status !== 'PLAN_PENDING_APPROVAL') { return; }
+      if (mission.steps.length <= 1) { return; }
+
+      const newSteps = mission.steps.filter((s) => s.stepId !== stepId);
+      if (newSteps.length === mission.steps.length) { return; }
+
+      transaction.update(docRef, {
+        steps: newSteps,
+        updatedAt: new Date().toISOString(),
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] deletePlannedStep failed', err instanceof Error ? err : undefined, {
+      missionId, stepId, error: errorMsg,
+    });
+    return false;
+  }
+}
+
+/**
+ * Approve a draft plan and move it from PLAN_PENDING_APPROVAL into
+ * IN_PROGRESS. After this the operator can no longer edit individual
+ * step args (they're locked in). Used by POST /plan/approve.
+ *
+ * NOTE (M4 → M3 bridge): this helper only flips the status. The actual
+ * execution kick-off is handled by the route handler, which today
+ * re-feeds the planned steps to Jasper as if they had just been typed.
+ * Once M3 (per-step pause) lands, the route handler will switch to the
+ * step-by-step runner instead.
+ */
+export async function approvePlan(missionId: string): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status !== 'PLAN_PENDING_APPROVAL') { return; }
+
+      transaction.update(docRef, {
+        status: 'IN_PROGRESS' as MissionStatus,
+        updatedAt: new Date().toISOString(),
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] approvePlan failed', err instanceof Error ? err : undefined, {
+      missionId, error: errorMsg,
+    });
+    return false;
+  }
+}
+
+/**
+ * Reject a draft plan and move it to FAILED with the operator's reason.
+ * Used by POST /plan/reject. This is also the "scrap" path — there is
+ * no "undo" once a plan is rejected. The mission stays in history for
+ * audit but cannot be revived.
+ */
+export async function rejectPlan(missionId: string, reason?: string): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status !== 'PLAN_PENDING_APPROVAL') { return; }
+
+      const now = new Date().toISOString();
+      transaction.update(docRef, {
+        status: 'FAILED' as MissionStatus,
+        error: reason ?? 'Plan rejected by operator',
+        completedAt: now,
+        updatedAt: now,
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] rejectPlan failed', err instanceof Error ? err : undefined, {
+      missionId, error: errorMsg,
+    });
+    return false;
+  }
+}
+
 /**
  * Cancel a mission — sets status to FAILED with 'Cancelled by user'
  * and marks any RUNNING steps as FAILED.
