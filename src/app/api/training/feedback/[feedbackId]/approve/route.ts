@@ -1,7 +1,7 @@
 /**
  * Approve Prompt Edit API
  *
- * POST /api/training/grade-specialist/[feedbackId]/approve
+ * POST /api/training/feedback/[feedbackId]/approve
  *
  * Human approved the Prompt Engineer's proposed edit. Creates a new
  * versioned Golden Master with the edit applied, deploys it atomically,

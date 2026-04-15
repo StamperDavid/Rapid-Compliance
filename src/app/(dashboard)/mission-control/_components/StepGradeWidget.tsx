@@ -268,7 +268,7 @@ export default function StepGradeWidget({
           proposedText: newProposedText ?? proposal.rawEdit.proposedText,
         };
 
-        await fetch(`/api/training/grade-specialist/${proposal.feedbackId}/approve`, {
+        await fetch(`/api/training/feedback/${proposal.feedbackId}/approve`, {
           method: 'POST',
           headers,
           body: JSON.stringify({ approvedEdit }),
@@ -298,7 +298,7 @@ export default function StepGradeWidget({
           headers['Authorization'] = `Bearer ${authToken}`;
         }
 
-        await fetch(`/api/training/grade-specialist/${proposal.feedbackId}/reject`, {
+        await fetch(`/api/training/feedback/${proposal.feedbackId}/reject`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
