@@ -348,6 +348,172 @@ export function invalidateIndustryGMCache(specialistId: string, industryKey: str
 }
 
 // ============================================================================
+// INDUSTRY-SCOPED VERSIONING (Phase 3 grade-to-edit pipeline)
+// ============================================================================
+
+function buildIndustryGMDocId(specialistId: string, industryKey: string, version: number): string {
+  return `sgm_${specialistId.toLowerCase()}_${industryKey}_v${version}`;
+}
+
+/**
+ * Create a new versioned GM for an industry-scoped specialist by applying a
+ * surgical prompt edit from the Prompt Engineer. The edit replaces an exact
+ * verbatim substring (`currentText`) in the active GM's systemPrompt with
+ * `proposedText`. No other fields change.
+ *
+ * The new version is created with isActive=false. The caller is expected to
+ * call `deployIndustryGMVersion` after human approval to activate it.
+ *
+ * Returns the new GM record, or null if the active GM cannot be found or the
+ * currentText doesn't appear in the active systemPrompt.
+ */
+export async function createIndustryGMVersionFromEdit(
+  specialistId: string,
+  industryKey: string,
+  edit: {
+    currentText: string;
+    proposedText: string;
+    rationale: string;
+    sourceTrainingFeedbackId: string;
+  },
+  createdBy: string,
+): Promise<SpecialistGoldenMaster | null> {
+  if (!adminDb) { return null; }
+
+  const activeGM = await getActiveSpecialistGMByIndustry(specialistId, industryKey);
+  if (!activeGM) {
+    logger.error(
+      '[SpecialistGMService] No active industry GM found — cannot create new version',
+      undefined,
+      { specialistId, industryKey },
+    );
+    return null;
+  }
+
+  const rawSystemPrompt = activeGM.config.systemPrompt;
+  const currentPrompt = typeof rawSystemPrompt === 'string'
+    ? rawSystemPrompt
+    : activeGM.systemPromptSnapshot ?? '';
+  if (!currentPrompt) {
+    logger.error(
+      '[SpecialistGMService] Active GM has no systemPrompt — cannot apply edit',
+      undefined,
+      { specialistId, industryKey, gmId: activeGM.id },
+    );
+    return null;
+  }
+
+  // Hard invariant: currentText must appear verbatim in the current prompt.
+  // The Prompt Engineer is supposed to guarantee this, but we double-check
+  // before writing to Firestore.
+  if (!currentPrompt.includes(edit.currentText)) {
+    throw new Error(
+      `createIndustryGMVersionFromEdit: currentText does not appear verbatim in active GM ${activeGM.id}. ` +
+      `The Prompt Engineer must have hallucinated the section. Refusing to write.`,
+    );
+  }
+
+  const newPrompt = currentPrompt.replace(edit.currentText, edit.proposedText);
+  const newVersion = activeGM.version + 1;
+  const newDocId = buildIndustryGMDocId(specialistId, industryKey, newVersion);
+
+  const now = new Date().toISOString();
+  const newConfig: Record<string, unknown> = {
+    ...activeGM.config,
+    systemPrompt: newPrompt,
+  };
+
+  const newGM: SpecialistGoldenMaster = {
+    id: newDocId,
+    specialistId: activeGM.specialistId,
+    specialistName: activeGM.specialistName,
+    version: newVersion,
+    industryKey,
+    config: newConfig,
+    systemPromptSnapshot: newPrompt,
+    sourceImprovementRequestId: edit.sourceTrainingFeedbackId,
+    changesApplied: [
+      {
+        field: 'systemPrompt',
+        currentValue: edit.currentText,
+        proposedValue: edit.proposedText,
+        reason: edit.rationale,
+        confidence: 0.8,
+      },
+    ],
+    isActive: false,
+    createdAt: now,
+    createdBy,
+    notes: `Created from Prompt Engineer edit (feedback ${edit.sourceTrainingFeedbackId}). Not yet deployed.`,
+    previousVersion: activeGM.version,
+  };
+
+  await adminDb.collection(getGMCollectionPath()).doc(newDocId).set(newGM);
+
+  logger.info(
+    `[SpecialistGMService] Created industry-scoped v${newVersion} for ${specialistId}:${industryKey} from Prompt Engineer edit`,
+    { specialistId, industryKey, version: newVersion, newDocId },
+  );
+
+  return newGM;
+}
+
+/**
+ * Deploy a specific industry-scoped GM version. Deactivates any other active
+ * versions for the same (specialistId, industryKey) pair and activates the
+ * target. Runs in a single Firestore batch. Invalidates the cache so the
+ * next specialist call picks up the new version.
+ */
+export async function deployIndustryGMVersion(
+  specialistId: string,
+  industryKey: string,
+  targetVersion: number,
+): Promise<{ success: boolean; error?: string }> {
+  if (!adminDb) {
+    return { success: false, error: 'adminDb not initialized' };
+  }
+
+  const collection = adminDb.collection(getGMCollectionPath());
+  const targetDocId = buildIndustryGMDocId(specialistId, industryKey, targetVersion);
+  const targetDoc = await collection.doc(targetDocId).get();
+  if (!targetDoc.exists) {
+    return { success: false, error: `GM v${targetVersion} not found for ${specialistId}:${industryKey}` };
+  }
+
+  const activeSnap = await collection
+    .where('specialistId', '==', specialistId)
+    .where('industryKey', '==', industryKey)
+    .where('isActive', '==', true)
+    .get();
+
+  const batch = adminDb.batch();
+  const now = new Date().toISOString();
+
+  for (const doc of activeSnap.docs) {
+    if (doc.id === targetDocId) { continue; }
+    batch.update(doc.ref, {
+      isActive: false,
+      deactivatedAt: now,
+      deactivatedReason: `superseded by ${targetDocId}`,
+    });
+  }
+
+  batch.update(collection.doc(targetDocId), {
+    isActive: true,
+    deployedAt: now,
+  });
+
+  await batch.commit();
+  invalidateIndustryGMCache(specialistId, industryKey);
+
+  logger.info(
+    `[SpecialistGMService] Deployed industry v${targetVersion} for ${specialistId}:${industryKey}`,
+    { specialistId, industryKey, version: targetVersion },
+  );
+  return { success: true };
+}
+
+// ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
 
