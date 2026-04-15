@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** April 14, 2026 (Task #59 — AI Chat Sales Agent (Alex) rebuilt as pure LLM specialist. Single action `respond_to_visitor` produces conversational reply + structured intent/qualification/nextAction/rationale in one LLM call. REQUIRED GM (no fallback prompt) — Alex is customer-facing content generation. Stateless (optional caller-provided history + prior qualification). Legacy taskType compat mapping for Jasper. Training Lab chat-widget GM separated from specialist GM. 27 of 38 swarm specialists are now real (71%); 6 of 11 Jasper department delegations are LIVE. Prior session (April 13-14): Tasks #61-#66 — Architect-layer rename + entire Intelligence department rebuilt.)
+**Last Updated:** April 15, 2026 — **Mission Control rebuild Phase M1 + M2 COMPLETE.** Training loop is operational end-to-end: grade a step → Prompt Engineer proposes surgical edit → 3-box popup (Keep current / Agent's suggestion / My rewrite) → approve → new specialist GM version deployed → rollback available inline. Jasper no longer calls specialists directly (4 bypass tools removed from his allowlist). BaseManager now tracks `specialistsUsed` per task so step grades route to the actual specialist, not to Jasper's orchestrator. 9 manager Golden Masters seeded, all 37 specialist rebuilds complete, Prompt Engineer live, safety nets (no-grades-no-changes + behavior-change) passing on real Firestore. Remaining on the Mission Control rebuild: M3 per-step pause + M4 plan pre-approval + M5 downstream flag + M6 quick-edit path + M7 scrap buttons + M8 cleanup.
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -192,6 +192,77 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 **Built (Layers 3+4):**
 - **Layer 3 — Auto-Publish Pipeline:** Approved deliverables auto-publish: blog drafts → published post, social → posted via social agent, video/image → saved to media library. Zero manual steps after approval.
 - **Layer 4 — Feedback Loop:** Rejected deliverables with reviewer feedback auto-create revision missions via `mission-persistence.ts`. Each rejection spawns a new tracked mission so Jasper iterates until approval.
+
+---
+
+## Training Loop + Mission Control Rebuild Status (April 15, 2026)
+
+This section is the most recent authoritative snapshot. Everything below in the "Current Status (March 28, 2026)" section is still valid for the platform-wide QA scorecard; this section supersedes it specifically for the agent swarm, manager review layer, and Mission Control grading/rollback pathways.
+
+### Training loop — OPERATIONAL end-to-end
+
+The Phase 3 training loop and the Mission Control M1 + M2 rebuild are both live on `origin/dev`. A human operator can now grade any completed step in Mission Control, the Prompt Engineer proposes a surgical edit to the specialist that actually produced the work, the operator picks one of three options in a 3-box popup (Keep current / Agent's suggestion / My rewrite), approve triggers an atomic deploy of a new Golden Master version, and a past version can be rolled back from the same panel with a single confirmation.
+
+Standing rules codified in `CLAUDE.md`:
+
+1. **Standing Rule #1 — Brand DNA baked into every Golden Master at seed time.** No runtime merging. When Brand DNA is edited, every GM is reseeded via `node scripts/reseed-all-gms.js`. Shared helper: `scripts/lib/brand-dna-helper.js`.
+2. **Standing Rule #2 — No grades = no Golden Master changes. Ever.** The only path by which a specialist prompt can change in production is: human grade → TrainingFeedback record → Prompt Engineer surgical edit → human approval → new GM version → deploy. There is zero automated self-improvement. Enforced by `scripts/verify-no-grades-no-changes.ts` at runtime.
+3. **Jasper delegates to managers, never calls specialists directly.** Enforced by removing 4 bypass tools from Jasper's allowlist + pattern matcher + `jasper-thought-partner.ts` system prompt. Lead Research and Discovery Hub chat endpoints retain access to those tool definitions for their own purposes.
+
+### Agent inventory (post-rebuild)
+
+| Layer | Count | Status |
+|---|---|---|
+| Specialist rebuilds complete | **37 of 37** | 100% — all real LLM agents with Firestore Golden Masters |
+| Specialist Golden Masters seeded | **36 + 1** | 36 active specialists + the Prompt Engineer meta-specialist |
+| Manager Golden Masters seeded | **9 of 10** | Content, Marketing, Outreach, Intelligence, Revenue, Reputation, Commerce, Builder, Architect. Master Orchestrator skipped by design (it delegates to managers, not specialists — review happens one level down). |
+| Manager review gates wired | **10 of 10** | All managers now flow specialist calls through `delegateWithReview` per Phase 1. |
+| Jasper department delegations LIVE | **10 of 11** | All 9 `delegate_to_*` managers + `delegate_to_agent`. Only remaining NOT_WIRED: `orchestrate_campaign` (downstream pipeline orchestration, not a specialist rebuild). |
+| Pirate-test verified specialists | **7 of 36** | Alex + Copywriter + Sentiment Analyst + Review Specialist + Deal Closer + Email Specialist + LinkedIn Expert. All 7 passed — proof the GM is loaded from Firestore at runtime. |
+| Behavior-change verified specialists | **1 of 36** | Copywriter — `scripts/verify-prompt-edit-changes-behavior.ts` proves v1 vs v2 produce demonstrably different output on the same task, not just different bytes in Firestore. |
+
+### Key files for the training loop
+
+- **`src/lib/agents/base-manager.ts`** — `reviewOutput()` is a real async LLM call that loads the manager's GM from Firestore. Per-report WeakMap cache prevents double-billing on retries. Includes the M2a accumulator (`specialistsUsedByTask: Map<string, Set<string>>`) that tracks every specialist delegation per task and auto-injects the list into `createReport`.
+- **`src/lib/agents/prompt-engineer/specialist.ts`** — meta-specialist that translates human corrections into surgical prompt edits. Uses Claude Opus 4.6 for best instruction-editing reasoning. Single action `propose_prompt_edit`. Hard rules: never touches Brand DNA, never adds sections, never rewrites more than one section per edit, never loses specialist identity.
+- **`src/lib/training/grade-submission-service.ts`** — orchestrator for the grade → edit → approve → deploy pipeline. Every specialist GM write flows through this service.
+- **`src/lib/training/training-feedback-service.ts`** — Firestore storage for grades. Collection: `organizations/{orgId}/trainingFeedback`. Lifecycle: `pending_review → applied | discarded | clarification_needed`.
+- **`src/lib/training/specialist-golden-master-service.ts`** — versioned specialist GMs with industry-scoped rollback via `listIndustryGMVersions` + `deployIndustryGMVersion` + `createIndustryGMVersionFromEdit`.
+- **`src/lib/training/manager-golden-master-service.ts`** — parallel service for manager GMs (new collection `managerGoldenMasters`). 60-second cache. Used by `BaseManager.reviewOutput()` at runtime.
+- **`src/components/training/PromptRevisionPopup.tsx`** — rewritten in M1 to the 3-box-with-radios shape. Backward-compatible prop interface so all three existing consumers (MissionGradeCard, StepGradeWidget, CampaignReview) continue working without changes. `onApprove` callback now emits an optional `source: 'agent' | 'user'` and `newProposedText` for downstream consumers that need to rebuild the backend's `approvedEdit` shape.
+- **`src/app/(dashboard)/mission-control/_components/StepGradeWidget.tsx`** — M2b rewrite. Reads `specialistsUsed` from the step, routes grades to the correct specialist via `/api/training/grade-specialist`. Multi-specialist dropdown when 2+ specialists contributed to the step. Falls back to no-op (records the rating without firing Prompt Engineer) when the step has no specialist target.
+- **`src/app/(dashboard)/mission-control/_components/SpecialistVersionHistory.tsx`** — M2d rollback UI. Inline panel per specialist with version list + single-confirmation rollback.
+- **`src/app/api/training/grade-specialist/`** — 4 API routes: `POST /` (submit grade), `POST /[id]/approve`, `POST /[id]/reject`, `GET /` (list feedback). Plus M2c's `GET /[specialistId]/versions` and `POST /[specialistId]/rollback`. All gated by `requireRole(['owner', 'admin'])`.
+
+### Verification scripts (all passing on real Firestore)
+
+- **`scripts/verify-content-manager-review.ts`** — Content Manager good/bad fixture test (M1 era). 2 of 2 pass.
+- **`scripts/verify-managers-review.ts`** — Outreach + Intelligence + Revenue Director good/bad fixtures. 6 of 6 pass. 8 of 8 total across 4 managers.
+- **`scripts/verify-prompt-engineer.ts`** — full grade → surgical edit → deploy → read-back → rollback round-trip. Passing.
+- **`scripts/verify-no-grades-no-changes.ts`** — runs 4 real specialist executions (Sentiment Analyst × 3 + Alex × 1) and asserts zero GM / TrainingFeedback state changes. Standing Rule #2 runtime enforcement. Passing.
+- **`scripts/verify-prompt-edit-changes-behavior.ts`** — proves prompt edits actually change what the LLM produces. Runs Copywriter on v1 with a specific task, grades it, deploys v2, runs Copywriter on the same task, compares outputs. v2 has `+6.34` concrete-feature density per 1000 words vs v1, 0 pirate markers in both (jargon already absent in v1), different h1 / hero heading / section content. Passing.
+- **`scripts/verify-rollback.ts`** — full rollback loop: create v2 → approve → list versions → `deployIndustryGMVersion(target=1)` → verify v1 active + v2 deactivated + active prompt matches v1 exactly. Passing.
+- **`scripts/pirate-test-alex.ts`** — unfakeable proof Alex reads his GM from Firestore at runtime. Swaps GM to pirate dialect, calls Alex, confirms pirate output, restores. Passing.
+- **`scripts/pirate-test-specialists.ts`** — generic pirate-test harness with CLI filter for 6 representative specialists. 6 of 6 pass.
+
+### What's NOT done yet on Mission Control
+
+- **M3 — Per-step pause during execution** (biggest remaining piece, ~3-4 days). Today a mission runs `IN_PROGRESS → COMPLETED` automatically when all tool calls finish. Target: each step runs, pauses with status `AWAITING_APPROVAL`, waits for operator approval/edit/rerun, then the next step starts. Requires changing the execution model in `chat/route.ts` from "fire all tool calls in one LLM turn" to a queue-based runner (`advanceMission(missionId)` called once per step approval). User explicitly requested a `LEGACY_MISSION_EXECUTION_MODEL` feature flag with heavy notation so the old model can coexist during rollout and be cleanly removed later.
+- **M4 — Plan pre-approval** (~2 days). New Jasper tool `propose_mission_plan` that writes the full step list to Firestore in new status `PLAN_PENDING_APPROVAL` WITHOUT executing any tools. Operator reviews, edits individual steps in the plan view (re-order / delete / change summary per Q1/C), approves, execution starts. Simple single-step missions skip the plan review.
+- **M5 — Downstream-changed flag** (~1 day). When a step is rerun, all steps after it in the mission get a "upstream changed — re-review?" marker. Operator clicks into each flagged step and picks "Still good, keep this output" or "Rerun with updated upstream". Not auto-invalidating because some downstream steps don't actually depend on upstream.
+- **M6 — Quick manual edit path** (~1 day). "Edit output directly" button on the step detail panel for small fixes that aren't worth training the agent on. New `MissionStep.manuallyEdited: boolean` field for audit trail.
+- **M7 — Scrap buttons** (~half day). Plan review screen + step review panel. In-flight cancel already exists and is wired to `POST /api/orchestrator/missions/[id]/cancel`.
+- **M8 — Cleanup** (~half day). Delete or convert `/settings/ai-agents/swarm-training` to dev-only test harness. Update `CLAUDE.md` with completion status. Update memory files. Final tsc + lint + run every verify script.
+
+### Architectural bugs found and corrected (April 15, 2026 session log)
+
+These are the mistakes the previous sessions left in the codebase that this session caught and fixed. Historical lessons:
+
+1. **Standalone grading page was the wrong surface.** An earlier session built `/settings/ai-agents/swarm-training` as a destination where the operator navigates and pastes specialist output to grade. The correct architecture is inline grading on the Mission Control step detail panel, where the operator is already reviewing work in context. Standalone page is now a dev-only test harness.
+2. **StepGradeWidget hardcoded `agentType: 'orchestrator'`.** Every step-level correction routed to Jasper's top-level GM regardless of which specialist produced the bad output. Copywriter kept producing the same bad copy while the review gate kept rejecting it — the training loop was broken at the root. M2b fixed the routing.
+3. **Jasper had 4 direct-specialist tools that bypassed managers entirely.** `create_video`, `scrape_website`, `research_competitors`, `scan_tech_stack`. The specialist calls skipped the Phase 1 review gate and orphaned their step records (tool name ≠ specialist ID). M2.0 removed them from Jasper's allowlist + pattern matcher + thought-partner prompt + mission trigger list.
+4. **Mission step `delegatedTo` field stored tool names, not specialist IDs.** `delegate_to_content` became `"CONTENT"` (department name), not `"COPYWRITER"` (actual specialist). M2a added `specialistsUsed: string[]` as a separate field populated by `BaseManager`'s accumulator. The old `delegatedTo` field is kept for backward compat; `specialistsUsed` is the authoritative target list for grading.
+5. **No rollback UI existed.** The backend primitive `deployIndustryGMVersion` could activate any past version, but there was no API to list versions and no UI to trigger the rollback. M2c + M2d shipped the full rollback path.
 
 ---
 
