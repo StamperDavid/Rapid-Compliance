@@ -460,6 +460,42 @@ export interface SpecialistGoldenMaster {
 }
 
 // ============================================================================
+// TRAINING FEEDBACK (human grades that trigger prompt edits)
+// ============================================================================
+
+/**
+ * A human grade/correction on a specialist (or manager) output. Each
+ * record is the input to the Prompt Engineer's edit-proposal flow.
+ *
+ * Honors the "no grades = no GM changes" standing rule: if a specialist
+ * never has a TrainingFeedback record with status !== 'discarded', its
+ * Golden Master is NEVER modified. This collection IS the only path
+ * by which specialist prompts get edited in production.
+ *
+ * Collection: `organizations/{orgId}/trainingFeedback`
+ * Doc IDs:    `tfb_{targetSpecialistId}_{timestamp}`
+ */
+export interface TrainingFeedback {
+  id: string;
+  targetSpecialistId: string;            // The specialist being corrected (not the Prompt Engineer)
+  targetSpecialistName: string;
+  sourceReportTaskId: string;            // Which specific output was flagged
+  sourceReportExcerpt: string;           // Sample of the flagged output for Prompt Engineer context
+  grade: 'reject' | 'request_revision' | 'approve_with_notes';
+  explanation: string;                   // Human's free-text explanation (the "correction")
+  graderUserId: string;                  // User UID of the grader
+  graderDisplayName?: string;
+  status: 'pending_review' | 'applied' | 'discarded' | 'clarification_needed';
+  linkedImprovementRequestId: string | null; // specialistImprovementRequests doc produced by Prompt Engineer
+  createdAt: string;
+  updatedAt: string;
+  appliedAt?: string;
+  discardedAt?: string;
+  discardedReason?: string;
+  notes?: string;
+}
+
+// ============================================================================
 // MANAGER GOLDEN MASTERS
 // ============================================================================
 
