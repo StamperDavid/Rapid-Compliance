@@ -86,10 +86,71 @@ export abstract class BaseManager extends BaseSpecialist {
   /** Maximum retry count for quality gate failures */
   private static readonly MAX_REVIEW_RETRIES = 2;
 
+  /**
+   * Per-task accumulator: tracks which specialists this manager delegated
+   * to during each `execute()` call. Keyed by the root task ID so concurrent
+   * executions of the same manager singleton don't corrupt each other.
+   * Populated by `delegateWithReview` before it hands off to the specialist.
+   * Consumed by the `createReport` override below, which auto-includes the
+   * accumulated list as `specialistsUsed` on the returned AgentReport.
+   *
+   * Phase M2a — April 15, 2026. Wired so Mission Control's step-level
+   * grading UI can route corrections to the correct specialist's Golden
+   * Master (per Standing Rule #2: "corrections go to the specialist that
+   * produced the work, not to the manager that reviewed it").
+   */
+  private specialistsUsedByTask: Map<string, Set<string>> = new Map();
+
   constructor(config: ManagerConfig) {
     super(config);
     this.managerConfig = config;
     this.delegationRules = config.delegationRules;
+  }
+
+  /**
+   * Record that this manager delegated to a specialist during a given task.
+   * Called from `delegateWithReview` with the ORIGINAL task ID (not any
+   * retry-derived ID) so retries within a single manager.execute() all
+   * contribute to the same set. Set.add is idempotent, so recording the
+   * same specialist twice is a no-op.
+   */
+  private recordSpecialistUsed(taskId: string, specialistId: string): void {
+    let set = this.specialistsUsedByTask.get(taskId);
+    if (!set) {
+      set = new Set();
+      this.specialistsUsedByTask.set(taskId, set);
+    }
+    set.add(specialistId);
+  }
+
+  /**
+   * Override of BaseSpecialist.createReport that auto-includes the
+   * accumulated `specialistsUsed` list for this task. Manager subclasses
+   * don't need to know about the accumulator — they keep calling
+   * `this.createReport(taskId, status, data, errors)` exactly as before.
+   *
+   * Cleanup: when a TERMINAL status (COMPLETED / FAILED / BLOCKED) is
+   * produced, the accumulator entry for this taskId is removed so
+   * long-running managers don't leak memory across thousands of tasks.
+   * Non-terminal statuses (STARTED / IN_PROGRESS) keep the entry alive
+   * so subsequent createReport calls on the same taskId still see the
+   * accumulated list.
+   */
+  protected override createReport(
+    taskId: string,
+    status: AgentReport['status'],
+    data: unknown,
+    errors?: string[],
+  ): AgentReport {
+    const report = super.createReport(taskId, status, data, errors);
+    const set = this.specialistsUsedByTask.get(taskId);
+    if (set && set.size > 0) {
+      report.specialistsUsed = Array.from(set);
+    }
+    if (status === 'COMPLETED' || status === 'FAILED' || status === 'BLOCKED') {
+      this.specialistsUsedByTask.delete(taskId);
+    }
+    return report;
   }
 
   // ==========================================================================
@@ -506,6 +567,12 @@ export abstract class BaseManager extends BaseSpecialist {
     specialistId: string,
     message: AgentMessage
   ): Promise<AgentReport> {
+    // Record this specialist as used for the root task id BEFORE running
+    // anything. The retry loop below re-executes with a derived `_retry_N`
+    // message id, but the accumulator is keyed on the ORIGINAL message.id
+    // so the final createReport picks up a single specialistsUsed list.
+    this.recordSpecialistUsed(message.id, specialistId);
+
     let lastReport: AgentReport | null = null;
     let lastReview: ReviewResult | null = null;
     let retries = 0;

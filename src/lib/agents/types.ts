@@ -33,6 +33,18 @@ export interface AgentReport {
   errors?: string[];
   nextSteps?: string[];
   qualityScore?: number; // 0-100, set by manager review or self-assessment
+  /**
+   * For Manager-produced reports: the list of specialist IDs this manager
+   * delegated to during this execution. Populated automatically by
+   * BaseManager's delegation helpers (accumulator pattern). Used by
+   * Mission Control's step-level grading UI to route corrections to the
+   * correct specialist's Golden Master — per Standing Rule #2 ("corrections
+   * go to the specialist that produced the work, not to the manager that
+   * reviewed it"). Undefined or empty array means no specialists were used
+   * (e.g. pure manager work, direct tool calls, or a manager that bypassed
+   * delegateWithReview).
+   */
+  specialistsUsed?: string[];
 }
 
 export interface SpecialistConfig {
