@@ -899,6 +899,93 @@ function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
 // STEP DETAIL PANEL (RIGHT)
 // ============================================================================
 
+function UpstreamChangedBanner({
+  missionId,
+  stepId,
+}: {
+  missionId: string;
+  stepId: string;
+}) {
+  const authFetch = useAuthFetch();
+  const [busy, setBusy] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  const handleStillGood = useCallback(async () => {
+    setBusy(true);
+    try {
+      const res = await authFetch(
+        `/api/orchestrator/missions/${missionId}/steps/${stepId}/clear-upstream-flag`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) },
+      );
+      if (res.ok) {
+        // Optimistic — hide the banner. The next refetch will sync the real state.
+        setDismissed(true);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [authFetch, missionId, stepId]);
+
+  if (dismissed) { return null; }
+
+  return (
+    <div style={{
+      padding: '0.75rem 1rem',
+      marginBottom: '0.75rem',
+      backgroundColor: 'rgba(var(--color-warning-rgb), 0.1)',
+      border: '1px solid var(--color-warning)',
+      borderRadius: '0.5rem',
+    }}>
+      <div style={{
+        fontSize: '0.6875rem',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        color: 'var(--color-warning)',
+        marginBottom: '0.25rem',
+      }}>
+        Upstream changed — re-review?
+      </div>
+      <div style={{
+        fontSize: '0.75rem',
+        color: 'var(--color-text-primary)',
+        lineHeight: 1.5,
+        marginBottom: '0.5rem',
+      }}>
+        An earlier step was rerun. This step&apos;s output may be stale. Decide:
+        keep this output as-is, or rerun this step with the updated upstream.
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button
+          type="button"
+          onClick={() => void handleStillGood()}
+          disabled={busy}
+          style={{
+            padding: '0.375rem 0.75rem',
+            backgroundColor: 'var(--color-bg-paper)',
+            color: 'var(--color-text-primary)',
+            border: '1px solid var(--color-border-strong)',
+            borderRadius: '0.375rem',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            cursor: busy ? 'not-allowed' : 'pointer',
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          {busy ? 'Working...' : 'Still good — keep this output'}
+        </button>
+      </div>
+      <div style={{
+        fontSize: '0.6875rem',
+        color: 'var(--color-text-secondary)',
+        marginTop: '0.375rem',
+      }}>
+        To rerun this step instead, use the rerun button below.
+      </div>
+    </div>
+  );
+}
+
 function StepDetailPanel({
   step,
   approvalStep,
@@ -1049,6 +1136,15 @@ function StepDetailPanel({
               </span>
             )}
           </div>
+
+          {/* M5: upstream-changed flag — operator chose to rerun an
+              earlier step, so this step's output may now be stale. */}
+          {displayStep.upstreamChanged === true && missionId && (
+            <UpstreamChangedBanner
+              missionId={missionId}
+              stepId={displayStep.stepId}
+            />
+          )}
 
           {/* Summary */}
           {displayStep.summary && (

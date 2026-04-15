@@ -67,6 +67,15 @@ export interface MissionStep {
    * skips steps where this is not true.
    */
   operatorApproved?: boolean;
+  /**
+   * Set to true on every step AFTER a rerun step (M5). The operator
+   * may have changed the upstream output, so downstream steps may now
+   * be stale. The operator can either click "Still good" to clear the
+   * flag without rerunning, or rerun the step to use the updated
+   * upstream. Not auto-invalidating because some downstream steps
+   * don't actually depend on upstream — this is a flag, not a force.
+   */
+  upstreamChanged?: boolean;
 }
 
 export interface Mission {
@@ -963,9 +972,25 @@ export async function rerunMissionStep(
       delete reset.durationMs;
       delete reset.toolResult;
       delete reset.error;
+      // The reset step itself is the source of the change — its own
+      // upstream flag (if any) clears now because the operator
+      // explicitly chose to rerun.
+      delete reset.upstreamChanged;
 
       const newSteps = [...mission.steps];
       newSteps[stepIndex] = reset;
+
+      // M5: every step AFTER the reset step gets the upstream-changed
+      // flag (if it has already run). The operator decides per-step
+      // whether the prior output is still valid or needs a rerun.
+      // PROPOSED steps that haven't run yet don't get the flag — they
+      // have no output to invalidate.
+      for (let i = stepIndex + 1; i < newSteps.length; i++) {
+        const downstream = newSteps[i];
+        if (downstream.status === 'COMPLETED' || downstream.status === 'FAILED') {
+          newSteps[i] = { ...downstream, upstreamChanged: true };
+        }
+      }
 
       transaction.update(docRef, {
         steps: newSteps,
@@ -984,6 +1009,56 @@ export async function rerunMissionStep(
       missionId, stepId, error: errorMsg,
     });
     return null;
+  }
+}
+
+/**
+ * Clear the upstreamChanged flag on a single step (M5). Operator
+ * looked at the step after an upstream rerun, decided the output is
+ * still valid, and clicked "Still good — keep this output". Does NOT
+ * rerun the step. The step keeps its existing toolResult.
+ *
+ * Step must be in COMPLETED or FAILED. Mission must NOT be in
+ * PLAN_PENDING_APPROVAL — clearing flags on a draft plan makes no
+ * sense (PROPOSED steps don't have outputs to flag stale).
+ */
+export async function clearStepUpstreamFlag(missionId: string, stepId: string): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status === 'PLAN_PENDING_APPROVAL') { return; }
+
+      const stepIndex = mission.steps.findIndex((s) => s.stepId === stepId);
+      if (stepIndex === -1) { return; }
+      const current = mission.steps[stepIndex];
+      if (current.status !== 'COMPLETED' && current.status !== 'FAILED') { return; }
+
+      const updated = { ...current };
+      delete updated.upstreamChanged;
+
+      const newSteps = [...mission.steps];
+      newSteps[stepIndex] = updated;
+
+      transaction.update(docRef, {
+        steps: newSteps,
+        updatedAt: new Date().toISOString(),
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] clearStepUpstreamFlag failed', err instanceof Error ? err : undefined, {
+      missionId, stepId, error: errorMsg,
+    });
+    return false;
   }
 }
 
