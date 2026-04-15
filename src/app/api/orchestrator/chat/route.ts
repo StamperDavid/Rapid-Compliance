@@ -521,17 +521,29 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
     const missionContext: ToolCallContext = { conversationId, missionId, userPrompt: message, userId: user.uid };
     let missionCreated = false;
 
-    // Tools that trigger a live mission on Mission Control
+    // Tools that trigger a live mission on Mission Control.
+    //
+    // RULE (April 15, 2026): Jasper delegates to MANAGERS only. He is not
+    // allowed to call specialists directly. Removed from this list because
+    // they bypass the manager review layer:
+    //   - create_video          (bypassed Content Manager → Video Specialist)
+    //   - research_competitors  (bypassed Intelligence Manager → Competitor Researcher)
+    //   - scrape_website        (bypassed Intelligence Manager → Scraper Specialist)
+    //   - scan_tech_stack       (bypassed Intelligence Manager → Technographic Scout)
+    // Jasper must now use delegate_to_content / delegate_to_intelligence for
+    // those tasks. The tool definitions still exist in jasper-tools.ts because
+    // purpose-built chat endpoints (Lead Research, Discovery Hub) use them —
+    // but Jasper's main chat does NOT trigger missions from them.
     const missionTriggerTools = [
       'delegate_to_builder', 'delegate_to_sales', 'delegate_to_marketing',
       'delegate_to_agent', 'delegate_to_trust', 'delegate_to_content',
       'delegate_to_architect', 'delegate_to_outreach', 'delegate_to_intelligence',
-      'delegate_to_commerce', 'create_video', 'generate_video', 'produce_video', 'assemble_video', 'generate_content',
+      'delegate_to_commerce', 'generate_video', 'produce_video', 'assemble_video', 'generate_content',
       'scan_leads', 'enrich_lead', 'draft_outreach_email',
-      'voice_agent', 'social_post', 'research_competitors',
+      'voice_agent', 'social_post',
       'orchestrate_campaign', 'create_campaign',
       'save_blog_draft', 'research_trending_topics', 'batch_produce_videos',
-      'scrape_website', 'scan_tech_stack', 'migrate_website',
+      'migrate_website',
     ];
 
     // Build model fallback chain: selected model + fallback models
@@ -606,8 +618,13 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
     }
 
     // ── Layer 2: Regex keyword matching (fast deterministic fallback) ──
+    //
+    // Every pattern maps to a delegate_to_* tool. Jasper is not allowed
+    // to call specialists directly (April 15, 2026 standing rule), so
+    // keywords like "scrape" route to delegate_to_intelligence which runs
+    // the Scraper Specialist through the Intelligence Manager review gate.
     const INTENT_TOOL_MAP: Array<{ patterns: RegExp; tools: string[] }> = [
-      { patterns: /scrap(e|ing)\b/i, tools: ['scrape_website'] },
+      { patterns: /scrap(e|ing)\b/i, tools: ['delegate_to_intelligence'] },
       { patterns: /analyz(e|ing)\s+(their|the|this)\s+(site|website|page|positioning|pricing)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /competitor(s|'s)?|competitive\s+(intel|analysis|research)/i, tools: ['delegate_to_intelligence'] },
@@ -644,9 +661,10 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       ...(expandedIntent?.tools ?? []),
     ]);
 
-    // Dependency-ordered phases
+    // Dependency-ordered phases. scrape_website removed April 15, 2026 —
+    // Jasper now uses delegate_to_intelligence for scraping which goes
+    // through the Intelligence Manager review gate.
     const PHASE_ORDER: Record<string, number> = {
-      scrape_website: 1,
       delegate_to_intelligence: 1,
       scan_leads: 1,
       get_seo_config: 1,
@@ -660,11 +678,6 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       create_campaign: 3,
       delegate_to_outreach: 4,
     };
-
-    // Count URL-like patterns + LLM-detected scrape URLs
-    const urlMatches = message.match(/\b\w+\.(com|io|org|net|co)\b/gi) ?? [];
-    const llmScrapeUrls = expandedIntent?.scrapeUrls ?? [];
-    const expectedScrapeCount = Math.max(urlMatches.length, llmScrapeUrls.length);
 
     // Build phased execution plan
     const phasedPlan = new Map<number, string[]>();
@@ -685,7 +698,6 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       finalQueryType: queryClassification.queryType,
       regexTools: [...regexTools],
       mergedTools: [...requiredTools],
-      expectedScrapeCount,
       isComplexRequest,
       phases: JSON.stringify(Object.fromEntries(phasedPlan)),
     });
@@ -710,10 +722,20 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       // ═════════════════════════════════════════════════════════════════════
 
       // Commander-level tools: delegation + queries + admin + lead management
+      //
+      // STANDING RULE (April 15, 2026): Jasper delegates to MANAGERS only.
+      // He is not allowed to call specialists directly. DO NOT add any of
+      // these tool names back to this allowlist under any circumstance —
+      // they bypass the manager review layer and break the training loop:
+      //   - create_video, scrape_website, research_competitors, scan_tech_stack
+      // If Jasper needs that capability, use delegate_to_content or
+      // delegate_to_intelligence. Those tool definitions still exist in
+      // jasper-tools.ts because Lead Research and Discovery Hub endpoints
+      // use them, but Jasper's own allowlist excludes them.
       const COMMANDER_TOOL_NAMES = new Set([
         // Department delegation (managers handle specialist coordination)
-        'delegate_to_intelligence',   // Research, competitor analysis, trends
-        'delegate_to_content',        // Blog, landing page copy, assets
+        'delegate_to_intelligence',   // Research, competitor analysis, trends, scraping, tech scans
+        'delegate_to_content',        // Blog, landing page copy, assets, video creation
         'delegate_to_marketing',      // Social posts, SEO, ads
         'delegate_to_sales',          // Lead qualification, pipeline, deal closing
         'delegate_to_outreach',       // Email/SMS/voice outreach sequences, email campaigns/drips
@@ -722,9 +744,6 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
         'delegate_to_trust',          // Reputation management
         'delegate_to_commerce',       // E-commerce, payments
         'delegate_to_agent',          // Generic agent delegation
-        // Direct-access tools (simple enough to not need a manager)
-        'scrape_website',             // Direct URL fetch + parse (user says "scrape X")
-        'produce_video',              // Video storyboard creation (AI Video Director)
         // Simple data queries (no delegation needed)
         'query_docs', 'get_platform_stats', 'get_system_state',
         'get_analytics', 'generate_report', 'get_seo_config',
@@ -835,7 +854,6 @@ CRITICAL RULES:
         // If no tool calls, check if required tools are still pending (phase-aware)
         if (!response.toolCalls || response.toolCalls.length === 0) {
           const firedToolSet = new Set(toolsExecuted);
-          const scrapeCount = toolsExecuted.filter(t => t === 'scrape_website').length;
 
           // Find the earliest incomplete phase
           let currentPhase = 0;
@@ -844,11 +862,7 @@ CRITICAL RULES:
           for (const [phase, tools] of [...phasedPlan.entries()].sort(([a], [b]) => a - b)) {
             const phaseIncomplete: string[] = [];
             for (const tool of tools) {
-              if (tool === 'scrape_website') {
-                if (scrapeCount < expectedScrapeCount) {
-                  phaseIncomplete.push(`scrape_website (${expectedScrapeCount - scrapeCount} URLs remaining)`);
-                }
-              } else if (!firedToolSet.has(tool)) {
+              if (!firedToolSet.has(tool)) {
                 phaseIncomplete.push(tool);
               }
             }
