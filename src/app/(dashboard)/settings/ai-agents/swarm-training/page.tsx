@@ -259,7 +259,7 @@ export default function SwarmTrainingPage() {
         ...activeEdit,
         proposedText: editedProposedText,
       };
-      const res = await authFetch(`/api/training/grade-specialist/${activeFeedbackId}/approve`, {
+      const res = await authFetch(`/api/training/feedback/${activeFeedbackId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approvedEdit: finalEdit }),
@@ -292,7 +292,7 @@ export default function SwarmTrainingPage() {
     }
     setModalBusy(true);
     try {
-      const res = await authFetch(`/api/training/grade-specialist/${activeFeedbackId}/reject`, {
+      const res = await authFetch(`/api/training/feedback/${activeFeedbackId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: rejectReason }),

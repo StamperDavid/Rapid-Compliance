@@ -1,7 +1,7 @@
 /**
  * Reject Prompt Edit API
  *
- * POST /api/training/grade-specialist/[feedbackId]/reject
+ * POST /api/training/feedback/[feedbackId]/reject
  *
  * Human rejected the Prompt Engineer's proposed edit. Marks the feedback
  * record as discarded with the rejection reason. Does NOT modify any
