@@ -685,19 +685,74 @@ export async function rejectPlan(missionId: string, reason?: string): Promise<bo
 // must not import jasper-tools (circular dependency).
 
 /**
- * M3.6 BRIDGE — auto-approve every PROPOSED step in a draft plan.
+ * Approve a single step in a draft plan. Operator clicked the
+ * approve button on one step row in the plan review UI.
  *
- * The /plan/approve endpoint calls this immediately before flipping
- * the mission to IN_PROGRESS. It exists because M3.7 will introduce
- * per-step approval gates in the plan view UI but until that ships
- * the operator has only one button ("Approve plan") and we infer
- * per-step approval from that single click.
- *
- * REMOVE WHEN M3.7 SHIPS — once the operator can individually approve
- * steps in the plan view, this implicit approval should fail closed
- * (refuse to run the mission if any step is still unapproved).
+ * Mission must be in PLAN_PENDING_APPROVAL. Step must be in PROPOSED.
+ * Sets operatorApproved=true on the targeted step.
  */
-export async function approveAllPlanStepsTemporary(missionId: string): Promise<boolean> {
+export async function approvePlanStep(missionId: string, stepId: string): Promise<boolean> {
+  return togglePlanStepApproval(missionId, stepId, true);
+}
+
+/**
+ * Un-approve a single step in a draft plan. Operator clicked the
+ * approve button on a step they previously approved (toggle off).
+ * Sets operatorApproved=false on the targeted step.
+ */
+export async function unapprovePlanStep(missionId: string, stepId: string): Promise<boolean> {
+  return togglePlanStepApproval(missionId, stepId, false);
+}
+
+async function togglePlanStepApproval(
+  missionId: string,
+  stepId: string,
+  approved: boolean,
+): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status !== 'PLAN_PENDING_APPROVAL') { return; }
+
+      const stepIndex = mission.steps.findIndex((s) => s.stepId === stepId);
+      if (stepIndex === -1) { return; }
+      if (mission.steps[stepIndex].status !== 'PROPOSED') { return; }
+
+      const newSteps = [...mission.steps];
+      newSteps[stepIndex] = {
+        ...newSteps[stepIndex],
+        operatorApproved: approved,
+      };
+
+      transaction.update(docRef, {
+        steps: newSteps,
+        updatedAt: new Date().toISOString(),
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] togglePlanStepApproval failed', err instanceof Error ? err : undefined, {
+      missionId, stepId, approved, error: errorMsg,
+    });
+    return false;
+  }
+}
+
+/**
+ * Approve every PROPOSED step in a draft plan in one call. The
+ * operator clicked the "Approve all steps" button at the top of the
+ * plan review UI. Mission must still be in PLAN_PENDING_APPROVAL.
+ */
+export async function approveAllPlanSteps(missionId: string): Promise<boolean> {
   if (!adminDb) { return false; }
   try {
     const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
@@ -723,7 +778,7 @@ export async function approveAllPlanStepsTemporary(missionId: string): Promise<b
     return success;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    logger.error('[MissionPersistence] approveAllPlanStepsTemporary failed', err instanceof Error ? err : undefined, {
+    logger.error('[MissionPersistence] approveAllPlanSteps failed', err instanceof Error ? err : undefined, {
       missionId, error: errorMsg,
     });
     return false;

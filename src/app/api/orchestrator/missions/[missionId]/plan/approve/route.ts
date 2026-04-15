@@ -1,15 +1,20 @@
 /**
- * Plan Approve Endpoint (M3.6 corrected design)
+ * Plan Approve Endpoint (M3.7 — hard gate enforced)
  *
  * POST /api/orchestrator/missions/[missionId]/plan/approve
  *
- * The operator approved a draft plan. Mission must be in
- * PLAN_PENDING_APPROVAL status. M3.7 will require every step to be
+ * The operator approved a draft plan and wants to run it. Mission
+ * must be in PLAN_PENDING_APPROVAL status. EVERY step must be
  * individually approved (operatorApproved=true) before this endpoint
- * accepts the call. Until M3.7 ships its UI, this endpoint sets every
- * step's operatorApproved to true automatically as a temporary bridge.
+ * accepts the call — the operator approves steps via the per-step
+ * "Approve" buttons in the plan review UI, or via the "Approve all
+ * steps" shortcut button.
  *
- * After approval:
+ * If any step is still unapproved, this endpoint returns 409 with a
+ * list of unapproved step IDs. The plan view UI uses this to disable
+ * the "Run plan" button until every step is approved or deleted.
+ *
+ * After all steps approved:
  *   1. Flip mission status PLAN_PENDING_APPROVAL → IN_PROGRESS
  *   2. Run the entire plan via runMissionToCompletion (sequential
  *      execution with auto-retry on first failure)
@@ -31,7 +36,6 @@ import { logger } from '@/lib/logger/logger';
 import {
   approvePlan,
   getMission,
-  approveAllPlanStepsTemporary,
 } from '@/lib/orchestrator/mission-persistence';
 import { runMissionToCompletion } from '@/lib/orchestrator/step-runner';
 
@@ -51,14 +55,35 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'missionId is required' }, { status: 400 });
     }
 
-    // M3.6 BRIDGE: auto-approve every step before the plan-approve
-    // flip. M3.7 will replace this with a hard gate that REFUSES the
-    // call if any step is still unapproved. Until then we let the
-    // operator approve the plan with a single click and infer per-step
-    // approval. This bridge call is safe because the only callers of
-    // /plan/approve are operators with owner/admin role — they're
-    // implicitly approving everything by hitting the button.
-    await approveAllPlanStepsTemporary(missionId);
+    // M3.7 HARD GATE: every step must be individually approved before
+    // the plan can run. Refuse with 409 if any step is unapproved so
+    // the UI can show the operator which steps still need attention.
+    const planMission = await getMission(missionId);
+    if (!planMission) {
+      return NextResponse.json(
+        { success: false, error: 'Mission not found' },
+        { status: 404 },
+      );
+    }
+    if (planMission.status !== 'PLAN_PENDING_APPROVAL') {
+      return NextResponse.json(
+        { success: false, error: 'Mission is not in plan-review status' },
+        { status: 409 },
+      );
+    }
+    const unapprovedStepIds = planMission.steps
+      .filter((s) => s.status === 'PROPOSED' && s.operatorApproved !== true)
+      .map((s) => s.stepId);
+    if (unapprovedStepIds.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `${unapprovedStepIds.length} step${unapprovedStepIds.length === 1 ? '' : 's'} not yet approved. Approve every step in the plan view (or click "Approve all steps") before running the plan.`,
+          unapprovedStepIds,
+        },
+        { status: 409 },
+      );
+    }
 
     // Step 1: flip status from PLAN_PENDING_APPROVAL → IN_PROGRESS.
     const flipped = await approvePlan(missionId);
