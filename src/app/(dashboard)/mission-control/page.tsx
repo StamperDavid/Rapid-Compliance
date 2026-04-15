@@ -18,6 +18,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useMissionStream } from '@/hooks/useMissionStream';
 import MissionSidebar from './_components/MissionSidebar';
 import MissionTimeline from './_components/MissionTimeline';
+import PlanReviewPanel from './_components/PlanReviewPanel';
 import ApprovalCard from './_components/ApprovalCard';
 import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
@@ -1723,11 +1724,18 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {selectedMission ? (
               <div>
-                <MissionTimeline
-                  mission={selectedMission}
-                  onStepSelect={handleStepSelect}
-                  selectedStepId={selectedStepId}
-                />
+                {selectedMission.status === 'PLAN_PENDING_APPROVAL' ? (
+                  <PlanReviewPanel
+                    mission={selectedMission}
+                    onPlanChanged={() => { void fetchMissions(); }}
+                  />
+                ) : (
+                  <MissionTimeline
+                    mission={selectedMission}
+                    onStepSelect={handleStepSelect}
+                    selectedStepId={selectedStepId}
+                  />
+                )}
                 {(selectedMission.status === 'COMPLETED' || selectedMission.status === 'FAILED') && (
                   <div style={{ padding: '0 1rem 1rem' }}>
                     <MissionGradeCard
