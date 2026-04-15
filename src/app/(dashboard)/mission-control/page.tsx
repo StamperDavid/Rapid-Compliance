@@ -986,6 +986,191 @@ function UpstreamChangedBanner({
   );
 }
 
+function ManualEditOutputBox({
+  missionId,
+  stepId,
+  currentResult,
+  isManuallyEdited,
+}: {
+  missionId: string;
+  stepId: string;
+  currentResult: string;
+  isManuallyEdited: boolean;
+}) {
+  const authFetch = useAuthFetch();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleStart = useCallback(() => {
+    setDraft(currentResult);
+    setEditing(true);
+    setError(null);
+  }, [currentResult]);
+
+  const handleCancel = useCallback(() => {
+    setEditing(false);
+    setDraft('');
+    setError(null);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (draft.trim().length === 0) {
+      setError('Output cannot be empty.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await authFetch(
+        `/api/orchestrator/missions/${missionId}/steps/${stepId}/edit-output`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newToolResult: draft }),
+        },
+      );
+      const body = (await res.json()) as { success: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        setError(body.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      setEditing(false);
+    } finally {
+      setBusy(false);
+    }
+  }, [authFetch, draft, missionId, stepId]);
+
+  return (
+    <div style={{
+      marginTop: '0.75rem',
+      paddingTop: '0.75rem',
+      borderTop: '1px solid var(--color-border-light)',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '0.5rem',
+        marginBottom: '0.5rem',
+      }}>
+        <div style={{
+          fontSize: '0.6875rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          color: 'var(--color-text-disabled)',
+        }}>
+          Manual edit {isManuallyEdited && <span style={{ color: 'var(--color-warning)' }}>· edited</span>}
+        </div>
+        {!editing && (
+          <button
+            type="button"
+            onClick={handleStart}
+            style={{
+              padding: '0.25rem 0.625rem',
+              backgroundColor: 'var(--color-bg-paper)',
+              color: 'var(--color-text-primary)',
+              border: '1px solid var(--color-border-strong)',
+              borderRadius: '0.375rem',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Edit output directly
+          </button>
+        )}
+      </div>
+
+      {editing && (
+        <>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={busy}
+            rows={10}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              fontSize: '0.75rem',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              backgroundColor: 'var(--color-bg-elevated)',
+              color: 'var(--color-text-primary)',
+              border: '1px solid var(--color-border-strong)',
+              borderRadius: '0.375rem',
+              resize: 'vertical',
+            }}
+          />
+          {error && (
+            <div style={{
+              marginTop: '0.375rem',
+              fontSize: '0.6875rem',
+              color: 'var(--color-error)',
+            }}>
+              {error}
+            </div>
+          )}
+          <div style={{
+            display: 'flex',
+            gap: '0.375rem',
+            marginTop: '0.5rem',
+          }}>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={busy}
+              style={{
+                padding: '0.375rem 0.875rem',
+                backgroundColor: 'var(--color-primary)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '0.375rem',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: busy ? 'not-allowed' : 'pointer',
+                opacity: busy ? 0.5 : 1,
+              }}
+            >
+              {busy ? 'Saving...' : 'Save edit'}
+            </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={busy}
+              style={{
+                padding: '0.375rem 0.875rem',
+                backgroundColor: 'transparent',
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border-strong)',
+                borderRadius: '0.375rem',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: busy ? 'not-allowed' : 'pointer',
+                opacity: busy ? 0.5 : 1,
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+          <div style={{
+            fontSize: '0.6875rem',
+            color: 'var(--color-text-disabled)',
+            marginTop: '0.5rem',
+            lineHeight: 1.4,
+          }}>
+            Saving overwrites the agent&apos;s output with your text. The
+            agent&apos;s instructions are NOT changed — this is for small
+            tweaks. To train the agent on a pattern, use the rate-this-step
+            section instead.
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function StepDetailPanel({
   step,
   approvalStep,
@@ -1228,6 +1413,16 @@ function StepDetailPanel({
           {/* Rich output rendering */}
           {displayStep.toolResult && (
             <DetailOutputRenderer toolResult={displayStep.toolResult} />
+          )}
+
+          {/* M6 — quick manual edit path */}
+          {(displayStep.status === 'COMPLETED' || displayStep.status === 'FAILED') && missionId && (
+            <ManualEditOutputBox
+              missionId={missionId}
+              stepId={displayStep.stepId}
+              currentResult={displayStep.toolResult ?? ''}
+              isManuallyEdited={displayStep.manuallyEdited === true}
+            />
           )}
 
           {/* Step grade widget — shown for completed steps */}

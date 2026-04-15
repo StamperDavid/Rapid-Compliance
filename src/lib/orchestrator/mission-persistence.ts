@@ -76,6 +76,15 @@ export interface MissionStep {
    * don't actually depend on upstream — this is a flag, not a force.
    */
   upstreamChanged?: boolean;
+  /**
+   * Set to true when the operator manually edited this step's
+   * toolResult via the "Edit output directly" button (M6). Used as
+   * an audit trail so future readers know the result is human-edited,
+   * not what the agent actually produced. Editing the output does NOT
+   * fire the Prompt Engineer or change any specialist's instructions
+   * — it's a quick fix path for tweaks too small to justify training.
+   */
+  manuallyEdited?: boolean;
 }
 
 export interface Mission {
@@ -1056,6 +1065,63 @@ export async function clearStepUpstreamFlag(missionId: string, stepId: string): 
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.error('[MissionPersistence] clearStepUpstreamFlag failed', err instanceof Error ? err : undefined, {
+      missionId, stepId, error: errorMsg,
+    });
+    return false;
+  }
+}
+
+/**
+ * Manually overwrite a step's toolResult (M6 — quick manual edit).
+ * Operator clicked "Edit output directly" and pasted in their own
+ * text. Sets manuallyEdited=true as the audit trail so we know this
+ * result was not produced by the agent.
+ *
+ * Step must be in COMPLETED or FAILED. Mission cannot be in
+ * PLAN_PENDING_APPROVAL — there's nothing to edit yet at plan time.
+ *
+ * The Prompt Engineer is NOT fired. No specialist instructions change.
+ * This is a tweak path for small fixes too minor to train on.
+ */
+export async function manuallyEditStepOutput(
+  missionId: string,
+  stepId: string,
+  newToolResult: string,
+): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    let success = false;
+
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) { return; }
+      const mission = doc.data() as Mission;
+      if (mission.status === 'PLAN_PENDING_APPROVAL') { return; }
+
+      const stepIndex = mission.steps.findIndex((s) => s.stepId === stepId);
+      if (stepIndex === -1) { return; }
+      const current = mission.steps[stepIndex];
+      if (current.status !== 'COMPLETED' && current.status !== 'FAILED') { return; }
+
+      const newSteps = [...mission.steps];
+      newSteps[stepIndex] = {
+        ...current,
+        toolResult: newToolResult,
+        manuallyEdited: true,
+      };
+
+      transaction.update(docRef, {
+        steps: newSteps,
+        updatedAt: new Date().toISOString(),
+      });
+      success = true;
+    });
+
+    return success;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] manuallyEditStepOutput failed', err instanceof Error ? err : undefined, {
       missionId, stepId, error: errorMsg,
     });
     return false;
