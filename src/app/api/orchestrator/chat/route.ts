@@ -510,6 +510,12 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
     const allToolResults: ToolResult[] = [];
     let lastReviewLink: string | undefined;
     let modelUsed = selectedModel;
+    // M4: set when Jasper calls propose_mission_plan in any iteration.
+    // Once true: (a) we break out of the tool loop after the current
+    // iteration so Jasper can't accidentally chain more tool calls, and
+    // (b) we skip finalizeMission so the mission stays in
+    // PLAN_PENDING_APPROVAL instead of being marked COMPLETED.
+    let planDrafted = false;
 
     // Mission tracking — derive missionId from client requestId when available.
     // This ensures retries with the same requestId reuse the same missionId,
@@ -535,6 +541,9 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
     // purpose-built chat endpoints (Lead Research, Discovery Hub) use them —
     // but Jasper's main chat does NOT trigger missions from them.
     const missionTriggerTools = [
+      // M4: plan-first path. When Jasper drafts a plan, we still need a
+      // missionId reserved so propose_mission_plan can write against it.
+      'propose_mission_plan',
       'delegate_to_builder', 'delegate_to_sales', 'delegate_to_marketing',
       'delegate_to_agent', 'delegate_to_trust', 'delegate_to_content',
       'delegate_to_architect', 'delegate_to_outreach', 'delegate_to_intelligence',
@@ -997,6 +1006,20 @@ CRITICAL RULES:
           totalToolsExecutedSoFar: toolsExecuted.length,
         });
 
+        // M4: if Jasper drafted a plan, end the chat turn here. The
+        // operator must approve the plan in Mission Control before any
+        // execution happens. We do NOT continue the tool loop because
+        // (a) the operator hasn't seen the plan yet, and (b) Jasper's
+        // own instructions tell him to stop after proposing.
+        if (iterToolNames.includes('propose_mission_plan')) {
+          planDrafted = true;
+          finalResponse =
+            `Plan drafted. ${response.toolCalls.length > 1 ? 'Note: I had to discard the other tool calls in this turn — only the plan was saved. ' : ''}` +
+            `Open Mission Control to review the steps, edit anything you want changed, and click approve when ready. ` +
+            `${lastReviewLink ?? `/mission-control?mission=${missionId}`}`;
+          break;
+        }
+
         // If this was the last iteration, force a response
         if (iterationCount >= maxIterations) {
           const { result: finalAttempt, model: finalModel } = await chatWithFallback<ChatCompletionResponse>(
@@ -1044,7 +1067,12 @@ CRITICAL RULES:
 
     // Finalize mission — derive status from in-memory tool results (avoids Firestore race condition
     // caused by fire-and-forget trackMissionStep writes that may not have landed yet).
-    if (missionCreated) {
+    //
+    // M4: skip finalization entirely when Jasper drafted a plan — the
+    // mission is in PLAN_PENDING_APPROVAL status and execution will be
+    // kicked off later when the operator approves the plan. Marking it
+    // COMPLETED here would lose the plan.
+    if (missionCreated && !planDrafted) {
       try {
         let missionStatus: 'COMPLETED' | 'FAILED' = 'COMPLETED';
 

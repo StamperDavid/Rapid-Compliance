@@ -129,6 +129,85 @@ export async function createMission(mission: Mission): Promise<void> {
 }
 
 /**
+ * Create a mission with a draft plan attached. Used by the M4
+ * `propose_mission_plan` Jasper tool — Jasper hands us a list of step
+ * proposals, we write the mission with status PLAN_PENDING_APPROVAL and
+ * every step in PROPOSED status. No tool execution happens here; this is
+ * a write-and-wait operation. The operator reviews the plan in Mission
+ * Control and either approves it (which kicks off execution) or rejects
+ * it (which moves the mission to FAILED).
+ */
+export interface PlannedStepInput {
+  toolName: string;
+  toolArgs: Record<string, unknown>;
+  summary: string;
+  specialistsExpected?: string[];
+  order: number;
+}
+
+export async function createMissionWithPlan(input: {
+  missionId: string;
+  conversationId: string;
+  title: string;
+  userPrompt: string;
+  plannedSteps: PlannedStepInput[];
+}): Promise<void> {
+  if (!adminDb) {
+    logger.warn('[MissionPersistence] Firestore not available — createWithPlan skipped', {
+      missionId: input.missionId,
+    });
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  // Stable per-step IDs so the operator's edit/reorder/delete API calls
+  // can address each step by ID after the plan is written.
+  const sortedSteps = [...input.plannedSteps].sort((a, b) => a.order - b.order);
+  const steps: MissionStep[] = sortedSteps.map((s, idx) => ({
+    stepId: `plan_step_${input.missionId}_${idx + 1}`,
+    toolName: s.toolName,
+    delegatedTo: s.toolName.replace('delegate_to_', '').toUpperCase(),
+    status: 'PROPOSED',
+    startedAt: now,
+    summary: s.summary,
+    toolArgs: s.toolArgs,
+    ...(s.specialistsExpected && s.specialistsExpected.length > 0
+      ? { specialistsUsed: s.specialistsExpected }
+      : {}),
+  }));
+
+  const mission: Mission = {
+    missionId: input.missionId,
+    conversationId: input.conversationId,
+    status: 'PLAN_PENDING_APPROVAL',
+    title: input.title,
+    userPrompt: input.userPrompt,
+    steps,
+    createdAt: now,
+    updatedAt: now,
+    plannedAt: now,
+  };
+
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(input.missionId);
+    await docRef.set(mission);
+
+    logger.info('[MissionPersistence] Mission created with draft plan', {
+      missionId: input.missionId,
+      title: input.title,
+      stepCount: steps.length,
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error('[MissionPersistence] Failed to create mission with plan', error instanceof Error ? error : undefined, {
+      missionId: input.missionId,
+      error: errorMsg,
+    });
+  }
+}
+
+/**
  * Append a step to an existing mission and update status/updatedAt.
  */
 export async function addMissionStep(missionId: string, step: MissionStep): Promise<void> {

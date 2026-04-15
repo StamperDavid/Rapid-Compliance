@@ -24,7 +24,9 @@ import { orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import {
   addMissionStep,
   updateMissionStep,
+  createMissionWithPlan,
   type MissionStepStatus,
+  type PlannedStepInput,
 } from './mission-persistence';
 import {
   createCampaign,
@@ -583,6 +585,90 @@ function getReviewLink(toolName: string, missionId?: string, params?: Record<str
  * These tools are Jasper's PRIMARY interface to the platform.
  */
 export const JASPER_TOOLS: ToolDefinition[] = [
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MISSION PLANNING (M4 — plan pre-approval)
+  //
+  // When the user's request needs more than one tool, Jasper MUST call
+  // propose_mission_plan FIRST and stop. The operator reviews the plan in
+  // Mission Control and approves/edits/rejects it before any work runs.
+  // Single-tool requests skip the plan and run immediately.
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'propose_mission_plan',
+      description:
+        'Draft a multi-step plan for the operator to review BEFORE any work runs. ' +
+        'Call this FIRST whenever the user\'s request needs more than one tool call. ' +
+        'You list every step you intend to take — which tool, with what arguments, ' +
+        'in what order — and the operator approves, edits, or rejects the plan in ' +
+        'Mission Control. After this tool returns, STOP. Do not call any other tools ' +
+        'in the same turn. The operator will trigger execution from Mission Control. ' +
+        'For single-tool requests (e.g. "send this email", "post this tweet"), do NOT ' +
+        'call this tool — just call the tool directly. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description:
+              'A short one-line title for the mission (max 80 chars). Plain English. ' +
+              'Example: "Research promotional-wear AI pain points and craft marketing strategy".',
+          },
+          steps: {
+            type: 'array',
+            description:
+              'The ordered list of steps you intend to take. Every step in this list ' +
+              'will be created in the database with status PROPOSED and shown to the ' +
+              'operator for review. Do not include steps you have not committed to.',
+            items: {
+              type: 'object',
+              properties: {
+                order: {
+                  type: 'number',
+                  description: 'Sequential step number starting at 1.',
+                },
+                toolName: {
+                  type: 'string',
+                  description:
+                    'Exact name of the tool you intend to call when this step runs. ' +
+                    'Must be one of the delegate_to_* tools or a single-purpose tool ' +
+                    'in your toolbox (e.g. delegate_to_intelligence, delegate_to_content, ' +
+                    'save_blog_draft, social_post). Do NOT use propose_mission_plan here.',
+                },
+                toolArgs: {
+                  type: 'object',
+                  description:
+                    'The arguments object you would pass to the tool when running it. ' +
+                    'Use the same shape as you would for a direct tool call. The operator ' +
+                    'can edit this in the plan review screen before approval.',
+                },
+                summary: {
+                  type: 'string',
+                  description:
+                    'One plain-English sentence (max 200 chars) describing what this ' +
+                    'step does, written for a non-technical operator. Example: ' +
+                    '"Research the top 5 promotional-wear competitors and their AI adoption stories".',
+                },
+                specialistsExpected: {
+                  type: 'array',
+                  description:
+                    'Optional. Your best guess at which specialists the manager will ' +
+                    'use for this step (e.g. ["COMPETITOR_RESEARCHER", "MARKET_ANALYST"]). ' +
+                    'Helps the operator see which agents will produce the work. ' +
+                    'Leave empty if you are not sure.',
+                  items: { type: 'string' },
+                },
+              },
+              required: ['order', 'toolName', 'toolArgs', 'summary'],
+            },
+          },
+        },
+        required: ['title', 'steps'],
+      },
+    },
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
   // KNOWLEDGE & STATE TOOLS (Anti-Hallucination Core)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3261,6 +3347,138 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
   try {
     switch (name) {
+      // ═══════════════════════════════════════════════════════════════════════
+      // MISSION PLANNING (M4 — plan pre-approval)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'propose_mission_plan': {
+        // Safe default so every exit path through this case has `content`
+        // assigned — the validation loop below uses early `break` which
+        // TypeScript's flow analysis can't trace through to the outer
+        // switch.
+        content = JSON.stringify({ error: 'propose_mission_plan: validation failed' });
+
+        // Validate the args shape. Jasper sometimes passes args as
+        // strings if his prompt drift causes him to JSON-stringify them
+        // incorrectly — coerce defensively so a single bad call doesn't
+        // burn an iteration.
+        const titleArg = args.title;
+        if (typeof titleArg !== 'string' || titleArg.trim().length === 0) {
+          content = JSON.stringify({
+            error: 'propose_mission_plan: title is required and must be a non-empty string',
+          });
+          break;
+        }
+
+        const stepsArg = args.steps;
+        if (!Array.isArray(stepsArg) || stepsArg.length === 0) {
+          content = JSON.stringify({
+            error: 'propose_mission_plan: steps must be a non-empty array',
+          });
+          break;
+        }
+        // Array.isArray narrows args.steps to any[], which then
+        // contaminates raw with any. Re-type as unknown[] so element
+        // access is type-safe and the lint rule is happy.
+        const stepsArr: unknown[] = stepsArg;
+
+        // Coerce each proposed step into PlannedStepInput shape. Reject
+        // the whole plan if any step is malformed — partial plans are
+        // worse than no plan because the operator can't trust them.
+        const plannedSteps: PlannedStepInput[] = [];
+        for (let i = 0; i < stepsArr.length; i++) {
+          const raw: unknown = stepsArr[i];
+          if (typeof raw !== 'object' || raw === null) {
+            content = JSON.stringify({
+              error: `propose_mission_plan: step ${i + 1} is not an object`,
+            });
+            break;
+          }
+          const step = raw as Record<string, unknown>;
+          const orderRaw = step.order;
+          const orderNum = typeof orderRaw === 'number' ? orderRaw : Number(orderRaw);
+          if (!Number.isFinite(orderNum) || orderNum < 1) {
+            content = JSON.stringify({
+              error: `propose_mission_plan: step ${i + 1} has invalid order (must be a number >= 1)`,
+            });
+            break;
+          }
+          if (typeof step.toolName !== 'string' || step.toolName.trim().length === 0) {
+            content = JSON.stringify({
+              error: `propose_mission_plan: step ${i + 1} is missing toolName`,
+            });
+            break;
+          }
+          if (step.toolName === 'propose_mission_plan') {
+            content = JSON.stringify({
+              error: `propose_mission_plan: step ${i + 1} cannot itself be propose_mission_plan`,
+            });
+            break;
+          }
+          if (typeof step.summary !== 'string' || step.summary.trim().length === 0) {
+            content = JSON.stringify({
+              error: `propose_mission_plan: step ${i + 1} is missing summary`,
+            });
+            break;
+          }
+          // toolArgs is allowed to be missing (operator can fill in
+          // before approving) — coerce to empty object.
+          const toolArgs =
+            typeof step.toolArgs === 'object' && step.toolArgs !== null
+              ? (step.toolArgs as Record<string, unknown>)
+              : {};
+          // specialistsExpected is optional — coerce to string array if
+          // present, drop if not.
+          const specialistsExpected = Array.isArray(step.specialistsExpected)
+            ? step.specialistsExpected.filter((s): s is string => typeof s === 'string')
+            : undefined;
+
+          plannedSteps.push({
+            order: orderNum,
+            toolName: step.toolName,
+            toolArgs,
+            summary: step.summary,
+            ...(specialistsExpected && specialistsExpected.length > 0
+              ? { specialistsExpected }
+              : {}),
+          });
+        }
+
+        // If validation populated `content` above, the loop bailed early
+        // — return the error without writing anything.
+        if (plannedSteps.length !== stepsArr.length) {
+          break;
+        }
+
+        // Need a missionId to write the plan against. The chat route
+        // passes one in via context for every request; if it's missing
+        // we can't persist the plan, so fail honestly.
+        if (!context?.missionId) {
+          content = JSON.stringify({
+            error: 'propose_mission_plan: no missionId in context — cannot persist plan',
+          });
+          break;
+        }
+
+        await createMissionWithPlan({
+          missionId: context.missionId,
+          conversationId: context.conversationId ?? 'unknown',
+          title: titleArg.slice(0, 80),
+          userPrompt: context.userPrompt ?? '',
+          plannedSteps,
+        });
+
+        content = JSON.stringify({
+          status: 'PLAN_PENDING_APPROVAL',
+          missionId: context.missionId,
+          stepCount: plannedSteps.length,
+          message:
+            'Plan drafted. The operator must review and approve it in Mission Control ' +
+            'before any work runs. Do NOT call any other tools in this turn.',
+          reviewLink: getReviewLink('propose_mission_plan', context.missionId),
+        });
+        break;
+      }
+
       // ═══════════════════════════════════════════════════════════════════════
       // KNOWLEDGE & STATE TOOLS
       // ═══════════════════════════════════════════════════════════════════════
