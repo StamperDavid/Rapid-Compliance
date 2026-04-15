@@ -1176,11 +1176,13 @@ function StepDetailPanel({
   approvalStep,
   missionId,
   stepGrades,
+  onScrapMission,
 }: {
   step: MissionStep | null;
   approvalStep: MissionStep | null;
   missionId: string | undefined;
   stepGrades: Record<string, GradeEntry>;
+  onScrapMission: () => void;
 }) {
   // If the selected step is the approval step, show the approval card prominently
   const showingApproval = approvalStep && (!step || step.stepId === approvalStep.stepId);
@@ -1237,11 +1239,28 @@ function StepDetailPanel({
             fontSize: '0.8125rem',
             color: 'var(--color-text-primary)',
             lineHeight: 1.5,
+            marginBottom: '0.625rem',
           }}>
             {formatToolName(approvalStep.toolName)} failed twice and the runner stopped.
             Review the step below and choose: rerun (with edited args if you want), or
             scrap the mission.
           </div>
+          <button
+            type="button"
+            onClick={onScrapMission}
+            style={{
+              padding: '0.375rem 0.75rem',
+              backgroundColor: 'transparent',
+              color: 'var(--color-error)',
+              border: '1px solid var(--color-error)',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Scrap this mission
+          </button>
         </div>
       )}
 
@@ -2162,6 +2181,7 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
               approvalStep={approvalStep}
               missionId={selectedMission.missionId}
               stepGrades={missionGrades}
+              onScrapMission={handleCancelRequest}
             />
           ) : (
             <div style={{
