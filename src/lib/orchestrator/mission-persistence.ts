@@ -21,6 +21,7 @@ import { logger } from '@/lib/logger/logger';
 
 export type MissionStatus =
   | 'PENDING'
+  | 'PLAN_PENDING_APPROVAL'
   | 'IN_PROGRESS'
   | 'AWAITING_APPROVAL'
   | 'COMPLETED'
@@ -28,6 +29,7 @@ export type MissionStatus =
 
 export type MissionStepStatus =
   | 'PENDING'
+  | 'PROPOSED'
   | 'RUNNING'
   | 'COMPLETED'
   | 'FAILED'
@@ -70,6 +72,13 @@ export interface Mission {
   approvalId?: string;
   /** True once the user has submitted at least one grade for this mission */
   graded?: boolean;
+  /**
+   * Timestamp when Jasper drafted the plan for this mission via
+   * `propose_mission_plan` (M4). Present when status is or has been
+   * `PLAN_PENDING_APPROVAL`. Used to sort pending-plan missions by age in
+   * the Mission Control "needs your review" bucket.
+   */
+  plannedAt?: string;
 }
 
 export interface ListMissionsOptions {

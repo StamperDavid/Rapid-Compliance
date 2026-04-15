@@ -17,6 +17,7 @@ interface MissionListResponse {
 
 const STATUS_COLORS: Record<MissionStatus, string> = {
   PENDING: 'var(--color-text-secondary)',
+  PLAN_PENDING_APPROVAL: 'var(--color-warning)',
   IN_PROGRESS: 'var(--color-success)',
   AWAITING_APPROVAL: 'var(--color-warning)',
   COMPLETED: 'var(--color-primary)',
