@@ -101,6 +101,13 @@ function trackMissionStep(
     toolArgs?: Record<string, unknown>;
     toolResult?: string;
     callId?: string; // Unique ID per tool invocation — pass the same callId for RUNNING and COMPLETED
+    /**
+     * Specialists this step's manager delegated to during execution.
+     * Only populated on COMPLETED/FAILED calls from `delegate_to_*`
+     * tool handlers (which read `report.specialistsUsed` off the
+     * manager's return value). See base-manager.ts M2a accumulator.
+     */
+    specialistsUsed?: string[];
   }
 ): void {
   if (!context?.missionId) { return; }
@@ -4407,7 +4414,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const builderDuration = Date.now() - builderStart;
           trackMissionStep(context, 'delegate_to_builder',
             builderResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Builder: ${builderResult.status}`, durationMs: builderDuration, toolResult: JSON.stringify(builderResult.data) }
+            { summary: `Builder: ${builderResult.status}`, durationMs: builderDuration, toolResult: JSON.stringify(builderResult.data), specialistsUsed: builderResult.specialistsUsed }
           );
 
           content = JSON.stringify({
@@ -4463,7 +4470,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const salesDuration = Date.now() - salesStart;
           trackMissionStep(context, 'delegate_to_sales',
             salesResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Sales: ${salesResult.status}`, durationMs: salesDuration, toolResult: JSON.stringify(salesResult.data) }
+            { summary: `Sales: ${salesResult.status}`, durationMs: salesDuration, toolResult: JSON.stringify(salesResult.data), specialistsUsed: salesResult.specialistsUsed }
           );
 
           content = JSON.stringify({
@@ -4526,7 +4533,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const marketingDuration = Date.now() - marketingStart;
           trackMissionStep(context, 'delegate_to_marketing',
             marketingResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Marketing: ${marketingResult.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(marketingResult.data) }
+            { summary: `Marketing: ${marketingResult.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(marketingResult.data), specialistsUsed: marketingResult.specialistsUsed }
           );
 
           content = JSON.stringify({
@@ -4583,7 +4590,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const trustDuration = Date.now() - trustStart;
           trackMissionStep(context, 'delegate_to_trust',
             trustResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data) }
+            { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data), specialistsUsed: trustResult.specialistsUsed }
           );
 
           content = JSON.stringify({
@@ -4650,7 +4657,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const contentDuration = Date.now() - contentStart;
           trackMissionStep(context, 'delegate_to_content',
             contentResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data) }
+            { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data), specialistsUsed: contentResult.specialistsUsed }
           );
 
           content = JSON.stringify({
@@ -4747,7 +4754,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const archDuration = Date.now() - archStart;
           trackMissionStep(context, 'delegate_to_architect',
             archResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Architect: ${archResult.status}`, durationMs: archDuration, toolResult: JSON.stringify(archResult.data) }
+            { summary: `Architect: ${archResult.status}`, durationMs: archDuration, toolResult: JSON.stringify(archResult.data), specialistsUsed: archResult.specialistsUsed }
           );
 
           content = JSON.stringify({
@@ -4874,7 +4881,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const outreachDuration = Date.now() - outreachStart;
           trackMissionStep(context, 'delegate_to_outreach',
             outreachResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data) }
+            { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data), specialistsUsed: outreachResult.specialistsUsed }
           );
 
           content = JSON.stringify({
@@ -4943,7 +4950,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const intelDuration = Date.now() - intelStart;
           trackMissionStep(context, 'delegate_to_intelligence',
             intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data) }
+            { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data), specialistsUsed: intelResult.specialistsUsed }
           );
 
           content = JSON.stringify({
@@ -5001,7 +5008,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const commerceDuration = Date.now() - commerceStart;
           trackMissionStep(context, 'delegate_to_commerce',
             commerceResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data) }
+            { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data), specialistsUsed: commerceResult.specialistsUsed }
           );
 
           content = JSON.stringify({

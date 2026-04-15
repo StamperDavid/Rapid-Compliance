@@ -45,6 +45,15 @@ export interface MissionStep {
   error?: string;
   toolArgs?: Record<string, unknown>;
   toolResult?: string;
+  /**
+   * List of specialist IDs this step's manager delegated to during execution.
+   * Populated automatically by BaseManager's accumulator (M2a, April 15, 2026).
+   * Mission Control's step-level grading UI reads this field to route prompt
+   * corrections to the correct specialist's Golden Master. Undefined/empty
+   * means no specialists contributed — either the step was pure manager work,
+   * a direct tool call, or a pre-M2a legacy step.
+   */
+  specialistsUsed?: string[];
 }
 
 export interface Mission {
@@ -159,7 +168,7 @@ export async function addMissionStep(missionId: string, step: MissionStep): Prom
 export async function updateMissionStep(
   missionId: string,
   stepId: string,
-  updates: Partial<Pick<MissionStep, 'status' | 'completedAt' | 'durationMs' | 'summary' | 'error' | 'toolArgs' | 'toolResult'>>
+  updates: Partial<Pick<MissionStep, 'status' | 'completedAt' | 'durationMs' | 'summary' | 'error' | 'toolArgs' | 'toolResult' | 'specialistsUsed'>>
 ): Promise<void> {
   if (!adminDb) {
     logger.warn('[MissionPersistence] Firestore not available — updateStep skipped');
