@@ -381,7 +381,7 @@ export default function CommandCenterPage() {
         </button>
       </div>
 
-      {/* ── Swarm Control — Global Kill Switch + Manager Toggles ──────── */}
+      {/* ── AI Automation Control ──────────────────────────────────────── */}
       {swarmControl && (
         <div
           className={`px-6 py-5 rounded-xl border ${
@@ -392,11 +392,11 @@ export default function CommandCenterPage() {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-foreground mb-1">Swarm Control</h2>
+              <h2 className="text-sm font-semibold text-foreground mb-1">AI Automation</h2>
               <p className="text-xs text-muted-foreground">
                 {swarmControl.globalPause
-                  ? 'ALL agent activity is frozen. Events and signals are queued.'
-                  : 'All systems operational. Toggle individual managers below.'}
+                  ? 'All AI activity is paused. Queued work will resume when you turn it back on.'
+                  : 'Your AI teams are working. You can pause individual departments below.'}
               </p>
             </div>
             <button
