@@ -102,6 +102,13 @@ const SOCIAL_ANALYTICS_COLLECTION = 'social_analytics';
  * Autonomous Posting Agent Class
  */
 export class AutonomousPostingAgent {
+  private static instance: AutonomousPostingAgent | null = null;
+
+  static getInstance(): AutonomousPostingAgent {
+    AutonomousPostingAgent.instance ??= new AutonomousPostingAgent();
+    return AutonomousPostingAgent.instance;
+  }
+
   private config: PostingAgentConfig;
   private twitterService: TwitterService | null = null;
   private agentSettings: AutonomousAgentSettings = DEFAULT_AGENT_SETTINGS;
@@ -854,6 +861,21 @@ export class AutonomousPostingAgent {
       failureCount,
       timestamp: new Date(),
     };
+  }
+
+  /**
+   * Publish a post immediately to a specific platform. Called by
+   * POST /api/social/post when the user clicks "Post" on a
+   * per-platform page. Wraps the internal postToPlatform method
+   * with a public interface.
+   */
+  async publishNow(
+    platform: SocialPlatform,
+    content: string,
+    metadata?: Record<string, string>,
+  ): Promise<{ success: boolean; postId?: string; error?: string }> {
+    const mediaUrls = metadata?.mediaUrl ? [metadata.mediaUrl] : undefined;
+    return this.postToPlatform(platform, content, mediaUrls);
   }
 
   /**
