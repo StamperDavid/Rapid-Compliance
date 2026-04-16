@@ -75,6 +75,19 @@ import { getPodcastSpecialist } from '../src/lib/agents/content/podcast/speciali
 import { getYouTubeExpert } from '../src/lib/agents/marketing/youtube/specialist';
 import { getInstagramExpert } from '../src/lib/agents/marketing/instagram/specialist';
 import { getPinterestExpert } from '../src/lib/agents/marketing/pinterest/specialist';
+import { getCompetitorResearcher } from '../src/lib/agents/intelligence/competitor/specialist';
+import { getScraperSpecialist } from '../src/lib/agents/intelligence/scraper/specialist';
+import { getTechnographicScout } from '../src/lib/agents/intelligence/technographic/specialist';
+import { getTrendScout } from '../src/lib/agents/intelligence/trend/specialist';
+import { getLeadQualifierSpecialist } from '../src/lib/agents/sales/qualifier/specialist';
+import { getMerchandiserSpecialist } from '../src/lib/agents/sales/merchandiser/specialist';
+import { getObjectionHandlerSpecialist } from '../src/lib/agents/sales/objection-handler/specialist';
+import { getOutreachSpecialist } from '../src/lib/agents/sales/outreach/specialist';
+import { getInventoryManagerSpecialist } from '../src/lib/agents/commerce/inventory/specialist';
+import { getReviewManagerSpecialist } from '../src/lib/agents/trust/review-manager/specialist';
+import { getGMBSpecialist } from '../src/lib/agents/trust/gmb/specialist';
+import { getCaseStudyBuilderSpecialist } from '../src/lib/agents/trust/case-study/specialist';
+import { getGrowthStrategist } from '../src/lib/agents/growth-strategist/specialist';
 import type { BaseSpecialist } from '../src/lib/agents/base-specialist';
 import type { AgentMessage, AgentReport } from '../src/lib/agents/types';
 
@@ -331,6 +344,222 @@ const TESTS: TestCase[] = [
       targetAudience: 'Business owners searching for sales tools on Pinterest',
       tone: 'clean, data-rich, visually scannable',
       campaignGoal: 'drive traffic to SalesVelocity.ai landing page',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  // ═══════════════════════════════════════════════════════════════════
+  // REMAINING UNVERIFIED SPECIALISTS (13 agents, never pirate-tested)
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    specialistId: 'COMPETITOR_RESEARCHER',
+    department: 'Intelligence',
+    gmDocId: `sgm_competitor_researcher_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getCompetitorResearcher(),
+    buildPayload: () => ({
+      action: 'research_competitors',
+      targets: ['hubspot.com'],
+      researchDepth: 'standard',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'SCRAPER_SPECIALIST',
+    department: 'Intelligence',
+    gmDocId: `sgm_scraper_specialist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getScraperSpecialist(),
+    buildPayload: () => ({
+      action: 'analyze_scrape',
+      url: 'https://example.com',
+      scrapedContent: 'Example Corp is a B2B SaaS company offering project management tools for teams of 10-500. Founded in 2020. Pricing: $20/user/month. Key features: Kanban boards, time tracking, invoicing.',
+      analysisGoal: 'Extract competitive positioning and pricing strategy',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'TECHNOGRAPHIC_SCOUT',
+    department: 'Intelligence',
+    gmDocId: `sgm_technographic_scout_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getTechnographicScout(),
+    buildPayload: () => ({
+      action: 'analyze_tech_stack',
+      url: 'https://example.com',
+      detectedTechnologies: ['Next.js', 'React', 'Stripe', 'Google Analytics', 'HubSpot'],
+      analysisGoal: 'Assess technology maturity and integration opportunities',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'TREND_SCOUT',
+    department: 'Intelligence',
+    gmDocId: `sgm_trend_scout_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getTrendScout(),
+    buildPayload: () => ({
+      action: 'scan_signals',
+      industry: 'B2B SaaS',
+      topics: ['AI sales automation', 'autonomous agents', 'LLM-powered workflows'],
+      timeframe: '30 days',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'LEAD_QUALIFIER',
+    department: 'Sales',
+    gmDocId: `sgm_lead_qualifier_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getLeadQualifierSpecialist(),
+    buildPayload: () => ({
+      action: 'qualify_lead',
+      lead: {
+        name: 'Jane Smith',
+        title: 'VP of Sales',
+        company: 'TechCorp',
+        industry: 'SaaS',
+        companySize: '100-500',
+        inboundSource: 'demo request form',
+        notes: 'Expressed frustration with current CRM and wants AI-powered automation.',
+      },
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'MERCHANDISER',
+    department: 'Sales',
+    gmDocId: `sgm_merchandiser_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getMerchandiserSpecialist(),
+    buildPayload: () => ({
+      action: 'evaluate_nudge',
+      visitor: {
+        visitorId: 'v_pirate_test',
+        currentPage: '/pricing',
+        timeOnPage: 45,
+        scrollDepth: 0.7,
+        previousPages: ['/features', '/about'],
+        sessionDuration: 180,
+      },
+      products: [
+        { id: 'starter', name: 'Starter Plan', price: 400, category: 'subscription' },
+        { id: 'pro', name: 'Professional Plan', price: 800, category: 'subscription' },
+      ],
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'OBJECTION_HANDLER',
+    department: 'Sales',
+    gmDocId: `sgm_objection_handler_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getObjectionHandlerSpecialist(),
+    buildPayload: () => ({
+      action: 'handle_objection',
+      objection: 'We already have HubSpot and switching would be too expensive and disruptive.',
+      context: {
+        leadName: 'John Smith',
+        company: 'Acme Corp',
+        industry: 'SaaS',
+        dealStage: 'NEGOTIATION',
+        dealValue: 30000,
+        competitorMentioned: 'HubSpot',
+      },
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'OUTREACH_SPECIALIST',
+    department: 'Sales',
+    gmDocId: `sgm_outreach_specialist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getOutreachSpecialist(),
+    buildPayload: () => ({
+      action: 'generate_outreach',
+      lead: {
+        name: 'Sarah Chen',
+        title: 'Head of Revenue',
+        company: 'GrowthCo',
+        industry: 'B2B SaaS',
+        companySize: '50-200',
+      },
+      goal: 'Book a 15-minute discovery call about AI sales automation',
+      channel: 'email',
+      tone: 'confident and direct',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'INVENTORY_MANAGER',
+    department: 'Commerce',
+    gmDocId: `sgm_inventory_manager_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getInventoryManagerSpecialist(),
+    buildPayload: () => ({
+      action: 'stock_analysis',
+      products: [
+        { id: 'prod1', name: 'Widget A', currentStock: 150, avgDailySales: 12, reorderPoint: 50 },
+        { id: 'prod2', name: 'Widget B', currentStock: 20, avgDailySales: 8, reorderPoint: 30 },
+      ],
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'REVIEW_MANAGER',
+    department: 'Trust',
+    gmDocId: `sgm_review_manager_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getReviewManagerSpecialist(),
+    buildPayload: () => ({
+      action: 'analyze_reviews',
+      reviews: [
+        { platform: 'google', rating: 5, text: 'Amazing product, saved our sales team 20 hours per week.', date: '2026-03-15' },
+        { platform: 'google', rating: 2, text: 'Onboarding was confusing, took 3 weeks to get value.', date: '2026-03-20' },
+        { platform: 'g2', rating: 4, text: 'Great AI features but the pricing page is unclear.', date: '2026-04-01' },
+      ],
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'GMB_SPECIALIST',
+    department: 'Trust',
+    gmDocId: `sgm_gmb_specialist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getGMBSpecialist(),
+    buildPayload: () => ({
+      action: 'audit_profile',
+      businessName: 'SalesVelocity AI',
+      category: 'Software company',
+      currentDescription: 'AI-powered sales automation platform.',
+      hoursSet: true,
+      photosCount: 5,
+      reviewCount: 23,
+      avgRating: 4.2,
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'CASE_STUDY_BUILDER',
+    department: 'Trust',
+    gmDocId: `sgm_case_study_builder_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getCaseStudyBuilderSpecialist(),
+    buildPayload: () => ({
+      action: 'build_case_study',
+      clientName: 'GrowthCo',
+      industry: 'B2B SaaS',
+      challenge: 'GrowthCo was manually qualifying 500 inbound leads per month with 4 SDRs. Response time averaged 18 hours. 60% of qualified leads went cold before first contact.',
+      solution: 'Deployed SalesVelocity.ai AI agent swarm: Lead Qualifier for instant BANT scoring, Email Specialist for same-hour personalized outreach, Deal Closer for proposal generation.',
+      results: 'Response time dropped from 18 hours to 4 minutes. Qualified lead conversion rate increased 340%. SDR team reduced from 4 to 1 (the remaining SDR focuses on enterprise accounts). $2.1M additional pipeline generated in first quarter.',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'GROWTH_STRATEGIST',
+    department: 'Standalone',
+    gmDocId: `sgm_growth_strategist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getGrowthStrategist(),
+    buildPayload: () => ({
+      action: 'analyze_growth',
+      metrics: {
+        mrr: 45000,
+        mrrGrowth: 0.12,
+        churnRate: 0.04,
+        cac: 800,
+        ltv: 12000,
+        leadCount: 150,
+        conversionRate: 0.08,
+      },
+      industry: 'B2B SaaS',
+      goal: 'Reach $100K MRR within 6 months while keeping CAC under $1000',
     }),
     extractProseFields: extractAllProse,
   },
