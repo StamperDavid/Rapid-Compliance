@@ -12,7 +12,7 @@ export const DASHBOARD_TABS: SubpageNavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Activities', href: '/dashboard/activities' },
   { label: 'Executive Briefing', href: '/executive-briefing' },
-  { label: 'AI Team', href: '/workforce' },
+  { label: 'Workforce HQ', href: '/workforce' },
   { label: 'Team', href: '/team/leaderboard' },
 ];
 
@@ -191,9 +191,9 @@ export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
 
 // ── AI Workforce Hub (all 5 AI items → 1 hub) ──────────────────────────────
 export const AI_WORKFORCE_TABS: SubpageNavItem[] = [
-  { label: 'AI Team', href: '/workforce' },
-  { label: 'Projects', href: '/mission-control' },
+  { label: 'Agents', href: '/workforce' },
+  { label: 'Mission Control', href: '/mission-control' },
   { label: 'Performance', href: '/workforce/performance' },
-  { label: 'Improve Results', href: '/settings/ai-agents/training' },
+  { label: 'Training', href: '/settings/ai-agents/training' },
   { label: 'Models & Data', href: '/ai/datasets' },
 ];
