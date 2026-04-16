@@ -313,7 +313,7 @@ export default function CommandCenterPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-6xl mx-auto">
+      <div className="p-8 space-y-6">
         <div className="text-center py-16 text-muted-foreground">
           Loading Social Dashboard...
         </div>
@@ -323,7 +323,7 @@ export default function CommandCenterPage() {
 
   if (!status) {
     return (
-      <div className="p-8 max-w-6xl mx-auto">
+      <div className="p-8 space-y-6">
         <div className="text-center py-16 text-muted-foreground">
           Failed to load agent status. Please try again.
         </div>
@@ -332,7 +332,7 @@ export default function CommandCenterPage() {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl mx-auto">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
