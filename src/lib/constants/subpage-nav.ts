@@ -12,7 +12,7 @@ export const DASHBOARD_TABS: SubpageNavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Activities', href: '/dashboard/activities' },
   { label: 'Executive Briefing', href: '/executive-briefing' },
-  { label: 'Workforce HQ', href: '/workforce' },
+  { label: 'AI Team', href: '/workforce' },
   { label: 'Team', href: '/team/leaderboard' },
 ];
 
@@ -27,14 +27,12 @@ export const CATALOG_TABS: SubpageNavItem[] = [
 
 // ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
 export const SOCIAL_TABS: SubpageNavItem[] = [
-  { label: 'Command Center', href: '/social/command-center' },
+  { label: 'Platforms', href: '/social' },
   { label: 'Campaigns', href: '/social/campaigns' },
   { label: 'Calendar', href: '/social/calendar' },
-  { label: 'Approvals', href: '/social/approvals' },
-  { label: 'Listening', href: '/social/listening' },
-  { label: 'Agent Rules', href: '/social/agent-rules' },
-  { label: 'Playbook', href: '/social/playbook' },
   { label: 'Analytics', href: '/social/analytics' },
+  { label: 'Listening', href: '/social/listening' },
+  { label: 'AI Settings', href: '/social/agent-rules' },
 ];
 
 // ── Analytics ───────────────────────────────────────────────────────────────
@@ -193,9 +191,9 @@ export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
 
 // ── AI Workforce Hub (all 5 AI items → 1 hub) ──────────────────────────────
 export const AI_WORKFORCE_TABS: SubpageNavItem[] = [
-  { label: 'Agents', href: '/workforce' },
-  { label: 'Mission Control', href: '/mission-control' },
+  { label: 'AI Team', href: '/workforce' },
+  { label: 'Projects', href: '/mission-control' },
   { label: 'Performance', href: '/workforce/performance' },
-  { label: 'Training', href: '/settings/ai-agents/training' },
+  { label: 'Improve Results', href: '/settings/ai-agents/training' },
   { label: 'Models & Data', href: '/ai/datasets' },
 ];

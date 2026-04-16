@@ -122,6 +122,111 @@ export class InstagramService {
     }
   }
 
+  /**
+   * Publish a carousel post (multiple images in a single post)
+   *
+   * Instagram carousel publishing flow:
+   * 1. Create an individual media container for each image (is_carousel_item=true)
+   * 2. Create a carousel container referencing all child containers
+   * 3. Publish the carousel container
+   */
+  async publishCarousel(
+    imageUrls: string[],
+    caption: string
+  ): Promise<InstagramPostResponse> {
+    try {
+      if (!this.config.accessToken || !this.config.instagramAccountId) {
+        return { success: false, error: 'Instagram not configured' };
+      }
+
+      if (imageUrls.length < 2) {
+        return { success: false, error: 'Carousel requires at least 2 images' };
+      }
+
+      if (imageUrls.length > 10) {
+        return { success: false, error: 'Carousel supports a maximum of 10 images' };
+      }
+
+      // Step 1: Create individual media containers for each image
+      const childContainerIds: string[] = [];
+
+      for (const imageUrl of imageUrls) {
+        const containerRes = await fetch(
+          `${API_BASE}/${this.config.instagramAccountId}/media`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image_url: imageUrl,
+              is_carousel_item: true,
+              access_token: this.config.accessToken,
+            }),
+          },
+        );
+
+        const containerData = (await containerRes.json()) as { id?: string; error?: { message?: string } };
+        if (!containerRes.ok || !containerData.id) {
+          return {
+            success: false,
+            error: containerData.error?.message ?? `Failed to create carousel item container for image: ${imageUrl}`,
+          };
+        }
+
+        childContainerIds.push(containerData.id);
+      }
+
+      // Step 2: Create carousel container with all child containers
+      const carouselRes = await fetch(
+        `${API_BASE}/${this.config.instagramAccountId}/media`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            media_type: 'CAROUSEL',
+            children: childContainerIds,
+            caption,
+            access_token: this.config.accessToken,
+          }),
+        },
+      );
+
+      const carouselData = (await carouselRes.json()) as { id?: string; error?: { message?: string } };
+      if (!carouselRes.ok || !carouselData.id) {
+        return {
+          success: false,
+          error: carouselData.error?.message ?? 'Failed to create carousel container',
+        };
+      }
+
+      // Step 3: Publish the carousel container
+      const publishRes = await fetch(
+        `${API_BASE}/${this.config.instagramAccountId}/media_publish`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            creation_id: carouselData.id,
+            access_token: this.config.accessToken,
+          }),
+        },
+      );
+
+      const publishData = (await publishRes.json()) as { id?: string; error?: { message?: string } };
+      if (!publishRes.ok || !publishData.id) {
+        return {
+          success: false,
+          error: publishData.error?.message ?? 'Failed to publish carousel',
+        };
+      }
+
+      return { success: true, postId: publishData.id };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error('[InstagramService] Carousel post failed', error instanceof Error ? error : new Error(msg));
+      return { success: false, error: msg };
+    }
+  }
+
   async getProfile(): Promise<InstagramProfile | null> {
     try {
       if (!this.config.accessToken || !this.config.instagramAccountId) {

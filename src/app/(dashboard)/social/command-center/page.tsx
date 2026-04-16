@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Social Media Command Center
- * Live agent status, activity feed, health gauges, and kill switch.
+ * Social Dashboard
+ * Live social media performance, activity feed, and AI automation controls.
  *
  * Follows the "Tesla Autopilot" model — AI drives by default,
  * user can grab the wheel at any moment.
@@ -79,18 +79,24 @@ interface SwarmControlState {
 // ─── Manager display names ───────────────────────────────────────────────────
 
 const MANAGER_DISPLAY_NAMES: Record<string, string> = {
-  MARKETING_MANAGER: 'Marketing',
-  REVENUE_DIRECTOR: 'Revenue',
-  ARCHITECT_MANAGER: 'Architect',
-  BUILDER_MANAGER: 'Builder',
+  INTELLIGENCE_MANAGER: 'Research',
+  MARKETING_MANAGER: 'Social & Marketing',
+  BUILDER_MANAGER: 'Website',
+  COMMERCE_MANAGER: 'E-commerce',
+  OUTREACH_MANAGER: 'Email & Outreach',
   CONTENT_MANAGER: 'Content',
-  OUTREACH_MANAGER: 'Outreach',
-  COMMERCE_MANAGER: 'Commerce',
-  REPUTATION_MANAGER: 'Reputation',
-  INTELLIGENCE_MANAGER: 'Intelligence',
+  ARCHITECT_MANAGER: 'Strategy',
+  REVENUE_DIRECTOR: 'Sales',
+  REPUTATION_MANAGER: 'Reviews & Reputation',
 };
 
 const ALL_MANAGER_IDS = Object.keys(MANAGER_DISPLAY_NAMES);
+
+/** Resolve a platform id (possibly untyped from API) to a human-readable label. */
+function platformLabel(id: string): string {
+  const meta = PLATFORM_META[id as keyof typeof PLATFORM_META];
+  return meta ? meta.label : id;
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -115,7 +121,17 @@ const CONNECTION_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 
 // ─── Velocity Gauge Component ────────────────────────────────────────────────
 
-function VelocityGauge({ label, current, max }: { label: string; current: number; max: number }) {
+interface VelocityGaugeProps {
+  label: string;
+  current: number;
+  max: number;
+  /** Optional suffix shown after the current value (e.g. "%") */
+  suffix?: string;
+  /** If true, the denominator line ("/ max") is hidden */
+  hideMax?: boolean;
+}
+
+function VelocityGauge({ label, current, max, suffix, hideMax }: VelocityGaugeProps) {
   const percentage = max > 0 ? Math.min((current / max) * 100, 100) : 0;
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
@@ -145,12 +161,14 @@ function VelocityGauge({ label, current, max }: { label: string; current: number
           transform="rotate(-90 44 44)"
           style={{ transition: 'stroke-dashoffset 0.6s ease' }}
         />
-        <text x="44" y="40" textAnchor="middle" fill="var(--color-text-primary)" fontSize="16" fontWeight="700">
-          {current}
+        <text x="44" y={hideMax ? '48' : '40'} textAnchor="middle" fill="var(--color-text-primary)" fontSize="16" fontWeight="700">
+          {current}{suffix ?? ''}
         </text>
-        <text x="44" y="56" textAnchor="middle" fill="var(--color-text-disabled)" fontSize="10">
-          / {max}
-        </text>
+        {!hideMax && (
+          <text x="44" y="56" textAnchor="middle" fill="var(--color-text-disabled)" fontSize="10">
+            / {max}
+          </text>
+        )}
       </svg>
       <div className="text-xs text-muted-foreground mt-1">{label}</div>
     </div>
@@ -193,7 +211,7 @@ export default function CommandCenterPage() {
       }
       setLastRefresh(new Date());
     } catch (error) {
-      logger.error('Failed to fetch command center data', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Failed to fetch social dashboard data', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -297,7 +315,7 @@ export default function CommandCenterPage() {
     return (
       <div className="p-8 max-w-6xl mx-auto">
         <div className="text-center py-16 text-muted-foreground">
-          Loading Command Center...
+          Loading Social Dashboard...
         </div>
       </div>
     );
@@ -318,8 +336,8 @@ export default function CommandCenterPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <PageTitle>Command Center</PageTitle>
-          <SectionDescription className="mt-1">Social media agent status and controls</SectionDescription>
+          <PageTitle>Social Dashboard</PageTitle>
+          <SectionDescription className="mt-1">Social media performance and controls</SectionDescription>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -381,7 +399,7 @@ export default function CommandCenterPage() {
         </button>
       </div>
 
-      {/* ── Swarm Control — Global Kill Switch + Manager Toggles ──────── */}
+      {/* ── AI Automation Control ──────────────────────────────────────── */}
       {swarmControl && (
         <div
           className={`px-6 py-5 rounded-xl border ${
@@ -392,11 +410,11 @@ export default function CommandCenterPage() {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-foreground mb-1">Swarm Control</h2>
+              <h2 className="text-sm font-semibold text-foreground mb-1">AI Automation</h2>
               <p className="text-xs text-muted-foreground">
                 {swarmControl.globalPause
-                  ? 'ALL agent activity is frozen. Events and signals are queued.'
-                  : 'All systems operational. Toggle individual managers below.'}
+                  ? 'All AI activity is paused. Queued work will resume when you turn it back on.'
+                  : 'Your AI teams are working. You can pause individual departments below.'}
               </p>
             </div>
             <button
@@ -447,7 +465,7 @@ export default function CommandCenterPage() {
 
           {swarmControl.pausedManagers.length > 0 && !swarmControl.globalPause && (
             <div className="mt-3 text-xs" style={{ color: '#FF9800' }}>
-              {swarmControl.pausedManagers.length} manager{swarmControl.pausedManagers.length > 1 ? 's' : ''} individually paused
+              {swarmControl.pausedManagers.length} department{swarmControl.pausedManagers.length > 1 ? 's' : ''} individually paused
             </div>
           )}
         </div>
@@ -474,29 +492,33 @@ export default function CommandCenterPage() {
 
       {/* ── Two-Column Layout: Velocity Gauges + Platform Status ───────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Velocity Gauges */}
+        {/* Social Performance Gauges */}
         <div className="p-5 bg-card rounded-xl border border-border-light">
-          <h2 className="text-sm font-semibold text-foreground mb-4">Velocity Limits (per hour)</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-4">Performance Overview</h2>
           <div className="flex justify-around">
             <VelocityGauge
-              label="Posts / Day"
-              current={status.velocityUsage.postsToday}
-              max={status.velocityUsage.maxDailyPosts}
+              label="Posts This Week"
+              current={status.todayPublished}
+              max={status.velocityUsage.maxDailyPosts * 7}
             />
             <VelocityGauge
-              label="Posts / Hour"
+              label="Engagement Rate"
               current={0}
-              max={status.velocityUsage.postVelocityLimit}
+              max={100}
+              suffix="%"
+              hideMax
             />
             <VelocityGauge
-              label="Replies / Hour"
+              label="Follower Growth"
               current={0}
-              max={status.velocityUsage.replyVelocityLimit}
+              max={100}
+              hideMax
             />
             <VelocityGauge
-              label="Likes / Hour"
-              current={0}
-              max={status.velocityUsage.likeVelocityLimit}
+              label="Scheduled Posts"
+              current={status.scheduledCount}
+              max={Math.max(status.scheduledCount, 20)}
+              hideMax
             />
           </div>
         </div>
@@ -528,7 +550,7 @@ export default function CommandCenterPage() {
                         className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-white uppercase"
                         style={{ backgroundColor: PLATFORM_COLORS[p.platform] ?? '#666' }}
                       >
-                        {p.platform}
+                        {platformLabel(p.platform)}
                       </span>
                       <div>
                         <div className="text-sm font-medium text-foreground">{p.accountName}</div>
@@ -545,12 +567,43 @@ export default function CommandCenterPage() {
                       >
                         {p.status}
                       </span>
+                      <Link
+                        href={`/social/platforms/${p.platform}`}
+                        className="text-xs text-primary font-medium hover:underline"
+                      >
+                        Open
+                      </Link>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
+        </div>
+
+        {/* All Platforms Grid */}
+        <div className="p-5 bg-card rounded-xl border border-border-light">
+          <h3 className="text-sm font-semibold text-foreground mb-3">All Platforms</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {SOCIAL_PLATFORMS.map((p) => {
+              const pmeta = PLATFORM_META[p];
+              return (
+                <Link
+                  key={p}
+                  href={`/social/platforms/${p}`}
+                  className="flex items-center gap-2 p-2 rounded-lg border border-border-light hover:bg-surface-elevated transition-colors"
+                >
+                  <span
+                    className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ backgroundColor: pmeta.color }}
+                  >
+                    {pmeta.icon}
+                  </span>
+                  <span className="text-xs font-medium text-foreground truncate">{pmeta.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -589,7 +642,7 @@ export default function CommandCenterPage() {
                         className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-white uppercase"
                         style={{ backgroundColor: PLATFORM_COLORS[event.platform] ?? '#666' }}
                       >
-                        {event.platform}
+                        {platformLabel(event.platform)}
                       </span>
                       <span className="text-xs font-medium" style={{ color: config.color }}>
                         {config.label}

@@ -13,11 +13,22 @@ import { socialProviderSchema, oauthCallbackQuerySchema } from '@/lib/social/soc
 import {
   exchangeTwitterCode,
   exchangeLinkedInCode,
+  exchangeMetaCode,
+  exchangeGoogleSocialCode,
+  exchangeTikTokCode,
+  exchangeRedditCode,
+  exchangePinterestCode,
   fetchTwitterProfile,
   fetchLinkedInProfile,
+  fetchYouTubeChannel,
+  fetchGoogleProfile,
+  fetchTikTokProfile,
+  fetchRedditProfile,
+  fetchPinterestProfile,
   encryptCredentials,
 } from '@/lib/social/social-oauth-service';
 import { SocialAccountService } from '@/lib/social/social-account-service';
+import type { MetaCredentials, GoogleSocialCredentials, TikTokCredentials, RedditCredentials, PinterestCredentials } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,6 +135,199 @@ export async function GET(
         });
 
         return NextResponse.redirect(`${settingsUrl}?success=linkedin&category=social`);
+      }
+
+      case 'facebook': {
+        const metaResult = await exchangeMetaCode(code, state);
+        const encrypted = encryptCredentials(metaResult.tokens);
+
+        // Encrypt each page access token individually
+        const encryptedPages = metaResult.pages.map((page) => ({
+          id: page.id,
+          name: page.name,
+          accessToken: encryptCredentials({
+            accessToken: page.accessToken,
+          }).accessToken,
+        }));
+
+        const metaCredentials: MetaCredentials = {
+          accessToken: encrypted.accessToken,
+          tokenExpiresAt: encrypted.tokenExpiresAt,
+          pages: encryptedPages,
+          instagramAccountId: metaResult.instagramAccountId,
+          metaUserId: metaResult.metaUserId,
+        };
+
+        await SocialAccountService.addAccount({
+          platform: 'facebook',
+          accountName: metaResult.userName,
+          handle: metaResult.metaUserId,
+          isDefault: true,
+          status: 'active',
+          credentials: metaCredentials,
+        });
+
+        logger.info('Meta account connected via OAuth (Facebook/Instagram/Threads/WhatsApp)', {
+          route: '/api/social/oauth/callback',
+          userName: metaResult.userName,
+          pagesCount: metaResult.pages.length,
+          hasInstagram: Boolean(metaResult.instagramAccountId),
+        });
+
+        return NextResponse.redirect(`${settingsUrl}?success=facebook&category=social`);
+      }
+
+      case 'youtube': {
+        const { tokens } = await exchangeGoogleSocialCode(code, state, 'youtube');
+        const channel = await fetchYouTubeChannel(tokens.accessToken);
+        const encrypted = encryptCredentials(tokens);
+
+        const ytCredentials: GoogleSocialCredentials = {
+          accessToken: encrypted.accessToken,
+          refreshToken: encrypted.refreshToken,
+          tokenExpiresAt: encrypted.tokenExpiresAt,
+          channelId: channel.channelId,
+          scope: tokens.scope,
+        };
+
+        await SocialAccountService.addAccount({
+          platform: 'youtube',
+          accountName: channel.title,
+          handle: channel.channelId,
+          profileImageUrl: channel.thumbnailUrl,
+          isDefault: true,
+          status: 'active',
+          credentials: ytCredentials,
+        });
+
+        logger.info('YouTube account connected via OAuth', {
+          route: '/api/social/oauth/callback',
+          channelId: channel.channelId,
+          title: channel.title,
+        });
+
+        return NextResponse.redirect(`${settingsUrl}?success=youtube&category=social`);
+      }
+
+      case 'google_business': {
+        const { tokens } = await exchangeGoogleSocialCode(code, state, 'google_business');
+        const profile = await fetchGoogleProfile(tokens.accessToken);
+        const encrypted = encryptCredentials(tokens);
+
+        const gbCredentials: GoogleSocialCredentials = {
+          accessToken: encrypted.accessToken,
+          refreshToken: encrypted.refreshToken,
+          tokenExpiresAt: encrypted.tokenExpiresAt,
+          scope: tokens.scope,
+        };
+
+        await SocialAccountService.addAccount({
+          platform: 'google_business',
+          accountName: profile.name,
+          handle: profile.email,
+          profileImageUrl: profile.profileImageUrl,
+          isDefault: true,
+          status: 'active',
+          credentials: gbCredentials,
+        });
+
+        logger.info('Google Business Profile connected via OAuth', {
+          route: '/api/social/oauth/callback',
+          name: profile.name,
+          email: profile.email,
+        });
+
+        return NextResponse.redirect(`${settingsUrl}?success=google_business&category=social`);
+      }
+
+      case 'tiktok': {
+        const { tokens, openId } = await exchangeTikTokCode(code, state);
+        const profile = await fetchTikTokProfile(tokens.accessToken);
+        const encrypted = encryptCredentials(tokens);
+
+        const ttCredentials: TikTokCredentials = {
+          accessToken: encrypted.accessToken,
+          refreshToken: encrypted.refreshToken,
+          tokenExpiresAt: encrypted.tokenExpiresAt,
+          openId,
+        };
+
+        await SocialAccountService.addAccount({
+          platform: 'tiktok',
+          accountName: profile.displayName,
+          handle: profile.openId,
+          profileImageUrl: profile.avatarUrl,
+          isDefault: true,
+          status: 'active',
+          credentials: ttCredentials,
+        });
+
+        logger.info('TikTok account connected via OAuth', {
+          route: '/api/social/oauth/callback',
+          displayName: profile.displayName,
+          openId,
+        });
+
+        return NextResponse.redirect(`${settingsUrl}?success=tiktok&category=social`);
+      }
+
+      case 'reddit': {
+        const { tokens } = await exchangeRedditCode(code, state);
+        const profile = await fetchRedditProfile(tokens.accessToken);
+        const encrypted = encryptCredentials(tokens);
+
+        const redditCreds: RedditCredentials = {
+          accessToken: encrypted.accessToken,
+          refreshToken: encrypted.refreshToken,
+          tokenExpiresAt: encrypted.tokenExpiresAt,
+          username: profile.name,
+        };
+
+        await SocialAccountService.addAccount({
+          platform: 'reddit',
+          accountName: profile.name,
+          handle: profile.name,
+          profileImageUrl: profile.iconUrl,
+          isDefault: true,
+          status: 'active',
+          credentials: redditCreds,
+        });
+
+        logger.info('Reddit account connected via OAuth', {
+          route: '/api/social/oauth/callback',
+          username: profile.name,
+        });
+
+        return NextResponse.redirect(`${settingsUrl}?success=reddit&category=social`);
+      }
+
+      case 'pinterest': {
+        const { tokens } = await exchangePinterestCode(code, state);
+        const profile = await fetchPinterestProfile(tokens.accessToken);
+        const encrypted = encryptCredentials(tokens);
+
+        const pinterestCreds: PinterestCredentials = {
+          accessToken: encrypted.accessToken,
+          refreshToken: encrypted.refreshToken,
+          tokenExpiresAt: encrypted.tokenExpiresAt,
+        };
+
+        await SocialAccountService.addAccount({
+          platform: 'pinterest',
+          accountName: profile.username,
+          handle: profile.username,
+          profileImageUrl: profile.profileImageUrl,
+          isDefault: true,
+          status: 'active',
+          credentials: pinterestCreds,
+        });
+
+        logger.info('Pinterest account connected via OAuth', {
+          route: '/api/social/oauth/callback',
+          username: profile.username,
+        });
+
+        return NextResponse.redirect(`${settingsUrl}?success=pinterest&category=social`);
       }
 
       default:

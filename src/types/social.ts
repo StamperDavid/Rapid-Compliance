@@ -449,6 +449,94 @@ export interface LinkedInCredentials {
   tokenExpiresAt?: string;
 }
 
+export interface MetaCredentials {
+  accessToken: string;
+  tokenExpiresAt?: string;
+  /** The user's Facebook pages with their page-scoped access tokens */
+  pages: Array<{
+    id: string;
+    name: string;
+    accessToken: string;
+  }>;
+  /** Instagram Business account ID linked to a page, if any */
+  instagramAccountId?: string;
+  /** The Meta user ID from the Graph API */
+  metaUserId?: string;
+}
+
+export interface GoogleSocialCredentials {
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+  /** YouTube channel ID (present when connected for YouTube) */
+  channelId?: string;
+  /** OAuth scopes granted */
+  scope?: string;
+}
+
+export interface TikTokCredentials {
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+  /** TikTok open_id — unique user identifier */
+  openId?: string;
+}
+
+export interface RedditCredentials {
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+  /** Reddit username */
+  username?: string;
+}
+
+export interface PinterestCredentials {
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+}
+
+export interface BlueskyCredentials {
+  /** DID (decentralized identifier) for the account */
+  did: string;
+  /** Handle (e.g. user.bsky.social) */
+  handle: string;
+  /** AT Protocol access JWT */
+  accessJwt: string;
+  /** AT Protocol refresh JWT */
+  refreshJwt: string;
+}
+
+export interface TelegramCredentials {
+  /** Bot API token from @BotFather */
+  botToken: string;
+  /** Target chat/channel ID for posting */
+  chatId: string;
+  /** Bot username (without @) */
+  botUsername: string;
+}
+
+export interface TruthSocialCredentials {
+  /** Mastodon-compatible instance URL */
+  instanceUrl: string;
+  /** OAuth bearer access token */
+  accessToken: string;
+  /** Account username */
+  username: string;
+}
+
+export type SocialCredentials =
+  | TwitterCredentials
+  | LinkedInCredentials
+  | MetaCredentials
+  | GoogleSocialCredentials
+  | TikTokCredentials
+  | RedditCredentials
+  | PinterestCredentials
+  | BlueskyCredentials
+  | TelegramCredentials
+  | TruthSocialCredentials;
+
 export interface SocialAccount {
   id: string;
   platform: SocialPlatform;
@@ -457,7 +545,7 @@ export interface SocialAccount {
   profileImageUrl?: string;
   isDefault: boolean;
   status: SocialAccountStatus;
-  credentials: TwitterCredentials | LinkedInCredentials;
+  credentials: SocialCredentials;
   addedAt: string;
   lastUsedAt?: string;
 }

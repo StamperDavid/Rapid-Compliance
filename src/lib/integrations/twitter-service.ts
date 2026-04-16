@@ -526,6 +526,78 @@ export class TwitterService {
   }
 
   /**
+   * Post a thread (multiple tweets in reply chain)
+   * Splits content on `---` separators, posts each tweet sequentially,
+   * each replying to the previous one via in_reply_to_tweet_id.
+   * Returns the first tweet's ID as the thread ID.
+   */
+  async postThread(
+    tweetTexts: string[]
+  ): Promise<TwitterPostResponse> {
+    if (!this.config.accessToken) {
+      return {
+        success: false,
+        error: 'OAuth 2.0 access token required for posting threads.',
+      };
+    }
+
+    if (tweetTexts.length === 0) {
+      return { success: false, error: 'Thread must contain at least one tweet.' };
+    }
+
+    // Validate all tweet lengths before posting any
+    for (let i = 0; i < tweetTexts.length; i++) {
+      if (tweetTexts[i].length > 280) {
+        return {
+          success: false,
+          error: `Tweet ${i + 1} exceeds 280 characters (${tweetTexts[i].length} chars).`,
+        };
+      }
+    }
+
+    logger.info('Twitter: Posting thread', { tweetCount: tweetTexts.length });
+
+    let firstTweetId: string | undefined;
+    let previousTweetId: string | undefined;
+
+    for (let i = 0; i < tweetTexts.length; i++) {
+      const result = await this.postTweet({
+        text: tweetTexts[i],
+        replyToTweetId: previousTweetId,
+      });
+
+      if (!result.success || !result.tweetId) {
+        logger.error('Twitter: Thread posting failed at tweet', new Error(result.error ?? 'Unknown'), {
+          tweetIndex: i,
+          threadId: firstTweetId,
+        });
+        return {
+          success: false,
+          tweetId: firstTweetId,
+          error: `Thread failed at tweet ${i + 1}/${tweetTexts.length}: ${result.error ?? 'Unknown error'}`,
+          rateLimitRemaining: result.rateLimitRemaining,
+          rateLimitReset: result.rateLimitReset,
+        };
+      }
+
+      if (i === 0) {
+        firstTweetId = result.tweetId;
+      }
+      previousTweetId = result.tweetId;
+    }
+
+    logger.info('Twitter: Thread posted successfully', {
+      threadId: firstTweetId,
+      tweetCount: tweetTexts.length,
+    });
+
+    return {
+      success: true,
+      tweetId: firstTweetId,
+    };
+  }
+
+  /**
    * Delete a tweet
    */
   async deleteTweet(tweetId: string): Promise<{ success: boolean; error?: string }> {

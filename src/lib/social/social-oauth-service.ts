@@ -1,6 +1,7 @@
 /**
  * Social OAuth Service
- * Handles OAuth flows for Twitter (PKCE) and LinkedIn social platforms.
+ * Handles OAuth flows for Twitter (PKCE), LinkedIn, Meta (Facebook/Instagram/Threads/WhatsApp),
+ * Google (YouTube + Google Business Profile), TikTok, Reddit, and Pinterest.
  * Generates auth URLs, exchanges codes for tokens, fetches profiles.
  */
 
@@ -9,7 +10,7 @@ import { logger } from '@/lib/logger/logger';
 import { encryptToken } from '@/lib/security/token-encryption';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
-import type { SocialOAuthState, SocialOAuthTokenResult } from '@/types/social';
+import type { SocialOAuthState, SocialOAuthTokenResult, SocialPlatform } from '@/types/social';
 
 const OAUTH_STATES_PATH = getSubCollection('socialOAuthStates');
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -28,7 +29,7 @@ function generateCodeChallenge(verifier: string): string {
 
 async function storeOAuthState(
   userId: string,
-  provider: 'twitter' | 'linkedin',
+  provider: SocialPlatform,
   codeVerifier?: string
 ): Promise<string> {
   const stateToken = crypto.randomBytes(32).toString('hex');
@@ -47,7 +48,7 @@ async function storeOAuthState(
 
 async function retrieveAndDeleteOAuthState(
   stateToken: string,
-  expectedProvider: 'twitter' | 'linkedin'
+  expectedProvider: SocialPlatform
 ): Promise<SocialOAuthState | null> {
   try {
     const raw = await FirestoreService.get(OAUTH_STATES_PATH, stateToken);
@@ -318,6 +319,684 @@ export async function fetchLinkedInProfile(accessToken: string): Promise<{
     id: data.sub,
     name: data.name,
     profileImageUrl: data.picture,
+  };
+}
+
+// ─── Meta OAuth 2.0 (Facebook / Instagram / Threads / WhatsApp) ─────────────
+
+/**
+ * Meta Graph API page data returned from /me/accounts
+ */
+interface MetaPageData {
+  id: string;
+  name: string;
+  access_token: string;
+}
+
+/**
+ * Shape of the Instagram business account response from the Graph API
+ */
+interface MetaInstagramBusinessAccount {
+  instagram_business_account?: { id: string };
+}
+
+export async function generateMetaAuthUrl(userId: string): Promise<string> {
+  const clientId = process.env.META_APP_ID;
+  if (!clientId) {
+    throw new Error('META_APP_ID environment variable is not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/facebook`;
+  const state = await storeOAuthState(userId, 'facebook');
+
+  const scopes = [
+    'pages_manage_posts',
+    'pages_read_engagement',
+    'instagram_basic',
+    'instagram_content_publish',
+    'threads_basic',
+    'threads_content_publish',
+    'whatsapp_business_management',
+    'whatsapp_business_messaging',
+  ].join(',');
+
+  return (
+    `https://www.facebook.com/v19.0/dialog/oauth` +
+    `?client_id=${clientId}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&scope=${encodeURIComponent(scopes)}` +
+    `&state=${state}` +
+    `&response_type=code`
+  );
+}
+
+export async function exchangeMetaCode(
+  code: string,
+  stateToken: string
+): Promise<{
+  tokens: SocialOAuthTokenResult;
+  stateData: SocialOAuthState;
+  pages: Array<{ id: string; name: string; accessToken: string }>;
+  instagramAccountId?: string;
+  metaUserId: string;
+  userName: string;
+}> {
+  const stateData = await retrieveAndDeleteOAuthState(stateToken, 'facebook');
+  if (!stateData) {
+    throw new Error('Invalid or expired OAuth state');
+  }
+
+  const clientId = process.env.META_APP_ID;
+  const clientSecret = process.env.META_APP_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('Meta OAuth credentials not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/facebook`;
+
+  // Step 1: Exchange code for short-lived token
+  const tokenUrl = new URL('https://graph.facebook.com/v19.0/oauth/access_token');
+  tokenUrl.searchParams.set('client_id', clientId);
+  tokenUrl.searchParams.set('client_secret', clientSecret);
+  tokenUrl.searchParams.set('redirect_uri', redirectUri);
+  tokenUrl.searchParams.set('code', code);
+
+  const tokenResponse = await fetch(tokenUrl.toString());
+  if (!tokenResponse.ok) {
+    const errorText = await tokenResponse.text();
+    logger.error('Meta short-lived token exchange failed', new Error(errorText));
+    throw new Error('Failed to exchange Meta authorization code');
+  }
+
+  const shortLivedData = await tokenResponse.json() as {
+    access_token: string;
+    token_type: string;
+    expires_in?: number;
+  };
+
+  // Step 2: Exchange short-lived token for long-lived token
+  const longLivedUrl = new URL('https://graph.facebook.com/v19.0/oauth/access_token');
+  longLivedUrl.searchParams.set('grant_type', 'fb_exchange_token');
+  longLivedUrl.searchParams.set('client_id', clientId);
+  longLivedUrl.searchParams.set('client_secret', clientSecret);
+  longLivedUrl.searchParams.set('fb_exchange_token', shortLivedData.access_token);
+
+  const longLivedResponse = await fetch(longLivedUrl.toString());
+  if (!longLivedResponse.ok) {
+    const errorText = await longLivedResponse.text();
+    logger.error('Meta long-lived token exchange failed', new Error(errorText));
+    throw new Error('Failed to obtain long-lived Meta access token');
+  }
+
+  const longLivedTokenData = await longLivedResponse.json() as {
+    access_token: string;
+    token_type: string;
+    expires_in?: number;
+  };
+
+  const tokens: SocialOAuthTokenResult = {
+    accessToken: longLivedTokenData.access_token,
+    tokenExpiresAt: longLivedTokenData.expires_in
+      ? new Date(Date.now() + longLivedTokenData.expires_in * 1000).toISOString()
+      : undefined,
+  };
+
+  // Step 3: Fetch the user's name and ID
+  const meResponse = await fetch(
+    `https://graph.facebook.com/v19.0/me?fields=id,name&access_token=${tokens.accessToken}`
+  );
+  if (!meResponse.ok) {
+    const errorText = await meResponse.text();
+    logger.error('Meta user profile fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch Meta user profile');
+  }
+
+  const meData = await meResponse.json() as { id: string; name: string };
+
+  // Step 4: Fetch the user's Facebook pages
+  const pagesResponse = await fetch(
+    `https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token&access_token=${tokens.accessToken}`
+  );
+  if (!pagesResponse.ok) {
+    const errorText = await pagesResponse.text();
+    logger.error('Meta pages fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch Meta pages');
+  }
+
+  const pagesData = await pagesResponse.json() as { data: MetaPageData[] };
+  const pages = (pagesData.data ?? []).map((page) => ({
+    id: page.id,
+    name: page.name,
+    accessToken: page.access_token,
+  }));
+
+  // Step 5: For each page, check for linked Instagram Business account
+  let instagramAccountId: string | undefined;
+
+  for (const page of pages) {
+    try {
+      const igResponse = await fetch(
+        `https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account&access_token=${page.accessToken}`
+      );
+      if (igResponse.ok) {
+        const igData = await igResponse.json() as MetaInstagramBusinessAccount;
+        if (igData.instagram_business_account?.id) {
+          instagramAccountId = igData.instagram_business_account.id;
+          break; // Use the first page with a linked IG account
+        }
+      }
+    } catch (igError) {
+      logger.warn('Failed to check Instagram business account for page', {
+        pageId: page.id,
+        error: igError instanceof Error ? igError.message : String(igError),
+      });
+    }
+  }
+
+  return { tokens, stateData, pages, instagramAccountId, metaUserId: meData.id, userName: meData.name };
+}
+
+// ─── Google OAuth 2.0 (YouTube + Google Business Profile) ────────────────────
+
+/**
+ * Generate a Google OAuth URL for YouTube or Google Business Profile.
+ * Both use Google's OAuth 2.0 but with different scopes and redirect URIs.
+ */
+export async function generateGoogleSocialAuthUrl(
+  userId: string,
+  scopes: string[],
+  provider: 'youtube' | 'google_business'
+): Promise<string> {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    throw new Error('GOOGLE_CLIENT_ID environment variable is not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/${provider}`;
+  const state = await storeOAuthState(userId, provider);
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: scopes.join(' '),
+    access_type: 'offline',
+    prompt: 'consent',
+    state,
+  });
+
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+export async function exchangeGoogleSocialCode(
+  code: string,
+  stateToken: string,
+  provider: 'youtube' | 'google_business'
+): Promise<{ tokens: SocialOAuthTokenResult; stateData: SocialOAuthState }> {
+  const stateData = await retrieveAndDeleteOAuthState(stateToken, provider);
+  if (!stateData) {
+    throw new Error('Invalid or expired OAuth state');
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('Google OAuth credentials not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/${provider}`;
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Google token exchange failed', new Error(errorText));
+    throw new Error('Failed to exchange Google authorization code');
+  }
+
+  const data = await response.json() as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
+
+  const tokens: SocialOAuthTokenResult = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    tokenExpiresAt: data.expires_in
+      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+      : undefined,
+    scope: data.scope,
+  };
+
+  return { tokens, stateData };
+}
+
+/**
+ * Fetch the authenticated user's YouTube channel info.
+ */
+export async function fetchYouTubeChannel(accessToken: string): Promise<{
+  channelId: string;
+  title: string;
+  thumbnailUrl?: string;
+}> {
+  const response = await fetch(
+    'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('YouTube channel fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch YouTube channel');
+  }
+
+  const data = await response.json() as {
+    items?: Array<{
+      id: string;
+      snippet: {
+        title: string;
+        thumbnails?: {
+          default?: { url: string };
+        };
+      };
+    }>;
+  };
+
+  const channel = data.items?.[0];
+  if (!channel) {
+    throw new Error('No YouTube channel found for this Google account');
+  }
+
+  return {
+    channelId: channel.id,
+    title: channel.snippet.title,
+    thumbnailUrl: channel.snippet.thumbnails?.default?.url,
+  };
+}
+
+/**
+ * Fetch the authenticated user's Google profile (used for Google Business).
+ */
+export async function fetchGoogleProfile(accessToken: string): Promise<{
+  id: string;
+  name: string;
+  email: string;
+  profileImageUrl?: string;
+}> {
+  const response = await fetch(
+    'https://www.googleapis.com/oauth2/v2/userinfo',
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Google profile fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch Google profile');
+  }
+
+  const data = await response.json() as {
+    id: string;
+    name: string;
+    email: string;
+    picture?: string;
+  };
+
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    profileImageUrl: data.picture,
+  };
+}
+
+// ─── TikTok OAuth 2.0 ──────────────────────────────────────────────────────
+
+export async function generateTikTokAuthUrl(userId: string): Promise<string> {
+  const clientKey = process.env.TIKTOK_CLIENT_KEY;
+  if (!clientKey) {
+    throw new Error('TIKTOK_CLIENT_KEY environment variable is not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/tiktok`;
+  const state = await storeOAuthState(userId, 'tiktok');
+
+  const params = new URLSearchParams({
+    client_key: clientKey,
+    response_type: 'code',
+    scope: 'video.upload,video.publish',
+    redirect_uri: redirectUri,
+    state,
+  });
+
+  return `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`;
+}
+
+export async function exchangeTikTokCode(
+  code: string,
+  stateToken: string
+): Promise<{
+  tokens: SocialOAuthTokenResult;
+  stateData: SocialOAuthState;
+  openId: string;
+}> {
+  const stateData = await retrieveAndDeleteOAuthState(stateToken, 'tiktok');
+  if (!stateData) {
+    throw new Error('Invalid or expired OAuth state');
+  }
+
+  const clientKey = process.env.TIKTOK_CLIENT_KEY;
+  const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+  if (!clientKey || !clientSecret) {
+    throw new Error('TikTok OAuth credentials not configured');
+  }
+
+  const response = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_key: clientKey,
+      client_secret: clientSecret,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/tiktok`,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('TikTok token exchange failed', new Error(errorText));
+    throw new Error('Failed to exchange TikTok authorization code');
+  }
+
+  const data = await response.json() as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    open_id: string;
+    scope?: string;
+  };
+
+  const tokens: SocialOAuthTokenResult = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    tokenExpiresAt: data.expires_in
+      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+      : undefined,
+    scope: data.scope,
+  };
+
+  return { tokens, stateData, openId: data.open_id };
+}
+
+/**
+ * Fetch TikTok user display name for account labeling.
+ */
+export async function fetchTikTokProfile(accessToken: string): Promise<{
+  openId: string;
+  displayName: string;
+  avatarUrl?: string;
+}> {
+  const response = await fetch(
+    'https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url',
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('TikTok profile fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch TikTok profile');
+  }
+
+  const data = await response.json() as {
+    data: {
+      user: {
+        open_id: string;
+        display_name: string;
+        avatar_url?: string;
+      };
+    };
+  };
+
+  return {
+    openId: data.data.user.open_id,
+    displayName: data.data.user.display_name,
+    avatarUrl: data.data.user.avatar_url,
+  };
+}
+
+// ─── Reddit OAuth 2.0 ──────────────────────────────────────────────────────
+
+export async function generateRedditAuthUrl(userId: string): Promise<string> {
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  if (!clientId) {
+    throw new Error('REDDIT_CLIENT_ID environment variable is not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/reddit`;
+  const state = await storeOAuthState(userId, 'reddit');
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    state,
+    redirect_uri: redirectUri,
+    duration: 'permanent',
+    scope: 'submit,identity',
+  });
+
+  return `https://www.reddit.com/api/v1/authorize?${params.toString()}`;
+}
+
+export async function exchangeRedditCode(
+  code: string,
+  stateToken: string
+): Promise<{ tokens: SocialOAuthTokenResult; stateData: SocialOAuthState }> {
+  const stateData = await retrieveAndDeleteOAuthState(stateToken, 'reddit');
+  if (!stateData) {
+    throw new Error('Invalid or expired OAuth state');
+  }
+
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('Reddit OAuth credentials not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/reddit`;
+
+  // Reddit requires HTTP Basic auth with client_id:client_secret
+  const response = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Reddit token exchange failed', new Error(errorText));
+    throw new Error('Failed to exchange Reddit authorization code');
+  }
+
+  const data = await response.json() as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
+
+  const tokens: SocialOAuthTokenResult = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    tokenExpiresAt: data.expires_in
+      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+      : undefined,
+    scope: data.scope,
+  };
+
+  return { tokens, stateData };
+}
+
+/**
+ * Fetch Reddit user identity (username).
+ */
+export async function fetchRedditProfile(accessToken: string): Promise<{
+  id: string;
+  name: string;
+  iconUrl?: string;
+}> {
+  const response = await fetch('https://oauth.reddit.com/api/v1/me', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'User-Agent': 'SalesVelocity/1.0',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Reddit profile fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch Reddit profile');
+  }
+
+  const data = await response.json() as {
+    id: string;
+    name: string;
+    icon_img?: string;
+  };
+
+  return {
+    id: data.id,
+    name: data.name,
+    iconUrl: data.icon_img,
+  };
+}
+
+// ─── Pinterest OAuth 2.0 ────────────────────────────────────────────────────
+
+export async function generatePinterestAuthUrl(userId: string): Promise<string> {
+  const appId = process.env.PINTEREST_APP_ID;
+  if (!appId) {
+    throw new Error('PINTEREST_APP_ID environment variable is not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/pinterest`;
+  const state = await storeOAuthState(userId, 'pinterest');
+
+  const params = new URLSearchParams({
+    client_id: appId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'boards:read,pins:read,pins:write',
+    state,
+  });
+
+  return `https://api.pinterest.com/oauth/?${params.toString()}`;
+}
+
+export async function exchangePinterestCode(
+  code: string,
+  stateToken: string
+): Promise<{ tokens: SocialOAuthTokenResult; stateData: SocialOAuthState }> {
+  const stateData = await retrieveAndDeleteOAuthState(stateToken, 'pinterest');
+  if (!stateData) {
+    throw new Error('Invalid or expired OAuth state');
+  }
+
+  const appId = process.env.PINTEREST_APP_ID;
+  const appSecret = process.env.PINTEREST_APP_SECRET;
+  if (!appId || !appSecret) {
+    throw new Error('Pinterest OAuth credentials not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/pinterest`;
+
+  const response = await fetch('https://api.pinterest.com/v5/oauth/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${Buffer.from(`${appId}:${appSecret}`).toString('base64')}`,
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Pinterest token exchange failed', new Error(errorText));
+    throw new Error('Failed to exchange Pinterest authorization code');
+  }
+
+  const data = await response.json() as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
+
+  const tokens: SocialOAuthTokenResult = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    tokenExpiresAt: data.expires_in
+      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+      : undefined,
+    scope: data.scope,
+  };
+
+  return { tokens, stateData };
+}
+
+/**
+ * Fetch Pinterest user profile for account labeling.
+ */
+export async function fetchPinterestProfile(accessToken: string): Promise<{
+  username: string;
+  profileImageUrl?: string;
+}> {
+  const response = await fetch('https://api.pinterest.com/v5/user_account', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Pinterest profile fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch Pinterest profile');
+  }
+
+  const data = await response.json() as {
+    username: string;
+    profile_image?: string;
+  };
+
+  return {
+    username: data.username,
+    profileImageUrl: data.profile_image,
   };
 }
 

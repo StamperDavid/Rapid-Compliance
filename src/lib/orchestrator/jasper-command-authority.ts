@@ -737,7 +737,7 @@ export class JasperCommandAuthority {
     const signal = signalBus.createSignal('DIRECT', 'JASPER', targetManager, message);
 
     try {
-      const reports = await signalBus.send(signal);
+      await signalBus.send(signal);
 
       // Store command in MemoryVault
       const vault = getMemoryVault();
@@ -753,11 +753,26 @@ export class JasperCommandAuthority {
         priority,
       });
 
-      if (reports.length > 0 && reports[0].status === 'COMPLETED') {
+      // Signal bus delivery is fire-and-forget (no persistent listeners).
+      // The real execution happens via the command dispatcher, which
+      // instantiates the target manager and calls execute() directly —
+      // same pattern as the delegate_to_* tools in jasper-tools.ts.
+      const { dispatchCommand } = await import('./command-dispatcher');
+      const dispatchResult = await dispatchCommand(targetManager, command, parameters);
+
+      if (dispatchResult.success) {
         return {
           commandId,
           status: 'EXECUTED',
-          response: reports[0].data as Record<string, unknown>,
+          response: dispatchResult.managerReport?.data as Record<string, unknown> ?? { message: 'Command executed successfully' },
+        };
+      }
+
+      if (dispatchResult.error) {
+        return {
+          commandId,
+          status: 'FAILED',
+          error: dispatchResult.error,
         };
       }
 

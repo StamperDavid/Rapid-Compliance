@@ -1804,7 +1804,7 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
     <div className="p-5">
       {/* Header with title + streaming indicator */}
       <div className="flex items-center gap-3 mb-3.5">
-        <PageTitle className="text-2xl">Mission Control</PageTitle>
+        <PageTitle className="text-2xl">Projects</PageTitle>
         {isStreaming && <LiveBadge />}
       </div>
 
