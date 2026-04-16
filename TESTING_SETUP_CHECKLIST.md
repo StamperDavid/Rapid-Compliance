@@ -1,6 +1,26 @@
 # Every Account, API Key, and Sign-in Needed to Test the Full System
 
+> **IMPORTANT:** Complete the "Developer App Registration" section FIRST.
+> These are one-time setup steps that YOU (the platform owner) do once.
+> Your clients never see this — they just click "Connect" in the app.
+
 Work through this list top to bottom. Check off each one as you complete it. Enter all API keys at `localhost:3000/settings/api-keys` unless noted otherwise.
+
+---
+
+## Developer App Registrations (do these FIRST — one time only)
+
+These go in your `.env.local` file. Without them, the Connect buttons for these platforms won't work.
+
+- [ ] **Meta (Facebook/Instagram/Threads/WhatsApp)** — Go to https://developers.facebook.com, create an app, get `META_APP_ID` and `META_APP_SECRET`. Add to `.env.local`.
+- [ ] **TikTok** — Go to https://developers.tiktok.com, register an app, get `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET`. Add to `.env.local`.
+- [ ] **Reddit** — Go to https://www.reddit.com/prefs/apps, create a "web app", get `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET`. Add to `.env.local`.
+- [ ] **Pinterest** — Go to https://developers.pinterest.com, create an app, get `PINTEREST_APP_ID` and `PINTEREST_APP_SECRET`. Add to `.env.local`.
+- [ ] **Google (YouTube + Google Business)** — `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are ALREADY in `.env.local`. Just enable the YouTube Data API v3 and Business Profile API in your Google Cloud project at https://console.cloud.google.com.
+
+Twitter and LinkedIn developer apps are already set up (their OAuth flows already work).
+
+Bluesky, Telegram, and Truth Social don't need developer apps — the credential forms handle everything.
 
 ---
 
