@@ -27,14 +27,12 @@ export const CATALOG_TABS: SubpageNavItem[] = [
 
 // ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
 export const SOCIAL_TABS: SubpageNavItem[] = [
-  { label: 'Dashboard', href: '/social/command-center' },
+  { label: 'Platforms', href: '/social' },
   { label: 'Campaigns', href: '/social/campaigns' },
   { label: 'Calendar', href: '/social/calendar' },
-  { label: 'Approvals', href: '/social/approvals' },
-  { label: 'Listening', href: '/social/listening' },
-  { label: 'AI Rules', href: '/social/agent-rules' },
-  { label: 'Strategy', href: '/social/playbook' },
   { label: 'Analytics', href: '/social/analytics' },
+  { label: 'Listening', href: '/social/listening' },
+  { label: 'AI Settings', href: '/social/agent-rules' },
 ];
 
 // ── Analytics ───────────────────────────────────────────────────────────────
