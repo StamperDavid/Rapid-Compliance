@@ -214,10 +214,10 @@ export type ClosingRequest = z.infer<typeof GenerateClosingStrategyPayloadSchema
 const LineItemSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().min(1).max(500),
-  quantity: z.number().int().min(1).max(10000),
-  unitPrice: z.number().min(0).max(10_000_000),
-  total: z.number().min(0).max(1_000_000_000),
-  discount: z.number().min(0).max(100).optional(),
+  quantity: z.coerce.number().int().min(1).max(10000),
+  unitPrice: z.coerce.number().min(0).max(10_000_000),
+  total: z.coerce.number().min(0).max(1_000_000_000),
+  discount: z.coerce.number().min(0).max(100).optional(),
 });
 
 const ContractSectionSchema = z.object({
