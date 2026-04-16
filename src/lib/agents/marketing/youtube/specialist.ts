@@ -158,13 +158,13 @@ const YouTubeContentResultSchema = z.object({
     description: z.string().min(10).max(200),
   })).min(3).max(15),
   endScreenCTA: z.object({
-    verbalCTA: z.string().min(10).max(300),
-    visualCTA: z.string().min(10).max(300),
-    timing: z.string().min(5).max(100),
+    verbalCTA: z.string().min(10).max(1500),
+    visualCTA: z.string().min(10).max(1500),
+    timing: z.string().min(5).max(200),
   }),
   playlistStrategy: z.object({
-    suggestedPlaylist: z.string().min(5).max(200),
-    positionRationale: z.string().min(20).max(500),
+    suggestedPlaylist: z.string().min(5).max(500),
+    positionRationale: z.string().min(20).max(2000),
     relatedTopics: z.array(z.string().min(3)).min(2).max(5),
   }),
 });

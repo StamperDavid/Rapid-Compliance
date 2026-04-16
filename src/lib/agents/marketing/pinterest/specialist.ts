@@ -179,9 +179,9 @@ const PinterestContentResultSchema = z.object({
     contentCalendar: z.array(z.object({
       month: z.string().min(3).max(20),
       theme: z.string().min(5).max(100),
-      pinIdea: z.string().min(10).max(200),
+      pinIdea: z.string().min(10).max(1000),
     })).min(3).max(6),
-    timingTip: z.string().min(10).max(300),
+    timingTip: z.string().min(10).max(1000),
   }),
 });
 

@@ -266,8 +266,8 @@ const FollowUpStepSchema = z.object({
 const ObjectionPreemptionSchema = z.object({
   likelyObjection: z.string().min(5).max(400),
   preemptionStrategy: z.string().min(20).max(600),
-  reframingStatement: z.string().min(20).max(500),
-  proofPoint: z.string().min(10).max(500),
+  reframingStatement: z.string().min(20).max(2000),
+  proofPoint: z.string().min(10).max(2000),
 });
 
 const GenerateClosingStrategyResultSchema = z.object({
