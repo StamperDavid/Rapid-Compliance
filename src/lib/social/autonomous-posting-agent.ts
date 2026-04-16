@@ -875,7 +875,7 @@ export class AutonomousPostingAgent {
     metadata?: Record<string, string>,
   ): Promise<{ success: boolean; postId?: string; error?: string }> {
     const mediaUrls = metadata?.mediaUrl ? [metadata.mediaUrl] : undefined;
-    return this.postToPlatform(platform, content, mediaUrls);
+    return this.postToPlatform(platform, content, mediaUrls, undefined, metadata);
   }
 
   /**
@@ -885,13 +885,18 @@ export class AutonomousPostingAgent {
     platform: SocialPlatform,
     content: string,
     mediaUrls?: string[],
-    accountId?: string
+    accountId?: string,
+    metadata?: Record<string, string>
   ): Promise<PostingResult> {
     const postId = `post-${platform}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     try {
       switch (platform) {
         case 'twitter':
+          // Detect thread format: content with `---` separators between tweets
+          if (content.includes('---')) {
+            return await this.postTwitterThread(postId, content, accountId);
+          }
           return await this.postToTwitter(postId, content, mediaUrls, accountId);
 
         case 'linkedin': {
@@ -918,6 +923,17 @@ export class AutonomousPostingAgent {
           if (!instagramService) {
             return { success: false, platform, postId, error: 'Instagram service not configured — add credentials in Settings > API Keys' };
           }
+
+          // Carousel mode: contentType=carousel with slideImages in metadata
+          if (metadata?.contentType === 'carousel' && metadata.slideImages) {
+            const slideImages = metadata.slideImages.split(',').map((u) => u.trim()).filter(Boolean);
+            if (slideImages.length < 2) {
+              return { success: false, platform, postId, error: 'Carousel requires at least 2 images' };
+            }
+            const carouselResult = await instagramService.publishCarousel(slideImages, content);
+            return { success: carouselResult.success, platform, postId, platformPostId: carouselResult.postId, error: carouselResult.error };
+          }
+
           if (!mediaUrls?.[0]) {
             return { success: false, platform, postId, error: 'Instagram requires an image or video — no media URL provided' };
           }
@@ -995,11 +1011,24 @@ export class AutonomousPostingAgent {
           if (!redditService) {
             return { success: false, platform, postId, error: 'Reddit service not configured — add credentials in Settings > API Keys' };
           }
-          // Reddit requires subreddit + title — extract from content or use defaults
-          const lines = content.split('\n').filter(Boolean);
-          const title = lines[0]?.substring(0, 300) ?? 'New post';
-          const body = lines.slice(1).join('\n') || content;
-          const redditResult = await redditService.submitPost({ subreddit: 'u_me', title, text: body, kind: 'self' });
+
+          // Use metadata for subreddit and title when provided; fall back to content parsing
+          const subreddit = metadata?.subreddit ?? 'u_me';
+          const redditTitle = metadata?.title ?? content.split('\n').filter(Boolean)[0]?.substring(0, 300) ?? 'New post';
+          const redditBody = metadata?.title
+            ? content  // When title comes from metadata, entire content is the body
+            : (content.split('\n').filter(Boolean).slice(1).join('\n') || content);
+
+          // Determine post kind: link if a URL is provided, otherwise self (text)
+          const redditKind = metadata?.url ? 'link' as const : 'self' as const;
+
+          const redditResult = await redditService.submitPost({
+            subreddit,
+            title: redditTitle,
+            text: redditKind === 'self' ? redditBody : undefined,
+            url: metadata?.url,
+            kind: redditKind,
+          });
           return { success: redditResult.success, platform, postId, platformPostId: redditResult.postId, error: redditResult.error };
         }
 
@@ -1101,6 +1130,61 @@ export class AutonomousPostingAgent {
       // Note: Media upload requires separate media upload API
       // mediaIds would need to be obtained by uploading media first
     });
+
+    if (result.success) {
+      return {
+        success: true,
+        platform: 'twitter',
+        postId,
+        platformPostId: result.tweetId,
+        publishedAt: new Date(),
+      };
+    }
+
+    return {
+      success: false,
+      platform: 'twitter',
+      postId,
+      error: result.error,
+      rateLimited: result.rateLimitRemaining === 0,
+      nextRetryAt: result.rateLimitReset,
+    };
+  }
+
+  /**
+   * Post a Twitter thread: content is split on `---` separators,
+   * each segment becomes a tweet in a reply chain.
+   */
+  private async postTwitterThread(
+    postId: string,
+    content: string,
+    accountId?: string
+  ): Promise<PostingResult> {
+    let service: TwitterService | null = null;
+    if (accountId) {
+      service = await createTwitterServiceForAccount(accountId);
+    }
+    if (!service) {
+      this.twitterService ??= await createTwitterService();
+      service = this.twitterService;
+    }
+
+    if (!service) {
+      return { success: false, platform: 'twitter', postId, error: 'Twitter service not configured' };
+    }
+
+    // Split content by --- separator, trim each tweet, drop empty segments
+    const tweetTexts = content
+      .split('---')
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+
+    if (tweetTexts.length < 2) {
+      // Not a real thread, fall back to single tweet with the full content
+      return this.postToTwitter(postId, content, undefined, accountId);
+    }
+
+    const result = await service.postThread(tweetTexts);
 
     if (result.success) {
       return {

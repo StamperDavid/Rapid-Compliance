@@ -10,6 +10,7 @@ import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { PLATFORM_META } from '@/lib/social/platform-config';
+import { MediaUploader } from '@/components/social/MediaUploader';
 import type { SocialPlatform } from '@/types/social';
 
 interface ContentTypeConfig {
@@ -246,6 +247,7 @@ export default function PlatformPage() {
   const [posting, setPosting] = useState(false);
   const [connected, setConnected] = useState<boolean | null>(null);
   const [recentPosts, setRecentPosts] = useState<Array<{ id: string; content: string; publishedAt: string; status: string }>>([]);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
 
   const activeContentType = contentTypes.find((ct) => ct.id === selectedContentType) ?? contentTypes[0];
 
@@ -296,13 +298,17 @@ export default function PlatformPage() {
           platform,
           contentType: selectedContentType,
           content: formData.content ?? '',
-          metadata: formData,
+          metadata: {
+            ...formData,
+            ...(mediaUrl ? { mediaUrl } : {}),
+          },
         }),
       });
       const result = (await res.json()) as PostResult;
       if (result.success) {
         toast.success(`Posted to ${meta?.label ?? platform}!`);
         setFormData({});
+        setMediaUrl(null);
         void fetchRecentPosts();
       } else {
         toast.error(result.error ?? 'Post failed');
@@ -376,6 +382,7 @@ export default function PlatformPage() {
                       onClick={() => {
                         setSelectedContentType(ct.id);
                         setFormData({});
+                        setMediaUrl(null);
                       }}
                     >
                       {ct.label}
@@ -434,6 +441,18 @@ export default function PlatformPage() {
                   )}
                 </div>
               ))}
+
+              {/* Media upload */}
+              <div>
+                <label className="text-sm font-medium text-foreground">Attach Media</label>
+                <div className="mt-1">
+                  <MediaUploader
+                    onUpload={(url) => setMediaUrl(url)}
+                    onRemove={() => setMediaUrl(null)}
+                    disabled={posting || connected === false}
+                  />
+                </div>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <Button
