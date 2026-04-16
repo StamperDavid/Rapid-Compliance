@@ -14,6 +14,11 @@ import { socialProviderSchema } from '@/lib/social/social-oauth-schemas';
 import {
   generateTwitterAuthUrl,
   generateLinkedInAuthUrl,
+  generateMetaAuthUrl,
+  generateGoogleSocialAuthUrl,
+  generateTikTokAuthUrl,
+  generateRedditAuthUrl,
+  generatePinterestAuthUrl,
 } from '@/lib/social/social-oauth-service';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +45,7 @@ export async function GET(
     // Validate provider
     const providerValidation = socialProviderSchema.safeParse(provider);
     if (!providerValidation.success) {
-      return errors.badRequest(`Unsupported provider: ${provider}. Must be 'twitter' or 'linkedin'.`);
+      return errors.badRequest(`Unsupported provider: ${provider}. Must be 'twitter', 'linkedin', 'facebook', 'instagram', 'threads', or 'whatsapp_business'.`);
     }
 
     const validProvider = providerValidation.data;
@@ -60,6 +65,33 @@ export async function GET(
         break;
       case 'linkedin':
         authUrl = await generateLinkedInAuthUrl(userId);
+        break;
+      case 'facebook':
+      case 'instagram':
+      case 'threads':
+      case 'whatsapp_business':
+        // All Meta platforms use the same Facebook OAuth flow
+        authUrl = await generateMetaAuthUrl(userId);
+        break;
+      case 'youtube':
+        authUrl = await generateGoogleSocialAuthUrl(userId, [
+          'https://www.googleapis.com/auth/youtube.upload',
+          'https://www.googleapis.com/auth/youtube',
+        ], 'youtube');
+        break;
+      case 'google_business':
+        authUrl = await generateGoogleSocialAuthUrl(userId, [
+          'https://www.googleapis.com/auth/business.manage',
+        ], 'google_business');
+        break;
+      case 'tiktok':
+        authUrl = await generateTikTokAuthUrl(userId);
+        break;
+      case 'reddit':
+        authUrl = await generateRedditAuthUrl(userId);
+        break;
+      case 'pinterest':
+        authUrl = await generatePinterestAuthUrl(userId);
         break;
       default:
         // Platforms without OAuth flow yet — return helpful error
