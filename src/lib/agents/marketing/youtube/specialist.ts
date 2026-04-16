@@ -143,8 +143,8 @@ const YouTubeContentResultSchema = z.object({
   tags: z.array(z.string().min(1)).min(5).max(15),
   thumbnailConcept: z.object({
     headline: z.string().min(3).max(100),
-    visualDescription: z.string().min(20).max(500),
-    emotionalTrigger: z.string().min(5).max(200),
+    visualDescription: z.string().min(20).max(2000),
+    emotionalTrigger: z.string().min(5).max(1000),
   }),
   scriptOutline: z.array(z.object({
     section: z.string().min(3).max(100),

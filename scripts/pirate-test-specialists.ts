@@ -469,14 +469,14 @@ const TESTS: TestCase[] = [
     specialistFactory: () => getObjectionHandlerSpecialist(),
     buildPayload: () => ({
       action: 'handle_objection',
-      objection: 'We already have HubSpot and switching would be too expensive and disruptive.',
-      context: {
-        leadName: 'John Smith',
-        company: 'Acme Corp',
-        industry: 'SaaS',
-        dealStage: 'NEGOTIATION',
-        dealValue: 30000,
-        competitorMentioned: 'HubSpot',
+      objection: {
+        rawObjection: 'We already have HubSpot and switching would be too expensive and disruptive.',
+        context: {
+          dealValue: 30000,
+          industry: 'SaaS',
+          competitorMentioned: 'HubSpot',
+          companySize: '50-200',
+        },
       },
     }),
     extractProseFields: extractAllProse,
@@ -523,10 +523,14 @@ const TESTS: TestCase[] = [
     specialistFactory: () => getReviewManagerSpecialist(),
     buildPayload: () => ({
       action: 'analyze_reviews',
+      businessContext: {
+        brandName: 'SalesVelocity.ai',
+        industry: 'B2B SaaS',
+      },
       reviews: [
-        { platform: 'google', rating: 5, text: 'Amazing product, saved our sales team 20 hours per week.', date: '2026-03-15' },
-        { platform: 'google', rating: 2, text: 'Onboarding was confusing, took 3 weeks to get value.', date: '2026-03-20' },
-        { platform: 'g2', rating: 4, text: 'Great AI features but the pricing page is unclear.', date: '2026-04-01' },
+        { id: 'rev1', platform: 'google', rating: 5, text: 'Amazing product, saved our sales team 20 hours per week.', reviewerName: 'Mike T.', reviewDate: '2026-03-15' },
+        { id: 'rev2', platform: 'google', rating: 2, text: 'Onboarding was confusing, took 3 weeks to get value.', reviewerName: 'Sarah K.', reviewDate: '2026-03-20' },
+        { id: 'rev3', platform: 'g2', rating: 4, text: 'Great AI features but the pricing page is unclear.', reviewerName: 'Tom L.', reviewDate: '2026-04-01' },
       ],
     }),
     extractProseFields: extractAllProse,
@@ -555,11 +559,33 @@ const TESTS: TestCase[] = [
     specialistFactory: () => getCaseStudyBuilderSpecialist(),
     buildPayload: () => ({
       action: 'build_case_study',
-      clientName: 'GrowthCo',
-      industry: 'B2B SaaS',
-      challenge: 'GrowthCo was manually qualifying 500 inbound leads per month with 4 SDRs. Response time averaged 18 hours. 60% of qualified leads went cold before first contact.',
-      solution: 'Deployed SalesVelocity.ai AI agent swarm: Lead Qualifier for instant BANT scoring, Email Specialist for same-hour personalized outreach, Deal Closer for proposal generation.',
-      results: 'Response time dropped from 18 hours to 4 minutes. Qualified lead conversion rate increased 340%. SDR team reduced from 4 to 1 (the remaining SDR focuses on enterprise accounts). $2.1M additional pipeline generated in first quarter.',
+      businessContext: {
+        brandName: 'SalesVelocity.ai',
+        industry: 'B2B SaaS',
+        productName: 'SalesVelocity.ai AI Agent Swarm',
+      },
+      successStory: {
+        id: 'cs_pirate_test',
+        clientName: 'GrowthCo',
+        clientIndustry: 'B2B SaaS',
+        clientSize: '50-200 employees',
+        beforeState: {
+          challenges: [{ category: 'operational', description: 'Manually qualifying 500 inbound leads per month with 4 SDRs. Response time averaged 18 hours.', severity: 'high' }],
+          metrics: [{ metric: 'Response Time', value: 18, unit: 'hours' }],
+          painPoints: ['60% of qualified leads went cold before first contact'],
+          context: 'GrowthCo had a growing inbound pipeline but their SDR team could not keep up.',
+        },
+        afterState: {
+          outcomes: [{ metric: 'Response Time', before: '18 hours', after: '4 minutes', improvement: '99.6% faster' }],
+          metrics: [{ metric: 'Response Time', value: 4, unit: 'minutes' }],
+          benefits: ['Qualified lead conversion rate increased 340%', 'SDR team reduced from 4 to 1'],
+          context: 'SalesVelocity.ai AI agents handle qualification, outreach, and proposals automatically.',
+        },
+        implementation: {
+          approach: 'Deployed AI agent swarm: Lead Qualifier for BANT scoring, Email Specialist for outreach, Deal Closer for proposals.',
+          timeline: '2 weeks from signup to full deployment',
+        },
+      },
     }),
     extractProseFields: extractAllProse,
   },
