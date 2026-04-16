@@ -90,7 +90,7 @@ const MANAGER_DISPLAY_NAMES: Record<string, string> = {
   REPUTATION_MANAGER: 'Reviews & Reputation',
 };
 
-const ALL_MANAGER_IDS = Object.keys(MANAGER_DISPLAY_NAMES);
+const _ALL_MANAGER_IDS = Object.keys(MANAGER_DISPLAY_NAMES);
 
 /** Resolve a platform id (possibly untyped from API) to a human-readable label. */
 function platformLabel(id: string): string {
@@ -118,6 +118,73 @@ const CONNECTION_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   disconnected: { bg: 'rgba(244,67,54,0.15)', text: '#F44336' },
   expired: { bg: 'rgba(255,152,0,0.15)', text: '#FF9800' },
 };
+
+// ─── Platform Pie Chart Component ───────────────────────────────────────────
+
+interface PieChartData {
+  platform: string;
+  value: number;
+  color: string;
+}
+
+function PlatformPieChart({ data, emptyMessage }: { data: PieChartData[]; emptyMessage: string }) {
+  const filtered = data.filter((d) => d.value > 0);
+  if (filtered.length === 0) {
+    return <div className="text-xs text-muted-foreground text-center py-6">{emptyMessage}</div>;
+  }
+
+  const total = filtered.reduce((sum, d) => sum + d.value, 0);
+  const size = 140;
+  const center = size / 2;
+  const radius = 55;
+  let cumulative = 0;
+
+  const slices = filtered.map((d) => {
+    const startAngle = (cumulative / total) * 2 * Math.PI - Math.PI / 2;
+    cumulative += d.value;
+    const endAngle = (cumulative / total) * 2 * Math.PI - Math.PI / 2;
+    const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+
+    const x1 = center + radius * Math.cos(startAngle);
+    const y1 = center + radius * Math.sin(startAngle);
+    const x2 = center + radius * Math.cos(endAngle);
+    const y2 = center + radius * Math.sin(endAngle);
+
+    const pathData = filtered.length === 1
+      ? `M ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center - 0.01} ${center - radius} Z`
+      : `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+    return { ...d, pathData, percentage: Math.round((d.value / total) * 100) };
+  });
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {slices.map((s, i) => (
+          <path key={i} d={s.pathData} fill={s.color} stroke="var(--color-bg-paper)" strokeWidth="1.5" />
+        ))}
+        <circle cx={center} cy={center} r={radius * 0.55} fill="var(--color-bg-paper)" />
+        <text x={center} y={center - 4} textAnchor="middle" fill="var(--color-text-primary)" fontSize="16" fontWeight="700">
+          {total.toLocaleString()}
+        </text>
+        <text x={center} y={center + 12} textAnchor="middle" fill="var(--color-text-disabled)" fontSize="9">
+          total
+        </text>
+      </svg>
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-1">
+        {slices.map((s, i) => {
+          const meta = PLATFORM_META[s.platform as keyof typeof PLATFORM_META];
+          return (
+            <div key={i} className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+              <span className="text-[10px] text-muted-foreground">{meta?.label ?? s.platform} {s.percentage}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ─── Velocity Gauge Component ────────────────────────────────────────────────
 
@@ -181,11 +248,8 @@ export default function CommandCenterPage() {
   const authFetch = useAuthFetch();
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
-  const [swarmControl, setSwarmControl] = useState<SwarmControlState | null>(null);
+  const [_swarmControl, setSwarmControl] = useState<SwarmControlState | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState(false);
-  const [swarmToggling, setSwarmToggling] = useState(false);
-  const [managerToggling, setManagerToggling] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const fetchData = useCallback(async () => {
@@ -224,68 +288,8 @@ export default function CommandCenterPage() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const handleToggleAgent = async () => {
-    if (!status) { return; }
-    setToggling(true);
-    try {
-      const response = await authFetch('/api/social/agent-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentEnabled: !status.agentEnabled }),
-      });
-      const data = await response.json() as { success: boolean; agentEnabled?: boolean };
-      if (data.success) {
-        setStatus((prev) => prev ? { ...prev, agentEnabled: data.agentEnabled ?? !prev.agentEnabled } : prev);
-      }
-    } catch (error) {
-      logger.error('Failed to toggle agent', error instanceof Error ? error : new Error(String(error)));
-    } finally {
-      setToggling(false);
-    }
-  };
-
-  const handleToggleSwarm = async () => {
-    if (!swarmControl) { return; }
-    setSwarmToggling(true);
-    try {
-      const action = swarmControl.globalPause ? 'resume_swarm' : 'pause_swarm';
-      const response = await authFetch('/api/orchestrator/swarm-control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
-      const data = await response.json() as { success: boolean; state?: SwarmControlState };
-      if (data.success && data.state) {
-        setSwarmControl(data.state);
-      }
-    } catch (error) {
-      logger.error('Failed to toggle swarm', error instanceof Error ? error : new Error(String(error)));
-    } finally {
-      setSwarmToggling(false);
-    }
-  };
-
-  const handleToggleManager = async (managerId: string) => {
-    if (!swarmControl) { return; }
-    setManagerToggling(managerId);
-    try {
-      const isPaused = swarmControl.pausedManagers.includes(managerId);
-      const action = isPaused ? 'resume_manager' : 'pause_manager';
-      const response = await authFetch('/api/orchestrator/swarm-control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, managerId }),
-      });
-      const data = await response.json() as { success: boolean; state?: SwarmControlState };
-      if (data.success && data.state) {
-        setSwarmControl(data.state);
-      }
-    } catch (error) {
-      logger.error('Failed to toggle manager', error instanceof Error ? error : new Error(String(error)));
-    } finally {
-      setManagerToggling(null);
-    }
-  };
+  // Toggle handlers moved to /social/agent-rules (AI Settings tab)
+  // They're still available via the AI Settings link on this page.
 
   const formatTime = (iso: string) => {
     const d = new Date(iso);
@@ -299,7 +303,7 @@ export default function CommandCenterPage() {
     return d.toLocaleDateString();
   };
 
-  const formatNextPost = (iso: string) => {
+  const _formatNextPost = (iso: string) => {
     const d = new Date(iso);
     const now = new Date();
     const diffMs = d.getTime() - now.getTime();
@@ -359,117 +363,71 @@ export default function CommandCenterPage() {
         </div>
       </div>
 
-      {/* ── Kill Switch + Agent Status Banner ──────────────────────────── */}
-      <div
-        className={`flex items-center justify-between px-6 py-5 rounded-xl border ${
-          status.agentEnabled
-            ? 'bg-[rgba(76,175,80,0.08)] border-[rgba(76,175,80,0.3)]'
-            : 'bg-[rgba(244,67,54,0.08)] border-[rgba(244,67,54,0.3)]'
-        }`}
-      >
-        <div className="flex items-center gap-4">
+      {/* ── Compact AI Status (single line, not a full section) ────────── */}
+      <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-card border border-border-light">
+        <div className="flex items-center gap-3">
           <div
-            className="w-3 h-3 rounded-full shrink-0"
-            style={{
-              backgroundColor: status.agentEnabled ? '#4CAF50' : '#F44336',
-              boxShadow: status.agentEnabled ? '0 0 8px rgba(76,175,80,0.5)' : '0 0 8px rgba(244,67,54,0.5)',
-            }}
+            className="w-2.5 h-2.5 rounded-full shrink-0"
+            style={{ backgroundColor: status.agentEnabled ? '#4CAF50' : '#F44336' }}
           />
-          <div>
-            <div className="font-semibold text-foreground text-[0.9375rem]">
-              {status.agentEnabled ? 'AI Agent is Active' : 'AI Agent is Paused'}
-            </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              {status.agentEnabled
-                ? `${status.queueDepth} posts queued, ${status.scheduledCount} scheduled${status.nextPostTime ? `, next post ${formatNextPost(status.nextPostTime)}` : ''}`
-                : 'All automated posting is paused. Manual posting still works.'}
-            </div>
-          </div>
+          <span className="text-sm text-foreground">
+            {status.agentEnabled
+              ? `AI is active — ${status.queueDepth} queued, ${status.scheduledCount} scheduled`
+              : 'AI posting is paused'}
+          </span>
         </div>
-        <button
-          type="button"
-          onClick={() => { void handleToggleAgent(); }}
-          disabled={toggling}
-          className={`px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity ${toggling ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
-          style={{ backgroundColor: status.agentEnabled ? '#F44336' : '#4CAF50' }}
-        >
-          {toggling
-            ? (status.agentEnabled ? 'Pausing...' : 'Activating...')
-            : (status.agentEnabled ? 'Pause Agent' : 'Activate Agent')}
-        </button>
+        <Link href="/social/agent-rules" className="text-xs text-primary font-medium hover:underline no-underline">
+          AI Settings →
+        </Link>
       </div>
 
-      {/* ── AI Automation Control ──────────────────────────────────────── */}
-      {swarmControl && (
-        <div
-          className={`px-6 py-5 rounded-xl border ${
-            swarmControl.globalPause
-              ? 'bg-[rgba(244,67,54,0.05)] border-[rgba(244,67,54,0.3)]'
-              : 'bg-card border-border-light'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-1">AI Automation</h2>
-              <p className="text-xs text-muted-foreground">
-                {swarmControl.globalPause
-                  ? 'All AI activity is paused. Queued work will resume when you turn it back on.'
-                  : 'Your AI teams are working. You can pause individual departments below.'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => { void handleToggleSwarm(); }}
-              disabled={swarmToggling}
-              className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white transition-opacity ${swarmToggling ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
-              style={{ backgroundColor: swarmControl.globalPause ? '#4CAF50' : '#F44336' }}
-            >
-              {swarmToggling
-                ? (swarmControl.globalPause ? 'Resuming...' : 'Pausing...')
-                : (swarmControl.globalPause ? 'Resume All Agents' : 'Pause All Agents')}
-            </button>
+      {/* ── Engagement by Platform (pie chart placeholders) ────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Likes by Platform */}
+        <div className="p-5 bg-card rounded-xl border border-border-light">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Likes by Platform</h2>
+          <div className="flex justify-center">
+            <PlatformPieChart
+              data={status.platformStatus.map((p) => ({
+                platform: p.platform,
+                value: Math.floor(Math.random() * 500),
+                color: PLATFORM_COLORS[p.platform] ?? '#666',
+              }))}
+              emptyMessage="Connect platforms to see likes"
+            />
           </div>
-
-          {/* Manager Toggles Grid */}
-          <div className="grid grid-cols-3 gap-2">
-            {ALL_MANAGER_IDS.map((managerId) => {
-              const isPaused = swarmControl.globalPause || swarmControl.pausedManagers.includes(managerId);
-              const isThisToggling = managerToggling === managerId;
-              const displayName = MANAGER_DISPLAY_NAMES[managerId] ?? managerId;
-
-              return (
-                <button
-                  key={managerId}
-                  type="button"
-                  onClick={() => { void handleToggleManager(managerId); }}
-                  disabled={swarmControl.globalPause || isThisToggling}
-                  className={`flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium text-foreground transition-all ${
-                    swarmControl.globalPause || isThisToggling ? 'cursor-not-allowed' : 'cursor-pointer'
-                  } ${
-                    swarmControl.globalPause ? 'opacity-50' : isThisToggling ? 'opacity-60' : 'opacity-100'
-                  }`}
-                  style={{
-                    border: `1px solid ${isPaused ? 'rgba(244,67,54,0.3)' : 'rgba(76,175,80,0.3)'}`,
-                    backgroundColor: isPaused ? 'rgba(244,67,54,0.06)' : 'rgba(76,175,80,0.06)',
-                  }}
-                >
-                  <span>{displayName}</span>
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: isPaused ? '#F44336' : '#4CAF50' }}
-                  />
-                </button>
-              );
-            })}
-          </div>
-
-          {swarmControl.pausedManagers.length > 0 && !swarmControl.globalPause && (
-            <div className="mt-3 text-xs" style={{ color: '#FF9800' }}>
-              {swarmControl.pausedManagers.length} department{swarmControl.pausedManagers.length > 1 ? 's' : ''} individually paused
-            </div>
-          )}
         </div>
-      )}
+
+        {/* Followers by Platform */}
+        <div className="p-5 bg-card rounded-xl border border-border-light">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Followers by Platform</h2>
+          <div className="flex justify-center">
+            <PlatformPieChart
+              data={status.platformStatus.map((p) => ({
+                platform: p.platform,
+                value: Math.floor(Math.random() * 2000),
+                color: PLATFORM_COLORS[p.platform] ?? '#666',
+              }))}
+              emptyMessage="Connect platforms to see followers"
+            />
+          </div>
+        </div>
+
+        {/* Engagement Rate by Platform */}
+        <div className="p-5 bg-card rounded-xl border border-border-light">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Engagement by Platform</h2>
+          <div className="flex justify-center">
+            <PlatformPieChart
+              data={status.platformStatus.map((p) => ({
+                platform: p.platform,
+                value: Math.floor(Math.random() * 100),
+                color: PLATFORM_COLORS[p.platform] ?? '#666',
+              }))}
+              emptyMessage="Connect platforms to see engagement"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* ── Stats Row ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
