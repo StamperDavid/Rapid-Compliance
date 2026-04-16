@@ -217,7 +217,7 @@ const LineItemSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(10000),
   unitPrice: z.coerce.number().min(0).max(10_000_000),
   total: z.coerce.number().min(0).max(1_000_000_000),
-  discount: z.coerce.number().min(0).max(100).optional(),
+  discount: z.coerce.number().min(0).optional(),
 });
 
 const ContractSectionSchema = z.object({
