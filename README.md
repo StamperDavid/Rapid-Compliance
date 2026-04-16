@@ -5,7 +5,7 @@
 > **API Directory:** HARDENED ZONE - Zero `any` types, 100% Zod validation, strict type safety
 > **Branch:** `dev` (production-bound)
 
-AI-powered sales platform with a 51-agent autonomous swarm (1 orchestrator + 10 managers + 40 specialists), customer memory persistence, real-time conversation management, and full e-commerce capabilities.
+AI-powered sales platform with a 57-agent autonomous swarm (1 orchestrator + 10 managers + 46 specialists), customer memory persistence, real-time conversation management, and full e-commerce capabilities.
 
 ---
 
@@ -39,7 +39,7 @@ AI-powered sales platform with a 51-agent autonomous swarm (1 orchestrator + 10 
 |--------|-------|
 | Physical Routes (page.tsx) | 159 |
 | API Endpoints (route.ts) | 226 |
-| AI Agents | 51 (1 orchestrator + 10 managers + 40 specialists) |
+| AI Agents | 51 (1 orchestrator + 10 managers + 46 specialists) |
 | RBAC Roles | 4 (owner, admin, manager, member) |
 | Firestore Collections | 60+ |
 
@@ -67,13 +67,13 @@ See [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) for complete coding s
 
 ## Core Innovation: AI Agent Swarm + Customer Memory
 
-### 51-Agent Autonomous Swarm
+### 57-Agent Autonomous Swarm
 
-A hierarchical agent system with 1 Orchestrator (Jasper), 10 Domain Managers, and 40 Specialists:
+A hierarchical agent system with 1 Orchestrator (Jasper), 10 Domain Managers, and 46 Specialists:
 
 - **Jasper (Orchestrator)** — User-facing AI chat brain. Delegates to managers, never calls specialists directly. Loads instructions from a Golden Master in Firestore with Brand DNA baked in at seed time.
 - **10 Domain Managers** — Content, Marketing, Outreach, Intelligence, Builder, Architect, Commerce, Revenue (Director), Reputation, Master Orchestrator. 9 of 10 have Golden Masters with LLM-backed review gates.
-- **40 Specialists** — Real LLM-backed agents across all departments (SEO, TikTok, email, pricing, video, copywriting, deal closing, sentiment analysis, etc.). Each loads instructions from Firestore at runtime.
+- **46 Specialists** — Real LLM-backed agents across all departments (SEO, TikTok, YouTube, Instagram, Pinterest, email, pricing, video, copywriting, blog writing, podcast planning, music/soundtrack, deal closing, sentiment analysis, etc.). Each loads instructions from Firestore at runtime.
 
 **Cross-Agent Communication:** TenantMemoryVault signal bus (BROADCAST, DIRECT, BUBBLE_UP, BUBBLE_DOWN)
 
