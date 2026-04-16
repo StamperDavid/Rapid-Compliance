@@ -545,12 +545,43 @@ export default function CommandCenterPage() {
                       >
                         {p.status}
                       </span>
+                      <Link
+                        href={`/social/platforms/${p.platform}`}
+                        className="text-xs text-primary font-medium hover:underline"
+                      >
+                        Open
+                      </Link>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
+        </div>
+
+        {/* All Platforms Grid */}
+        <div className="p-5 bg-card rounded-xl border border-border-light">
+          <h3 className="text-sm font-semibold text-foreground mb-3">All Platforms</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {SOCIAL_PLATFORMS.map((p) => {
+              const pmeta = PLATFORM_META[p];
+              return (
+                <Link
+                  key={p}
+                  href={`/social/platforms/${p}`}
+                  className="flex items-center gap-2 p-2 rounded-lg border border-border-light hover:bg-surface-elevated transition-colors"
+                >
+                  <span
+                    className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ backgroundColor: pmeta.color }}
+                  >
+                    {pmeta.icon}
+                  </span>
+                  <span className="text-xs font-medium text-foreground truncate">{pmeta.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
 
