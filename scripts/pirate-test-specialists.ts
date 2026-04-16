@@ -357,8 +357,10 @@ const TESTS: TestCase[] = [
     specialistFactory: () => getCompetitorResearcher(),
     buildPayload: () => ({
       action: 'research_competitors',
-      targets: ['hubspot.com'],
-      researchDepth: 'standard',
+      niche: 'B2B SaaS sales automation',
+      location: 'United States',
+      limit: 5,
+      includeAnalysis: true,
     }),
     extractProseFields: extractAllProse,
   },
@@ -376,15 +378,23 @@ const TESTS: TestCase[] = [
     extractProseFields: extractAllProse,
   },
   {
+    // NOTE: The Technographic Scout's LLM path (executeAnalyzeTechStack) only
+    // fires when REAL tech signatures are detected from a live URL scrape.
+    // execute() always calls scanTechStack(payload.url) — extra fields like
+    // `action` or `detectedTechnologies` are ignored.  The pirate-prompt swap
+    // is still valid, but the test requires a URL whose HTML contains at least
+    // one of the 60+ TECH_SIGNATURES (scripts/globals/HTML patterns).
+    // example.com has no detectable signatures, so the LLM step is skipped and
+    // zero pirate markers appear in the output.
+    // Resolution: use salesforce.com which consistently loads HubSpot and
+    // various analytics pixels that match multiple signatures, guaranteeing
+    // the LLM analysis path is entered.
     specialistId: 'TECHNOGRAPHIC_SCOUT',
     department: 'Intelligence',
     gmDocId: `sgm_technographic_scout_${INDUSTRY_KEY}_v1`,
     specialistFactory: () => getTechnographicScout(),
     buildPayload: () => ({
-      action: 'analyze_tech_stack',
-      url: 'https://example.com',
-      detectedTechnologies: ['Next.js', 'React', 'Stripe', 'Google Analytics', 'HubSpot'],
-      analysisGoal: 'Assess technology maturity and integration opportunities',
+      url: 'https://www.salesforce.com',
     }),
     extractProseFields: extractAllProse,
   },
@@ -408,15 +418,21 @@ const TESTS: TestCase[] = [
     specialistFactory: () => getLeadQualifierSpecialist(),
     buildPayload: () => ({
       action: 'qualify_lead',
-      lead: {
+      leadId: 'L_pirate_test_qualifier',
+      contact: {
         name: 'Jane Smith',
+        email: 'jane.smith@techcorp.io',
         title: 'VP of Sales',
-        company: 'TechCorp',
-        industry: 'SaaS',
-        companySize: '100-500',
-        inboundSource: 'demo request form',
-        notes: 'Expressed frustration with current CRM and wants AI-powered automation.',
+        seniority: 'VP',
       },
+      company: {
+        name: 'TechCorp',
+        domain: 'techcorp.io',
+        industry: 'SaaS',
+        employeeRange: '51-200',
+        fundingStage: 'Series B',
+      },
+      notes: 'Expressed frustration with current CRM and wants AI-powered automation.',
     }),
     extractProseFields: extractAllProse,
   },
@@ -427,25 +443,29 @@ const TESTS: TestCase[] = [
     specialistFactory: () => getMerchandiserSpecialist(),
     buildPayload: () => ({
       action: 'evaluate_nudge',
-      visitor: {
-        visitorId: 'v_pirate_test',
-        currentPage: '/pricing',
-        timeOnPage: 45,
-        scrollDepth: 0.7,
-        previousPages: ['/features', '/about'],
-        sessionDuration: 180,
+      interactionHistory: {
+        leadId: 'v_pirate_test',
+        segment: 'smb',
+        source: 'organic_search',
+        pageViews: {
+          pricingPageViews: 4,
+          featurePageViews: 3,
+          totalPageViews: 12,
+          totalTimeOnSiteMinutes: 18,
+        },
+        returnVisits: {
+          totalVisits: 3,
+          daysActiveInLast30: 5,
+        },
+        hasActiveCoupon: false,
       },
-      products: [
-        { id: 'starter', name: 'Starter Plan', price: 400, category: 'subscription' },
-        { id: 'pro', name: 'Professional Plan', price: 800, category: 'subscription' },
-      ],
     }),
     extractProseFields: extractAllProse,
   },
   {
-    specialistId: 'OBJECTION_HANDLER',
+    specialistId: 'OBJ_HANDLER',
     department: 'Sales',
-    gmDocId: `sgm_objection_handler_${INDUSTRY_KEY}_v1`,
+    gmDocId: `sgm_obj_handler_${INDUSTRY_KEY}_v1`,
     specialistFactory: () => getObjectionHandlerSpecialist(),
     buildPayload: () => ({
       action: 'handle_objection',
@@ -469,15 +489,16 @@ const TESTS: TestCase[] = [
     buildPayload: () => ({
       action: 'generate_outreach',
       lead: {
-        name: 'Sarah Chen',
+        firstName: 'Sarah',
+        lastName: 'Chen',
         title: 'Head of Revenue',
-        company: 'GrowthCo',
+        companyName: 'GrowthCo',
         industry: 'B2B SaaS',
-        companySize: '50-200',
+        employeeRange: '50-200 employees',
       },
-      goal: 'Book a 15-minute discovery call about AI sales automation',
       channel: 'email',
-      tone: 'confident and direct',
+      tone: 'professional',
+      campaignGoal: 'Book a 15-minute discovery call about AI sales automation',
     }),
     extractProseFields: extractAllProse,
   },
@@ -496,9 +517,9 @@ const TESTS: TestCase[] = [
     extractProseFields: extractAllProse,
   },
   {
-    specialistId: 'REVIEW_MANAGER',
+    specialistId: 'REV_MGR',
     department: 'Trust',
-    gmDocId: `sgm_review_manager_${INDUSTRY_KEY}_v1`,
+    gmDocId: `sgm_rev_mgr_${INDUSTRY_KEY}_v1`,
     specialistFactory: () => getReviewManagerSpecialist(),
     buildPayload: () => ({
       action: 'analyze_reviews',
@@ -528,9 +549,9 @@ const TESTS: TestCase[] = [
     extractProseFields: extractAllProse,
   },
   {
-    specialistId: 'CASE_STUDY_BUILDER',
+    specialistId: 'CASE_STUDY',
     department: 'Trust',
-    gmDocId: `sgm_case_study_builder_${INDUSTRY_KEY}_v1`,
+    gmDocId: `sgm_case_study_${INDUSTRY_KEY}_v1`,
     specialistFactory: () => getCaseStudyBuilderSpecialist(),
     buildPayload: () => ({
       action: 'build_case_study',
@@ -543,23 +564,19 @@ const TESTS: TestCase[] = [
     extractProseFields: extractAllProse,
   },
   {
+    // NOTE: The Growth Strategist's LLM path lives in analyzeDemographics(),
+    // invoked when taskType === 'DEMOGRAPHIC_TARGETING'.  The other task types
+    // (BUSINESS_REVIEW, SEO_STRATEGY, AD_SPEND_ANALYSIS, CHANNEL_ATTRIBUTION)
+    // are fully deterministic — they aggregate Firestore metrics and apply
+    // rule-based logic with no OpenRouter call.  The earlier 'analyze_growth'
+    // action was wrong — execute() reads `payload.taskType`, not `payload.action`.
     specialistId: 'GROWTH_STRATEGIST',
     department: 'Standalone',
     gmDocId: `sgm_growth_strategist_${INDUSTRY_KEY}_v1`,
     specialistFactory: () => getGrowthStrategist(),
     buildPayload: () => ({
-      action: 'analyze_growth',
-      metrics: {
-        mrr: 45000,
-        mrrGrowth: 0.12,
-        churnRate: 0.04,
-        cac: 800,
-        ltv: 12000,
-        leadCount: 150,
-        conversionRate: 0.08,
-      },
-      industry: 'B2B SaaS',
-      goal: 'Reach $100K MRR within 6 months while keeping CAC under $1000',
+      taskType: 'DEMOGRAPHIC_TARGETING',
+      periodDays: 30,
     }),
     extractProseFields: extractAllProse,
   },
