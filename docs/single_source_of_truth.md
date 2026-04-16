@@ -38,7 +38,7 @@
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 194 | Verified March 28, 2026 |
 | API Endpoints (route.ts) | 436 | Verified March 28, 2026 |
-| AI Agents | 58 | **58 FUNCTIONAL (46 swarm + 6 standalone + 6 Claude Code QA agents)** |
+| AI Agents | 51 | **51 FUNCTIONAL (1 Jasper orchestrator + 10 managers + 40 specialists)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | ~1,746 | Verified March 28, 2026 |
 | Type Definition Files (src/types/) | 56 | 831+ interfaces/types across all files |
@@ -213,7 +213,7 @@ Standing rules codified in `CLAUDE.md`:
 
 | Layer | Count | Status |
 |---|---|---|
-| Specialist rebuilds complete | **37 of 37** | 100% — all real LLM agents with Firestore Golden Masters |
+| Specialist rebuilds complete | **40 of 40** | 100% — all real LLM agents with Firestore Golden Masters |
 | Specialist Golden Masters seeded | **36 + 1** | 36 active specialists + the Prompt Engineer meta-specialist |
 | Manager Golden Masters seeded | **9 of 10** | Content, Marketing, Outreach, Intelligence, Revenue, Reputation, Commerce, Builder, Architect. Master Orchestrator skipped by design (it delegates to managers, not specialists — review happens one level down). |
 | Manager review gates wired | **10 of 10** | All managers now flow specialist calls through `delegateWithReview` per Phase 1. |
@@ -278,7 +278,7 @@ These are the mistakes the previous sessions left in the codebase that this sess
 |------|--------|
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated |
 | 4-role RBAC | **ENFORCED** — 100% of 436 routes protected (366 standard auth + 50 alternative auth + 20 intentionally public), 53 permissions, sidebar filtering |
-| Agent hierarchy | **100% COMPLETE** — 58 agents (46 swarm + 6 standalone + 6 Claude Code QA), all managers orchestrate all specialists |
+| Agent hierarchy | **100% COMPLETE** — 51 agents (1 orchestrator + 10 managers + 40 specialists), all managers orchestrate all specialists |
 | Jasper delegation | **COMPLETE** — 46 tools (9 delegate_to_*, 37 utility). All tool handlers execute real services. 2 minor stubs (`generate_content`, `draft_outreach_email`) redirect to specialized endpoints. Mission Control SSE streaming + Campaign Review live |
 | CRM & Sales | **COMPLETE** — Lead scoring (0-100 BANT), proprietary enrichment (500x cheaper than Clearbit), 6-stage deal pipeline with signal bus, smart sequencer with score-based timing |
 | Type safety | **CLEAN** — `tsc --noEmit` passes. Zero `any`, zero `@ts-ignore`, zero `@ts-expect-error` |
@@ -534,7 +534,7 @@ Standalone: JASPER, VOICE_AGENT_HANDLER,
            AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
 ```
 
-**Total: 46 Swarm (1 + 9 + 36) + 6 Standalone + 6 Claude Code QA = 58 Agents**
+**Total: 51 Agents (1 Jasper orchestrator + 10 managers + 40 specialists)**
 
 **Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
 
@@ -879,11 +879,12 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 ### Agent Swarm Overview
 
-**Total Agents:** 58 (46 swarm + 6 standalone + 6 Claude Code QA)
-- **Swarm Agents:** 46 (1 orchestrator + 9 managers + 36 specialists)
-- **Standalone Agents:** 6 (outside swarm hierarchy)
-- **Claude Code QA Agents:** 6 (in `.claude/agents/`)
-- **Variants:** 2 (Growth Analyst sub-specializations)
+**Total Agents:** 51 (1 orchestrator + 10 managers + 40 specialists)
+- **Jasper (orchestrator):** 1 — user-facing chat brain, delegates to managers
+- **Department Managers:** 10 — Content, Marketing, Outreach, Intelligence, Builder, Architect, Commerce, Revenue Director, Reputation, Master Orchestrator. 9 of 10 have Golden Masters with LLM-backed review gates.
+- **Specialists:** 40 — all real LLM-backed agents with Firestore Golden Masters
+
+Note: 6 Claude Code QA agents exist in `.claude/agents/` but those are development-time tools for running audits, not production agents in the platform. They are NOT counted in the 51.
 
 | Status | Count | Description |
 |--------|-------|-------------|

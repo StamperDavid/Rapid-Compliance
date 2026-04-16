@@ -7,7 +7,7 @@ Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
 Last Updated: April 15, 2026 — Mission Control rebuild **Phase M1 + M2 COMPLETE**. Training loop is fully operational end-to-end: grade a step → Prompt Engineer proposes surgical edit → 3-box popup (Keep current / Agent's suggestion / My rewrite) → approve → new specialist GM version deployed → rollback available per specialist from inline Mission Control panel. Jasper can no longer call specialists directly — 4 bypass tools removed from his allowlist.
 
-**Status: AGENT SPECIALIST REBUILD COMPLETE (37/37 REAL), Phase 1-4 MANAGER REBUILD COMPLETE (9 manager GMs seeded, review gate live, Prompt Engineer wired, safety nets passing), Mission Control M1 + M2 COMPLETE (popup rewrite, specialist routing, rollback backend + UI).** Remaining on the Mission Control rebuild: M3 per-step pause + M4 plan pre-approval + M5 downstream flag + M6 quick-edit path + M7 scrap buttons + M8 cleanup.
+**Status: ALL 40 SPECIALISTS REAL, Phase 1-4 MANAGER REBUILD COMPLETE (10 managers, 9 GMs seeded, review gate live, Prompt Engineer wired, safety nets passing), MISSION CONTROL M1-M8 COMPLETE (popup rewrite, specialist routing, rollback backend + UI, plan pre-approval, sequential auto-execute with retry, downstream-changed flag, manual edit path, scrap buttons, cleanup done).** Total agent count: 51 (1 Jasper + 10 managers + 40 specialists). Code-verified April 15, 2026.
 
 ---
 

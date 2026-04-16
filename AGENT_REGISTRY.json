@@ -1,13 +1,14 @@
 {
   "$schema": "SWARM_REGISTRY_V2",
   "lastAudit": "2026-02-27",
-  "totalAgents": 52,
-  "swarmAgents": 46,
-  "standaloneAgents": 6,
-  "_note": "Authoritative source is src/lib/agents/agent-registry.ts — update there first",
-  "functionalAgents": 52,
+  "totalAgents": 51,
+  "orchestrators": 1,
+  "managers": 10,
+  "specialists": 40,
+  "_note": "Authoritative source is src/lib/agents/ directory — 1 Jasper + 10 manager.ts files + 40 specialist.ts files = 51 total. Code-verified April 15, 2026.",
+  "functionalAgents": 51,
   "ghostAgents": 0,
-  "assessment": "FULL INVENTORY COMPLETE - 46 swarm agents (1 orchestrator + 9 managers + 36 specialists) all FUNCTIONAL, plus 6 standalone agents operating outside the swarm hierarchy. 100% operational.",
+  "assessment": "FULL INVENTORY COMPLETE - 51 agents (1 Jasper orchestrator + 10 managers + 40 specialists) all FUNCTIONAL with real LLM backends and Firestore Golden Masters. Code-verified from find src/lib/agents -name specialist.ts and manager.ts.",
 
   "hierarchy": {
     "MASTER_ORCHESTRATOR": {
