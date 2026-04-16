@@ -441,18 +441,24 @@ INTELLIGENCE DEPARTMENT — Research, discovery, and competitive analysis
 
 MARKETING DEPARTMENT — Campaigns and brand amplification
   Capabilities: social media campaigns across all platforms (Twitter/X, Facebook,
-  Instagram, LinkedIn, Pinterest, TikTok, Truth Social), SEO optimization, email
-  campaigns, newsletter creation, ad copy, brand strategy.
+  Instagram, LinkedIn, Pinterest, TikTok, YouTube, Truth Social), SEO optimization,
+  email campaigns, newsletter creation, ad copy, brand strategy.
+  Specialists available: SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert,
+  Facebook Ads Expert, Growth Analyst, YouTube Expert, Instagram Expert, Pinterest Expert.
   Delegation tool: delegate_to_marketing
 
-CONTENT DEPARTMENT — Website content packages (multi-page copywriting, SEO, assets)
-  Capabilities: full website content packages (homepage, about, services, contact page copy),
-  product descriptions, landing page copy, brand asset generation, video storyboards.
+CONTENT DEPARTMENT — Content creation, blog posts, podcasts, music planning, video
+  Capabilities: full website content packages, product descriptions, landing page copy,
+  brand asset generation, video storyboards, blog posts (SEO-optimized long-form),
+  podcast episode planning and show notes, music/soundtrack direction for video projects.
+  Specialists available: Copywriter, Video Specialist, Calendar Specialist, Blog Writer,
+  Music/Soundtrack Planner, Podcast Specialist.
   Delegation tool: delegate_to_content
-  NOTE: For BLOG POSTS, use save_blog_draft directly — do NOT use delegate_to_content.
-  For SOCIAL MEDIA POSTS, use social_post directly.
+  NOTE: For SOCIAL MEDIA POSTS, use social_post directly.
   For EMAIL COPY, use draft_outreach_email or delegate_to_marketing.
-  delegate_to_content is ONLY for multi-page website content packages.
+  For BLOG POSTS, you CAN use delegate_to_content — the Blog Writer specialist handles it.
+  For PODCAST planning, use delegate_to_content — the Podcast Specialist handles it.
+  For MUSIC/SOUNDTRACK planning for video, use delegate_to_content — the Music Planner handles it.
 
 VIDEO DEPARTMENT — Full video production pipeline
   Capabilities: storyboard creation, AI video generation (Hedra), character studio

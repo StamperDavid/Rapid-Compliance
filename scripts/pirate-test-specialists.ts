@@ -69,6 +69,12 @@ import { getReviewSpecialist } from '../src/lib/agents/trust/review/specialist';
 import { getDealCloserSpecialist } from '../src/lib/agents/sales/deal-closer/specialist';
 import { getEmailSpecialist } from '../src/lib/agents/outreach/email/specialist';
 import { getLinkedInExpert } from '../src/lib/agents/marketing/linkedin/specialist';
+import { getMusicPlanner } from '../src/lib/agents/content/music/specialist';
+import { getBlogWriter } from '../src/lib/agents/content/blog/specialist';
+import { getPodcastSpecialist } from '../src/lib/agents/content/podcast/specialist';
+import { getYouTubeExpert } from '../src/lib/agents/marketing/youtube/specialist';
+import { getInstagramExpert } from '../src/lib/agents/marketing/instagram/specialist';
+import { getPinterestExpert } from '../src/lib/agents/marketing/pinterest/specialist';
 import type { BaseSpecialist } from '../src/lib/agents/base-specialist';
 import type { AgentMessage, AgentReport } from '../src/lib/agents/types';
 
@@ -234,6 +240,97 @@ const TESTS: TestCase[] = [
       targetAudience: 'SaaS founders and VP Sales',
       tone: 'confident',
       campaignGoal: 'thought leadership on the future of outbound sales',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  // ═══════════════════════════════════════════════════════════════════
+  // NEW SPECIALISTS (built April 15, 2026 session)
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    specialistId: 'MUSIC_PLANNER',
+    department: 'Content',
+    gmDocId: `sgm_music_planner_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getMusicPlanner(),
+    buildPayload: () => ({
+      action: 'plan_soundtrack',
+      projectDescription: 'A 60-second product demo video for SalesVelocity.ai showing the AI agent swarm delegating tasks across departments. Target audience: SaaS founders. Mood: energetic, confident, modern. Visual style: dark UI with blue accent highlights, screen recordings, animated data visualizations.',
+      targetAudience: 'SaaS founders and VP Sales at B2B companies',
+      mood: 'energetic and confident',
+      videoDurationSeconds: 60,
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'BLOG_WRITER',
+    department: 'Content',
+    gmDocId: `sgm_blog_writer_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getBlogWriter(),
+    buildPayload: () => ({
+      action: 'outline_blog_post',
+      topic: 'How AI Sales Agents Are Replacing Traditional SDR Teams in 2026',
+      targetKeywords: ['AI sales agent', 'SDR automation', 'AI outbound'],
+      audience: 'SaaS founders considering AI-powered sales',
+      wordCountTarget: 2000,
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'PODCAST_SPECIALIST',
+    department: 'Content',
+    gmDocId: `sgm_podcast_specialist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getPodcastSpecialist(),
+    buildPayload: () => ({
+      action: 'plan_episode',
+      topic: 'The Death of Cold Calling: How AI Agents Are Rewriting Outbound Sales',
+      targetAudience: 'SaaS founders and sales leaders',
+      episodeFormat: 'solo',
+      durationMinutes: 25,
+      brandVoice: 'confident, data-driven, slightly provocative',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'YOUTUBE_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_youtube_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getYouTubeExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'SalesVelocity.ai product walkthrough — how AI agents run your sales pipeline',
+      contentType: 'tutorial',
+      targetAudience: 'SaaS founders evaluating AI sales tools',
+      tone: 'confident and educational',
+      campaignGoal: 'drive free trial signups from YouTube',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'INSTAGRAM_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_instagram_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getInstagramExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'AI agents handling your sales pipeline while you focus on strategy',
+      contentType: 'carousel',
+      targetAudience: 'Entrepreneurs and small business owners on Instagram',
+      tone: 'modern, visual, punchy',
+      campaignGoal: 'brand awareness for SalesVelocity.ai',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'PINTEREST_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_pinterest_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getPinterestExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'AI-powered sales automation infographic — how the agent swarm works',
+      contentType: 'infographic',
+      targetAudience: 'Business owners searching for sales tools on Pinterest',
+      tone: 'clean, data-rich, visually scannable',
+      campaignGoal: 'drive traffic to SalesVelocity.ai landing page',
     }),
     extractProseFields: extractAllProse,
   },
