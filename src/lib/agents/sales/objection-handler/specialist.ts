@@ -220,7 +220,7 @@ const HandleObjectionResultSchema = z.object({
   strategyRationale: z.string().min(50).max(2000),
   followUpQuestions: z.array(z.string().min(10).max(300)).min(1).max(5),
   valuePropsUsed: z.array(z.string().min(5).max(200)).max(5),
-  escalationAdvice: z.string().min(20).max(600).optional(),
+  escalationAdvice: z.string().min(20).max(2000).optional(),
   confidenceScore: z.number().min(0).max(1),
 });
 

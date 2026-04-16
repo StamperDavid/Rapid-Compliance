@@ -1576,7 +1576,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'delegate_to_marketing',
       description:
-        'Delegate a marketing campaign or content request to the Marketing Department. The Marketing Manager will analyze the goal and coordinate TikTok, Twitter/X, and Facebook specialists as needed. ENABLED: TRUE.',
+        'Delegate a marketing campaign or content request to the Marketing Department. The Marketing Manager coordinates 9 specialists: SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, Growth Analyst, YouTube Expert, Instagram Expert, Pinterest Expert. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -1587,7 +1587,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           platform: {
             type: 'string',
             description: 'Optional: Specific platform to target. If not provided, Marketing Manager will select best platform(s) based on goal.',
-            enum: ['tiktok', 'twitter', 'facebook', 'all', 'auto'],
+            enum: ['tiktok', 'twitter', 'facebook', 'linkedin', 'youtube', 'instagram', 'pinterest', 'seo', 'all', 'auto'],
           },
           niche: {
             type: 'string',
@@ -1860,14 +1860,14 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'delegate_to_content',
       description:
-        'Delegate a content creation request to the Content Department. The Content Manager will coordinate Copywriter (Brand DNA + SEO-injected copy), Calendar Coordinator (scheduling + cross-platform sync), and Video Specialist (scripts, storyboards, thumbnails). ENABLED: TRUE.',
+        'Delegate a content creation request to the Content Department. The Content Manager coordinates 6 specialists: Copywriter, Video Specialist, Calendar Specialist, Blog Writer (SEO long-form), Music/Soundtrack Planner (audio direction for video), Podcast Specialist (episode planning + show notes). ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           contentType: {
             type: 'string',
             description: 'Type of content to produce',
-            enum: ['blog_post', 'social_media', 'email_campaign', 'video_script', 'landing_page_copy', 'ad_creative', 'newsletter', 'case_study'],
+            enum: ['blog_post', 'social_media', 'email_campaign', 'video_script', 'landing_page_copy', 'ad_creative', 'newsletter', 'case_study', 'podcast_episode', 'podcast_show_notes', 'music_soundtrack', 'music_style'],
           },
           topic: {
             type: 'string',

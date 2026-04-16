@@ -86,7 +86,7 @@ const SUPPORTED_ACTIONS = ['generate_outreach'] as const;
  *   margin. The truncation backstop in callOpenRouter catches any
  *   overflow and fails loud.
  */
-const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 12500;
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 18000;
 
 interface OutreachSpecialistGMConfig {
   systemPrompt: string;

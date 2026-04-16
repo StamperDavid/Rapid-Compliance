@@ -17,6 +17,9 @@
  * - TWITTER_X_EXPERT: Threads, engagement, thought leadership
  * - FACEBOOK_ADS_EXPERT: Paid ads, lead generation, retargeting
  * - LINKEDIN_EXPERT: B2B content, professional networking
+ * - YOUTUBE_EXPERT: Long-form video, tutorials, SEO-driven content
+ * - INSTAGRAM_EXPERT: Visual storytelling, reels, carousels, stories
+ * - PINTEREST_EXPERT: Visual search, keyword-rich pins, seasonal content
  * - SEO_EXPERT: Keyword research, content optimization
  * - GROWTH_ANALYST: Performance analytics, mutation directives, growth tracking
  *
@@ -32,6 +35,9 @@ import { getFacebookAdsExpert } from './facebook/specialist';
 import { getLinkedInExpert } from './linkedin/specialist';
 import { getSEOExpert } from './seo/specialist';
 import { getGrowthAnalyst } from './growth-analyst/specialist';
+import { getYouTubeExpert } from './youtube/specialist';
+import { getInstagramExpert } from './instagram/specialist';
+import { getPinterestExpert } from './pinterest/specialist';
 import {
   getMemoryVault,
   shareInsight,
@@ -71,6 +77,9 @@ SPECIALISTS YOU ORCHESTRATE:
 - TWITTER_X_EXPERT: Threads, thought leadership, B2B engagement, real-time conversations
 - FACEBOOK_ADS_EXPERT: Paid ads, lead generation, retargeting, older demographics
 - LINKEDIN_EXPERT: B2B content, professional networking, executive thought leadership
+- YOUTUBE_EXPERT: Long-form video, tutorials, SEO-driven content, subscriber growth
+- INSTAGRAM_EXPERT: Visual storytelling, reels, carousels, stories, hashtag strategy
+- PINTEREST_EXPERT: Visual search, keyword-rich pins, boards, seasonal content planning
 - SEO_EXPERT: Keyword research, content optimization, search visibility
 - GROWTH_ANALYST: Performance analytics, pattern identification, strategy mutations, growth tracking
 
@@ -109,6 +118,15 @@ Best for: Paid campaigns, 35-65+ demographics, local business, lead forms, retar
 
 ### LinkedIn (LINKEDIN_EXPERT)
 Best for: B2B sales, executive targeting, professional content, recruitment, partnerships
+
+### YouTube (YOUTUBE_EXPERT)
+Best for: Long-form video, tutorials, SEO-driven content, subscriber growth, brand authority
+
+### Instagram (INSTAGRAM_EXPERT)
+Best for: Visual storytelling, reels, carousels, stories, hashtag reach, community building
+
+### Pinterest (PINTEREST_EXPERT)
+Best for: Visual search, evergreen content, seasonal planning, product discovery, traffic driving
 
 ### SEO (SEO_EXPERT)
 Best for: Keyword strategy, content optimization, organic search visibility
@@ -188,13 +206,13 @@ const INTENT_KEYWORDS: Record<CampaignIntent, string[]> = {
  * Specialist mapping by intent
  */
 const INTENT_SPECIALISTS: Record<CampaignIntent, string[]> = {
-  FULL_FUNNEL: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT'],
-  AWARENESS: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT'],
-  LEAD_GENERATION: ['SEO_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT'],
-  THOUGHT_LEADERSHIP: ['SEO_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT'],
-  VIRAL_CONTENT: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT'],
-  PAID_ADVERTISING: ['FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT'],
-  ORGANIC_GROWTH: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT'],
+  FULL_FUNNEL: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT'],
+  AWARENESS: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT'],
+  LEAD_GENERATION: ['SEO_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'PINTEREST_EXPERT'],
+  THOUGHT_LEADERSHIP: ['SEO_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT'],
+  VIRAL_CONTENT: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'INSTAGRAM_EXPERT'],
+  PAID_ADVERTISING: ['FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'INSTAGRAM_EXPERT'],
+  ORGANIC_GROWTH: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT'],
   SINGLE_PLATFORM: [], // Determined dynamically
 };
 
@@ -241,6 +259,9 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     'TWITTER_X_EXPERT',
     'FACEBOOK_ADS_EXPERT',
     'LINKEDIN_EXPERT',
+    'YOUTUBE_EXPERT',
+    'INSTAGRAM_EXPERT',
+    'PINTEREST_EXPERT',
     'SEO_EXPERT',
     'GROWTH_ANALYST',
   ],
@@ -270,6 +291,27 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     {
       triggerKeywords: ['linkedin', 'b2b', 'professional', 'executive', 'corporate', 'enterprise', 'decision maker', 'c-suite'],
       delegateTo: 'LINKEDIN_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // YouTube - Long-form video, tutorials
+    {
+      triggerKeywords: ['youtube', 'video', 'tutorial', 'vlog', 'subscriber', 'thumbnail', 'long-form', 'chapter', 'playlist', 'watch time'],
+      delegateTo: 'YOUTUBE_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Instagram - Visual, reels, stories
+    {
+      triggerKeywords: ['instagram', 'ig', 'reel', 'reels', 'carousel', 'story', 'stories', 'hashtag', 'visual', 'influencer'],
+      delegateTo: 'INSTAGRAM_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Pinterest - Visual search, pins
+    {
+      triggerKeywords: ['pinterest', 'pin', 'board', 'pins', 'idea pin', 'rich pin', 'visual search', 'seasonal content', 'pinning'],
+      delegateTo: 'PINTEREST_EXPERT',
       priority: 10,
       requiresApproval: false,
     },
@@ -412,6 +454,9 @@ export interface CampaignBrief {
     twitter: unknown;
     facebook: unknown;
     linkedin: unknown;
+    youtube: unknown;
+    instagram: unknown;
+    pinterest: unknown;
     seo: unknown;
   };
 
@@ -496,6 +541,9 @@ export class MarketingManager extends BaseManager {
       { name: 'TWITTER_X_EXPERT', factory: getTwitterExpert },
       { name: 'FACEBOOK_ADS_EXPERT', factory: getFacebookAdsExpert },
       { name: 'LINKEDIN_EXPERT', factory: getLinkedInExpert },
+      { name: 'YOUTUBE_EXPERT', factory: getYouTubeExpert },
+      { name: 'INSTAGRAM_EXPERT', factory: getInstagramExpert },
+      { name: 'PINTEREST_EXPERT', factory: getPinterestExpert },
       { name: 'SEO_EXPERT', factory: getSEOExpert },
       { name: 'GROWTH_ANALYST', factory: getGrowthAnalyst },
     ];
@@ -1168,6 +1216,9 @@ export class MarketingManager extends BaseManager {
       if (text.includes('twitter') || text.includes('x.com')) {return ['TWITTER_X_EXPERT'];}
       if (text.includes('facebook') || text.includes('fb ')) {return ['FACEBOOK_ADS_EXPERT'];}
       if (text.includes('linkedin')) {return ['LINKEDIN_EXPERT'];}
+      if (text.includes('youtube')) {return ['YOUTUBE_EXPERT'];}
+      if (text.includes('instagram') || text.includes(' ig ')) {return ['INSTAGRAM_EXPERT'];}
+      if (text.includes('pinterest')) {return ['PINTEREST_EXPERT'];}
       if (text.includes('seo')) {return ['SEO_EXPERT'];}
     }
 
@@ -1201,6 +1252,9 @@ export class MarketingManager extends BaseManager {
       twitter: null,
       facebook: null,
       linkedin: null,
+      youtube: null,
+      instagram: null,
+      pinterest: null,
       seo: null,
     };
 
@@ -2033,6 +2087,36 @@ export class MarketingManager extends BaseManager {
           tone: this.mapToneToLinkedInTone(brandContext.toneOfVoice),
         };
 
+      case 'YOUTUBE':
+        return {
+          ...basePayload,
+          action: 'generate_content',
+          topic: goal.message,
+          contentType: 'video',
+          targetAudience: goal.targetAudience?.demographics ?? brandContext.targetAudience,
+          tone: this.mapToneToLinkedInTone(brandContext.toneOfVoice),
+        };
+
+      case 'INSTAGRAM':
+        return {
+          ...basePayload,
+          action: 'generate_content',
+          topic: goal.message,
+          contentType: 'post',
+          targetAudience: goal.targetAudience?.demographics ?? brandContext.targetAudience,
+          tone: brandContext.toneOfVoice,
+        };
+
+      case 'PINTEREST':
+        return {
+          ...basePayload,
+          action: 'generate_content',
+          topic: goal.message,
+          contentType: 'pin',
+          targetAudience: goal.targetAudience?.demographics ?? brandContext.targetAudience,
+          tone: brandContext.toneOfVoice,
+        };
+
       default:
         return basePayload;
     }
@@ -2134,6 +2218,15 @@ export class MarketingManager extends BaseManager {
       case 'LINKEDIN':
         outputs.linkedin = data;
         break;
+      case 'YOUTUBE':
+        outputs.youtube = data;
+        break;
+      case 'INSTAGRAM':
+        outputs.instagram = data;
+        break;
+      case 'PINTEREST':
+        outputs.pinterest = data;
+        break;
     }
   }
 
@@ -2147,6 +2240,9 @@ export class MarketingManager extends BaseManager {
       TWITTER: 'TWITTER_X_EXPERT',
       FACEBOOK: 'FACEBOOK_ADS_EXPERT',
       LINKEDIN: 'LINKEDIN_EXPERT',
+      YOUTUBE: 'YOUTUBE_EXPERT',
+      INSTAGRAM: 'INSTAGRAM_EXPERT',
+      PINTEREST: 'PINTEREST_EXPERT',
       SEO: 'SEO_EXPERT',
     };
     return mapping[platform] ?? `${platform}_EXPERT`;
@@ -2223,6 +2319,48 @@ Brand Voice: ${brandVoice}
 SEO Keywords to Incorporate: ${keywords}
 Focus: B2B content, professional networking, thought leadership
 Content Type: Posts, articles, connection outreach
+Key Phrases to Use: ${brandContext.keyPhrases.slice(0, 3).join(', ') || 'None specified'}
+Phrases to Avoid: ${brandContext.avoidPhrases.slice(0, 3).join(', ') || 'None specified'}`;
+    }
+
+    if (platform === 'YOUTUBE') {
+      return `Create YouTube campaign strategy:
+Campaign Goal: ${goal.message}
+Objective: ${goal.objective}
+Budget: ${budget}
+${industryContext}
+Brand Voice: ${brandVoice}
+SEO Keywords to Incorporate: ${keywords}
+Focus: Long-form video, tutorials, SEO-driven content, subscriber growth
+Content Type: Videos, thumbnails, descriptions, playlists
+Key Phrases to Use: ${brandContext.keyPhrases.slice(0, 3).join(', ') || 'None specified'}
+Phrases to Avoid: ${brandContext.avoidPhrases.slice(0, 3).join(', ') || 'None specified'}`;
+    }
+
+    if (platform === 'INSTAGRAM') {
+      return `Create Instagram campaign strategy:
+Campaign Goal: ${goal.message}
+Objective: ${goal.objective}
+Budget: ${budget}
+${industryContext}
+Brand Voice: ${brandVoice}
+SEO Keywords to Incorporate: ${keywords}
+Focus: Visual storytelling, reels, carousels, stories, hashtag reach
+Content Type: Reels, carousels, feed posts, stories
+Key Phrases to Use: ${brandContext.keyPhrases.slice(0, 3).join(', ') || 'None specified'}
+Phrases to Avoid: ${brandContext.avoidPhrases.slice(0, 3).join(', ') || 'None specified'}`;
+    }
+
+    if (platform === 'PINTEREST') {
+      return `Create Pinterest campaign strategy:
+Campaign Goal: ${goal.message}
+Objective: ${goal.objective}
+Budget: ${budget}
+${industryContext}
+Brand Voice: ${brandVoice}
+SEO Keywords to Incorporate: ${keywords}
+Focus: Visual search, keyword-rich pins, boards, seasonal content planning
+Content Type: Standard pins, idea pins, product pins, boards
 Key Phrases to Use: ${brandContext.keyPhrases.slice(0, 3).join(', ') || 'None specified'}
 Phrases to Avoid: ${brandContext.avoidPhrases.slice(0, 3).join(', ') || 'None specified'}`;
     }
@@ -2337,6 +2475,15 @@ Budget: ${budget}`;
     }
     if (strategy.platforms.includes('LINKEDIN')) {
       recommendations.push('LinkedIn: Focus on value-first content - educational posts outperform promotional ones');
+    }
+    if (strategy.platforms.includes('YOUTUBE')) {
+      recommendations.push('YouTube: Optimize title and thumbnail together - they are the primary click drivers in search and suggested');
+    }
+    if (strategy.platforms.includes('INSTAGRAM')) {
+      recommendations.push('Instagram: Reels get 2x the reach of static posts - prioritize short-form video for discovery');
+    }
+    if (strategy.platforms.includes('PINTEREST')) {
+      recommendations.push('Pinterest: Pin content 2-3 months before the season - Pinterest users plan ahead');
     }
 
     // Cross-platform recommendations

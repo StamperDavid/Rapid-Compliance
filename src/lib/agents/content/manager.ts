@@ -18,6 +18,7 @@
  * - CALENDAR_COORDINATOR: Content scheduling and cross-platform timing
  * - VIDEO_SPECIALIST: Scripts, storyboards, video SEO
  * - ASSET_GENERATOR: Brand visuals, social graphics (from builder domain)
+ * - MUSIC_PLANNER: Soundtrack planning, music style recommendations, audio creative direction
  *
  * WORKFLOW:
  * 1. Receive TechnicalBrief via site.blueprint_ready signal
@@ -34,9 +35,12 @@
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
 import { getCopywriter } from './copywriter/specialist';
+import { getBlogWriter } from './blog/specialist';
 import { getCalendarCoordinator } from './calendar/specialist';
 import { VideoSpecialist } from './video/specialist';
 import { getAssetGenerator } from '../builder/assets/specialist';
+import { getMusicPlanner } from './music/specialist';
+import { getPodcastSpecialist } from './podcast/specialist';
 import {
   shareInsight,
   broadcastSignal,
@@ -75,6 +79,8 @@ SPECIALISTS YOU ORCHESTRATE:
 - CALENDAR_COORDINATOR: Content scheduling, optimal timing, cross-platform coordination
 - VIDEO_SPECIALIST: Script-to-storyboard, audio cues, video SEO, thumbnail strategy
 - ASSET_GENERATOR: Logos, banners, social graphics, brand visuals
+- MUSIC_PLANNER: Soundtrack planning, music style profiles, audio creative direction
+- PODCAST_SPECIALIST: Episode planning, show notes, interview questions, segment outlines
 
 ## CONTENT PRODUCTION FLOW
 1. RECEIVE: TechnicalBrief from ARCHITECT_MANAGER (site.blueprint_ready signal)
@@ -128,6 +134,8 @@ export type ContentIntent =
   | 'COPY_ONLY'            // Copywriter for text content
   | 'VISUAL_ONLY'          // Asset generation only
   | 'VIDEO_PRODUCTION'     // Video specialist focus
+  | 'PODCAST_PRODUCTION'   // Podcast specialist focus
+  | 'BLOG_CONTENT'         // Blog Writer for long-form SEO content
   | 'SCHEDULING'           // Calendar coordination
   | 'SEO_REFRESH'          // Update existing content for SEO
   | 'SINGLE_PAGE';         // Content for one specific page
@@ -152,6 +160,14 @@ const _INTENT_KEYWORDS: Record<ContentIntent, string[]> = {
     'video', 'storyboard', 'script', 'youtube', 'tiktok', 'reel', 'short',
     'b-roll', 'thumbnail',
   ],
+  PODCAST_PRODUCTION: [
+    'podcast', 'episode', 'show notes', 'interview questions', 'episode plan',
+    'segment outline', 'intro script', 'outro script', 'guest research',
+  ],
+  BLOG_CONTENT: [
+    'blog', 'blog post', 'long-form', 'thought leadership', 'editorial',
+    'seo article', 'pillar content', 'content marketing',
+  ],
   SCHEDULING: [
     'schedule', 'calendar', 'publish', 'timing', 'when to post', 'optimal time',
     'content calendar',
@@ -166,12 +182,14 @@ const _INTENT_KEYWORDS: Record<ContentIntent, string[]> = {
  * Specialist mapping by intent
  */
 const INTENT_SPECIALISTS: Record<ContentIntent, string[]> = {
-  FULL_PACKAGE: ['COPYWRITER', 'CALENDAR_COORDINATOR', 'VIDEO_SPECIALIST', 'ASSET_GENERATOR'],
+  FULL_PACKAGE: ['COPYWRITER', 'BLOG_WRITER', 'CALENDAR_COORDINATOR', 'VIDEO_SPECIALIST', 'ASSET_GENERATOR', 'MUSIC_PLANNER'],
   COPY_ONLY: ['COPYWRITER'],
+  BLOG_CONTENT: ['BLOG_WRITER'],
   VISUAL_ONLY: ['ASSET_GENERATOR'],
-  VIDEO_PRODUCTION: ['VIDEO_SPECIALIST', 'COPYWRITER'],
+  VIDEO_PRODUCTION: ['VIDEO_SPECIALIST', 'COPYWRITER', 'MUSIC_PLANNER'],
+  PODCAST_PRODUCTION: ['PODCAST_SPECIALIST'],
   SCHEDULING: ['CALENDAR_COORDINATOR'],
-  SEO_REFRESH: ['COPYWRITER'],
+  SEO_REFRESH: ['COPYWRITER', 'BLOG_WRITER'],
   SINGLE_PAGE: ['COPYWRITER', 'ASSET_GENERATOR'],
 };
 
@@ -196,6 +214,8 @@ const CONTENT_MANAGER_CONFIG: ManagerConfig = {
       'brand_voice_enforcement',
       'multi_modal_synthesis',
       'content_validation',
+      'soundtrack_planning',
+      'podcast_planning',
     ],
   },
   systemPrompt: SYSTEM_PROMPT,
@@ -214,13 +234,20 @@ const CONTENT_MANAGER_CONFIG: ManagerConfig = {
   },
   maxTokens: 8192,
   temperature: 0.4,
-  specialists: ['COPYWRITER', 'CALENDAR_COORDINATOR', 'VIDEO_SPECIALIST', 'ASSET_GENERATOR'],
+  specialists: ['COPYWRITER', 'BLOG_WRITER', 'CALENDAR_COORDINATOR', 'VIDEO_SPECIALIST', 'ASSET_GENERATOR', 'MUSIC_PLANNER', 'PODCAST_SPECIALIST'],
   delegationRules: [
-    // Copywriter - Text content
+    // Copywriter - Short-form text content
     {
-      triggerKeywords: ['copy', 'headline', 'write', 'content', 'blog', 'article', 'description', 'email', 'ad'],
+      triggerKeywords: ['copy', 'headline', 'write', 'content', 'description', 'email', 'ad'],
       delegateTo: 'COPYWRITER',
       priority: 10,
+      requiresApproval: false,
+    },
+    // Blog Writer - Long-form SEO blog content
+    {
+      triggerKeywords: ['blog', 'blog post', 'article', 'long-form', 'thought leadership', 'editorial', 'seo article', 'pillar content'],
+      delegateTo: 'BLOG_WRITER',
+      priority: 15,
       requiresApproval: false,
     },
     // Calendar - Scheduling
@@ -241,6 +268,20 @@ const CONTENT_MANAGER_CONFIG: ManagerConfig = {
     {
       triggerKeywords: ['image', 'graphic', 'banner', 'logo', 'asset', 'visual', 'favicon', 'social graphic'],
       delegateTo: 'ASSET_GENERATOR',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Music Planner - Soundtrack and audio direction
+    {
+      triggerKeywords: ['music', 'soundtrack', 'audio', 'score', 'jingle', 'sound design', 'tempo', 'bpm', 'instrumentation'],
+      delegateTo: 'MUSIC_PLANNER',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Podcast Specialist - Podcast content planning
+    {
+      triggerKeywords: ['podcast', 'episode', 'show notes', 'interview questions', 'episode plan', 'segment outline', 'guest research'],
+      delegateTo: 'PODCAST_SPECIALIST',
       priority: 10,
       requiresApproval: false,
     },
@@ -519,9 +560,12 @@ export class ContentManager extends BaseManager {
 
     const specialistFactories = [
       { name: 'COPYWRITER', factory: getCopywriter },
+      { name: 'BLOG_WRITER', factory: getBlogWriter },
       { name: 'CALENDAR_COORDINATOR', factory: getCalendarCoordinator },
       { name: 'VIDEO_SPECIALIST', factory: () => new VideoSpecialist() },
       { name: 'ASSET_GENERATOR', factory: getAssetGenerator },
+      { name: 'MUSIC_PLANNER', factory: getMusicPlanner },
+      { name: 'PODCAST_SPECIALIST', factory: getPodcastSpecialist },
     ];
 
     for (const { name, factory } of specialistFactories) {
