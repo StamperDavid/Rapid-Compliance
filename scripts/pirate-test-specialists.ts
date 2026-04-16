@@ -570,14 +570,14 @@ const TESTS: TestCase[] = [
         clientIndustry: 'B2B SaaS',
         clientSize: '50-200 employees',
         beforeState: {
-          challenges: [{ category: 'operational', description: 'Manually qualifying 500 inbound leads per month with 4 SDRs. Response time averaged 18 hours.', severity: 'high' }],
-          metrics: [{ metric: 'Response Time', value: 18, unit: 'hours' }],
+          challenges: [{ title: 'Slow Lead Response', description: 'Manually qualifying 500 inbound leads per month with 4 SDRs. Response time averaged 18 hours.', impact: 'Lost 60% of qualified leads before first contact', severity: 'HIGH' as const }],
+          metrics: [{ label: 'Response Time', value: 18, unit: 'hours' }],
           painPoints: ['60% of qualified leads went cold before first contact'],
           context: 'GrowthCo had a growing inbound pipeline but their SDR team could not keep up.',
         },
         afterState: {
-          outcomes: [{ metric: 'Response Time', before: '18 hours', after: '4 minutes', improvement: '99.6% faster' }],
-          metrics: [{ metric: 'Response Time', value: 4, unit: 'minutes' }],
+          outcomes: [{ title: 'Instant Lead Response', description: 'AI agents qualify leads in under 4 minutes', impact: '99.6% faster response time' }],
+          metrics: [{ label: 'Response Time', value: 4, unit: 'minutes' }],
           benefits: ['Qualified lead conversion rate increased 340%', 'SDR team reduced from 4 to 1'],
           context: 'SalesVelocity.ai AI agents handle qualification, outreach, and proposals automatically.',
         },
