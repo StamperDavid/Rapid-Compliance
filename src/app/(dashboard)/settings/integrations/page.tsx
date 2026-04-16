@@ -19,6 +19,7 @@ import TeamsIntegration from '@/components/integrations/TeamsIntegration';
 import ZapierIntegration from '@/components/integrations/ZapierIntegration';
 import TwitterIntegration from '@/components/integrations/TwitterIntegration';
 import LinkedInIntegration from '@/components/integrations/LinkedInIntegration';
+import SocialPlatformIntegration, { SOCIAL_PLATFORM_CONFIGS } from '@/components/integrations/SocialPlatformIntegration';
 import GoogleSearchConsoleIntegration from '@/components/integrations/GoogleSearchConsoleIntegration';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
@@ -208,6 +209,25 @@ export default function IntegrationsPage() {
       integrations: [
         { id: 'twitter', component: TwitterIntegration },
         { id: 'linkedin', component: LinkedInIntegration },
+        ...SOCIAL_PLATFORM_CONFIGS.map((cfg) => ({
+          id: cfg.id,
+          component: function SocialWrapper(props: {
+            integration: ConnectedIntegration | null;
+            onConnect: (integration: Partial<ConnectedIntegration>) => void;
+            onDisconnect: () => void;
+            onUpdate: (updates: Record<string, unknown>) => void;
+          }) {
+            return (
+              <SocialPlatformIntegration
+                config={cfg}
+                integration={props.integration as Record<string, unknown> | null}
+                onConnect={(data) => props.onConnect(data as Partial<ConnectedIntegration>)}
+                onDisconnect={props.onDisconnect}
+                onUpdate={props.onUpdate}
+              />
+            );
+          },
+        })),
       ],
     },
     {
