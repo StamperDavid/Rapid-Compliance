@@ -128,7 +128,7 @@ const SegmentSchema = z.object({
   durationMinutes: z.number().min(0.5),
   talkingPoints: z.array(z.string().min(1)).min(1),
   transitionNote: z.string().min(1),
-  segueToNext: z.string().optional(),
+  segueToNext: z.string().nullish(),
 });
 
 const EpisodePlanResultSchema = z.object({
