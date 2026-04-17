@@ -936,8 +936,14 @@ CRITICAL RULES:
           toolChoice: iterationToolChoice,
         });
 
-        // Create mission BEFORE tools execute so steps can write to it
-        if (!missionCreated && response.toolCalls.some((tc: ToolCall) => missionTriggerTools.includes(tc.function.name))) {
+        // Create mission BEFORE tools execute so steps can write to it.
+        // SKIP this for propose_mission_plan — that tool creates its own
+        // mission with PLAN_PENDING_APPROVAL status and pre-filled steps.
+        // Creating an empty IN_PROGRESS mission first causes a race
+        // condition where Mission Control loads the empty version before
+        // the plan version lands.
+        const isPlanProposal = response.toolCalls.some((tc: ToolCall) => tc.function.name === 'propose_mission_plan');
+        if (!missionCreated && !isPlanProposal && response.toolCalls.some((tc: ToolCall) => missionTriggerTools.includes(tc.function.name))) {
           const now = new Date().toISOString();
           const titleSnippet = message.slice(0, 80) + (message.length > 80 ? '...' : '');
           try {
