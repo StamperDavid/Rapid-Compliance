@@ -361,6 +361,69 @@ export default function PlatformPage() {
         </div>
       </div>
 
+      {/* ── Platform Metrics ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: 'Followers', value: '—', trend: null },
+          { label: 'Following', value: '—', trend: null },
+          { label: 'Posts', value: String(recentPosts.length), trend: null },
+          { label: 'Engagement Rate', value: '—', trend: null },
+          { label: 'Reach (30d)', value: '—', trend: null },
+          { label: 'Impressions (30d)', value: '—', trend: null },
+        ].map((metric) => (
+          <Card key={metric.label}>
+            <CardContent className="pt-4 pb-4 text-center">
+              <div className="text-xs text-muted-foreground">{metric.label}</div>
+              <div className="text-xl font-bold text-foreground mt-1">{metric.value}</div>
+              {metric.trend !== null && (
+                <div className={`text-xs mt-0.5 ${Number(metric.trend) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {Number(metric.trend) >= 0 ? '+' : ''}{metric.trend}%
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* ── AI Strategy & Advice ──────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">AI Strategy for {meta.label}</CardTitle>
+          <CardDescription>
+            Your {meta.label} specialist analyzes your performance and recommends what to do next.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {connected === false ? (
+            <div className="text-sm text-muted-foreground py-4">
+              Connect your {meta.label} account to get personalized strategy recommendations from your AI specialist.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-surface-elevated border border-border-light">
+                <div className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">Content Recommendation</div>
+                <div className="text-sm text-foreground">
+                  Connect your {meta.label} account and post a few times. Your AI specialist will analyze your engagement patterns and recommend the best content types, posting times, and topics for your audience.
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-surface-elevated border border-border-light">
+                <div className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">Growth Strategy</div>
+                <div className="text-sm text-foreground">
+                  Once you have engagement data, your specialist will identify growth opportunities — hashtag strategies, audience segments to target, competitors to study, and content gaps to fill.
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/dashboard')}
+              >
+                Ask Jasper for {meta.label} strategy now
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Composer */}
         <div className="lg:col-span-2">

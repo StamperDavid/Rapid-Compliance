@@ -161,6 +161,20 @@ For each platform below, you need to create a developer app (or get API credenti
 
 ---
 
+## Paid Advertising / Ads Manager API Keys
+
+For testing paid ad campaigns on each platform, you'll need ads API access in addition to the organic posting credentials above.
+
+- [ ] **Facebook/Instagram Ads** — Same Meta app as organic posting, but enable the Marketing API. Go to developers.facebook.com > your app > Add Product > Marketing API. You'll need an Ad Account ID from your Meta Business Suite.
+- [ ] **Google Ads (YouTube)** — Go to https://ads.google.com, create an account if needed. Then enable the Google Ads API in your Google Cloud project. Get a developer token from the Google Ads API Center. Add `GOOGLE_ADS_DEVELOPER_TOKEN` and `GOOGLE_ADS_CUSTOMER_ID` to `.env.local`.
+- [ ] **TikTok Ads** — Go to https://ads.tiktok.com, create a TikTok For Business account. Then go to TikTok Marketing API at https://business-api.tiktok.com and register for API access. Add `TIKTOK_ADS_APP_ID` and `TIKTOK_ADS_SECRET` to `.env.local`.
+- [ ] **LinkedIn Ads** — Go to https://www.linkedin.com/campaignmanager, create a Campaign Manager account. The same LinkedIn developer app handles both organic and ads. You'll need an Ad Account ID.
+- [ ] **Pinterest Ads** — Same Pinterest developer app as organic. Enable the Ads API in your Pinterest app settings. You'll need an Advertiser ID from ads.pinterest.com.
+- [ ] **Twitter/X Ads** — Go to https://ads.twitter.com. The same Twitter developer app handles both organic and ads. You'll need an Ads Account ID.
+- [ ] **Reddit Ads** — Go to https://ads.reddit.com and create an ad account. Reddit's ads API uses the same OAuth app. You'll need a campaign ID.
+
+Note: Bluesky, Threads, Truth Social, Telegram, WhatsApp Business, and Google Business do NOT have ads APIs — they're organic only.
+
 ## Other Optional Services
 
 - [ ] **Slack** — Get a webhook URL from https://api.slack.com/messaging/webhooks. Enter in Settings > API Keys. Only needed if you want Slack notifications.
