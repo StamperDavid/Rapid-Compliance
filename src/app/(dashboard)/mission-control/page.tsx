@@ -1582,7 +1582,15 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
   );
 
   // The displayed mission: prefer streamed data, fall back to list data
-  const selectedMission = streamedMission ?? missions.find((m) => m.missionId === selectedMissionId) ?? null;
+  // For plan-review missions, prefer the fetched data over the SSE
+  // stream. The stream creates a skeleton with empty steps — but plan
+  // steps are written all at once in createMissionWithPlan, so the
+  // stream never receives step_added events for them. The list fetch
+  // returns the full mission including all plan steps.
+  const fetchedMission = missions.find((m) => m.missionId === selectedMissionId) ?? null;
+  const selectedMission = fetchedMission?.status === 'PLAN_PENDING_APPROVAL'
+    ? fetchedMission
+    : (streamedMission ?? fetchedMission);
 
   // Selected step from the mission
   const selectedStep = selectedMission?.steps.find((s) => s.stepId === selectedStepId) ?? null;
