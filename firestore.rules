@@ -11,11 +11,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Check if user is an admin (binary role check)
+    // Check if user has admin-level access (owner or admin role)
     function isAdmin() {
       return isAuthenticated()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+            || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner');
     }
 
     // ========================================
