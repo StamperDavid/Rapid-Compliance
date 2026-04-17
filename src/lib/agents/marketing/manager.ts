@@ -20,6 +20,7 @@
  * - YOUTUBE_EXPERT: Long-form video, tutorials, SEO-driven content
  * - INSTAGRAM_EXPERT: Visual storytelling, reels, carousels, stories
  * - PINTEREST_EXPERT: Visual search, keyword-rich pins, seasonal content
+ * - PAID_ADS_SPECIALIST: Campaign strategy, budget allocation, ad optimization
  * - SEO_EXPERT: Keyword research, content optimization
  * - GROWTH_ANALYST: Performance analytics, mutation directives, growth tracking
  *
@@ -38,6 +39,7 @@ import { getGrowthAnalyst } from './growth-analyst/specialist';
 import { getYouTubeExpert } from './youtube/specialist';
 import { getInstagramExpert } from './instagram/specialist';
 import { getPinterestExpert } from './pinterest/specialist';
+import { getPaidAdsSpecialist } from './paid-ads/specialist';
 import {
   getMemoryVault,
   shareInsight,
@@ -80,6 +82,7 @@ SPECIALISTS YOU ORCHESTRATE:
 - YOUTUBE_EXPERT: Long-form video, tutorials, SEO-driven content, subscriber growth
 - INSTAGRAM_EXPERT: Visual storytelling, reels, carousels, stories, hashtag strategy
 - PINTEREST_EXPERT: Visual search, keyword-rich pins, boards, seasonal content planning
+- PAID_ADS_SPECIALIST: Paid campaign strategy, budget allocation, audience targeting, ad optimization across all platforms
 - SEO_EXPERT: Keyword research, content optimization, search visibility
 - GROWTH_ANALYST: Performance analytics, pattern identification, strategy mutations, growth tracking
 
@@ -127,6 +130,9 @@ Best for: Visual storytelling, reels, carousels, stories, hashtag reach, communi
 
 ### Pinterest (PINTEREST_EXPERT)
 Best for: Visual search, evergreen content, seasonal planning, product discovery, traffic driving
+
+### Paid Advertising (PAID_ADS_SPECIALIST)
+Best for: Cross-platform paid campaign strategy, budget allocation, audience targeting, bid optimization, ad creative briefs, ROAS/CPA optimization
 
 ### SEO (SEO_EXPERT)
 Best for: Keyword strategy, content optimization, organic search visibility
@@ -191,7 +197,8 @@ const INTENT_KEYWORDS: Record<CampaignIntent, string[]> = {
   ],
   PAID_ADVERTISING: [
     'paid', 'ads', 'advertising', 'budget', 'spend', 'roi', 'roas',
-    'retarget', 'ppc', 'cpm', 'cpc',
+    'retarget', 'ppc', 'cpm', 'cpc', 'cpa', 'ad spend', 'ad optimization',
+    'campaign budget', 'bid strategy', 'ad creative',
   ],
   ORGANIC_GROWTH: [
     'organic', 'seo', 'search', 'ranking', 'content marketing',
@@ -206,12 +213,12 @@ const INTENT_KEYWORDS: Record<CampaignIntent, string[]> = {
  * Specialist mapping by intent
  */
 const INTENT_SPECIALISTS: Record<CampaignIntent, string[]> = {
-  FULL_FUNNEL: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT'],
+  FULL_FUNNEL: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST'],
   AWARENESS: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT'],
-  LEAD_GENERATION: ['SEO_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'PINTEREST_EXPERT'],
+  LEAD_GENERATION: ['SEO_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST'],
   THOUGHT_LEADERSHIP: ['SEO_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT'],
   VIRAL_CONTENT: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'INSTAGRAM_EXPERT'],
-  PAID_ADVERTISING: ['FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'INSTAGRAM_EXPERT'],
+  PAID_ADVERTISING: ['FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'INSTAGRAM_EXPERT', 'PAID_ADS_SPECIALIST'],
   ORGANIC_GROWTH: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT'],
   SINGLE_PLATFORM: [], // Determined dynamically
 };
@@ -262,6 +269,7 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     'YOUTUBE_EXPERT',
     'INSTAGRAM_EXPERT',
     'PINTEREST_EXPERT',
+    'PAID_ADS_SPECIALIST',
     'SEO_EXPERT',
     'GROWTH_ANALYST',
   ],
@@ -312,6 +320,13 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     {
       triggerKeywords: ['pinterest', 'pin', 'board', 'pins', 'idea pin', 'rich pin', 'visual search', 'seasonal content', 'pinning'],
       delegateTo: 'PINTEREST_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Paid Advertising - Campaign strategy, budget allocation, ad optimization
+    {
+      triggerKeywords: ['paid', 'advertising', 'ads', 'campaign budget', 'ad spend', 'ppc', 'cpm', 'cpa', 'roas', 'ad optimization', 'bid strategy', 'ad creative', 'media buy', 'ad campaign', 'paid media'],
+      delegateTo: 'PAID_ADS_SPECIALIST',
       priority: 10,
       requiresApproval: false,
     },
@@ -457,6 +472,7 @@ export interface CampaignBrief {
     youtube: unknown;
     instagram: unknown;
     pinterest: unknown;
+    paidAds: unknown;
     seo: unknown;
   };
 
@@ -544,6 +560,7 @@ export class MarketingManager extends BaseManager {
       { name: 'YOUTUBE_EXPERT', factory: getYouTubeExpert },
       { name: 'INSTAGRAM_EXPERT', factory: getInstagramExpert },
       { name: 'PINTEREST_EXPERT', factory: getPinterestExpert },
+      { name: 'PAID_ADS_SPECIALIST', factory: getPaidAdsSpecialist },
       { name: 'SEO_EXPERT', factory: getSEOExpert },
       { name: 'GROWTH_ANALYST', factory: getGrowthAnalyst },
     ];
@@ -1219,6 +1236,7 @@ export class MarketingManager extends BaseManager {
       if (text.includes('youtube')) {return ['YOUTUBE_EXPERT'];}
       if (text.includes('instagram') || text.includes(' ig ')) {return ['INSTAGRAM_EXPERT'];}
       if (text.includes('pinterest')) {return ['PINTEREST_EXPERT'];}
+      if (text.includes('paid ad') || text.includes('ad spend') || text.includes('ppc') || text.includes('media buy')) {return ['PAID_ADS_SPECIALIST'];}
       if (text.includes('seo')) {return ['SEO_EXPERT'];}
     }
 
@@ -1255,6 +1273,7 @@ export class MarketingManager extends BaseManager {
       youtube: null,
       instagram: null,
       pinterest: null,
+      paidAds: null,
       seo: null,
     };
 
@@ -2117,6 +2136,18 @@ export class MarketingManager extends BaseManager {
           tone: brandContext.toneOfVoice,
         };
 
+      case 'PAID_ADS':
+        return {
+          ...basePayload,
+          action: 'plan_campaign',
+          campaignGoal: this.mapObjectiveToPaidAdsGoal(goal.objective),
+          totalBudget: this.extractNumericBudget(strategy.budgetAllocation['PAID_ADS'] ?? '1000'),
+          durationDays: 30,
+          targetAudience: goal.targetAudience?.demographics ?? brandContext.targetAudience,
+          industry: brandContext.industry,
+          availablePlatforms: strategy.platforms.filter(p => p !== 'PAID_ADS' && p !== 'SEO'),
+        };
+
       default:
         return basePayload;
     }
@@ -2198,6 +2229,28 @@ export class MarketingManager extends BaseManager {
   }
 
   /**
+   * Map campaign objective to paid ads campaign goal
+   */
+  private mapObjectiveToPaidAdsGoal(objective: string): string {
+    const mapping: Record<string, string> = {
+      awareness: 'awareness',
+      engagement: 'traffic',
+      conversions: 'conversions',
+      leads: 'leads',
+      retention: 'traffic',
+    };
+    return mapping[objective] ?? 'awareness';
+  }
+
+  /**
+   * Extract numeric budget from a budget string like "$1,000" or "1000"
+   */
+  private extractNumericBudget(budgetStr: string): number {
+    const match = budgetStr.replace(/[,$]/g, '').match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 1000;
+  }
+
+  /**
    * Store specialist output in the appropriate slot
    */
   private storeSpecialistOutput(
@@ -2227,6 +2280,9 @@ export class MarketingManager extends BaseManager {
       case 'PINTEREST':
         outputs.pinterest = data;
         break;
+      case 'PAID_ADS':
+        outputs.paidAds = data;
+        break;
     }
   }
 
@@ -2243,6 +2299,7 @@ export class MarketingManager extends BaseManager {
       YOUTUBE: 'YOUTUBE_EXPERT',
       INSTAGRAM: 'INSTAGRAM_EXPERT',
       PINTEREST: 'PINTEREST_EXPERT',
+      PAID_ADS: 'PAID_ADS_SPECIALIST',
       SEO: 'SEO_EXPERT',
     };
     return mapping[platform] ?? `${platform}_EXPERT`;
@@ -2361,6 +2418,20 @@ Brand Voice: ${brandVoice}
 SEO Keywords to Incorporate: ${keywords}
 Focus: Visual search, keyword-rich pins, boards, seasonal content planning
 Content Type: Standard pins, idea pins, product pins, boards
+Key Phrases to Use: ${brandContext.keyPhrases.slice(0, 3).join(', ') || 'None specified'}
+Phrases to Avoid: ${brandContext.avoidPhrases.slice(0, 3).join(', ') || 'None specified'}`;
+    }
+
+    if (platform === 'PAID_ADS') {
+      return `Create paid advertising campaign strategy:
+Campaign Goal: ${goal.message}
+Objective: ${goal.objective}
+Budget: ${budget}
+${industryContext}
+Brand Voice: ${brandVoice}
+SEO Keywords to Incorporate: ${keywords}
+Focus: Cross-platform paid media strategy, budget allocation, audience targeting, bid optimization
+Content Type: Ad creative briefs, campaign structure, audience segments
 Key Phrases to Use: ${brandContext.keyPhrases.slice(0, 3).join(', ') || 'None specified'}
 Phrases to Avoid: ${brandContext.avoidPhrases.slice(0, 3).join(', ') || 'None specified'}`;
     }
