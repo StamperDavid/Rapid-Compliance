@@ -2,6 +2,26 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { logger } from '@/lib/logger/logger';
+
+interface SwarmControlState {
+  globalPause: boolean;
+  pausedManagers: string[];
+  updatedAt: string;
+  updatedBy: string;
+}
+
+const DEPARTMENT_NAMES: Record<string, string> = {
+  INTELLIGENCE_MANAGER: 'Research',
+  MARKETING_MANAGER: 'Social & Marketing',
+  BUILDER_MANAGER: 'Website',
+  COMMERCE_MANAGER: 'E-commerce',
+  OUTREACH_MANAGER: 'Email & Outreach',
+  CONTENT_MANAGER: 'Content',
+  ARCHITECT_MANAGER: 'Strategy',
+  REVENUE_DIRECTOR: 'Sales',
+  REPUTATION_MANAGER: 'Reviews & Reputation',
+};
 
 interface AutonomousAgentSettings {
   agentEnabled: boolean;
@@ -30,6 +50,9 @@ export default function AgentRulesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [swarmControl, setSwarmControl] = useState<SwarmControlState | null>(null);
+  const [swarmToggling, setSwarmToggling] = useState(false);
+  const [managerToggling, setManagerToggling] = useState<string | null>(null);
 
   const [config, setConfig] = useState<AutonomousAgentSettings>({
     agentEnabled: false,
@@ -153,6 +176,58 @@ export default function AgentRulesPage() {
     }));
   };
 
+  // Load swarm control state
+  const loadSwarmControl = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/orchestrator/swarm-control');
+      const data = (await res.json()) as { success: boolean; state?: SwarmControlState };
+      if (data.success && data.state) { setSwarmControl(data.state); }
+    } catch (err) {
+      logger.error('Failed to load swarm control', err instanceof Error ? err : undefined);
+    }
+  }, [authFetch]);
+
+  useEffect(() => { void loadSwarmControl(); }, [loadSwarmControl]);
+
+  const handleToggleSwarm = async () => {
+    if (!swarmControl) { return; }
+    setSwarmToggling(true);
+    try {
+      const action = swarmControl.globalPause ? 'resume_swarm' : 'pause_swarm';
+      const res = await authFetch('/api/orchestrator/swarm-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = (await res.json()) as { success: boolean; state?: SwarmControlState };
+      if (data.success && data.state) { setSwarmControl(data.state); }
+    } catch (err) {
+      logger.error('Failed to toggle swarm', err instanceof Error ? err : undefined);
+    } finally {
+      setSwarmToggling(false);
+    }
+  };
+
+  const handleToggleManager = async (managerId: string) => {
+    if (!swarmControl) { return; }
+    setManagerToggling(managerId);
+    try {
+      const isPaused = swarmControl.pausedManagers.includes(managerId);
+      const action = isPaused ? 'resume_manager' : 'pause_manager';
+      const res = await authFetch('/api/orchestrator/swarm-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, managerId }),
+      });
+      const data = (await res.json()) as { success: boolean; state?: SwarmControlState };
+      if (data.success && data.state) { setSwarmControl(data.state); }
+    } catch (err) {
+      logger.error('Failed to toggle manager', err instanceof Error ? err : undefined);
+    } finally {
+      setManagerToggling(null);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, action: () => void) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -174,12 +249,91 @@ export default function AgentRulesPage() {
     <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', margin: 0 }}>
-          Agent Rules
+          AI Settings
         </h1>
         <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem', marginBottom: 0 }}>
-          Configure guardrails and limits for the autonomous posting agent
+          Control AI automation, set posting limits, and manage department activity
         </p>
       </div>
+
+      {/* ── AI Department Controls ──────────────────────────────────── */}
+      {swarmControl && (
+        <div style={{
+          backgroundColor: 'var(--color-bg-paper)',
+          border: `1px solid ${swarmControl.globalPause ? 'rgba(244,67,54,0.3)' : 'var(--color-border-strong)'}`,
+          borderRadius: '0.75rem',
+          padding: '1.25rem',
+          marginBottom: '1.5rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', margin: 0 }}>
+                AI Departments
+              </h2>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem', margin: 0 }}>
+                {swarmControl.globalPause
+                  ? 'All AI activity is paused. Click resume to restart.'
+                  : 'All departments are active. Pause individual departments below.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { void handleToggleSwarm(); }}
+              disabled={swarmToggling}
+              style={{
+                padding: '0.5rem 1.25rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: '#fff',
+                backgroundColor: swarmControl.globalPause ? '#4CAF50' : '#F44336',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: swarmToggling ? 'not-allowed' : 'pointer',
+                opacity: swarmToggling ? 0.6 : 1,
+              }}
+            >
+              {swarmToggling
+                ? (swarmControl.globalPause ? 'Resuming...' : 'Pausing...')
+                : (swarmControl.globalPause ? 'Resume All' : 'Pause All')}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+            {Object.entries(DEPARTMENT_NAMES).map(([managerId, displayName]) => {
+              const isPaused = swarmControl.globalPause || swarmControl.pausedManagers.includes(managerId);
+              const isThisToggling = managerToggling === managerId;
+              return (
+                <button
+                  key={managerId}
+                  type="button"
+                  onClick={() => { void handleToggleManager(managerId); }}
+                  disabled={swarmControl.globalPause || isThisToggling}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.5rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    color: 'var(--color-text-primary)',
+                    border: `1px solid ${isPaused ? 'rgba(244,67,54,0.3)' : 'rgba(76,175,80,0.3)'}`,
+                    backgroundColor: isPaused ? 'rgba(244,67,54,0.06)' : 'rgba(76,175,80,0.06)',
+                    borderRadius: '0.375rem',
+                    cursor: swarmControl.globalPause || isThisToggling ? 'not-allowed' : 'pointer',
+                    opacity: swarmControl.globalPause ? 0.5 : 1,
+                  }}
+                >
+                  <span>{displayName}</span>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    backgroundColor: isPaused ? '#F44336' : '#4CAF50',
+                  }} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div
