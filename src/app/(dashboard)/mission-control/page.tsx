@@ -1598,7 +1598,7 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
         // Always include deep-linked mission so review links work
         const tenMinAgo = Date.now() - 10 * 60 * 1000;
         const liveMissions = data.data.missions.filter((m) => {
-          const isActive = m.status === 'IN_PROGRESS' || m.status === 'AWAITING_APPROVAL' || m.status === 'PENDING';
+          const isActive = m.status === 'IN_PROGRESS' || m.status === 'AWAITING_APPROVAL' || m.status === 'PENDING' || m.status === 'PLAN_PENDING_APPROVAL';
           const isRecentlyCompleted = (m.status === 'COMPLETED' || m.status === 'FAILED') &&
             m.completedAt && new Date(m.completedAt).getTime() > tenMinAgo;
           const isDeepLinked = deepLinkedMission != null && m.missionId === deepLinkedMission;
