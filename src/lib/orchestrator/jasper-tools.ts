@@ -3369,16 +3369,26 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           break;
         }
 
-        const stepsArg = args.steps;
+        let stepsArg = args.steps;
+        // The LLM sometimes double-serializes the steps array as a
+        // JSON string instead of passing it as a native array. Parse
+        // it if that happens.
+        if (typeof stepsArg === 'string') {
+          try {
+            stepsArg = JSON.parse(stepsArg) as unknown;
+          } catch {
+            content = JSON.stringify({
+              error: 'propose_mission_plan: steps is a string but not valid JSON',
+            });
+            break;
+          }
+        }
         if (!Array.isArray(stepsArg) || stepsArg.length === 0) {
           content = JSON.stringify({
             error: 'propose_mission_plan: steps must be a non-empty array',
           });
           break;
         }
-        // Array.isArray narrows args.steps to any[], which then
-        // contaminates raw with any. Re-type as unknown[] so element
-        // access is type-safe and the lint rule is happy.
         const stepsArr: unknown[] = stepsArg;
 
         // Coerce each proposed step into PlannedStepInput shape. Reject
