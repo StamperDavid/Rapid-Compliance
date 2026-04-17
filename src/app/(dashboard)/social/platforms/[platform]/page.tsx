@@ -539,6 +539,30 @@ export default function PlatformPage() {
 
         {/* Sidebar */}
         <div className="space-y-4">
+          {/* Paid Advertising */}
+          {['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'pinterest', 'reddit'].includes(platform) && (
+            <Card className="border-primary/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Paid Advertising</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-xs text-muted-foreground">
+                  Run paid ads on {meta?.label ?? platform} to reach more people. Our AI plans your budget, targeting, and creative.
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => router.push('/dashboard')}
+                >
+                  Create Ad Campaign
+                </Button>
+                <div className="text-[10px] text-muted-foreground">
+                  Tell Jasper your goal and budget — the Paid Advertising Specialist handles the rest.
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">Recent Posts</CardTitle>
