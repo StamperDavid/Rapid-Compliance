@@ -394,6 +394,12 @@ async function callOpenRouter(
   ctx: LlmCallContext,
   userPrompt: string,
 ): Promise<string> {
+  const callStart = Date.now();
+  const promptChars = ctx.resolvedSystemPrompt.length + userPrompt.length;
+  logger.info(
+    `[CompetitorResearcher][llm] OpenRouter.chat start: model=${ctx.gm.model}, promptChars=${promptChars}, maxTokens=${ctx.gm.maxTokens}`,
+    { file: FILE },
+  );
   const provider = new OpenRouterProvider(PLATFORM_ID);
   const response = await provider.chat({
     model: ctx.gm.model,
@@ -404,6 +410,10 @@ async function callOpenRouter(
     temperature: ctx.gm.temperature,
     maxTokens: ctx.gm.maxTokens,
   });
+  logger.info(
+    `[CompetitorResearcher][llm] OpenRouter.chat done in ${Date.now() - callStart}ms (finishReason=${response.finishReason ?? 'unknown'}, respChars=${response.content?.length ?? 0})`,
+    { file: FILE },
+  );
 
   if (response.finishReason === 'length') {
     throw new Error(
@@ -529,6 +539,30 @@ function buildAnalyzeCompetitorsPrompt(inputs: AnalyzeCompetitorsInputs): string
   return [...header, ...competitorBlocks, ...footer].join('\n');
 }
 
+function trimAnalysisArraysToSchemaCaps(parsed: unknown): void {
+  if (!parsed || typeof parsed !== 'object') {return;}
+  const obj = parsed as Record<string, unknown>;
+
+  if (Array.isArray(obj.competitors)) {
+    obj.competitors = obj.competitors.slice(0, 20).map((c: unknown) => {
+      if (!c || typeof c !== 'object') {return c;}
+      const comp = c as Record<string, unknown>;
+      if (Array.isArray(comp.strengths)) {comp.strengths = comp.strengths.slice(0, 6);}
+      if (Array.isArray(comp.weaknesses)) {comp.weaknesses = comp.weaknesses.slice(0, 5);}
+      return comp;
+    });
+  }
+
+  const mi = obj.marketInsights;
+  if (mi && typeof mi === 'object') {
+    const marketInsights = mi as Record<string, unknown>;
+    if (Array.isArray(marketInsights.dominantPlayers)) {marketInsights.dominantPlayers = marketInsights.dominantPlayers.slice(0, 4);}
+    if (Array.isArray(marketInsights.gaps)) {marketInsights.gaps = marketInsights.gaps.slice(0, 6);}
+    if (Array.isArray(marketInsights.opportunities)) {marketInsights.opportunities = marketInsights.opportunities.slice(0, 6);}
+    if (Array.isArray(marketInsights.recommendations)) {marketInsights.recommendations = marketInsights.recommendations.slice(0, 6);}
+  }
+}
+
 async function executeAnalyzeCompetitors(
   inputs: AnalyzeCompetitorsInputs,
   ctx: LlmCallContext,
@@ -544,6 +578,11 @@ async function executeAnalyzeCompetitors(
       `Competitor Researcher output was not valid JSON: ${rawContent.slice(0, 300)}`,
     );
   }
+
+  // LLMs occasionally produce arrays slightly longer than the schema's max.
+  // Trim over-count arrays in place so a single extra item doesn't throw away
+  // an otherwise valid analysis.
+  trimAnalysisArraysToSchemaCaps(parsed);
 
   const result = CompetitorAnalysisResultSchema.safeParse(parsed);
   if (!result.success) {
@@ -635,45 +674,81 @@ export class CompetitorResearcher extends BaseSpecialist {
     const location = request.location ?? '';
     const limit = request.limit ?? 10;
     const errors: string[] = [];
+    const phaseStart = Date.now();
 
     // Step 1: Generate + execute search queries via Serper
+    const serperStart = Date.now();
     const searchQueries = this.generateSearchQueries(niche, location);
     const candidateUrls = await this.collectCandidateUrls(searchQueries, errors);
+    logger.info(
+      `[CompetitorResearcher][phase] serper done: ${candidateUrls.length} candidate URLs in ${Date.now() - serperStart}ms`,
+      { file: FILE },
+    );
 
     // Step 2: Filter + dedupe
     const filteredUrls = this.filterCandidates(candidateUrls);
     const urlsToAnalyze = filteredUrls.slice(0, limit);
+    logger.info(
+      `[CompetitorResearcher][phase] filter done: ${urlsToAnalyze.length} urls to scrape (limit=${limit})`,
+      { file: FILE },
+    );
 
-    // Step 3: Scrape each selected competitor + compute deterministic metrics
-    const scrapedBatch: ScrapedCompetitor[] = [];
-    for (let i = 0; i < urlsToAnalyze.length; i++) {
-      const url = urlsToAnalyze[i];
-      try {
-        const content = await scrapeWebsite(url);
-        if (!content?.cleanedText) {
-          continue;
+    // Step 3: Scrape each selected competitor in parallel + compute deterministic metrics.
+    // Visiting 10 URLs sequentially reliably exceeds the 120s tool-wrapper ceiling; running
+    // them concurrently drops wall time to roughly the slowest single site.
+    type ScrapeOutcome =
+      | { ok: true; record: ScrapedCompetitor }
+      | { ok: false; url: string; reason: string; silent: boolean };
+
+    const scrapeOutcomes: ScrapeOutcome[] = await Promise.all(
+      urlsToAnalyze.map(async (url, i): Promise<ScrapeOutcome> => {
+        try {
+          const content = await scrapeWebsite(url);
+          if (!content?.cleanedText) {
+            return { ok: false, url, reason: 'empty content', silent: true };
+          }
+          const dataPoints = extractDataPoints(content);
+          const domain = new URL(url).hostname.replace('www.', '');
+          const seoMetrics = await this.analyzeSEOMetrics(content, niche, domain);
+          const detectedTech = this.detectTechFromHtml(content.rawHtml ?? '');
+          return {
+            ok: true,
+            record: {
+              rank: i + 1,
+              url,
+              domain,
+              title: content.title ?? '',
+              description: content.description ?? '',
+              keywords: content.metadata?.keywords ?? dataPoints.keywords.slice(0, 20),
+              cleanedText: content.cleanedText,
+              seoMetrics,
+              detectedTech,
+            },
+          };
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Scrape failed';
+          logger.warn('Competitor scrape failed', { url, error: msg });
+          return { ok: false, url, reason: msg, silent: false };
         }
-        const dataPoints = extractDataPoints(content);
-        const domain = new URL(url).hostname.replace('www.', '');
-        const seoMetrics = await this.analyzeSEOMetrics(content, niche, domain);
-        const detectedTech = this.detectTechFromHtml(content.rawHtml ?? '');
-        scrapedBatch.push({
-          rank: i + 1,
-          url,
-          domain,
-          title: content.title ?? '',
-          description: content.description ?? '',
-          keywords: content.metadata?.keywords ?? dataPoints.keywords.slice(0, 20),
-          cleanedText: content.cleanedText,
-          seoMetrics,
-          detectedTech,
-        });
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Scrape failed';
-        errors.push(`Failed to scrape ${url}: ${msg}`);
-        logger.warn('Competitor scrape failed', { url, error: msg });
+      }),
+    );
+
+    const scrapedBatch: ScrapedCompetitor[] = [];
+    let scrapeFailCount = 0;
+    for (const outcome of scrapeOutcomes) {
+      if (outcome.ok) {
+        scrapedBatch.push(outcome.record);
+      } else {
+        scrapeFailCount += 1;
+        if (!outcome.silent) {
+          errors.push(`Failed to scrape ${outcome.url}: ${outcome.reason}`);
+        }
       }
     }
+    logger.info(
+      `[CompetitorResearcher][phase] scrape done: ${scrapedBatch.length} ok / ${scrapeFailCount} failed (elapsed ${Date.now() - phaseStart}ms)`,
+      { file: FILE },
+    );
 
     // Step 4: LLM analysis over the full scraped batch
     let analysis: CompetitorAnalysisResult | null = null;
@@ -682,11 +757,25 @@ export class CompetitorResearcher extends BaseSpecialist {
 
     if (scrapedBatch.length > 0) {
       try {
+        const gmStart = Date.now();
         const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
         analysisModel = ctx.gm.model;
+        logger.info(
+          `[CompetitorResearcher][phase] GM loaded in ${Date.now() - gmStart}ms (model=${ctx.gm.model}, maxTokens=${ctx.gm.maxTokens})`,
+          { file: FILE },
+        );
+        const llmStart = Date.now();
+        logger.info(
+          `[CompetitorResearcher][phase] calling LLM for ${scrapedBatch.length} competitors...`,
+          { file: FILE },
+        );
         analysis = await executeAnalyzeCompetitors(
           { niche, location, scrapedCompetitors: scrapedBatch },
           ctx,
+        );
+        logger.info(
+          `[CompetitorResearcher][phase] LLM analysis done in ${Date.now() - llmStart}ms (total elapsed ${Date.now() - phaseStart}ms)`,
+          { file: FILE },
         );
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -914,9 +1003,17 @@ export class CompetitorResearcher extends BaseSpecialist {
     domain?: string,
   ): Promise<number> {
     if (domain) {
+      const dforStart = Date.now();
       try {
         const dataForSEO = getDataForSEOService();
         const metricsResult = await dataForSEO.getDomainMetrics(domain);
+        const dforElapsed = Date.now() - dforStart;
+        if (dforElapsed > 5000) {
+          logger.warn(
+            `[CompetitorResearcher][dfor] DataForSEO getDomainMetrics slow: ${dforElapsed}ms for domain=${domain}`,
+            { file: FILE },
+          );
+        }
         if (metricsResult.success && metricsResult.data) {
           const rank = metricsResult.data.domainRank;
           if (typeof rank === 'number' && rank > 0) {

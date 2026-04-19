@@ -521,6 +521,17 @@ export interface ContentRequest {
   technicalBrief?: TechnicalBrief;
   pages?: string[];
   contentTypes?: ('copy' | 'visuals' | 'video' | 'social')[];
+  /**
+   * Singular content type sent by Jasper's `delegate_to_content` tool. Free-form
+   * string like 'blog_post', 'video', 'podcast', 'email', etc. When present,
+   * this takes precedence over `contentTypes` in intent detection so a request
+   * for a single blog post doesn't accidentally fire all 6 content specialists.
+   */
+  contentType?: string;
+  topic?: string;
+  audience?: string;
+  seoKeywords?: string;
+  format?: string;
   urgency?: 'low' | 'medium' | 'high';
   targetPlatforms?: string[];
 }
@@ -841,6 +852,20 @@ export class ContentManager extends BaseManager {
    * Detect content intent from the request
    */
   private detectContentIntent(request: ContentRequest): ContentIntent {
+    // Jasper's singular contentType takes precedence — a request that
+    // explicitly names ONE content type must not fan out to all 6 specialists.
+    if (typeof request.contentType === 'string' && request.contentType.length > 0) {
+      const ct = request.contentType.toLowerCase().trim();
+      if (ct.includes('blog') || ct === 'article' || ct === 'pillar') {return 'BLOG_CONTENT';}
+      if (ct === 'video' || ct === 'reel' || ct === 'short' || ct === 'youtube' || ct === 'tiktok') {return 'VIDEO_PRODUCTION';}
+      if (ct === 'podcast' || ct === 'episode') {return 'PODCAST_PRODUCTION';}
+      if (ct === 'visuals' || ct === 'image' || ct === 'asset' || ct === 'graphic' || ct === 'banner') {return 'VISUAL_ONLY';}
+      if (ct === 'copy' || ct === 'headline' || ct === 'email' || ct === 'ad' || ct === 'social_post') {return 'COPY_ONLY';}
+      if (ct === 'calendar' || ct === 'schedule') {return 'SCHEDULING';}
+      if (ct === 'seo_refresh' || ct === 'seo') {return 'SEO_REFRESH';}
+      // Unrecognized singular type — fall through to legacy paths below.
+    }
+
     // Check for explicit content types
     if (request.contentTypes) {
       if (request.contentTypes.length === 1) {
