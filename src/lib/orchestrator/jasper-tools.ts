@@ -37,7 +37,11 @@ import {
 // TIMEOUT UTILITY — Prevents hung LLM calls from spinning forever
 // ============================================================================
 
-const MANAGER_TIMEOUT_MS = 120_000; // 120 seconds per manager delegation
+// 300s per manager delegation. Large LLM analyses (e.g. Competitor Researcher
+// returning 7k+ tokens of structured JSON for 5-10 scraped sites) reliably take
+// 60-110s; Level 1 verify-external-apis measured 106s for a single 28k-char
+// prompt. 120s left no room for manager review retries or variance.
+const MANAGER_TIMEOUT_MS = 300_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -6133,7 +6137,9 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
   let resultStatus: 'SUCCESS' | 'ERROR' = 'SUCCESS';
   try {
     const parsed = JSON.parse(content) as Record<string, unknown>;
-    if (typeof parsed.error === 'string' && parsed.error.length > 0) {
+    const hasErrorString = typeof parsed.error === 'string' && parsed.error.length > 0;
+    const statusFailed = typeof parsed.status === 'string' && parsed.status === 'FAILED';
+    if (hasErrorString || statusFailed) {
       resultStatus = 'ERROR';
     }
   } catch {

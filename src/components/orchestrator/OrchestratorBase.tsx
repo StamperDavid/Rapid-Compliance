@@ -933,6 +933,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     const patterns = [
       { regex: /\[([^\]]+)\]\(([^)]+)\)/g, render: (captures: string[]) => <a key={key++} href={captures[2]} target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">{captures[1]}</a> },
       { regex: /(?<!\()(https?:\/\/[^\s<]+)/g, render: (captures: string[]) => <a key={key++} href={captures[1]} target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">{captures[1]}</a> },
+      { regex: /(?<![/\w])(\/[a-z][a-z0-9_/-]*(?:\?[^\s)]*)?)/gi, render: (captures: string[]) => <a key={key++} href={captures[1]} className="underline text-cyan-400 hover:text-cyan-300">{captures[1]}</a> },
       { regex: /`([^`]+)`/g, render: (captures: string[]) => <code key={key++} className="px-1 py-0.5 bg-surface-main rounded text-xs font-mono">{captures[1]}</code> },
       { regex: /\*\*([^*]+)\*\*/g, render: (captures: string[]) => <strong key={key++} className="font-semibold">{captures[1]}</strong> },
       { regex: /\*([^*]+)\*/g, render: (captures: string[]) => <em key={key++} className="italic">{captures[1]}</em> },
@@ -957,7 +958,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           newParts.push(remaining.slice(lastIndex));
         }
 
-        if (newParts.length > 0) {
+        if (lastIndex > 0) {
           parts.push(...newParts);
           remaining = '';
         }

@@ -549,7 +549,7 @@ export class IntelligenceManager extends BaseManager {
       brandName: (payload?.brandName as string) ?? (payload?.brand as string) ?? brandName ?? undefined,
       keywords,
       includeDeepAnalysis: includeDeep,
-      limit: (payload?.limit as number) ?? 10,
+      limit: (payload?.limit as number) ?? 5,
     };
   }
 
@@ -752,10 +752,10 @@ export class IntelligenceManager extends BaseManager {
     switch (specialistId) {
       case 'COMPETITOR_RESEARCHER':
         payload = {
-          action: 'search_competitors',
+          action: 'research_competitors',
           niche: request.niche ?? 'technology services',
           location: request.location ?? 'Global',
-          limit: request.limit ?? 10,
+          limit: request.limit ?? 5,
           includeAnalysis: request.includeDeepAnalysis ?? false,
         };
         break;

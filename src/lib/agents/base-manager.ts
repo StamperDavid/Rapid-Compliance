@@ -594,7 +594,10 @@ export abstract class BaseManager extends BaseSpecialist {
             },
           };
 
+      const iterStart = Date.now();
+      this.log('INFO', `[delegateWithReview] iter ${retries}/${BaseManager.MAX_REVIEW_RETRIES} specialist=${specialistId} starting`);
       const report = await this.delegateToSpecialist(specialistId, currentMessage);
+      this.log('INFO', `[delegateWithReview] iter ${retries} specialist returned in ${Date.now() - iterStart}ms status=${report.status}`);
 
       // If specialist failed outright, record and return
       if (report.status === 'FAILED' || report.status === 'BLOCKED') {
@@ -608,8 +611,20 @@ export abstract class BaseManager extends BaseSpecialist {
         return report;
       }
 
-      // Run quality gate (cached per report — safe to call multiple times)
+      // ========================================================================
+      // MANAGER AUTO-REVIEW — DISABLED (2026-04-18)
+      // Human operator reviews every specialist output in Mission Control, so
+      // running a manager LLM review first adds cost + delay with no benefit.
+      // Synthetic PASS short-circuits the retry loop. Original block preserved
+      // below inside /* */ so we can restore it when shadow-mode training is
+      // ready. Do NOT delete — we will need it back.
+      // ========================================================================
+      const review: ReviewResult = { approved: true, feedback: [], severity: 'PASS', qualityScore: 100 };
+      /*
+      const reviewStart = Date.now();
       const review = await this.reviewOutput(report);
+      this.log('INFO', `[delegateWithReview] iter ${retries} review done in ${Date.now() - reviewStart}ms approved=${review.approved} severity=${review.severity}`);
+      */
 
       if (review.approved) {
         this.recordPerformanceEntry(report, review, retries, startTime);
