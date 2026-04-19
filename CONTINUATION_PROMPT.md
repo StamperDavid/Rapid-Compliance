@@ -1,5 +1,131 @@
 # SalesVelocity.ai — Manual QA & Launch Readiness Plan
 
+---
+
+# 🔴 SESSION RESUME — April 18, 2026 evening → April 19 pickup
+
+**Read this section FIRST. Do not ask the owner to remind you of anything in here. Everything below this header is the most recent state and overrides older sections in this file where they conflict.**
+
+## TL;DR
+
+Apr 18 Mission Control live test on prompt *"Research the top 3 competitors in the promotional wear industry and write a blog post about how AI is changing that industry"*. Step 1 (Intelligence) now produces a real 4-competitor brief in ~100s with visible output in Mission Control. Step 2 (Content) correctly picks the Blog Writer (Bug J fixed) but the Blog Writer is never invoked — it completes in 274ms with 0 specialists run. **Owner flagged this as a systemic concern:** if BLOG_WRITER is registered-but-unreachable, other managers likely have the same pattern. That audit is task #1 tomorrow.
+
+**11 commits landed on `origin/dev` today, ending with `282b5561 fix(orchestration): intelligence + content pipeline fixes after live testing`.** Both worktrees (`D:\Future Rapid Compliance` on `dev`, `D:\rapid-dev` on `rapid-dev`) are in sync. rapid-dev's `.next` is cleared. Dev server was killed at stop time.
+
+## STEP 0 — Automatic setup when this session opens (do it without being asked)
+
+1. **Read memory files** in this order — they're the ground truth:
+   - `memory/project_session_handoff_apr18.md` — exact state at stop
+   - `memory/project_live_test_monitoring_setup.md` — monitoring setup + known gaps
+   - `memory/project_manager_auto_review_disabled.md` — review layer is OFF, intentional
+   - `memory/MEMORY.md` index for everything else
+2. **Check `D:\rapid-dev\.next` is gone.** If present, `rm -rf D:/rapid-dev/.next`.
+3. **Kill any stray server on :3000:** `netstat -ano | grep ":3000" | grep LISTENING` → kill any PID.
+4. **Start the dev server via direct node call** (NOT npm — it breaks stdio capture on Windows/Git Bash):
+   ```
+   cd "D:/rapid-dev" && node "./node_modules/next/dist/bin/next" dev > "D:/rapid-dev/dev-server.log" 2>&1
+   ```
+   Use `run_in_background: true`.
+5. **Arm the expanded monitor immediately** (see filter below). Use `persistent: true`, `timeout_ms: 3600000`.
+6. **Tell the owner "Ready. Monitor armed."** — do not wait to be asked.
+
+## Expanded monitor filter (reflects today's gaps)
+
+```
+tail -f "D:/rapid-dev/dev-server.log" 2>/dev/null | grep -v --line-buffered -E "feature_config|entity_config|chrome.devtools|orchestrator/missions\?limit" | grep -E --line-buffered "Ready in|\[phase\]|\[llm\]|\[dfor\]|\[delegate\]|Detected content intent|Activating specialists|propose_mission_plan|LLM analysis failed|Step failed|halting mission|POST /api/orchestrator/chat|plan/approve|Intelligence insights|Skipping|Mission cancelled|newStatus=FAILED|newStatus=COMPLETED|createMissionWithPlan|PLAN_PENDING|FAILED_PRECONDITION|429 Too Many|rate.?limit|0 of 0 specialists| 5[0-9][0-9] in |TypeError|ReferenceError|Unhandled|SyntaxError"
+```
+
+**New fragments compared to earlier today** (these were added to address gaps we hit):
+- `FAILED_PRECONDITION` — missing Firestore composite index errors
+- `429 Too Many` + `rate.?limit` — external API rate limiting
+- `0 of 0 specialists` — flags Bug L pattern (step completes but no specialist ran)
+- `Mission cancelled` — cancel path visibility
+- `newStatus=FAILED` / `newStatus=COMPLETED` — mission/step transitions
+- `createMissionWithPlan` + `PLAN_PENDING` — plan lifecycle visibility
+
+**The monitor will NEVER catch these — ask the owner proactively when the scenario fits:**
+- Browser console errors (hydration, chunk load, connection refused client-side)
+- UI layout/rendering bugs
+- Anything only visible in the owner's browser DevTools
+
+## What's already fixed — don't re-discover
+
+| Bug | What | Commit | File |
+|---|---|---|---|
+| A | Competitor Researcher payload action mismatch (search→research) | 282b5561 | intelligence/manager.ts:758 |
+| C | Tool wrapper treated inner `status='FAILED'` as SUCCESS | 282b5561 | orchestrator/jasper-tools.ts:6133 |
+| E | Sequential scrape loop → 120s+ timeouts | 282b5561 | intelligence/competitor/specialist.ts:662 |
+| F | LLM output arrays exceed schema max → whole report tossed | 282b5561 | intelligence/competitor/specialist.ts (trimAnalysisArraysToSchemaCaps) |
+| I | Manager timeout 120s too tight for ~100s LLM calls | 282b5561 (120→300s) | orchestrator/jasper-tools.ts:40 |
+| — | Default competitor count 10→5 | 282b5561 | intelligence/manager.ts:552, 758 |
+| — | Manager auto-review DISABLED (commented out, synthetic PASS) | 282b5561 | base-manager.ts:614 |
+| J | Content Manager ignored `contentType="blog_post"`, defaulted to FULL_PACKAGE | 282b5561 | content/manager.ts detectContentIntent |
+| — | Relative URLs autolink in chat bubble | 282b5561 | components/orchestrator/OrchestratorBase.tsx |
+| — | Phase/llm/dfor/delegate timing logs | 282b5561 | intelligence/competitor/specialist.ts + base-manager.ts |
+| — | Level 1 external API verify script | 282b5561 | scripts/verify-external-apis.ts |
+
+**Run `npx tsx scripts/verify-external-apis.ts` whenever LLM/Serper/DataForSEO behavior is suspect.** Exit 0 = all good.
+
+## Open bugs — strict priority order
+
+### 🔴 Bug L — Unreachable specialists (HIGHEST, blocker)
+
+`content/manager.ts` `delegateToSpecialists()` at line 1023 only invokes COPYWRITER (line 1039) and ASSET_GENERATOR (line 1116). VIDEO_SPECIALIST + CALENDAR_COORDINATOR are invoked in the parent `orchestrateContentProduction()` (lines 962-982). **BLOG_WRITER, PODCAST_SPECIALIST, MUSIC_PLANNER have NO invocation path anywhere** — they're registered FUNCTIONAL but can't be called.
+
+**Owner explicitly flagged this as potentially systemic.** DO NOT just add a BLOG_WRITER branch. First:
+
+1. **Write `scripts/verify-specialist-reachability.ts`** — instantiate every manager (Content, Intelligence, Outreach, Marketing, Revenue, Architect, Reputation, Analytics, Growth, MasterOrchestrator), list registered specialists, scan manager code for `specialist.execute(` calls keyed on each ID. Output a table: Manager | Specialist | Registered | Has invocation path | Invocation site (file:line).
+2. **Present the full table to the owner.** Any "Registered=✓ Invocation=✗" row is a dead specialist. Let the owner decide scope before fixing.
+3. **After owner approves scope**, fix each unreachable specialist with the COPYWRITER invocation pattern (content/manager.ts:1039-1112).
+
+### 🟠 Bug H — Cancel mission doesn't abort running work
+
+`cancelMission()` at `mission-persistence.ts:1135` only writes Firestore. No AbortController, no fetch cancellation. Zombie LLM/Serper/scrape work continues 3-5 min after cancel. Real fix requires plumbing AbortSignal from cancel endpoint → tool wrapper → manager → specialist → every external fetch. ~half day.
+
+### 🟡 Bug D — UI duplicates plan+execution step rows
+
+Mission Control shows 6-8 rows for a 3-step plan because plan_step_* (from createMissionWithPlan) and step_delegate_* (from tool wrapper's addMissionStep) are both rendered. Fix: make the tool wrapper UPDATE the existing plan_step_* entry instead of APPENDING a new step_delegate_* row. Cosmetic but actively confusing during testing.
+
+### 🟡 Bug B — trend_discovery hang (may already be fixed)
+
+Earlier test runs showed 120s hangs on trend_discovery. Today's test runs sometimes drafted 2-step plans (no trend_discovery) so we never cleanly re-verified. After Bug L lands and a full 3-step run succeeds, check whether trend_discovery works end-to-end or still hangs. May already be resolved by Bug E + F + I fixes.
+
+## Standing rules (violate at your own peril)
+
+- **No eslint-disable, no @ts-ignore, no bypassing quality gates** (CLAUDE.md binding). Fix underlying code. Pre-commit hook WILL block the commit — I hit this today on an `Unnecessary escape character` and had to fix it properly.
+- **Both worktrees in sync.** Every edit lands in BOTH `D:\Future Rapid Compliance` (dev) AND `D:\rapid-dev` (rapid-dev). Don't forget the second.
+- **Stay on dev branch.** Push to main via `git push origin dev:main` if needed, never `git checkout main`.
+- **Plain English in user-facing text.** Drop "payload/schema/registry/AbortSignal/etc." — say what the thing DOES. Owner called this out multiple times today.
+- **Read the log and the code. Don't guess.** Owner has zero tolerance for speculative answers. Cite file:line. Today's "it's probably the cancel button" guess got called out and deservedly so.
+- **Use screenshots the owner shares** — don't ask them to re-describe.
+- **Manager auto-review is intentionally DISABLED.** See `project_manager_auto_review_disabled.md`. Do NOT "restore" the `reviewOutput()` call. The synthetic `{approved: true, severity: 'PASS'}` short-circuit is by design.
+
+## Owner's working style — internalize these
+
+- Give a RECOMMENDATION, not a menu. Explain briefly. Take action. Only ask when there's a genuine trade-off.
+- "Stop guessing" = actually read the code/logs before any claim. No "probably/likely/might be".
+- Short clear answers > long detailed ones. Strip jargon the first time.
+- They iterate fast. Set up monitor immediately so they never wait.
+- They will ask you to re-explain if the first version had jargon. Default to plain English up front.
+
+## Current state at stop
+
+- Server down.
+- Both worktrees clean and synced with `origin/dev` at `282b5561`.
+- Memory files updated.
+- `.next` caches cleared on rapid-dev.
+- No background tasks running.
+
+Tomorrow's first work unit: **write `scripts/verify-specialist-reachability.ts`, run it, present the table, WAIT FOR OWNER APPROVAL before any Bug L fixes.**
+
+---
+
+# Older plan sections (April 15 and earlier)
+
+**The sections below pre-date today's April 18 work. Where they conflict with the section above, the April 18 section wins.**
+
+---
+
 **Always** review CLAUDE.md rules before starting a task. Both Standing Rule #1 (Brand DNA baked into every GM at seed time) and Standing Rule #2 (no grades = no GM changes) are binding.
 
 ## Context
