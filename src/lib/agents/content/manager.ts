@@ -1597,11 +1597,16 @@ export class ContentManager extends BaseManager {
       if (report.status === 'COMPLETED' && report.data) {
         const blogResult = report.data as BlogPostResult;
 
-        // Persist as a Blog Post doc so it shows up in /content/blog listing.
-        // Non-fatal if it fails — we still return the blog content to the caller.
-        await this.persistBlogAsPost(blogResult, taskId).catch((err: unknown) => {
+        // Persist as a Blog Post doc so it shows up in /content/blog listing
+        // AND the editor shows the generated content. Returns the postId on
+        // success so ContentPackage can carry it for the review link.
+        const postId = await this.persistBlogAsPost(blogResult, taskId).catch((err: unknown) => {
           this.log('WARN', `Blog post persistence failed: ${err instanceof Error ? err.message : String(err)}`);
+          return null;
         });
+        if (postId) {
+          (blogResult as BlogPostResult & { blogPostId?: string }).blogPostId = postId;
+        }
 
         return blogResult;
       }
@@ -1621,16 +1626,19 @@ export class ContentManager extends BaseManager {
 
   /**
    * Persist a BlogPostResult as a BlogPost document in Firestore so it shows
-   * up in the /content/blog listing. We store the full raw output in the
-   * `rawBlogOutput` field so downstream editors can convert the sections to
-   * the site's PageSection[] structure later. The BlogPost.content field is
-   * left empty initially — rendering the raw sections into Widget structures
-   * belongs to the editor, not the manager.
+   * up in the /content/blog listing AND the editor displays the real content.
+   *
+   * Converts BlogPostResult.sections into the site's PageSection[] / Widget[]
+   * structure. Each blog section becomes a heading widget + text widget. The
+   * CTA and SEO notes are appended as additional widgets. The raw output is
+   * also stashed in `rawBlogOutput` for future editor re-import flows.
+   *
+   * Returns the postId so callers can build links into the editor.
    */
-  private async persistBlogAsPost(blog: BlogPostResult, taskId: string): Promise<void> {
+  private async persistBlogAsPost(blog: BlogPostResult, taskId: string): Promise<string | null> {
     if (!adminDb) {
       this.log('WARN', 'Firestore admin not available — blog persistence skipped');
-      return;
+      return null;
     }
 
     const now = new Date().toISOString();
@@ -1642,6 +1650,65 @@ export class ContentManager extends BaseManager {
       return Number.isFinite(n) && n > 0 ? n : 5;
     })();
 
+    // Build widgets: intro + (heading + text) per section + optional CTA
+    const widgets: Array<Record<string, unknown>> = [];
+    if (blog.metaDescription) {
+      widgets.push({
+        id: `intro_${postId}`,
+        type: 'text',
+        data: { content: blog.metaDescription },
+      });
+    }
+    for (let i = 0; i < blog.sections.length; i++) {
+      const s = blog.sections[i];
+      const level = s.headingLevel === 'h3' ? 3 : 2;
+      widgets.push({
+        id: `h_${postId}_${i}`,
+        type: 'heading',
+        data: { level, text: s.heading },
+      });
+      widgets.push({
+        id: `p_${postId}_${i}`,
+        type: 'text',
+        data: { content: s.body },
+      });
+      if (s.keyTakeaway) {
+        widgets.push({
+          id: `k_${postId}_${i}`,
+          type: 'text',
+          data: { content: `Key takeaway: ${s.keyTakeaway}` },
+        });
+      }
+    }
+    if (blog.cta?.text) {
+      widgets.push({
+        id: `cta_${postId}`,
+        type: 'heading',
+        data: { level: 2, text: blog.cta.text },
+      });
+      if (blog.cta.placement) {
+        widgets.push({
+          id: `cta_placement_${postId}`,
+          type: 'text',
+          data: { content: `(Placement: ${blog.cta.placement})` },
+        });
+      }
+    }
+
+    const content = [
+      {
+        id: `section_${postId}`,
+        type: 'section' as const,
+        columns: [
+          {
+            id: `col_${postId}`,
+            width: 100,
+            widgets,
+          },
+        ],
+      },
+    ];
+
     // Build BlogPost-shaped document. Fields match src/types/website.ts BlogPost interface,
     // plus a non-standard `rawBlogOutput` holding the BLOG_WRITER result for later editor use.
     const postData = {
@@ -1649,7 +1716,7 @@ export class ContentManager extends BaseManager {
       slug: blog.slug,
       title: blog.title,
       excerpt: blog.metaDescription,
-      content: [],
+      content,
       author: 'system',
       authorName: 'Blog Writer',
       categories: [],
@@ -1670,15 +1737,15 @@ export class ContentManager extends BaseManager {
       updatedAt: now,
       createdBy: 'system',
       lastEditedBy: 'system',
-      // Raw output from BLOG_WRITER — not part of the standard BlogPost interface,
-      // but included here so the editor can later render/import the structured
-      // sections, CTA, and internal links when the owner opens the post.
+      // Raw output from BLOG_WRITER preserved on the doc so editor logic can
+      // regenerate the widget tree differently later if needed.
       rawBlogOutput: blog,
     };
 
     const blogPath = `${getSubCollection('website')}/config/blog-posts`;
     await adminDb.collection(blogPath).doc(postId).set(postData);
     this.log('INFO', `Blog post persisted: ${postId} (${blog.title})`);
+    return postId;
   }
 
   /**
