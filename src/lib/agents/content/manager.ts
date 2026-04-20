@@ -35,7 +35,7 @@
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
 import { getCopywriter } from './copywriter/specialist';
-import { getBlogWriter } from './blog/specialist';
+import { getBlogWriter, type BlogPostResult } from './blog/specialist';
 import { getCalendarCoordinator } from './calendar/specialist';
 import { VideoSpecialist } from './video/specialist';
 import { getAssetGenerator } from '../builder/assets/specialist';
@@ -431,6 +431,7 @@ export interface ContentPackage {
   socialSnippets: SocialSnippets;
   videoContent: VideoContent | null;
   calendar: ContentCalendar | null;
+  blogContent: BlogPostResult | null;
 
   // Validation
   validation: {
@@ -448,6 +449,7 @@ export interface ContentPackage {
     calendar: unknown;
     video: unknown;
     assets: unknown;
+    blog: unknown;
   };
 
   // Metadata
@@ -923,6 +925,7 @@ export class ContentManager extends BaseManager {
       copywriter: null,
       calendar: null,
       video: null,
+      blog: null,
       assets: null,
     };
 
@@ -981,6 +984,19 @@ export class ContentManager extends BaseManager {
       );
     }
 
+    // Step 8b: Get blog content if applicable
+    let blogContent: BlogPostResult | null = null;
+    if (specialistIds.includes('BLOG_WRITER')) {
+      blogContent = await this.generateBlogContent(
+        request,
+        brandContext,
+        seoContext,
+        taskId,
+        delegations,
+        specialistOutputs,
+      );
+    }
+
     // Step 9: Validate content against Brand DNA
     const validation = this.validateContent(pageContent, socialSnippets, brandContext, seoContext);
     this.log('INFO', `Content validation: ${validation.passed ? 'PASSED' : 'FAILED'}`);
@@ -1003,6 +1019,7 @@ export class ContentManager extends BaseManager {
       socialSnippets,
       videoContent,
       calendar,
+      blogContent,
       validation,
       delegations,
       specialistOutputs,
@@ -1461,6 +1478,100 @@ export class ContentManager extends BaseManager {
       }
     } catch (error) {
       this.log('WARN', `Video generation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    return null;
+  }
+
+  /**
+   * Generate long-form blog content if BLOG_WRITER is activated.
+   * Jasper's `delegate_to_content` tool with `contentType: 'blog_post'` now
+   * routes here via `detectContentIntent() === 'BLOG_CONTENT'`. Before this
+   * method existed, BLOG_WRITER was registered but had no invocation path
+   * (see `scripts/verify-specialist-reachability.ts` + Bug L writeup).
+   */
+  private async generateBlogContent(
+    request: ContentRequest,
+    brandContext: BrandContext,
+    seoContext: SEOContext,
+    taskId: string,
+    delegations: DelegationResult[],
+    specialistOutputs: ContentPackage['specialistOutputs'],
+  ): Promise<BlogPostResult | null> {
+    const blogWriter = this.specialists.get('BLOG_WRITER');
+
+    if (!blogWriter?.isFunctional()) {
+      return null;
+    }
+
+    const startTime = Date.now();
+
+    // Derive target keywords from Jasper's payload first, then SEO context, then fallback
+    const seoKeywordsFromCtx = Object.values(seoContext.perPage ?? {})
+      .flatMap((p) => p.keywordFocus ?? []);
+    let targetKeywords: string[];
+    if (typeof request.seoKeywords === 'string' && request.seoKeywords.length > 0) {
+      targetKeywords = request.seoKeywords.split(',').map((k) => k.trim()).filter((k) => k.length > 0);
+    } else if (seoKeywordsFromCtx.length > 0) {
+      targetKeywords = seoKeywordsFromCtx.slice(0, 5);
+    } else {
+      targetKeywords = [brandContext.companyDescription ?? 'industry insight'];
+    }
+
+    const topic = request.topic
+      ?? `How ${brandContext.companyDescription ?? 'our industry'} is evolving`;
+
+    const wordCountTarget = request.format === 'short'
+      ? 800
+      : request.format === 'long'
+        ? 1800
+        : 1200;
+
+    try {
+      const blogMessage: AgentMessage = {
+        id: `${taskId}_blog`,
+        type: 'COMMAND',
+        from: this.identity.id,
+        to: 'BLOG_WRITER',
+        payload: {
+          action: 'write_blog_post',
+          topic,
+          targetKeywords,
+          audience: request.audience ?? brandContext.targetAudience ?? 'business decision makers',
+          wordCountTarget,
+          toneOverride: brandContext.toneOfVoice,
+        },
+        timestamp: new Date(),
+        priority: 'HIGH',
+        requiresResponse: true,
+        traceId: taskId,
+      };
+
+      const report = await blogWriter.execute(blogMessage);
+      const executionTimeMs = Date.now() - startTime;
+
+      delegations.push({
+        specialist: 'BLOG_WRITER',
+        brief: `Generate blog post on "${topic}"`,
+        status: report.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+        result: report.data,
+        executionTimeMs,
+      });
+
+      specialistOutputs.blog = report.data;
+
+      if (report.status === 'COMPLETED' && report.data) {
+        return report.data as BlogPostResult;
+      }
+    } catch (error) {
+      this.log('WARN', `Blog generation failed: ${error instanceof Error ? error.message : String(error)}`);
+      delegations.push({
+        specialist: 'BLOG_WRITER',
+        brief: `Generate blog post on "${topic}"`,
+        status: 'FAILED',
+        result: null,
+        executionTimeMs: Date.now() - startTime,
+      });
     }
 
     return null;
