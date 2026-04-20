@@ -107,6 +107,23 @@ async function runOneStepInternal(
         stepError = parsed.error;
         stepStatus = 'FAILED';
       }
+      // Unwrap delegate_to_* tool envelopes so the step's toolResult stores the
+      // raw agent report data (IntelligenceBrief, ContentPackage, etc.) instead
+      // of the outer {status, data, manager, reviewLink} wrapper. The Mission
+      // Control review renderers expect the inner shape. Without this unwrap,
+      // every delegate_to_* step falls through to DelegationResultReview which
+      // only shows "Delegation completed successfully" instead of the rich
+      // output.
+      const isDelegateTool = step.toolName.startsWith('delegate_to_');
+      const hasWrapperShape = isDelegateTool
+        && typeof parsed === 'object'
+        && parsed !== null
+        && 'data' in parsed
+        && typeof parsed.data === 'object'
+        && parsed.data !== null;
+      if (hasWrapperShape) {
+        toolResult = JSON.stringify(parsed.data);
+      }
     } catch {
       // Non-JSON tool result — treat as success
     }
