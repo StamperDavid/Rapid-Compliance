@@ -521,6 +521,17 @@ function detectOutputType(data: ParsedOutput, toolName?: string): string {
   // Explicit type field
   if (typeof data.type === 'string' && data.type !== '') { return data.type; }
 
+  // Content Manager package — has detectedIntent plus at least one content output field.
+  // Must be checked BEFORE the generic delegation_result fallback, since a ContentPackage
+  // also has status + message fields that would otherwise match the generic path.
+  if (
+    'detectedIntent' in data &&
+    ('pageContent' in data || 'blogContent' in data || 'videoContent' in data ||
+     'musicContent' in data || 'podcastContent' in data || 'specialistOutputs' in data)
+  ) {
+    return 'content_package';
+  }
+
   // Blog draft — has draftId + slug + title
   if ('draftId' in data && 'slug' in data) { return 'blog_draft'; }
 
@@ -594,6 +605,243 @@ function BlogDraftReview({ data }: { data: ParsedOutput }) {
         </a>
       )}
     </div>
+  );
+}
+
+// ============================================================================
+// CONTENT PACKAGE RENDERER — unpacks Content Manager output:
+// blogContent + videoContent + musicContent + podcastContent + calendar.
+// Without this renderer the Content step detail falls through to
+// DelegationResultReview which only shows the summary/metadata, not the
+// actual generated content. This is the fix for Bug M.
+// ============================================================================
+
+function ContentPackageReview({ data }: { data: ParsedOutput }) {
+  const detectedIntent = data.detectedIntent as string | undefined;
+  const validation = data.validation as { passed?: boolean; seoScore?: number; toneConsistency?: number } | undefined;
+  const confidence = data.confidence as number | undefined;
+  const execution = data.execution as { totalSpecialists?: number; successfulSpecialists?: number; failedSpecialists?: number } | undefined;
+  const delegations = data.delegations as Array<{ specialist?: string; brief?: string; status?: string }> | undefined;
+
+  const blogContent = data.blogContent as Record<string, unknown> | null | undefined;
+  const videoContent = data.videoContent as Record<string, unknown> | null | undefined;
+  const musicContent = data.musicContent as Record<string, unknown> | null | undefined;
+  const podcastContent = data.podcastContent as Record<string, unknown> | null | undefined;
+
+  const hasAnyContent = Boolean(blogContent ?? videoContent ?? musicContent ?? podcastContent);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Summary bar — intent + confidence + validation */}
+      <section style={{ padding: '1rem 1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+        {detectedIntent && <span><strong style={{ color: 'var(--color-text-primary)' }}>Intent:</strong> {detectedIntent.replace(/_/g, ' ')}</span>}
+        {execution && <span><strong style={{ color: 'var(--color-text-primary)' }}>Specialists:</strong> {execution.successfulSpecialists ?? 0} of {execution.totalSpecialists ?? 0} ok</span>}
+        {validation && <span><strong style={{ color: 'var(--color-text-primary)' }}>Validation:</strong> {validation.passed ? 'Passed' : 'Failed'} · SEO {validation.seoScore ?? '-'}% · Tone {validation.toneConsistency ?? '-'}%</span>}
+        {typeof confidence === 'number' && <span><strong style={{ color: 'var(--color-text-primary)' }}>Confidence:</strong> {Math.round(confidence * 100)}%</span>}
+      </section>
+
+      {/* Blog post body */}
+      {blogContent && <BlogContentRenderer blog={blogContent} />}
+
+      {/* Video content */}
+      {videoContent && (
+        <section>
+          <SectionLabel>Video Output</SectionLabel>
+          <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', whiteSpace: 'pre-wrap' }}>
+            {JSON.stringify(videoContent, null, 2)}
+          </div>
+        </section>
+      )}
+
+      {/* Music soundtrack plan */}
+      {musicContent && <MusicContentRenderer music={musicContent} />}
+
+      {/* Podcast episode plan */}
+      {podcastContent && <PodcastContentRenderer podcast={podcastContent} />}
+
+      {/* Fallback — if no content fields were populated, show agent activity */}
+      {!hasAnyContent && (
+        <section>
+          <SectionLabel>Agent Activity</SectionLabel>
+          <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
+            {Array.isArray(delegations) && delegations.length > 0 ? (
+              <ul style={{ margin: 0, paddingLeft: '1rem', listStyle: 'none' }}>
+                {delegations.map((d, i) => (
+                  <li key={i} style={{ marginBottom: '0.5rem' }}>
+                    <span style={{ display: 'inline-block', width: '1.2rem' }}>
+                      {d.status === 'COMPLETED' ? '✓' : '✗'}
+                    </span>
+                    <strong>{(d.specialist ?? 'Unknown').replace(/_/g, ' ')}</strong>
+                    <span style={{ color: 'var(--color-text-secondary)' }}> — {d.status ?? 'unknown'}</span>
+                    {d.brief && <div style={{ marginLeft: '1.2rem', color: 'var(--color-text-secondary)', fontSize: '0.8125rem' }}>{d.brief}</div>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span style={{ color: 'var(--color-text-disabled)' }}>No specialists produced content for this package.</span>
+            )}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function BlogContentRenderer({ blog }: { blog: Record<string, unknown> }) {
+  const title = blog.title as string | undefined;
+  const metaDescription = blog.metaDescription as string | undefined;
+  const slug = blog.slug as string | undefined;
+  const estimatedReadTime = blog.estimatedReadTime as string | undefined;
+  const sections = blog.sections as Array<{ headingLevel?: string; heading?: string; body?: string; keyTakeaway?: string }> | undefined;
+  const internalLinks = blog.internalLinks as Array<{ anchorText?: string; targetUrl?: string; contextSentence?: string; sectionHeading?: string }> | undefined;
+  const cta = blog.cta as { text?: string; placement?: string } | undefined;
+  const seoNotes = blog.seoNotes as { primaryKeyword?: string; secondaryKeywords?: string[]; featuredSnippetTarget?: string; schemaMarkupSuggestion?: string } | undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Title + meta */}
+      <section style={{ padding: '1.25rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem' }}>
+        <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>{title ?? 'Untitled blog post'}</h2>
+        {metaDescription && <p style={{ margin: '0.75rem 0 0 0', fontSize: '0.9375rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{metaDescription}</p>}
+        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+          {slug && <span>/{slug}</span>}
+          {estimatedReadTime && <span>{estimatedReadTime}</span>}
+        </div>
+      </section>
+
+      {/* Sections */}
+      {Array.isArray(sections) && sections.length > 0 && (
+        <section>
+          <SectionLabel>Blog Body</SectionLabel>
+          <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {sections.map((s, i) => {
+              const HeadingTag = s.headingLevel === 'h3' ? 'h3' : 'h2';
+              return (
+                <div key={i}>
+                  <HeadingTag style={{ margin: 0, fontSize: s.headingLevel === 'h3' ? '1rem' : '1.125rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                    {s.heading ?? 'Untitled section'}
+                  </HeadingTag>
+                  {s.body && <div style={{ fontSize: '0.9375rem', color: 'var(--color-text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{s.body}</div>}
+                  {s.keyTakeaway && <div style={{ marginTop: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-main)', borderLeft: '3px solid var(--color-primary)', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>Key takeaway: {s.keyTakeaway}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* CTA */}
+      {cta?.text && (
+        <section>
+          <SectionLabel>Call to Action</SectionLabel>
+          <div style={{ padding: '1rem 1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', borderLeft: '3px solid var(--color-primary)' }}>
+            <div style={{ fontSize: '0.9375rem', color: 'var(--color-text-primary)', fontWeight: 600 }}>{cta.text}</div>
+            {cta.placement && <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Placement: {cta.placement}</div>}
+          </div>
+        </section>
+      )}
+
+      {/* SEO Notes */}
+      {seoNotes && (
+        <section>
+          <SectionLabel>SEO Notes</SectionLabel>
+          <div style={{ padding: '1rem 1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.8125rem', color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
+            {seoNotes.primaryKeyword && <div><strong>Primary keyword:</strong> {seoNotes.primaryKeyword}</div>}
+            {Array.isArray(seoNotes.secondaryKeywords) && seoNotes.secondaryKeywords.length > 0 && <div><strong>Secondary:</strong> {seoNotes.secondaryKeywords.join(', ')}</div>}
+            {seoNotes.featuredSnippetTarget && <div><strong>Featured snippet target:</strong> {seoNotes.featuredSnippetTarget}</div>}
+            {seoNotes.schemaMarkupSuggestion && <div><strong>Schema suggestion:</strong> {seoNotes.schemaMarkupSuggestion}</div>}
+          </div>
+        </section>
+      )}
+
+      {/* Internal links */}
+      {Array.isArray(internalLinks) && internalLinks.length > 0 && (
+        <section>
+          <SectionLabel>Suggested Internal Links ({internalLinks.length})</SectionLabel>
+          <div style={{ padding: '1rem 1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {internalLinks.map((link, i) => (
+              <div key={i} style={{ fontSize: '0.8125rem', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>
+                <div><strong>{link.anchorText}</strong> → {link.targetUrl}</div>
+                {link.sectionHeading && <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>In section: {link.sectionHeading}</div>}
+                {link.contextSentence && <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>&ldquo;{link.contextSentence}&rdquo;</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function MusicContentRenderer({ music }: { music: Record<string, unknown> }) {
+  const overallMood = music.overallMood as string | undefined;
+  const genre = music.genre as string | undefined;
+  const subgenres = music.subgenres as string[] | undefined;
+  const bpmRange = music.bpmRange as { min?: number; max?: number } | undefined;
+  const tracks = music.tracks as Array<Record<string, unknown>> | undefined;
+
+  return (
+    <section>
+      <SectionLabel>Soundtrack Plan</SectionLabel>
+      <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
+        {overallMood && <div><strong>Mood:</strong> {overallMood}</div>}
+        {genre && <div><strong>Genre:</strong> {genre}{Array.isArray(subgenres) && subgenres.length > 0 ? ` (${subgenres.join(', ')})` : ''}</div>}
+        {bpmRange && <div><strong>BPM range:</strong> {bpmRange.min ?? '-'}–{bpmRange.max ?? '-'}</div>}
+        {Array.isArray(tracks) && tracks.length > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <strong>Tracks ({tracks.length}):</strong>
+            <ul style={{ marginTop: '0.5rem', paddingLeft: '1.25rem' }}>
+              {tracks.map((t, i) => (
+                <li key={i} style={{ marginBottom: '0.375rem' }}>
+                  <strong>{(t.trackName as string) ?? 'Untitled'}</strong> — {(t.mood as string) ?? ''} @ {(t.suggestedBpm as number | undefined) ?? '-'} BPM
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PodcastContentRenderer({ podcast }: { podcast: Record<string, unknown> }) {
+  const episodeTitle = podcast.episodeTitle as string | undefined;
+  const description = podcast.description as string | undefined;
+  const hookOpening = podcast.hookOpening as string | undefined;
+  const segments = podcast.segments as Array<Record<string, unknown>> | undefined;
+  const interviewQuestions = podcast.interviewQuestions as string[] | undefined;
+  const estimatedTotalMinutes = podcast.estimatedTotalMinutes as number | undefined;
+
+  return (
+    <section>
+      <SectionLabel>Podcast Episode Plan</SectionLabel>
+      <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {episodeTitle && <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700 }}>{episodeTitle}</h3>}
+        {estimatedTotalMinutes && <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>{estimatedTotalMinutes} minutes</div>}
+        {description && <div>{description}</div>}
+        {hookOpening && <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-main)', borderLeft: '3px solid var(--color-primary)', fontStyle: 'italic' }}><strong>Hook:</strong> {hookOpening}</div>}
+        {Array.isArray(segments) && segments.length > 0 && (
+          <div>
+            <strong>Segments ({segments.length}):</strong>
+            <ul style={{ marginTop: '0.5rem', paddingLeft: '1.25rem' }}>
+              {segments.map((s, i) => (
+                <li key={i} style={{ marginBottom: '0.375rem' }}>
+                  <strong>{(s.segmentName as string) ?? 'Untitled'}</strong> ({(s.durationMinutes as number | undefined) ?? '-'} min)
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {Array.isArray(interviewQuestions) && interviewQuestions.length > 0 && (
+          <div>
+            <strong>Interview Questions ({interviewQuestions.length}):</strong>
+            <ul style={{ marginTop: '0.5rem', paddingLeft: '1.25rem' }}>
+              {interviewQuestions.map((q, i) => <li key={i}>{q}</li>)}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -1104,6 +1352,7 @@ function StepReviewContent({ missionId, stepId }: { missionId: string; stepId: s
           {outputType === 'thumbnails' && <ThumbnailsReview data={parsed} />}
           {outputType === 'draft' && <DraftReview data={parsed} />}
           {outputType === 'blog_draft' && <BlogDraftReview data={parsed} />}
+          {outputType === 'content_package' && <ContentPackageReview data={parsed} />}
           {outputType === 'intelligence' && <IntelligenceReview data={parsed} />}
           {(outputType === 'delegation_result' || outputType === 'campaign_result' || outputType === 'social_post' || outputType === 'lead_scan') && <DelegationResultReview data={parsed} />}
           {outputType === 'unknown' && <FallbackReview raw={step.toolResult ?? ''} />}
