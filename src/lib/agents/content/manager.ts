@@ -39,8 +39,8 @@ import { getBlogWriter, type BlogPostResult } from './blog/specialist';
 import { getCalendarCoordinator } from './calendar/specialist';
 import { VideoSpecialist } from './video/specialist';
 import { getAssetGenerator } from '../builder/assets/specialist';
-import { getMusicPlanner } from './music/specialist';
-import { getPodcastSpecialist } from './podcast/specialist';
+import { getMusicPlanner, type SoundtrackPlanResult } from './music/specialist';
+import { getPodcastSpecialist, type EpisodePlanResult } from './podcast/specialist';
 import {
   shareInsight,
   broadcastSignal,
@@ -432,6 +432,8 @@ export interface ContentPackage {
   videoContent: VideoContent | null;
   calendar: ContentCalendar | null;
   blogContent: BlogPostResult | null;
+  musicContent: SoundtrackPlanResult | null;
+  podcastContent: EpisodePlanResult | null;
 
   // Validation
   validation: {
@@ -450,6 +452,8 @@ export interface ContentPackage {
     video: unknown;
     assets: unknown;
     blog: unknown;
+    music: unknown;
+    podcast: unknown;
   };
 
   // Metadata
@@ -926,6 +930,8 @@ export class ContentManager extends BaseManager {
       calendar: null,
       video: null,
       blog: null,
+      music: null,
+      podcast: null,
       assets: null,
     };
 
@@ -997,6 +1003,30 @@ export class ContentManager extends BaseManager {
       );
     }
 
+    // Step 8c: Get music content if applicable
+    let musicContent: SoundtrackPlanResult | null = null;
+    if (specialistIds.includes('MUSIC_PLANNER')) {
+      musicContent = await this.generateMusicContent(
+        request,
+        brandContext,
+        taskId,
+        delegations,
+        specialistOutputs,
+      );
+    }
+
+    // Step 8d: Get podcast content if applicable
+    let podcastContent: EpisodePlanResult | null = null;
+    if (specialistIds.includes('PODCAST_SPECIALIST')) {
+      podcastContent = await this.generatePodcastContent(
+        request,
+        brandContext,
+        taskId,
+        delegations,
+        specialistOutputs,
+      );
+    }
+
     // Step 9: Validate content against Brand DNA
     const validation = this.validateContent(pageContent, socialSnippets, brandContext, seoContext);
     this.log('INFO', `Content validation: ${validation.passed ? 'PASSED' : 'FAILED'}`);
@@ -1020,6 +1050,8 @@ export class ContentManager extends BaseManager {
       videoContent,
       calendar,
       blogContent,
+      musicContent,
+      podcastContent,
       validation,
       delegations,
       specialistOutputs,
@@ -1568,6 +1600,157 @@ export class ContentManager extends BaseManager {
       delegations.push({
         specialist: 'BLOG_WRITER',
         brief: `Generate blog post on "${topic}"`,
+        status: 'FAILED',
+        result: null,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
+
+    return null;
+  }
+
+  /**
+   * Generate soundtrack plan if MUSIC_PLANNER is activated. Mirrors the
+   * BLOG_WRITER pattern — the specialist was registered but had no invocation
+   * path until this commit (Bug L part 2).
+   */
+  private async generateMusicContent(
+    request: ContentRequest,
+    brandContext: BrandContext,
+    taskId: string,
+    delegations: DelegationResult[],
+    specialistOutputs: ContentPackage['specialistOutputs'],
+  ): Promise<SoundtrackPlanResult | null> {
+    const musicPlanner = this.specialists.get('MUSIC_PLANNER');
+
+    if (!musicPlanner?.isFunctional()) {
+      return null;
+    }
+
+    const startTime = Date.now();
+
+    const projectDescription = request.topic
+      ?? `Brand content for ${brandContext.companyDescription ?? 'the business'}`;
+
+    try {
+      const musicMessage: AgentMessage = {
+        id: `${taskId}_music`,
+        type: 'COMMAND',
+        from: this.identity.id,
+        to: 'MUSIC_PLANNER',
+        payload: {
+          action: 'plan_soundtrack',
+          projectDescription,
+          targetAudience: request.audience ?? brandContext.targetAudience,
+          brandTone: brandContext.toneOfVoice,
+          contentType: request.contentType,
+        },
+        timestamp: new Date(),
+        priority: 'NORMAL',
+        requiresResponse: true,
+        traceId: taskId,
+      };
+
+      const report = await musicPlanner.execute(musicMessage);
+      const executionTimeMs = Date.now() - startTime;
+
+      delegations.push({
+        specialist: 'MUSIC_PLANNER',
+        brief: `Plan soundtrack for "${projectDescription}"`,
+        status: report.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+        result: report.data,
+        executionTimeMs,
+      });
+
+      specialistOutputs.music = report.data;
+
+      if (report.status === 'COMPLETED' && report.data) {
+        return report.data as SoundtrackPlanResult;
+      }
+    } catch (error) {
+      this.log('WARN', `Music planning failed: ${error instanceof Error ? error.message : String(error)}`);
+      delegations.push({
+        specialist: 'MUSIC_PLANNER',
+        brief: `Plan soundtrack for "${projectDescription}"`,
+        status: 'FAILED',
+        result: null,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
+
+    return null;
+  }
+
+  /**
+   * Generate podcast episode plan if PODCAST_SPECIALIST is activated.
+   * Mirrors BLOG_WRITER pattern. Was registered but unreachable before this
+   * commit (Bug L part 3).
+   */
+  private async generatePodcastContent(
+    request: ContentRequest,
+    brandContext: BrandContext,
+    taskId: string,
+    delegations: DelegationResult[],
+    specialistOutputs: ContentPackage['specialistOutputs'],
+  ): Promise<EpisodePlanResult | null> {
+    const podcastSpecialist = this.specialists.get('PODCAST_SPECIALIST');
+
+    if (!podcastSpecialist?.isFunctional()) {
+      return null;
+    }
+
+    const startTime = Date.now();
+
+    const topic = request.topic
+      ?? `Insights on ${brandContext.companyDescription ?? 'our industry'}`;
+
+    const durationMinutes = request.format === 'short'
+      ? 15
+      : request.format === 'long'
+        ? 60
+        : 30;
+
+    try {
+      const podcastMessage: AgentMessage = {
+        id: `${taskId}_podcast`,
+        type: 'COMMAND',
+        from: this.identity.id,
+        to: 'PODCAST_SPECIALIST',
+        payload: {
+          action: 'plan_episode',
+          topic,
+          targetAudience: request.audience ?? brandContext.targetAudience,
+          episodeFormat: 'solo',
+          durationMinutes,
+          brandVoice: brandContext.toneOfVoice,
+        },
+        timestamp: new Date(),
+        priority: 'NORMAL',
+        requiresResponse: true,
+        traceId: taskId,
+      };
+
+      const report = await podcastSpecialist.execute(podcastMessage);
+      const executionTimeMs = Date.now() - startTime;
+
+      delegations.push({
+        specialist: 'PODCAST_SPECIALIST',
+        brief: `Plan podcast episode on "${topic}"`,
+        status: report.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+        result: report.data,
+        executionTimeMs,
+      });
+
+      specialistOutputs.podcast = report.data;
+
+      if (report.status === 'COMPLETED' && report.data) {
+        return report.data as EpisodePlanResult;
+      }
+    } catch (error) {
+      this.log('WARN', `Podcast planning failed: ${error instanceof Error ? error.message : String(error)}`);
+      delegations.push({
+        specialist: 'PODCAST_SPECIALIST',
+        brief: `Plan podcast episode on "${topic}"`,
         status: 'FAILED',
         result: null,
         executionTimeMs: Date.now() - startTime,
