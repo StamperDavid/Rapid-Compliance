@@ -696,16 +696,34 @@ function BlogContentRenderer({ blog }: { blog: Record<string, unknown> }) {
   const internalLinks = blog.internalLinks as Array<{ anchorText?: string; targetUrl?: string; contextSentence?: string; sectionHeading?: string }> | undefined;
   const cta = blog.cta as { text?: string; placement?: string } | undefined;
   const seoNotes = blog.seoNotes as { primaryKeyword?: string; secondaryKeywords?: string[]; featuredSnippetTarget?: string; schemaMarkupSuggestion?: string } | undefined;
+  const blogPostId = blog.blogPostId as string | undefined;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* Title + meta */}
+      {/* Title + meta + editor link */}
       <section style={{ padding: '1.25rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem' }}>
         <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>{title ?? 'Untitled blog post'}</h2>
         {metaDescription && <p style={{ margin: '0.75rem 0 0 0', fontSize: '0.9375rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{metaDescription}</p>}
-        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-disabled)', alignItems: 'center' }}>
           {slug && <span>/{slug}</span>}
           {estimatedReadTime && <span>{estimatedReadTime}</span>}
+          {blogPostId && (
+            <Link
+              href={`/website/blog/editor?postId=${blogPostId}`}
+              style={{
+                marginLeft: 'auto',
+                padding: '0.375rem 0.875rem',
+                backgroundColor: 'var(--color-primary)',
+                color: '#fff',
+                borderRadius: '0.375rem',
+                textDecoration: 'none',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+              }}
+            >
+              Open in Editor →
+            </Link>
+          )}
         </div>
       </section>
 
