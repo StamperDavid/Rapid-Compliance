@@ -61,6 +61,14 @@ export interface ToolCallContext {
   userPrompt?: string;
   userId?: string;
   campaignId?: string;
+  /**
+   * When true, `trackMissionStep` is a no-op — the caller is driving step
+   * state itself (e.g., M3 StepRunner which already updates plan_step_*
+   * records via markStepRunning/markStepDone). Prevents the duplicate-row
+   * Bug D where StepRunner writes plan_step_* and the tool wrapper
+   * separately appends step_delegate_*.
+   */
+  suppressStepTracking?: boolean;
 }
 
 /**
@@ -117,6 +125,10 @@ function trackMissionStep(
   }
 ): void {
   if (!context?.missionId) { return; }
+  // Plan-driven StepRunner already updates mission steps in place — skip the
+  // parallel step_delegate_* write that would otherwise duplicate rows in
+  // Mission Control (Bug D).
+  if (context.suppressStepTracking) { return; }
 
   // Use callId if provided, otherwise fall back to toolName (backwards compat)
   const mapKey = extras?.callId
