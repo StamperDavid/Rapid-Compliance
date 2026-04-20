@@ -172,7 +172,11 @@ async function resetForAutoRetry(missionId: string, stepId: string): Promise<boo
  */
 export async function runMissionToCompletion(input: RunMissionInput): Promise<RunMissionResult> {
   const { missionId, userId, conversationId, userPrompt } = input;
-  const toolContext: ToolCallContext = { conversationId, missionId, userPrompt, userId };
+  // suppressStepTracking=true because this runner drives plan_step_* state
+  // directly via markStepRunning/markStepDone. Without it, the tool wrapper's
+  // trackMissionStep would ALSO append separate step_delegate_* rows, which
+  // is Bug D — the UI then shows 2×N rows for an N-step plan.
+  const toolContext: ToolCallContext = { conversationId, missionId, userPrompt, userId, suppressStepTracking: true };
 
   let stepsRun = 0;
   let stepsFailed = 0;
