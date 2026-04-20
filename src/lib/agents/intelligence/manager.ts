@@ -45,6 +45,14 @@ export interface IntelligenceRequest {
   keywords?: string[];
   includeDeepAnalysis?: boolean;
   limit?: number;
+  /**
+   * Free-text focus hint carried forward from Jasper's plan step description
+   * (e.g. "AI adoption and technology strategies"). Specialists' LLM prompts
+   * must incorporate this so generic templated outputs get steered toward
+   * what the operator actually asked for. Was previously dropped at the
+   * manager boundary — see Bug Q.
+   */
+  focusAreas?: string;
 }
 
 /**
@@ -535,11 +543,20 @@ export class IntelligenceManager extends BaseManager {
     const includeDeep = (payload?.includeDeepAnalysis as boolean)
       ?? (depth === 'deep');
 
-    const focusAreas = payload?.focusAreas as string[] | undefined;
+    // Jasper's tool schema declares focusAreas as a string, but older callers
+    // may have sent an array. Normalise both to a single free-text string so
+    // specialists can feed it straight into their LLM prompts.
+    const rawFocusAreas = payload?.focusAreas;
+    const focusAreas: string | undefined = typeof rawFocusAreas === 'string'
+      ? (rawFocusAreas.trim().length > 0 ? rawFocusAreas.trim() : undefined)
+      : Array.isArray(rawFocusAreas)
+        ? ((rawFocusAreas as unknown[]).filter((x): x is string => typeof x === 'string').join(', ') || undefined)
+        : undefined;
+
     const existingKeywords = payload?.keywords as string[] | undefined;
     const keywords = existingKeywords
       ?? (keywordsFromTargets.length > 0 ? keywordsFromTargets : undefined)
-      ?? (focusAreas && focusAreas.length > 0 ? focusAreas : undefined);
+      ?? (focusAreas ? [focusAreas] : undefined);
 
     return {
       intent: (payload?.intent as ResearchIntent) ?? mappedIntent ?? undefined,
@@ -550,6 +567,7 @@ export class IntelligenceManager extends BaseManager {
       keywords,
       includeDeepAnalysis: includeDeep,
       limit: (payload?.limit as number) ?? 5,
+      focusAreas,
     };
   }
 
@@ -757,6 +775,7 @@ export class IntelligenceManager extends BaseManager {
           location: request.location ?? 'Global',
           limit: request.limit ?? 5,
           includeAnalysis: request.includeDeepAnalysis ?? false,
+          focusAreas: request.focusAreas,
         };
         break;
 
@@ -785,6 +804,7 @@ export class IntelligenceManager extends BaseManager {
           keywords: request.keywords ?? [],
           competitors: [], // Will be populated from competitor results if available
           timeframe: '30d',
+          focusAreas: request.focusAreas,
         };
         break;
 

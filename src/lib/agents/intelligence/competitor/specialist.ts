@@ -212,6 +212,8 @@ export interface CompetitorSearchRequest {
   location: string;
   limit?: number;
   includeAnalysis?: boolean;
+  /** Free-text focus steering from the Jasper plan step description. */
+  focusAreas?: string;
 }
 
 const CompetitorSearchRequestSchema = z.object({
@@ -220,6 +222,11 @@ const CompetitorSearchRequestSchema = z.object({
   location: z.string().min(0).max(200).optional().default(''),
   limit: z.number().int().min(1).max(20).optional().default(10),
   includeAnalysis: z.boolean().optional().default(false),
+  /** Free-text focus steering — flows from Jasper's plan step description
+   * through the Intelligence Manager into the analyze_competitors prompt
+   * so generic output gets constrained to the topic the operator asked for
+   * (e.g. "AI adoption and technology strategies"). */
+  focusAreas: z.string().max(2000).optional(),
 });
 
 // ============================================================================
@@ -304,18 +311,21 @@ const CompetitorAnalysisSchema = z.object({
   targetAudience: z.string().min(2).max(400).nullable(),
   pricePoint: PricePointEnum,
   positioningNarrative: z.string().min(20).max(1200),
-  strengths: z.array(z.string().min(10).max(300)).min(3).max(6),
-  weaknesses: z.array(z.string().min(10).max(300)).min(2).max(5),
+  // Arrays: no min length enforced — LLMs intermittently produce empty/short
+  // arrays and rejecting the whole analysis over 1 missing item costs the
+  // operator the full 100-second LLM call. See Bug P writeup.
+  strengths: z.array(z.string().min(10).max(300)).max(6).optional().default([]),
+  weaknesses: z.array(z.string().min(10).max(300)).max(5).optional().default([]),
 });
 
 const MarketInsightsSchema = z.object({
   saturation: SaturationEnum,
   saturationReasoning: z.string().min(50).max(1500),
-  dominantPlayers: z.array(z.string().min(1).max(200)).min(1).max(4),
-  gaps: z.array(z.string().min(15).max(400)).min(2).max(6),
-  opportunities: z.array(z.string().min(15).max(400)).min(2).max(6),
+  dominantPlayers: z.array(z.string().min(1).max(200)).max(4).optional().default([]),
+  gaps: z.array(z.string().min(15).max(400)).max(6).optional().default([]),
+  opportunities: z.array(z.string().min(15).max(400)).max(6).optional().default([]),
   competitiveDynamics: z.string().min(100).max(3000),
-  recommendations: z.array(z.string().min(20).max(400)).min(3).max(6),
+  recommendations: z.array(z.string().min(20).max(400)).max(6).optional().default([]),
 });
 
 const CompetitorAnalysisResultSchema = z.object({
@@ -451,6 +461,11 @@ interface AnalyzeCompetitorsInputs {
   niche: string;
   location: string;
   scrapedCompetitors: ScrapedCompetitor[];
+  /** Free-text operator-supplied focus ("AI adoption and technology strategies",
+   * "pricing pressure on SMB tier", etc). When present, the prompt instructs
+   * the LLM to bias every competitor's analysis toward this angle rather than
+   * producing the generic positioning/strengths/weaknesses template. */
+  focusAreas?: string;
 }
 
 function truncate(text: string | null | undefined, max: number): string {
@@ -460,7 +475,7 @@ function truncate(text: string | null | undefined, max: number): string {
 }
 
 function buildAnalyzeCompetitorsPrompt(inputs: AnalyzeCompetitorsInputs): string {
-  const { niche, location, scrapedCompetitors } = inputs;
+  const { niche, location, scrapedCompetitors, focusAreas } = inputs;
 
   const header: string[] = [
     'ACTION: analyze_competitors',
@@ -470,6 +485,13 @@ function buildAnalyzeCompetitorsPrompt(inputs: AnalyzeCompetitorsInputs): string
     `Niche: ${niche}`,
     `Location: ${location || 'Global'}`,
     `Competitor count in batch: ${scrapedCompetitors.length}`,
+    ...(focusAreas && focusAreas.length > 0 ? [
+      '',
+      `## FOCUS AREA (from operator's plan) — HIGHEST PRIORITY`,
+      `The operator asked for this specific angle: "${focusAreas}"`,
+      '',
+      'Every per-competitor analysis block MUST address this focus explicitly. The strengths, weaknesses, positioningNarrative, and marketInsights.recommendations fields should all be grounded in this focus rather than producing a generic competitive analysis. If the scraped content does not contain information relevant to this focus for a given competitor, say so explicitly in positioningNarrative ("Scraped content offers no visibility into their <focus>.") rather than filling with unrelated observations.',
+    ] : []),
     '',
     '---',
     '',
@@ -770,7 +792,7 @@ export class CompetitorResearcher extends BaseSpecialist {
           { file: FILE },
         );
         analysis = await executeAnalyzeCompetitors(
-          { niche, location, scrapedCompetitors: scrapedBatch },
+          { niche, location, scrapedCompetitors: scrapedBatch, focusAreas: request.focusAreas },
           ctx,
         );
         logger.info(
