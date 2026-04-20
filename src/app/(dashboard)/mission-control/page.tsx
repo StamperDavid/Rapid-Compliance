@@ -624,7 +624,8 @@ function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
 
   const outputType = (parsed.type as string)
     ?? (parsed.status === 'draft' ? 'draft' : null)
-    ?? (parsed.briefId && (parsed.synthesis || parsed.competitorAnalysis) ? 'intelligence-brief' : null);
+    ?? (parsed.briefId && (parsed.synthesis || parsed.competitorAnalysis) ? 'intelligence-brief' : null)
+    ?? (parsed.detectedIntent && (parsed.blogContent || parsed.videoContent || parsed.musicContent || parsed.podcastContent || parsed.specialistOutputs) ? 'content-package' : null);
 
   switch (outputType) {
     case 'research': {
@@ -886,6 +887,9 @@ function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
     case 'intelligence-brief':
       return <IntelligenceBriefRenderer data={parsed} sectionLabel={sectionLabel} contentBox={contentBox} />;
 
+    case 'content-package':
+      return <ContentPackageBriefRenderer data={parsed} sectionLabel={sectionLabel} contentBox={contentBox} />;
+
     default:
       return (
         <CollapsibleSection title="Output (Result)">
@@ -893,6 +897,211 @@ function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
         </CollapsibleSection>
       );
   }
+}
+
+// ============================================================================
+// CONTENT PACKAGE RENDERER (inline, right-panel compact version)
+// ============================================================================
+
+function ContentPackageBriefRenderer({
+  data,
+  sectionLabel,
+  contentBox,
+}: {
+  data: Record<string, unknown>;
+  sectionLabel: React.CSSProperties;
+  contentBox: React.CSSProperties;
+}) {
+  const [showRaw, setShowRaw] = useState(false);
+
+  if (showRaw) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={sectionLabel}>Content Package (Raw)</div>
+          <button
+            type="button"
+            onClick={() => setShowRaw(false)}
+            style={{
+              background: 'none', border: '1px solid var(--color-border-light)',
+              borderRadius: '0.375rem', padding: '0.25rem 0.625rem',
+              fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer',
+              color: 'var(--color-text-secondary)', font: 'inherit',
+            }}
+          >
+            Formatted View
+          </button>
+        </div>
+        <div style={{
+          ...contentBox,
+          fontFamily: 'monospace', fontSize: '0.6875rem',
+          whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '500px',
+        }}>
+          {JSON.stringify(data, null, 2)}
+        </div>
+      </div>
+    );
+  }
+
+  const detectedIntent = data.detectedIntent as string | undefined;
+  const blogContent = data.blogContent as Record<string, unknown> | null | undefined;
+  const videoContent = data.videoContent as Record<string, unknown> | null | undefined;
+  const musicContent = data.musicContent as Record<string, unknown> | null | undefined;
+  const podcastContent = data.podcastContent as Record<string, unknown> | null | undefined;
+  const validation = data.validation as { passed?: boolean; seoScore?: number; toneConsistency?: number } | undefined;
+  const execution = data.execution as { totalSpecialists?: number; successfulSpecialists?: number; failedSpecialists?: number } | undefined;
+
+  const pillStyle = (color: string, bg: string): React.CSSProperties => ({
+    display: 'inline-block', fontSize: '0.625rem', fontWeight: 700,
+    padding: '0.125rem 0.5rem', borderRadius: '9999px',
+    color, backgroundColor: bg, letterSpacing: '0.02em',
+  });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* Header with toggle */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={sectionLabel}>Content Package</div>
+          {detectedIntent && (
+            <span style={pillStyle('#0369a1', 'rgba(3,105,161,0.1)')}>
+              {detectedIntent.replace(/_/g, ' ')}
+            </span>
+          )}
+          {validation?.passed != null && (
+            <span style={pillStyle(
+              validation.passed ? '#059669' : '#dc2626',
+              validation.passed ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)',
+            )}>
+              {validation.passed ? 'Validated' : 'Validation failed'}
+            </span>
+          )}
+          {execution && typeof execution.successfulSpecialists === 'number' && (
+            <span style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>
+              {execution.successfulSpecialists}/{execution.totalSpecialists} specialists
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowRaw(true)}
+          style={{
+            background: 'none', border: '1px solid var(--color-border-light)',
+            borderRadius: '0.375rem', padding: '0.25rem 0.625rem',
+            fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer',
+            color: 'var(--color-text-secondary)', font: 'inherit',
+          }}
+        >
+          Raw JSON
+        </button>
+      </div>
+
+      {/* Blog post */}
+      {blogContent && (() => {
+        const title = blogContent.title as string | undefined;
+        const metaDescription = blogContent.metaDescription as string | undefined;
+        const slug = blogContent.slug as string | undefined;
+        const estimatedReadTime = blogContent.estimatedReadTime as string | undefined;
+        const sections = blogContent.sections as Array<{ headingLevel?: string; heading?: string; body?: string; keyTakeaway?: string }> | undefined;
+        const cta = blogContent.cta as { text?: string; placement?: string } | undefined;
+        const blogPostId = blogContent.blogPostId as string | undefined;
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+            <div style={{ ...contentBox, padding: '0.75rem' }}>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>
+                {title ?? 'Untitled blog post'}
+              </div>
+              {metaDescription && (
+                <div style={{ marginTop: '0.375rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                  {metaDescription}
+                </div>
+              )}
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', fontSize: '0.625rem', color: 'var(--color-text-disabled)', alignItems: 'center', flexWrap: 'wrap' }}>
+                {slug && <span>/{slug}</span>}
+                {estimatedReadTime && <span>{estimatedReadTime}</span>}
+                {Array.isArray(sections) && <span>{sections.length} sections</span>}
+                {blogPostId && (
+                  <a
+                    href={`/website/blog/editor?postId=${blogPostId}`}
+                    style={{
+                      marginLeft: 'auto',
+                      padding: '0.25rem 0.625rem',
+                      backgroundColor: 'var(--color-primary)',
+                      color: '#fff',
+                      borderRadius: '0.25rem',
+                      textDecoration: 'none',
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Open in Editor →
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {Array.isArray(sections) && sections.length > 0 && (
+              <div style={contentBox}>
+                {sections.map((s, i) => (
+                  <div key={i} style={{ marginBottom: i < sections.length - 1 ? '0.75rem' : 0 }}>
+                    <div style={{ fontSize: s.headingLevel === 'h3' ? '0.75rem' : '0.8125rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
+                      {s.heading ?? 'Untitled section'}
+                    </div>
+                    {s.body && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                        {s.body}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {cta?.text && (
+              <div style={{
+                padding: '0.5rem 0.75rem',
+                backgroundColor: 'var(--color-bg-elevated)',
+                borderRadius: '0.375rem',
+                borderLeft: '3px solid var(--color-primary)',
+                fontSize: '0.75rem',
+                color: 'var(--color-text-primary)',
+                fontWeight: 600,
+              }}>
+                CTA: {cta.text}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Non-blog content fallbacks (video/music/podcast) — compact summary only */}
+      {videoContent && (
+        <div style={contentBox}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>Video output attached</div>
+        </div>
+      )}
+      {musicContent && (
+        <div style={contentBox}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>Soundtrack plan attached</div>
+        </div>
+      )}
+      {podcastContent && (
+        <div style={contentBox}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>Podcast episode plan attached</div>
+        </div>
+      )}
+
+      {/* Nothing populated — show the agent activity instead of a blank panel */}
+      {!blogContent && !videoContent && !musicContent && !podcastContent && (
+        <div style={contentBox}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+            No content fields populated on this package. Check specialistOutputs for partial results.
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ============================================================================
