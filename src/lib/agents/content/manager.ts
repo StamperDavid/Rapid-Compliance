@@ -50,6 +50,8 @@ import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
 import type { TechnicalBrief, PageSEORequirements } from '../architect/manager';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { adminDb } from '@/lib/firebase/admin';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // Minimal BrandDNA type for this manager (used by getBrandDNA return type)
 interface _BrandDNA {
@@ -1593,7 +1595,15 @@ export class ContentManager extends BaseManager {
       specialistOutputs.blog = report.data;
 
       if (report.status === 'COMPLETED' && report.data) {
-        return report.data as BlogPostResult;
+        const blogResult = report.data as BlogPostResult;
+
+        // Persist as a Blog Post doc so it shows up in /content/blog listing.
+        // Non-fatal if it fails — we still return the blog content to the caller.
+        await this.persistBlogAsPost(blogResult, taskId).catch((err: unknown) => {
+          this.log('WARN', `Blog post persistence failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
+
+        return blogResult;
       }
     } catch (error) {
       this.log('WARN', `Blog generation failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -1607,6 +1617,68 @@ export class ContentManager extends BaseManager {
     }
 
     return null;
+  }
+
+  /**
+   * Persist a BlogPostResult as a BlogPost document in Firestore so it shows
+   * up in the /content/blog listing. We store the full raw output in the
+   * `rawBlogOutput` field so downstream editors can convert the sections to
+   * the site's PageSection[] structure later. The BlogPost.content field is
+   * left empty initially — rendering the raw sections into Widget structures
+   * belongs to the editor, not the manager.
+   */
+  private async persistBlogAsPost(blog: BlogPostResult, taskId: string): Promise<void> {
+    if (!adminDb) {
+      this.log('WARN', 'Firestore admin not available — blog persistence skipped');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const postId = `post_blog_${taskId}_${Date.now()}`;
+    const readTimeMinutes = (() => {
+      if (!blog.estimatedReadTime) { return 5; }
+      const m = /(\d+)/.exec(blog.estimatedReadTime);
+      const n = m ? parseInt(m[1], 10) : NaN;
+      return Number.isFinite(n) && n > 0 ? n : 5;
+    })();
+
+    // Build BlogPost-shaped document. Fields match src/types/website.ts BlogPost interface,
+    // plus a non-standard `rawBlogOutput` holding the BLOG_WRITER result for later editor use.
+    const postData = {
+      id: postId,
+      slug: blog.slug,
+      title: blog.title,
+      excerpt: blog.metaDescription,
+      content: [],
+      author: 'system',
+      authorName: 'Blog Writer',
+      categories: [],
+      tags: blog.seoNotes?.secondaryKeywords ?? [],
+      featured: false,
+      seo: {
+        title: blog.title,
+        description: blog.metaDescription,
+        keywords: [
+          blog.seoNotes?.primaryKeyword,
+          ...(blog.seoNotes?.secondaryKeywords ?? []),
+        ].filter((k): k is string => typeof k === 'string' && k.length > 0),
+      },
+      status: 'draft' as const,
+      views: 0,
+      readTime: readTimeMinutes,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: 'system',
+      lastEditedBy: 'system',
+      // Raw output from BLOG_WRITER — not part of the standard BlogPost interface,
+      // but included here so the editor can later render/import the structured
+      // sections, CTA, and internal links when the owner opens the post.
+      rawBlogOutput: blog,
+    };
+
+    const blogPath = `${getSubCollection('website')}/config/blog-posts`;
+    await adminDb.collection(blogPath).doc(postId).set(postData);
+    this.log('INFO', `Blog post persisted: ${postId} (${blog.title})`);
   }
 
   /**
