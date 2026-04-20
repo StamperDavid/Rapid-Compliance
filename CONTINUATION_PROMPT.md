@@ -66,6 +66,16 @@ tail -f "D:/rapid-dev/dev-server.log" 2>/dev/null | grep -v --line-buffered -E "
 
 **Run `npx tsx scripts/verify-external-apis.ts` whenever LLM/Serper/DataForSEO behavior is suspect.** Exit 0 = all good.
 
+## Additional monitoring tools added 2026-04-20
+
+Three standalone scripts close gaps the log tail alone cannot see. Start them in their live modes alongside the main Monitor during Mission Control testing:
+
+- **`scripts/monitor-node-health.ts`** — polls dev server's Node process every 5s. Alerts on `MEMORY_HIGH` (>1800MB), `HTTP_UNRESPONSIVE` (>10s homepage HEAD), `HTTP_5XX`, `DEV_SERVER_NOT_LISTENING`. Writes all samples to `D:/rapid-dev/node-health.log`. Run: `npx tsx scripts/monitor-node-health.ts` (background).
+- **`scripts/track-api-costs.ts`** — estimates per-mission $ from the log. `--tail` for live alerts (>$2, >20 Serper, >5 LLM); `--report` for a post-run cost table. Cost model: Claude Sonnet 4.6 ($3/M input + $15/M output via chars/3.5 token approx), Serper ($0.30/1000), DataForSEO ($0.01/lookup).
+- **`scripts/detect-zombie-work.ts`** — catches Bug H. Marks missions as terminal on `halting mission`/`Mission cancelled`/`newStatus=FAILED|COMPLETED`/`Mission finalized`, then flags any LLM/Serper/scrape/delegate that fires more than 10s after terminal state. `--tail` for live, `--report` for post-run audit. Writes `D:/rapid-dev/zombie-alerts.log`.
+
+See `memory/project_live_test_monitoring_setup.md` for full usage details.
+
 ## Open bugs — strict priority order
 
 ### 🔴 Bug L — Unreachable specialists (HIGHEST, blocker)
