@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import StarRating from './StarRating';
 import { PromptRevisionPopup } from '@/components/training/PromptRevisionPopup';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface MissionGradeCardProps {
   missionId: string;
@@ -29,6 +30,7 @@ interface RevisionData {
 }
 
 export default function MissionGradeCard({ missionId, existingGrade }: MissionGradeCardProps) {
+  const authFetch = useAuthFetch();
   const [expanded, setExpanded] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [score, setScore] = useState<number>(existingGrade?.score ?? 0);
@@ -47,22 +49,9 @@ export default function MissionGradeCard({ missionId, existingGrade }: MissionGr
     setErrorMsg('');
 
     try {
-      const authToken =
-        typeof window !== 'undefined'
-          ? (window as Window & { __jasperAuthToken?: string }).__jasperAuthToken
-          : undefined;
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-
-      const response = await fetch(`/api/orchestrator/missions/${missionId}/grade`, {
+      const response = await authFetch(`/api/orchestrator/missions/${missionId}/grade`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           score,
           explanation: explanation.trim() || undefined,
@@ -87,7 +76,7 @@ export default function MissionGradeCard({ missionId, existingGrade }: MissionGr
       if (trimmedExplanation) {
         setIsProposing(true);
         try {
-          const revRes = await fetch('/api/training/propose-prompt-revision', {
+          const revRes = await authFetch('/api/training/propose-prompt-revision', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -116,7 +105,7 @@ export default function MissionGradeCard({ missionId, existingGrade }: MissionGr
   async function handleApproveRevision(fullRevisedPrompt: string, changeDescription: string) {
     setIsApplying(true);
     try {
-      await fetch('/api/training/apply-prompt-revision', {
+      await authFetch('/api/training/apply-prompt-revision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
