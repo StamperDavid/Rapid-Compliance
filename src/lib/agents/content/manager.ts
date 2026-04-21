@@ -53,6 +53,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { generateAndStoreBlogFeaturedImage } from '@/lib/content/blog-featured-image';
+import { buildResearchContextFromVault } from '@/lib/content/intelligence-context';
 
 // Minimal BrandDNA type for this manager (used by getBrandDNA return type)
 interface _BrandDNA {
@@ -1562,6 +1563,20 @@ export class ContentManager extends BaseManager {
         ? 1800
         : 1200;
 
+    // Pull the latest intelligence brief from MemoryVault. When an upstream
+    // Intelligence step ran in this mission, its full brief (competitor
+    // positioning, market gaps, trend signals) is available as a STRATEGY
+    // entry tagged 'intelligence'. We read the raw brief — NOT the shallow
+    // synthesis — so BLOG_WRITER can cite real findings instead of generating
+    // generic industry commentary. Null means no research available; BLOG_WRITER
+    // just runs without a research context in that case.
+    const researchContext = await buildResearchContextFromVault(this.identity.id);
+    if (researchContext !== null) {
+      this.log('INFO', `Passing intelligence research context to BLOG_WRITER (${researchContext.length} chars)`);
+    } else {
+      this.log('INFO', 'No intelligence brief found in vault — BLOG_WRITER will run without research context');
+    }
+
     try {
       const blogMessage: AgentMessage = {
         id: `${taskId}_blog`,
@@ -1575,6 +1590,7 @@ export class ContentManager extends BaseManager {
           audience: request.audience ?? brandContext.targetAudience ?? 'business decision makers',
           wordCountTarget,
           toneOverride: brandContext.toneOfVoice,
+          ...(researchContext !== null ? { researchContext } : {}),
         },
         timestamp: new Date(),
         priority: 'HIGH',
