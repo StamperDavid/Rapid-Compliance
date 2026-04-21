@@ -293,18 +293,31 @@ function buildBlogPostUserPrompt(req: BlogPostRequest): string {
     : '';
 
   // When upstream Intelligence Manager ran and produced real research, embed
-  // it verbatim and instruct the LLM to use it as the source of facts. Without
-  // this block, the LLM would generate generic industry commentary even when
-  // real competitor data was collected this mission.
+  // it verbatim and instruct the LLM to use it as the source of facts.
+  //
+  // CRITICAL FRAMING: this is a content blog, not competitive intelligence.
+  // The companies in the research are INDUSTRY EXAMPLES — likely prospects or
+  // peers of the blog's target audience — NOT adversaries. The blog must be
+  // neutral and authoritative, using the research to demonstrate industry
+  // understanding, never to criticize or position "against" the researched
+  // companies. Without this framing, adversarial language leaks into the
+  // output and breaks inbound marketing intent.
   const researchBlock = req.researchContext
     ? [
-        '=== RESEARCH CONTEXT (authoritative — use this instead of general knowledge) ===',
+        '=== INDUSTRY RESEARCH CONTEXT (authoritative source of facts) ===',
         '',
         req.researchContext,
         '',
-        '=== END RESEARCH CONTEXT ===',
+        '=== END INDUSTRY RESEARCH ===',
         '',
-        'Use the research above as your source of facts. Cite specific competitor names, positioning, strengths, weaknesses, market gaps, and trend signals from this block when they are relevant. Do not invent statistics or companies that are not in the research. If the research is silent on a point, it is better to omit the claim than to fabricate.',
+        'Use the research above as your source of facts about the industry this blog covers.',
+        'Framing rules — these are absolute:',
+        '- The companies in the research are INDUSTRY EXAMPLES, not competitors or adversaries. Some of them are likely readers of this blog.',
+        '- Write neutrally and authoritatively. You are informing an industry audience, not competing against them.',
+        '- Cite specific company names and their activities when it helps illustrate industry trends (e.g., "Companies like X have adopted Y, while others are still exploring Z").',
+        '- NEVER frame the research as "our competitors" or criticize the listed companies. Do not say any company is "losing" or "failing" at anything.',
+        '- Present gaps in the industry landscape as opportunities, not as weaknesses of specific companies.',
+        '- Do not invent statistics or companies that are not in the research. If the research is silent on a point, omit the claim rather than fabricate.',
         '',
       ].join('\n')
     : '';
