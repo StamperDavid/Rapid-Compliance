@@ -107,6 +107,14 @@ export interface BlogPostRequest {
   toneOverride?: string;
   contentAngle?: string;
   competitorUrls?: string[];
+  /**
+   * Pre-formatted research block from upstream Intelligence Manager (or any
+   * research agent). When present, the LLM is instructed to cite and
+   * synthesize this material as the source of facts instead of hallucinating
+   * generic industry commentary. Typically populated by Content Manager via
+   * `buildResearchContextFromVault()` in src/lib/content/intelligence-context.ts.
+   */
+  researchContext?: string;
 }
 
 export interface BlogOutlineRequest {
@@ -284,6 +292,23 @@ function buildBlogPostUserPrompt(req: BlogPostRequest): string {
     ? `Competitor URLs to outperform (do NOT mention them by name):\n${(req.competitorUrls ?? []).map((u) => `- ${u}`).join('\n')}`
     : '';
 
+  // When upstream Intelligence Manager ran and produced real research, embed
+  // it verbatim and instruct the LLM to use it as the source of facts. Without
+  // this block, the LLM would generate generic industry commentary even when
+  // real competitor data was collected this mission.
+  const researchBlock = req.researchContext
+    ? [
+        '=== RESEARCH CONTEXT (authoritative — use this instead of general knowledge) ===',
+        '',
+        req.researchContext,
+        '',
+        '=== END RESEARCH CONTEXT ===',
+        '',
+        'Use the research above as your source of facts. Cite specific competitor names, positioning, strengths, weaknesses, market gaps, and trend signals from this block when they are relevant. Do not invent statistics or companies that are not in the research. If the research is silent on a point, it is better to omit the claim than to fabricate.',
+        '',
+      ].join('\n')
+    : '';
+
   return [
     'ACTION: write_blog_post',
     '',
@@ -294,6 +319,7 @@ function buildBlogPostUserPrompt(req: BlogPostRequest): string {
     `Content angle: ${angle}`,
     req.toneOverride ? `Tone override: ${req.toneOverride}` : '',
     '',
+    researchBlock,
     'Internal pages available for linking:',
     internalPages,
     '',
