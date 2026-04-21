@@ -52,6 +52,7 @@ import type { TechnicalBrief, PageSEORequirements } from '../architect/manager';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { generateAndStoreBlogFeaturedImage } from '@/lib/content/blog-featured-image';
 
 // Minimal BrandDNA type for this manager (used by getBrandDNA return type)
 interface _BrandDNA {
@@ -1600,7 +1601,7 @@ export class ContentManager extends BaseManager {
         // Persist as a Blog Post doc so it shows up in /content/blog listing
         // AND the editor shows the generated content. Returns the postId on
         // success so ContentPackage can carry it for the review link.
-        const postId = await this.persistBlogAsPost(blogResult, taskId).catch((err: unknown) => {
+        const postId = await this.persistBlogAsPost(blogResult, taskId, brandContext).catch((err: unknown) => {
           this.log('WARN', `Blog post persistence failed: ${err instanceof Error ? err.message : String(err)}`);
           return null;
         });
@@ -1635,7 +1636,11 @@ export class ContentManager extends BaseManager {
    *
    * Returns the postId so callers can build links into the editor.
    */
-  private async persistBlogAsPost(blog: BlogPostResult, taskId: string): Promise<string | null> {
+  private async persistBlogAsPost(
+    blog: BlogPostResult,
+    taskId: string,
+    brandContext?: BrandContext,
+  ): Promise<string | null> {
     if (!adminDb) {
       this.log('WARN', 'Firestore admin not available — blog persistence skipped');
       return null;
@@ -1643,6 +1648,20 @@ export class ContentManager extends BaseManager {
 
     const now = new Date().toISOString();
     const postId = `post_blog_${taskId}_${Date.now()}`;
+
+    // Generate a featured image via DALL-E and cache it in Firestore so the
+    // URL doesn't expire. Non-fatal — blog persists without an image if this
+    // fails (operator sees a blog without a feature image rather than no blog
+    // at all).
+    const featuredImageResult = await generateAndStoreBlogFeaturedImage({
+      postId,
+      title: blog.title,
+      excerpt: blog.metaDescription ?? blog.title,
+      brandStyleHint: brandContext?.toneOfVoice,
+    });
+    if (featuredImageResult) {
+      this.log('INFO', `Blog featured image generated and cached: ${featuredImageResult.url}`);
+    }
     const readTimeMinutes = (() => {
       if (!blog.estimatedReadTime) { return 5; }
       const m = /(\d+)/.exec(blog.estimatedReadTime);
@@ -1717,6 +1736,7 @@ export class ContentManager extends BaseManager {
       title: blog.title,
       excerpt: blog.metaDescription,
       content,
+      ...(featuredImageResult ? { featuredImage: featuredImageResult.url } : {}),
       author: 'system',
       authorName: 'Blog Writer',
       categories: [],
