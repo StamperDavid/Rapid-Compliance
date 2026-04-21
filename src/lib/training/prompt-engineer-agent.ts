@@ -1,22 +1,37 @@
 /**
- * Prompt Engineer Agent
+ * Prompt Engineer Agent — legacy adapter.
  *
- * Specialist AI agent that proposes targeted, section-level edits to an agent's
- * system prompt based on owner feedback or corrections.  The agent is intentionally
- * conservative: it only touches the section that is directly relevant to the
- * correction and preserves all other formatting and instructions verbatim.
+ * HISTORY: this file originally hardcoded the Prompt Engineer's model
+ * (anthropic/claude-3-opus) and its entire system prompt as a TS constant.
+ * When OpenRouter retired claude-3-opus the function started failing
+ * silently, persisting proposals with changeDescription="AI call failed."
+ * Owner flagged that all agents are supposed to pull model + prompt from
+ * Firestore Golden Masters, not from hardcoded values — per Standing Rule
+ * #1 ("every LLM agent spawns from its Golden Master, Brand DNA baked in").
+ *
+ * This file now delegates to the proper GM-backed Prompt Engineer specialist
+ * at `src/lib/agents/prompt-engineer/specialist.ts`. That specialist loads
+ * its model, temperature, maxTokens, and system prompt from the
+ * `specialistGoldenMasters` collection at runtime. Model changes happen by
+ * reseeding the GM (or deploying a new version through the standard
+ * grade → Prompt Engineer → approve → deploy pipeline), not by code edit.
+ *
+ * The legacy PromptRevisionRequest / PromptRevisionResponse shape is kept
+ * intact so existing callers work without modification:
+ *   - /api/training/propose-prompt-revision (old Training Lab route)
+ *   - /api/orchestrator/missions/[missionId]/plan/edit-step (new Bug R hook
+ *     that captures operator plan edits as training signal for Jasper)
  */
 
 import type { AgentDomain } from '@/types/training';
-import type { ModelName } from '@/types/ai-models';
-import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import type { AgentMessage } from '@/lib/agents/types';
 import { logger } from '@/lib/logger/logger';
+import { getPromptEngineer, type ProposePromptEditResult } from '@/lib/agents/prompt-engineer/specialist';
 
 const FILE = 'prompt-engineer-agent.ts';
 
 // ---------------------------------------------------------------------------
-// Public types
+// Public types — preserved from the legacy signature for caller compatibility
 // ---------------------------------------------------------------------------
 
 export interface PromptRevisionRequest {
@@ -41,226 +56,111 @@ export interface PromptRevisionResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Internal types used for parsing
-// ---------------------------------------------------------------------------
-
-interface ParsedRevision {
-  before: string;
-  after: string;
-  description: string;
-  question: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Prompt Engineer system prompt
-// ---------------------------------------------------------------------------
-
-const PROMPT_ENGINEER_SYSTEM_PROMPT = `You are a specialist in editing AI agent system prompts.
-
-Your role is to apply targeted, surgical edits to an existing system prompt based on owner feedback.
-
-## Core Rules
-
-1. **Only touch what is relevant.**  Identify the single section of the prompt that is
-   responsible for the behaviour described in the correction.  Edit only that section.
-   Do not rewrite, reorganise, or summarise the rest of the prompt.
-
-2. **Preserve formatting exactly.**  The original prompt may use decorative dividers such
-   as \`═══\`, section headers, bullet styles, numbered lists, and indentation.
-   Your revised section must match the original formatting style character-for-character.
-
-3. **Never delete working instructions.**  If existing instructions are not directly
-   contradicted by the correction, keep them.  Only remove text that the correction
-   explicitly renders wrong or obsolete.
-
-4. **Handle conflicts honestly.**  If the correction directly conflicts with an existing
-   instruction in the prompt, do NOT silently override the existing instruction.
-   Instead, surface the conflict via a clarifying question in the <question> tag.
-
-5. **Minimal diff.**  Prefer adding a new bullet or modifying a sentence over rewriting
-   a whole block.
-
-## Output Format
-
-You MUST respond using exactly this XML-like structure.  No other text outside the tags.
-
-<before>
-[Copy the exact section — and only that section — from the current prompt that you are
-changing.  This must be a verbatim substring of the current prompt so it can be located
-and replaced programmatically.]
-</before>
-<after>
-[The revised version of that section, with the correction applied.]
-</after>
-<description>
-[1-2 sentences summarising what changed and why.]
-</description>
-<question>
-[If the correction conflicts with an existing rule, write a specific clarifying question
-here asking the owner which instruction should take precedence.  Otherwise write exactly:
-NONE]
-</question>`;
-
-// ---------------------------------------------------------------------------
-// Helper: parse the structured response
-// ---------------------------------------------------------------------------
-
-function parseRevisionResponse(raw: string): ParsedRevision | null {
-  const extract = (tag: string): string | null => {
-    const pattern = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i');
-    const match = pattern.exec(raw);
-    return match !== null ? match[1].trim() : null;
-  };
-
-  const before = extract('before');
-  const after = extract('after');
-  const description = extract('description');
-  const questionRaw = extract('question');
-
-  if (before === null || after === null || description === null) {
-    return null;
-  }
-
-  const question =
-    questionRaw === null || questionRaw.toUpperCase() === 'NONE' ? null : questionRaw;
-
-  return { before, after, description, question };
-}
-
-// ---------------------------------------------------------------------------
-// Main exported function
+// Main exported function — delegates to the GM-backed specialist
 // ---------------------------------------------------------------------------
 
 /**
- * Ask the Prompt Engineer AI to propose a targeted revision to a system prompt.
+ * Ask the Prompt Engineer to propose a targeted revision to a system prompt.
  *
- * The AI locates the section responsible for the undesired behaviour, rewrites
- * only that section, and returns both the section diff and the full revised prompt.
+ * Delegates to the GM-backed specialist. The specialist loads its model,
+ * temperature, maxTokens, and system prompt from Firestore — so updating the
+ * Prompt Engineer's own behaviour is a GM change (via seed script or its own
+ * Training Lab entry), not a code edit. No hardcoded model here.
  */
 export async function proposePromptRevision(
   request: PromptRevisionRequest,
 ): Promise<PromptRevisionResponse> {
-  logger.info('[PromptEngineerAgent] Revision requested', {
+  logger.info('[PromptEngineerAgent] Revision requested (delegating to GM-backed specialist)', {
     file: FILE,
     agentType: request.agentType,
     context: request.context,
   });
 
-  const userMessage = `## Agent Type
-${request.agentType}
-
-## Context
-${request.context}
-
-## Owner Correction
-${request.correction}
-
-## Current System Prompt
-\`\`\`
-${request.currentSystemPrompt}
-\`\`\`
-
-Apply the correction to the system prompt following the rules in your instructions.
-Output only the four XML tags — no additional commentary.`;
-
-  // claude-3-opus was retired by OpenRouter (404 "No endpoints found for
-  // anthropic/claude-3-opus"). Switching to the current-generation Sonnet
-  // which has driven the rest of the pipeline reliably through today's
-  // testing and produces valid structured output for this agent's prompt.
-  const model: ModelName = 'claude-sonnet-4.6';
-  const provider = new OpenRouterProvider(PLATFORM_ID);
-
-  let rawResponse: string;
+  const targetSpecialistId = request.agentType === 'orchestrator'
+    ? 'JASPER_ORCHESTRATOR'
+    : request.agentType.toUpperCase();
+  const targetSpecialistName = request.agentType === 'orchestrator'
+    ? 'Jasper (Orchestrator)'
+    : request.agentType;
 
   try {
-    const chatResponse = await provider.chat({
-      model,
-      messages: [
-        { role: 'system', content: PROMPT_ENGINEER_SYSTEM_PROMPT },
-        { role: 'user', content: userMessage },
-      ],
-      temperature: 0.3,
-      maxTokens: 8192,
-    });
+    const promptEngineer = getPromptEngineer();
+    await promptEngineer.initialize();
 
-    rawResponse = chatResponse.content;
+    const message: AgentMessage = {
+      id: `legacy_revision_${Date.now()}`,
+      timestamp: new Date(),
+      from: 'PROMPT_ENGINEER_LEGACY_ADAPTER',
+      to: 'PROMPT_ENGINEER',
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      payload: {
+        action: 'propose_prompt_edit',
+        targetSpecialistId,
+        targetSpecialistName,
+        currentSystemPrompt: request.currentSystemPrompt,
+        correctedReportExcerpt: request.context,
+        humanCorrection: {
+          grade: 'request_revision',
+          explanation: request.correction,
+        },
+        priorVersionCount: 0,
+      },
+      requiresResponse: true,
+      traceId: `legacy_revision_${Date.now()}`,
+    };
+
+    const report = await promptEngineer.execute(message);
+    if (report.status !== 'COMPLETED') {
+      const errMsg = (report.errors ?? []).join(' | ') || 'Prompt Engineer returned non-COMPLETED status';
+      logger.error('[PromptEngineerAgent] Specialist execution failed', new Error(errMsg), { file: FILE });
+      return {
+        beforeSection: '',
+        afterSection: '',
+        clarifyingQuestion: `The Prompt Engineer specialist failed: ${errMsg}. Try again or edit the prompt manually.`,
+        changeDescription: 'No change was made — the Prompt Engineer specialist failed.',
+        fullRevisedPrompt: request.currentSystemPrompt,
+      };
+    }
+
+    const result = report.data as ProposePromptEditResult;
+
+    if (result.status === 'CLARIFICATION_NEEDED') {
+      return {
+        beforeSection: '',
+        afterSection: '',
+        clarifyingQuestion: result.questions.join(' | '),
+        changeDescription: result.rationale,
+        fullRevisedPrompt: request.currentSystemPrompt,
+      };
+    }
+
+    // EDIT_PROPOSED — build the full revised prompt by replacing the target
+    // section verbatim. The specialist enforces (via post-parse invariant)
+    // that currentText appears verbatim in the input prompt, so this replace
+    // is guaranteed to hit exactly once.
+    const fullRevisedPrompt = request.currentSystemPrompt.replace(
+      result.currentText,
+      result.proposedText,
+    );
+
+    return {
+      beforeSection: result.currentText,
+      afterSection: result.proposedText,
+      changeDescription: result.rationale,
+      fullRevisedPrompt,
+    };
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));
-    logger.error('[PromptEngineerAgent] OpenRouter call failed', error, { file: FILE });
-
+    logger.error('[PromptEngineerAgent] Delegation to specialist threw', error, { file: FILE });
     return {
       beforeSection: '',
       afterSection: '',
       clarifyingQuestion:
-        `The AI call failed and could not produce a revision. Error: ${error.message}. ` +
-        'Please try again or manually edit the prompt.',
-      changeDescription: 'No change was made — the AI call failed.',
+        `The Prompt Engineer specialist threw: ${error.message}. ` +
+        'Check that its Golden Master is seeded in Firestore.',
+      changeDescription: 'No change was made — the Prompt Engineer specialist threw.',
       fullRevisedPrompt: request.currentSystemPrompt,
     };
   }
-
-  logger.info('[PromptEngineerAgent] Raw response received', {
-    file: FILE,
-    responseLength: rawResponse.length,
-  });
-
-  // --- Parse structured response ------------------------------------------
-
-  const parsed = parseRevisionResponse(rawResponse);
-
-  if (parsed === null) {
-    logger.warn('[PromptEngineerAgent] Failed to parse structured response', {
-      file: FILE,
-      rawResponse,
-    });
-
-    return {
-      beforeSection: '',
-      afterSection: '',
-      clarifyingQuestion:
-        'The AI returned an unexpected format and the revision could not be parsed. ' +
-        'Could you clarify which section of the prompt you would like to modify?',
-      changeDescription: 'No change was made — the response format was invalid.',
-      fullRevisedPrompt: request.currentSystemPrompt,
-    };
-  }
-
-  // --- Verify the before-section exists verbatim in the current prompt -----
-
-  if (!request.currentSystemPrompt.includes(parsed.before)) {
-    logger.warn('[PromptEngineerAgent] Before-section not found verbatim in current prompt', {
-      file: FILE,
-      beforeSection: parsed.before.slice(0, 120),
-    });
-
-    return {
-      beforeSection: parsed.before,
-      afterSection: parsed.after,
-      clarifyingQuestion:
-        'The AI proposed a change to a section that could not be located verbatim in the ' +
-        'current prompt.  Could you point to the specific paragraph or rule you want changed ' +
-        'so the revision can be applied precisely?',
-      changeDescription: parsed.description,
-      fullRevisedPrompt: request.currentSystemPrompt,
-    };
-  }
-
-  // --- Build the full revised prompt ---------------------------------------
-
-  // Replace only the first occurrence to avoid unintended double-replacement
-  const fullRevisedPrompt = request.currentSystemPrompt.replace(parsed.before, parsed.after);
-
-  logger.info('[PromptEngineerAgent] Revision produced successfully', {
-    file: FILE,
-    agentType: request.agentType,
-    hasConflict: parsed.question !== null,
-  });
-
-  return {
-    beforeSection: parsed.before,
-    afterSection: parsed.after,
-    clarifyingQuestion: parsed.question ?? undefined,
-    changeDescription: parsed.description,
-    fullRevisedPrompt,
-  };
 }
