@@ -472,18 +472,19 @@
       ]
     },
     {
-      "collectionGroup": "agentRepProfiles",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "agentType", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "video_pipeline_projects",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "missionGrades",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "missionId", "order": "ASCENDING" },
+        { "fieldPath": "gradedAt", "order": "DESCENDING" }
       ]
     }
   ],
