@@ -163,7 +163,11 @@ ${request.currentSystemPrompt}
 Apply the correction to the system prompt following the rules in your instructions.
 Output only the four XML tags — no additional commentary.`;
 
-  const model: ModelName = 'claude-3-opus';
+  // claude-3-opus was retired by OpenRouter (404 "No endpoints found for
+  // anthropic/claude-3-opus"). Switching to the current-generation Sonnet
+  // which has driven the rest of the pipeline reliably through today's
+  // testing and produces valid structured output for this agent's prompt.
+  const model: ModelName = 'claude-sonnet-4.6';
   const provider = new OpenRouterProvider(PLATFORM_ID);
 
   let rawResponse: string;
