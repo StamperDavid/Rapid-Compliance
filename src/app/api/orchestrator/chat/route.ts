@@ -844,7 +844,28 @@ CRITICAL RULES:
         const lastMsg = currentMessages[currentMessages.length - 1];
         const wasNudged = typeof lastMsg?.content === 'string' && lastMsg.content.startsWith('SYSTEM: Phase');
         const shouldForceTools = (iterationCount === 1 && !isNonActionQuery) || (wasNudged && !isNonActionQuery);
-        const iterationToolChoice = shouldForceTools ? ('required' as const) : ('auto' as const);
+
+        // Architectural plan-first gate: on the very first iteration of any
+        // action request, force Jasper to call propose_mission_plan specifically
+        // (not just "any tool"). Previous behavior used toolChoice='required'
+        // which let the LLM pick any tool — observed Apr 21 when Jasper
+        // bypassed plan approval entirely and fired 5 tools directly
+        // (delegate_to_intelligence + save_blog_draft + scan_leads +
+        // get_seo_config + delegate_to_content), hallucinating lead data.
+        // The M4 rule to use propose_mission_plan is in the GM prompt, but
+        // LLM compliance with long prompts is unreliable. Forcing the
+        // specific tool name at the API layer is deterministic — the
+        // operator ALWAYS sees a plan before work runs. If the request is
+        // truly one step, Jasper produces a 1-step plan, still reviewable.
+        const planGateEngaged = iterationCount === 1 && !isNonActionQuery;
+        const hasProposeMissionPlanAvailable = activeTools.some(
+          (t) => t.function.name === 'propose_mission_plan',
+        );
+        const iterationToolChoice = planGateEngaged && hasProposeMissionPlanAvailable
+          ? ({ type: 'function' as const, function: { name: 'propose_mission_plan' } })
+          : shouldForceTools
+            ? ('required' as const)
+            : ('auto' as const);
 
         const { result: response, model } = await chatWithFallback<ChatCompletionResponse>(
           modelsToTry,
@@ -933,7 +954,7 @@ CRITICAL RULES:
           traceId,
           iteration: iterationCount,
           tools: response.toolCalls.map((tc: ToolCall) => tc.function.name),
-          toolChoice: iterationToolChoice,
+          toolChoice: typeof iterationToolChoice === 'string' ? iterationToolChoice : `force:${iterationToolChoice.function.name}`,
         });
 
         // Create mission BEFORE tools execute so steps can write to it.
