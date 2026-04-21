@@ -22,6 +22,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { generateImage } from '@/lib/ai/image-generation-service';
 import { logger } from '@/lib/logger/logger';
+import sharp from 'sharp';
 
 const COLLECTION = 'blog_featured_images';
 
@@ -100,19 +101,49 @@ export async function generateAndStoreBlogFeaturedImage(
     return null;
   }
 
-  // Download the DALL-E bytes before the temporary URL expires
+  // Download the DALL-E bytes before the temporary URL expires, then compress
+  // to JPEG so the base64 payload fits in a Firestore document field (hard
+  // limit 1,048,487 bytes). Raw DALL-E PNGs at 1792x1024 are typically
+  // 1.5–3MB, which encoded as base64 overflows the field. JPEG quality 85
+  // on a web banner is visually indistinguishable from the source but lands
+  // at ~150-300KB.
   let base64: string;
-  let contentType: string;
+  const contentType = 'image/jpeg';
   try {
     const response = await fetch(dalleUrl);
     if (!response.ok) {
       throw new Error(`Fetch returned ${response.status}`);
     }
     const arrayBuffer = await response.arrayBuffer();
-    base64 = Buffer.from(arrayBuffer).toString('base64');
-    contentType = response.headers.get('content-type') ?? 'image/png';
+    const compressed = await sharp(Buffer.from(arrayBuffer))
+      .jpeg({ quality: 85, mozjpeg: true })
+      .toBuffer();
+    base64 = compressed.toString('base64');
+
+    logger.info('[BlogFeaturedImage] Compressed image for Firestore', {
+      postId: input.postId,
+      originalBytes: arrayBuffer.byteLength,
+      compressedBytes: compressed.byteLength,
+      base64Bytes: base64.length,
+    });
+
+    // Safety net: if the compressed output somehow still exceeds Firestore's
+    // field limit (unusual at q85), retry once at a lower quality before giving up.
+    if (base64.length > 1_000_000) {
+      logger.warn('[BlogFeaturedImage] Compressed image still too large — re-compressing at q70', {
+        postId: input.postId,
+        base64Bytes: base64.length,
+      });
+      const recompressed = await sharp(Buffer.from(arrayBuffer))
+        .jpeg({ quality: 70, mozjpeg: true })
+        .toBuffer();
+      base64 = recompressed.toString('base64');
+      if (base64.length > 1_000_000) {
+        throw new Error(`Compressed image still too large for Firestore (${base64.length} bytes)`);
+      }
+    }
   } catch (err) {
-    logger.warn('[BlogFeaturedImage] Failed to download generated image', {
+    logger.warn('[BlogFeaturedImage] Failed to download or compress generated image', {
       postId: input.postId,
       error: err instanceof Error ? err.message : String(err),
     });
