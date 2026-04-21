@@ -135,7 +135,12 @@ const BlogSectionSchema = z.object({
   headingLevel: z.enum(['h2', 'h3']),
   heading: z.string().min(1),
   body: z.string().min(1),
-  keyTakeaway: z.string().optional(),
+  // nullish = undefined OR null OR string. Optional alone rejects explicit
+  // null, which LLMs commonly emit for "no key takeaway for this section".
+  // Observed Apr 21: Claude returned "keyTakeaway": null on 3 of 4 sections
+  // and the schema rejected the entire blog, losing the whole post + the
+  // feature image pipeline that runs after persistence.
+  keyTakeaway: z.string().nullish(),
 });
 
 const InternalLinkPlacementSchema = z.object({
@@ -159,8 +164,10 @@ const BlogPostResultSchema = z.object({
   seoNotes: z.object({
     primaryKeyword: z.string().min(1),
     secondaryKeywords: z.array(z.string()),
-    featuredSnippetTarget: z.string().optional(),
-    schemaMarkupSuggestion: z.string().optional(),
+    // Same pattern as keyTakeaway — accept null, undefined, or string. LLMs
+    // emit null freely for "not applicable."
+    featuredSnippetTarget: z.string().nullish(),
+    schemaMarkupSuggestion: z.string().nullish(),
   }),
 });
 
