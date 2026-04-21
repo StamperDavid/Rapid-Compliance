@@ -78,28 +78,40 @@ interface VaultBrief {
 // FORMATTERS
 // ============================================================================
 
-function formatCompetitor(c: RawCompetitor, idx: number): string {
+/**
+ * Format a single company from the research as a neutral industry example.
+ *
+ * IMPORTANT: even though the upstream specialist is called COMPETITOR_RESEARCHER
+ * and its output fields use words like "competitor" / "strengths" / "weaknesses",
+ * content blogs treat these companies as INDUSTRY EXAMPLES — not adversaries.
+ * The downstream blog's audience is likely these very companies (or their
+ * peers); adversarial framing breaks inbound marketing intent. We reframe
+ * the same data neutrally for the LLM: what they do, what they focus on,
+ * where the industry has opportunity space — never "weaknesses."
+ */
+function formatCompanyForIndustryContext(c: RawCompetitor, idx: number): string {
   const lines: string[] = [];
-  const header = c.name ? `${idx + 1}. ${c.name}` : `${idx + 1}. (Unnamed competitor)`;
+  const header = c.name ? `${idx + 1}. ${c.name}` : `${idx + 1}. (Unnamed company)`;
   lines.push(header + (c.url ? ` — ${c.url}` : ''));
 
   if (c.positioning?.tagline) {
     lines.push(`   Tagline: ${c.positioning.tagline}`);
   }
   if (c.positioning?.targetAudience) {
-    lines.push(`   Target audience: ${c.positioning.targetAudience}`);
+    lines.push(`   Who they serve: ${c.positioning.targetAudience}`);
   }
   if (c.positioning?.pricePoint) {
-    lines.push(`   Price point: ${c.positioning.pricePoint}`);
+    lines.push(`   Price tier: ${c.positioning.pricePoint}`);
   }
   if (c.positioningNarrative) {
-    lines.push(`   Positioning: ${c.positioningNarrative}`);
+    lines.push(`   How they position: ${c.positioningNarrative}`);
   }
   if (c.strengths && c.strengths.length > 0) {
-    lines.push(`   Strengths: ${c.strengths.join('; ')}`);
+    lines.push(`   What they do well: ${c.strengths.join('; ')}`);
   }
   if (c.weaknesses && c.weaknesses.length > 0) {
-    lines.push(`   Weaknesses: ${c.weaknesses.join('; ')}`);
+    // Reframe gaps as industry-level opportunity space, not criticism of the company
+    lines.push(`   Areas they are less focused on (industry opportunity space): ${c.weaknesses.join('; ')}`);
   }
 
   return lines.join('\n');
@@ -180,16 +192,19 @@ export async function buildResearchContextFromVault(
 
   const sections: string[] = [];
 
-  // Competitor research — the meat of what we usually want to cite
+  // Industry research — the meat of what a content blog will cite. Note the
+  // neutral framing: these are companies operating in the industry, used as
+  // real-world examples, NOT competitors to beat. The blog's audience is
+  // likely these very companies (or their peers).
   const comp = brief.competitorAnalysis;
   if (comp && Array.isArray(comp.competitors) && comp.competitors.length > 0) {
-    sections.push('## Competitors researched');
+    sections.push('## Companies operating in this industry');
     for (let i = 0; i < comp.competitors.length; i++) {
-      sections.push(formatCompetitor(comp.competitors[i], i));
+      sections.push(formatCompanyForIndustryContext(comp.competitors[i], i));
     }
     if (comp.marketInsights) {
       sections.push('');
-      sections.push('## Market insights');
+      sections.push('## Industry landscape');
       sections.push(formatMarketInsights(comp.marketInsights));
     }
   }
