@@ -31,6 +31,7 @@ import {
   PromptRevisionPopup,
   type PromptRevisionPopupProps,
 } from '@/components/training/PromptRevisionPopup';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface StepGradeWidgetProps {
   missionId: string;
@@ -82,6 +83,7 @@ export default function StepGradeWidget({
   specialistsUsed,
   existingGrade,
 }: StepGradeWidgetProps) {
+  const authFetch = useAuthFetch();
   const [score, setScore] = useState<number>(existingGrade?.score ?? 0);
   const [explanation, setExplanation] = useState<string>(existingGrade?.explanation ?? '');
   const [showReason, setShowReason] = useState<boolean>(false);
@@ -113,19 +115,9 @@ export default function StepGradeWidget({
     setSubmitState('submitting');
 
     try {
-      const authToken =
-        typeof window !== 'undefined'
-          ? (window as Window & { __jasperAuthToken?: string }).__jasperAuthToken
-          : undefined;
-
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-
-      const response = await fetch(`/api/orchestrator/missions/${missionId}/grade`, {
+      const response = await authFetch(`/api/orchestrator/missions/${missionId}/grade`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stepId,
           score: submittedScore,
@@ -173,7 +165,7 @@ export default function StepGradeWidget({
       // has the exact specialist output to reference.
       const sourceReportExcerpt = `[Step ${stepId} output — graded ${submittedScore}/5]\n\nOperator correction: ${trimmedExplanation}`;
 
-      const gradeRes = await fetch('/api/training/grade-specialist', {
+      const gradeRes = await authFetch('/api/training/grade-specialist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -249,16 +241,6 @@ export default function StepGradeWidget({
       setIsApplying(true);
 
       try {
-        const authToken =
-          typeof window !== 'undefined'
-            ? (window as Window & { __jasperAuthToken?: string }).__jasperAuthToken
-            : undefined;
-
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (authToken) {
-          headers['Authorization'] = `Bearer ${authToken}`;
-        }
-
         // Build the approvedEdit body for the Phase 3 backend. The popup tells
         // us whether the operator picked the agent's suggestion or wrote their
         // own, and `newProposedText` is the resolved new section text either
@@ -268,9 +250,9 @@ export default function StepGradeWidget({
           proposedText: newProposedText ?? proposal.rawEdit.proposedText,
         };
 
-        await fetch(`/api/training/feedback/${proposal.feedbackId}/approve`, {
+        await authFetch(`/api/training/feedback/${proposal.feedbackId}/approve`, {
           method: 'POST',
-          headers,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ approvedEdit }),
         });
         // Source telemetry (agent vs user rewrite) is captured in the
@@ -288,19 +270,9 @@ export default function StepGradeWidget({
     void (async () => {
       if (!proposal) { return; }
       try {
-        const authToken =
-          typeof window !== 'undefined'
-            ? (window as Window & { __jasperAuthToken?: string }).__jasperAuthToken
-            : undefined;
-
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (authToken) {
-          headers['Authorization'] = `Bearer ${authToken}`;
-        }
-
-        await fetch(`/api/training/feedback/${proposal.feedbackId}/reject`, {
+        await authFetch(`/api/training/feedback/${proposal.feedbackId}/reject`, {
           method: 'POST',
-          headers,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             reason: 'Operator chose to keep current prompt via 3-box popup.',
           }),

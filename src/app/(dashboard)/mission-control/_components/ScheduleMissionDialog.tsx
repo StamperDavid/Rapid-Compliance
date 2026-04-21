@@ -13,6 +13,7 @@
 
 import { useState, useId } from 'react';
 import type { ScheduleFrequency } from '@/types/mission-schedule';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 // ============================================================================
 // PROPS
@@ -51,6 +52,7 @@ export default function ScheduleMissionDialog({
   onScheduled,
 }: ScheduleMissionDialogProps) {
   const formId = useId();
+  const authFetch = useAuthFetch();
 
   const [name, setName] = useState<string>(missionTitle);
   const [frequency, setFrequency] = useState<ScheduleFrequency>('weekly');
@@ -59,12 +61,6 @@ export default function ScheduleMissionDialog({
   const [expiresAt, setExpiresAt] = useState<string>('');
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [errorMsg, setErrorMsg] = useState<string>('');
-
-  // Retrieve the auth token set by the Jasper orchestrator on the window object
-  function getAuthToken(): string | undefined {
-    if (typeof window === 'undefined') { return undefined; }
-    return (window as Window & { __jasperAuthToken?: string }).__jasperAuthToken;
-  }
 
   async function handleSubmit() {
     if (!name.trim()) { return; }
@@ -84,12 +80,6 @@ export default function ScheduleMissionDialog({
     setErrorMsg('');
 
     try {
-      const authToken = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-
       const body: {
         sourceMissionId: string;
         name: string;
@@ -111,9 +101,9 @@ export default function ScheduleMissionDialog({
         body.expiresAt = new Date(expiresAt).toISOString();
       }
 
-      const response = await fetch('/api/orchestrator/missions/schedules', {
+      const response = await authFetch('/api/orchestrator/missions/schedules', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
