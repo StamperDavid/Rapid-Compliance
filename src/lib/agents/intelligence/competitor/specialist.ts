@@ -655,6 +655,25 @@ export class CompetitorResearcher extends BaseSpecialist {
       logger.info(`[CompetitorResearcher] Researching: ${request.niche} in ${request.location || 'Global'}`, { file: FILE });
 
       const result = await this.findCompetitors(request);
+
+      // If LLM analysis was skipped or failed (including after the in-step
+      // retry), the deterministic fallback produces only placeholder output
+      // ("LLM analysis unavailable...") with no real cross-competitor
+      // synthesis. Reporting this as COMPLETED masked a real failure and
+      // let downstream steps (blog, etc.) generate content from skeleton
+      // data. Treat it as FAILED so StepRunner can decide whether to retry
+      // and the step turns red in Mission Control.
+      if (result.analysisMode === 'deterministic_fallback') {
+        return this.createReport(
+          taskId,
+          'FAILED',
+          result,
+          result.errors.length > 0
+            ? result.errors
+            : ['Competitor Researcher: LLM analysis failed — no useful insights produced'],
+        );
+      }
+
       return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -791,20 +810,34 @@ export class CompetitorResearcher extends BaseSpecialist {
           `[CompetitorResearcher][phase] calling LLM for ${scrapedBatch.length} competitors...`,
           { file: FILE },
         );
-        analysis = await executeAnalyzeCompetitors(
-          { niche, location, scrapedCompetitors: scrapedBatch, focusAreas: request.focusAreas },
-          ctx,
-        );
+
+        // Retry once on transient LLM failures (empty response bodies from
+        // OpenRouter/Anthropic, brief connection drops, etc.). Re-calling
+        // the LLM is cheap vs re-running Serper + 5 scrapes; we've already
+        // paid for those inputs.
+        const llmInputs = { niche, location, scrapedCompetitors: scrapedBatch, focusAreas: request.focusAreas };
+        try {
+          analysis = await executeAnalyzeCompetitors(llmInputs, ctx);
+        } catch (firstError) {
+          const firstMsg = firstError instanceof Error ? firstError.message : String(firstError);
+          logger.warn(
+            `[CompetitorResearcher] LLM first attempt failed: ${firstMsg} — retrying once`,
+            { file: FILE },
+          );
+          await new Promise<void>((resolve) => { setTimeout(resolve, 2000); });
+          analysis = await executeAnalyzeCompetitors(llmInputs, ctx);
+        }
+
         logger.info(
           `[CompetitorResearcher][phase] LLM analysis done in ${Date.now() - llmStart}ms (total elapsed ${Date.now() - phaseStart}ms)`,
           { file: FILE },
         );
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        errors.push(`LLM analysis failed: ${msg}`);
+        errors.push(`LLM analysis failed (after retry): ${msg}`);
         analysisMode = 'deterministic_fallback';
         logger.error(
-          '[CompetitorResearcher] LLM analysis failed — falling back to skeleton output',
+          '[CompetitorResearcher] LLM analysis failed after retry — step will be reported as FAILED',
           error instanceof Error ? error : new Error(msg),
           { file: FILE },
         );
