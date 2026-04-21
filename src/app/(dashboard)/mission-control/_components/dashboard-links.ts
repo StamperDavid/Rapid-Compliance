@@ -15,8 +15,10 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   delegate_to_marketing_manager: { route: '/email/campaigns', label: 'Email Campaigns' },
   delegate_to_content: { route: '/website/blog', label: 'Content' },
   delegate_to_outreach: { route: '/leads', label: 'Lead Scanner' },
-  delegate_to_intelligence: { route: '/analytics', label: 'Analytics' },
-  delegate_to_trust: { route: '/analytics', label: 'Analytics' },
+  // delegate_to_intelligence / delegate_to_trust intentionally omitted — their
+  // output lives in MemoryVault and is rendered inline in the step detail panel.
+  // /analytics was built for traffic metrics, not research reports, so the link
+  // was a dead-end. Revisit if a per-mission intelligence dashboard is built.
   delegate_to_commerce: { route: '/products', label: 'Products' },
   // Video tools
   create_video: { route: '/content/video', label: 'Video Studio' },
