@@ -479,15 +479,38 @@ export async function finalizeMission(
  * PROPOSED status. Updates outside {summary, toolArgs} are silently
  * dropped — operators can only edit what they own at plan time.
  */
+export interface UpdatePlannedStepResult {
+  success: boolean;
+  /**
+   * Snapshot of the step BEFORE the edit. Populated only on success. Used by
+   * callers (notably the plan edit-step API) to feed a before/after delta
+   * into Jasper's prompt-revision pipeline so operator plan edits feed back
+   * into training.
+   */
+  before?: {
+    toolName: string;
+    summary?: string;
+    toolArgs?: Record<string, unknown>;
+  };
+  /** Snapshot of the step AFTER the edit. Same purpose as `before`. */
+  after?: {
+    toolName: string;
+    summary?: string;
+    toolArgs?: Record<string, unknown>;
+  };
+}
+
 export async function updatePlannedStep(
   missionId: string,
   stepId: string,
   updates: { summary?: string; toolArgs?: Record<string, unknown> },
-): Promise<boolean> {
-  if (!adminDb) { return false; }
+): Promise<UpdatePlannedStepResult> {
+  if (!adminDb) { return { success: false }; }
   try {
     const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
     let success = false;
+    let before: UpdatePlannedStepResult['before'];
+    let after: UpdatePlannedStepResult['after'];
 
     await adminDb.runTransaction(async (transaction) => {
       const doc = await transaction.get(docRef);
@@ -499,11 +522,24 @@ export async function updatePlannedStep(
       if (stepIndex === -1) { return; }
       if (mission.steps[stepIndex].status !== 'PROPOSED') { return; }
 
-      const updatedStep = { ...mission.steps[stepIndex] };
+      const original = mission.steps[stepIndex];
+      before = {
+        toolName: original.toolName,
+        summary: original.summary,
+        toolArgs: original.toolArgs,
+      };
+
+      const updatedStep = { ...original };
       if (updates.summary !== undefined) { updatedStep.summary = updates.summary; }
       if (updates.toolArgs !== undefined) { updatedStep.toolArgs = updates.toolArgs; }
       const newSteps = [...mission.steps];
       newSteps[stepIndex] = updatedStep;
+
+      after = {
+        toolName: updatedStep.toolName,
+        summary: updatedStep.summary,
+        toolArgs: updatedStep.toolArgs,
+      };
 
       transaction.update(docRef, {
         steps: newSteps,
@@ -512,13 +548,13 @@ export async function updatePlannedStep(
       success = true;
     });
 
-    return success;
+    return { success, before, after };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.error('[MissionPersistence] updatePlannedStep failed', err instanceof Error ? err : undefined, {
       missionId, stepId, error: errorMsg,
     });
-    return false;
+    return { success: false };
   }
 }
 
