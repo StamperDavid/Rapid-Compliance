@@ -154,8 +154,14 @@ const TargetSectionSchema = z.object({
 const EditProposedSchema = z.object({
   status: z.literal('EDIT_PROPOSED'),
   targetSection: TargetSectionSchema,
-  currentText: z.string().min(1).max(8000),
-  proposedText: z.string().min(1).max(8000),
+  // Caps raised Apr 22 from 8000 → 20000. When an operator submits multiple
+  // corrections in one grade, the Prompt Engineer bundles them into a
+  // larger edit that can exceed 8000 chars. 20000 is roughly half of
+  // Jasper's full GM (~42K chars) — the realistic upper bound for a single
+  // section. Same-shape bug as the changeDescription cap on
+  // /api/training/apply-prompt-revision (also raised today).
+  currentText: z.string().min(1).max(20000),
+  proposedText: z.string().min(1).max(20000),
   rationale: z.string().min(30).max(3000),
   confidence: z.number().int().min(0).max(100),
   conflictsWithOtherSections: z.array(z.string().min(1).max(600)).max(10),
