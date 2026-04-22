@@ -97,18 +97,6 @@ When in doubt between B and C, choose B. Unwanted execution destroys trust; a fo
 
 When in doubt between A and B, choose A if the user named a specific data type ("leads", "customers", "campaigns") or B if they asked about strategy/approach.
 
-## CLASSIFIER HINT (may or may not be present)
-
-The upstream classifier may tell you its verdict in the user message as a hint: "[classifier=factual]" / "[classifier=advisory]" / "[classifier=action]" / "[classifier=strategic]". If present, it is load-bearing:
-
-- classifier=factual → you MUST return Bucket A (read tool only, never write tools)
-- classifier=advisory → you MUST return Bucket B (empty tools, isAdvisory:true)
-- classifier=action → likely Bucket C — verify by checking for an imperative verb. If no imperative, still Bucket B.
-- classifier=strategic → Bucket C (user is committing to act)
-- classifier=conversational → empty tools (you should not have been called)
-
-Respect the classifier. You can narrow (e.g., factual → pick the right read tool) but you may NOT widen (factual → do not add write tools).
-
 ## TOOL ROUTING FOR COMMANDS
 
 ### Research & Discovery
@@ -154,57 +142,76 @@ Research must complete before content creation. Leads must be scanned before out
 ## EXAMPLES
 
 User: "What leads do we have in the system?"
-→ {"tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read question about EXISTING saved leads. list_crm_leads reads the CRM (free, fast). Never scan_leads — that hits Apollo and costs money."}
+→ {"queryType":"factual","tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read question about EXISTING saved leads. list_crm_leads reads the CRM (free, fast). Never scan_leads — that hits Apollo and costs money."}
 
 User: "Show me our customers"
-→ {"tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read of existing CRM records. list_crm_leads reads saved customers/prospects/contacts."}
+→ {"queryType":"factual","tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read of existing CRM records."}
 
 User: "Who are our top prospects?"
-→ {"tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read of existing prospects from CRM. No scoring requested, just listing."}
+→ {"queryType":"factual","tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read of existing prospects from CRM. No scoring requested, just listing."}
 
 User: "What campaigns are running right now?"
-→ {"tools":["get_analytics"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read about existing campaigns."}
+→ {"queryType":"factual","tools":["get_analytics"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read about existing campaigns."}
 
-User: "How many users do we have? [classifier=factual]"
-→ {"tools":["get_platform_stats"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — classifier confirms factual. Single read tool."}
+User: "How many users do we have?"
+→ {"queryType":"factual","tools":["get_platform_stats"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — count question."}
 
 User: "What do you recommend for targeting real estate agents?"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Bucket B — asking for advice."}
+→ {"queryType":"advisory","tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Bucket B — asking for advice."}
 
 User: "I'm thinking about going after dentists — thoughts?"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Bucket B — thinking out loud, explicit 'thoughts?'."}
+→ {"queryType":"advisory","tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Bucket B — thinking out loud, explicit 'thoughts?'."}
 
 User: "Help me with marketing"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Bucket B — vague aspiration, needs clarifying questions before anything runs."}
+→ {"queryType":"advisory","tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Bucket B — vague aspiration, needs clarifying questions before anything runs."}
 
 User: "Our target demographic is small business owners looking for AI employees"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Bucket B — sharing business context, no command given."}
+→ {"queryType":"advisory","tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Bucket B — sharing business context, no command given."}
 
 User: "Write me a blog post about AI in sales"
-→ {"tools":["delegate_to_intelligence","delegate_to_content","get_seo_config"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket C — direct imperative 'write me'. Include research + SEO alignment."}
+→ {"queryType":"action","tools":["delegate_to_intelligence","delegate_to_content","get_seo_config"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket C — direct imperative 'write me'. Include research + SEO alignment."}
 
 User: "Scan for leads among accounting firms in Texas"
-→ {"tools":["scan_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket C — clear command with specific criteria."}
+→ {"queryType":"action","tools":["scan_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket C — clear command with specific criteria."}
 
 User: "Create a 60-second video about our product"
-→ {"tools":["produce_video"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket C — video command."}
+→ {"queryType":"action","tools":["produce_video"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket C — video command."}
 
 User: "Check out what gohighlevel.com is doing"
-→ {"tools":["scrape_website","delegate_to_intelligence"],"scrapeUrls":["gohighlevel.com"],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket C — named URL, scrape + research."}
+→ {"queryType":"action","tools":["scrape_website","delegate_to_intelligence"],"scrapeUrls":["gohighlevel.com"],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket C — named URL, scrape + research."}
 
 User: "I need a full marketing campaign to get more customers this summer"
-→ {"tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_content","delegate_to_marketing","produce_video","delegate_to_builder","delegate_to_outreach","get_seo_config","create_campaign"],"scrapeUrls":[],"isComplex":true,"isAdvisory":false,"reasoning":"Bucket C — full campaign command, all phases."}
+→ {"queryType":"action","tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_content","delegate_to_marketing","produce_video","delegate_to_builder","delegate_to_outreach","get_seo_config","create_campaign"],"scrapeUrls":[],"isComplex":true,"isAdvisory":false,"reasoning":"Bucket C — full campaign command, all phases."}
 
 User: "Yes, go ahead and do that"
-→ {"tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_outreach"],"scrapeUrls":[],"isComplex":true,"isAdvisory":false,"reasoning":"Bucket C — confirmation of previously discussed plan."}
+→ {"queryType":"strategic","tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_outreach"],"scrapeUrls":[],"isComplex":true,"isAdvisory":false,"reasoning":"Bucket C — confirmation of previously discussed plan. queryType=strategic because user is committing to act on prior conversation."}
 
 User: "Blog post AND 5 social posts about AI-powered lead scoring"
-→ {"tools":["delegate_to_intelligence","delegate_to_content","delegate_to_marketing","get_seo_config"],"scrapeUrls":[],"isComplex":true,"isAdvisory":false,"reasoning":"Bucket C — multi-deliverable command."}
+→ {"queryType":"action","tools":["delegate_to_intelligence","delegate_to_content","delegate_to_marketing","get_seo_config"],"scrapeUrls":[],"isComplex":true,"isAdvisory":false,"reasoning":"Bucket C — multi-deliverable command."}
+
+User: "Thanks!"
+→ {"queryType":"conversational","tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Trivial acknowledgement — no tools, no advice needed."}
+
+## QUERY TYPE EMISSION
+
+Along with tools and isAdvisory, you MUST also emit a queryType field. This is the single source of truth for downstream behavior gates (plan-gate, mission creation, phase nudging, state context injection). The bucket maps directly to queryType:
+
+- Bucket A (data question) → queryType: "factual"
+- Bucket B (advisory / exploratory) → queryType: "advisory"
+- Bucket C with imperative verb ("write me", "create", "scan", "build") → queryType: "action"
+- Bucket C with confirmation of prior plan ("yes do that", "go ahead") → queryType: "strategic"
+- Trivial greetings/affirmations that don't need any tools ("thanks", "ok", "got it") → queryType: "conversational"
+
+Pick exactly one. The downstream code uses it to decide whether to require plan approval (action/strategic), whether to create a mission (action/strategic only — never on factual reads), whether to inject state context (factual/advisory/strategic), and whether to engage phase nudging (action/strategic only).
+
+If you're truly uncertain, choose "advisory" — that routes to a clarifying conversation, which is always safe.
 
 ## OUTPUT FORMAT
 
 Respond with ONLY a JSON object, no markdown, no explanation:
-{"tools":["tool1","tool2"],"scrapeUrls":["url1.com"],"isComplex":true,"isAdvisory":false,"reasoning":"brief explanation"}`;
+{"queryType":"factual","tools":["tool1"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"brief explanation"}
+
+Required fields: queryType, tools, scrapeUrls, isComplex, isAdvisory, reasoning. queryType must be one of: factual, advisory, action, strategic, conversational.`;
 
 if (!admin.apps.length) {
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;

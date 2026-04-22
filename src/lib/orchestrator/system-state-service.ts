@@ -48,177 +48,23 @@ export interface StateValidation {
   verifiedState: SystemState;
 }
 
-export interface QueryClassification {
-  requiresStateReflection: boolean;
-  queryType: 'factual' | 'strategic' | 'advisory' | 'conversational' | 'action';
-  suggestedTools: string[];
-  reason: string;
-}
-
 // ============================================================================
-// QUERY CLASSIFICATION
+// QUERY CLASSIFICATION — RETIRED
 // ============================================================================
-
-/**
- * Patterns that REQUIRE state reflection before responding.
- * These are queries where hallucination would be harmful.
- */
-const FACTUAL_PATTERNS = [
-  /how many (org|user|agent|trial|customer)/i,
-  /what (is|are) (the|our) (count|total|number)/i,
-  /status of/i,
-  /how (does|do) (the|our) (system|platform|feature)/i,
-  /what can (you|the system|jasper)/i,
-  /list (all|the|our)/i,
-  /show me (the|all)/i,
-  /what (features|capabilities|integrations)/i,
-  /is .* (configured|setup|connected|enabled)/i,
-  /what happened (with|to)/i,
-  /any (errors|issues|problems)/i,
-  /provisioner/i,
-  /architecture/i,
-  // "What leads/customers/... do we have" — possessive-read questions.
-  // Without this, the classifier falls through to advisory, then the Intent
-  // Expander promotes to action (because "leads" suggests tools), and Jasper
-  // runs scan_leads + enrich_lead + score_leads for what should be a read.
-  /what (?:[\w\s]+? )?do (?:we|i|you) have/i,
-  /who (?:are|is) (?:our|my|the) (?:lead|customer|client|prospect|user)s?/i,
-];
-
-/**
- * Advisory patterns — the user is ASKING A QUESTION, not requesting action.
- * Jasper should respond conversationally with recommendations, NOT execute tools.
- * State context is loaded so Jasper can give informed advice.
- */
-const ADVISORY_PATTERNS = [
-  /what.*(recommend|suggest|think|advise)/i,
-  /what (should|would|could) (we|i|you)/i,
-  /how (should|would|could) (we|i|you)/i,
-  /where (do|should) (we|i) start/i,
-  /what.*priority/i,
-  /what.*focus/i,
-  /what.*best (way|approach|strategy)/i,
-  /any (ideas|suggestions|thoughts)/i,
-  /help me (understand|figure out|think through|plan)/i,
-  /can you (explain|help me understand|walk me through)/i,
-  // Trailing question cues — standalone "thoughts?", "ideas?", etc. at end of message
-  /[—–\-,]\s*(thoughts|ideas|suggestions|opinions|advice|input)\s*\??\s*$/i,
-  /\b(thoughts|ideas|suggestions)\s*\?\s*$/i,
-  /\bwhat do you think\s*\??\s*$/i,
-  /\bwhat would you (do|say|suggest)\s*\??\s*$/i,
-  /\bsound good\s*\??\s*$/i,
-  /\bmake sense\s*\??\s*$/i,
-  // Contemplative phrasing — user is exploring, not commanding
-  /^(i'?m\s+)?(thinking about|considering|wondering about|mulling over|toying with|exploring)\b/i,
-  /^(i'?m\s+)?curious about/i,
-];
-
-/**
- * Strategic patterns — the user wants to TAKE ACTION.
- * These benefit from state context and DO trigger tool execution.
- */
-const STRATEGIC_PATTERNS = [
-  /launch/i,
-  /get started/i,
-  /let'?s (do|go|start|build|create|run)/i,
-  /go ahead/i,
-  /execute/i,
-  /run (the|a|this)/i,
-  /do it/i,
-  /make it happen/i,
-];
-
-/**
- * Conversational patterns that don't need state reflection.
- */
-const CONVERSATIONAL_PATTERNS = [
-  /^(hi|hello|hey|good morning|good afternoon)/i,
-  /^(thanks|thank you|great|awesome|perfect)/i,
-  /^(yes|no|okay|ok|sure|got it)/i,
-];
-
-/**
- * Classify a user query to determine if state reflection is needed.
- */
-export function classifyQuery(query: string): QueryClassification {
-  const queryLower = query.toLowerCase().trim();
-
-  // Check conversational first (lowest priority for tools)
-  if (CONVERSATIONAL_PATTERNS.some((p) => p.test(queryLower))) {
-    return {
-      requiresStateReflection: false,
-      queryType: 'conversational',
-      suggestedTools: [],
-      reason: 'Conversational query - no data lookup needed',
-    };
-  }
-
-  // Check factual patterns (highest priority for tools)
-  if (FACTUAL_PATTERNS.some((p) => p.test(queryLower))) {
-    const suggestedTools: string[] = [];
-
-    if (/how many|count|total|number/i.test(queryLower)) {
-      suggestedTools.push('get_platform_stats');
-    }
-    if (/how does|architecture|feature|capabilities/i.test(queryLower)) {
-      suggestedTools.push('query_docs');
-    }
-    if (/status|error|issue|log/i.test(queryLower)) {
-      suggestedTools.push('inspect_agent_logs');
-    }
-    if (/configured|setup|connected/i.test(queryLower)) {
-      suggestedTools.push('get_system_state');
-    }
-    if (/\b(lead|customer|client|prospect)s?\b/i.test(queryLower)) {
-      // Read questions about EXISTING saved leads — list_crm_leads is the
-      // free, fast, read-only CRM read. scan_leads queries Apollo and writes
-      // new leads, which is the wrong tool for "what do we have" (Apr 22 bug Z).
-      suggestedTools.push('list_crm_leads');
-    }
-
-    if (suggestedTools.length === 0) {
-      suggestedTools.push('get_system_state');
-    }
-
-    return {
-      requiresStateReflection: true,
-      queryType: 'factual',
-      suggestedTools,
-      reason: 'Factual query detected - MUST use tools to verify data',
-    };
-  }
-
-  // Check advisory patterns BEFORE strategic — questions get conversation, not execution
-  if (ADVISORY_PATTERNS.some((p) => p.test(queryLower))) {
-    return {
-      requiresStateReflection: true,
-      queryType: 'advisory',
-      suggestedTools: ['get_system_state', 'get_platform_stats'],
-      reason: 'Advisory query - user is asking for guidance, NOT requesting action. Respond with recommendations, do NOT execute tools.',
-    };
-  }
-
-  // Check strategic patterns — user wants to take action
-  if (STRATEGIC_PATTERNS.some((p) => p.test(queryLower))) {
-    return {
-      requiresStateReflection: true,
-      queryType: 'strategic',
-      suggestedTools: ['get_system_state', 'get_platform_stats'],
-      reason: 'Strategic query - recommend state awareness for data-driven response',
-    };
-  }
-
-  // Default: treat as advisory (safe fallback).
-  // If the user truly wants action, the Intent Expander will detect it and
-  // the expander override will reclassify. Defaulting to 'action' is dangerous
-  // because informational statements ("our target is X") would trigger execution.
-  return {
-    requiresStateReflection: true,
-    queryType: 'advisory',
-    suggestedTools: ['get_system_state'],
-    reason: 'Unclassified query - defaulting to advisory for safety. Intent Expander will override if action is detected.',
-  };
-}
+//
+// The regex-based classifier (FACTUAL_PATTERNS, ADVISORY_PATTERNS, etc.) was
+// removed Apr 22 2026. Pattern matching is not intent reading — it dressed up
+// keyword hits as "intelligent classification" while requiring per-prompt
+// regex patches every time a user phrased something a new way.
+//
+// The GM-backed Intent Expander (src/lib/orchestrator/intent-expander.ts) is
+// now the single source of truth for queryType + suggested tools. It runs
+// Haiku 4.5, returns classification + tool plan in one LLM call, and is gated
+// by scripts/verify-intent-expander-behavior.ts before any model upgrade.
+//
+// validateClaim, generateStateContext, and detectPotentialHallucination are
+// real functions used elsewhere — kept intact below.
+// ============================================================================
 
 // ============================================================================
 // STATE VALIDATION
@@ -417,7 +263,6 @@ ${originalResponse}
 // ============================================================================
 
 export const SystemStateService = {
-  classifyQuery,
   validateClaim,
   generateStateContext,
   detectPotentialHallucination,

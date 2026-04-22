@@ -112,7 +112,6 @@ export {
   SystemStateService,
   type StateValidation,
   type StateCorrection,
-  type QueryClassification,
 } from './system-state-service';
 
 // Jasper Command Authority - Phase 8 Autonomous Business Operations
