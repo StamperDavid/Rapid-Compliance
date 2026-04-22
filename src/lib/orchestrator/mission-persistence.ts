@@ -559,19 +559,40 @@ export async function updatePlannedStep(
 }
 
 /**
+ * Result shape for `reorderPlannedSteps`. `success` is the primary backward-
+ * compatible field every caller still checks. `before` / `after` are the
+ * full stepId + toolName + order snapshots captured inside the same
+ * Firestore transaction so callers that want to feed the reorder event into
+ * Jasper's training pipeline don't need a second round-trip to Firestore to
+ * reconstruct what changed.
+ */
+export interface ReorderPlannedStepsResult {
+  success: boolean;
+  before?: Array<{ stepId: string; toolName: string; order: number }>;
+  after?: Array<{ stepId: string; toolName: string; order: number }>;
+}
+
+/**
  * Reorder the steps in a draft plan. Caller passes the new order as a
  * full list of stepIds. Every existing step must appear exactly once in
  * the new order — partial reorders are rejected to prevent accidental
  * step loss. Used by POST /plan/reorder.
+ *
+ * Returns both before and after snapshots (stepId + toolName + order index)
+ * so the route handler can emit a training signal describing what Jasper
+ * originally proposed vs. the operator's final ordering. Snapshots are only
+ * populated on success.
  */
 export async function reorderPlannedSteps(
   missionId: string,
   newOrder: string[],
-): Promise<boolean> {
-  if (!adminDb) { return false; }
+): Promise<ReorderPlannedStepsResult> {
+  if (!adminDb) { return { success: false }; }
   try {
     const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
     let success = false;
+    let before: ReorderPlannedStepsResult['before'];
+    let after: ReorderPlannedStepsResult['after'];
 
     await adminDb.runTransaction(async (transaction) => {
       const doc = await transaction.get(docRef);
@@ -591,6 +612,20 @@ export async function reorderPlannedSteps(
       const reorderedSteps = newOrder.map((id) => stepMap.get(id)).filter((s): s is MissionStep => s !== undefined);
       if (reorderedSteps.length !== mission.steps.length) { return; }
 
+      // Capture BEFORE snapshot from the pre-mutation steps array, and AFTER
+      // snapshot from the reordered array. Both use the index as `order` so
+      // callers see the move pattern clearly.
+      before = mission.steps.map((s, idx) => ({
+        stepId: s.stepId,
+        toolName: s.toolName,
+        order: idx,
+      }));
+      after = reorderedSteps.map((s, idx) => ({
+        stepId: s.stepId,
+        toolName: s.toolName,
+        order: idx,
+      }));
+
       transaction.update(docRef, {
         steps: reorderedSteps,
         updatedAt: new Date().toISOString(),
@@ -598,14 +633,31 @@ export async function reorderPlannedSteps(
       success = true;
     });
 
-    return success;
+    return { success, before, after };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.error('[MissionPersistence] reorderPlannedSteps failed', err instanceof Error ? err : undefined, {
       missionId, error: errorMsg,
     });
-    return false;
+    return { success: false };
   }
+}
+
+/**
+ * Result shape for `deletePlannedStep`. `success` is the primary backward-
+ * compatible field. `deletedStep` is a snapshot of the step captured BEFORE
+ * the mutation so callers can describe to the training pipeline exactly
+ * which step Jasper proposed that the operator then threw away. Only
+ * populated when the delete actually succeeded.
+ */
+export interface DeletePlannedStepResult {
+  success: boolean;
+  deletedStep?: {
+    stepId: string;
+    toolName: string;
+    summary?: string;
+    toolArgs?: Record<string, unknown>;
+  };
 }
 
 /**
@@ -613,12 +665,21 @@ export async function reorderPlannedSteps(
  * Mission must be in PLAN_PENDING_APPROVAL status. Cannot delete the last
  * remaining step — an empty plan would fail to execute. Operator should
  * scrap the whole mission instead via the reject endpoint.
+ *
+ * Returns the deleted-step snapshot on success so the route handler can feed
+ * the delete event into Jasper's training pipeline. The snapshot is captured
+ * inside the same Firestore transaction that performs the mutation, so the
+ * returned state is consistent with what was actually removed.
  */
-export async function deletePlannedStep(missionId: string, stepId: string): Promise<boolean> {
-  if (!adminDb) { return false; }
+export async function deletePlannedStep(
+  missionId: string,
+  stepId: string,
+): Promise<DeletePlannedStepResult> {
+  if (!adminDb) { return { success: false }; }
   try {
     const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
     let success = false;
+    let deletedStep: DeletePlannedStepResult['deletedStep'];
 
     await adminDb.runTransaction(async (transaction) => {
       const doc = await transaction.get(docRef);
@@ -627,8 +688,18 @@ export async function deletePlannedStep(missionId: string, stepId: string): Prom
       if (mission.status !== 'PLAN_PENDING_APPROVAL') { return; }
       if (mission.steps.length <= 1) { return; }
 
+      const victim = mission.steps.find((s) => s.stepId === stepId);
+      if (!victim) { return; }
+
       const newSteps = mission.steps.filter((s) => s.stepId !== stepId);
       if (newSteps.length === mission.steps.length) { return; }
+
+      deletedStep = {
+        stepId: victim.stepId,
+        toolName: victim.toolName,
+        summary: victim.summary,
+        toolArgs: victim.toolArgs,
+      };
 
       transaction.update(docRef, {
         steps: newSteps,
@@ -637,13 +708,13 @@ export async function deletePlannedStep(missionId: string, stepId: string): Prom
       success = true;
     });
 
-    return success;
+    return { success, deletedStep };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.error('[MissionPersistence] deletePlannedStep failed', err instanceof Error ? err : undefined, {
       missionId, stepId, error: errorMsg,
     });
-    return false;
+    return { success: false };
   }
 }
 
