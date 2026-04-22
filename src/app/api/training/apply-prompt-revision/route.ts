@@ -39,7 +39,12 @@ const ApplyRevisionSchema = z.object({
   ]),
   revisedPromptSection: z.string().min(1),
   fullRevisedPrompt: z.string().min(100),
-  changeDescription: z.string().min(1).max(500),
+  // The Prompt Engineer's changeDescription frequently runs 1000-1500 chars
+  // because it explains the pattern, the rewrite intent, and the tradeoff.
+  // The previous 500-char cap was unrealistic and caused 422s on every
+  // mission-grade approval. 5000 is safely above what the Prompt Engineer
+  // produces while still preventing absurd-size payloads.
+  changeDescription: z.string().min(1).max(5000),
 });
 
 // ---------------------------------------------------------------------------
