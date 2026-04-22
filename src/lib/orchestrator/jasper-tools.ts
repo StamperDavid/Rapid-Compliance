@@ -634,9 +634,18 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           steps: {
             type: 'array',
             description:
-              'The ordered list of steps you intend to take. Every step in this list ' +
-              'will be created in the database with status PROPOSED and shown to the ' +
-              'operator for review. Do not include steps you have not committed to.',
+              'The ordered list of action steps the operator will approve. Every step is ' +
+              'work that produces a deliverable or mutates state — delegate_to_*, scan_leads, ' +
+              'enrich_lead, draft_outreach_email, social_post, scrape_website, etc. ' +
+              'STRICT FORBIDDEN as steps (these are info-only reads — call them yourself ' +
+              'BEFORE propose_mission_plan if you need the data, NEVER include them as ' +
+              'steps): query_docs, get_system_state, get_platform_stats, get_seo_config, ' +
+              'inspect_agent_logs, list_avatars, list_organizations, list_users, ' +
+              'get_organization, get_analytics, generate_report, get_video_status. ' +
+              'Also forbidden: save_blog_draft, generate_video, create_video, social_post — ' +
+              'these are direct specialist tools that bypass the manager review layer; use ' +
+              'delegate_to_content / delegate_to_marketing instead. ' +
+              'Do not include steps you have not committed to.',
             items: {
               type: 'object',
               properties: {
