@@ -69,10 +69,12 @@ export async function POST(
       );
     }
 
-    // Fire-and-forget: capture the edit as a training signal for Jasper.
-    // Does NOT block the response — the Prompt Engineer LLM call takes
-    // seconds and the operator doesn't need to wait.
-    void captureJasperPlanCorrection({
+    // Await the Prompt Engineer call so the popup can open inline with the
+    // proposal as soon as the response lands. Yes, this means the API call
+    // takes ~30-45s instead of ~200ms — the operator sees a spinner during
+    // that wait, and the inline popup is the deliberate UX (vs the previous
+    // banner-with-30s-poll design that the owner rejected).
+    const jasperProposal = await captureJasperPlanCorrection({
       missionId,
       stepId: parsed.data.stepId,
       actionType: 'edit',
@@ -81,7 +83,12 @@ export async function POST(
       graderUserId: user.uid,
     });
 
-    return NextResponse.json({ success: true, missionId, stepId: parsed.data.stepId });
+    return NextResponse.json({
+      success: true,
+      missionId,
+      stepId: parsed.data.stepId,
+      jasperProposal,
+    });
   } catch (err) {
     logger.error('[PlanAPI] edit-step failed', err instanceof Error ? err : undefined);
     return NextResponse.json({ success: false, error: 'Failed to edit step' }, { status: 500 });

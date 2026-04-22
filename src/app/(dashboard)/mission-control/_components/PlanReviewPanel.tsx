@@ -30,12 +30,19 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
-import JasperPlanFeedbackBanner from './JasperPlanFeedbackBanner';
+import type { CapturedJasperProposal } from '@/lib/orchestrator/plan-edit-training-capture';
+import { PromptRevisionPopup } from '@/components/training/PromptRevisionPopup';
 
 interface PlanReviewPanelProps {
   mission: Mission;
   onPlanChanged: () => void;
 }
+
+type PlanMutationResponse = {
+  success: boolean;
+  error?: string;
+  jasperProposal?: CapturedJasperProposal | null;
+};
 
 function formatToolName(toolName: string): string {
   return toolName
@@ -55,6 +62,73 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
   const [rejectReason, setRejectReason] = useState('');
   const [confirmDeleteStepId, setConfirmDeleteStepId] = useState<string | null>(null);
   const [confirmApproveOpen, setConfirmApproveOpen] = useState(false);
+  // Jasper training proposal returned by edit/delete/reorder responses.
+  // Drives the inline PromptRevisionPopup at the bottom of the panel.
+  const [pendingProposal, setPendingProposal] = useState<CapturedJasperProposal | null>(null);
+  const [proposalApplying, setProposalApplying] = useState(false);
+
+  const handleProposalApprove = useCallback(
+    async (
+      _fullRevisedPrompt: string,
+      _changeDescription: string,
+      _source?: 'agent' | 'user',
+      newProposedText?: string,
+    ) => {
+      if (!pendingProposal) { return; }
+      setProposalApplying(true);
+      try {
+        const body = newProposedText !== undefined && newProposedText !== pendingProposal.afterSection
+          ? { proposedTextOverride: newProposedText }
+          : {};
+        const res = await authFetch(
+          `/api/training/jasper-plan-feedback/${pendingProposal.feedbackId}/approve`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          },
+        );
+        const result = (await res.json()) as { success: boolean; newVersionNumber?: number; error?: string };
+        if (!res.ok || !result.success) {
+          toast.error(result.error ?? `Approve failed: HTTP ${res.status}`);
+          return;
+        }
+        toast.success(
+          result.newVersionNumber
+            ? `Jasper updated — new GM version v${result.newVersionNumber} deployed`
+            : 'Jasper updated',
+        );
+        setPendingProposal(null);
+      } finally {
+        setProposalApplying(false);
+      }
+    },
+    [authFetch, pendingProposal, toast],
+  );
+
+  const handleProposalReject = useCallback(async () => {
+    if (!pendingProposal) { return; }
+    setProposalApplying(true);
+    try {
+      const res = await authFetch(
+        `/api/training/jasper-plan-feedback/${pendingProposal.feedbackId}/reject`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+      );
+      const result = (await res.json()) as { success: boolean; error?: string };
+      if (!res.ok || !result.success) {
+        toast.error(result.error ?? `Reject failed: HTTP ${res.status}`);
+        return;
+      }
+      toast.success('Kept current — Golden Master unchanged');
+      setPendingProposal(null);
+    } finally {
+      setProposalApplying(false);
+    }
+  }, [authFetch, pendingProposal, toast]);
 
   const handleEditClick = useCallback((step: MissionStep) => {
     setEditingStepId(step.stepId);
@@ -87,7 +161,7 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
           updates: { summary: editSummary, toolArgs: parsedArgs },
         }),
       });
-      const body = (await res.json()) as { success: boolean; error?: string };
+      const body = (await res.json()) as PlanMutationResponse;
       if (!res.ok || !body.success) {
         toast.error(body.error ?? `Edit failed: HTTP ${res.status}`);
         return;
@@ -95,6 +169,9 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
       toast.success('Step updated');
       handleEditCancel();
       onPlanChanged();
+      if (body.jasperProposal) {
+        setPendingProposal(body.jasperProposal);
+      }
     } finally {
       setBusy(false);
     }
@@ -116,12 +193,15 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newOrder: ids }),
       });
-      const body = (await res.json()) as { success: boolean; error?: string };
+      const body = (await res.json()) as PlanMutationResponse;
       if (!res.ok || !body.success) {
         toast.error(body.error ?? `Reorder failed: HTTP ${res.status}`);
         return;
       }
       onPlanChanged();
+      if (body.jasperProposal) {
+        setPendingProposal(body.jasperProposal);
+      }
     } finally {
       setBusy(false);
     }
@@ -145,7 +225,7 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stepId }),
       });
-      const body = (await res.json()) as { success: boolean; error?: string };
+      const body = (await res.json()) as PlanMutationResponse;
       if (!res.ok || !body.success) {
         toast.error(body.error ?? `Delete failed: HTTP ${res.status}`);
         return;
@@ -153,6 +233,9 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
       toast.success('Step deleted');
       setConfirmDeleteStepId(null);
       onPlanChanged();
+      if (body.jasperProposal) {
+        setPendingProposal(body.jasperProposal);
+      }
     } finally {
       setBusy(false);
     }
@@ -252,7 +335,6 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
 
   return (
     <div className="p-4 space-y-4">
-      <JasperPlanFeedbackBanner />
       <Card className="border-warning border-2">
         <CardHeader>
           <CardTitle className="text-lg">Draft Plan — Needs Your Review</CardTitle>
@@ -495,6 +577,30 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
         variant="default"
         loading={busy}
       />
+
+      {/*
+        PromptRevisionPopup — opens inline when an edit/delete/reorder response
+        carries a Jasper training proposal. The 3-box picker (Keep current /
+        Agent's suggestion / My rewrite) submits to the jasper-plan-feedback
+        approve/reject endpoints. Replaces the old async banner UX (Apr 22).
+      */}
+      {pendingProposal && (
+        <PromptRevisionPopup
+          isOpen={true}
+          onClose={() => { setPendingProposal(null); }}
+          onApprove={(fullRevisedPrompt, changeDescription, source, newProposedText) => {
+            void handleProposalApprove(fullRevisedPrompt, changeDescription, source, newProposedText);
+          }}
+          onReject={() => { void handleProposalReject(); }}
+          agentType="Jasper (Orchestrator)"
+          beforeSection={pendingProposal.beforeSection}
+          afterSection={pendingProposal.afterSection}
+          clarifyingQuestion={pendingProposal.clarifyingQuestion}
+          changeDescription={pendingProposal.changeDescription}
+          fullRevisedPrompt={pendingProposal.fullRevisedPrompt}
+          isApplying={proposalApplying}
+        />
+      )}
     </div>
   );
 }

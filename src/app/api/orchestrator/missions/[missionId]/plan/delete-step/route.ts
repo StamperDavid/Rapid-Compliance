@@ -59,9 +59,10 @@ export async function POST(
       );
     }
 
-    // Fire-and-forget: capture the deletion as a Jasper training signal so
-    // future plans of this shape don't include the unwanted step.
-    void captureJasperPlanCorrection({
+    // Await so the popup can open inline with the proposal — see edit-step
+    // for the rationale. The popup is the deliberate UX vs the previous
+    // banner-with-async-poll design.
+    const jasperProposal = await captureJasperPlanCorrection({
       missionId,
       stepId: parsed.data.stepId,
       actionType: 'delete',
@@ -75,6 +76,7 @@ export async function POST(
       missionId,
       deletedStepId: parsed.data.stepId,
       deletedStep: result.deletedStep,
+      jasperProposal,
     });
   } catch (err) {
     logger.error('[PlanAPI] delete-step failed', err instanceof Error ? err : undefined);
