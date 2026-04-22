@@ -996,6 +996,34 @@ export const JASPER_TOOLS: ToolDefinition[] = [
   {
     type: 'function',
     function: {
+      name: 'list_crm_leads',
+      description:
+        'READ-ONLY: List leads currently saved in the CRM (Firestore organizations/{platform}/leads). Use this for "what leads do we have", "show me our customers/prospects", or any question about EXISTING saved leads. Does NOT call Apollo, does NOT cost API credits, does NOT create new leads. Returns total count plus a sample of lead records (id, name, company, email, status, score, source, isDemo). For DISCOVERING NEW prospects via Apollo, use scan_leads instead. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          status: {
+            type: 'string',
+            description: 'Filter by lead status. Default: all.',
+            enum: ['all', 'new', 'contacted', 'qualified', 'converted', 'lost'],
+          },
+          limit: {
+            type: 'string',
+            description: 'Maximum leads to return in the sample (default: 25, max: 100). The total count is always returned regardless of limit.',
+          },
+          includeDemo: {
+            type: 'string',
+            description: 'Include leads tagged as demo data (isDemo:true). Default: "true".',
+            enum: ['true', 'false'],
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'scan_leads',
       description:
         'Search for companies matching specified criteria using Apollo.io organization search. Returns company name, domain, industry, employee count, revenue, funding, tech stack, and location. By default, saves results to CRM as new leads (set saveToCrm to "false" for preview-only). ENABLED: TRUE.',
@@ -3658,6 +3686,56 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       // LEAD GENERATION & CRM TOOLS
       // ═══════════════════════════════════════════════════════════════════════
+      case 'list_crm_leads': {
+        try {
+          const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+          const { getSubCollection } = await import('@/lib/firebase/collections');
+
+          const limitArg = Number(args.limit ?? 25);
+          const limit = Number.isFinite(limitArg) && limitArg > 0 ? Math.min(limitArg, 100) : 25;
+          const statusFilter = typeof args.status === 'string' && args.status !== 'all' ? args.status : null;
+          const includeDemo = String(args.includeDemo ?? 'true') !== 'false';
+
+          const all = await AdminFirestoreService.getAll(getSubCollection('leads'), []) as Array<Record<string, unknown> & { id: string }>;
+          const filtered = all.filter((lead) => {
+            if (!includeDemo && lead.isDemo === true) { return false; }
+            if (statusFilter !== null && lead.status !== statusFilter) { return false; }
+            return true;
+          });
+          const sample = filtered.slice(0, limit).map((lead) => {
+            const firstName = typeof lead.firstName === 'string' ? lead.firstName : '';
+            const lastName = typeof lead.lastName === 'string' ? lead.lastName : '';
+            const company = typeof lead.company === 'string' ? lead.company : '';
+            return {
+              id: lead.id,
+              name: [firstName, lastName].filter(Boolean).join(' ') || company || '(no name)',
+              company,
+              email: typeof lead.email === 'string' ? lead.email : '',
+              status: typeof lead.status === 'string' ? lead.status : 'new',
+              score: typeof lead.score === 'number' ? lead.score : null,
+              source: typeof lead.source === 'string' ? lead.source : '',
+              isDemo: lead.isDemo === true,
+              createdAt: typeof lead.createdAt === 'string' ? lead.createdAt : null,
+            };
+          });
+
+          content = JSON.stringify({
+            status: 'completed',
+            source: 'crm',
+            total: filtered.length,
+            returned: sample.length,
+            statusFilter: statusFilter ?? 'all',
+            includeDemo,
+            leads: sample,
+          });
+        } catch (err) {
+          content = JSON.stringify({
+            status: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+        break;
+      }
       case 'scan_leads': {
         trackMissionStep(context, 'scan_leads', 'RUNNING', { toolArgs: args });
         const scanLeadsStart = Date.now();
