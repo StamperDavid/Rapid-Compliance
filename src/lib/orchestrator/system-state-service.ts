@@ -170,7 +170,10 @@ export function classifyQuery(query: string): QueryClassification {
       suggestedTools.push('get_system_state');
     }
     if (/\b(lead|customer|client|prospect)s?\b/i.test(queryLower)) {
-      suggestedTools.push('scan_leads');
+      // Read questions about EXISTING saved leads — list_crm_leads is the
+      // free, fast, read-only CRM read. scan_leads queries Apollo and writes
+      // new leads, which is the wrong tool for "what do we have" (Apr 22 bug Z).
+      suggestedTools.push('list_crm_leads');
     }
 
     if (suggestedTools.length === 0) {

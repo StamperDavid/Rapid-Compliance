@@ -640,7 +640,11 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /competitor(s|'s)?|competitive\s+(intel|analysis|research)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /research\b/i, tools: ['delegate_to_intelligence'] },
-      { patterns: /leads?|prospects?|find\s+(me\s+)?(companies|businesses)|scan\s+for/i, tools: ['scan_leads'] },
+      // DISCOVERY only — when user EXPLICITLY wants to find new prospects via Apollo.
+      // Possessive-read questions ("what leads do we have", "show me our customers")
+      // are caught by FACTUAL_PATTERNS upstream and route to list_crm_leads via the
+      // classifier's suggestedTools. Don't widen this regex — it must NOT match a read.
+      { patterns: /find\s+(me\s+)?(new\s+)?(leads?|prospects?|companies|businesses)|scan\s+for|prospect\s+for/i, tools: ['scan_leads'] },
       { patterns: /enrich/i, tools: ['enrich_lead'] },
       { patterns: /score\s+(them|leads?|the)/i, tools: ['score_leads'] },
       { patterns: /outreach|cold\s+email|personalized\s+email|draft.*(email|outreach)\s+(to|for)/i, tools: ['delegate_to_outreach'] },
@@ -917,7 +921,16 @@ CRITICAL RULES:
             }
           }
 
-          if (pendingByPhase.length > 0 && pendingToolReminders < MAX_REMINDERS && !isNonActionQuery) {
+          // Phase nudging is for ACTION/strategic missions only — it forces
+          // Jasper to march through every regex-suggested phase tool. For
+          // factual reads, the LLM already has its answer after one tool call;
+          // nudging it to "complete phase 1" makes it call extra tools the
+          // user never asked for (Apr 22 bug Z: forced scan_leads → wrote 25
+          // unwanted leads to CRM). Per the principle "Jasper's only job is
+          // intent interpretation," let the LLM finish answering when it's
+          // done — don't keep poking it with phase reminders.
+          const allowNudge = !isNonActionQuery && queryClassification.queryType !== 'factual';
+          if (pendingByPhase.length > 0 && pendingToolReminders < MAX_REMINDERS && allowNudge) {
             pendingToolReminders++;
             const phaseLabels: Record<number, string> = {
               1: 'Research & Discovery',
