@@ -212,10 +212,14 @@ export async function listPendingJasperFeedback(): Promise<JasperPlanFeedbackRec
     return [];
   }
 
+  // No Firestore .orderBy here — that requires a composite index
+  // (status + createdAt) that has to be created manually in the Firebase
+  // console. Pending proposals are typically a handful, so client-side
+  // sort is trivial cost and avoids the deploy friction. Same pattern
+  // used by listJasperGMVersions.
   const snapshot = await adminDb
     .collection(getCollectionPath())
     .where('status', '==', 'pending_review')
-    .orderBy('createdAt', 'desc')
     .get();
 
   const records: JasperPlanFeedbackRecord[] = [];
@@ -229,6 +233,9 @@ export async function listPendingJasperFeedback(): Promise<JasperPlanFeedbackRec
       });
     }
   }
+
+  // Sort newest-first by createdAt (string ISO timestamp comparison works).
+  records.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
 
   return records;
 }
