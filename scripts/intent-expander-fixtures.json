@@ -5,12 +5,12 @@
     {
       "id": "A1-read-leads",
       "bucket": "A",
-      "note": "The exact failure mode that triggered the Apr 22 rebuild. Haiku 3 returned scan_leads + enrich_lead + score_leads. Must be scan_leads only.",
+      "note": "The original failure that triggered the rebuild. Apr 22 v2: must route to list_crm_leads (CRM read), NOT scan_leads (Apollo write).",
       "input": "What leads do we have in the system?",
       "classifierHint": "factual",
       "must": {
-        "toolsAllowed": ["scan_leads"],
-        "toolsForbidden": ["enrich_lead", "score_leads", "delegate_to_outreach", "delegate_to_content", "delegate_to_marketing"],
+        "toolsAllowed": ["list_crm_leads"],
+        "toolsForbidden": ["scan_leads", "enrich_lead", "score_leads", "delegate_to_outreach", "delegate_to_content", "delegate_to_marketing"],
         "isAdvisory": false,
         "isComplex": false,
         "toolCount": 1
@@ -22,8 +22,8 @@
       "input": "Show me our customers",
       "classifierHint": "factual",
       "must": {
-        "toolsAllowed": ["scan_leads"],
-        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "toolsAllowed": ["list_crm_leads"],
+        "toolsForbidden": ["scan_leads", "enrich_lead", "score_leads"],
         "isAdvisory": false,
         "isComplex": false,
         "toolCount": 1
@@ -35,8 +35,8 @@
       "input": "Who are our top prospects?",
       "classifierHint": "factual",
       "must": {
-        "toolsAllowed": ["scan_leads"],
-        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "toolsAllowed": ["list_crm_leads"],
+        "toolsForbidden": ["scan_leads", "enrich_lead", "score_leads"],
         "isAdvisory": false,
         "isComplex": false,
         "toolCount": 1
@@ -220,14 +220,26 @@
     {
       "id": "D1-no-hint-read",
       "bucket": "A",
-      "note": "No classifier hint — expander must still categorize correctly from the user message alone.",
+      "note": "No classifier hint — expander must still categorize correctly. Apr 22 v2: must be list_crm_leads, never scan_leads.",
       "input": "What leads do we have?",
       "classifierHint": null,
       "must": {
-        "toolsAllowed": ["scan_leads"],
-        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "toolsAllowed": ["list_crm_leads"],
+        "toolsForbidden": ["scan_leads", "enrich_lead", "score_leads"],
         "isAdvisory": false,
         "toolCount": 1
+      }
+    },
+    {
+      "id": "C8-find-new-leads",
+      "bucket": "C",
+      "note": "Verifies scan_leads still routes correctly for DISCOVERY commands (not the same as list_crm_leads for reads). User wants to FIND new prospects via Apollo.",
+      "input": "Find me new leads in healthcare",
+      "classifierHint": "action",
+      "must": {
+        "toolsRequired": ["scan_leads"],
+        "toolsForbidden": ["list_crm_leads", "enrich_lead", "score_leads"],
+        "isAdvisory": false
       }
     },
     {

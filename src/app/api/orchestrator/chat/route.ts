@@ -768,7 +768,7 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
         'list_organizations', 'get_organization', 'get_pricing_tiers',
         'recall_conversation_history',
         // Lead management (no manager for these yet — keep accessible)
-        'scan_leads', 'enrich_lead', 'score_leads',
+        'list_crm_leads', 'scan_leads', 'enrich_lead', 'score_leads',
         // Campaign container (lightweight — just creates tracking record)
         'create_campaign',
         // Admin CRUD
@@ -978,8 +978,17 @@ CRITICAL RULES:
         // Creating an empty IN_PROGRESS mission first causes a race
         // condition where Mission Control loads the empty version before
         // the plan version lands.
+        //
+        // ALSO SKIP for read-class queries (factual/advisory/conversational).
+        // A user asking "what leads do we have" should never manufacture an
+        // orphan mission just because Jasper called scan_leads to look.
+        // Only action/strategic queries — where the user actually committed
+        // to having work done — should create missions (Apr 22 bug AA).
+        const isReadClassQuery = queryClassification.queryType === 'factual'
+          || queryClassification.queryType === 'advisory'
+          || queryClassification.queryType === 'conversational';
         const isPlanProposal = response.toolCalls.some((tc: ToolCall) => tc.function.name === 'propose_mission_plan');
-        if (!missionCreated && !isPlanProposal && response.toolCalls.some((tc: ToolCall) => missionTriggerTools.includes(tc.function.name))) {
+        if (!missionCreated && !isPlanProposal && !isReadClassQuery && response.toolCalls.some((tc: ToolCall) => missionTriggerTools.includes(tc.function.name))) {
           const now = new Date().toISOString();
           const titleSnippet = message.slice(0, 80) + (message.length > 80 ? '...' : '');
           try {

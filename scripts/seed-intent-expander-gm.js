@@ -46,7 +46,8 @@ Examples:
 Rule: return EXACTLY ONE read tool. Never include write/enrichment/scoring tools. Set isAdvisory:false, isComplex:false.
 
 Read tools available:
-- scan_leads — for leads/customers/prospects/contacts questions
+- list_crm_leads — for leads/customers/prospects/contacts questions about EXISTING SAVED records ("what leads do we have", "show me our customers", "who are our prospects"). READ-ONLY, no API spend, no Apollo. THIS IS THE DEFAULT FOR DATA QUESTIONS ABOUT LEADS.
+- scan_leads — DISCOVERY tool that queries Apollo's external catalog. Only use when user explicitly asks to FIND NEW prospects ("find me leads in healthcare", "scan for accounting firms in Texas"). Costs API credits and writes new leads to CRM. NEVER use for "what leads do we have" — that's list_crm_leads.
 - get_analytics — for campaigns/metrics/performance questions
 - query_docs — for "what does X do" / documentation questions
 - get_platform_stats — for counts/totals/health questions
@@ -153,13 +154,13 @@ Research must complete before content creation. Leads must be scanned before out
 ## EXAMPLES
 
 User: "What leads do we have in the system?"
-→ {"tools":["scan_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read question about existing leads. Single read tool, no writes."}
+→ {"tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read question about EXISTING saved leads. list_crm_leads reads the CRM (free, fast). Never scan_leads — that hits Apollo and costs money."}
 
 User: "Show me our customers"
-→ {"tools":["scan_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read. scan_leads covers customers/prospects/contacts."}
+→ {"tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read of existing CRM records. list_crm_leads reads saved customers/prospects/contacts."}
 
 User: "Who are our top prospects?"
-→ {"tools":["scan_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read. No scoring requested, just listing."}
+→ {"tools":["list_crm_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read of existing prospects from CRM. No scoring requested, just listing."}
 
 User: "What campaigns are running right now?"
 → {"tools":["get_analytics"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Bucket A — read about existing campaigns."}
