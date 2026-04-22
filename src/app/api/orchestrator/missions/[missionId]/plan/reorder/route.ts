@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { reorderPlannedSteps } from '@/lib/orchestrator/mission-persistence';
+import { captureJasperPlanCorrection } from '@/lib/orchestrator/plan-edit-training-capture';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,7 @@ export async function POST(
 ) {
   const authResult = await requireRole(request, ['owner', 'admin']);
   if (authResult instanceof NextResponse) { return authResult; }
+  const { user } = authResult;
 
   try {
     const { missionId } = await params;
@@ -46,8 +48,8 @@ export async function POST(
       );
     }
 
-    const ok = await reorderPlannedSteps(missionId, parsed.data.newOrder);
-    if (!ok) {
+    const result = await reorderPlannedSteps(missionId, parsed.data.newOrder);
+    if (!result.success) {
       return NextResponse.json(
         {
           success: false,
@@ -57,7 +59,24 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ success: true, missionId, stepCount: parsed.data.newOrder.length });
+    // Fire-and-forget: capture the reorder as a Jasper training signal so
+    // future plans of this shape are emitted in the operator's preferred order.
+    void captureJasperPlanCorrection({
+      missionId,
+      stepId: null,
+      actionType: 'reorder',
+      before: result.before ?? null,
+      after: result.after ?? null,
+      graderUserId: user.uid,
+    });
+
+    return NextResponse.json({
+      success: true,
+      missionId,
+      stepCount: parsed.data.newOrder.length,
+      before: result.before,
+      after: result.after,
+    });
   } catch (err) {
     logger.error('[PlanAPI] reorder failed', err instanceof Error ? err : undefined);
     return NextResponse.json({ success: false, error: 'Failed to reorder steps' }, { status: 500 });

@@ -166,8 +166,8 @@ async function main(): Promise<void> {
 
     console.log('\n[4/7] Reorder: move step 1 to the end');
     const reorderedIds = [originalIds[1], originalIds[2], originalIds[0]];
-    const reorderOk = await reorderPlannedSteps(happyMissionId, reorderedIds);
-    assert(reorderOk, 'reorderPlannedSteps returned true');
+    const reorderResult = await reorderPlannedSteps(happyMissionId, reorderedIds);
+    assert(reorderResult.success, 'reorderPlannedSteps returned success=true');
     mission = await readMission(db, happyMissionId);
     assert(mission!.steps[0].stepId === originalIds[1], 'first step is now original step 2');
     assert(mission!.steps[1].stepId === originalIds[2], 'second step is now original step 3');
@@ -175,21 +175,21 @@ async function main(): Promise<void> {
     assert(mission!.steps[2].summary === 'EDITED — researching the top 3 competitors only', 'edit survived reorder');
 
     console.log('\n[5/7] Delete the new step 2 (original step 3)');
-    const deleteOk = await deletePlannedStep(happyMissionId, originalIds[2]);
-    assert(deleteOk, 'deletePlannedStep returned true');
+    const deleteResult = await deletePlannedStep(happyMissionId, originalIds[2]);
+    assert(deleteResult.success, 'deletePlannedStep returned success=true');
     mission = await readMission(db, happyMissionId);
     assert(mission!.steps.length === 2, 'now has 2 steps');
     assert(!mission!.steps.some((s) => s.stepId === originalIds[2]), 'deleted step is gone');
 
     console.log('\n[6/7] Try to delete the second-to-last step (should still work — only blocks at 1)');
-    const deleteAgainOk = await deletePlannedStep(happyMissionId, mission!.steps[0].stepId);
-    assert(deleteAgainOk, 'second delete also worked');
+    const deleteAgainResult = await deletePlannedStep(happyMissionId, mission!.steps[0].stepId);
+    assert(deleteAgainResult.success, 'second delete also worked');
     mission = await readMission(db, happyMissionId);
     assert(mission!.steps.length === 1, 'now has 1 step');
 
     console.log('\n[6b/7] Try to delete the LAST step (should refuse)');
-    const lastDeleteOk = await deletePlannedStep(happyMissionId, mission!.steps[0].stepId);
-    assert(!lastDeleteOk, 'deletePlannedStep refused to delete the last remaining step');
+    const lastDeleteResult = await deletePlannedStep(happyMissionId, mission!.steps[0].stepId);
+    assert(!lastDeleteResult.success, 'deletePlannedStep refused to delete the last remaining step');
     mission = await readMission(db, happyMissionId);
     assert(mission!.steps.length === 1, 'still has 1 step');
 

@@ -30,6 +30,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
+import JasperPlanFeedbackBanner from './JasperPlanFeedbackBanner';
 
 interface PlanReviewPanelProps {
   mission: Mission;
@@ -251,6 +252,7 @@ export default function PlanReviewPanel({ mission, onPlanChanged }: PlanReviewPa
 
   return (
     <div className="p-4 space-y-4">
+      <JasperPlanFeedbackBanner />
       <Card className="border-warning border-2">
         <CardHeader>
           <CardTitle className="text-lg">Draft Plan — Needs Your Review</CardTitle>
