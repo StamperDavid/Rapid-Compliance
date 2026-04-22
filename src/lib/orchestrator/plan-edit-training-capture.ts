@@ -71,11 +71,35 @@ function buildCorrection(input: PlanCorrectionInput): string {
   return lines.join('\n');
 }
 
+export interface CapturedJasperProposal {
+  feedbackId: string;
+  agentType: 'orchestrator';
+  beforeSection: string;
+  afterSection: string;
+  changeDescription: string;
+  fullRevisedPrompt: string;
+  clarifyingQuestion?: string;
+}
+
 /**
  * Capture an operator's plan correction as a Jasper training proposal.
- * Fire-and-forget — caller does not await success. All errors are logged.
+ * Awaits the Prompt Engineer call so the caller can return the proposal in
+ * the API response — the UI then opens the existing PromptRevisionPopup
+ * inline with this proposal as input. The 3-box picker (Keep / Accept /
+ * Rewrite) submits to /api/training/jasper-plan-feedback/[id]/{approve,reject}.
+ *
+ * Returns the proposal + feedbackId on success, null on any failure (no GM,
+ * Firestore unavailable, Prompt Engineer error). All errors are logged. The
+ * caller is expected to gracefully degrade (the plan mutation itself has
+ * already landed by the time this runs).
+ *
+ * Standing Rule #2 still gated downstream: this only WRITES the proposal to
+ * status='pending_review'. No GM mutation happens until the operator
+ * explicitly clicks Accept in the popup, which calls the approve endpoint.
  */
-export async function captureJasperPlanCorrection(input: PlanCorrectionInput): Promise<void> {
+export async function captureJasperPlanCorrection(
+  input: PlanCorrectionInput,
+): Promise<CapturedJasperProposal | null> {
   const { missionId, stepId, actionType, before, after, graderUserId } = input;
   const logKey = { missionId, stepId, actionType };
 
@@ -83,7 +107,7 @@ export async function captureJasperPlanCorrection(input: PlanCorrectionInput): P
     const gm = await getActiveJasperGoldenMaster();
     if (gm === null) {
       logger.warn('[PlanEditTraining] No active Jasper GM — skipping Prompt Engineer call', logKey);
-      return;
+      return null;
     }
 
     const correction = buildCorrection(input);
@@ -96,7 +120,7 @@ export async function captureJasperPlanCorrection(input: PlanCorrectionInput): P
 
     if (!adminDb) {
       logger.warn('[PlanEditTraining] Firestore admin not available — cannot persist proposal', logKey);
-      return;
+      return null;
     }
 
     const stepIdSegment = stepId ?? 'reorder';
@@ -122,10 +146,21 @@ export async function captureJasperPlanCorrection(input: PlanCorrectionInput): P
       feedbackId,
       changeDescription: proposal.changeDescription,
     });
+
+    return {
+      feedbackId,
+      agentType: 'orchestrator',
+      beforeSection: proposal.beforeSection ?? '',
+      afterSection: proposal.afterSection ?? '',
+      changeDescription: proposal.changeDescription ?? '',
+      fullRevisedPrompt: proposal.fullRevisedPrompt ?? '',
+      clarifyingQuestion: proposal.clarifyingQuestion,
+    };
   } catch (err) {
     logger.warn('[PlanEditTraining] Proposal failed — plan correction itself still landed', {
       ...logKey,
       error: err instanceof Error ? err.message : String(err),
     });
+    return null;
   }
 }

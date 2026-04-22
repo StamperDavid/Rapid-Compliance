@@ -59,9 +59,10 @@ export async function POST(
       );
     }
 
-    // Fire-and-forget: capture the reorder as a Jasper training signal so
-    // future plans of this shape are emitted in the operator's preferred order.
-    void captureJasperPlanCorrection({
+    // Await so the popup can open inline with the proposal — see edit-step
+    // for the rationale. The popup is the deliberate UX vs the previous
+    // banner-with-async-poll design.
+    const jasperProposal = await captureJasperPlanCorrection({
       missionId,
       stepId: null,
       actionType: 'reorder',
@@ -76,6 +77,7 @@ export async function POST(
       stepCount: parsed.data.newOrder.length,
       before: result.before,
       after: result.after,
+      jasperProposal,
     });
   } catch (err) {
     logger.error('[PlanAPI] reorder failed', err instanceof Error ? err : undefined);
