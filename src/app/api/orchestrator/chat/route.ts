@@ -587,6 +587,47 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       ? await expandIntent(message, queryClassification.queryType)
       : null;
 
+    // ── LLM intent override: the expander understands intent regardless of
+    //    spelling, phrasing, or mixed signals. It can promote or demote queryType. ──
+    if (expandedIntent?.isAdvisory && queryClassification.queryType !== 'advisory') {
+      // Expander says advisory — override to advisory (e.g., typo missed by regex)
+      logger.info('[Jasper] Intent Expander overriding queryType to advisory', {
+        previousType: queryClassification.queryType,
+        expanderReasoning: expandedIntent.reasoning,
+      });
+      queryClassification.queryType = 'advisory';
+      queryClassification.requiresStateReflection = true;
+
+      // Late-inject advisory context into the system prompt since the original
+      // advisory check (above) ran before the expander had a chance to classify.
+      const lateAdvisoryContext = `
+
+IMPORTANT — ADVISORY MODE:
+The user is asking for your advice, recommendations, or opinion. They are NOT asking you to execute anything.
+DO NOT call any tools that create data (scan_leads, delegate_to_outreach, delegate_to_marketing, delegate_to_content, etc.).
+Instead, have a strategic conversation:
+1. Explain your recommended approach and WHY it makes sense for their situation
+2. Outline the specific steps you WOULD take if they approve
+3. Ask if they want you to proceed with execution
+Only execute tools if the user explicitly says to go ahead (e.g., "yes do it", "go ahead", "let's do that", "execute that plan").
+You MAY call read-only tools like get_system_state or query_docs to inform your recommendation.`;
+
+      // Append to the system message (first message in the array)
+      if (messages.length > 0 && messages[0].role === 'system') {
+        messages[0].content += lateAdvisoryContext;
+      }
+    } else if (expandedIntent && !expandedIntent.isAdvisory && expandedIntent.tools.length > 0 && queryClassification.queryType === 'advisory') {
+      // Expander says action with specific tools — override advisory default back
+      // to action. This handles the safe default (advisory) being correctly promoted
+      // when the expander detects a real action request (e.g., "write me a blog post").
+      logger.info('[Jasper] Intent Expander overriding advisory default to action', {
+        previousType: queryClassification.queryType,
+        expanderTools: expandedIntent.tools,
+        expanderReasoning: expandedIntent.reasoning,
+      });
+      queryClassification.queryType = 'action';
+    }
+
     // ── Layer 2: Regex keyword matching (fast deterministic fallback) ──
     //
     // Every pattern maps to a delegate_to_* tool. Jasper is not allowed
@@ -599,7 +640,11 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /competitor(s|'s)?|competitive\s+(intel|analysis|research)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /research\b/i, tools: ['delegate_to_intelligence'] },
-      { patterns: /leads?|prospects?|find\s+(me\s+)?(companies|businesses)|scan\s+for/i, tools: ['scan_leads'] },
+      // DISCOVERY only — when user EXPLICITLY wants to find new prospects via Apollo.
+      // Possessive-read questions ("what leads do we have", "show me our customers")
+      // are caught by FACTUAL_PATTERNS upstream and route to list_crm_leads via the
+      // classifier's suggestedTools. Don't widen this regex — it must NOT match a read.
+      { patterns: /find\s+(me\s+)?(new\s+)?(leads?|prospects?|companies|businesses)|scan\s+for|prospect\s+for/i, tools: ['scan_leads'] },
       { patterns: /enrich/i, tools: ['enrich_lead'] },
       { patterns: /score\s+(them|leads?|the)/i, tools: ['score_leads'] },
       { patterns: /outreach|cold\s+email|personalized\s+email|draft.*(email|outreach)\s+(to|for)/i, tools: ['delegate_to_outreach'] },
@@ -612,10 +657,16 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       { patterns: /campaign|multi.?channel|content\s+blitz|everything/i, tools: ['delegate_to_content', 'delegate_to_marketing', 'produce_video'] },
     ];
 
+    // Skip regex matching for advisory queries — the Intent Expander already
+    // returns empty tools for questions/recommendations. Regex keywords like
+    // "leads" or "campaign" in an advisory question would add unwanted tools
+    // that the nudging system then forces the model to execute.
     const regexTools = new Set<string>();
-    for (const { patterns, tools } of INTENT_TOOL_MAP) {
-      if (patterns.test(message)) {
-        for (const t of tools) { regexTools.add(t); }
+    if (queryClassification.queryType !== 'advisory') {
+      for (const { patterns, tools } of INTENT_TOOL_MAP) {
+        if (patterns.test(message)) {
+          for (const t of tools) { regexTools.add(t); }
+        }
       }
     }
 
@@ -657,7 +708,9 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
     logger.info('[Jasper] Intent detection (LLM + regex merged)', {
       expanderUsed: Boolean(expandedIntent),
       expanderTools: expandedIntent?.tools ?? [],
+      expanderIsAdvisory: expandedIntent?.isAdvisory ?? false,
       expanderReasoning: expandedIntent?.reasoning,
+      finalQueryType: queryClassification.queryType,
       regexTools: [...regexTools],
       mergedTools: [...requiredTools],
       isComplexRequest,
@@ -868,7 +921,16 @@ CRITICAL RULES:
             }
           }
 
-          if (pendingByPhase.length > 0 && pendingToolReminders < MAX_REMINDERS) {
+          // Phase nudging is for ACTION/strategic missions only — it forces
+          // Jasper to march through every regex-suggested phase tool. For
+          // factual reads, the LLM already has its answer after one tool call;
+          // nudging it to "complete phase 1" makes it call extra tools the
+          // user never asked for (Apr 22 bug Z: forced scan_leads → wrote 25
+          // unwanted leads to CRM). Per the principle "Jasper's only job is
+          // intent interpretation," let the LLM finish answering when it's
+          // done — don't keep poking it with phase reminders.
+          const allowNudge = !isNonActionQuery && queryClassification.queryType !== 'factual';
+          if (pendingByPhase.length > 0 && pendingToolReminders < MAX_REMINDERS && allowNudge) {
             pendingToolReminders++;
             const phaseLabels: Record<number, string> = {
               1: 'Research & Discovery',
