@@ -373,9 +373,48 @@ export async function POST(request: NextRequest) {
       logger.info('[Jasper] Using custom model', { model: selectedModel });
     }
 
-    // Classify the query to determine if state reflection is needed
-    const queryClassification = SystemStateService.classifyQuery(message);
+    // ── Intent classification: LLM Expander is the SINGLE SOURCE OF TRUTH ──
+    //
+    // Apr 22 2026 refactor: the legacy regex classifier (FACTUAL_PATTERNS et al.
+    // in system-state-service.ts) has been retired. Pattern matching is not
+    // intent reading — it pretends to be intelligent while dressing up keyword
+    // hits as "classification." Now: the GM-backed Intent Expander reads the
+    // user's actual message and emits queryType + tool list in one call.
+    //
+    // Trivial greetings ("hi", "thanks", "ok") still get a regex fast-path so
+    // we don't burn an LLM call on one-word acknowledgements. Everything else
+    // goes to the LLM. If the LLM call fails, the safe fallback is advisory
+    // mode — Jasper asks a clarifying question rather than guessing at action.
+    const TRIVIAL_GREETING_RE = /^(hi|hello|hey|thanks?|thank\s+you|yes|no|ok|okay|got\s+it|sure|cool|nice|great|perfect|awesome|good\s+(morning|afternoon|evening))[\s.!?]*$/i;
+    const isTrivialGreeting = TRIVIAL_GREETING_RE.test(message.trim());
+
+    const expandedIntent = isTrivialGreeting ? null : await expandIntent(message);
+
+    const queryClassification: {
+      queryType: 'factual' | 'advisory' | 'action' | 'strategic' | 'conversational';
+      requiresStateReflection: boolean;
+      suggestedTools: string[];
+    } = isTrivialGreeting
+      ? { queryType: 'conversational', requiresStateReflection: false, suggestedTools: [] }
+      : expandedIntent
+        ? {
+            queryType: expandedIntent.queryType,
+            // Inject state context when Jasper needs grounded data — for reads
+            // and for advisory conversations where he might be asked about state.
+            requiresStateReflection: expandedIntent.queryType === 'factual'
+              || expandedIntent.queryType === 'advisory'
+              || expandedIntent.queryType === 'strategic',
+            suggestedTools: expandedIntent.tools,
+          }
+        : {
+            // Expander failed (network / parse). Safe default: talk to the user.
+            queryType: 'advisory',
+            requiresStateReflection: true,
+            suggestedTools: [],
+          };
+
     logger.info('[Jasper] Query classified', {
+      source: isTrivialGreeting ? 'greeting-fast-path' : (expandedIntent ? 'llm-expander' : 'fallback-advisory'),
       queryType: queryClassification.queryType,
       requiresStateReflection: queryClassification.requiresStateReflection,
       suggestedTools: queryClassification.suggestedTools,
@@ -580,27 +619,12 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
     // Phase order ensures research data feeds into campaign content.
     // ═══════════════════════════════════════════════════════════════════════
 
-    // ── Layer 1: LLM Intent Expander (runs for non-conversational queries) ──
-    // Pass the classifier verdict as a hint so the expander respects it —
-    // e.g., factual hint means read-only, never widen to writes (Apr 22 bug Y).
-    const expandedIntent = queryClassification.queryType !== 'conversational'
-      ? await expandIntent(message, queryClassification.queryType)
-      : null;
-
-    // ── LLM intent override: the expander understands intent regardless of
-    //    spelling, phrasing, or mixed signals. It can promote or demote queryType. ──
-    if (expandedIntent?.isAdvisory && queryClassification.queryType !== 'advisory') {
-      // Expander says advisory — override to advisory (e.g., typo missed by regex)
-      logger.info('[Jasper] Intent Expander overriding queryType to advisory', {
-        previousType: queryClassification.queryType,
-        expanderReasoning: expandedIntent.reasoning,
-      });
-      queryClassification.queryType = 'advisory';
-      queryClassification.requiresStateReflection = true;
-
-      // Late-inject advisory context into the system prompt since the original
-      // advisory check (above) ran before the expander had a chance to classify.
-      const lateAdvisoryContext = `
+    // ── Late-inject advisory mode context if needed ──
+    // The expander already classified this as advisory. Append the explicit
+    // "do not execute, have a conversation instead" guardrail to Jasper's
+    // system prompt so he knows to talk rather than act.
+    if (queryClassification.queryType === 'advisory') {
+      const advisoryGuardrail = `
 
 IMPORTANT — ADVISORY MODE:
 The user is asking for your advice, recommendations, or opinion. They are NOT asking you to execute anything.
@@ -610,71 +634,16 @@ Instead, have a strategic conversation:
 2. Outline the specific steps you WOULD take if they approve
 3. Ask if they want you to proceed with execution
 Only execute tools if the user explicitly says to go ahead (e.g., "yes do it", "go ahead", "let's do that", "execute that plan").
-You MAY call read-only tools like get_system_state or query_docs to inform your recommendation.`;
+You MAY call read-only tools like get_system_state, query_docs, or list_crm_leads to inform your recommendation.`;
 
-      // Append to the system message (first message in the array)
       if (messages.length > 0 && messages[0].role === 'system') {
-        messages[0].content += lateAdvisoryContext;
-      }
-    } else if (expandedIntent && !expandedIntent.isAdvisory && expandedIntent.tools.length > 0 && queryClassification.queryType === 'advisory') {
-      // Expander says action with specific tools — override advisory default back
-      // to action. This handles the safe default (advisory) being correctly promoted
-      // when the expander detects a real action request (e.g., "write me a blog post").
-      logger.info('[Jasper] Intent Expander overriding advisory default to action', {
-        previousType: queryClassification.queryType,
-        expanderTools: expandedIntent.tools,
-        expanderReasoning: expandedIntent.reasoning,
-      });
-      queryClassification.queryType = 'action';
-    }
-
-    // ── Layer 2: Regex keyword matching (fast deterministic fallback) ──
-    //
-    // Every pattern maps to a delegate_to_* tool. Jasper is not allowed
-    // to call specialists directly (April 15, 2026 standing rule), so
-    // keywords like "scrape" route to delegate_to_intelligence which runs
-    // the Scraper Specialist through the Intelligence Manager review gate.
-    const INTENT_TOOL_MAP: Array<{ patterns: RegExp; tools: string[] }> = [
-      { patterns: /scrap(e|ing)\b/i, tools: ['delegate_to_intelligence'] },
-      { patterns: /analyz(e|ing)\s+(their|the|this)\s+(site|website|page|positioning|pricing)/i, tools: ['delegate_to_intelligence'] },
-      { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['delegate_to_intelligence'] },
-      { patterns: /competitor(s|'s)?|competitive\s+(intel|analysis|research)/i, tools: ['delegate_to_intelligence'] },
-      { patterns: /research\b/i, tools: ['delegate_to_intelligence'] },
-      // DISCOVERY only — when user EXPLICITLY wants to find new prospects via Apollo.
-      // Possessive-read questions ("what leads do we have", "show me our customers")
-      // are caught by FACTUAL_PATTERNS upstream and route to list_crm_leads via the
-      // classifier's suggestedTools. Don't widen this regex — it must NOT match a read.
-      { patterns: /find\s+(me\s+)?(new\s+)?(leads?|prospects?|companies|businesses)|scan\s+for|prospect\s+for/i, tools: ['scan_leads'] },
-      { patterns: /enrich/i, tools: ['enrich_lead'] },
-      { patterns: /score\s+(them|leads?|the)/i, tools: ['score_leads'] },
-      { patterns: /outreach|cold\s+email|personalized\s+email|draft.*(email|outreach)\s+(to|for)/i, tools: ['delegate_to_outreach'] },
-      { patterns: /email\s*(campaign|sequence|drip|blast|series)/i, tools: ['delegate_to_outreach'] },
-      { patterns: /seo|search\s+engine|keywords?\s+(config|setup|align)/i, tools: ['get_seo_config'] },
-      { patterns: /video|storyboard/i, tools: ['produce_video'] },
-      { patterns: /social\s*(media|post)|post\s+(on|to)\s+(twitter|linkedin|facebook)/i, tools: ['delegate_to_marketing'] },
-      { patterns: /blog|article/i, tools: ['delegate_to_content'] },
-      { patterns: /landing\s*page/i, tools: ['delegate_to_builder'] },
-      { patterns: /campaign|multi.?channel|content\s+blitz|everything/i, tools: ['delegate_to_content', 'delegate_to_marketing', 'produce_video'] },
-    ];
-
-    // Skip regex matching for advisory queries — the Intent Expander already
-    // returns empty tools for questions/recommendations. Regex keywords like
-    // "leads" or "campaign" in an advisory question would add unwanted tools
-    // that the nudging system then forces the model to execute.
-    const regexTools = new Set<string>();
-    if (queryClassification.queryType !== 'advisory') {
-      for (const { patterns, tools } of INTENT_TOOL_MAP) {
-        if (patterns.test(message)) {
-          for (const t of tools) { regexTools.add(t); }
-        }
+        messages[0].content += advisoryGuardrail;
       }
     }
 
-    // ── Merge: union of LLM expander + regex results ──
-    const requiredTools = new Set<string>([
-      ...regexTools,
-      ...(expandedIntent?.tools ?? []),
-    ]);
+    // ── Required tool set comes ENTIRELY from the expander now ──
+    // No regex merging. The LLM picks tools based on intent, period.
+    const requiredTools = new Set<string>(expandedIntent?.tools ?? []);
 
     // Dependency-ordered phases. scrape_website removed April 15, 2026 —
     // Jasper now uses delegate_to_intelligence for scraping which goes
@@ -711,8 +680,7 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       expanderIsAdvisory: expandedIntent?.isAdvisory ?? false,
       expanderReasoning: expandedIntent?.reasoning,
       finalQueryType: queryClassification.queryType,
-      regexTools: [...regexTools],
-      mergedTools: [...requiredTools],
+      tools: [...requiredTools],
       isComplexRequest,
       phases: JSON.stringify(Object.fromEntries(phasedPlan)),
     });

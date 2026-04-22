@@ -57,7 +57,7 @@ function initAdmin(): void {
 
 initAdmin();
 
-import { expandIntent, type ClassifierHint } from '../src/lib/orchestrator/intent-expander';
+import { expandIntent, type QueryType } from '../src/lib/orchestrator/intent-expander';
 import {
   getActiveSpecialistGMByIndustry,
   invalidateIndustryGMCache,
@@ -74,6 +74,7 @@ const TEST_GM_ID = `sgm_intent_expander_${INDUSTRY_KEY}_v999_test`;
 // ============================================================================
 
 interface FixtureMust {
+  queryType?: QueryType;
   toolsAllowed?: string[];
   toolsForbidden?: string[];
   toolsRequired?: string[];
@@ -89,7 +90,6 @@ interface Fixture {
   bucket: 'A' | 'B' | 'C';
   note?: string;
   input: string;
-  classifierHint: ClassifierHint | null;
   must: FixtureMust;
 }
 
@@ -104,6 +104,7 @@ interface FixtureResult {
   passed: boolean;
   failures: string[];
   actual: {
+    queryType: QueryType;
     tools: string[];
     scrapeUrls: string[];
     isAdvisory: boolean;
@@ -119,7 +120,7 @@ interface FixtureResult {
 
 function evaluateFixture(
   fixture: Fixture,
-  actual: { tools: string[]; scrapeUrls: string[]; isAdvisory: boolean; isComplex: boolean; reasoning: string } | null,
+  actual: { queryType: QueryType; tools: string[]; scrapeUrls: string[]; isAdvisory: boolean; isComplex: boolean; reasoning: string } | null,
 ): string[] {
   const failures: string[] = [];
   if (!actual) {
@@ -128,6 +129,9 @@ function evaluateFixture(
   }
   const m = fixture.must;
 
+  if (m.queryType !== undefined && actual.queryType !== m.queryType) {
+    failures.push(`queryType=${actual.queryType}, expected ${m.queryType}`);
+  }
   if (m.toolsAllowed !== undefined) {
     const extras = actual.tools.filter((t) => !m.toolsAllowed!.includes(t));
     if (extras.length > 0) {
@@ -285,8 +289,7 @@ async function main(): Promise<void> {
     const results: FixtureResult[] = [];
     for (const fixture of fixtures) {
       const startMs = Date.now();
-      const hint: ClassifierHint | undefined = fixture.classifierHint ?? undefined;
-      const actual = await expandIntent(fixture.input, hint);
+      const actual = await expandIntent(fixture.input);
       const durationMs = Date.now() - startMs;
       const failures = evaluateFixture(fixture, actual);
       const passed = failures.length === 0;
@@ -296,6 +299,7 @@ async function main(): Promise<void> {
         failures,
         actual: actual
           ? {
+              queryType: actual.queryType,
               tools: actual.tools,
               scrapeUrls: actual.scrapeUrls,
               isAdvisory: actual.isAdvisory,
@@ -313,8 +317,8 @@ async function main(): Promise<void> {
         `  ${color}${icon}${reset} ${fixture.id.padEnd(24)} [${fixture.bucket}] ${passed ? 'PASS' : 'FAIL'} (${durationMs}ms)`,
       );
       if (!passed) {
-        console.log(`      input: "${fixture.input}"${fixture.classifierHint ? ` [hint=${fixture.classifierHint}]` : ''}`);
-        console.log(`      actual: tools=[${actual?.tools.join(',') ?? 'null'}] adv=${actual?.isAdvisory} complex=${actual?.isComplex}`);
+        console.log(`      input: "${fixture.input}"`);
+        console.log(`      actual: queryType=${actual?.queryType} tools=[${actual?.tools.join(',') ?? 'null'}] adv=${actual?.isAdvisory} complex=${actual?.isComplex}`);
         for (const fail of failures) {
           console.log(`      · ${fail}`);
         }

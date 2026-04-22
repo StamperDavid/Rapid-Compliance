@@ -1,14 +1,14 @@
 {
-  "version": 1,
-  "description": "Golden fixtures for the Intent Expander. Each case documents the bucket, input, classifier hint (optional), and the properties that MUST hold for a passing run. A model/prompt change that breaks any 'must' assertion is a regression.",
+  "version": 2,
+  "description": "Golden fixtures for the Intent Expander as the SOLE intent classifier (post-Apr 22 refactor). The expander now returns queryType in addition to tools — both are asserted. Removed classifierHint field (no upstream classifier exists anymore).",
   "fixtures": [
     {
       "id": "A1-read-leads",
       "bucket": "A",
-      "note": "The original failure that triggered the rebuild. Apr 22 v2: must route to list_crm_leads (CRM read), NOT scan_leads (Apollo write).",
+      "note": "The original failure that triggered the rebuild. Must route to list_crm_leads + queryType=factual.",
       "input": "What leads do we have in the system?",
-      "classifierHint": "factual",
       "must": {
+        "queryType": "factual",
         "toolsAllowed": ["list_crm_leads"],
         "toolsForbidden": ["scan_leads", "enrich_lead", "score_leads", "delegate_to_outreach", "delegate_to_content", "delegate_to_marketing"],
         "isAdvisory": false,
@@ -20,8 +20,8 @@
       "id": "A2-show-customers",
       "bucket": "A",
       "input": "Show me our customers",
-      "classifierHint": "factual",
       "must": {
+        "queryType": "factual",
         "toolsAllowed": ["list_crm_leads"],
         "toolsForbidden": ["scan_leads", "enrich_lead", "score_leads"],
         "isAdvisory": false,
@@ -33,8 +33,8 @@
       "id": "A3-who-prospects",
       "bucket": "A",
       "input": "Who are our top prospects?",
-      "classifierHint": "factual",
       "must": {
+        "queryType": "factual",
         "toolsAllowed": ["list_crm_leads"],
         "toolsForbidden": ["scan_leads", "enrich_lead", "score_leads"],
         "isAdvisory": false,
@@ -46,8 +46,8 @@
       "id": "A4-user-count",
       "bucket": "A",
       "input": "How many users do we have?",
-      "classifierHint": "factual",
       "must": {
+        "queryType": "factual",
         "toolsAllowed": ["get_platform_stats", "list_users"],
         "toolsForbidden": ["enrich_lead", "score_leads", "delegate_to_outreach"],
         "isAdvisory": false,
@@ -59,8 +59,8 @@
       "id": "A5-campaigns-running",
       "bucket": "A",
       "input": "What campaigns are running right now?",
-      "classifierHint": "factual",
       "must": {
+        "queryType": "factual",
         "toolsAllowed": ["get_analytics", "generate_report", "get_system_state"],
         "toolsForbidden": ["delegate_to_marketing", "delegate_to_content", "create_campaign"],
         "isAdvisory": false,
@@ -72,8 +72,8 @@
       "id": "B1-recommend",
       "bucket": "B",
       "input": "What do you recommend for targeting real estate agents?",
-      "classifierHint": "advisory",
       "must": {
+        "queryType": "advisory",
         "toolsAllowed": [],
         "toolsForbidden": ["scan_leads", "enrich_lead", "delegate_to_content", "delegate_to_outreach"],
         "isAdvisory": true,
@@ -85,8 +85,8 @@
       "id": "B2-thinking-dentists",
       "bucket": "B",
       "input": "I'm thinking about going after dentists — thoughts?",
-      "classifierHint": "advisory",
       "must": {
+        "queryType": "advisory",
         "toolsAllowed": [],
         "toolsForbidden": ["scan_leads", "enrich_lead"],
         "isAdvisory": true,
@@ -99,8 +99,8 @@
       "bucket": "B",
       "note": "Prompt 5 of the QA pass. Vague aspiration — must never draft a plan.",
       "input": "Help me with marketing.",
-      "classifierHint": "advisory",
       "must": {
+        "queryType": "advisory",
         "toolsAllowed": [],
         "toolsForbidden": ["scan_leads", "delegate_to_content", "delegate_to_marketing", "create_campaign"],
         "isAdvisory": true,
@@ -112,8 +112,8 @@
       "id": "B4-context-share",
       "bucket": "B",
       "input": "Our target demographic is small business owners looking for AI employees",
-      "classifierHint": "advisory",
       "must": {
+        "queryType": "advisory",
         "toolsAllowed": [],
         "toolsForbidden": ["scan_leads", "delegate_to_outreach"],
         "isAdvisory": true,
@@ -125,8 +125,8 @@
       "id": "B5-should-focus",
       "bucket": "B",
       "input": "Should we focus on email or social this quarter?",
-      "classifierHint": "advisory",
       "must": {
+        "queryType": "advisory",
         "toolsAllowed": [],
         "toolsForbidden": ["delegate_to_outreach", "delegate_to_marketing"],
         "isAdvisory": true,
@@ -137,12 +137,12 @@
     {
       "id": "C1-blog-post",
       "bucket": "C",
-      "note": "Prompt 2 of the QA pass. Pure content, no research needed for product facts we already have.",
+      "note": "Prompt 2 of the QA pass.",
       "input": "Write me a blog post about AI in sales",
-      "classifierHint": "action",
       "must": {
+        "queryType": "action",
         "toolsRequired": ["delegate_to_content"],
-        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "toolsForbidden": ["enrich_lead", "score_leads", "save_blog_draft"],
         "isAdvisory": false
       }
     },
@@ -150,8 +150,8 @@
       "id": "C2-scan-leads-command",
       "bucket": "C",
       "input": "Scan for leads among accounting firms in Texas",
-      "classifierHint": "action",
       "must": {
+        "queryType": "action",
         "toolsRequired": ["scan_leads"],
         "toolsForbidden": ["delegate_to_content", "produce_video"],
         "isAdvisory": false,
@@ -161,12 +161,12 @@
     {
       "id": "C3-video-command",
       "bucket": "C",
-      "note": "Prompt 3 of the QA pass. Video route must go through produce_video.",
+      "note": "Prompt 3 of the QA pass.",
       "input": "Create a 60-second video explaining how SalesVelocity.ai helps small businesses automate their sales outreach",
-      "classifierHint": "action",
       "must": {
+        "queryType": "action",
         "toolsRequired": ["produce_video"],
-        "toolsForbidden": ["delegate_to_content", "delegate_to_builder", "scan_leads"],
+        "toolsForbidden": ["delegate_to_content", "delegate_to_builder", "scan_leads", "create_video"],
         "isAdvisory": false
       }
     },
@@ -174,8 +174,8 @@
       "id": "C4-named-url",
       "bucket": "C",
       "input": "Check out what gohighlevel.com is doing",
-      "classifierHint": "action",
       "must": {
+        "queryType": "action",
         "toolsRequired": ["scrape_website"],
         "toolsForbidden": ["enrich_lead", "score_leads"],
         "isAdvisory": false,
@@ -186,8 +186,8 @@
       "id": "C5-full-campaign",
       "bucket": "C",
       "input": "I need a full marketing campaign to get more customers this summer",
-      "classifierHint": "action",
       "must": {
+        "queryType": "action",
         "toolsRequired": ["delegate_to_content", "delegate_to_marketing", "scan_leads"],
         "isAdvisory": false,
         "isComplex": true,
@@ -198,8 +198,8 @@
       "id": "C6-go-ahead",
       "bucket": "C",
       "input": "Yes, go ahead and do that",
-      "classifierHint": "strategic",
       "must": {
+        "queryType": "strategic",
         "isAdvisory": false,
         "toolCountAtLeast": 1
       }
@@ -207,61 +207,49 @@
     {
       "id": "C7-multi-deliverable",
       "bucket": "C",
-      "note": "Prompt 4 of the QA pass. Blog AND social — must include both content and marketing tools.",
+      "note": "Prompt 4 of the QA pass.",
       "input": "Create a blog post AND 5 social media posts about the benefits of AI-powered lead scoring for B2B sales teams",
-      "classifierHint": "action",
       "must": {
+        "queryType": "action",
         "toolsRequired": ["delegate_to_content", "delegate_to_marketing"],
-        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "toolsForbidden": ["enrich_lead", "score_leads", "save_blog_draft"],
         "isAdvisory": false,
         "isComplex": true
       }
     },
     {
-      "id": "D1-no-hint-read",
-      "bucket": "A",
-      "note": "No classifier hint — expander must still categorize correctly. Apr 22 v2: must be list_crm_leads, never scan_leads.",
-      "input": "What leads do we have?",
-      "classifierHint": null,
-      "must": {
-        "toolsAllowed": ["list_crm_leads"],
-        "toolsForbidden": ["scan_leads", "enrich_lead", "score_leads"],
-        "isAdvisory": false,
-        "toolCount": 1
-      }
-    },
-    {
       "id": "C8-find-new-leads",
       "bucket": "C",
-      "note": "Verifies scan_leads still routes correctly for DISCOVERY commands (not the same as list_crm_leads for reads). User wants to FIND new prospects via Apollo.",
+      "note": "Discovery command (vs read of existing CRM).",
       "input": "Find me new leads in healthcare",
-      "classifierHint": "action",
       "must": {
+        "queryType": "action",
         "toolsRequired": ["scan_leads"],
         "toolsForbidden": ["list_crm_leads", "enrich_lead", "score_leads"],
         "isAdvisory": false
       }
     },
     {
-      "id": "D2-no-hint-advisory",
+      "id": "D2-ambiguous-help",
       "bucket": "B",
-      "input": "Thoughts on going after insurance brokers as a niche?",
-      "classifierHint": null,
+      "note": "Ambiguous request — must NOT draft a plan. A follow-up question is free; an unwanted campaign is not.",
+      "input": "Can you help me out?",
       "must": {
+        "queryType": "advisory",
         "toolsAllowed": [],
         "isAdvisory": true,
         "toolCount": 0
       }
     },
     {
-      "id": "D3-ambiguous-help",
-      "bucket": "B",
-      "note": "Ambiguous request — must NOT draft a plan. A follow-up question is free; an unwanted campaign is not.",
-      "input": "Can you help me out?",
-      "classifierHint": null,
+      "id": "E1-greeting-thanks",
+      "bucket": "C",
+      "note": "Trivial conversational input. Should be queryType=conversational with empty tools — no need to invoke any pipeline.",
+      "input": "Thanks!",
       "must": {
+        "queryType": "conversational",
         "toolsAllowed": [],
-        "isAdvisory": true,
+        "isAdvisory": false,
         "toolCount": 0
       }
     }
