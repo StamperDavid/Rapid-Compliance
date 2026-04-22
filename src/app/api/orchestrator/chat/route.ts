@@ -863,7 +863,14 @@ CRITICAL RULES:
         // specific tool name at the API layer is deterministic — the
         // operator ALWAYS sees a plan before work runs. If the request is
         // truly one step, Jasper produces a 1-step plan, still reviewable.
-        const planGateEngaged = iterationCount === 1 && !isNonActionQuery;
+        //
+        // Only 'action' and 'strategic' queries need a mission. Factual reads
+        // ("what leads do we have") should call their suggested read tools and
+        // answer in chat — forcing propose_mission_plan on them creates orphan
+        // PLAN_PENDING missions for simple questions (Apr 22 QA pass bug X).
+        const planGateEngaged = iterationCount === 1
+          && (queryClassification.queryType === 'action'
+            || queryClassification.queryType === 'strategic');
         const hasProposeMissionPlanAvailable = activeTools.some(
           (t) => t.function.name === 'propose_mission_plan',
         );
