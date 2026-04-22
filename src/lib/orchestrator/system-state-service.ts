@@ -77,6 +77,12 @@ const FACTUAL_PATTERNS = [
   /any (errors|issues|problems)/i,
   /provisioner/i,
   /architecture/i,
+  // "What leads/customers/... do we have" — possessive-read questions.
+  // Without this, the classifier falls through to advisory, then the Intent
+  // Expander promotes to action (because "leads" suggests tools), and Jasper
+  // runs scan_leads + enrich_lead + score_leads for what should be a read.
+  /what (?:[\w\s]+? )?do (?:we|i|you) have/i,
+  /who (?:are|is) (?:our|my|the) (?:lead|customer|client|prospect|user)s?/i,
 ];
 
 /**
@@ -162,6 +168,9 @@ export function classifyQuery(query: string): QueryClassification {
     }
     if (/configured|setup|connected/i.test(queryLower)) {
       suggestedTools.push('get_system_state');
+    }
+    if (/\b(lead|customer|client|prospect)s?\b/i.test(queryLower)) {
+      suggestedTools.push('scan_leads');
     }
 
     if (suggestedTools.length === 0) {

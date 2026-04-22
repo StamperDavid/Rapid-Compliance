@@ -742,6 +742,12 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       // jasper-tools.ts because Lead Research and Discovery Hub endpoints
       // use them, but Jasper's own allowlist excludes them.
       const COMMANDER_TOOL_NAMES = new Set([
+        // Plan-first gate: required in the allowlist so the architectural
+        // plan-gate (route.ts ~L860) can force this tool on iteration 1 of
+        // any action request. Without it, activeTools omits propose_mission_plan
+        // for complex requests and the gate silently falls back to 'required',
+        // which lets Jasper bypass plan approval entirely.
+        'propose_mission_plan',
         // Department delegation (managers handle specialist coordination)
         'delegate_to_intelligence',   // Research, competitor analysis, trends, scraping, tech scans
         'delegate_to_content',        // Blog, landing page copy, assets, video creation
