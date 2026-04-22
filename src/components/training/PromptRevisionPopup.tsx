@@ -33,7 +33,7 @@
  * Rewritten April 15, 2026 as part of the Mission Control rebuild (Phase M1).
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -42,6 +42,71 @@ import { Button } from '@/components/ui/button';
 // ============================================================================
 
 type RevisionChoice = 'keep' | 'agent' | 'user';
+
+interface DiffLine {
+  type: 'unchanged' | 'removed' | 'added';
+  text: string;
+}
+
+/**
+ * Line-level Longest Common Subsequence diff. Used to highlight removed
+ * (red) and added (green) lines in the before/after panels so the operator
+ * can see exactly what's changing without eyeballing two long blocks of text.
+ *
+ * Returns the diff in unified order: every line from `before` and `after`
+ * is present, tagged as 'unchanged' (in both) | 'removed' (only in before)
+ * | 'added' (only in after).
+ *
+ * O(m*n) time/space — fine for prompt sections that top out a few hundred
+ * lines. Not suitable for whole-document diffs without optimization.
+ */
+function lineDiff(before: string, after: string): DiffLine[] {
+  const beforeLines = before.split('\n');
+  const afterLines = after.split('\n');
+  const m = beforeLines.length;
+  const n = afterLines.length;
+
+  // Build LCS length table.
+  const dp: number[][] = Array.from({ length: m + 1 }, () =>
+    Array.from({ length: n + 1 }, () => 0),
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (beforeLines[i - 1] === afterLines[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  // Walk back to produce the line list.
+  const result: DiffLine[] = [];
+  let i = m;
+  let j = n;
+  while (i > 0 && j > 0) {
+    if (beforeLines[i - 1] === afterLines[j - 1]) {
+      result.unshift({ type: 'unchanged', text: beforeLines[i - 1] });
+      i--;
+      j--;
+    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+      result.unshift({ type: 'removed', text: beforeLines[i - 1] });
+      i--;
+    } else {
+      result.unshift({ type: 'added', text: afterLines[j - 1] });
+      j--;
+    }
+  }
+  while (i > 0) {
+    result.unshift({ type: 'removed', text: beforeLines[i - 1] });
+    i--;
+  }
+  while (j > 0) {
+    result.unshift({ type: 'added', text: afterLines[j - 1] });
+    j--;
+  }
+  return result;
+}
 
 export interface PromptRevisionPopupProps {
   isOpen: boolean;
@@ -113,13 +178,22 @@ export function PromptRevisionPopup({
   // clicking Submit. Operators who want "Keep current" or "My rewrite" change
   // the radio explicitly.
   const [selected, setSelected] = useState<RevisionChoice>('agent');
-  const [userRewrite, setUserRewrite] = useState('');
+  // Prefill the "My rewrite" textarea with the agent's suggestion so the
+  // operator can edit it (typical workflow) instead of starting from a blank
+  // page (which is what they almost never want).
+  const [userRewrite, setUserRewrite] = useState(afterSection);
 
   // Reset selection and user text whenever a new proposal arrives.
   useEffect(() => {
     setSelected('agent');
-    setUserRewrite('');
+    setUserRewrite(afterSection);
   }, [afterSection, beforeSection]);
+
+  // Compute the line-level diff once per proposal so we can render
+  // before-with-removals (Box 1) and after-with-additions (Box 2).
+  const diff = useMemo(() => lineDiff(beforeSection, afterSection), [beforeSection, afterSection]);
+  const removedCount = useMemo(() => diff.filter((d) => d.type === 'removed').length, [diff]);
+  const addedCount = useMemo(() => diff.filter((d) => d.type === 'added').length, [diff]);
 
   // Lock body scroll while open.
   useEffect(() => {
@@ -261,10 +335,27 @@ export function PromptRevisionPopup({
               </label>
               <p className="text-xs text-muted-foreground mb-2">
                 Nothing changes. {agentType}&apos;s Golden Master stays exactly as it is.
+                {removedCount > 0 && (
+                  <span className="text-destructive"> Lines highlighted red would be removed if you accept.</span>
+                )}
               </p>
-              <pre className="flex-1 font-mono text-xs whitespace-pre-wrap overflow-auto min-h-[200px] max-h-[45vh] p-3 rounded bg-surface-elevated border border-border text-foreground">
-                {beforeSection}
-              </pre>
+              <div className="flex-1 font-mono text-xs whitespace-pre-wrap overflow-auto min-h-[200px] max-h-[45vh] p-3 rounded bg-surface-elevated border border-border text-foreground">
+                {diff
+                  .filter((d) => d.type !== 'added')
+                  .map((d, idx) => (
+                    <div
+                      key={`before-${idx}`}
+                      className={
+                        d.type === 'removed'
+                          ? 'bg-destructive/15 text-destructive whitespace-pre-wrap'
+                          : 'whitespace-pre-wrap'
+                      }
+                    >
+                      {d.type === 'removed' ? `- ${d.text}` : `  ${d.text}`}
+                      {d.text === '' && ' '}
+                    </div>
+                  ))}
+              </div>
             </div>
 
             {/* Box 2 — Agent's suggestion */}
@@ -283,10 +374,27 @@ export function PromptRevisionPopup({
               </label>
               <p className="text-xs text-muted-foreground mb-2">
                 Replace the current section with what the Prompt Engineer proposed.
+                {addedCount > 0 && (
+                  <span className="text-success"> Lines highlighted green are new.</span>
+                )}
               </p>
-              <pre className="flex-1 font-mono text-xs whitespace-pre-wrap overflow-auto min-h-[200px] max-h-[45vh] p-3 rounded bg-surface-elevated border border-border text-foreground">
-                {afterSection}
-              </pre>
+              <div className="flex-1 font-mono text-xs whitespace-pre-wrap overflow-auto min-h-[200px] max-h-[45vh] p-3 rounded bg-surface-elevated border border-border text-foreground">
+                {diff
+                  .filter((d) => d.type !== 'removed')
+                  .map((d, idx) => (
+                    <div
+                      key={`after-${idx}`}
+                      className={
+                        d.type === 'added'
+                          ? 'bg-success/15 text-success whitespace-pre-wrap'
+                          : 'whitespace-pre-wrap'
+                      }
+                    >
+                      {d.type === 'added' ? `+ ${d.text}` : `  ${d.text}`}
+                      {d.text === '' && ' '}
+                    </div>
+                  ))}
+              </div>
             </div>
 
             {/* Box 3 — My rewrite */}
@@ -304,7 +412,7 @@ export function PromptRevisionPopup({
                 <span className="text-sm font-semibold text-foreground">My rewrite</span>
               </label>
               <p className="text-xs text-muted-foreground mb-2">
-                Write your own replacement for the current section. Minimum 10 characters.
+                Edit the agent&apos;s suggestion (prefilled below) or rewrite from scratch. Minimum 10 characters.
               </p>
               <textarea
                 value={userRewrite}
