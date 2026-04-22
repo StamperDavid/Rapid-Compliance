@@ -581,8 +581,10 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
     // ═══════════════════════════════════════════════════════════════════════
 
     // ── Layer 1: LLM Intent Expander (runs for non-conversational queries) ──
+    // Pass the classifier verdict as a hint so the expander respects it —
+    // e.g., factual hint means read-only, never widen to writes (Apr 22 bug Y).
     const expandedIntent = queryClassification.queryType !== 'conversational'
-      ? await expandIntent(message)
+      ? await expandIntent(message, queryClassification.queryType)
       : null;
 
     // ── LLM intent override: the expander understands intent regardless of

@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "description": "Golden fixtures for the Intent Expander. Each case documents the bucket, input, classifier hint (optional), and the properties that MUST hold for a passing run. A model/prompt change that breaks any 'must' assertion is a regression.",
+  "fixtures": [
+    {
+      "id": "A1-read-leads",
+      "bucket": "A",
+      "note": "The exact failure mode that triggered the Apr 22 rebuild. Haiku 3 returned scan_leads + enrich_lead + score_leads. Must be scan_leads only.",
+      "input": "What leads do we have in the system?",
+      "classifierHint": "factual",
+      "must": {
+        "toolsAllowed": ["scan_leads"],
+        "toolsForbidden": ["enrich_lead", "score_leads", "delegate_to_outreach", "delegate_to_content", "delegate_to_marketing"],
+        "isAdvisory": false,
+        "isComplex": false,
+        "toolCount": 1
+      }
+    },
+    {
+      "id": "A2-show-customers",
+      "bucket": "A",
+      "input": "Show me our customers",
+      "classifierHint": "factual",
+      "must": {
+        "toolsAllowed": ["scan_leads"],
+        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "isAdvisory": false,
+        "isComplex": false,
+        "toolCount": 1
+      }
+    },
+    {
+      "id": "A3-who-prospects",
+      "bucket": "A",
+      "input": "Who are our top prospects?",
+      "classifierHint": "factual",
+      "must": {
+        "toolsAllowed": ["scan_leads"],
+        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "isAdvisory": false,
+        "isComplex": false,
+        "toolCount": 1
+      }
+    },
+    {
+      "id": "A4-user-count",
+      "bucket": "A",
+      "input": "How many users do we have?",
+      "classifierHint": "factual",
+      "must": {
+        "toolsAllowed": ["get_platform_stats", "list_users"],
+        "toolsForbidden": ["enrich_lead", "score_leads", "delegate_to_outreach"],
+        "isAdvisory": false,
+        "isComplex": false,
+        "toolCount": 1
+      }
+    },
+    {
+      "id": "A5-campaigns-running",
+      "bucket": "A",
+      "input": "What campaigns are running right now?",
+      "classifierHint": "factual",
+      "must": {
+        "toolsAllowed": ["get_analytics", "generate_report", "get_system_state"],
+        "toolsForbidden": ["delegate_to_marketing", "delegate_to_content", "create_campaign"],
+        "isAdvisory": false,
+        "isComplex": false,
+        "toolCount": 1
+      }
+    },
+    {
+      "id": "B1-recommend",
+      "bucket": "B",
+      "input": "What do you recommend for targeting real estate agents?",
+      "classifierHint": "advisory",
+      "must": {
+        "toolsAllowed": [],
+        "toolsForbidden": ["scan_leads", "enrich_lead", "delegate_to_content", "delegate_to_outreach"],
+        "isAdvisory": true,
+        "isComplex": false,
+        "toolCount": 0
+      }
+    },
+    {
+      "id": "B2-thinking-dentists",
+      "bucket": "B",
+      "input": "I'm thinking about going after dentists — thoughts?",
+      "classifierHint": "advisory",
+      "must": {
+        "toolsAllowed": [],
+        "toolsForbidden": ["scan_leads", "enrich_lead"],
+        "isAdvisory": true,
+        "isComplex": false,
+        "toolCount": 0
+      }
+    },
+    {
+      "id": "B3-help-marketing",
+      "bucket": "B",
+      "note": "Prompt 5 of the QA pass. Vague aspiration — must never draft a plan.",
+      "input": "Help me with marketing.",
+      "classifierHint": "advisory",
+      "must": {
+        "toolsAllowed": [],
+        "toolsForbidden": ["scan_leads", "delegate_to_content", "delegate_to_marketing", "create_campaign"],
+        "isAdvisory": true,
+        "isComplex": false,
+        "toolCount": 0
+      }
+    },
+    {
+      "id": "B4-context-share",
+      "bucket": "B",
+      "input": "Our target demographic is small business owners looking for AI employees",
+      "classifierHint": "advisory",
+      "must": {
+        "toolsAllowed": [],
+        "toolsForbidden": ["scan_leads", "delegate_to_outreach"],
+        "isAdvisory": true,
+        "isComplex": false,
+        "toolCount": 0
+      }
+    },
+    {
+      "id": "B5-should-focus",
+      "bucket": "B",
+      "input": "Should we focus on email or social this quarter?",
+      "classifierHint": "advisory",
+      "must": {
+        "toolsAllowed": [],
+        "toolsForbidden": ["delegate_to_outreach", "delegate_to_marketing"],
+        "isAdvisory": true,
+        "isComplex": false,
+        "toolCount": 0
+      }
+    },
+    {
+      "id": "C1-blog-post",
+      "bucket": "C",
+      "note": "Prompt 2 of the QA pass. Pure content, no research needed for product facts we already have.",
+      "input": "Write me a blog post about AI in sales",
+      "classifierHint": "action",
+      "must": {
+        "toolsRequired": ["delegate_to_content"],
+        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "isAdvisory": false
+      }
+    },
+    {
+      "id": "C2-scan-leads-command",
+      "bucket": "C",
+      "input": "Scan for leads among accounting firms in Texas",
+      "classifierHint": "action",
+      "must": {
+        "toolsRequired": ["scan_leads"],
+        "toolsForbidden": ["delegate_to_content", "produce_video"],
+        "isAdvisory": false,
+        "isComplex": false
+      }
+    },
+    {
+      "id": "C3-video-command",
+      "bucket": "C",
+      "note": "Prompt 3 of the QA pass. Video route must go through produce_video.",
+      "input": "Create a 60-second video explaining how SalesVelocity.ai helps small businesses automate their sales outreach",
+      "classifierHint": "action",
+      "must": {
+        "toolsRequired": ["produce_video"],
+        "toolsForbidden": ["delegate_to_content", "delegate_to_builder", "scan_leads"],
+        "isAdvisory": false
+      }
+    },
+    {
+      "id": "C4-named-url",
+      "bucket": "C",
+      "input": "Check out what gohighlevel.com is doing",
+      "classifierHint": "action",
+      "must": {
+        "toolsRequired": ["scrape_website"],
+        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "isAdvisory": false,
+        "scrapeUrlContains": "gohighlevel"
+      }
+    },
+    {
+      "id": "C5-full-campaign",
+      "bucket": "C",
+      "input": "I need a full marketing campaign to get more customers this summer",
+      "classifierHint": "action",
+      "must": {
+        "toolsRequired": ["delegate_to_content", "delegate_to_marketing", "scan_leads"],
+        "isAdvisory": false,
+        "isComplex": true,
+        "toolCountAtLeast": 6
+      }
+    },
+    {
+      "id": "C6-go-ahead",
+      "bucket": "C",
+      "input": "Yes, go ahead and do that",
+      "classifierHint": "strategic",
+      "must": {
+        "isAdvisory": false,
+        "toolCountAtLeast": 1
+      }
+    },
+    {
+      "id": "C7-multi-deliverable",
+      "bucket": "C",
+      "note": "Prompt 4 of the QA pass. Blog AND social — must include both content and marketing tools.",
+      "input": "Create a blog post AND 5 social media posts about the benefits of AI-powered lead scoring for B2B sales teams",
+      "classifierHint": "action",
+      "must": {
+        "toolsRequired": ["delegate_to_content", "delegate_to_marketing"],
+        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "isAdvisory": false,
+        "isComplex": true
+      }
+    },
+    {
+      "id": "D1-no-hint-read",
+      "bucket": "A",
+      "note": "No classifier hint — expander must still categorize correctly from the user message alone.",
+      "input": "What leads do we have?",
+      "classifierHint": null,
+      "must": {
+        "toolsAllowed": ["scan_leads"],
+        "toolsForbidden": ["enrich_lead", "score_leads"],
+        "isAdvisory": false,
+        "toolCount": 1
+      }
+    },
+    {
+      "id": "D2-no-hint-advisory",
+      "bucket": "B",
+      "input": "Thoughts on going after insurance brokers as a niche?",
+      "classifierHint": null,
+      "must": {
+        "toolsAllowed": [],
+        "isAdvisory": true,
+        "toolCount": 0
+      }
+    },
+    {
+      "id": "D3-ambiguous-help",
+      "bucket": "B",
+      "note": "Ambiguous request — must NOT draft a plan. A follow-up question is free; an unwanted campaign is not.",
+      "input": "Can you help me out?",
+      "classifierHint": null,
+      "must": {
+        "toolsAllowed": [],
+        "isAdvisory": true,
+        "toolCount": 0
+      }
+    }
+  ]
+}
