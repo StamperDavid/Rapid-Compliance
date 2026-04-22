@@ -44,6 +44,7 @@ const SCRIPTS = [
   'seed-ux-ui-strategist-gm.js',
   'seed-funnel-strategist-gm.js',
   'seed-growth-strategist-gm.js',
+  'seed-intent-expander-gm.js',
 ];
 
 const SCRIPTS_DIR = path.resolve(__dirname);
