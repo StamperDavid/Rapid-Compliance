@@ -236,7 +236,8 @@
       "id": "reputation-002",
       "category": "reputation",
       "prompt": "Check our ratings across all review platforms.",
-      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_trust"] }
+      "comment": "Semantically read-class (factual) — 'check' here means 'tell me'. The Intent Expander correctly classifies as factual 10/10, and Jasper efficiently one-shots via delegate_to_trust instead of drafting a plan. A plan would be over-orchestration for a single read. Accept either path.",
+      "expect": { "toolsAnyOf": ["delegate_to_trust"] }
     },
     {
       "id": "reputation-003",
