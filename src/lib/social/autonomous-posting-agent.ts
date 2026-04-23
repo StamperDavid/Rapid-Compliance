@@ -1413,51 +1413,67 @@ export class AutonomousPostingAgent {
   }
 
   /**
-   * Process scheduled posts that are due
+   * Process scheduled posts that are due.
+   *
+   * Uses the Admin SDK (adminDb) because this runs server-side from a cron
+   * endpoint where the client SDK has no auth context and silently returns [].
    */
   async processScheduledPosts(): Promise<BatchPostingResult> {
     const now = new Date();
     const results: PostingResult[] = [];
 
     try {
-      // Get all scheduled posts that are due
-      const { where } = await import('firebase/firestore');
-      const scheduledPosts = await FirestoreService.getAll<SocialMediaPost>(
-        getSubCollection(SOCIAL_POSTS_COLLECTION),
-        [
-          where('status', '==', 'scheduled'),
-          where('scheduledAt', '<=', now),
-        ]
-      );
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (!adminDb) {
+        logger.error('AutonomousPostingAgent: adminDb unavailable — cannot process scheduled posts',
+          new Error('adminDb null'));
+        return { results, successCount: 0, failureCount: 0, timestamp: now };
+      }
+
+      const collectionPath = getSubCollection(SOCIAL_POSTS_COLLECTION);
+      const snapshot = await adminDb.collection(collectionPath)
+        .where('status', '==', 'scheduled')
+        .get();
+
+      const scheduledPosts: SocialMediaPost[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data() as SocialMediaPost;
+        // scheduledAt may be a Firestore Timestamp, Date, or ISO string — normalize.
+        const scheduledAtRaw: unknown = (data as unknown as { scheduledAt?: unknown }).scheduledAt;
+        let scheduledAtMs = 0;
+        if (scheduledAtRaw instanceof Date) {
+          scheduledAtMs = scheduledAtRaw.getTime();
+        } else if (typeof scheduledAtRaw === 'string') {
+          scheduledAtMs = new Date(scheduledAtRaw).getTime();
+        } else if (scheduledAtRaw && typeof scheduledAtRaw === 'object' && 'toDate' in scheduledAtRaw) {
+          const toDate = (scheduledAtRaw as { toDate: () => Date }).toDate;
+          if (typeof toDate === 'function') { scheduledAtMs = toDate.call(scheduledAtRaw).getTime(); }
+        }
+        if (scheduledAtMs > 0 && scheduledAtMs <= now.getTime()) {
+          scheduledPosts.push({ ...data, id: doc.id });
+        }
+      });
 
       logger.info('AutonomousPostingAgent: Processing scheduled posts', {
         count: scheduledPosts.length,
       });
 
       for (const post of scheduledPosts) {
-        // Update status to publishing
-        await FirestoreService.update(
-          getSubCollection(SOCIAL_POSTS_COLLECTION),
-          post.id,
-          { status: 'publishing', updatedAt: new Date() }
-        );
+        const postRef = adminDb.collection(collectionPath).doc(post.id);
+
+        await postRef.update({ status: 'publishing', updatedAt: new Date() });
 
         // Post to platform
         const result = await this.postToPlatform(post.platform, post.content, post.mediaUrls);
         results.push(result);
 
-        // Update post record
-        await FirestoreService.update(
-          getSubCollection(SOCIAL_POSTS_COLLECTION),
-          post.id,
-          {
-            status: result.success ? 'published' : 'failed',
-            platformPostId: result.platformPostId,
-            publishedAt: result.publishedAt,
-            error: result.error,
-            updatedAt: new Date(),
-          }
-        );
+        await postRef.update({
+          status: result.success ? 'published' : 'failed',
+          platformPostId: result.platformPostId ?? null,
+          publishedAt: result.publishedAt ?? null,
+          error: result.error ?? null,
+          updatedAt: new Date(),
+        });
       }
 
       const successCount = results.filter((r) => r.success).length;

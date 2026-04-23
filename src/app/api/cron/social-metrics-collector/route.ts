@@ -1,8 +1,11 @@
 /**
  * Social Metrics Collector Cron Endpoint
  *
- * Fetches engagement metrics for published social media posts and
- * triggers processing of scheduled posts.
+ * Fetches engagement metrics for published social media posts.
+ *
+ * Scheduled-post processing was moved to its own dedicated cron
+ * (/api/cron/scheduled-social-publisher, every 5 min) — this endpoint
+ * is now metrics-only.
  *
  * Recommended schedule: every 2-4 hours
  * Authentication: Bearer token via CRON_SECRET
@@ -65,43 +68,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. Process scheduled posts that are due
-    let scheduledResult: { processed: number; errors: string[] } = {
-      processed: 0,
-      errors: [],
-    };
-
-    try {
-      const { createPostingAgent } = await import('@/lib/social/autonomous-posting-agent');
-      const agent = await createPostingAgent();
-      const batchResult = await agent.processScheduledPosts();
-
-      scheduledResult = {
-        processed: batchResult.successCount + batchResult.failureCount,
-        errors: batchResult.results
-          .filter(r => !r.success && r.error)
-          .map(r => r.error as string),
-      };
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      scheduledResult.errors.push(`Scheduled post processing error: ${errorMsg}`);
-      logger.error('Failed to process scheduled posts',
-        error instanceof Error ? error : new Error(errorMsg), {
-          route: '/api/cron/social-metrics-collector',
-        });
-    }
-
     return NextResponse.json({
-      success: metricsResult.success && scheduledResult.errors.length === 0,
+      success: metricsResult.success,
       metrics: {
         postsScanned: metricsResult.postsScanned,
         postsUpdated: metricsResult.postsUpdated,
         errors: metricsResult.errors,
         durationMs: metricsResult.durationMs,
-      },
-      scheduledPosts: {
-        processed: scheduledResult.processed,
-        errors: scheduledResult.errors,
       },
       timestamp: new Date().toISOString(),
     });
