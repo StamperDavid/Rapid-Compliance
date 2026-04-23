@@ -228,6 +228,18 @@ export default function TwitterIntegration({
         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem', textAlign: 'center' }}>
           OAuth connects securely via X. Manual setup requires API keys from the X Developer Portal.
         </p>
+
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem', textAlign: 'center' }}>
+          Don&apos;t have an account?{' '}
+          <a
+            href="https://twitter.com/i/flow/signup"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: primaryColor, textDecoration: 'underline' }}
+          >
+            Sign up on X →
+          </a>
+        </p>
       </div>
     );
   }

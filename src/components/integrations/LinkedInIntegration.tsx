@@ -224,6 +224,18 @@ export default function LinkedInIntegration({
         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem', textAlign: 'center' }}>
           OAuth connects via LinkedIn. Manual setup requires API credentials from the LinkedIn Developer Portal.
         </p>
+
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem', textAlign: 'center' }}>
+          Don&apos;t have an account?{' '}
+          <a
+            href="https://www.linkedin.com/signup"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: primaryColor, textDecoration: 'underline' }}
+          >
+            Sign up on LinkedIn →
+          </a>
+        </p>
       </div>
     );
   }

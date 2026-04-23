@@ -21,21 +21,24 @@ interface SocialPlatformConfig {
   connectMethod: ConnectMethod;
   credentialFields?: CredentialField[];
   connectEndpoint?: string;
+  /** Where to send the user if they don't have an account yet. */
+  signupUrl?: string;
 }
 
 export const SOCIAL_PLATFORM_CONFIGS: SocialPlatformConfig[] = [
-  { id: 'facebook', name: 'Facebook', color: '#1877F2', connectMethod: 'oauth' },
-  { id: 'instagram', name: 'Instagram', color: '#E4405F', connectMethod: 'oauth' },
-  { id: 'threads', name: 'Threads', color: '#000000', connectMethod: 'oauth' },
-  { id: 'whatsapp_business', name: 'WhatsApp Business', color: '#25D366', connectMethod: 'oauth' },
-  { id: 'youtube', name: 'YouTube', color: '#FF0000', connectMethod: 'oauth' },
-  { id: 'google_business', name: 'Google Business', color: '#4285F4', connectMethod: 'oauth' },
-  { id: 'tiktok', name: 'TikTok', color: '#000000', connectMethod: 'oauth' },
-  { id: 'reddit', name: 'Reddit', color: '#FF4500', connectMethod: 'oauth' },
-  { id: 'pinterest', name: 'Pinterest', color: '#E60023', connectMethod: 'oauth' },
+  { id: 'facebook', name: 'Facebook', color: '#1877F2', connectMethod: 'oauth', signupUrl: 'https://www.facebook.com/r.php' },
+  { id: 'instagram', name: 'Instagram', color: '#E4405F', connectMethod: 'oauth', signupUrl: 'https://www.instagram.com/accounts/emailsignup/' },
+  { id: 'threads', name: 'Threads', color: '#000000', connectMethod: 'oauth', signupUrl: 'https://www.threads.net/' },
+  { id: 'whatsapp_business', name: 'WhatsApp Business', color: '#25D366', connectMethod: 'oauth', signupUrl: 'https://business.whatsapp.com/' },
+  { id: 'youtube', name: 'YouTube', color: '#FF0000', connectMethod: 'oauth', signupUrl: 'https://accounts.google.com/signup' },
+  { id: 'google_business', name: 'Google Business', color: '#4285F4', connectMethod: 'oauth', signupUrl: 'https://business.google.com/create' },
+  { id: 'tiktok', name: 'TikTok', color: '#000000', connectMethod: 'oauth', signupUrl: 'https://www.tiktok.com/signup' },
+  { id: 'reddit', name: 'Reddit', color: '#FF4500', connectMethod: 'oauth', signupUrl: 'https://www.reddit.com/register' },
+  { id: 'pinterest', name: 'Pinterest', color: '#E60023', connectMethod: 'oauth', signupUrl: 'https://www.pinterest.com/business/create/' },
   {
     id: 'bluesky', name: 'Bluesky', color: '#0085FF', connectMethod: 'credentials',
     connectEndpoint: '/api/social/connect/bluesky',
+    signupUrl: 'https://bsky.app/',
     credentialFields: [
       { key: 'identifier', label: 'Handle', placeholder: 'yourname.bsky.social', type: 'text' },
       { key: 'password', label: 'App Password', placeholder: 'From Bluesky Settings > App Passwords', type: 'password' },
@@ -44,6 +47,7 @@ export const SOCIAL_PLATFORM_CONFIGS: SocialPlatformConfig[] = [
   {
     id: 'telegram', name: 'Telegram', color: '#26A5E4', connectMethod: 'credentials',
     connectEndpoint: '/api/social/connect/telegram',
+    signupUrl: 'https://telegram.org/',
     credentialFields: [
       { key: 'botToken', label: 'Bot Token', placeholder: 'From @BotFather', type: 'password' },
       { key: 'chatId', label: 'Chat ID', placeholder: 'Channel or group chat ID', type: 'text' },
@@ -52,6 +56,7 @@ export const SOCIAL_PLATFORM_CONFIGS: SocialPlatformConfig[] = [
   {
     id: 'truth_social', name: 'Truth Social', color: '#4C75A3', connectMethod: 'credentials',
     connectEndpoint: '/api/social/connect/truth_social',
+    signupUrl: 'https://truthsocial.com/',
     credentialFields: [
       { key: 'accessToken', label: 'Access Token', placeholder: 'From account settings', type: 'password' },
       { key: 'instanceUrl', label: 'Instance URL', placeholder: 'https://truthsocial.com', type: 'text' },
@@ -169,6 +174,20 @@ export default function SocialPlatformIntegration({
           >
             {connecting ? 'Connecting...' : `Connect ${config.name}`}
           </Button>
+        </div>
+      )}
+
+      {!isConnected && config.signupUrl && (
+        <div className="text-xs text-muted-foreground">
+          Don&apos;t have an account?{' '}
+          <a
+            href={config.signupUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Sign up on {config.name} →
+          </a>
         </div>
       )}
 
