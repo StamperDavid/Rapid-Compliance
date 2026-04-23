@@ -26,15 +26,30 @@ import { logger } from '@/lib/logger/logger';
 import toast from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
+
+interface SocialAccountSummary {
+  id: string;
+  platform: SocialPlatform;
+  accountName: string;
+  handle: string;
+  profileImageUrl?: string;
+  status: 'active' | 'disconnected' | 'expired';
+}
+
+const SOCIAL_PLATFORM_IDS = new Set<string>(SOCIAL_PLATFORMS);
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
   const { theme } = useOrgTheme();
+  const authFetch = useAuthFetch();
   const searchParams = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<string | null>(
     searchParams.get('category') ?? null
   );
   const [integrations, setIntegrations] = useState<Record<string, ConnectedIntegration | null>>({});
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccountSummary[]>([]);
 
   // Handle success/error URL params from OAuth callbacks
   React.useEffect(() => {
@@ -56,19 +71,33 @@ export default function IntegrationsPage() {
     }
   }, [searchParams]);
 
+  const loadSocialAccounts = React.useCallback(async () => {
+    if (!user) { return; }
+    try {
+      const res = await authFetch('/api/social/accounts');
+      if (!res.ok) { return; }
+      const body = (await res.json()) as { success: boolean; accounts?: SocialAccountSummary[] };
+      if (body.success && Array.isArray(body.accounts)) {
+        setSocialAccounts(body.accounts);
+      }
+    } catch (error) {
+      logger.error('Failed to load social accounts:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+    }
+  }, [user, authFetch]);
+
   React.useEffect(() => {
 
     // Load saved integrations from Firestore
     const loadIntegrations = async () => {
       if (!user) {return;}
-      
+
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         const integrationsData = await FirestoreService.get(
           `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.INTEGRATIONS}`,
           'all'
         );
-        
+
         if (integrationsData) {
           setIntegrations(integrationsData as Record<string, ConnectedIntegration | null>);
         }
@@ -76,9 +105,14 @@ export default function IntegrationsPage() {
         logger.error('Failed to load integrations:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       }
     };
-    
+
     void loadIntegrations();
-  }, [user]);
+    // Also load social accounts — social OAuth callbacks write to the
+    // social_accounts collection, not the integrations/all map doc, so the
+    // integrations map alone doesn't reflect real connection state for the
+    // 14 social platforms.
+    void loadSocialAccounts();
+  }, [user, searchParams, loadSocialAccounts]);
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
   const textColor = theme?.colors?.text?.primary || 'var(--color-text-primary)';
@@ -109,13 +143,28 @@ export default function IntegrationsPage() {
 
   const handleDisconnect = async (integrationId: string) => {
     if (!user) {return;}
-    
+
+    // Social platforms: delete the matching social_accounts records so the
+    // real connection state flips. The integrations/all map is cleared too
+    // in case any legacy write left a stale entry.
+    if (SOCIAL_PLATFORM_IDS.has(integrationId)) {
+      const matching = socialAccounts.filter((a) => a.platform === integrationId);
+      try {
+        await Promise.all(matching.map((acct) =>
+          authFetch(`/api/social/accounts?id=${encodeURIComponent(acct.id)}`, { method: 'DELETE' })
+        ));
+        setSocialAccounts((prev) => prev.filter((a) => a.platform !== integrationId));
+      } catch (error) {
+        logger.error('Failed to remove social accounts:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+      }
+    }
+
     const updated = {
       ...integrations,
       [integrationId]: null,
     };
     setIntegrations(updated);
-    
+
     // Save to Firestore
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -248,7 +297,45 @@ export default function IntegrationsPage() {
     },
   ];
 
-  const connectedCount = Object.values(integrations).filter(i => i?.status === 'active').length;
+  // Synthesize a ConnectedIntegration-shape view for social platforms that
+  // have at least one active account in social_accounts. This is what the
+  // integration cards need in order to render as "Connected".
+  const socialAccountsByPlatform = React.useMemo(() => {
+    const map = new Map<string, SocialAccountSummary[]>();
+    for (const acct of socialAccounts) {
+      if (acct.status !== 'active') { continue; }
+      const list = map.get(acct.platform) ?? [];
+      list.push(acct);
+      map.set(acct.platform, list);
+    }
+    return map;
+  }, [socialAccounts]);
+
+  const resolveIntegrationForCard = (integrationId: string): ConnectedIntegration | null => {
+    if (SOCIAL_PLATFORM_IDS.has(integrationId)) {
+      const accounts = socialAccountsByPlatform.get(integrationId);
+      if (accounts && accounts.length > 0) {
+        const primary = accounts[0];
+        return {
+          status: 'active',
+          platform: integrationId,
+          handle: primary.handle,
+          accountName: primary.accountName,
+          profileImageUrl: primary.profileImageUrl,
+          accountCount: accounts.length,
+        } as unknown as ConnectedIntegration;
+      }
+      // No active social account → card stays "Connect"
+      return null;
+    }
+    return integrations[integrationId] ?? null;
+  };
+
+  const connectedSocialPlatformCount = socialAccountsByPlatform.size;
+  const connectedOtherCount = Object.entries(integrations).filter(
+    ([id, i]) => !SOCIAL_PLATFORM_IDS.has(id) && i?.status === 'active'
+  ).length;
+  const connectedCount = connectedSocialPlatformCount + connectedOtherCount;
 
   return (
     <div className="p-8 space-y-6">
@@ -331,7 +418,7 @@ export default function IntegrationsPage() {
                 return (
                   <IntegrationComponent
                     key={id}
-                    integration={integrations[id] ?? null}
+                    integration={resolveIntegrationForCard(id)}
                     onConnect={(integration) => { void handleConnect(id, integration); }}
                     onDisconnect={() => { void handleDisconnect(id); }}
                     onUpdate={(updates) => {
