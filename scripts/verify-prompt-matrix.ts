@@ -169,12 +169,23 @@ async function runOne(fixture: PromptFixture, iteration: number, gmPrompt: strin
       if (tc.function.name === 'propose_mission_plan') {
         planCalled = true;
         try {
-          const parsed = JSON.parse(tc.function.arguments) as { steps?: Array<{ toolName?: string }> };
-          for (const step of parsed.steps ?? []) {
-            if (typeof step.toolName === 'string') { toolsCalled.push(step.toolName); }
+          const parsed = JSON.parse(tc.function.arguments) as { steps?: unknown };
+          // Production code at jasper-tools.ts:3487-3496 handles the case where the
+          // LLM double-serializes `steps` as a JSON string instead of emitting a
+          // native array (happens ~20% of the time on prompts with nested JSON in
+          // toolArgs). Mirror that tolerance here so the matrix matches production
+          // behavior instead of flagging well-formed plans as empty.
+          let stepsValue: unknown = parsed.steps;
+          if (typeof stepsValue === 'string') {
+            try { stepsValue = JSON.parse(stepsValue); } catch { /* leave as-is; checked below */ }
+          }
+          if (Array.isArray(stepsValue)) {
+            for (const step of stepsValue as Array<{ toolName?: unknown }>) {
+              if (typeof step.toolName === 'string') { toolsCalled.push(step.toolName); }
+            }
           }
         } catch {
-          // If the plan args won't parse, leave steps empty and the expectation check will flag it.
+          // If the top-level args won't parse, leave steps empty and the expectation check will flag it.
         }
       } else {
         toolsCalled.push(tc.function.name);
