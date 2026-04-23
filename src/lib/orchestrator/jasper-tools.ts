@@ -572,6 +572,8 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   social_post: '/social',
   migrate_website: '/website',
   voice_agent: '/voice',
+  place_call: '/voice',
+  send_sms: '/sms-messages',
   create_campaign: '/mission-control',
 };
 
@@ -2358,6 +2360,62 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
         },
         required: ['action'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DIRECT SMS SEND (Twilio/Vonage — compliance-gated)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'send_sms',
+      description:
+        'Send a direct SMS to a phone number via the configured provider (Twilio primary, Vonage fallback). Use this when the user asks to text someone, send an SMS, or message a lead via phone. TCPA compliance is enforced: the recipient must have opted in or the send will be rejected. Always confirm the user intends an outbound text before calling this — it costs money per send. Returns the provider message id on success. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          to: {
+            type: 'string',
+            description: 'Recipient phone number in E.164 format (e.g. +15551234567)',
+          },
+          message: {
+            type: 'string',
+            description: 'Message body (plain text, 160 chars per segment on GSM; longer messages are auto-segmented)',
+          },
+          from: {
+            type: 'string',
+            description: 'Optional sender phone number or alpha sender id — defaults to the configured Twilio number',
+          },
+        },
+        required: ['to', 'message'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PLACE OUTBOUND VOICE CALL (Twilio — compliance-gated)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'place_call',
+      description:
+        'Initiate an outbound voice call via Twilio. Use this when the user asks Jasper to call a lead, dial a number, or place a phone call. TCPA consent AND call-time restrictions are enforced — calls outside the recipient local 8am–9pm window are blocked. The call connects to the AI Voice Agent webhook (/api/voice/twiml). Always call voice_agent with action=configure FIRST to set the mode (prospector/closer) and conversation context, otherwise the AI will fall back to generic behavior. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          to: {
+            type: 'string',
+            description: 'Recipient phone number in E.164 format (e.g. +15551234567)',
+          },
+          contactId: {
+            type: 'string',
+            description: 'Optional CRM contact/lead id to link the call record to',
+          },
+        },
+        required: ['to'],
       },
     },
   },
@@ -5996,6 +6054,176 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             durationMs: Date.now() - voiceStart,
           });
           content = JSON.stringify({ error: voiceErrorMsg });
+        }
+        break;
+      }
+
+      case 'send_sms': {
+        const smsStart = Date.now();
+        trackMissionStep(context, 'send_sms', 'RUNNING', { toolArgs: args });
+
+        const to = typeof args.to === 'string' ? args.to : '';
+        const message = typeof args.message === 'string' ? args.message : '';
+        const from = typeof args.from === 'string' ? args.from : undefined;
+
+        if (!to || !message) {
+          trackMissionStep(context, 'send_sms', 'FAILED', { error: 'Missing to or message' });
+          content = JSON.stringify({ success: false, error: 'to and message are required' });
+          break;
+        }
+
+        try {
+          const { checkTCPAConsent } = await import('@/lib/compliance/tcpa-service');
+          const tcpa = await checkTCPAConsent(to, 'sms');
+          if (!tcpa.allowed) {
+            trackMissionStep(context, 'send_sms', 'FAILED', {
+              error: `TCPA: ${tcpa.reason}`,
+              durationMs: Date.now() - smsStart,
+            });
+            content = JSON.stringify({ success: false, error: `Blocked by TCPA compliance: ${tcpa.reason}` });
+            break;
+          }
+
+          const { sendSMS } = await import('@/lib/sms/sms-service');
+          const userId = context?.userId;
+          const result = await sendSMS({
+            to,
+            message,
+            from,
+            metadata: userId ? { userId } : undefined,
+          });
+
+          if (result.success) {
+            trackMissionStep(context, 'send_sms', 'COMPLETED', {
+              summary: `SMS sent to ${to}`,
+              durationMs: Date.now() - smsStart,
+              toolResult: JSON.stringify(result),
+            });
+            content = JSON.stringify({
+              success: true,
+              messageId: result.messageId,
+              provider: result.provider,
+              to,
+            });
+          } else {
+            trackMissionStep(context, 'send_sms', 'FAILED', {
+              error: result.error ?? 'SMS send failed',
+              durationMs: Date.now() - smsStart,
+            });
+            content = JSON.stringify({ success: false, error: result.error ?? 'SMS send failed' });
+          }
+        } catch (smsError) {
+          const smsErrorMsg = smsError instanceof Error ? smsError.message : String(smsError);
+          trackMissionStep(context, 'send_sms', 'FAILED', {
+            error: smsErrorMsg,
+            durationMs: Date.now() - smsStart,
+          });
+          content = JSON.stringify({ success: false, error: smsErrorMsg });
+        }
+        break;
+      }
+
+      case 'place_call': {
+        const callStart = Date.now();
+        trackMissionStep(context, 'place_call', 'RUNNING', { toolArgs: args });
+
+        const to = typeof args.to === 'string' ? args.to : '';
+        const contactId = typeof args.contactId === 'string' ? args.contactId : undefined;
+
+        if (!to) {
+          trackMissionStep(context, 'place_call', 'FAILED', { error: 'Missing to' });
+          content = JSON.stringify({ success: false, error: 'to (phone number) is required' });
+          break;
+        }
+
+        try {
+          const { checkTCPAConsent, checkCallTimeRestrictions } = await import('@/lib/compliance/tcpa-service');
+          const tcpa = await checkTCPAConsent(to, 'call');
+          if (!tcpa.allowed) {
+            trackMissionStep(context, 'place_call', 'FAILED', {
+              error: `TCPA: ${tcpa.reason}`,
+              durationMs: Date.now() - callStart,
+            });
+            content = JSON.stringify({ success: false, error: `Blocked by TCPA compliance: ${tcpa.reason}` });
+            break;
+          }
+
+          const timeCheck = checkCallTimeRestrictions(to);
+          if (!timeCheck.allowed) {
+            trackMissionStep(context, 'place_call', 'FAILED', {
+              error: `Time window: ${timeCheck.reason}`,
+              durationMs: Date.now() - callStart,
+            });
+            content = JSON.stringify({ success: false, error: timeCheck.reason });
+            break;
+          }
+
+          const { getTwilioCredentials } = await import('@/lib/security/twilio-verification');
+          const twilioKeys = await getTwilioCredentials();
+          if (!twilioKeys?.accountSid || !twilioKeys?.authToken || !twilioKeys?.phoneNumber) {
+            trackMissionStep(context, 'place_call', 'FAILED', {
+              error: 'Twilio credentials missing',
+              durationMs: Date.now() - callStart,
+            });
+            content = JSON.stringify({
+              success: false,
+              error: 'Twilio is not configured. Add credentials under Settings > API Keys before placing calls.',
+            });
+            break;
+          }
+
+          const twilioModule = (await import('twilio')).default;
+          const client = twilioModule(twilioKeys.accountSid, twilioKeys.authToken);
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.length > 0
+            ? process.env.NEXT_PUBLIC_APP_URL
+            : 'http://localhost:3000';
+
+          const call = await client.calls.create({
+            to,
+            from: twilioKeys.phoneNumber,
+            url: `${appUrl}/api/voice/twiml`,
+            statusCallback: `${appUrl}/api/webhooks/voice`,
+            statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+          });
+
+          const { getCallsCollection } = await import('@/lib/firebase/collections');
+          const { adminDb } = await import('@/lib/firebase/admin');
+          const callId = `call-${Date.now()}`;
+          if (adminDb) {
+            await adminDb.collection(getCallsCollection()).doc(callId).set({
+              id: callId,
+              twilioCallSid: call.sid,
+              contactId: contactId ?? null,
+              phoneNumber: to,
+              status: 'initiated',
+              direction: 'outbound',
+              recordingConsentDisclosed: true,
+              createdAt: new Date().toISOString(),
+              createdBy: context?.userId ?? 'jasper',
+              initiatedBy: 'jasper',
+            });
+          }
+
+          trackMissionStep(context, 'place_call', 'COMPLETED', {
+            summary: `Outbound call to ${to} initiated`,
+            durationMs: Date.now() - callStart,
+            toolResult: JSON.stringify({ callId, twilioSid: call.sid }),
+          });
+          content = JSON.stringify({
+            success: true,
+            callId,
+            twilioSid: call.sid,
+            status: call.status,
+            to,
+            reviewLink: getReviewLink('place_call', context?.missionId),
+          });
+        } catch (callError) {
+          const callErrorMsg = callError instanceof Error ? callError.message : String(callError);
+          trackMissionStep(context, 'place_call', 'FAILED', {
+            error: callErrorMsg,
+            durationMs: Date.now() - callStart,
+          });
+          content = JSON.stringify({ success: false, error: callErrorMsg });
         }
         break;
       }
