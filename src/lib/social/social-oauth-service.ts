@@ -496,6 +496,97 @@ export async function exchangeMetaCode(
   return { tokens, stateData, pages, instagramAccountId, metaUserId: meData.id, userName: meData.name };
 }
 
+/**
+ * Detect the Threads user ID for an authenticated Meta account.
+ *
+ * Returns { threadsUserId, username } if the user granted Threads permissions
+ * and has an active Threads profile. Returns null on any failure — Threads
+ * isn't fully rolled out to all Meta users, and many IG Business accounts
+ * don't have a Threads profile yet, so a null result is expected and benign.
+ */
+export async function fetchThreadsProfile(
+  accessToken: string
+): Promise<{ threadsUserId: string; username?: string } | null> {
+  try {
+    const response = await fetch(
+      `https://graph.threads.net/v1.0/me?fields=id,username&access_token=${encodeURIComponent(accessToken)}`
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const data = await response.json() as { id?: string; username?: string };
+    if (!data.id) { return null; }
+    return { threadsUserId: data.id, username: data.username };
+  } catch (error) {
+    logger.warn('Threads profile fetch failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+interface WhatsAppPhoneNumber {
+  phoneNumberId: string;
+  displayPhoneNumber?: string;
+  businessAccountId: string;
+}
+
+/**
+ * Detect the WhatsApp Business phone numbers the authenticated Meta user can
+ * post from.
+ *
+ * Meta requires the user to have set up a WhatsApp Business Account (WABA)
+ * under a Meta Business — this is not automatic with OAuth consent. Returns
+ * an empty array when no WABA is configured, which is the common case.
+ */
+export async function fetchWhatsAppPhoneNumbers(
+  accessToken: string
+): Promise<WhatsAppPhoneNumber[]> {
+  try {
+    // One nested query pulls businesses → WABAs → phone numbers in a single call.
+    const url = `https://graph.facebook.com/v19.0/me?fields=${encodeURIComponent(
+      'businesses{owned_whatsapp_business_accounts{id,phone_numbers{id,display_phone_number}}}'
+    )}&access_token=${encodeURIComponent(accessToken)}`;
+    const response = await fetch(url);
+    if (!response.ok) { return []; }
+
+    interface NestedResponse {
+      businesses?: {
+        data?: Array<{
+          owned_whatsapp_business_accounts?: {
+            data?: Array<{
+              id: string;
+              phone_numbers?: {
+                data?: Array<{ id: string; display_phone_number?: string }>;
+              };
+            }>;
+          };
+        }>;
+      };
+    }
+
+    const data = await response.json() as NestedResponse;
+    const results: WhatsAppPhoneNumber[] = [];
+    for (const biz of data.businesses?.data ?? []) {
+      for (const waba of biz.owned_whatsapp_business_accounts?.data ?? []) {
+        for (const phone of waba.phone_numbers?.data ?? []) {
+          results.push({
+            phoneNumberId: phone.id,
+            displayPhoneNumber: phone.display_phone_number,
+            businessAccountId: waba.id,
+          });
+        }
+      }
+    }
+    return results;
+  } catch (error) {
+    logger.warn('WhatsApp phone numbers fetch failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
+}
+
 // ─── Google OAuth 2.0 (YouTube + Google Business Profile) ────────────────────
 
 /**

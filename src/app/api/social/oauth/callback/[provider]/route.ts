@@ -25,6 +25,8 @@ import {
   fetchTikTokProfile,
   fetchRedditProfile,
   fetchPinterestProfile,
+  fetchThreadsProfile,
+  fetchWhatsAppPhoneNumbers,
   encryptCredentials,
 } from '@/lib/social/social-oauth-service';
 import { SocialAccountService } from '@/lib/social/social-account-service';
@@ -150,7 +152,7 @@ export async function GET(
           }).accessToken,
         }));
 
-        const metaCredentials: MetaCredentials = {
+        const baseMetaCredentials: MetaCredentials = {
           accessToken: encrypted.accessToken,
           tokenExpiresAt: encrypted.tokenExpiresAt,
           pages: encryptedPages,
@@ -158,20 +160,79 @@ export async function GET(
           metaUserId: metaResult.metaUserId,
         };
 
+        const subPlatformsConnected: string[] = [];
+
+        // Facebook record — one per user, always created since a Meta login
+        // that returned a valid userName is at minimum usable for the FB Graph
+        // even if no pages are linked yet.
         await SocialAccountService.addAccount({
           platform: 'facebook',
           accountName: metaResult.userName,
           handle: metaResult.metaUserId,
           isDefault: true,
           status: 'active',
-          credentials: metaCredentials,
+          credentials: baseMetaCredentials,
         });
+        subPlatformsConnected.push('facebook');
 
-        logger.info('Meta account connected via OAuth (Facebook/Instagram/Threads/WhatsApp)', {
+        // Instagram record — only if the user has an IG Business account
+        // linked to one of their pages. instagram-service looks up accounts
+        // by platform === 'instagram', so without this the account was
+        // invisible even after a successful Meta OAuth.
+        if (metaResult.instagramAccountId) {
+          await SocialAccountService.addAccount({
+            platform: 'instagram',
+            accountName: `${metaResult.userName} (Instagram)`,
+            handle: metaResult.instagramAccountId,
+            isDefault: true,
+            status: 'active',
+            credentials: baseMetaCredentials,
+          });
+          subPlatformsConnected.push('instagram');
+        }
+
+        // Threads record — Threads is opt-in per user on Meta's side, so we
+        // probe graph.threads.net/me to see if the account has an active
+        // Threads profile. fetchThreadsProfile returns null when the user
+        // has no Threads profile or didn't grant threads scopes.
+        const threadsProfile = await fetchThreadsProfile(metaResult.tokens.accessToken);
+        if (threadsProfile) {
+          await SocialAccountService.addAccount({
+            platform: 'threads',
+            accountName: threadsProfile.username
+              ? `@${threadsProfile.username}`
+              : `${metaResult.userName} (Threads)`,
+            handle: threadsProfile.threadsUserId,
+            isDefault: true,
+            status: 'active',
+            credentials: baseMetaCredentials,
+          });
+          subPlatformsConnected.push('threads');
+        }
+
+        // WhatsApp Business record — one record per phone number under any
+        // WABA the user owns. Most users don't have a WABA configured, in
+        // which case the array is empty and no record is created.
+        const waPhones = await fetchWhatsAppPhoneNumbers(metaResult.tokens.accessToken);
+        for (const phone of waPhones) {
+          await SocialAccountService.addAccount({
+            platform: 'whatsapp_business',
+            accountName: phone.displayPhoneNumber
+              ? `WhatsApp ${phone.displayPhoneNumber}`
+              : `WhatsApp ${phone.phoneNumberId}`,
+            handle: phone.phoneNumberId,
+            isDefault: true,
+            status: 'active',
+            credentials: baseMetaCredentials,
+          });
+          subPlatformsConnected.push('whatsapp_business');
+        }
+
+        logger.info('Meta account connected via OAuth', {
           route: '/api/social/oauth/callback',
           userName: metaResult.userName,
           pagesCount: metaResult.pages.length,
-          hasInstagram: Boolean(metaResult.instagramAccountId),
+          subPlatformsConnected,
         });
 
         return NextResponse.redirect(`${settingsUrl}?success=facebook&category=social`);
