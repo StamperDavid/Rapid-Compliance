@@ -13,6 +13,7 @@ import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSocialPostsCollection } from '@/lib/firebase/collections';
 import type { PublishResult } from '@/types/video-pipeline';
 import { SOCIAL_PLATFORMS } from '@/types/social';
+import { createPostingAgent } from '@/lib/social/autonomous-posting-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +78,11 @@ export async function POST(request: NextRequest) {
     const postsCollection = getSocialPostsCollection();
     const results: PublishResult[] = [];
 
-    // Create a social post for each selected platform
+    // Only instantiate the posting agent when we actually need to fire now.
+    // For scheduled-mode the dedicated cron (/api/cron/scheduled-social-publisher)
+    // will pick the post up when scheduledAt passes.
+    const agent = scheduleMode === 'now' ? await createPostingAgent() : null;
+
     for (const platform of platforms) {
       const postId = `pub-${Date.now()}-${platform}-${Math.random().toString(36).slice(2, 8)}`;
       const hashtags = tags.map((t) => `#${t}`);
@@ -89,18 +94,51 @@ export async function POST(request: NextRequest) {
         hashtags.join(' '),
       ].filter(Boolean).join('\n').trim();
 
-      const postStatus = scheduleMode === 'scheduled' ? 'scheduled' : 'published';
       const now = new Date().toISOString();
 
-      const postDoc = {
+      // Scheduled path — record goes in as 'scheduled', cron drains it later.
+      if (scheduleMode === 'scheduled') {
+        const postDoc = {
+          id: postId,
+          platform,
+          content: postContent,
+          status: 'scheduled' as const,
+          mediaUrls: [videoUrl],
+          hashtags: tags,
+          scheduledAt: scheduledAt,
+          scheduledFor: scheduledAt,
+          publishedAt: null,
+          sourceProjectId: projectId,
+          sourceType: 'video-pipeline',
+          createdAt: now,
+          updatedAt: now,
+          createdBy: authResult.user.uid,
+        };
+
+        try {
+          await AdminFirestoreService.set(postsCollection, postId, postDoc);
+          results.push({ platform, status: 'scheduled', postId });
+        } catch (platformError) {
+          logger.error(
+            `Failed to record scheduled video post on ${platform}`,
+            platformError instanceof Error ? platformError : undefined,
+            { platform, projectId }
+          );
+          results.push({ platform, status: 'failed', error: `Failed to schedule post on ${platform}` });
+        }
+        continue;
+      }
+
+      // Immediate path — record the attempt, call the platform, write the outcome.
+      const initialDoc = {
         id: postId,
         platform,
         content: postContent,
-        status: postStatus,
+        status: 'publishing' as const,
         mediaUrls: [videoUrl],
         hashtags: tags,
-        scheduledFor: scheduleMode === 'scheduled' ? scheduledAt : null,
-        publishedAt: scheduleMode === 'now' ? now : null,
+        scheduledFor: null,
+        publishedAt: null,
         sourceProjectId: projectId,
         sourceType: 'video-pipeline',
         createdAt: now,
@@ -109,31 +147,52 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        await AdminFirestoreService.set(postsCollection, postId, postDoc);
+        await AdminFirestoreService.set(postsCollection, postId, initialDoc);
+      } catch (writeError) {
+        logger.error(
+          `Failed to record video publish attempt on ${platform}`,
+          writeError instanceof Error ? writeError : undefined,
+          { platform, projectId }
+        );
+        results.push({ platform, status: 'failed', error: 'Could not record publish attempt' });
+        continue;
+      }
 
-        results.push({
-          platform,
-          status: postStatus === 'scheduled' ? 'scheduled' : 'published',
-          postId,
-          publishedAt: postStatus === 'published' ? now : undefined,
+      if (!agent) {
+        // Defensive: shouldn't happen given the branch above, but keeps the
+        // compiler and runtime honest.
+        results.push({ platform, status: 'failed', error: 'Posting agent unavailable' });
+        continue;
+      }
+
+      const publishResult = await agent.publishNow(platform, postContent, { mediaUrl: videoUrl });
+      const finalizedAt = new Date().toISOString();
+
+      if (publishResult.success) {
+        await AdminFirestoreService.update(postsCollection, postId, {
+          status: 'published',
+          platformPostId: publishResult.postId ?? null,
+          publishedAt: finalizedAt,
+          updatedAt: finalizedAt,
         });
-
+        results.push({ platform, status: 'published', postId, publishedAt: finalizedAt });
         logger.info('Video published to platform', {
           platform,
           postId,
           projectId,
-          scheduleMode,
+          platformPostId: publishResult.postId,
         });
-      } catch (platformError) {
-        logger.error(
-          `Failed to publish to ${platform}`,
-          platformError instanceof Error ? platformError : undefined,
-          { platform, projectId }
-        );
-        results.push({
-          platform,
+      } else {
+        await AdminFirestoreService.update(postsCollection, postId, {
           status: 'failed',
-          error: `Failed to create post on ${platform}`,
+          error: publishResult.error ?? 'Unknown publish error',
+          updatedAt: finalizedAt,
+        });
+        results.push({ platform, status: 'failed', error: publishResult.error ?? 'Unknown publish error' });
+        logger.warn(`Video publish to ${platform} failed`, {
+          platform,
+          postId,
+          error: publishResult.error,
         });
       }
     }
