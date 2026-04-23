@@ -266,6 +266,24 @@ async function main(): Promise<void> {
   const categoryArg = args.find((a) => a.startsWith('--category='));
   const idArg = args.find((a) => a.startsWith('--id='));
   const iterArg = args.find((a) => a.startsWith('--iterations='));
+  const progressArg = args.find((a) => a.startsWith('--progress-file='));
+  const progressFile = progressArg ? progressArg.split('=').slice(1).join('=') : null;
+
+  // Incremental progress file — written after every prompt finishes so the
+  // caller can tail it even when stdout is pipe-buffered. Overwrites each
+  // append so tailing always sees the latest full state.
+  const progressLines: string[] = [];
+  const flushProgress = (): void => {
+    if (!progressFile) { return; }
+    try {
+      fs.writeFileSync(progressFile, progressLines.join('\n') + '\n');
+    } catch { /* non-fatal */ }
+  };
+  const logLine = (line: string): void => {
+    console.log(line);
+    progressLines.push(line);
+    flushProgress();
+  };
 
   const fixture = loadFixture();
   let prompts = fixture.prompts;
@@ -321,13 +339,13 @@ async function main(): Promise<void> {
     const toolsStr = first.toolsCalled.length > 0
       ? first.toolsCalled.slice(0, 6).join(',') + (first.toolsCalled.length > 6 ? `+${first.toolsCalled.length - 6}` : '')
       : 'none';
-    console.log(`${status} ${p.id.padEnd(22)} ${p.category.padEnd(22)} ${passCount}/${iters} ${avgMs}ms qt=${qt}${planTag} tools=[${toolsStr}]`);
+    logLine(`${status} ${p.id.padEnd(22)} ${p.category.padEnd(22)} ${passCount}/${iters} ${avgMs}ms qt=${qt}${planTag} tools=[${toolsStr}]`);
     for (const r of iterResults) {
       if (r.errorMessage) {
-        console.log(`   iter ${r.iteration} ERROR: ${r.errorMessage}`);
+        logLine(`   iter ${r.iteration} ERROR: ${r.errorMessage}`);
       } else if (r.failures.length > 0) {
         for (const f of r.failures) {
-          console.log(`   iter ${r.iteration} FAIL: ${f}`);
+          logLine(`   iter ${r.iteration} FAIL: ${f}`);
         }
       }
     }
