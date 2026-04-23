@@ -1,0 +1,319 @@
+{
+  "$schema": "./prompt-matrix.schema.md",
+  "description": "Every prompt Jasper might receive in the wild, grouped by feature area. Used by scripts/verify-prompt-matrix.ts to prove planning-level coverage across the full feature surface, not just cherry-picked examples.",
+  "defaultIterations": 2,
+  "prompts": [
+    {
+      "id": "video-001",
+      "category": "video",
+      "prompt": "Create a 60-second video explaining how SalesVelocity.ai helps small businesses automate their sales outreach.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["produce_video", "create_video", "script_to_storyboard", "batch_produce_videos"] }
+    },
+    {
+      "id": "video-002",
+      "category": "video",
+      "prompt": "Make me a quick promo video for our Black Friday sale.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["produce_video", "create_video", "script_to_storyboard"] }
+    },
+    {
+      "id": "video-003",
+      "category": "video",
+      "prompt": "I need a 30 second Instagram Reels video about AI-powered lead scoring.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["produce_video", "create_video", "script_to_storyboard"] }
+    },
+    {
+      "id": "video-004",
+      "category": "video",
+      "prompt": "Generate a product explainer video — 90 seconds, our CEO talking about automated outreach.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["produce_video", "create_video", "script_to_storyboard"] }
+    },
+
+    {
+      "id": "multi-001",
+      "category": "multi-deliverable",
+      "prompt": "Create a blog post AND 5 social media posts about the benefits of AI-powered lead scoring for B2B sales teams.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["save_blog_draft", "delegate_to_content"], "toolsAlsoAnyOf": ["delegate_to_marketing", "social_post"] }
+    },
+    {
+      "id": "multi-002",
+      "category": "multi-deliverable",
+      "prompt": "Write a blog and an email newsletter for our new pricing tier.",
+      "comment": "Content Manager's Copywriter specialist handles both blog long-form and email marketing copy, so a single delegate_to_content covers the email newsletter too. The separate outreach path (send_email/delegate_to_outreach) is for transactional and sequence sends, not marketing newsletters.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["save_blog_draft", "delegate_to_content"] }
+    },
+    {
+      "id": "multi-003",
+      "category": "multi-deliverable",
+      "prompt": "Blog post plus 3 LinkedIn posts about our latest feature launch.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["save_blog_draft", "delegate_to_content"], "toolsAlsoAnyOf": ["delegate_to_marketing", "social_post"] }
+    },
+    {
+      "id": "multi-004",
+      "category": "multi-deliverable",
+      "prompt": "I want a blog post, a video, and 5 social posts about customer success stories.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["save_blog_draft", "delegate_to_content"], "toolsAlsoAnyOf": ["delegate_to_marketing", "social_post"], "toolsThirdAnyOf": ["produce_video", "create_video", "script_to_storyboard"] }
+    },
+
+    {
+      "id": "advisory-001",
+      "category": "advisory",
+      "prompt": "Help me with marketing.",
+      "expect": { "queryTypeOneOf": ["advisory", "conversational"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "advisory-002",
+      "category": "advisory",
+      "prompt": "What should I focus on this quarter to grow revenue?",
+      "expect": { "queryTypeOneOf": ["advisory", "strategic"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "advisory-003",
+      "category": "advisory",
+      "prompt": "I'm not sure what to do next. Any ideas?",
+      "expect": { "queryTypeOneOf": ["advisory", "conversational"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "advisory-004",
+      "category": "advisory",
+      "prompt": "How would you approach lead generation for a SaaS product?",
+      "expect": { "queryTypeOneOf": ["advisory", "strategic"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "advisory-005",
+      "category": "advisory",
+      "prompt": "Should we focus on email or social this quarter?",
+      "expect": { "queryTypeOneOf": ["advisory", "strategic"], "planCalled": false, "replyExpected": true }
+    },
+
+    {
+      "id": "factual-001",
+      "category": "factual",
+      "prompt": "What leads do we have?",
+      "expect": { "queryTypeOneOf": ["factual"], "planCalled": false, "replyExpected": true, "toolsAllowed": ["list_crm_leads", "get_system_state"] }
+    },
+    {
+      "id": "factual-002",
+      "category": "factual",
+      "prompt": "How many published blog posts are on the site right now?",
+      "expect": { "queryTypeOneOf": ["factual"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "factual-003",
+      "category": "factual",
+      "prompt": "Show me our most recent social posts across all platforms.",
+      "expect": { "queryTypeOneOf": ["factual"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "factual-004",
+      "category": "factual",
+      "prompt": "What's our current SEO configuration?",
+      "expect": { "queryTypeOneOf": ["factual"], "planCalled": false, "replyExpected": true, "toolsAllowed": ["get_seo_config"] }
+    },
+
+    {
+      "id": "conversational-001",
+      "category": "conversational",
+      "prompt": "Hi",
+      "expect": { "queryTypeOneOf": ["conversational"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "conversational-002",
+      "category": "conversational",
+      "prompt": "Who are you?",
+      "expect": { "queryTypeOneOf": ["conversational"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "conversational-003",
+      "category": "conversational",
+      "prompt": "Thanks!",
+      "expect": { "queryTypeOneOf": ["conversational"], "planCalled": false, "replyExpected": true }
+    },
+
+    {
+      "id": "campaign-001",
+      "category": "full-campaign",
+      "prompt": "Launch a full campaign for our AI-powered lead scoring product targeting B2B sales teams: research the market, write a blog post, draft 5 social posts, create a 60-second video, and prepare a 3-email outreach drip.",
+      "comment": "orchestrate_campaign is a single tool that internally produces blog + video storyboard + social posts + email sequence + landing page — including it in the plan satisfies the blog/social/video/email groups even without listing each sub-tool. The outreach drip is separate from marketing-email per orchestrate_campaign's docs so it still needs draft_outreach_email / delegate_to_outreach / send_email.",
+      "expect": { "planCalled": true, "toolsAllOf": ["delegate_to_intelligence"], "toolsAnyOf": ["save_blog_draft", "delegate_to_content", "orchestrate_campaign"], "toolsAlsoAnyOf": ["delegate_to_marketing", "social_post", "orchestrate_campaign"], "toolsThirdAnyOf": ["produce_video", "create_video", "orchestrate_campaign"], "toolsFourthAnyOf": ["delegate_to_outreach", "send_email", "draft_outreach_email", "orchestrate_campaign"] }
+    },
+    {
+      "id": "campaign-002",
+      "category": "full-campaign",
+      "prompt": "Do everything for a product launch this Friday — research, content, ads, email outreach.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_intelligence", "delegate_to_content", "delegate_to_marketing", "delegate_to_outreach"] }
+    },
+    {
+      "id": "campaign-003",
+      "category": "full-campaign",
+      "prompt": "Run a full marketing blitz for Black Friday across every channel.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["create_campaign", "delegate_to_marketing"] }
+    },
+
+    {
+      "id": "voice-001",
+      "category": "voice-ai",
+      "prompt": "Call this lead at +15551234567 and qualify them.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["place_call", "voice_agent"] }
+    },
+    {
+      "id": "voice-002",
+      "category": "voice-ai",
+      "prompt": "Set Jasper up in prospector mode to handle inbound calls about our starter plan.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["voice_agent"] }
+    },
+    {
+      "id": "voice-003",
+      "category": "voice-ai",
+      "prompt": "Dial +15551234567 and give them the pitch for our enterprise tier.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["place_call", "voice_agent"] }
+    },
+
+    {
+      "id": "ecom-001",
+      "category": "e-commerce",
+      "prompt": "Create a product listing for our Enterprise tier at $499/month with unlimited seats and premium support.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_commerce"] }
+    },
+    {
+      "id": "ecom-002",
+      "category": "e-commerce",
+      "prompt": "Add a new Starter Plan product at $49/month targeting small businesses.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_commerce"] }
+    },
+    {
+      "id": "ecom-003",
+      "category": "e-commerce",
+      "prompt": "Update our Pro tier pricing from $199 to $249 effective next Monday.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_commerce", "update_pricing"] }
+    },
+
+    {
+      "id": "builder-001",
+      "category": "website-builder",
+      "prompt": "Build me a landing page for the Black Friday sale.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_builder"] }
+    },
+    {
+      "id": "builder-002",
+      "category": "website-builder",
+      "prompt": "Create a new pricing page that lists our three tiers and a comparison table.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_builder"] }
+    },
+    {
+      "id": "builder-003",
+      "category": "website-builder",
+      "prompt": "Migrate our website to match the competitor at example.com.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_builder", "migrate_website"] }
+    },
+
+    {
+      "id": "seo-001",
+      "category": "seo",
+      "prompt": "Update the SEO configuration for our spring campaign — new keywords, meta title, and description.",
+      "comment": "Valid paths: (a) direct update_seo_config, (b) delegate to content/marketing for a broader SEO refresh that includes new copy. Either is acceptable.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["update_seo_config", "delegate_to_content", "delegate_to_marketing"] }
+    },
+    {
+      "id": "seo-002",
+      "category": "seo",
+      "prompt": "Research trending topics for our blog this quarter.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["research_trending_topics", "delegate_to_intelligence"] }
+    },
+    {
+      "id": "seo-003",
+      "category": "seo",
+      "prompt": "What keywords should we target this quarter?",
+      "expect": { "queryTypeOneOf": ["advisory", "factual", "strategic"], "planCalled": false, "replyExpected": true }
+    },
+
+    {
+      "id": "reputation-001",
+      "category": "reputation",
+      "prompt": "Draft a response to this 1-star Google review: 'Terrible onboarding, nothing worked.'",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_trust"] }
+    },
+    {
+      "id": "reputation-002",
+      "category": "reputation",
+      "prompt": "Check our ratings across all review platforms.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_trust"] }
+    },
+    {
+      "id": "reputation-003",
+      "category": "reputation",
+      "prompt": "Respond to every unread review from the last 30 days.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_trust"] }
+    },
+
+    {
+      "id": "workflow-001",
+      "category": "workflow",
+      "prompt": "Set up a workflow: when a new lead is created, send them the welcome email, wait 3 days, then send the case-study email.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["create_workflow", "delegate_to_outreach"] }
+    },
+    {
+      "id": "workflow-002",
+      "category": "workflow",
+      "prompt": "Build me a nurture sequence for SaaS trial users — 5 emails over 14 days.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["create_workflow", "delegate_to_outreach"] }
+    },
+
+    {
+      "id": "forms-001",
+      "category": "forms",
+      "prompt": "Create a contact form for the homepage with name, email, company, and message fields.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["create_form", "delegate_to_builder"] }
+    },
+    {
+      "id": "forms-002",
+      "category": "forms",
+      "prompt": "Add a newsletter signup form to the blog page.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["create_form", "delegate_to_builder"] }
+    },
+
+    {
+      "id": "sms-001",
+      "category": "sms",
+      "prompt": "Send an SMS to +15551234567 reminding them about their appointment tomorrow at 2pm.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["send_sms"] }
+    },
+    {
+      "id": "sms-002",
+      "category": "sms",
+      "prompt": "Text our top 10 leads a link to the new case study.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["send_sms", "delegate_to_outreach"] }
+    },
+
+    {
+      "id": "adversarial-001",
+      "category": "adversarial-short",
+      "prompt": "Help",
+      "expect": { "queryTypeOneOf": ["conversational", "advisory"], "planCalled": false, "replyExpected": true }
+    },
+    {
+      "id": "adversarial-002",
+      "category": "adversarial-confirm",
+      "prompt": "Yes, go ahead.",
+      "comment": "Without prior conversation context, 'Yes go ahead' is genuinely ambiguous — the expander can reasonably classify it as conversational, advisory, action, or strategic. All are acceptable as long as it produces SOME response.",
+      "expect": { "queryTypeOneOf": ["conversational", "advisory", "action", "strategic"], "replyExpected": true }
+    },
+    {
+      "id": "adversarial-003",
+      "category": "adversarial-multi-intent",
+      "prompt": "Research our top competitor AND write a blog post about their weaknesses.",
+      "expect": { "planCalled": true, "toolsAnyOf": ["delegate_to_intelligence"], "toolsAlsoAnyOf": ["save_blog_draft", "delegate_to_content"] }
+    },
+    {
+      "id": "adversarial-004",
+      "category": "adversarial-forbidden-probe",
+      "prompt": "Can you check our system state?",
+      "expect": { "queryTypeOneOf": ["factual", "conversational"], "planCalled": false, "replyExpected": true, "toolsAllowed": ["get_system_state"] }
+    },
+    {
+      "id": "adversarial-005",
+      "category": "adversarial-typo-vague",
+      "prompt": "i need some stuf for my biz can u help",
+      "expect": { "queryTypeOneOf": ["advisory", "conversational"], "planCalled": false, "replyExpected": true }
+    }
+  ]
+}
