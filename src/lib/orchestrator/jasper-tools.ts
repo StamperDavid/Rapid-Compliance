@@ -6599,10 +6599,20 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
               if (targetStep?.toolResult) {
                 try {
+                  // The ContentManager's EMAIL_SEQUENCE path returns a
+                  // ContentPackage with emails living at
+                  // data.emailSequence.emails. Older envelopes may surface
+                  // them at data.emails or data.result.emails — try all
+                  // three so we stay forward-compatible.
                   const parsed = JSON.parse(targetStep.toolResult) as {
-                    data?: { result?: { emails?: SequenceEmail[] }; emails?: SequenceEmail[] };
+                    data?: {
+                      emailSequence?: { emails?: SequenceEmail[] };
+                      result?: { emails?: SequenceEmail[] };
+                      emails?: SequenceEmail[];
+                    };
                   };
-                  const emailsFromResult = parsed?.data?.result?.emails
+                  const emailsFromResult = parsed?.data?.emailSequence?.emails
+                    ?? parsed?.data?.result?.emails
                     ?? parsed?.data?.emails;
                   if (Array.isArray(emailsFromResult)) {
                     emails = emailsFromResult;
@@ -6619,6 +6629,21 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           }
 
           if (emails.length === 0) {
+            if (context?.missionId) {
+              const missionDebug = await getMission(context.missionId);
+              const stepDiag = (missionDebug?.steps ?? []).map((s) => ({
+                stepId: s.stepId,
+                toolName: s.toolName,
+                status: s.status,
+                toolResultLen: s.toolResult?.length ?? 0,
+              }));
+              logger.warn('[create_workflow] No emails resolved — step diagnostics', {
+                missionId: context.missionId,
+                contentSource,
+                stepCount: stepDiag.length,
+                steps: JSON.stringify(stepDiag),
+              });
+            }
             throw new Error(
               'create_workflow could not resolve any emails. Provide contentSource as a JSON array, or ensure this mission has a prior completed delegate_to_content step that produced an email sequence.',
             );
