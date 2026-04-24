@@ -6599,19 +6599,24 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
               if (targetStep?.toolResult) {
                 try {
-                  // The ContentManager's EMAIL_SEQUENCE path returns a
-                  // ContentPackage with emails living at
-                  // data.emailSequence.emails. Older envelopes may surface
-                  // them at data.emails or data.result.emails — try all
-                  // three so we stay forward-compatible.
+                  // Two envelope shapes are possible:
+                  //   (A) plan-driven runner stores the ContentPackage
+                  //       directly at top level → parsed.emailSequence.emails
+                  //   (B) legacy jasper-tools delegate_to_content wrapper
+                  //       → parsed.data.emailSequence.emails
+                  // Try top-level first (the live shape), then fall back.
                   const parsed = JSON.parse(targetStep.toolResult) as {
+                    emailSequence?: { emails?: SequenceEmail[] };
+                    emails?: SequenceEmail[];
                     data?: {
                       emailSequence?: { emails?: SequenceEmail[] };
                       result?: { emails?: SequenceEmail[] };
                       emails?: SequenceEmail[];
                     };
                   };
-                  const emailsFromResult = parsed?.data?.emailSequence?.emails
+                  const emailsFromResult = parsed?.emailSequence?.emails
+                    ?? parsed?.emails
+                    ?? parsed?.data?.emailSequence?.emails
                     ?? parsed?.data?.result?.emails
                     ?? parsed?.data?.emails;
                   if (Array.isArray(emailsFromResult)) {
