@@ -612,23 +612,59 @@ export interface WorkflowTemplate {
   name: string;
   description: string;
   category: string;
-  
+
   // Preview
   icon: string;
   thumbnail?: string;
-  
+
   // Template data
   workflow: Partial<Workflow>;
-  
+
   // Requirements
   requiredSchemas?: string[]; // Schema types needed
   requiredIntegrations?: string[]; // Integrations needed
-  
+
   // Metadata
   isPopular: boolean;
   usageCount: number;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   tags: string[];
-  
+
   createdAt: FlexTimestamp;
+}
+
+/**
+ * Workflow Sequence Job
+ *
+ * One scheduled email within a multi-step cadence (nurture, drip, welcome,
+ * newsletter). Created by the `create_workflow` orchestrator tool; dispatched
+ * by the /api/cron/workflow-scheduler route on its poll tick.
+ *
+ * This is deliberately outside the existing Workflow actions model because
+ * the in-process workflow engine uses setTimeout-based delays bounded by a
+ * 60s global timeout — it cannot schedule sends days out. Sequence jobs are
+ * dispatched directly by the cron poller using absolute `fireAt` timestamps.
+ */
+export interface WorkflowSequenceJob {
+  id: string;
+  workflowId: string;
+  missionId?: string;
+  stepIndex: number; // 1-based position in the sequence
+  totalSteps: number;
+  sequenceType: 'nurture' | 'drip' | 'welcome' | 'newsletter' | 'custom';
+  triggerEvent?: string; // e.g. "trial_signup", "new_lead"
+  recipient: string; // literal email OR template like "{{entity.email}}"
+  recipientResolved: boolean; // true when `recipient` is a final address, not a template
+  emailSubject: string;
+  emailPreview?: string;
+  emailBody: string;
+  sendTimingHint?: string; // "day 3", "immediately on trigger"
+  fireAt: string; // ISO timestamp when this step should dispatch
+  status: 'pending' | 'fired' | 'failed' | 'skipped' | 'cancelled';
+  firedAt?: string;
+  provider?: string;
+  messageId?: string;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
 }

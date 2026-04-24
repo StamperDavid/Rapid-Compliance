@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { executeScheduledWorkflows } from '@/lib/workflows/triggers/schedule-trigger';
+import { fireReadySequenceJobs } from '@/lib/workflows/sequence-scheduler';
 import { logger } from '@/lib/logger/logger';
 import { verifyCronAuth } from '@/lib/auth/api-auth';
 
@@ -14,7 +15,15 @@ export const maxDuration = 60;
 
 /**
  * GET /api/cron/workflow-scheduler
- * Execute all due scheduled workflows
+ *
+ * Two responsibilities per tick:
+ *   1. executeScheduledWorkflows() — runs classic trigger=schedule workflows
+ *      whose nextRun <= now (action-chain driven).
+ *   2. fireReadySequenceJobs() — dispatches individual email steps of a
+ *      multi-day cadence created via the create_workflow tool, each keyed
+ *      by an absolute fireAt timestamp.
+ *
+ * Both passes run every invocation. Scheduled every 5 minutes in vercel.json.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -26,14 +35,20 @@ export async function GET(request: NextRequest) {
     });
 
     await executeScheduledWorkflows();
+    const sequenceStats = await fireReadySequenceJobs();
 
     logger.info('Workflow scheduler cron completed', {
       route: '/api/cron/workflow-scheduler',
+      sequenceChecked: sequenceStats.checked,
+      sequenceFired: sequenceStats.fired,
+      sequenceFailed: sequenceStats.failed,
+      sequenceSkipped: sequenceStats.skipped,
     });
 
     return NextResponse.json({
       success: true,
       message: 'Scheduled workflows processed',
+      sequenceJobs: sequenceStats,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
