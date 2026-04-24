@@ -26,6 +26,8 @@
  * Flags (match verify-prompt-matrix.ts for operator muscle memory):
  *   --id=<fixture-id>                run only that one prompt
  *   --category=<cat>                 run every prompt in a category
+ *   --categories=<a,b,c>             run every prompt in any of these categories
+ *   --exclude-categories=<a,b,c>     run every prompt EXCEPT these categories
  *   --iterations=<n>                 override default iterations (default 1 — E2E is expensive)
  *   --timeout=<minutes>              per-prompt terminal-state timeout (default 25)
  *   --base-url=<url>                 dev server URL (default http://localhost:3000)
@@ -568,6 +570,8 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const idArg = args.find((a) => a.startsWith('--id='))?.split('=')[1];
   const catArg = args.find((a) => a.startsWith('--category='))?.split('=')[1];
+  const catsArg = args.find((a) => a.startsWith('--categories='))?.split('=')[1];
+  const excludeArg = args.find((a) => a.startsWith('--exclude-categories='))?.split('=')[1];
   const iterArg = args.find((a) => a.startsWith('--iterations='))?.split('=')[1];
   const timeoutArg = args.find((a) => a.startsWith('--timeout='))?.split('=')[1];
   const baseUrlArg = args.find((a) => a.startsWith('--base-url='))?.split('=')[1];
@@ -585,8 +589,16 @@ async function main(): Promise<void> {
   let prompts = fixture.prompts;
   if (idArg) { prompts = prompts.filter((p) => p.id === idArg); }
   if (catArg) { prompts = prompts.filter((p) => p.category === catArg); }
+  if (catsArg) {
+    const set = new Set(catsArg.split(',').map((s) => s.trim()));
+    prompts = prompts.filter((p) => set.has(p.category));
+  }
+  if (excludeArg) {
+    const set = new Set(excludeArg.split(',').map((s) => s.trim()));
+    prompts = prompts.filter((p) => !set.has(p.category));
+  }
   if (prompts.length === 0) {
-    log(`No prompts match filter (id=${idArg ?? '*'} category=${catArg ?? '*'})`);
+    log(`No prompts match filter (id=${idArg ?? '*'} category=${catArg ?? '*'} categories=${catsArg ?? '*'} exclude=${excludeArg ?? '*'})`);
     process.exit(1);
   }
   log(`Running ${prompts.length} prompt(s) at up to ${iterationsOverride ?? 1} iter each`);
