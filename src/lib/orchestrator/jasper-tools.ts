@@ -6669,16 +6669,54 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           }
           const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
           const nowIso = new Date().toISOString();
+
+          // Map known entity-event trigger names to an entity.created shape
+          // so CRM event dispatch (fireLeadCreated → getApplicableWorkflows)
+          // can match this workflow. Unknown trigger names fall back to
+          // `manual` — the sequence still runs on the demo recipient, but
+          // no live entity event will fire it for real recipients.
+          type LooseTrigger = {
+            id: string;
+            name: string;
+            type: string;
+            requireConfirmation?: boolean;
+            schemaId?: string;
+          };
+          const entityTriggerMap: Record<string, string | undefined> = {
+            new_lead: 'leads',
+            lead_created: 'leads',
+            'lead.created': 'leads',
+            lead_added: 'leads',
+            trial_signup: 'leads', // No 'users'/'signups' schema yet; leads stands in
+            new_user: 'leads',
+            new_signup: 'leads',
+            signup: 'leads',
+            form_submit: 'leads', // Form submissions land as leads
+            new_contact: 'contacts',
+            contact_created: 'contacts',
+            new_deal: 'deals',
+            deal_created: 'deals',
+          };
+          const mappedSchema = entityTriggerMap[trigger.toLowerCase()];
+          const triggerShape: LooseTrigger = mappedSchema
+            ? {
+                id: `trigger_${Date.now()}`,
+                name: `${trigger} → ${mappedSchema}.created`,
+                type: 'entity.created',
+                schemaId: mappedSchema,
+              }
+            : {
+                id: `trigger_${Date.now()}`,
+                name: `${trigger} event`,
+                type: 'manual',
+                requireConfirmation: false,
+              };
+
           const workflowDoc = {
             id: workflowId,
             name,
             description: `Automated ${sequenceType} — fires on ${trigger}, ${emails.length} emails.`,
-            trigger: {
-              id: `trigger_${Date.now()}`,
-              name: `${trigger} event`,
-              type: 'manual',
-              requireConfirmation: false,
-            },
+            trigger: triggerShape,
             actions: [], // Send steps are dispatched via workflowSequenceJobs, not action chain
             settings: {
               enabled: true,

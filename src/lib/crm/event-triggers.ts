@@ -348,9 +348,53 @@ async function executeTriggeredWorkflow(
       return;
     }
 
-    const workflow = { id: workflowSnap.id, ...workflowSnap.data() } as Workflow;
-    
-    // Execute the workflow with event context
+    const workflow = { id: workflowSnap.id, ...workflowSnap.data() } as Workflow & {
+      sequenceType?: 'nurture' | 'drip' | 'welcome' | 'newsletter' | 'custom';
+      triggerEvent?: string;
+    };
+
+    // Sequence workflows (from the create_workflow Jasper tool) have no
+    // action chain — their payload is stored as template rows in
+    // workflowSequenceJobs. Route them to instantiateSequenceForRecipient
+    // so the template is cloned into live jobs with the entity's real email
+    // address. Classic action-chain workflows still go through executeWorkflow.
+    const isSequenceWorkflow = typeof workflow.sequenceType === 'string'
+      && Array.isArray(workflow.actions)
+      && workflow.actions.length === 0;
+
+    if (isSequenceWorkflow) {
+      const entityData = event.entityData ?? {};
+      const recipient = typeof entityData.email === 'string' && entityData.email.trim().length > 0
+        ? entityData.email.trim()
+        : typeof entityData.emailAddress === 'string' && entityData.emailAddress.trim().length > 0
+          ? entityData.emailAddress.trim()
+          : '';
+
+      if (!recipient) {
+        logger.warn('[CRM Event Triggers] Sequence workflow matched but entity has no email — skipping', {
+          workflowId: rule.workflowId,
+          entityType: event.entityType,
+          entityId: event.entityId,
+        });
+        return;
+      }
+
+      const { instantiateSequenceForRecipient } = await import('@/lib/workflows/sequence-scheduler');
+      const result = await instantiateSequenceForRecipient({
+        workflowId: rule.workflowId,
+        recipient,
+        triggerEntity: entityData,
+      });
+
+      logger.info('Sequence workflow instantiated for recipient', {
+        workflowId: rule.workflowId,
+        recipient,
+        jobCount: result.jobIds.length,
+      });
+      return;
+    }
+
+    // Execute the workflow with event context (classic action-chain path)
     await executeWorkflow(
       workflow,
       {
