@@ -34,7 +34,7 @@
 
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
-import { getCopywriter } from './copywriter/specialist';
+import { getCopywriter, type EmailSequenceResult } from './copywriter/specialist';
 import { getBlogWriter, type BlogPostResult } from './blog/specialist';
 import { getCalendarCoordinator } from './calendar/specialist';
 import { VideoSpecialist } from './video/specialist';
@@ -140,6 +140,7 @@ export type ContentIntent =
   | 'VIDEO_PRODUCTION'     // Video specialist focus
   | 'PODCAST_PRODUCTION'   // Podcast specialist focus
   | 'BLOG_CONTENT'         // Blog Writer for long-form SEO content
+  | 'EMAIL_SEQUENCE'       // N-email nurture/drip/campaign with cadence timing
   | 'SCHEDULING'           // Calendar coordination
   | 'SEO_REFRESH'          // Update existing content for SEO
   | 'SINGLE_PAGE';         // Content for one specific page
@@ -172,6 +173,12 @@ const _INTENT_KEYWORDS: Record<ContentIntent, string[]> = {
     'blog', 'blog post', 'long-form', 'thought leadership', 'editorial',
     'seo article', 'pillar content', 'content marketing',
   ],
+  EMAIL_SEQUENCE: [
+    'email sequence', 'email_sequence', 'nurture sequence', 'nurture_sequence',
+    'drip campaign', 'drip', 'email drip', 'email_drip',
+    'email campaign', 'email_campaign', 'newsletter',
+    'welcome series', 'onboarding sequence', 'follow-up sequence',
+  ],
   SCHEDULING: [
     'schedule', 'calendar', 'publish', 'timing', 'when to post', 'optimal time',
     'content calendar',
@@ -188,6 +195,7 @@ const _INTENT_KEYWORDS: Record<ContentIntent, string[]> = {
 const INTENT_SPECIALISTS: Record<ContentIntent, string[]> = {
   FULL_PACKAGE: ['COPYWRITER', 'BLOG_WRITER', 'CALENDAR_COORDINATOR', 'VIDEO_SPECIALIST', 'ASSET_GENERATOR', 'MUSIC_PLANNER'],
   COPY_ONLY: ['COPYWRITER'],
+  EMAIL_SEQUENCE: ['COPYWRITER'],
   BLOG_CONTENT: ['BLOG_WRITER'],
   VISUAL_ONLY: ['ASSET_GENERATOR'],
   VIDEO_PRODUCTION: ['VIDEO_SPECIALIST', 'COPYWRITER', 'MUSIC_PLANNER'],
@@ -438,6 +446,7 @@ export interface ContentPackage {
   blogContent: BlogPostResult | null;
   musicContent: SoundtrackPlanResult | null;
   podcastContent: EpisodePlanResult | null;
+  emailSequence: EmailSequenceResult | null;
 
   // Validation
   validation: {
@@ -544,6 +553,16 @@ export interface ContentRequest {
   format?: string;
   urgency?: 'low' | 'medium' | 'high';
   targetPlatforms?: string[];
+
+  /**
+   * Email-sequence-specific fields (used when contentType resolves to EMAIL_SEQUENCE
+   * intent — e.g. "email_sequence", "nurture_sequence", "drip_campaign").
+   * Jasper's delegate_to_content tool passes these on matrix prompts like
+   * "Build a nurture sequence — 5 emails over 14 days".
+   */
+  count?: number;
+  cadence?: string;
+  trigger?: string;
 }
 
 // ============================================================================
@@ -870,6 +889,15 @@ export class ContentManager extends BaseManager {
       if (ct === 'video' || ct === 'reel' || ct === 'short' || ct === 'youtube' || ct === 'tiktok') {return 'VIDEO_PRODUCTION';}
       if (ct === 'podcast' || ct === 'episode') {return 'PODCAST_PRODUCTION';}
       if (ct === 'visuals' || ct === 'image' || ct === 'asset' || ct === 'graphic' || ct === 'banner') {return 'VISUAL_ONLY';}
+      // Email-sequence family matches BEFORE the generic 'email' → COPY_ONLY
+      // branch so multi-step sequences don't get compressed into single-email copy.
+      if (
+        ct === 'email_sequence' || ct === 'email-sequence'
+        || ct === 'email_campaign' || ct === 'email_drip' || ct === 'drip'
+        || ct === 'nurture' || ct === 'nurture_sequence' || ct === 'nurture-sequence'
+        || ct === 'newsletter' || ct === 'welcome_series' || ct === 'onboarding_sequence'
+        || ct === 'follow_up_sequence' || ct === 'followup_sequence'
+      ) {return 'EMAIL_SEQUENCE';}
       if (ct === 'copy' || ct === 'headline' || ct === 'email' || ct === 'ad' || ct === 'social_post') {return 'COPY_ONLY';}
       if (ct === 'calendar' || ct === 'schedule') {return 'SCHEDULING';}
       if (ct === 'seo_refresh' || ct === 'seo') {return 'SEO_REFRESH';}
@@ -950,6 +978,25 @@ export class ContentManager extends BaseManager {
     // Step 3: Detect content intent
     const detectedIntent = this.detectContentIntent(request);
     this.log('INFO', `Detected content intent: ${detectedIntent}`);
+
+    // EMAIL_SEQUENCE fast path — only the Copywriter runs, no fan-out to
+    // video / blog / music / podcast. This prevents the 10-minute hang that
+    // occurred before this intent existed (requests fell through to
+    // FULL_PACKAGE and sequential video+blog+music+podcast calls blew
+    // past the 300s Content Manager timeout).
+    if (detectedIntent === 'EMAIL_SEQUENCE') {
+      return this.orchestrateEmailSequence(
+        request,
+        brandContext,
+        seoContext,
+        detectedIntent,
+        taskId,
+        startTime,
+        delegations,
+        specialistOutputs,
+        warnings,
+      );
+    }
 
     // Step 4: Resolve specialists for this intent
     const specialistIds = this.resolveSpecialistsForIntent(detectedIntent);
@@ -1056,6 +1103,7 @@ export class ContentManager extends BaseManager {
       blogContent,
       musicContent,
       podcastContent,
+      emailSequence: null,
       validation,
       delegations,
       specialistOutputs,
@@ -1933,6 +1981,148 @@ export class ContentManager extends BaseManager {
     }
 
     return null;
+  }
+
+  /**
+   * EMAIL_SEQUENCE fast path — produces a full ContentPackage whose only
+   * populated content field is `emailSequence`. Takes the COPYWRITER path
+   * only, no fan-out, no blog/video/music/podcast calls. This exists because
+   * prior to April 24 2026, contentType="email_sequence" fell through to
+   * FULL_PACKAGE and the sequential video+blog+music+podcast chain timed
+   * out (see memory/project_content_manager_email_sequence_hang.md).
+   */
+  private async orchestrateEmailSequence(
+    request: ContentRequest,
+    brandContext: BrandContext,
+    seoContext: SEOContext,
+    detectedIntent: ContentIntent,
+    taskId: string,
+    startTime: number,
+    delegations: DelegationResult[],
+    specialistOutputs: ContentPackage['specialistOutputs'],
+    warnings: string[],
+  ): Promise<ContentPackage> {
+    const copywriter = this.specialists.get('COPYWRITER');
+    const specialistStart = Date.now();
+
+    let emailSequence: EmailSequenceResult | null = null;
+
+    if (!copywriter?.isFunctional()) {
+      warnings.push('COPYWRITER specialist is not functional — email sequence cannot be produced');
+      delegations.push({
+        specialist: 'COPYWRITER',
+        brief: 'Generate email sequence',
+        status: 'FAILED',
+        result: null,
+        executionTimeMs: 0,
+      });
+    } else {
+      const topic = request.topic && request.topic.trim().length > 0
+        ? request.topic
+        : 'Follow-up sequence';
+      const audience = request.audience && request.audience.trim().length > 0
+        ? request.audience
+        : brandContext.targetAudience ?? 'prospects';
+      const count = typeof request.count === 'number' && request.count >= 1 && request.count <= 20
+        ? request.count
+        : 5;
+
+      try {
+        const message: AgentMessage = {
+          id: `${taskId}_emailseq`,
+          type: 'COMMAND',
+          from: this.identity.id,
+          to: 'COPYWRITER',
+          payload: {
+            action: 'generate_email_sequence',
+            topic,
+            audience,
+            count,
+            cadence: request.cadence,
+            trigger: request.trigger,
+            toneOfVoice: brandContext.toneOfVoice,
+            keyPhrases: brandContext.keyPhrases,
+            avoidPhrases: brandContext.avoidPhrases,
+          },
+          timestamp: new Date(),
+          priority: 'HIGH',
+          requiresResponse: true,
+          traceId: taskId,
+        };
+
+        const report = await copywriter.execute(message);
+        const executionTimeMs = Date.now() - specialistStart;
+
+        delegations.push({
+          specialist: 'COPYWRITER',
+          brief: `Generate ${count}-email sequence on "${topic}"`,
+          status: report.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          result: report.data,
+          executionTimeMs,
+        });
+
+        specialistOutputs.copywriter = report.data;
+
+        if (report.status === 'COMPLETED' && report.data) {
+          emailSequence = report.data as EmailSequenceResult;
+        } else {
+          const reportErrors = report.errors ?? [];
+          warnings.push(
+            `COPYWRITER returned ${report.status} for email sequence: ${reportErrors.join('; ') || 'no error detail'}`,
+          );
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        warnings.push(`Email sequence generation failed: ${msg}`);
+        delegations.push({
+          specialist: 'COPYWRITER',
+          brief: 'Generate email sequence',
+          status: 'FAILED',
+          result: null,
+          executionTimeMs: Date.now() - specialistStart,
+        });
+      }
+    }
+
+    const completedAt = new Date();
+    const totalExecutionTimeMs = Date.now() - startTime;
+    const successful = delegations.filter((d) => d.status === 'COMPLETED').length;
+    const failed = delegations.filter((d) => d.status === 'FAILED').length;
+
+    return {
+      packageId: `content_${taskId}`,
+      blueprintId: request.blueprintId,
+      createdAt: new Date(startTime),
+      completedAt,
+      brandContext,
+      seoContext,
+      detectedIntent,
+      pageContent: [],
+      socialSnippets: { twitter: [], linkedin: [], instagram: [], tiktok: [], facebook: [] },
+      videoContent: null,
+      calendar: null,
+      blogContent: null,
+      musicContent: null,
+      podcastContent: null,
+      emailSequence,
+      validation: {
+        passed: emailSequence !== null,
+        avoidPhraseViolations: [],
+        toneConsistency: emailSequence !== null ? 1.0 : 0,
+        seoScore: 0,
+        accessibilityScore: 1.0,
+      },
+      delegations,
+      specialistOutputs,
+      confidence: emailSequence !== null ? 0.9 : 0,
+      warnings,
+      execution: {
+        totalSpecialists: 1,
+        successfulSpecialists: successful,
+        failedSpecialists: failed,
+        totalExecutionTimeMs,
+      },
+    };
   }
 
   /**
