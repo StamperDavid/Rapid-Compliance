@@ -141,6 +141,7 @@ export type ContentIntent =
   | 'PODCAST_PRODUCTION'   // Podcast specialist focus
   | 'BLOG_CONTENT'         // Blog Writer for long-form SEO content
   | 'EMAIL_SEQUENCE'       // N-email nurture/drip/campaign with cadence timing
+  | 'MUSIC_ONLY'           // Music/Soundtrack Planner only
   | 'SCHEDULING'           // Calendar coordination
   | 'SEO_REFRESH'          // Update existing content for SEO
   | 'SINGLE_PAGE';         // Content for one specific page
@@ -179,6 +180,10 @@ const _INTENT_KEYWORDS: Record<ContentIntent, string[]> = {
     'email campaign', 'email_campaign', 'newsletter',
     'welcome series', 'onboarding sequence', 'follow-up sequence',
   ],
+  MUSIC_ONLY: [
+    'music', 'soundtrack', 'music_soundtrack', 'music_style',
+    'audio style', 'theme music', 'background music',
+  ],
   SCHEDULING: [
     'schedule', 'calendar', 'publish', 'timing', 'when to post', 'optimal time',
     'content calendar',
@@ -200,6 +205,7 @@ const INTENT_SPECIALISTS: Record<ContentIntent, string[]> = {
   VISUAL_ONLY: ['ASSET_GENERATOR'],
   VIDEO_PRODUCTION: ['VIDEO_SPECIALIST', 'COPYWRITER', 'MUSIC_PLANNER'],
   PODCAST_PRODUCTION: ['PODCAST_SPECIALIST'],
+  MUSIC_ONLY: ['MUSIC_PLANNER'],
   SCHEDULING: ['CALENDAR_COORDINATOR'],
   SEO_REFRESH: ['COPYWRITER', 'BLOG_WRITER'],
   SINGLE_PAGE: ['COPYWRITER', 'ASSET_GENERATOR'],
@@ -883,24 +889,86 @@ export class ContentManager extends BaseManager {
   private detectContentIntent(request: ContentRequest): ContentIntent {
     // Jasper's singular contentType takes precedence — a request that
     // explicitly names ONE content type must not fan out to all 6 specialists.
+    //
+    // Every value in the delegate_to_content `contentType` enum must map to
+    // a focused intent here. Anything that falls through lands on
+    // FULL_PACKAGE and times out the Content Manager at 300s. See
+    // jasper-tools.ts (delegate_to_content.parameters.contentType.enum)
+    // for the authoritative list.
     if (typeof request.contentType === 'string' && request.contentType.length > 0) {
       const ct = request.contentType.toLowerCase().trim();
-      if (ct.includes('blog') || ct === 'article' || ct === 'pillar') {return 'BLOG_CONTENT';}
-      if (ct === 'video' || ct === 'reel' || ct === 'short' || ct === 'youtube' || ct === 'tiktok') {return 'VIDEO_PRODUCTION';}
-      if (ct === 'podcast' || ct === 'episode') {return 'PODCAST_PRODUCTION';}
-      if (ct === 'visuals' || ct === 'image' || ct === 'asset' || ct === 'graphic' || ct === 'banner') {return 'VISUAL_ONLY';}
+
+      // Blog / long-form / thought-leadership — BLOG_WRITER only
+      if (ct.includes('blog') || ct === 'article' || ct === 'pillar' || ct === 'case_study' || ct === 'case-study') {
+        return 'BLOG_CONTENT';
+      }
+
+      // Video direction — VIDEO_SPECIALIST path. video_script counts here
+      // because the Video Specialist owns script creation too.
+      if (
+        ct === 'video' || ct === 'video_script' || ct === 'video-script'
+        || ct === 'reel' || ct === 'short' || ct === 'youtube' || ct === 'tiktok'
+      ) {
+        return 'VIDEO_PRODUCTION';
+      }
+
+      // Podcast — PODCAST_SPECIALIST. Show notes are still podcast work.
+      if (
+        ct === 'podcast' || ct === 'episode' || ct === 'podcast_episode' || ct === 'podcast-episode'
+        || ct === 'podcast_show_notes' || ct === 'podcast-show-notes' || ct === 'show_notes'
+      ) {
+        return 'PODCAST_PRODUCTION';
+      }
+
+      // Music / soundtrack direction — MUSIC_PLANNER only
+      if (
+        ct === 'music' || ct === 'soundtrack' || ct === 'music_soundtrack' || ct === 'music-soundtrack'
+        || ct === 'music_style' || ct === 'music-style'
+      ) {
+        return 'MUSIC_ONLY';
+      }
+
+      // Asset/visual generation — ASSET_GENERATOR only
+      if (
+        ct === 'visuals' || ct === 'image' || ct === 'asset' || ct === 'graphic' || ct === 'banner'
+        || ct === 'thumbnail' || ct === 'social_graphic'
+      ) {
+        return 'VISUAL_ONLY';
+      }
+
       // Email-sequence family matches BEFORE the generic 'email' → COPY_ONLY
       // branch so multi-step sequences don't get compressed into single-email copy.
       if (
         ct === 'email_sequence' || ct === 'email-sequence'
-        || ct === 'email_campaign' || ct === 'email_drip' || ct === 'drip'
+        || ct === 'email_campaign' || ct === 'email_drip' || ct === 'drip' || ct === 'drip_campaign' || ct === 'drip-campaign'
         || ct === 'nurture' || ct === 'nurture_sequence' || ct === 'nurture-sequence'
         || ct === 'newsletter' || ct === 'welcome_series' || ct === 'onboarding_sequence'
         || ct === 'follow_up_sequence' || ct === 'followup_sequence'
-      ) {return 'EMAIL_SEQUENCE';}
-      if (ct === 'copy' || ct === 'headline' || ct === 'email' || ct === 'ad' || ct === 'social_post') {return 'COPY_ONLY';}
-      if (ct === 'calendar' || ct === 'schedule') {return 'SCHEDULING';}
-      if (ct === 'seo_refresh' || ct === 'seo') {return 'SEO_REFRESH';}
+      ) {
+        return 'EMAIL_SEQUENCE';
+      }
+
+      // Short-form copy / ad creative / landing page / social post — COPYWRITER only.
+      // landing_page_copy and ad_creative both belong here because a single
+      // Copywriter LLM call produces the body — no fan-out is justified.
+      if (
+        ct === 'copy' || ct === 'headline' || ct === 'email' || ct === 'ad' || ct === 'ad_creative' || ct === 'ad-creative'
+        || ct === 'social_post' || ct === 'social_media' || ct === 'social-media' || ct === 'tweet' || ct === 'post'
+        || ct === 'landing_page_copy' || ct === 'landing-page-copy' || ct === 'landing_page' || ct === 'landing-page'
+      ) {
+        return 'COPY_ONLY';
+      }
+
+      // Calendar / scheduling — CALENDAR_COORDINATOR only
+      if (ct === 'calendar' || ct === 'schedule' || ct === 'content_calendar' || ct === 'content-calendar') {
+        return 'SCHEDULING';
+      }
+
+      // SEO refresh — COPYWRITER + BLOG_WRITER (existing content optimization)
+      if (ct === 'seo_refresh' || ct === 'seo' || ct === 'seo-refresh') {
+        return 'SEO_REFRESH';
+      }
+
       // Unrecognized singular type — fall through to legacy paths below.
     }
 
@@ -1017,66 +1085,61 @@ export class ContentManager extends BaseManager {
     // Step 6: Generate social snippets
     const socialSnippets = this.generateSocialSnippets(pageContent, brandContext);
 
-    // Step 7: Get video content if applicable
-    let videoContent: VideoContent | null = null;
-    if (specialistIds.includes('VIDEO_SPECIALIST')) {
-      videoContent = await this.generateVideoContent(
-        request,
-        brandContext,
-        taskId,
-        delegations,
-        specialistOutputs
-      );
-    }
+    // Steps 7-8d: Run the five independent specialists in parallel.
+    //
+    // These were previously awaited one after another, which meant a
+    // FULL_PACKAGE run was ~5 × per-specialist-LLM-latency (~40s each, ~200s
+    // total) before the 300s manager timeout. None of the five depend on
+    // the others' output — they all read the shared request + brand + SEO
+    // context and return their own specialist result. Promise.allSettled
+    // cuts wall time to roughly max(specialist), and preserves the
+    // partial-success semantics of the previous serial code: each specialist
+    // can independently fail without blocking the others.
+    const videoPromise = specialistIds.includes('VIDEO_SPECIALIST')
+      ? this.generateVideoContent(request, brandContext, taskId, delegations, specialistOutputs)
+      : Promise.resolve<VideoContent | null>(null);
 
-    // Step 8: Get calendar recommendations if applicable
-    let calendar: ContentCalendar | null = null;
-    if (specialistIds.includes('CALENDAR_COORDINATOR')) {
-      calendar = await this.generateContentCalendar(
-        pageContent,
-        request.targetPlatforms ?? [],
-        taskId,
-        delegations,
-        specialistOutputs
-      );
-    }
+    const calendarPromise = specialistIds.includes('CALENDAR_COORDINATOR')
+      ? this.generateContentCalendar(pageContent, request.targetPlatforms ?? [], taskId, delegations, specialistOutputs)
+      : Promise.resolve<ContentCalendar | null>(null);
 
-    // Step 8b: Get blog content if applicable
-    let blogContent: BlogPostResult | null = null;
-    if (specialistIds.includes('BLOG_WRITER')) {
-      blogContent = await this.generateBlogContent(
-        request,
-        brandContext,
-        seoContext,
-        taskId,
-        delegations,
-        specialistOutputs,
-      );
-    }
+    const blogPromise = specialistIds.includes('BLOG_WRITER')
+      ? this.generateBlogContent(request, brandContext, seoContext, taskId, delegations, specialistOutputs)
+      : Promise.resolve<BlogPostResult | null>(null);
 
-    // Step 8c: Get music content if applicable
-    let musicContent: SoundtrackPlanResult | null = null;
-    if (specialistIds.includes('MUSIC_PLANNER')) {
-      musicContent = await this.generateMusicContent(
-        request,
-        brandContext,
-        taskId,
-        delegations,
-        specialistOutputs,
-      );
-    }
+    const musicPromise = specialistIds.includes('MUSIC_PLANNER')
+      ? this.generateMusicContent(request, brandContext, taskId, delegations, specialistOutputs)
+      : Promise.resolve<SoundtrackPlanResult | null>(null);
 
-    // Step 8d: Get podcast content if applicable
-    let podcastContent: EpisodePlanResult | null = null;
-    if (specialistIds.includes('PODCAST_SPECIALIST')) {
-      podcastContent = await this.generatePodcastContent(
-        request,
-        brandContext,
-        taskId,
-        delegations,
-        specialistOutputs,
-      );
-    }
+    const podcastPromise = specialistIds.includes('PODCAST_SPECIALIST')
+      ? this.generatePodcastContent(request, brandContext, taskId, delegations, specialistOutputs)
+      : Promise.resolve<EpisodePlanResult | null>(null);
+
+    const settled = await Promise.allSettled([
+      videoPromise,
+      calendarPromise,
+      blogPromise,
+      musicPromise,
+      podcastPromise,
+    ]);
+
+    const pickSettled = <T>(index: number): T | null => {
+      const result = settled[index];
+      if (result?.status === 'fulfilled') {
+        return (result.value as T | null) ?? null;
+      }
+      if (result?.status === 'rejected') {
+        const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+        warnings.push(`Parallel specialist failed at index ${index}: ${reason}`);
+      }
+      return null;
+    };
+
+    const videoContent: VideoContent | null = pickSettled<VideoContent>(0);
+    const calendar: ContentCalendar | null = pickSettled<ContentCalendar>(1);
+    const blogContent: BlogPostResult | null = pickSettled<BlogPostResult>(2);
+    const musicContent: SoundtrackPlanResult | null = pickSettled<SoundtrackPlanResult>(3);
+    const podcastContent: EpisodePlanResult | null = pickSettled<EpisodePlanResult>(4);
 
     // Step 9: Validate content against Brand DNA
     const validation = this.validateContent(pageContent, socialSnippets, brandContext, seoContext);
