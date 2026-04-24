@@ -383,6 +383,148 @@ export async function fireReadySequenceJobs(maxBatch: number = 50): Promise<Fire
 }
 
 /**
+ * Instantiate a sequence for a real recipient from a Workflow's template jobs.
+ *
+ * Called when the upstream event (e.g. `lead_created`) fires for a specific
+ * entity: we copy the workflow's template jobs (which carry recipient
+ * `{{entity.email}}`) into fresh `workflowSequenceJobs` docs with the real
+ * email address, `status=pending`, and fireAt recomputed as `now + offset`
+ * (where offset is the per-template job's original day offset from the
+ * workflow's createdAt). The template rows stay untouched so the same
+ * workflow can instantiate for every future matching entity.
+ *
+ * Returns the created job IDs. No-op (empty array + warning log) if the
+ * workflow has no template jobs or the recipient is still a template string.
+ */
+export async function instantiateSequenceForRecipient(params: {
+  workflowId: string;
+  recipient: string;
+  triggerEntity?: Record<string, unknown>;
+}): Promise<ScheduleEmailSequenceResult | { jobIds: []; fireAts: []; firstFireAt: ''; lastFireAt: '' }> {
+  if (!adminDb) {
+    throw new Error('Firestore admin not initialized — cannot instantiate sequence');
+  }
+  if (/\{\{/.test(params.recipient)) {
+    logger.warn('[SequenceScheduler] instantiateSequenceForRecipient refused template recipient', {
+      workflowId: params.workflowId,
+      recipient: params.recipient,
+    });
+    return { jobIds: [], fireAts: [], firstFireAt: '', lastFireAt: '' };
+  }
+
+  const collectionPath = getSubCollection(COLLECTION);
+  const templateSnap = await adminDb
+    .collection(collectionPath)
+    .where('workflowId', '==', params.workflowId)
+    .get();
+
+  if (templateSnap.empty) {
+    logger.warn('[SequenceScheduler] No template jobs found for workflow', {
+      workflowId: params.workflowId,
+    });
+    return { jobIds: [], fireAts: [], firstFireAt: '', lastFireAt: '' };
+  }
+
+  const templates = templateSnap.docs
+    .map((d) => d.data() as WorkflowSequenceJob)
+    .filter((t) => !t.recipientResolved)
+    .sort((a, b) => a.stepIndex - b.stepIndex);
+
+  if (templates.length === 0) {
+    logger.warn('[SequenceScheduler] No template (unresolved) jobs for workflow', {
+      workflowId: params.workflowId,
+    });
+    return { jobIds: [], fireAts: [], firstFireAt: '', lastFireAt: '' };
+  }
+
+  // Rebuild the emails array + offsets from the template jobs. Offsets are
+  // the day-delta between a template's fireAt and the first template's fireAt.
+  const firstTemplateFireMs = new Date(templates[0].fireAt).getTime();
+  const sortedEmails: SequenceEmail[] = templates.map((t) => ({
+    order: t.stepIndex,
+    subjectLine: t.emailSubject,
+    previewText: t.emailPreview,
+    // We only store rendered body HTML on the template. Re-wrap-avoidance:
+    // renderEmailBody would HTML-wrap again. Stripping the outer div recreates
+    // the author's body as best we can; if this ever misbehaves we can add a
+    // separate `emailBodyRaw` column.
+    body: stripHtmlEnvelope(t.emailBody),
+    cta: undefined,
+    sendTimingHint: t.sendTimingHint,
+  }));
+
+  const offsetsDays = templates.map((t) =>
+    (new Date(t.fireAt).getTime() - firstTemplateFireMs) / DAY_MS,
+  );
+
+  // Schedule a fresh sequence anchored at now, preserving the original
+  // per-step day-offsets from the template.
+  const startAt = new Date();
+  const nowIso = startAt.toISOString();
+  const jobIds: string[] = [];
+  const fireAts: string[] = [];
+  const batch = adminDb.batch();
+
+  for (let i = 0; i < templates.length; i++) {
+    const tmpl = templates[i];
+    const fireAtMs = startAt.getTime() + offsetsDays[i] * DAY_MS;
+    const fireAt = new Date(fireAtMs).toISOString();
+    const jobId = `seqjob_${params.workflowId}_${tmpl.stepIndex}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const job: WorkflowSequenceJob = {
+      id: jobId,
+      workflowId: params.workflowId,
+      missionId: tmpl.missionId,
+      stepIndex: tmpl.stepIndex,
+      totalSteps: tmpl.totalSteps,
+      sequenceType: tmpl.sequenceType,
+      triggerEvent: tmpl.triggerEvent,
+      recipient: params.recipient,
+      recipientResolved: true,
+      emailSubject: tmpl.emailSubject,
+      emailPreview: tmpl.emailPreview,
+      emailBody: tmpl.emailBody,
+      sendTimingHint: tmpl.sendTimingHint,
+      fireAt,
+      status: 'pending',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    batch.set(adminDb.collection(collectionPath).doc(jobId), job);
+    jobIds.push(jobId);
+    fireAts.push(fireAt);
+  }
+
+  await batch.commit();
+
+  logger.info('[SequenceScheduler] Instantiated sequence for recipient', {
+    workflowId: params.workflowId,
+    recipient: params.recipient,
+    jobCount: jobIds.length,
+    firstFireAt: fireAts[0],
+    lastFireAt: fireAts[fireAts.length - 1],
+  });
+
+  const emailsForReturn: SequenceEmail[] = sortedEmails;
+  void emailsForReturn; // Only used to keep the type tightened in reviews
+  return {
+    jobIds,
+    fireAts,
+    firstFireAt: fireAts[0],
+    lastFireAt: fireAts[fireAts.length - 1],
+  };
+}
+
+/**
+ * Strip the HTML envelope added by renderEmailBody so a template's body
+ * can be re-used without double-wrapping. Safe on plain strings too.
+ */
+function stripHtmlEnvelope(html: string): string {
+  const match = /^<div[^>]*>([\s\S]*)<\/div>$/.exec(html.trim());
+  return match ? match[1] : html;
+}
+
+/**
  * Estimate a day-level countdown string for display. Used by the
  * create_workflow tool response so the operator sees "fires in ~3 days"
  * without having to compute it.
