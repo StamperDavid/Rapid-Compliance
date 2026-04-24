@@ -334,7 +334,26 @@ interface Expectation {
   failures: string[];
 }
 
-function evaluateFixture(fixture: Fixture, mission: MissionDoc | null, chatReply: string | null): Expectation {
+/**
+ * Unified evaluator.
+ *
+ * Handles three fixture shapes:
+ *   1. planCalled=true      mission must exist AND reach COMPLETED AND contain expected tools
+ *   2. planCalled=false     no mission must be created; reply (if expected) must be non-empty
+ *   3. planCalled omitted   either-path — tool set sourced from mission if one exists, else
+ *                           from chat metadata.toolExecuted. Status still checked when mission
+ *                           exists so we catch halts.
+ *
+ * Tool checks (toolsAnyOf / toolsAllOf / etc.) now run against the unified tool set in cases
+ * 1 and 3, not just case 1. This fixes the prior hole where `toolsAnyOf` fixtures without
+ * planCalled silently passed when no mission was created.
+ */
+function evaluateFixture(
+  fixture: Fixture,
+  mission: MissionDoc | null,
+  chatReply: string | null,
+  chatToolsExecuted: string[],
+): Expectation {
   const failures: string[] = [];
   const ex = fixture.expect;
 
@@ -346,38 +365,67 @@ function evaluateFixture(fixture: Fixture, mission: MissionDoc | null, chatReply
     if (mission) { failures.push(`planCalled=false but a mission was created (${mission.missionId})`); }
   }
 
-  if (ex.planCalled === true) {
-    if (!mission) { failures.push('planCalled=true but no mission was found'); return { passed: false, failures }; }
-    const tools = (mission.steps ?? []).map((s) => s.toolName);
-    const toolSet = new Set(tools);
-    if (ex.toolsAllOf) {
-      for (const t of ex.toolsAllOf) {
-        if (!toolSet.has(t)) { failures.push(`toolsAllOf missing ${t}`); }
-      }
-    }
-    for (const groupKey of ['toolsAnyOf', 'toolsAlsoAnyOf', 'toolsThirdAnyOf', 'toolsFourthAnyOf'] as const) {
-      const group = ex[groupKey];
-      if (group && group.length > 0) {
-        const hit = group.some((t) => toolSet.has(t));
-        if (!hit) { failures.push(`${groupKey} not satisfied — need one of [${group.join(',')}], got [${tools.join(',')}]`); }
-      }
-    }
-    if (ex.toolsForbidden) {
-      const present = ex.toolsForbidden.filter((t) => toolSet.has(t));
-      if (present.length > 0) { failures.push(`forbidden tools present: [${present.join(',')}]`); }
-    }
+  if (ex.planCalled === true && !mission) {
+    failures.push('planCalled=true but no mission was found');
+    return { passed: false, failures };
+  }
 
-    // Every step should be COMPLETED or (if halted) at least not in an
-    // unrecoverable state. FAILED steps that weren't retried count as a fail.
+  // Unified tool set — mission steps if available, else chat metadata.
+  // Either-path fixtures (planCalled omitted) can pass via direct delegation.
+  const toolsCalled = mission
+    ? (mission.steps ?? []).map((s) => s.toolName)
+    : chatToolsExecuted;
+  const toolSet = new Set(toolsCalled);
+
+  const hasToolAssertions = Boolean(
+    ex.toolsAllOf || ex.toolsAnyOf || ex.toolsAlsoAnyOf
+    || ex.toolsThirdAnyOf || ex.toolsFourthAnyOf || ex.toolsForbidden,
+  );
+  if (hasToolAssertions && toolsCalled.length === 0 && ex.planCalled !== false) {
+    failures.push('tool assertions present but neither a mission nor chat metadata recorded any tool calls');
+  }
+
+  if (ex.toolsAllOf) {
+    for (const t of ex.toolsAllOf) {
+      if (!toolSet.has(t)) { failures.push(`toolsAllOf missing ${t} (got [${toolsCalled.join(',')}])`); }
+    }
+  }
+  for (const groupKey of ['toolsAnyOf', 'toolsAlsoAnyOf', 'toolsThirdAnyOf', 'toolsFourthAnyOf'] as const) {
+    const group = ex[groupKey];
+    if (group && group.length > 0) {
+      const hit = group.some((t) => toolSet.has(t));
+      if (!hit) { failures.push(`${groupKey} not satisfied — need one of [${group.join(',')}], got [${toolsCalled.join(',')}]`); }
+    }
+  }
+  if (ex.toolsForbidden) {
+    const present = ex.toolsForbidden.filter((t) => toolSet.has(t));
+    if (present.length > 0) { failures.push(`forbidden tools present: [${present.join(',')}]`); }
+  }
+
+  // Mission status checks — only when a mission actually exists. Terminal
+  // states we accept: COMPLETED. Anything else is a failure signal:
+  //   FAILED              — execution hit unrecoverable error
+  //   AWAITING_APPROVAL   — a step failed twice and the mission halted
+  //   IN_PROGRESS         — our poll timed out before the mission finished,
+  //                         which means it was still running server-side when
+  //                         we stopped watching (this was the silent false-pass
+  //                         before the fix)
+  //   PLAN_PENDING_APPROVAL — approve-all or approve POST never landed
+  //   PENDING             — mission never started
+  if (mission) {
     const failedSteps = (mission.steps ?? []).filter((s) => s.status === 'FAILED');
     if (failedSteps.length > 0) {
       failures.push(`${failedSteps.length} step(s) in FAILED state: ${failedSteps.map((s) => `${s.toolName}(${s.error ?? 'no-error'})`).join(', ')}`);
     }
     if (mission.status === 'FAILED') {
-      failures.push(`mission status=FAILED`);
-    }
-    if (mission.status === 'AWAITING_APPROVAL') {
-      failures.push(`mission halted in AWAITING_APPROVAL — a step failed twice`);
+      failures.push('mission status=FAILED');
+    } else if (mission.status === 'AWAITING_APPROVAL') {
+      failures.push('mission halted in AWAITING_APPROVAL — a step failed twice');
+    } else if (mission.status === 'IN_PROGRESS') {
+      failures.push('mission still IN_PROGRESS at poll timeout — execution did not reach a terminal state within --timeout window');
+    } else if (mission.status !== 'COMPLETED') {
+      // Catch PLAN_PENDING_APPROVAL, PENDING, or any future state we don't explicitly handle.
+      failures.push(`mission stuck in non-terminal status=${mission.status}`);
     }
   }
 
@@ -429,6 +477,13 @@ async function runOnce(
   }
 
   const missionIdFromChat = chat.metadata?.missionId;
+  // Chat route reports toolExecuted as a comma-separated string — split it so
+  // either-path fixtures (planCalled omitted) can verify direct-delegation tools
+  // when no mission was created.
+  const chatToolsExecuted: string[] = typeof chat.metadata?.toolExecuted === 'string'
+    ? chat.metadata.toolExecuted.split(',').map((s) => s.trim()).filter((s) => s.length > 0)
+    : [];
+
   // Locate the mission. If chat surfaced missionId use it; otherwise search.
   let mission: MissionDoc | null = null;
   if (missionIdFromChat) {
@@ -439,16 +494,18 @@ async function runOnce(
     mission = await pollMissionByPrompt(fixture.prompt, afterTimestamp, 10_000);
   }
 
-  // If still no mission, Jasper answered advisory/factual — evaluate reply-only.
+  // If still no mission, Jasper answered advisory/factual or direct-delegated.
+  // Evaluate against chat metadata for the tool set.
   if (!mission) {
-    log(`[${fixture.id}] iter ${iteration} — no mission created (advisory/factual reply)`);
-    const ev = evaluateFixture(fixture, null, chatReply);
+    log(`[${fixture.id}] iter ${iteration} — no mission created (advisory/factual/direct-delegate, tools=[${chatToolsExecuted.join(',')}])`);
+    const ev = evaluateFixture(fixture, null, chatReply, chatToolsExecuted);
     return {
       fixtureId: fixture.id,
       iteration,
       ok: ev.passed,
       failures: ev.failures,
       chatReply: chatReply ?? undefined,
+      planTools: chatToolsExecuted.length > 0 ? chatToolsExecuted : undefined,
       durationMs: Date.now() - start,
     };
   }
@@ -457,7 +514,7 @@ async function runOnce(
 
   // If this prompt is expected to NOT call plan but did — short-circuit fail.
   if (fixture.expect.planCalled === false) {
-    const ev = evaluateFixture(fixture, mission, chatReply);
+    const ev = evaluateFixture(fixture, mission, chatReply, chatToolsExecuted);
     return {
       fixtureId: fixture.id,
       iteration,
@@ -531,9 +588,9 @@ async function runOnce(
     };
   }
 
-  const ev = evaluateFixture(fixture, final, chatReply);
+  const ev = evaluateFixture(fixture, final, chatReply, chatToolsExecuted);
   const deliverables = extractDeliverables(final);
-  log(`[${fixture.id}] iter ${iteration} — final=${final.status} ${ev.passed ? 'PASS' : `FAIL(${ev.failures.length})`}`);
+  log(`[${fixture.id}] iter ${iteration} — final=${final.status} ${ev.passed ? 'PASS' : `FAIL(${ev.failures.length})`}${ev.failures.length > 0 ? ` :: ${ev.failures.join(' | ')}` : ''}`);
 
   return {
     fixtureId: fixture.id,
