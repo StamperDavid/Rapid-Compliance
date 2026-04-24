@@ -486,6 +486,22 @@
         { "fieldPath": "missionId", "order": "ASCENDING" },
         { "fieldPath": "gradedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "workflowSequenceJobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "fireAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workflowSequenceJobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workflowId", "order": "ASCENDING" },
+        { "fieldPath": "stepIndex", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
