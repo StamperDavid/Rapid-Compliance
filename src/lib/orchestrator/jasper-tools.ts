@@ -32,6 +32,7 @@ import {
   createCampaign,
   trackDeliverableAsync,
 } from '@/lib/campaign/campaign-service';
+import type { SequenceEmail } from '@/lib/workflows/sequence-scheduler';
 
 // ============================================================================
 // TIMEOUT UTILITY — Prevents hung LLM calls from spinning forever
@@ -575,6 +576,7 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   place_call: '/voice',
   send_sms: '/sms-messages',
   create_campaign: '/mission-control',
+  create_workflow: '/mission-control',
 };
 
 /**
@@ -2558,6 +2560,53 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       },
     },
   },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WORKFLOW SCHEDULING — Cadence automation for email sequences
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'create_workflow',
+      description:
+        'Wire the CADENCE for a multi-email sequence (nurture, drip, welcome series, newsletter). Pairs with delegate_to_content: Copywriter writes the emails, create_workflow schedules WHEN each one fires. Creates a Workflow record + a row per email in workflowSequenceJobs with an absolute fireAt timestamp, so the workflow-scheduler cron can dispatch each email on time. ENABLED: TRUE. Required for any prompt containing cadence words ("nurture", "drip", "day 3", "wait N days", "welcome sequence", "newsletter cadence").',
+      parameters: {
+        type: 'object',
+        properties: {
+          trigger: {
+            type: 'string',
+            description: 'What event starts the sequence for a given recipient (e.g., "trial_signup", "new_lead", "abandoned_cart", "form_submit", "manual"). Stored on each scheduled step so downstream systems can hook the right entity event.',
+          },
+          sequenceType: {
+            type: 'string',
+            description: 'Category of cadence this workflow represents.',
+            enum: ['nurture', 'drip', 'welcome', 'newsletter', 'custom'],
+          },
+          cadence: {
+            type: 'string',
+            description: 'Human description of send timing (e.g., "day 1, day 3, day 7, day 14", "over 14 days", "every 2 days"). Ignored if each email already carries a sendTimingHint from the Copywriter; used as fallback.',
+          },
+          contentSource: {
+            type: 'string',
+            description: 'Reference to the Copywriter output that produced the email bodies. Accepts "step_N_output" (pulls emails[] from step N of the current mission) or a JSON-encoded email array (same shape as Copywriter\'s generate_email_sequence output: order, subjectLine, previewText, body, cta, sendTimingHint). If omitted, the tool reads the most recent delegate_to_content step in this mission.',
+          },
+          steps: {
+            type: 'integer',
+            description: 'Expected number of emails in the sequence. Used as a sanity check against contentSource. If the resolved email array has a different length, the tool uses the actual array and flags a warning.',
+          },
+          recipient: {
+            type: 'string',
+            description: 'Destination address for the demo fire of this sequence. Use a literal email for dry runs, or the template "{{entity.email}}" to indicate the sequence will be instantiated per-recipient when the trigger event fires. Defaults to the template when omitted.',
+          },
+          name: {
+            type: 'string',
+            description: 'Optional: human-readable name for the workflow (shown in the workflows list).',
+          },
+        },
+        required: ['trigger', 'sequenceType'],
+      },
+    },
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
   // FULL CAMPAIGN ORCHESTRATION — Research → Strategy → Multi-Deliverable
   // ═══════════════════════════════════════════════════════════════════════════
@@ -6462,6 +6511,200 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           trackMissionStep(context, 'batch_produce_videos', 'FAILED', {
             error: errMsg,
             durationMs: Date.now() - batchStart,
+          });
+        }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // WORKFLOW SCHEDULING EXECUTION (Stage A.5 — April 24, 2026)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'create_workflow': {
+        // Creates a Workflow record + N workflowSequenceJobs, one per email
+        // in the sequence with an absolute fireAt timestamp. The existing
+        // /api/cron/workflow-scheduler endpoint polls pending jobs every
+        // 5 minutes (registered in vercel.json) and dispatches each via
+        // sendEmail when fireAt <= now.
+        //
+        // Why not use the existing workflow engine's delay-action? That
+        // action blocks on setTimeout and the engine has a 60s global
+        // timeout — fine for same-minute chains, unusable for day-scale
+        // cadences. sequence-scheduler bypasses the engine for send steps
+        // while still writing a Workflow doc so the sequence appears in
+        // workflow lists and the operator can pause/archive it.
+        const createWfStart = Date.now();
+        trackMissionStep(context, 'create_workflow', 'RUNNING', { toolArgs: args });
+
+        try {
+          const { scheduleEmailSequence, describeCountdown } = await import('@/lib/workflows/sequence-scheduler');
+          const { createWorkflow } = await import('@/lib/workflows/workflow-service');
+          const { getMission } = await import('@/lib/orchestrator/mission-persistence');
+
+          // -----------------------------------------------------------------
+          // Parse args
+          // -----------------------------------------------------------------
+          const trigger = typeof args.trigger === 'string' && args.trigger.trim().length > 0
+            ? args.trigger.trim()
+            : 'manual';
+          const sequenceTypeRaw = typeof args.sequenceType === 'string' ? args.sequenceType.trim() : 'nurture';
+          const allowedSequenceTypes = ['nurture', 'drip', 'welcome', 'newsletter', 'custom'] as const;
+          const sequenceType: (typeof allowedSequenceTypes)[number] =
+            (allowedSequenceTypes as readonly string[]).includes(sequenceTypeRaw)
+              ? (sequenceTypeRaw as (typeof allowedSequenceTypes)[number])
+              : 'nurture';
+          const cadence = typeof args.cadence === 'string' ? args.cadence : undefined;
+          const expectedSteps = typeof args.steps === 'number'
+            ? args.steps
+            : (typeof args.steps === 'string' ? parseInt(args.steps, 10) : undefined);
+          const recipient = typeof args.recipient === 'string' && args.recipient.trim().length > 0
+            ? args.recipient.trim()
+            : '{{entity.email}}';
+          const name = typeof args.name === 'string' && args.name.trim().length > 0
+            ? args.name.trim()
+            : `${sequenceType} sequence (${trigger})`;
+
+          // -----------------------------------------------------------------
+          // Resolve contentSource → emails[]
+          //
+          // Three paths:
+          //   a) args.contentSource is a JSON array (inline)
+          //   b) args.contentSource matches step_N_output (or is missing) →
+          //      pull from the Nth delegate_to_content step on the mission
+          //   c) fallback: most recent delegate_to_content step on the mission
+          // -----------------------------------------------------------------
+          let emails: SequenceEmail[] = [];
+          const contentSource = typeof args.contentSource === 'string' ? args.contentSource.trim() : '';
+
+          if (contentSource.startsWith('[')) {
+            try {
+              const inline = JSON.parse(contentSource) as unknown;
+              if (Array.isArray(inline)) {
+                emails = inline as SequenceEmail[];
+              }
+            } catch {
+              // Fall through to mission-step resolution
+            }
+          }
+
+          if (emails.length === 0 && context?.missionId) {
+            const mission = await getMission(context.missionId);
+            if (mission?.steps && mission.steps.length > 0) {
+              const contentSteps = mission.steps.filter(
+                (s) => s.toolName === 'delegate_to_content' && s.status === 'COMPLETED' && s.toolResult,
+              );
+              const stepNumMatch = /step[_\s-]?(\d+)/i.exec(contentSource);
+              const targetStep = stepNumMatch && contentSteps.length > 0
+                ? (contentSteps[parseInt(stepNumMatch[1], 10) - 1] ?? contentSteps[contentSteps.length - 1])
+                : contentSteps[contentSteps.length - 1];
+
+              if (targetStep?.toolResult) {
+                try {
+                  const parsed = JSON.parse(targetStep.toolResult) as {
+                    data?: { result?: { emails?: SequenceEmail[] }; emails?: SequenceEmail[] };
+                  };
+                  const emailsFromResult = parsed?.data?.result?.emails
+                    ?? parsed?.data?.emails;
+                  if (Array.isArray(emailsFromResult)) {
+                    emails = emailsFromResult;
+                  }
+                } catch (parseErr) {
+                  logger.warn('[create_workflow] Failed to parse delegate_to_content toolResult', {
+                    missionId: context.missionId,
+                    stepId: targetStep.stepId,
+                    error: parseErr instanceof Error ? parseErr.message : String(parseErr),
+                  });
+                }
+              }
+            }
+          }
+
+          if (emails.length === 0) {
+            throw new Error(
+              'create_workflow could not resolve any emails. Provide contentSource as a JSON array, or ensure this mission has a prior completed delegate_to_content step that produced an email sequence.',
+            );
+          }
+
+          // -----------------------------------------------------------------
+          // Create the Workflow record + schedule jobs
+          // -----------------------------------------------------------------
+          const workflowRecord = await createWorkflow(
+            {
+              name,
+              description: `Automated ${sequenceType} — fires on ${trigger}, ${emails.length} emails.`,
+              trigger: {
+                id: `trigger_${Date.now()}`,
+                name: `${trigger} event`,
+                type: 'manual',
+                requireConfirmation: false,
+              },
+              actions: [], // Send steps are dispatched via workflowSequenceJobs, not action chain
+              settings: {
+                enabled: true,
+                onError: 'continue',
+                logLevel: 'errors',
+                retentionDays: 90,
+              },
+              permissions: {
+                canView: ['owner', 'admin', 'manager'],
+                canEdit: ['owner', 'admin'],
+                canExecute: ['owner', 'admin'],
+              },
+              status: 'active',
+            },
+            context?.userId ?? 'jasper',
+          );
+
+          const scheduled = await scheduleEmailSequence({
+            workflowId: workflowRecord.id,
+            missionId: context?.missionId,
+            sequenceType,
+            triggerEvent: trigger,
+            emails,
+            cadence,
+            recipient,
+          });
+
+          const mismatchNote = typeof expectedSteps === 'number' && expectedSteps !== emails.length
+            ? ` (expected ${expectedSteps} steps, resolved ${emails.length})`
+            : '';
+
+          const reviewLink = getReviewLink('create_workflow', context?.missionId);
+          const summary =
+            `${sequenceType} sequence scheduled: ${emails.length} emails, ` +
+            `first fires in ${describeCountdown(scheduled.firstFireAt)}, ` +
+            `last in ${describeCountdown(scheduled.lastFireAt)}${mismatchNote}`;
+
+          content = JSON.stringify({
+            status: 'COMPLETED',
+            workflowId: workflowRecord.id,
+            sequenceType,
+            trigger,
+            stepsScheduled: emails.length,
+            firstFireAt: scheduled.firstFireAt,
+            lastFireAt: scheduled.lastFireAt,
+            jobIds: scheduled.jobIds,
+            recipient,
+            recipientResolved: !/\{\{/.test(recipient),
+            message: summary,
+            reviewLink,
+          });
+
+          trackMissionStep(context, 'create_workflow', 'COMPLETED', {
+            summary,
+            durationMs: Date.now() - createWfStart,
+            toolResult: content,
+          });
+        } catch (createWfError: unknown) {
+          const errorMsg = createWfError instanceof Error ? createWfError.message : 'Unknown error';
+          trackMissionStep(context, 'create_workflow', 'FAILED', {
+            summary: `create_workflow failed: ${errorMsg}`,
+            durationMs: Date.now() - createWfStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({
+            status: 'FAILED',
+            error: errorMsg,
+            tool: 'create_workflow',
           });
         }
         break;
