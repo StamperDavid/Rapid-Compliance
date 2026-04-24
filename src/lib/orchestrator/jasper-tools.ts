@@ -3483,15 +3483,34 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         let stepsArg = args.steps;
         // The LLM sometimes double-serializes the steps array as a
         // JSON string instead of passing it as a native array. Parse
-        // it if that happens.
+        // it if that happens. A known drift pattern on prompts carrying
+        // structured data (e.g. review text) is that the stringified
+        // array gets a spurious trailing `]` appended — retry once with
+        // it stripped before giving up.
         if (typeof stepsArg === 'string') {
+          const raw: string = stepsArg;
           try {
-            stepsArg = JSON.parse(stepsArg) as unknown;
+            stepsArg = JSON.parse(raw) as unknown;
           } catch {
-            content = JSON.stringify({
-              error: 'propose_mission_plan: steps is a string but not valid JSON',
-            });
-            break;
+            const trimmed = raw.trimEnd();
+            if (trimmed.endsWith(']]')) {
+              try {
+                stepsArg = JSON.parse(trimmed.slice(0, -1)) as unknown;
+                logger.warn('[propose_mission_plan] Recovered stringified steps by stripping trailing "]" — Jasper drift', {
+                  originalLength: raw.length,
+                });
+              } catch {
+                content = JSON.stringify({
+                  error: 'propose_mission_plan: steps is a string but not valid JSON',
+                });
+                break;
+              }
+            } else {
+              content = JSON.stringify({
+                error: 'propose_mission_plan: steps is a string but not valid JSON',
+              });
+              break;
+            }
           }
         }
         if (!Array.isArray(stepsArg) || stepsArg.length === 0) {
