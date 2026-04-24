@@ -1921,8 +1921,8 @@ export const JASPER_TOOLS: ToolDefinition[] = [
         properties: {
           contentType: {
             type: 'string',
-            description: 'Type of content to produce',
-            enum: ['blog_post', 'social_media', 'email_campaign', 'video_script', 'landing_page_copy', 'ad_creative', 'newsletter', 'case_study', 'podcast_episode', 'podcast_show_notes', 'music_soundtrack', 'music_style'],
+            description: 'Type of content to produce. Use "email_sequence" / "nurture_sequence" / "drip_campaign" for multi-email cadenced flows (Copywriter produces N emails, cadence is wired separately via create_workflow).',
+            enum: ['blog_post', 'social_media', 'email_campaign', 'email_sequence', 'nurture_sequence', 'drip_campaign', 'video_script', 'landing_page_copy', 'ad_creative', 'newsletter', 'case_study', 'podcast_episode', 'podcast_show_notes', 'music_soundtrack', 'music_style'],
           },
           topic: {
             type: 'string',
@@ -1952,6 +1952,18 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           scheduleDate: {
             type: 'string',
             description: 'Optional: ISO date string for when to schedule publication',
+          },
+          count: {
+            type: 'integer',
+            description: 'Email-sequence only: how many emails to produce. Must be between 1 and 20. Required when contentType is email_sequence / nurture_sequence / drip_campaign. Ignored for other contentType values.',
+          },
+          cadence: {
+            type: 'string',
+            description: 'Email-sequence only: human description of send timing (e.g., "over 14 days", "day 1, 3, 7, 14"). Copywriter uses this to annotate sendTimingHint for each email; actual workflow scheduling happens via create_workflow.',
+          },
+          trigger: {
+            type: 'string',
+            description: 'Email-sequence only: what event starts the sequence for a recipient (e.g., "trial_signup", "abandoned_cart", "form_submit").',
           },
         },
         required: ['topic'],
@@ -5049,6 +5061,17 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           if (args.seoKeywords && typeof args.seoKeywords === 'string') {
             contentPayload.seoKeywords = args.seoKeywords.split(',').map((k: string) => k.trim());
           }
+
+          // Email-sequence-specific args — pass through when Jasper populates them.
+          // The Content Manager ignores these unless contentType resolves to
+          // EMAIL_SEQUENCE intent, so they're safe to forward unconditionally.
+          if (typeof args.count === 'number') { contentPayload.count = args.count; }
+          else if (typeof args.count === 'string') {
+            const n = parseInt(args.count, 10);
+            if (Number.isFinite(n)) { contentPayload.count = n; }
+          }
+          if (typeof args.cadence === 'string') { contentPayload.cadence = args.cadence; }
+          if (typeof args.trigger === 'string') { contentPayload.trigger = args.trigger; }
 
           const contentResult = await withTimeout(contentMgr.execute({
             id: `content_${Date.now()}`,

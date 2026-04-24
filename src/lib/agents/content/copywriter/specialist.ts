@@ -34,7 +34,7 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'copywriter/specialist.ts';
 const SPECIALIST_ID = 'COPYWRITER';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['generate_page_copy', 'generate_proposal'] as const;
+const SUPPORTED_ACTIONS = ['generate_page_copy', 'generate_proposal', 'generate_email_sequence'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
 /**
@@ -91,10 +91,10 @@ const CONFIG: SpecialistConfig = {
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'CONTENT_MANAGER',
-    capabilities: ['generate_page_copy', 'generate_proposal'],
+    capabilities: ['generate_page_copy', 'generate_proposal', 'generate_email_sequence'],
   },
   systemPrompt: '', // Loaded from Firestore Golden Master at runtime
-  tools: ['generate_page_copy', 'generate_proposal'],
+  tools: ['generate_page_copy', 'generate_proposal', 'generate_email_sequence'],
   outputSchema: {
     type: 'object',
     properties: {
@@ -136,6 +136,24 @@ export interface ProposalRequest {
   techStack?: string[];
   companySize?: string;
   requestedInfo?: string[];
+}
+
+export interface EmailSequenceRequest {
+  action: 'generate_email_sequence';
+  /** What the sequence is about (e.g. "Trial signup nurture", "Black Friday drip"). */
+  topic: string;
+  /** Who receives it (e.g. "new trial signups", "abandoned-cart shoppers"). */
+  audience: string;
+  /** How many emails to produce. Defaults to 5 if omitted. 1 is a single newsletter. */
+  count?: number;
+  /** Human cadence description passed through from the prompt (e.g. "over 14 days", "day 1, 3, 7, 14"). The copywriter uses this to annotate sendTimingHint for each email; the actual workflow scheduling happens elsewhere via create_workflow. */
+  cadence?: string;
+  /** What triggers the sequence for a given recipient (e.g. "trial_signup", "abandoned_cart"). */
+  trigger?: string;
+  /** Tone and phrase guidance threaded through from Content Manager. */
+  toneOfVoice?: string;
+  keyPhrases?: string[];
+  avoidPhrases?: string[];
 }
 
 // ============================================================================
@@ -187,6 +205,25 @@ const ProposalResultSchema = z.object({
 });
 
 export type ProposalResult = z.infer<typeof ProposalResultSchema>;
+
+const EmailSequenceResultSchema = z.object({
+  sequenceId: z.string().min(1),
+  topic: z.string().min(1),
+  audience: z.string().min(1),
+  trigger: z.string().optional(),
+  cadence: z.string().optional(),
+  emails: z.array(z.object({
+    order: z.number().int().min(1),
+    subjectLine: z.string().min(1).max(80),
+    previewText: z.string().min(1).max(120),
+    body: z.string().min(1),
+    cta: z.string().min(1),
+    sendTimingHint: z.string().min(1),
+  })).min(1),
+  generatedAt: z.string().min(1),
+});
+
+export type EmailSequenceResult = z.infer<typeof EmailSequenceResultSchema>;
 
 // ============================================================================
 // LLM INVOCATION CORE
@@ -480,6 +517,125 @@ async function executeProposal(
 }
 
 // ============================================================================
+// ACTION: generate_email_sequence
+// ============================================================================
+
+function buildEmailSequenceUserPrompt(req: EmailSequenceRequest): string {
+  const count = typeof req.count === 'number' && req.count >= 1 && req.count <= 20 ? req.count : 5;
+  const cadence = req.cadence && req.cadence.trim().length > 0 ? req.cadence.trim() : 'operator will set the cadence downstream — annotate timing relative to the trigger event (day 1, day 3, etc.)';
+  const trigger = req.trigger && req.trigger.trim().length > 0 ? req.trigger.trim() : 'sequence start';
+  const keyPhrases = (req.keyPhrases ?? []).join(', ') || '(none specified)';
+  const avoidPhrases = (req.avoidPhrases ?? []).join(', ') || '(none specified)';
+
+  return [
+    'ACTION: generate_email_sequence',
+    '',
+    `Topic: ${req.topic}`,
+    `Audience: ${req.audience}`,
+    `Trigger event: ${trigger}`,
+    `Cadence: ${cadence}`,
+    `Email count: ${count}`,
+    `Tone of voice: ${req.toneOfVoice ?? '(follow the Brand DNA tone in the system prompt)'}`,
+    `Key phrases to weave in: ${keyPhrases}`,
+    `Phrases you must NOT use: ${avoidPhrases}`,
+    '',
+    'Produce a sequenced set of emails. Respond with ONLY a valid JSON object, no markdown fences, no preamble, no explanation. The JSON must match this exact schema:',
+    '',
+    '{',
+    '  "sequenceId": "IGNORED — server overwrites this. Return any placeholder string.",',
+    '  "topic": "IGNORED — server overwrites this. Return any placeholder string.",',
+    '  "audience": "IGNORED — server overwrites this. Return any placeholder string.",',
+    '  "trigger": "IGNORED — server overwrites this. Return any placeholder string.",',
+    '  "cadence": "IGNORED — server overwrites this. Return any placeholder string.",',
+    '  "emails": [',
+    '    {',
+    '      "order": 1,',
+    '      "subjectLine": "under 80 chars, specific, curiosity-driven, no clickbait",',
+    '      "previewText": "under 120 chars, complements the subject without repeating it",',
+    '      "body": "100-200 words of plain-text email body — conversational, one idea per paragraph, maximum 4 short paragraphs, address the reader directly as \\"you\\"",',
+    '      "cta": "ONE concrete next action — a specific link text, a reply prompt, a booking step. Under 60 chars.",',
+    '      "sendTimingHint": "when this email fires relative to the trigger — e.g. \\"immediately on trigger\\", \\"day 3\\", \\"day 7\\" — aligned with the cadence above"',
+    '    }',
+    '  ],',
+    '  "generatedAt": "IGNORED — server overwrites this. Return any placeholder string."',
+    '}',
+    '',
+    `Rules you MUST follow:`,
+    `- Produce EXACTLY ${count} emails in the emails array.`,
+    '- Each email must have a distinct narrative purpose. Do not repeat the same angle across emails.',
+    '- A typical 5-email nurture arc: 1) welcome + orient, 2) name the core problem, 3) show the solution with a proof point, 4) handle the most likely objection, 5) conversion push with urgency.',
+    '- If count differs from 5, adapt the arc — compress or expand, but never skip the "welcome/orient" and "conversion push" bookends when count >= 2.',
+    '- order field must be 1, 2, 3, ... through count, no gaps, no duplicates.',
+    '- Every email has exactly ONE cta. Multiple CTAs in one email dilute conversion.',
+    '- Do not fabricate statistics, percentages, testimonials, or client names.',
+    '- Do not use any phrase from the avoid list.',
+    '- Weave in key phrases where they fit naturally — never force them.',
+    '- Subject lines should NOT start with "RE:" or "FWD:" unless the sequence is explicitly a re-engagement flow. Do not fake reply threads.',
+    '- Body should be plain-text, not HTML. No markdown headers. Paragraph breaks only.',
+    '- sendTimingHint must be human-readable and align with the Cadence line above. If cadence is vague, infer reasonable spacing (day 1, day 3, day 7, day 10, day 14 for 5 emails over ~2 weeks).',
+    '- Do not write proposalId, leadId, or generatedAt values — those are placeholders; server overwrites them.',
+  ].join('\n');
+}
+
+async function executeEmailSequence(
+  req: EmailSequenceRequest,
+  ctx: LlmCallContext,
+): Promise<EmailSequenceResult> {
+  const userPrompt = buildEmailSequenceUserPrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Copywriter email_sequence output was not valid JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  // Server-side overwrite of identity/context fields. Echo the caller's
+  // request values back so downstream consumers (UI, grade service) can
+  // trust them without parsing the user prompt.
+  if (typeof parsed === 'object' && parsed !== null) {
+    const obj = parsed as Record<string, unknown>;
+    const now = Date.now();
+    obj.sequenceId = `emailseq_${now}_${Math.random().toString(36).slice(2, 8)}`;
+    obj.topic = req.topic;
+    obj.audience = req.audience;
+    if (req.trigger) { obj.trigger = req.trigger; }
+    if (req.cadence) { obj.cadence = req.cadence; }
+    obj.generatedAt = new Date(now).toISOString();
+  }
+
+  const result = EmailSequenceResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Copywriter email_sequence did not match expected schema: ${issueSummary}`);
+  }
+
+  const requestedCount = typeof req.count === 'number' && req.count >= 1 && req.count <= 20 ? req.count : 5;
+  if (result.data.emails.length !== requestedCount) {
+    throw new Error(
+      `Copywriter email_sequence must have exactly ${requestedCount} emails, got ${result.data.emails.length}`,
+    );
+  }
+
+  // order field must be a contiguous 1..N — the schema can't express this on its own.
+  const orders = result.data.emails.map((e) => e.order).sort((a, b) => a - b);
+  for (let i = 0; i < orders.length; i++) {
+    if (orders[i] !== i + 1) {
+      throw new Error(
+        `Copywriter email_sequence order fields must be contiguous 1..${requestedCount}, got [${orders.join(',')}]`,
+      );
+    }
+  }
+
+  return result.data;
+}
+
+// ============================================================================
 // COPYWRITER CLASS
 // ============================================================================
 
@@ -523,6 +679,22 @@ export class Copywriter extends BaseSpecialist {
       if (action === 'generate_page_copy') {
         const req = payload as unknown as PageCopyRequest;
         const data = await executePageCopy(req, ctx);
+        return this.createReport(taskId, 'COMPLETED', data);
+      }
+
+      if (action === 'generate_email_sequence') {
+        const req = payload as unknown as EmailSequenceRequest;
+        if (typeof req.topic !== 'string' || req.topic.trim().length === 0) {
+          return this.createReport(taskId, 'FAILED', null, [
+            'Copywriter generate_email_sequence: topic is required and must be non-empty',
+          ]);
+        }
+        if (typeof req.audience !== 'string' || req.audience.trim().length === 0) {
+          return this.createReport(taskId, 'FAILED', null, [
+            'Copywriter generate_email_sequence: audience is required and must be non-empty',
+          ]);
+        }
+        const data = await executeEmailSequence(req, ctx);
         return this.createReport(taskId, 'COMPLETED', data);
       }
 
@@ -591,7 +763,9 @@ export const __internal = {
   loadGMConfig,
   buildPageCopyUserPrompt,
   buildProposalUserPrompt,
+  buildEmailSequenceUserPrompt,
   stripJsonFences,
   PageCopyResultSchema,
   ProposalResultSchema,
+  EmailSequenceResultSchema,
 };
