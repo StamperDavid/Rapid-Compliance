@@ -1,7 +1,7 @@
 # SalesVelocity.ai — Full-Orchestration Verification Plan
 
-> **Updated:** April 23, 2026 evening — Jasper v11 call-shape fix shipped, matrix regression at 99%. Plan now sequences E2E runner → account connections → true end-to-end testing → multi-tenant conversion.
-> **Status:** Planning-layer verified at 242/245 (99%) across 49 matrix prompts. Execution layer not yet automated end-to-end.
+> **Updated:** April 24, 2026 afternoon — E2E runner shipped, Content Manager EMAIL_SEQUENCE rebuild (Option B) shipped, `create_workflow` gap discovered and queued as next session's lead task.
+> **Status:** Planning-layer 99% clean. Execution-layer Layer-1 sweep at 22/24 real pass. Workflow scheduling (`create_workflow` tool) is the only remaining blocker on the nurture/drip/newsletter features.
 
 ---
 
@@ -11,12 +11,13 @@ Everything here overrides older sections. Do not ask the operator to remind you 
 
 ## TL;DR — where we are right now
 
-- **Jasper orchestrator is at v11.** Call-shape rule deployed April 23 — `steps` is a native JSON array, `toolArgs` fields are native objects, never stringified. Fixed the reputation-001 bug (3/20 → 20/20 at 20 iter).
-- **Intent Expander is at v2** (`sgm_intent_expander_saas_sales_ops`). LLM-backed, Haiku 4.5. Legacy regex classifier retired.
-- **Prompt matrix is the regression suite.** 49 prompts across 19 categories in `scripts/fixtures/prompt-matrix.json`. Last full run: 242/245 (99%). Only residual flake is `campaign-001` (pre-existing, ~5% fail rate, unrelated to v11).
-- **Mission Control rebuild M1–M8 is LIVE** — plan pre-approval, sequential auto-execute with retry, downstream-changed flag, manual edit, inline scrap, full training loop (grade → PE → deploy → rollback) all in Mission Control.
-- **Training loop is end-to-end operational** — grade → Prompt Engineer proposes surgical edit → 3-box popup → approve → new GM version deployed → rollback available inline. 9 manager GMs + 37 specialist rebuilds + Prompt Engineer meta-specialist shipped.
-- **Standing rules preserved:** every GM change still requires a human grade or explicit operator delegation. Nothing self-improves silently.
+- **Jasper orchestrator is at v11.** Call-shape rule + parser hardening keeps `propose_mission_plan` clean. reputation-001 fixed 3/20 → 20/20.
+- **Copywriter specialist is at v2.** New `generate_email_sequence` action ships N-email sequences with subject/preview/body/cta/timing. Shipped April 24 along with the Content Manager EMAIL_SEQUENCE intent routing — the 10-minute FULL_PACKAGE hang on `contentType="email_sequence"` is gone.
+- **Intent Expander is at v2** (`sgm_intent_expander_saas_sales_ops_v2`). LLM-backed, Haiku 4.5.
+- **Prompt matrix + E2E runner are both live.** `scripts/verify-prompt-matrix.ts` tests planning (242/245 at 5 iter). `scripts/verify-prompt-matrix-e2e.ts` drives plan → approve → execute → deliverable extraction against the live dev server (22/24 real pass on the Layer-1 sweep).
+- **Mission Control rebuild M1–M8 is LIVE.** Plan pre-approval, sequential auto-execute with retry, downstream-changed flag, manual edit, inline scrap, full training loop (grade → PE → deploy → rollback) all in Mission Control.
+- **Training loop is end-to-end operational.** 9 manager GMs + 38 specialist rebuilds + Prompt Engineer meta-specialist shipped.
+- **Standing rules preserved.** Every GM change still requires a human grade or explicit operator delegation. Nothing self-improves silently.
 
 ## What's been verified vs what hasn't
 
@@ -24,9 +25,10 @@ Everything here overrides older sections. Do not ask the operator to remind you 
 |---|---|
 | Jasper planning (right tools, right shape) | ✓ Verified via matrix, 99% at 5 iter |
 | Plan approval + per-step approval gate | ✓ Verified via `scripts/verify-mission-execution-lifecycle.ts` |
-| Specialist execution → deliverable in Firestore | ⚠️ Verified for some flows (blog, reputation-response), not all |
-| External delivery (social post hits X, email hits inbox) | ✗ Blocked on OAuth account connections |
-| End-to-end automation for regression testing | ✗ Blocked on E2E runner build (~2 hrs) |
+| Specialist execution → deliverable in Firestore | ✓ Layer-1 sweep 22/24 real pass (advisory, factual, conversational, reputation, forms, adversarial all 100%; workflow blocked on create_workflow) |
+| Workflow scheduling (emails fire on cadence) | ✗ **Blocked on `create_workflow` tool being unimplemented — next session's lead task** |
+| External delivery (social post hits X, email hits inbox) | ✗ Blocked on OAuth account connections (operator's parallel track) |
+| End-to-end automation for regression testing | ✓ E2E runner shipped (`scripts/verify-prompt-matrix-e2e.ts`) |
 
 ---
 
@@ -49,13 +51,14 @@ Everything here overrides older sections. Do not ask the operator to remind you 
 
 4. **Arm the expanded log monitor immediately.** Filter spec is in `memory/project_live_test_monitoring_setup.md`. `Monitor` tool, `persistent: true`, `timeout_ms: 3600000`.
 
-5. **Confirm Jasper v11 is active:**
+5. **Confirm Jasper v11 + Copywriter v2 are active:**
    ```
    npx tsx scripts/dump-jasper-gm.ts | grep "GM id="
+   npx tsx scripts/dump-copywriter-gm.ts | grep "GM id="
    ```
-   Expect: `GM id=jasper_orchestrator_v11 version=v11 len=51618` (or higher if iterated since).
+   Expect: `GM id=jasper_orchestrator_v11 version=v11` and `GM id=sgm_copywriter_saas_sales_ops_v2 version=2` (or higher).
 
-6. **Tell the operator "Ready. Monitor armed. Jasper v11 confirmed active."** — don't wait to be asked.
+6. **Tell the operator "Ready. Monitor armed. Jasper v11 + Copywriter v2 confirmed active."** — don't wait to be asked.
 
 ---
 
@@ -63,21 +66,35 @@ Everything here overrides older sections. Do not ask the operator to remind you 
 
 Multi-tenant conversion with a broken single-tenant loop is a nightmare. Order of operations is fixed:
 
-## Stage A — Build the E2E runner (~2 hrs)
+## 🔴 Stage A.5 — Build the `create_workflow` tool (NEXT SESSION, ~2-3 hrs)
 
-Fills the biggest gap: the matrix tests planning but not execution. The runner makes every matrix prompt a full "plan → approve → execute → deliverable" loop.
+**The only blocker left on the nurture/drip/newsletter features.** Jasper's prompt references `create_workflow` as a required step for any cadence-based email sequence, but the tool was never implemented. `workflow-001` and `workflow-002` halt at step 2 with `"Unknown tool: create_workflow"`.
 
-**Shape** (designed, not yet built):
-- Firebase custom-token exchange for the operator's UID → ID token
-- POST `/api/orchestrator/chat` with the prompt
-- Poll Firestore for the mission hitting `PLAN_PENDING_APPROVAL`
-- POST approve-all-steps + approve the plan
-- Poll for terminal state (`COMPLETED` / `FAILED` / `AWAITING_APPROVAL` halt)
-- Extract deliverable refs, write a JSON result file
-- Fire-and-abort HTTP for the approve call (it blocks) with parallel Firestore poll
-- 30-min timeout, cancel path, `AWAITING_APPROVAL` halt handling
+### What "done" looks like
+- Tool schema in `src/lib/orchestrator/jasper-tools.ts` (name, parameters: trigger, cadence/steps, contentSource, sequenceType, optional conditions)
+- Executor case handler that validates args, writes a `workflow` record to Firestore with enough detail for a scheduler to fire each email at the right time, returns `{ status, workflowId, reviewLink }`
+- Workflow data model in `src/types/workflow.ts` (or extend existing)
+- Persistence via `getSubCollection('workflows')`
+- **Scheduler that actually fires the emails on schedule** — check `src/lib/workflow-engine/` (if it exists) or stand up a cron/queue. Owner was explicit: "not faking or ignoring."
+- Integration with `send_email` or `delegate_to_outreach` for the actual per-recipient delivery when the cadence hits
+- Update workflow-001 / workflow-002 matrix fixtures to expect `create_workflow` (already expected — these prompts just fail today) — no fixture change needed, just verify
+- E2E verification: `npx tsx scripts/verify-prompt-matrix-e2e.ts --category=workflow --iterations=1` must pass 2/2 with COMPLETED status on both
 
-Deliverable: `scripts/verify-prompt-matrix-e2e.ts`. Existing `verify-prompt-matrix.ts` stays as the fast planning-only regression.
+### Out of scope for Stage A.5
+- Building a fancy visual workflow editor UI
+- Supporting non-email workflow node types (SMS, voice calls, conditional branches) — keep the first version email-only
+- Webhook-triggered workflows from third-party systems
+- A/B testing or multi-variant scheduling
+- Reseeding the Copywriter or Jasper GMs (the prompts already reference `create_workflow` correctly)
+
+### Standing rules to respect
+- **Rule #1 (Brand DNA baked into GM):** no Brand DNA work here; this is a code+tool build, not a prompt edit.
+- **Rule #2 (no grades = no GM edits):** this session does not edit any active GM. If a GM edit becomes necessary (e.g. to adjust Jasper's prompt about workflow usage), that's a separate scope.
+- **No eslint-disable, no @ts-ignore, no stubs.** If the workflow engine doesn't exist yet, write it for real — do not fake a "workflow scheduled" response without real scheduling.
+
+## Stage A — E2E runner (DONE April 24)
+
+`scripts/verify-prompt-matrix-e2e.ts` drives the full mission loop: Firebase custom-token → chat POST → Firestore poll for PLAN_PENDING_APPROVAL → approve-all → approve (fire-and-abort) → terminal state poll → deliverable extraction. Flags: --id, --category, --categories, --exclude-categories, --iterations, --timeout.
 
 ## Stage B — Connect real accounts
 
@@ -133,17 +150,17 @@ Only after A–D are clean. The Penthouse single-tenant state gets re-tenantized
 # AUTOMATED TEST HARNESSES
 
 **Existing:**
-- `scripts/verify-prompt-matrix.ts` — 49 prompts, planning-layer coverage, flags `--id`, `--category`, `--iterations`. Last result: 242/245 at 5 iter.
-- `scripts/propose-matrix-corrections.ts` + `apply-matrix-corrections.ts` — automated grade → PE → deploy pipeline for matrix training targets.
-- `scripts/diagnose-jasper-planning.ts` — deep-diagnostic for flaky prompts, dumps raw propose_mission_plan args.
-- `scripts/verify-mission-plan-lifecycle.ts` — M4 plan editing (22 assertions).
-- `scripts/verify-mission-execution-lifecycle.ts` — M3.6/M3.7 sequential execution + retry + halt + resume (32 assertions).
-- `scripts/verify-upstream-changed-flag.ts` — M5 downstream flag propagation (14 assertions).
-- `scripts/verify-prompt-edit-changes-behavior.ts` — proves PE edits change specialist output, not just GM bytes.
+- `scripts/verify-prompt-matrix.ts` — 49 prompts, planning-layer coverage. Last: 242/245 at 5 iter.
+- `scripts/verify-prompt-matrix-e2e.ts` — full mission-lifecycle E2E (auth → plan → approve → execute → deliverable). Last Layer-1 sweep: 22/24 real pass.
+- `scripts/propose-matrix-corrections.ts` + `apply-matrix-corrections.ts` — automated grade → PE → deploy pipeline.
+- `scripts/diagnose-jasper-planning.ts` — deep-diagnostic for flaky prompts.
+- `scripts/dump-jasper-gm.ts` + `scripts/dump-copywriter-gm.ts` — read-only utilities for auditing the active GMs.
+- `scripts/verify-mission-plan-lifecycle.ts` / `verify-mission-execution-lifecycle.ts` / `verify-upstream-changed-flag.ts` — M3-M5 infrastructure.
+- `scripts/verify-prompt-edit-changes-behavior.ts` — behavioral proof that PE edits change output.
 - `scripts/verify-no-grades-no-changes.ts` — Standing Rule #2 runtime proof.
 
-**To build:**
-- `scripts/verify-prompt-matrix-e2e.ts` — Stage A deliverable. Full plan → execute → deliverable verification for every matrix prompt.
+**To build next session:**
+- The `create_workflow` tool itself + its Firestore persistence + its scheduler (see Stage A.5 above).
 
 ---
 
@@ -171,10 +188,12 @@ Full filter spec + supplementary monitor scripts in `memory/project_live_test_mo
 
 | ID | Description | Severity | Status |
 |---|---|---|---|
-| campaign-001 flake | Jasper occasionally substitutes a second `delegate_to_content` for the outreach drip step | Low | Pre-existing, ~5% at 20 iter, not a v11 regression. Surgical PE edit candidate. |
+| `create_workflow` unimplemented | Jasper's prompt tells him to call it for cadence-based sequences; tool was never built | **High** | **Lead task for next session (Stage A.5).** |
+| campaign-001 flake | Jasper occasionally substitutes a second `delegate_to_content` for the outreach drip step | Low | Pre-existing, ~5% at 20 iter. Surgical PE edit candidate. |
 | Bug F | Only COMPETITOR_RESEARCHER — no INDUSTRY_RESEARCHER | Medium | Every "research our product" prompt scrapes competitors instead. |
 | Bug H | Zombie work after mission cancel/halt | Medium | `detect-zombie-work.ts` flags it. |
-| Bug L | Content Manager registers BLOG_WRITER / PODCAST_SPECIALIST / MUSIC_PLANNER but never invokes them | Medium | Owner flagged systemic — audit ALL managers for unreachable specialists before fixing individually. |
+| Bug L | Content Manager registers BLOG_WRITER / PODCAST_SPECIALIST / MUSIC_PLANNER but never invokes them | Medium | Audit all managers for unreachable specialists before fixing individually. |
+| Logo save-to-theme-editor bug | Homepage logo didn't persist to theme editor | Low | Operator flagged April 24. |
 | Apollo Technographic Scout | Tries to scrape topic strings as URLs | Low | Errors but doesn't halt. |
 | Cleanup script gaps | Doesn't touch blog posts, campaigns, videos | Medium | Extend when E2E runner starts producing them at volume. |
 
