@@ -6537,8 +6537,9 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
         try {
           const { scheduleEmailSequence, describeCountdown } = await import('@/lib/workflows/sequence-scheduler');
-          const { createWorkflow } = await import('@/lib/workflows/workflow-service');
           const { getMission } = await import('@/lib/orchestrator/mission-persistence');
+          const { adminDb } = await import('@/lib/firebase/admin');
+          const { getSubCollection } = await import('@/lib/firebase/collections');
 
           // -----------------------------------------------------------------
           // Parse args
@@ -6656,36 +6657,64 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
           // -----------------------------------------------------------------
           // Create the Workflow record + schedule jobs
+          //
+          // We write the workflow doc via adminDb directly instead of going
+          // through workflow-service.createWorkflow, because that service
+          // uses the client Firebase SDK which has no auth context when
+          // called from inside an API route — Firestore rules reject the
+          // write with PERMISSION_DENIED. adminDb bypasses rules.
           // -----------------------------------------------------------------
-          const workflowRecord = await createWorkflow(
-            {
-              name,
-              description: `Automated ${sequenceType} — fires on ${trigger}, ${emails.length} emails.`,
-              trigger: {
-                id: `trigger_${Date.now()}`,
-                name: `${trigger} event`,
-                type: 'manual',
-                requireConfirmation: false,
-              },
-              actions: [], // Send steps are dispatched via workflowSequenceJobs, not action chain
-              settings: {
-                enabled: true,
-                onError: 'continue',
-                logLevel: 'errors',
-                retentionDays: 90,
-              },
-              permissions: {
-                canView: ['owner', 'admin', 'manager'],
-                canEdit: ['owner', 'admin'],
-                canExecute: ['owner', 'admin'],
-              },
-              status: 'active',
+          if (!adminDb) {
+            throw new Error('Firestore admin not initialized — cannot create workflow');
+          }
+          const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+          const nowIso = new Date().toISOString();
+          const workflowDoc = {
+            id: workflowId,
+            name,
+            description: `Automated ${sequenceType} — fires on ${trigger}, ${emails.length} emails.`,
+            trigger: {
+              id: `trigger_${Date.now()}`,
+              name: `${trigger} event`,
+              type: 'manual',
+              requireConfirmation: false,
             },
-            context?.userId ?? 'jasper',
-          );
+            actions: [], // Send steps are dispatched via workflowSequenceJobs, not action chain
+            settings: {
+              enabled: true,
+              onError: 'continue',
+              logLevel: 'errors',
+              retentionDays: 90,
+            },
+            permissions: {
+              canView: ['owner', 'admin', 'manager'],
+              canEdit: ['owner', 'admin'],
+              canExecute: ['owner', 'admin'],
+            },
+            status: 'active',
+            stats: {
+              totalRuns: 0,
+              successfulRuns: 0,
+              failedRuns: 0,
+            },
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            createdBy: context?.userId ?? 'jasper',
+            version: 1,
+            // Stage A.5 metadata — these help the workflows list surface
+            // sequence workflows separately from classic action-chain ones.
+            sequenceType,
+            triggerEvent: trigger,
+            sequenceStepCount: emails.length,
+            missionId: context?.missionId,
+          };
+          await adminDb
+            .collection(getSubCollection('workflows'))
+            .doc(workflowId)
+            .set(workflowDoc);
 
           const scheduled = await scheduleEmailSequence({
-            workflowId: workflowRecord.id,
+            workflowId,
             missionId: context?.missionId,
             sequenceType,
             triggerEvent: trigger,
@@ -6706,7 +6735,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
           content = JSON.stringify({
             status: 'COMPLETED',
-            workflowId: workflowRecord.id,
+            workflowId,
             sequenceType,
             trigger,
             stepsScheduled: emails.length,
