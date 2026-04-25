@@ -64,7 +64,7 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'outreach/email/specialist.ts';
 const SPECIALIST_ID = 'EMAIL_SPECIALIST';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['compose_email'] as const;
+const SUPPORTED_ACTIONS = ['compose_email', 'compose_outreach_sequence'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
 /**
@@ -222,6 +222,88 @@ const ComposeEmailResultSchema = z.object({
 });
 
 export type ComposeEmailResult = z.infer<typeof ComposeEmailResultSchema>;
+
+// ============================================================================
+// INPUT CONTRACT — compose_outreach_sequence (multi-email cold drip)
+// ============================================================================
+//
+// Used when Jasper or the Outreach Manager wants a coherent N-email cold
+// outreach sequence personalized for ONE prospect, with a narrative arc
+// across the emails (hook → escalate → close). Distinct from compose_email
+// (single touch) and from the Copywriter's generate_email_sequence
+// (broadcast nurture content, not lead-personalized).
+// ============================================================================
+
+export interface ComposeOutreachSequenceRequest {
+  action: 'compose_outreach_sequence';
+  campaignName: string;
+  /** Description of the lead this sequence is for — name, role, company,
+   * recent triggers, vertical. The narrative arc references these. */
+  targetAudience: string;
+  /** Overall objective the sequence is driving toward. */
+  goal: string;
+  /** How many emails in the sequence. 2-10. */
+  sequenceLength: number;
+  /** Optional cadence hint (e.g. "day 1, day 4, day 8"). The composer
+   * adds sendTimingHint to each email; actual scheduling is handled by
+   * create_workflow downstream. */
+  cadence?: string;
+  /** Optional hint for the dominant email purpose (e.g. cold_outbound,
+   * meeting_request). Each step within the sequence may pick its own
+   * purpose, but the LLM strongly prefers this if provided. */
+  suggestedPurposeSlug?: string;
+  brief: string;
+}
+
+const ComposeOutreachSequenceRequestSchema = z.object({
+  action: z.literal('compose_outreach_sequence'),
+  campaignName: z.string().min(2).max(120),
+  targetAudience: z.string().min(5).max(1200),
+  goal: z.string().min(5).max(500),
+  sequenceLength: z.number().int().min(2).max(10),
+  cadence: z.string().min(2).max(400).optional(),
+  suggestedPurposeSlug: z.string().min(2).max(80).optional(),
+  brief: z.string().min(20).max(8000),
+});
+
+// ============================================================================
+// OUTPUT CONTRACT — compose_outreach_sequence
+// ============================================================================
+//
+// Each email shares the per-email field caps from ComposeEmailResultSchema
+// (subjectLine, previewText, bodyPlainText, ctaLine, psLine,
+// personalizationNotes) plus a stepIndex, a stepPurposeSlug for analytics
+// routing, a sendTimingHint that aligns with cadence, and a narrativeRole
+// describing this email's place in the arc. Sequence-level fields capture
+// the overall narrative spine.
+// ============================================================================
+
+const SequenceEmailSchema = z.object({
+  stepIndex: z.number().int().min(1).max(20),
+  totalSteps: z.number().int().min(2).max(20),
+  stepPurposeSlug: z.string().min(2).max(80),
+  narrativeRole: z.string().min(20).max(800),
+  subjectLine: z.string().min(5).max(120),
+  previewText: z.string().min(10).max(250),
+  bodyPlainText: z.string().min(100).max(7000),
+  ctaLine: z.string().min(10).max(500),
+  psLine: z.string().min(5).max(500),
+  personalizationNotes: z.string().min(50).max(6000),
+  sendTimingHint: z.string().min(2).max(120),
+});
+
+const ComposeOutreachSequenceResultSchema = z.object({
+  campaignName: z.string().min(2).max(120),
+  sequenceLength: z.number().int().min(2).max(20),
+  narrativeArcSummary: z.string().min(80).max(2000),
+  emails: z.array(SequenceEmailSchema).min(2).max(20),
+  toneAndAngleReasoning: z.string().min(50).max(5000),
+  followupSuggestion: z.string().min(50).max(5000),
+  spamRiskNotes: z.string().min(30).max(4000),
+  rationale: z.string().min(150).max(10000),
+});
+
+export type ComposeOutreachSequenceResult = z.infer<typeof ComposeOutreachSequenceResultSchema>;
 
 // ============================================================================
 // LLM INVOCATION CORE
@@ -413,6 +495,146 @@ function buildComposeEmailUserPrompt(req: ComposeEmailRequest, purposeTypes: Ema
   return sections.join('\n');
 }
 
+// ============================================================================
+// ACTION: compose_outreach_sequence
+// ============================================================================
+
+function buildComposeSequenceUserPrompt(
+  req: ComposeOutreachSequenceRequest,
+  purposeTypes: EmailPurposeType[],
+): string {
+  const slugList = purposeTypes.map((t) => t.slug).join(' | ');
+  const cadenceLine = req.cadence
+    ? `Cadence hint (use these to populate each email's sendTimingHint): ${req.cadence}`
+    : 'No cadence hint — infer reasonable spacing per email (e.g. day 1, day 4, day 8 for a 3-email sequence).';
+  const suggestedLine = req.suggestedPurposeSlug
+    ? `Suggested dominant purpose (caller hint — most steps should use this slug, with steps adapting individually as the arc requires): ${req.suggestedPurposeSlug}`
+    : 'No purpose hint — pick the best fit per step from the active taxonomy';
+
+  const sections: string[] = [
+    'ACTION: compose_outreach_sequence',
+    '',
+    `You are writing ONE coherent ${req.sequenceLength}-step cold outreach sequence personalized for the ONE prospect described in targetAudience. NOT broadcast marketing copy. NOT a nurture sequence. NOT N independent emails.`,
+    'Every email must reference and build on the prior emails in the sequence. The recipient experiences this as a deliberate, escalating conversation, not a series of disconnected pitches.',
+    '',
+    `Campaign: ${req.campaignName}`,
+    `Goal: ${req.goal}`,
+    `Target prospect: ${req.targetAudience}`,
+    `Sequence length: ${req.sequenceLength} emails`,
+    cadenceLine,
+    suggestedLine,
+    '',
+    'Brief from the Outreach Manager:',
+    req.brief,
+    '',
+    'Produce a coherent sequence. Respond with ONLY a valid JSON object, no markdown fences, no preamble. The JSON must match this exact schema:',
+    '',
+    '{',
+    `  "campaignName": "${req.campaignName}",`,
+    `  "sequenceLength": ${req.sequenceLength},`,
+    '  "narrativeArcSummary": "<80 to 2000 chars — name the arc in one paragraph: how each email builds on the last toward the goal. This is the test for arc coherence.>",',
+    '  "emails": [',
+    '    {',
+    '      "stepIndex": 1,',
+    `      "totalSteps": ${req.sequenceLength},`,
+    `      "stepPurposeSlug": "<one of: ${slugList}>",`,
+    '      "narrativeRole": "<20 to 800 chars — this email\'s job in the arc (e.g. opener that surfaces a specific pain), how it sets up step 2>",',
+    '      "subjectLine": "<5 to 120 chars — earns the open without spam triggers>",',
+    '      "previewText": "<10 to 250 chars — extends the subject, never repeats>",',
+    '      "bodyPlainText": "<100 to 7000 chars — send-ready cold-outreach body, plain text, scannable, opens with prospect specificity, exactly ONE CTA>",',
+    '      "ctaLine": "<10 to 500 chars — the single CTA in this email, lifted from the body>",',
+    '      "psLine": "<5 to 500 chars — high reply-lift PS that restates the most compelling reason to respond>",',
+    '      "personalizationNotes": "<50 to 6000 chars — variables and strategic personalization hooks for THIS step>",',
+    '      "sendTimingHint": "<2 to 120 chars — when this email fires (e.g. \\"day 1\\", \\"day 4\\", \\"day 8\\") — must align with cadence above>"',
+    '    }',
+    `    ... continue for all ${req.sequenceLength} emails, each one referencing the prior steps`,
+    '  ],',
+    '  "toneAndAngleReasoning": "<50 to 5000 chars — why this tone and angle for this prospect across the whole arc>",',
+    '  "followupSuggestion": "<50 to 5000 chars — if the entire sequence is ignored, what is the next step (different channel? wait + retry? deprioritize?)>",',
+    '  "spamRiskNotes": "<30 to 4000 chars — honest spam-risk appraisal across the sequence; cumulative risk from sending N emails matters here>",',
+    '  "rationale": "<150 to 10000 chars — the strategic case for this exact arc with this exact prospect; how the sequence as a whole earns the conversion>"',
+    '}',
+    '',
+    'Hard rules you MUST follow:',
+    `- emails array MUST have exactly ${req.sequenceLength} elements with stepIndex 1..${req.sequenceLength} in order, each with totalSteps=${req.sequenceLength}.`,
+    `- stepPurposeSlug on each step MUST be one of the slugs from the taxonomy list: ${slugList}. Do NOT invent slugs.`,
+    "- The narrativeArcSummary and each email's narrativeRole MUST make explicit how this email connects to the prior emails. Generic descriptions are a failure.",
+    '- bodyPlainText for step 1 opens with prospect-specific context (pain, trigger, role, vertical). Step 2+ opens with continuity from prior step ("Following up on the {{vertical}} note", "Saw you didn\'t bite on the demo", etc.) — NOT a generic greeting.',
+    '- Each step has exactly ONE call-to-action. The ctaLine is a copy of that CTA. Cumulative across the sequence, the asks should escalate (curiosity → specific question → meeting → final).',
+    '- psLine on each step is a real PS, not a disclaimer.',
+    '- sendTimingHint on each step must align with cadence above. If cadence is "day 1, day 4, day 8", then step 1 hint is "day 1", step 2 is "day 4", step 3 is "day 8". If no cadence given, infer reasonable spacing.',
+    '- personalizationNotes on each step MUST name the variables ({{first_name}}, {{company}}, etc.) AND strategic hooks beyond merging.',
+    '- Brand DNA in the system prompt above governs voice across ALL steps. avoidPhrases must not appear in any prose field across the whole sequence.',
+    '- spamRiskNotes is sequence-level: account for cumulative risk from sending N emails to the same recipient. Burnout is real.',
+    '- Output ONLY the JSON object. No prose outside it. No markdown fences. No preamble.',
+  ];
+
+  return sections.join('\n');
+}
+
+async function executeComposeOutreachSequence(
+  req: ComposeOutreachSequenceRequest,
+  ctx: LlmCallContext,
+): Promise<ComposeOutreachSequenceResult> {
+  const userPrompt = buildComposeSequenceUserPrompt(req, ctx.purposeTypes);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Email Specialist (sequence) output was not valid JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  const result = ComposeOutreachSequenceResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Email Specialist sequence output did not match expected schema: ${issueSummary}`);
+  }
+
+  // Sequence-length sanity: the LLM was told the count; reject if it drifted.
+  if (result.data.emails.length !== req.sequenceLength) {
+    throw new Error(
+      `Email Specialist sequence: requested ${req.sequenceLength} emails, ` +
+      `LLM returned ${result.data.emails.length}. Refusing partial sequence.`,
+    );
+  }
+
+  // Step ordering sanity — must be 1..N contiguous, each with totalSteps=N.
+  for (let i = 0; i < result.data.emails.length; i++) {
+    const e = result.data.emails[i];
+    if (e.stepIndex !== i + 1) {
+      throw new Error(
+        `Email Specialist sequence: emails[${i}].stepIndex was ${e.stepIndex}, expected ${i + 1}.`,
+      );
+    }
+    if (e.totalSteps !== req.sequenceLength) {
+      throw new Error(
+        `Email Specialist sequence: emails[${i}].totalSteps was ${e.totalSteps}, expected ${req.sequenceLength}.`,
+      );
+    }
+  }
+
+  // Runtime taxonomy validation per step (Firestore-backed list, can change
+  // between seeds). Same pattern as compose_email.
+  const validSlugs = new Set(ctx.purposeTypes.map((t) => t.slug));
+  for (let i = 0; i < result.data.emails.length; i++) {
+    const slug = result.data.emails[i].stepPurposeSlug;
+    if (!validSlugs.has(slug)) {
+      throw new Error(
+        `Email Specialist sequence: emails[${i}].stepPurposeSlug='${slug}' is not in the active taxonomy. ` +
+        `Valid slugs: ${[...validSlugs].join(', ')}.`,
+      );
+    }
+  }
+
+  return result.data;
+}
+
 async function executeComposeEmail(
   req: ComposeEmailRequest,
   ctx: LlmCallContext,
@@ -490,6 +712,26 @@ export class EmailSpecialist extends BaseSpecialist {
 
       logger.info(`[EmailSpecialist] Executing action=${action} taskId=${taskId}`, { file: FILE });
 
+      const ctx = await loadGMBrandDNAAndPurposeTypes(DEFAULT_INDUSTRY_KEY);
+
+      if (action === 'compose_outreach_sequence') {
+        const seqValidation = ComposeOutreachSequenceRequestSchema.safeParse({
+          ...payload,
+          action,
+        });
+        if (!seqValidation.success) {
+          const issueSummary = seqValidation.error.issues
+            .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+            .join('; ');
+          return this.createReport(taskId, 'FAILED', null, [
+            `Email Specialist compose_outreach_sequence: invalid input payload: ${issueSummary}`,
+          ]);
+        }
+        const data = await executeComposeOutreachSequence(seqValidation.data, ctx);
+        return this.createReport(taskId, 'COMPLETED', data);
+      }
+
+      // action === 'compose_email'
       const inputValidation = ComposeEmailRequestSchema.safeParse({
         ...payload,
         action,
@@ -503,7 +745,6 @@ export class EmailSpecialist extends BaseSpecialist {
         ]);
       }
 
-      const ctx = await loadGMBrandDNAAndPurposeTypes(DEFAULT_INDUSTRY_KEY);
       const data = await executeComposeEmail(inputValidation.data, ctx);
       return this.createReport(taskId, 'COMPLETED', data);
     } catch (error) {
