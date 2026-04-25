@@ -217,7 +217,7 @@ Standing rules codified in `CLAUDE.md`:
 | Specialist Golden Masters seeded | **36 + 1** | 36 active specialists + the Prompt Engineer meta-specialist |
 | Manager Golden Masters seeded | **9 of 10** | Content, Marketing, Outreach, Intelligence, Revenue, Reputation, Commerce, Builder, Architect. Master Orchestrator skipped by design (it delegates to managers, not specialists — review happens one level down). |
 | Manager review gates wired | **10 of 10** | All managers now flow specialist calls through `delegateWithReview` per Phase 1. |
-| Jasper department delegations LIVE | **10 of 11** | All 9 `delegate_to_*` managers + `delegate_to_agent`. Only remaining NOT_WIRED: `orchestrate_campaign` (downstream pipeline orchestration, not a specialist rebuild). |
+| Jasper department delegations LIVE | **10 of 10** | All 9 `delegate_to_*` managers + `delegate_to_agent`. The `orchestrate_campaign` shortcut tool was removed Apr 25 2026 — it violated Jasper's delegation principle (would have run pipeline work itself rather than delegating). Multi-channel campaigns now plan as parallel `delegate_to_*` calls. |
 | Pirate-test verified specialists | **7 of 36** | Alex + Copywriter + Sentiment Analyst + Review Specialist + Deal Closer + Email Specialist + LinkedIn Expert. All 7 passed — proof the GM is loaded from Firestore at runtime. |
 | Behavior-change verified specialists | **1 of 36** | Copywriter — `scripts/verify-prompt-edit-changes-behavior.ts` proves v1 vs v2 produce demonstrably different output on the same task, not just different bytes in Firestore. |
 

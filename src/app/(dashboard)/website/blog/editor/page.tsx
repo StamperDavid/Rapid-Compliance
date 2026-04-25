@@ -62,7 +62,7 @@ export default function BlogPostEditorPage() {
       const data = await response.json() as { post: BlogPost };
       const loaded = data.post;
       // Defensive: ensure content is always a PageSection array
-      // Jasper's orchestrate_campaign previously saved content as a raw markdown string
+      // Older blog drafts (from before the campaign rebuild) stored content as raw markdown
       if (!Array.isArray(loaded.content)) {
         const rawContent = typeof loaded.content === 'string' ? loaded.content : '';
         loaded.content = rawContent ? [

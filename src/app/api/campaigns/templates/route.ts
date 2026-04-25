@@ -2,7 +2,13 @@
  * Campaign Templates API
  * GET /api/campaigns/templates — List pre-built campaign templates
  *
- * Templates provide pre-filled parameters for Jasper's orchestrate_campaign tool.
+ * Each template carries a pre-filled prompt that the campaigns dashboard
+ * sends to Jasper via Mission Control. Jasper then plans the campaign
+ * across the appropriate department delegations (delegate_to_content +
+ * delegate_to_marketing + delegate_to_intelligence as needed). The
+ * `defaults` block is a hint for the prompt template, not a tool call
+ * payload.
+ *
  * Stored in Firestore with auto-seeding on first access.
  */
 
@@ -21,7 +27,7 @@ interface CampaignTemplate {
   iconName: string;
   /** Pre-filled prompt for Jasper */
   promptTemplate: string;
-  /** Default orchestrate_campaign parameters */
+  /** Default hints used when rendering the prompt template */
   defaults: {
     audience: string;
     tone: 'professional' | 'conversational' | 'energetic' | 'empathetic';
