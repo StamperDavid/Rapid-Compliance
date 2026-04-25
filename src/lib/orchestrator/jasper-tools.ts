@@ -2028,7 +2028,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'delegate_to_outreach',
       description:
-        'Delegate a multi-channel outreach campaign to the Outreach Department. The Outreach Manager will coordinate Email Specialist and SMS Specialist with DNC compliance, frequency throttling, and sentiment-aware routing. Supports multi-step sequences with channel escalation (EMAIL → SMS → VOICE). ENABLED: TRUE.',
+        'Delegate a multi-channel outreach campaign to the Outreach Department. The Outreach Manager will coordinate Email Specialist and SMS Specialist with DNC compliance, frequency throttling, and sentiment-aware routing. For COLD-OUTREACH EMAIL DRIPS (e.g. "3-email outreach drip", "5-touch cold sequence"): set channel="email" and steps to the email count (>=2) — the Email Specialist will produce a coherent N-email arc personalized to the prospect in one call. For SINGLE outreach emails: leave steps at 1 (or omit). ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -5268,7 +5268,32 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           // delegate_to_outreach again with channel='sms'.
           const channelArg = (args.channel as string | undefined) ?? 'auto';
           const intent: 'SEND_EMAIL' | 'SEND_SMS' = channelArg === 'sms' ? 'SEND_SMS' : 'SEND_EMAIL';
-          const composeAction: 'compose_email' | 'compose_sms' = intent === 'SEND_SMS' ? 'compose_sms' : 'compose_email';
+
+          // Sequence vs single-email routing. When the caller asks for >1
+          // step on the email channel, dispatch the Email Specialist's
+          // compose_outreach_sequence action instead of compose_email so
+          // the LLM produces a coherent N-email arc in ONE call rather
+          // than N independent emails. SMS sequences are not yet
+          // implemented (SMS Specialist still has only compose_sms);
+          // Jasper's tool prompt steers SMS users to channel='email'.
+          const stepsRaw = args.steps;
+          const stepsNum =
+            typeof stepsRaw === 'number'
+              ? Math.trunc(stepsRaw)
+              : typeof stepsRaw === 'string'
+                ? parseInt(stepsRaw, 10)
+                : NaN;
+          const sequenceLength = Number.isFinite(stepsNum) ? stepsNum : 1;
+          const useSequence = intent === 'SEND_EMAIL' && sequenceLength >= 2;
+
+          let composeAction: 'compose_email' | 'compose_sms' | 'compose_outreach_sequence';
+          if (useSequence) {
+            composeAction = 'compose_outreach_sequence';
+          } else if (intent === 'SEND_SMS') {
+            composeAction = 'compose_sms';
+          } else {
+            composeAction = 'compose_email';
+          }
 
           // Build a single-sentence target audience descriptor from the lead
           // profile fields we have. Empty fields are skipped.
@@ -5282,7 +5307,9 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
           const sequenceType = (args.sequenceType as string | undefined) ?? 'cold_outreach';
           const messageBrief = (args.message as string | undefined) ?? '';
-          const goal = `Compose a single ${composeAction === 'compose_sms' ? 'SMS' : 'email'} as part of a ${sequenceType} outreach to ${firstName}`;
+          const goal = useSequence
+            ? `Compose a coherent ${sequenceLength}-email cold outreach sequence (${sequenceType}) personalized for ${firstName}, escalating across the arc toward conversion`
+            : `Compose a single ${composeAction === 'compose_sms' ? 'SMS' : 'email'} as part of a ${sequenceType} outreach to ${firstName}`;
 
           const outreachPayload: Record<string, unknown> = {
             intent,
@@ -5294,6 +5321,13 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             lead: firstLead,
             // Pass through compliance notes for the specialist's brief if present.
             ...(args.complianceNotes ? { complianceNotes: args.complianceNotes } : {}),
+            // Sequence-specific fields the specialist's
+            // compose_outreach_sequence action reads. Pass through unconditionally —
+            // the schema ignores them when action=compose_email.
+            ...(useSequence ? { sequenceLength } : {}),
+            ...(useSequence && typeof args.delayBetweenSteps === 'string'
+              ? { cadence: args.delayBetweenSteps }
+              : {}),
           };
 
           const outreachResult = await withTimeout(outreachMgr.execute({
