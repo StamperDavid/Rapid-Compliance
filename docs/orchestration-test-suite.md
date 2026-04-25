@@ -25,7 +25,7 @@ These are well-structured prompts. If Jasper can't handle these, nothing else ma
 
 | # | Prompt | Expected Tools | Tests | Result |
 |---|--------|---------------|-------|--------|
-| A.1 | *[See CONTINUATION_PROMPT test prompt — the 5-part end-to-end campaign]* | scrape_website x3, research_trending_topics, scan_leads, orchestrate_campaign, draft_outreach_email, get_seo_config | Zero narration, 8+ parallel tool calls, leads saved to CRM | |
+| A.1 | *[See CONTINUATION_PROMPT test prompt — the 5-part end-to-end campaign]* | scrape_website x3, research_trending_topics, scan_leads, delegate_to_content, delegate_to_marketing, draft_outreach_email, get_seo_config | Zero narration, 8+ parallel tool calls, leads saved to CRM | |
 | A.2 | "1. Research our top 3 competitors: GoHighLevel, Vendasta, HubSpot. 2. Write a blog post comparing us to them. 3. Post a summary on Twitter and LinkedIn." | research_competitors (or scrape_website x3), save_blog_draft, social_post x2 | 4-6 tool calls, blog + social created separately, not collapsed into one campaign | |
 | A.3 | "Scrape salesforce.com and hubspot.com. Then score all my existing leads. Then draft an outreach email to whoever scores highest." | scrape_website x2, score_leads, draft_outreach_email | Sequential dependency understood (outreach depends on scoring), scrape runs parallel | |
 
@@ -44,7 +44,7 @@ These test whether Jasper can extract intent from conversational requests.
 | B.5 | "Help me get my SEO sorted out" | get_seo_config | Pulls current config first, then advises based on real data | |
 | B.6 | "Can you look into what GoHighLevel charges?" | scrape_website (gohighlevel.com) or research_competitors | Actually scrapes/researches, never answers from memory | |
 | B.7 | "I'm not getting enough leads from my website" | get_analytics or get_seo_config, then actionable advice | Pulls real data before recommending fixes | |
-| B.8 | "I've got a product launch next week, help me promote it" | orchestrate_campaign or create_campaign + individual tools | Creates multi-channel content, doesn't just give a plan | |
+| B.8 | "I've got a product launch next week, help me promote it" | delegate_to_content + delegate_to_marketing (+ create_campaign if grouping deliverables) | Creates multi-channel content, doesn't just give a plan | |
 
 ---
 
@@ -75,12 +75,12 @@ The hardest category — Jasper must decompose natural language into multiple to
 |---|--------|---------------|-------|--------|
 | D.1 | "Find me some leads in SaaS, enrich the best ones, and draft cold emails to them" | scan_leads, enrich_lead, draft_outreach_email | Three distinct tools, correct order | |
 | D.2 | "I need a blog post and social media posts about our new pricing" | save_blog_draft, social_post (or create_campaign + both) | 2+ deliverables, not collapsed into one tool | |
-| D.3 | "Research what Vendasta is doing, then build a campaign that positions us as better" | scrape_website or research_competitors, then orchestrate_campaign | Research tool fires SEPARATELY from campaign, not inside it | |
+| D.3 | "Research what Vendasta is doing, then build a campaign that positions us as better" | scrape_website or research_competitors, then delegate_to_content + delegate_to_marketing | Research tool fires SEPARATELY from the campaign delegations, not inside one combined tool | |
 | D.4 | "Scrape these three sites and summarize the findings: hubspot.com, salesforce.com, zoho.com" | scrape_website x3 | Three separate scrape calls, not one | |
-| D.5 | "Write a blog, make a video, post on all our socials, and send an email blast about our summer sale" | orchestrate_campaign (or create_campaign + individual tools) | Multi-channel campaign created | |
+| D.5 | "Write a blog, make a video, post on all our socials, and send an email blast about our summer sale" | delegate_to_content (blog + video script) + delegate_to_marketing (social + email blast) | Multi-channel campaign created via parallel delegations | |
 | D.6 | "Look at our SEO, find what keywords we're missing, and write content to fill the gaps" | get_seo_config, research_trending_topics, save_blog_draft (or generate_content) | SEO audit → gap analysis → content creation chain | |
 | D.7 | "I want to run an outbound campaign — find 20 prospects in fintech, score them, and email the top 5" | scan_leads(industry: "fintech", limit: "20"), score_leads, draft_outreach_email | Full outbound pipeline, leads saved to CRM | |
-| D.8 | "Build me a landing page for our webinar and write 3 emails to drive registrations" | orchestrate_campaign (with landing page + email) or delegate_to_builder + delegate_to_marketing | Landing page AND email sequence created | |
+| D.8 | "Build me a landing page for our webinar and write 3 emails to drive registrations" | delegate_to_builder (landing page) + delegate_to_content (email copy) + create_workflow (3-email cadence) | Landing page AND email sequence created | |
 
 ---
 
@@ -106,7 +106,7 @@ Real users use marketing/sales jargon — Jasper must map it to tools.
 |---|--------|---------------|-------|--------|
 | F.1 | "Run an ABM play targeting enterprise fintech" | scan_leads(industry: "fintech"), draft_outreach_email | Understands ABM = Account-Based Marketing = targeted lead outreach | |
 | F.2 | "I need a nurture sequence for cold leads" | delegate_to_marketing or draft_outreach_email (multi-email) | Creates email drip sequence, not a single email | |
-| F.3 | "Set up a drip campaign" | delegate_to_marketing or orchestrate_campaign (email-focused) | Multi-touch email sequence | |
+| F.3 | "Set up a drip campaign" | delegate_to_content (email_sequence) + create_workflow (cadence) | Multi-touch email sequence with scheduled cadence | |
 | F.4 | "I need top-of-funnel content" | save_blog_draft or generate_content (educational/awareness content) | Understands TOFU = broad awareness content | |
 | F.5 | "Pipeline is thin, need to fill it" | scan_leads, then actionable next steps | Lead generation, not a motivational speech | |
 | F.6 | "What's our MQL to SQL conversion rate?" | get_analytics or get_platform_stats | Pulls real metrics if available | |

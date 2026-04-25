@@ -133,8 +133,8 @@
       "id": "campaign-001",
       "category": "full-campaign",
       "prompt": "Launch a full campaign for our AI-powered lead scoring product targeting B2B sales teams: research the market, write a blog post, draft 5 social posts, create a 60-second video, and prepare a 3-email outreach drip.",
-      "comment": "orchestrate_campaign is a single tool that internally produces blog + video storyboard + social posts + email sequence + landing page — including it in the plan satisfies the blog/social/video/email groups even without listing each sub-tool. The outreach drip is separate from marketing-email per orchestrate_campaign's docs so it still needs draft_outreach_email / delegate_to_outreach / send_email.",
-      "expect": { "planCalled": true, "toolsAllOf": ["delegate_to_intelligence"], "toolsAnyOf": ["save_blog_draft", "delegate_to_content", "orchestrate_campaign"], "toolsAlsoAnyOf": ["delegate_to_marketing", "social_post", "orchestrate_campaign"], "toolsThirdAnyOf": ["produce_video", "create_video", "orchestrate_campaign"], "toolsFourthAnyOf": ["delegate_to_outreach", "send_email", "draft_outreach_email", "orchestrate_campaign"] }
+      "comment": "Multi-channel campaigns plan as multiple parallel delegations: delegate_to_intelligence for market research, delegate_to_content for blog/video script work, delegate_to_marketing for social posts, delegate_to_outreach for the cold-email drip. There is no single combined tool.",
+      "expect": { "planCalled": true, "toolsAllOf": ["delegate_to_intelligence"], "toolsAnyOf": ["save_blog_draft", "delegate_to_content"], "toolsAlsoAnyOf": ["delegate_to_marketing", "social_post"], "toolsThirdAnyOf": ["delegate_to_content", "produce_video", "create_video"], "toolsFourthAnyOf": ["delegate_to_outreach", "send_email", "draft_outreach_email"] }
     },
     {
       "id": "campaign-002",

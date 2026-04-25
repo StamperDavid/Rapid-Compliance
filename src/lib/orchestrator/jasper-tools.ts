@@ -2607,56 +2607,6 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FULL CAMPAIGN ORCHESTRATION — Research → Strategy → Multi-Deliverable
-  // ═══════════════════════════════════════════════════════════════════════════
-  {
-    type: 'function',
-    function: {
-      name: 'orchestrate_campaign',
-      description:
-        'Run a CONTENT-ONLY campaign pipeline. Creates: blog draft, video storyboard, social posts, email sequence, and landing page — all under one campaign. Includes internal research/strategy phases for content angles only. User reviews at /mission-control?campaign={id}. Use for "full campaign", "content blitz", or "multi-channel content". IMPORTANT: This tool does NOT scrape websites, scan leads, enrich leads, score leads, or draft outreach emails. Those are SEPARATE tools (scrape_website, scan_leads, enrich_lead, score_leads, draft_outreach_email) that must be called alongside this tool, not instead of it. ENABLED: TRUE.',
-      parameters: {
-        type: 'object',
-        properties: {
-          topic: {
-            type: 'string',
-            description: 'The campaign topic or product to create content for (e.g., "AI-powered CRM launch", "Spring real estate tips")',
-          },
-          audience: {
-            type: 'string',
-            description: 'Target audience description (e.g., "B2B SaaS founders", "first-time homebuyers")',
-          },
-          tone: {
-            type: 'string',
-            description: 'Content tone across deliverables',
-            enum: ['professional', 'conversational', 'energetic', 'empathetic'],
-          },
-          platforms: {
-            type: 'string',
-            description: 'Comma-separated social platforms for posts (default: "twitter,linkedin")',
-          },
-          emailCount: {
-            type: 'number',
-            description: 'Number of emails to generate in the sequence (default: 1). Set to 3 for a 3-email drip sequence, etc.',
-          },
-          skipVideo: {
-            type: 'boolean',
-            description: 'Set true to skip video production (faster campaign)',
-          },
-          skipEmail: {
-            type: 'boolean',
-            description: 'Set true to skip email draft',
-          },
-          skipLandingPage: {
-            type: 'boolean',
-            description: 'Set true to skip landing page generation',
-          },
-        },
-        required: ['topic'],
-      },
-    },
-  },
 ];
 
 // ============================================================================
@@ -6804,23 +6754,6 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             tool: 'create_workflow',
           });
         }
-        break;
-      }
-
-      case 'orchestrate_campaign': {
-        const orchStart = Date.now();
-        trackMissionStep(context, 'orchestrate_campaign', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Campaign orchestration: not yet wired — multi-department specialist rebuild in progress';
-        trackMissionStep(context, 'orchestrate_campaign', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - orchStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Campaign orchestration is offline while the Content and Marketing specialists are being rebuilt as real AI agents. This flagship tool spans both departments and will return online only after the full Content department (Copywriter, Video Specialist, Calendar Coordinator, Asset Generator) and Marketing department (SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, Growth Analyst) are rebuilt. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'CAMPAIGN_ORCHESTRATOR',
-        });
         break;
       }
 

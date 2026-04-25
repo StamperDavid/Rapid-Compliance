@@ -40,7 +40,6 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   migrate_website: { route: '/website', label: 'Website' },
   // Campaign tools
   create_campaign: { route: '/mission-control', label: 'Mission Control' },
-  orchestrate_campaign: { route: '/mission-control', label: 'Campaign Review' },
   batch_produce_videos: { route: '/content/video/calendar', label: 'Content Calendar' },
   // Campaign deliverable steps (fallbacks — toolResult.reviewLink takes priority)
   campaign_video: { route: '/content/video', label: 'Video Studio' },
@@ -114,7 +113,6 @@ const STEP_DISPLAY_NAMES: Record<string, string> = {
   edit_video: 'Edit Video',
   create_image: 'Image Generation',
   // Campaign orchestration steps
-  orchestrate_campaign: 'Campaign Orchestration',
   campaign_research: 'Campaign Research',
   campaign_strategy: 'Campaign Strategy',
   campaign_blog: 'Blog Draft',

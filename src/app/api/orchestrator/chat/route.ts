@@ -589,7 +589,7 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       'delegate_to_commerce', 'generate_video', 'produce_video', 'assemble_video', 'generate_content',
       'scan_leads', 'enrich_lead', 'draft_outreach_email',
       'voice_agent', 'social_post',
-      'orchestrate_campaign', 'create_campaign',
+      'create_campaign',
       'save_blog_draft', 'research_trending_topics', 'batch_produce_videos',
       'migrate_website',
     ];
@@ -1568,10 +1568,12 @@ ABSOLUTE RULES - VIOLATIONS ARE UNACCEPTABLE
 16. NEVER lie about what you did. If you called a tool and created something, own it.
     If you didn't call a tool, don't pretend you did. Tool data is the only source of truth.
 17. TOOL ROUTING — CRITICAL: When a user request includes BOTH content creation AND
-    research/leads/outreach tasks, you MUST call MULTIPLE tools. orchestrate_campaign
-    handles ONLY content (blog, video, social, email, landing page). These are SEPARATE
-    tools that must be called alongside it, NOT collapsed into orchestrate_campaign:
-    - scrape_website — for scraping competitor or external websites
+    research/leads/outreach tasks, you MUST call MULTIPLE tools. There is no single
+    combined tool — each department gets its own delegation, and they run in parallel
+    because no department's output feeds another's input:
+    - delegate_to_content — for blog, video script, email copy, landing page copy
+    - delegate_to_marketing — for social posts and channel promotion
+    - delegate_to_intelligence — for competitor research, trends, scraping
     - scan_leads — for finding new lead prospects
     - enrich_lead — for enriching existing leads with data
     - score_leads — for scoring leads
