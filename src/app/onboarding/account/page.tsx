@@ -36,6 +36,7 @@ export default function AccountCreationPage() {
     fullName,
     email: storedEmail,
     phoneNumber,
+    smsConsent,
     companyName: storedCompanyName,
     setAccountInfo,
     setStep,
@@ -175,6 +176,33 @@ export default function AccountCreationPage() {
       } catch (batchError: unknown) {
         await deleteUser(userCredential.user);
         throw batchError;
+      }
+
+      // Record SMS consent if the user opted in on the industry page.
+      // This is fire-and-forget — failure does not block onboarding,
+      // because the user's account is already created and they can opt
+      // in later from settings if needed.
+      if (smsConsent && phoneNumber && phoneNumber.trim().length > 0) {
+        try {
+          const idToken = await userCredential.user.getIdToken();
+          await fetch('/api/onboarding/record-sms-consent', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              phoneNumber: phoneNumber.trim(),
+              consentType: 'express_written',
+              source: 'onboarding_signup',
+            }),
+          });
+        } catch {
+          // Don't fail signup over a consent recording error. The user's
+          // account is already created; they can opt in again from
+          // settings. Server-side errors here will surface in the
+          // application logs via the API route's logger.
+        }
       }
 
       // Store account info and redirect to feature selection

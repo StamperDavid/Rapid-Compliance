@@ -76,6 +76,12 @@ export interface OnboardingState {
   nicheDescription: string;
   companyName: string;
 
+  // SMS opt-in (CTIA-compliant consent collected in step 1).
+  // True only when the user explicitly checked the consent box. Persisted
+  // through onboarding so the final account-creation step can record it
+  // in the tcpa_consent collection. Defaults to false; never auto-checked.
+  smsConsent: boolean;
+
   // Default trial plan (hidden from user)
   planId: string;
   trialRecords: number;
@@ -88,6 +94,7 @@ export interface OnboardingState {
   setIndustry: (industry: IndustryOption) => void;
   setCustomIndustry: (name: string) => void;
   setContactInfo: (info: { fullName: string; email: string; phoneNumber: string; nicheDescription: string }) => void;
+  setSmsConsent: (consent: boolean) => void;
   setAccountInfo: (email: string, companyName: string) => void;
   setStep: (step: OnboardingState['currentStep']) => void;
   reset: () => void;
@@ -118,6 +125,7 @@ const initialState = {
   phoneNumber: '',
   nicheDescription: '',
   companyName: '',
+  smsConsent: false,
   planId: 'trial',
   trialRecords: 1000,
   startedAt: null as string | null,
@@ -143,6 +151,8 @@ export const useOnboardingStore = create<OnboardingState>()(
         phoneNumber: info.phoneNumber,
         nicheDescription: info.nicheDescription,
       }),
+
+      setSmsConsent: (consent) => set({ smsConsent: consent }),
 
       setAccountInfo: (email, companyName) => set({ email, companyName }),
 

@@ -38,16 +38,19 @@ export default function IndustrySelectionPage() {
     setInjectionAnswer,
     setCustomNiche,
     setContactInfo,
+    setSmsConsent,
     setStep,
     fullName: storedFullName,
     email: storedEmail,
     phoneNumber: storedPhoneNumber,
+    smsConsent: storedSmsConsent,
   } = useOnboardingStore();
 
   // Form state
   const [fullName, setFullName] = useState(storedFullName || '');
   const [email, setEmail] = useState(storedEmail || '');
   const [phoneNumber, setPhoneNumber] = useState(storedPhoneNumber || '');
+  const [smsConsent, setSmsConsentLocal] = useState<boolean>(storedSmsConsent ?? false);
 
   // Combobox state
   const [isOpen, setIsOpen] = useState(false);
@@ -136,6 +139,10 @@ export default function IndustrySelectionPage() {
       phoneNumber: phoneNumber.trim(),
       nicheDescription: '', // No longer used — replaced by customNiche / injection
     });
+
+    // Save SMS opt-in. Only meaningful when a phone number was provided
+    // — without a phone, the consent has nothing to attach to.
+    setSmsConsent(phoneNumber.trim().length > 0 && smsConsent);
 
     // Save inline answers if applicable
     if (selectedCategory.templateIds.length === 0) {
@@ -261,6 +268,49 @@ export default function IndustrySelectionPage() {
                 />
               </div>
             </div>
+
+            {/* SMS opt-in (CTIA-compliant). Only shown when a phone number
+                has been entered. Unchecked by default — never auto-checked.
+                Submitting unchecked is fine; the user simply won't receive
+                SMS. Checking this records explicit express-written consent
+                in tcpa_consent on account creation. */}
+            {phoneNumber.trim().length > 0 && (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={smsConsent}
+                    onChange={(e) => setSmsConsentLocal(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-300 leading-relaxed">
+                    Yes, send me SMS messages from SalesVelocity.ai including account
+                    notifications, marketing updates, and customer-care messages.
+                    Message frequency varies. Message and data rates may apply.
+                    Reply STOP to opt out, HELP for help. By checking this box, I agree
+                    to the{' '}
+                    <a
+                      href="https://www.salesvelocity.ai/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-400 hover:text-indigo-300 underline"
+                    >
+                      Terms of Service
+                    </a>{' '}
+                    and{' '}
+                    <a
+                      href="https://www.salesvelocity.ai/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-400 hover:text-indigo-300 underline"
+                    >
+                      Privacy Policy
+                    </a>
+                    .
+                  </span>
+                </label>
+              </div>
+            )}
 
             {/* Category Combobox */}
             <div ref={dropdownRef}>
