@@ -203,8 +203,16 @@ const ComposeDmReplyRequestSchema = z.object({
   brandContext: z.record(z.unknown()).optional(),
 });
 
+// Schema upper-bound matches the system-side send cap in
+// `twitter-dm-service.sendXDirectMessage` (500 chars). The brand voice
+// playbook in the GM v2 systemPrompt asks for ≤240 chars for DM
+// ergonomics — that's a quality target the LLM mostly honors.  The
+// operator's edit-before-send affordance in Mission Control catches
+// any rare overshoots before the DM actually goes out.  Hard-failing
+// the specialist on a 245-char reply would just hide working drafts
+// that an operator could have approved with one keystroke.
 const ComposeDmReplyResultSchema = z.object({
-  replyText: z.string().min(1).max(240),
+  replyText: z.string().min(1).max(500),
   reasoning: z.string().min(20).max(1500),
   confidence: z.enum(['low', 'medium', 'high']),
   suggestEscalation: z.boolean(),
