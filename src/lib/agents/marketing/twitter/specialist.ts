@@ -38,7 +38,7 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'marketing/twitter/specialist.ts';
 const SPECIALIST_ID = 'TWITTER_X_EXPERT';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['generate_content'] as const;
+const SUPPORTED_ACTIONS = ['generate_content', 'compose_dm_reply'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
 /**
@@ -87,10 +87,10 @@ const CONFIG: SpecialistConfig = {
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'MARKETING_MANAGER',
-    capabilities: ['generate_content'],
+    capabilities: ['generate_content', 'compose_dm_reply'],
   },
   systemPrompt: '', // Loaded from Firestore Golden Master at runtime
-  tools: ['generate_content'],
+  tools: ['generate_content', 'compose_dm_reply'],
   outputSchema: {
     type: 'object',
     properties: {
@@ -168,6 +168,49 @@ const TwitterContentResultSchema = z.object({
 });
 
 export type TwitterContentResult = z.infer<typeof TwitterContentResultSchema>;
+
+// ============================================================================
+// INPUT/OUTPUT CONTRACT — compose_dm_reply
+// ============================================================================
+//
+// The X Expert produces a single short reply to an inbound DM. The
+// Marketing Manager's inbound-DM fast-path invokes this action with the
+// full inbound context the synthetic-trigger captured from the
+// inboundSocialEvents document. Output is hard-capped at 240 chars to
+// match X's DM ergonomics + the brand's playbook (longer reads as a
+// wall of text in DM threads). Includes a `reasoning` field so the
+// operator can see WHY the specialist chose this reply when reviewing
+// in Mission Control, and a `confidence` enum that the auto-approve
+// toggle can use later for a high-confidence-only auto-send mode.
+
+export interface ComposeDmReplyRequest {
+  action: 'compose_dm_reply';
+  platform: 'x';
+  inboundEventId: string;
+  senderHandle?: string;
+  senderId?: string;
+  inboundText: string;
+  brandContext?: BrandContextInput;
+}
+
+const ComposeDmReplyRequestSchema = z.object({
+  action: z.literal('compose_dm_reply'),
+  platform: z.literal('x'),
+  inboundEventId: z.string().min(1),
+  senderHandle: z.string().optional(),
+  senderId: z.string().optional(),
+  inboundText: z.string().min(1),
+  brandContext: z.record(z.unknown()).optional(),
+});
+
+const ComposeDmReplyResultSchema = z.object({
+  replyText: z.string().min(1).max(240),
+  reasoning: z.string().min(20).max(1500),
+  confidence: z.enum(['low', 'medium', 'high']),
+  suggestEscalation: z.boolean(),
+});
+
+export type ComposeDmReplyResult = z.infer<typeof ComposeDmReplyResultSchema>;
 
 // ============================================================================
 // LLM INVOCATION CORE
@@ -383,6 +426,127 @@ async function executeGenerateContent(
 }
 
 // ============================================================================
+// ACTION: compose_dm_reply
+// ============================================================================
+//
+// Output is small (≤240 chars + reasoning ≈ ~1500 chars max), so we
+// override maxTokens to a much smaller budget than the thread schema's
+// 9000-token floor — saves money and avoids unnecessary overhead per
+// inbound DM. Provider validation still applies (truncation backstop,
+// JSON parse, Zod schema) so a model that ignores the budget still
+// fails loudly.
+
+const DM_REPLY_MAX_TOKENS = 1200;
+
+function buildComposeDmReplyUserPrompt(req: ComposeDmReplyRequest): string {
+  const sections: string[] = [
+    'ACTION: compose_dm_reply',
+    '',
+    `Inbound platform: X (Twitter)`,
+    `Inbound event id: ${req.inboundEventId}`,
+  ];
+  if (req.senderHandle) {
+    sections.push(`Sender handle: ${req.senderHandle}`);
+  }
+  sections.push('');
+  sections.push('Inbound DM text (verbatim):');
+  sections.push('"""');
+  sections.push(req.inboundText);
+  sections.push('"""');
+  sections.push('');
+
+  const brand = req.brandContext;
+  if (brand) {
+    sections.push('Brand context from caller:');
+    if (brand.industry) {
+      sections.push(`  Industry: ${brand.industry}`);
+    }
+    if (brand.toneOfVoice) {
+      sections.push(`  Tone of voice: ${brand.toneOfVoice}`);
+    }
+    if (brand.keyPhrases && brand.keyPhrases.length > 0) {
+      sections.push(`  Key phrases: ${brand.keyPhrases.join(', ')}`);
+    }
+    if (brand.avoidPhrases && brand.avoidPhrases.length > 0) {
+      sections.push(`  Avoid phrases: ${brand.avoidPhrases.join(', ')}`);
+    }
+    sections.push('');
+  }
+
+  sections.push('Compose ONE direct message reply for the brand to send back to this sender. Respond with ONLY a valid JSON object, no markdown fences, no preamble. Schema:');
+  sections.push('');
+  sections.push('{');
+  sections.push('  "replyText": "<the reply text the brand will send, 1-240 chars>",');
+  sections.push('  "reasoning": "<why this reply is appropriate given the inbound message and brand voice, 20-1500 chars>",');
+  sections.push('  "confidence": "<low | medium | high>",');
+  sections.push('  "suggestEscalation": <true | false — set true if a human should review before send because the inbound is hostile, off-topic, contains a complaint, or asks for something the brand cannot promise>');
+  sections.push('}');
+  sections.push('');
+  sections.push('Hard rules:');
+  sections.push('- replyText MUST be ≤240 characters. This is the brand\'s DM playbook ceiling, not X\'s 10000-char limit. Count carefully.');
+  sections.push('- Acknowledge the sender\'s SPECIFIC message — never reply with a generic template that ignores what they said.');
+  sections.push('- Match the brand tone of voice supplied in brand context. If none was supplied, default to professional yet approachable.');
+  sections.push('- If the sender asks about pricing, do NOT quote prices in the DM — point them to the website (https://www.salesvelocity.ai) for current pricing.');
+  sections.push('- If the sender is hostile, complaining, or asking for something the brand cannot promise, set suggestEscalation=true and write a polite holding reply that does not commit the brand to anything.');
+  sections.push('- Never invent product features, integrations, customer counts, pricing, or claims about the platform that were not provided in brand context.');
+  sections.push('- No exclamation overload, no marketing-speak ("revolutionary", "industry-leading", "game-changing"), no emoji.');
+  sections.push('- Plain text only. No URLs unless the inbound message explicitly asks where to find something — in which case https://www.salesvelocity.ai is the default destination.');
+  sections.push('- confidence reflects how sure you are the replyText fits the brand voice and addresses the sender\'s actual question. low/medium = the operator should probably edit before sending.');
+  sections.push('- Do NOT include the JSON in markdown fences. Output starts with `{` and ends with `}`.');
+
+  return sections.join('\n');
+}
+
+async function executeComposeDmReply(
+  req: ComposeDmReplyRequest,
+  ctx: LlmCallContext,
+): Promise<ComposeDmReplyResult> {
+  const userPrompt = buildComposeDmReplyUserPrompt(req);
+
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: DM_REPLY_MAX_TOKENS,
+  });
+
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Twitter/X Expert compose_dm_reply: LLM truncated at maxTokens=${DM_REPLY_MAX_TOKENS}. ` +
+      `Either raise the budget or shorten the inbound text.`,
+    );
+  }
+
+  const rawContent = (response.content ?? '').trim();
+  if (rawContent.length === 0) {
+    throw new Error('Twitter/X Expert compose_dm_reply: LLM returned empty response');
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Twitter/X Expert compose_dm_reply output was not valid JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  const result = ComposeDmReplyResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Twitter/X Expert compose_dm_reply output did not match expected schema: ${issueSummary}`);
+  }
+
+  return result.data;
+}
+
+// ============================================================================
 // TWITTER/X EXPERT CLASS
 // ============================================================================
 
@@ -420,24 +584,48 @@ export class TwitterExpert extends BaseSpecialist {
 
       logger.info(`[TwitterExpert] Executing action=${action} taskId=${taskId}`, { file: FILE });
 
-      // Validate input at the boundary so we fail fast with a clear error
-      const inputValidation = GenerateContentRequestSchema.safeParse({
-        ...payload,
-        action,
-      });
-      if (!inputValidation.success) {
-        const issueSummary = inputValidation.error.issues
-          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-          .join('; ');
-        return this.createReport(taskId, 'FAILED', null, [
-          `Twitter/X Expert generate_content: invalid input payload: ${issueSummary}`,
-        ]);
-      }
-
       const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
 
-      const data = await executeGenerateContent(inputValidation.data, ctx);
-      return this.createReport(taskId, 'COMPLETED', data);
+      if (action === 'generate_content') {
+        const inputValidation = GenerateContentRequestSchema.safeParse({
+          ...payload,
+          action,
+        });
+        if (!inputValidation.success) {
+          const issueSummary = inputValidation.error.issues
+            .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+            .join('; ');
+          return this.createReport(taskId, 'FAILED', null, [
+            `Twitter/X Expert generate_content: invalid input payload: ${issueSummary}`,
+          ]);
+        }
+        const data = await executeGenerateContent(inputValidation.data, ctx);
+        return this.createReport(taskId, 'COMPLETED', data);
+      }
+
+      if (action === 'compose_dm_reply') {
+        const inputValidation = ComposeDmReplyRequestSchema.safeParse({
+          ...payload,
+          action,
+        });
+        if (!inputValidation.success) {
+          const issueSummary = inputValidation.error.issues
+            .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+            .join('; ');
+          return this.createReport(taskId, 'FAILED', null, [
+            `Twitter/X Expert compose_dm_reply: invalid input payload: ${issueSummary}`,
+          ]);
+        }
+        const data = await executeComposeDmReply(inputValidation.data, ctx);
+        return this.createReport(taskId, 'COMPLETED', data);
+      }
+
+      // Exhaustiveness guard — if a new SUPPORTED_ACTIONS entry is added
+      // without a handler, this fails loudly instead of silently passing.
+      const _exhaustive: never = action;
+      return this.createReport(taskId, 'FAILED', null, [
+        `Twitter/X Expert: action '${_exhaustive}' has no handler in execute()`,
+      ]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[TwitterExpert] Execution failed', error instanceof Error ? error : new Error(errorMessage), { file: FILE });
@@ -490,9 +678,14 @@ export const __internal = {
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
   MIN_OUTPUT_TOKENS_FOR_SCHEMA,
+  DM_REPLY_MAX_TOKENS,
   loadGMConfig,
   buildGenerateContentUserPrompt,
+  buildComposeDmReplyUserPrompt,
+  executeComposeDmReply,
   stripJsonFences,
   GenerateContentRequestSchema,
   TwitterContentResultSchema,
+  ComposeDmReplyRequestSchema,
+  ComposeDmReplyResultSchema,
 };

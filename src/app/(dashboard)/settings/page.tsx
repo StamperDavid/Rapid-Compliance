@@ -90,6 +90,7 @@ export default function SettingsPage() {
         { icon: '🛡️', label: 'Compliance Reports', description: 'Run audits, view compliance scores, and track regulatory adherence', href: `/compliance-reports`, permission: canManageOrganization },
         { icon: '📜', label: 'Audit Log', description: 'View system-wide audit trail of all user and system actions', href: `/website/audit-log`, permission: canManageOrganization },
         { icon: '🔀', label: 'Lead Routing', description: 'Configure automatic lead assignment rules and round-robin routing', href: `/settings/lead-routing`, permission: canAssignRecords },
+        { icon: '🤖', label: 'Inbound Automation', description: 'Choose which inbound channels (X DMs, future SMS, comments) auto-reply without operator review', href: `/settings/automation`, permission: canManageOrganization },
       ]
     },
     {
