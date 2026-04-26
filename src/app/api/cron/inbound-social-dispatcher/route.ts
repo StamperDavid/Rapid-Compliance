@@ -1,22 +1,37 @@
 /**
- * Inbound social-event dispatcher.
+ * ⚠️ DISABLED — VIOLATES JASPER'S DELEGATION RULE ⚠️
  *
- * Polls the inboundSocialEvents Firestore collection for unprocessed
- * Twitter direct-message events. For each, generates a reply via the
- * LLM (OpenRouter / Sonnet 4.6 with Brand DNA injected), sends the
- * reply through X's DM API using our OAuth 1.0a User Context creds,
- * and marks the event processed with the response details.
+ * This dispatcher polls inboundSocialEvents and replies to DMs via a
+ * direct LLM call, completely bypassing Jasper. That contradicts the
+ * foundational rule that Jasper interprets intent and delegates to
+ * managers; he is the only orchestrator. Built April 25-26 2026 as a
+ * stop-gap, owner correctly flagged the architecture violation, and
+ * it has been removed from the Vercel cron schedule (vercel.json) so
+ * it cannot run autonomously.
  *
- * Tonight's scope: DMs only. Mentions / follows / etc. are persisted
- * but not auto-responded — operator decides what to do with them.
+ * The CORRECT architecture for inbound-DM auto-reply:
+ *   1. Webhook receives DM → stores in inboundSocialEvents
+ *      (src/app/api/webhooks/twitter/route.ts — keep)
+ *   2. A "synthetic Jasper trigger" mechanism kicks off a Jasper
+ *      mission with a prompt like "Inbound DM from {sender}:
+ *      '{text}' — plan a response."  ← TO BE BUILT
+ *   3. Jasper.propose_mission_plan → delegate_to_marketing → Marketing
+ *      Manager → X Expert specialist composes reply
+ *   4. Reply lands in Mission Control as a step result for operator
+ *      review (or auto-approve when confidence high enough)
+ *   5. A new tool `send_social_reply` (or specialist-internal call)
+ *      sends the reply via the X DM API
+ *   6. Mission completes; conversation logged to CRM
  *
- * Triggered every minute by Vercel Cron (configured in vercel.json).
+ * This file stays in the repo as a reference for the dispatch
+ * shape (loadTwitterCreds, OAuth 1.0a header, DM POST endpoint), all
+ * of which the proper Jasper-mediated path will reuse. The route
+ * still requires verifyCronAuth so even if hit manually it cannot
+ * run without the CRON_SECRET — and even then it would only
+ * generate-and-send if vercel.json registers it again.
  *
- * NOT a long-term home for DM-reply intelligence — when the
- * SocialDMSpecialist gets built with its own Golden Master, this
- * dispatcher should hand off to it via OutreachManager.execute() or a
- * dedicated SocialEngagementManager. For now, a direct LLM call gets
- * us auto-reply behavior without spinning up a full specialist.
+ * Do not re-enable this cron until the proper Jasper path replaces
+ * the inline LLM call.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

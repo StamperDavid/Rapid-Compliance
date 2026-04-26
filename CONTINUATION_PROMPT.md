@@ -1,7 +1,7 @@
 # SalesVelocity.ai — Full-Orchestration Verification Plan
 
-> **Updated:** April 24, 2026 afternoon — E2E runner shipped, Content Manager EMAIL_SEQUENCE rebuild (Option B) shipped, `create_workflow` gap discovered and queued as next session's lead task.
-> **Status:** Planning-layer 99% clean. Execution-layer Layer-1 sweep at 22/24 real pass. Workflow scheduling (`create_workflow` tool) is the only remaining blocker on the nurture/drip/newsletter features.
+> **Updated:** April 26, 2026 (early morning).
+> **Status:** Email + SMS + X organic posting + X DM webhook all wired and verified live. Twilio toll-free verification under review. **One architecture violation flagged for next session: inbound-social-dispatcher bypasses Jasper.** Disabled but not yet rebuilt.
 
 ---
 
@@ -11,35 +11,49 @@ Everything here overrides older sections. Do not ask the operator to remind you 
 
 ## TL;DR — where we are right now
 
-- **Jasper orchestrator is at v11.** Call-shape rule + parser hardening keeps `propose_mission_plan` clean. reputation-001 fixed 3/20 → 20/20.
-- **Copywriter specialist is at v2.** New `generate_email_sequence` action ships N-email sequences with subject/preview/body/cta/timing. Shipped April 24 along with the Content Manager EMAIL_SEQUENCE intent routing — the 10-minute FULL_PACKAGE hang on `contentType="email_sequence"` is gone.
-- **Intent Expander is at v2** (`sgm_intent_expander_saas_sales_ops_v2`). LLM-backed, Haiku 4.5.
-- **Prompt matrix + E2E runner are both live.** `scripts/verify-prompt-matrix.ts` tests planning (242/245 at 5 iter). `scripts/verify-prompt-matrix-e2e.ts` drives plan → approve → execute → deliverable extraction against the live dev server (22/24 real pass on the Layer-1 sweep).
-- **Mission Control rebuild M1–M8 is LIVE.** Plan pre-approval, sequential auto-execute with retry, downstream-changed flag, manual edit, inline scrap, full training loop (grade → PE → deploy → rollback) all in Mission Control.
-- **Training loop is end-to-end operational.** 9 manager GMs + 38 specialist rebuilds + Prompt Engineer meta-specialist shipped.
-- **Standing rules preserved.** Every GM change still requires a human grade or explicit operator delegation. Nothing self-improves silently.
+- **Jasper orchestrator is at v12.** `orchestrate_campaign` tool deleted across the codebase (it violated Jasper's "interpret intent + delegate" rule). Multi-channel campaigns now plan as parallel `delegate_to_*` calls. 10-of-10 department delegations live.
+- **Copywriter specialist is at v3.** Strict per-email length caps (`subjectLine` ≤ 80, `previewText` ≤ 120). Drift bug killed in 3/3 spot-check.
+- **Email Specialist is at v2** with new `compose_outreach_sequence` action — coherent N-email cold drips personalized per prospect. Verified live (3-email sequence, narrative arc held, 103s).
+- **Email pipeline live.** SendGrid + domain auth on `salesvelocity.ai` (5 CNAMEs + DMARC TXT in GoDaddy DNS). Live test sent + delivered to a real Gmail.
+- **SMS pipeline plumbed but blocked.** Twilio account + key + phone `+18449553015` saved. **Toll-free verification was rejected**, was resubmitted with corrected business type, DBA, three sample messages per category, and a real CTIA-compliant opt-in URL `https://www.salesvelocity.ai/onboarding/industry`. **Currently under Twilio review** — "in progress" status.
+- **CTIA SMS opt-in checkbox shipped on `/onboarding/industry`.** Renders only when phone is entered, full disclosure label, never auto-checked. Account creation POSTs to new `/api/onboarding/record-sms-consent` route which writes to `tcpa_consent` via adminDb.
+- **X (Twitter) brand account fully wired.** `@salesvelocityai` exists, dev portal app approved with OAuth 2.0 + OAuth 1.0a credentials, profile polished, $25 of credits loaded with auto-reload. **Real test tweet posted** (status id `2048224495564202398`). X is purely pay-per-use now: $0.015/tweet, $0.20/tweet with URL.
+- **X Account Activity webhook registered + verified.** `https://rapidcompliance.us/api/webhooks/twitter` validates CRC + verifies signatures, writes inbound events to `inboundSocialEvents` Firestore. Test DM + follow event both landed within seconds. Webhook id `2048240842830401536`.
+- **🔴 Architecture violation in `inbound-social-dispatcher` cron.** It was built to auto-reply to DMs via direct OpenRouter call — bypasses Jasper entirely. Owner correctly rejected it. **Disabled in vercel.json.** File header rewritten to flag the violation. Do NOT re-enable.
 
-## What's been verified vs what hasn't
+## What's verified working vs what's pending
 
-| Layer | Status |
+| Capability | Status |
 |---|---|
-| Jasper planning (right tools, right shape) | ✓ Verified via matrix, 99% at 5 iter |
+| Jasper planning (right tools, right shape) | ✓ Matrix 242/245 (99%) at 5 iter |
 | Plan approval + per-step approval gate | ✓ Verified via `scripts/verify-mission-execution-lifecycle.ts` |
-| Specialist execution → deliverable in Firestore | ✓ Layer-1 sweep 22/24 real pass (advisory, factual, conversational, reputation, forms, adversarial all 100%; workflow blocked on create_workflow) |
-| Workflow scheduling (emails fire on cadence) | ✗ **Blocked on `create_workflow` tool being unimplemented — next session's lead task** |
-| External delivery (social post hits X, email hits inbox) | ✗ Blocked on OAuth account connections (operator's parallel track) |
-| End-to-end automation for regression testing | ✓ E2E runner shipped (`scripts/verify-prompt-matrix-e2e.ts`) |
+| Specialist execution → deliverable in Firestore | ✓ Layer-1 sweep 36/39 (92%) post-fix |
+| Workflow scheduling (emails fire on cadence) | ✓ workflow-001 + workflow-002 pass 2/2 |
+| Email sending (real delivery to a real inbox) | ✓ Live test landed in Gmail |
+| Outreach sequence generation (per-prospect cold drip) | ✓ 3-email arc generated in 103s |
+| Outreach sequence dispatch on `lead_created` | ✓ Verified via `scripts/verify-sequence-outreach-wiring.ts` |
+| X organic posting | ✓ Live test tweet posted |
+| X DM webhook receipt | ✓ Two test events landed in Firestore |
+| SMS sending | ✗ Blocked on Twilio toll-free verification (under review) |
+| **DM auto-response via Jasper** | **✗ ARCHITECTURE VIOLATION — must build the proper Jasper-mediated path** |
+| Customer X OAuth (Architecture A) | ✗ Requires X Basic tier $200/mo — defer to launch |
+| X Ads (paid) | ✗ Separate Ads API approval queue — not started |
+| Social platforms beyond X (LinkedIn, Meta, TikTok, YouTube, Bluesky, Reddit, Pinterest, Truth Social) | ✗ Code wired, account/OAuth setup pending |
 
 ---
 
-# STEP 0 — Automatic setup when this session opens (do without being asked)
+# 🔴 STEP 0 — Automatic setup when this session opens (do without being asked)
 
 1. **Read memory in this order** — ground truth:
    - `memory/MEMORY.md` (the index)
-   - Any session-handoff memory dated April 23 (midday + evening)
+   - The session-handoff memory dated April 25-26
    - `memory/project_jasper_only_job_is_intent.md`
+   - `memory/feedback_audit_against_jasper_rules_dont_assume_from_names.md`
+   - `memory/feedback_finish_one_thing_before_moving_to_next.md`
    - `memory/project_live_test_monitoring_setup.md`
    - `memory/project_manager_auto_review_disabled.md`
+   - `memory/project_email_domain_dev_vs_launch.md` — rapidcompliance.us during dev, salesvelocity.ai at launch
+   - `memory/project_rotate_secrets_in_transcript.md`
 
 2. **Check `D:/rapid-dev/.next` cache.** If stale after a merge, `rm -rf D:/rapid-dev/.next`.
 
@@ -47,18 +61,83 @@ Everything here overrides older sections. Do not ask the operator to remind you 
    ```
    cd "D:/rapid-dev" && node "./node_modules/next/dist/bin/next" dev > "D:/rapid-dev/dev-server.log" 2>&1
    ```
-   Use `run_in_background: true`.
+   Use `run_in_background: true`. Wait for "Ready in" before proceeding.
 
 4. **Arm the expanded log monitor immediately.** Filter spec is in `memory/project_live_test_monitoring_setup.md`. `Monitor` tool, `persistent: true`, `timeout_ms: 3600000`.
 
-5. **Confirm Jasper v11 + Copywriter v2 are active:**
+5. **Confirm active GMs:**
    ```
    npx tsx scripts/dump-jasper-gm.ts | grep "GM id="
    npx tsx scripts/dump-copywriter-gm.ts | grep "GM id="
+   npx tsx scripts/dump-email-specialist-gm.ts | grep "GM id="
    ```
-   Expect: `GM id=jasper_orchestrator_v11 version=v11` and `GM id=sgm_copywriter_saas_sales_ops_v2 version=2` (or higher).
+   Expect: `jasper_orchestrator_v12`, `sgm_copywriter_saas_sales_ops_v3`, `sgm_email_specialist_saas_sales_ops_v2`.
 
-6. **Tell the operator "Ready. Monitor armed. Jasper v11 + Copywriter v2 confirmed active."** — don't wait to be asked.
+6. **Tell the operator** "Ready. Monitor armed. Jasper v12 + Copywriter v3 + Email Specialist v2 confirmed active." — don't wait to be asked.
+
+---
+
+# 🔴 LEAD TASK NEXT SESSION — Build Jasper-mediated inbound DM auto-reply
+
+The `inbound-social-dispatcher` cron route exists at `src/app/api/cron/inbound-social-dispatcher/route.ts` and is **disabled** (removed from vercel.json). Do NOT re-enable it as-is — it bypasses Jasper. Build the proper architecture instead.
+
+## Correct architecture (build this)
+
+```
+X DM arrives
+  ↓
+/api/webhooks/twitter receives, verifies signature
+  ↓
+Stores raw event in inboundSocialEvents collection (already works)
+  ↓
+NEW dispatcher polls inboundSocialEvents (or Firestore listener)
+  ↓
+For each unprocessed DM event:
+  - Build a synthetic user message for Jasper:
+      "Inbound X DM from @<sender>: '<text>'. Plan a response."
+  - Invoke Jasper via the same chat API path the UI uses
+      (POST /api/orchestrator/chat with a system-flagged synthetic user)
+  ↓
+Jasper.propose_mission_plan
+  ↓
+Plan: delegate_to_marketing → Marketing Manager → X Expert specialist composes reply
+  ↓
+Reply lands in Mission Control as a step result
+  ↓
+Operator approves (or auto-approve when confidence threshold met)
+  ↓
+NEW tool `send_social_reply` (or specialist-internal call) sends reply via X DM API
+  ↓
+Mission completes. Conversation logged to CRM. inboundSocialEvent marked processed.
+```
+
+## What needs to be built
+
+1. **Synthetic Jasper-trigger mechanism.** A way for non-user events (webhooks, cron) to invoke a Jasper mission with a pre-formed user prompt. Right now the `/api/orchestrator/chat` route requires an authenticated user session. Either:
+   - Add a service-mode endpoint that accepts a synthetic event payload + a service token (rotate the cron's CRON_SECRET, plus a special header `x-synthetic-trigger: true` so we can audit it).
+   - Or: have the dispatcher write directly to the `missions` collection with a pre-built plan in `PLAN_PENDING_APPROVAL` state. Less elegant but simpler.
+
+2. **`send_social_reply` tool** (or `send_x_dm`). Add to JASPER_TOOLS. Args: `targetParticipantId`, `replyText`, `inboundEventId`. Executor calls X DM API via OAuth 1.0a User Context (the OAuth flow already exists in scripts/verify-twitter-post-live.ts and scripts/run-inbound-social-dispatcher.ts — copy that). Marks the source `inboundSocialEvent` as processed when the send succeeds.
+
+3. **X Expert specialist GM update** — the Marketing department's X Expert specialist needs its Golden Master to know how to compose a DM reply that's brand-voiced, short (≤240 chars), context-specific. Operator-delegated GM edit per `feedback_delegation_vs_self_training`.
+
+4. **Mission Control rendering** for inbound-DM missions. Should already work since they're just regular missions with steps, but verify the inbound DM context shows up in the step view so the operator can see the original message before approving the reply.
+
+5. **A new dispatcher cron** that:
+   - Polls `inboundSocialEvents` where `processed=false` AND `kind='direct_message_events'` AND no Mission has been created for it yet
+   - Invokes the synthetic-Jasper-trigger
+   - Marks the event as `mission_initiated` (separate flag from `processed`) so it doesn't re-fire while the mission is in progress
+
+## Verification when done
+
+- Send a fresh DM to `@salesvelocityai` from a different account
+- Within 1-2 min: a new mission appears in Mission Control titled "Inbound X DM response"
+- Plan: delegate_to_marketing (X Expert composes reply)
+- Approve the plan
+- Specialist composes a reply
+- Approve the reply
+- `send_social_reply` tool fires; the reply lands in the original sender's DM thread
+- `inboundSocialEvent` is marked `processed: true` with the reply text + messageId
 
 ---
 
@@ -66,69 +145,42 @@ Everything here overrides older sections. Do not ask the operator to remind you 
 
 Multi-tenant conversion with a broken single-tenant loop is a nightmare. Order of operations is fixed:
 
-## 🔴 Stage A.5 — Build the `create_workflow` tool (NEXT SESSION, ~2-3 hrs)
+## Stage A.6 — Inbound DM auto-reply via Jasper (NEXT SESSION, the lead task above)
 
-**The only blocker left on the nurture/drip/newsletter features.** Jasper's prompt references `create_workflow` as a required step for any cadence-based email sequence, but the tool was never implemented. `workflow-001` and `workflow-002` halt at step 2 with `"Unknown tool: create_workflow"`.
+## Stage B — Twilio toll-free SMS verification (under review by Twilio)
 
-### What "done" looks like
-- Tool schema in `src/lib/orchestrator/jasper-tools.ts` (name, parameters: trigger, cadence/steps, contentSource, sequenceType, optional conditions)
-- Executor case handler that validates args, writes a `workflow` record to Firestore with enough detail for a scheduler to fire each email at the right time, returns `{ status, workflowId, reviewLink }`
-- Workflow data model in `src/types/workflow.ts` (or extend existing)
-- Persistence via `getSubCollection('workflows')`
-- **Scheduler that actually fires the emails on schedule** — check `src/lib/workflow-engine/` (if it exists) or stand up a cron/queue. Owner was explicit: "not faking or ignoring."
-- Integration with `send_email` or `delegate_to_outreach` for the actual per-recipient delivery when the cadence hits
-- Update workflow-001 / workflow-002 matrix fixtures to expect `create_workflow` (already expected — these prompts just fail today) — no fixture change needed, just verify
-- E2E verification: `npx tsx scripts/verify-prompt-matrix-e2e.ts --category=workflow --iterations=1` must pass 2/2 with COMPLETED status on both
+Owner has resubmitted with the corrected info + the new opt-in URL. Once approved, SMS sending unblocks. While waiting:
+- **Verify** the SMS opt-in checkbox actually persists `tcpa_consent` end-to-end with a real account creation flow on the live deployed site
+- **Build** SMS receive webhook (Twilio sends inbound SMS to a webhook on our app — same architectural decision as DMs: must go through Jasper, not auto-reply directly)
 
-### Out of scope for Stage A.5
-- Building a fancy visual workflow editor UI
-- Supporting non-email workflow node types (SMS, voice calls, conditional branches) — keep the first version email-only
-- Webhook-triggered workflows from third-party systems
-- A/B testing or multi-variant scheduling
-- Reseeding the Copywriter or Jasper GMs (the prompts already reference `create_workflow` correctly)
+## Stage C — Connect remaining social accounts
 
-### Standing rules to respect
-- **Rule #1 (Brand DNA baked into GM):** no Brand DNA work here; this is a code+tool build, not a prompt edit.
-- **Rule #2 (no grades = no GM edits):** this session does not edit any active GM. If a GM edit becomes necessary (e.g. to adjust Jasper's prompt about workflow usage), that's a separate scope.
-- **No eslint-disable, no @ts-ignore, no stubs.** If the workflow engine doesn't exist yet, write it for real — do not fake a "workflow scheduled" response without real scheduling.
+Per the audit done last session: 11 platforms have wired code. X organic + DM ingest now live. Still pending:
+- **Tonight-easy:** Bluesky (5 min), Reddit (30 min), Truth Social (30 min)
+- **Day-1:** Meta (Facebook + Instagram + Threads via single Business Suite OAuth)
+- **Mid-week:** Pinterest, YouTube, LinkedIn (RapidAPI fallback)
+- **1-2 weeks:** TikTok app review (parallel-path now)
 
-## Stage A — E2E runner (DONE April 24)
+For EACH platform, the bar is: real post landed on the platform from the live system. Not "credentials saved."
 
-`scripts/verify-prompt-matrix-e2e.ts` drives the full mission loop: Firebase custom-token → chat POST → Firestore poll for PLAN_PENDING_APPROVAL → approve-all → approve (fire-and-abort) → terminal state poll → deliverable extraction. Flags: --id, --category, --categories, --exclude-categories, --iterations, --timeout.
+## Stage D — Specialist GMs trained on each platform's organic + paid playbook
 
-## Stage B — Connect real accounts
+Each marketing-department specialist (X Expert, LinkedIn Expert, Facebook Ads Expert, etc.) needs platform-specific algorithm knowledge baked into its Golden Master. Operator-delegated GM edits, one specialist per session.
 
-### Social OAuth
-Meta (FB+IG), LinkedIn, X. Each is ~5 min of dashboard work + existing OAuth scaffolding in the repo. Meta OAuth sub-platform split already shipped (commit `4fbd9ec7`).
+## Stage E — Paid ads on each platform
 
-### Email — **start this before social because it's slower**
-Email connection has layers social doesn't have:
+Separate setup from organic posting:
+- X Ads — separate Ads API approval queue
+- Meta Ads — Meta Business Suite + Ads Manager
+- TikTok Ads — TikTok Ads Manager
+- LinkedIn Ads — Campaign Manager
+- YouTube/Google Ads — Google Ads account
 
-| Layer | Why it matters |
-|---|---|
-| OAuth (Gmail or Microsoft Graph / M365) | Agent reads inbox, sends, manages threads |
-| Domain auth (SPF + DKIM + DMARC) | Skip = every campaign lands in spam |
-| Deliverability warm-up | Can't cold-blast 1000 from a fresh account |
-| Suppression + unsubscribe compliance | CAN-SPAM / GDPR / CASL — legally required |
-| Bounce + complaint webhook | Sender reputation tanks if unhandled |
+Each requires its own ad account, billing, policy review.
 
-**Start email domain auth first** — DNS propagation + warm-up is days, not minutes. Social can be connected later in an afternoon.
+## Stage F — Multi-tenant conversion
 
-## Stage C — Full matrix at E2E depth
-
-Run the 49-prompt matrix through the E2E runner instead of the planning-only harness. Every prompt goes all the way to published / sent / posted (or a safe test destination). Expected output: a per-prompt E2E pass/fail plus deliverable URLs/paths.
-
-## Stage D — Manual weekend prompt testing (operator)
-
-Things the matrix can't judge: tone, brand voice, cohesion across deliverables, edge cases from real prospect interactions. Operator drives this with Jasper on localhost:3000, grades inline, training loop feeds back into GM versions.
-
-## Stage E — Multi-tenant conversion (me)
-
-Only after A–D are clean. The Penthouse single-tenant state gets re-tenantized:
-- Re-add `organizationId` parameter throughout data access helpers (`getSubCollection` already uses `PLATFORM_ID` — flip that to a context variable)
-- Re-enable multi-tenant firestore rules
-- Per-tenant Brand DNA, per-tenant GM versioning (specialist GMs already keyed by industry — this is closer than it looks)
-- Tenant provisioning + onboarding flow (owner clients purchase their own deployment)
+Only after Stages A-E are clean. Re-add `organizationId` parameter throughout data access helpers, re-enable multi-tenant Firestore rules, per-tenant Brand DNA, per-tenant GM versioning, tenant provisioning + onboarding.
 
 ---
 
@@ -142,8 +194,9 @@ Only after A–D are clean. The Penthouse single-tenant state gets re-tenantized
 | Did deliverables land in the expected places? | Is the social post on-brand? |
 | Did cleanup work between runs? | Does the campaign feel cohesive? |
 | Are there hangs, retries, silent failures, zombie work? | Did the system understand WHAT the user wanted? |
+| **Architecture violations like the inbound-social-dispatcher** | **Final approve/reject on every edge case** |
 
-**When Claude finds an orchestration failure:** fix it autonomously per CLAUDE.md guardrails. Do not interrupt the operator until either (a) a deliverable is ready for human review, or (b) all queued fixes are complete.
+**When Claude finds an orchestration failure:** fix it autonomously per CLAUDE.md guardrails. Do not interrupt the operator until either (a) a deliverable is ready for human review, or (b) all queued fixes are complete. **Architecture violations get DISABLED first, then surfaced to the operator with a proper rebuild plan — never papered over.**
 
 ---
 
@@ -151,28 +204,27 @@ Only after A–D are clean. The Penthouse single-tenant state gets re-tenantized
 
 **Existing:**
 - `scripts/verify-prompt-matrix.ts` — 49 prompts, planning-layer coverage. Last: 242/245 at 5 iter.
-- `scripts/verify-prompt-matrix-e2e.ts` — full mission-lifecycle E2E (auth → plan → approve → execute → deliverable). Last Layer-1 sweep: 22/24 real pass.
-- `scripts/propose-matrix-corrections.ts` + `apply-matrix-corrections.ts` — automated grade → PE → deploy pipeline.
-- `scripts/diagnose-jasper-planning.ts` — deep-diagnostic for flaky prompts.
-- `scripts/dump-jasper-gm.ts` + `scripts/dump-copywriter-gm.ts` — read-only utilities for auditing the active GMs.
-- `scripts/verify-mission-plan-lifecycle.ts` / `verify-mission-execution-lifecycle.ts` / `verify-upstream-changed-flag.ts` — M3-M5 infrastructure.
-- `scripts/verify-prompt-edit-changes-behavior.ts` — behavioral proof that PE edits change output.
-- `scripts/verify-no-grades-no-changes.ts` — Standing Rule #2 runtime proof.
+- `scripts/verify-prompt-matrix-e2e.ts` — full mission-lifecycle E2E. Last Layer-1 sweep: 36/39 real pass post-fix.
+- `scripts/verify-twitter-post-live.ts` — fires a real test tweet via OAuth 1.0a User Context.
+- `scripts/verify-email-pipeline-live.ts` — fires a real email through SendGrid + sequence-scheduler.
+- `scripts/verify-sequence-outreach-wiring.ts` — synthetic lead_created → real per-recipient sequence jobs.
+- `scripts/check-twitter-inbound-events.ts` — read-only DM event inspector.
+- `scripts/cleanup-test-data-recursive.ts` — preserves demo-* and isDemo:true; deletes everything else.
 
 **To build next session:**
-- The `create_workflow` tool itself + its Firestore persistence + its scheduler (see Stage A.5 above).
+- Whatever harness proves the Jasper-mediated DM reply path works end-to-end. (Send a DM → mission appears → approve → reply lands in the sender's DM thread.)
 
 ---
 
 # CLEANUP DISCIPLINE — between runs
 
 ```
-npx tsx scripts/cleanup-qa-test-data.ts --yes
+npx tsx scripts/cleanup-test-data-recursive.ts --confirm
 ```
 
-Cleans non-demo leads + terminal missions in the last 60 min. Does NOT yet touch test blog posts, campaigns, videos, or Hedra renders — extend when those start piling up during E2E runs.
+Preserves demo + live work, deletes test pollution across all collections (missions, workflows, workflowSequenceJobs, campaigns, sequences, scene_previews, missionGrades, trainingFeedback, conversations, **inboundSocialEvents**, etc.). First run on Apr 25 cleared 123 docs.
 
-Paid artifacts (Hedra videos, DALL-E, Apollo) — either skip in matrix or accept the spend (operator confirmed OK). Never confuse demo data (permanent, `isDemo: true`) with test data (ephemeral, session-scoped).
+Paid artifacts (Hedra videos, DALL-E, Apollo, X tweets at $0.015-0.20) — either skip in matrix or accept the spend. Owner has X auto-reload on with $25 floor.
 
 ---
 
@@ -180,38 +232,19 @@ Paid artifacts (Hedra videos, DALL-E, Apollo) — either skip in matrix or accep
 
 Full filter spec + supplementary monitor scripts in `memory/project_live_test_monitoring_setup.md`. Arm the main Monitor on every dev server restart. Start `monitor-node-health`, `track-api-costs --tail`, `detect-zombie-work --tail` for live Mission Control testing; skip for background matrix runs.
 
-**What the log monitor CAN'T catch:** browser console, UI rendering, node memory, API spend, zombie work. Those have dedicated scripts or require an operator screenshot.
-
 ---
 
 # KNOWN OPEN ISSUES (current)
 
 | ID | Description | Severity | Status |
 |---|---|---|---|
-| `create_workflow` unimplemented | Jasper's prompt tells him to call it for cadence-based sequences; tool was never built | **High** | **Lead task for next session (Stage A.5).** |
-| campaign-001 flake | Jasper occasionally substitutes a second `delegate_to_content` for the outreach drip step | Low | Pre-existing, ~5% at 20 iter. Surgical PE edit candidate. |
-| Bug F | Only COMPETITOR_RESEARCHER — no INDUSTRY_RESEARCHER | Medium | Every "research our product" prompt scrapes competitors instead. |
-| Bug H | Zombie work after mission cancel/halt | Medium | `detect-zombie-work.ts` flags it. |
-| Bug L | Content Manager registers BLOG_WRITER / PODCAST_SPECIALIST / MUSIC_PLANNER but never invokes them | Medium | Audit all managers for unreachable specialists before fixing individually. |
-| Logo save-to-theme-editor bug | Homepage logo didn't persist to theme editor | Low | Operator flagged April 24. |
-| Apollo Technographic Scout | Tries to scrape topic strings as URLs | Low | Errors but doesn't halt. |
-| Cleanup script gaps | Doesn't touch blog posts, campaigns, videos | Medium | Extend when E2E runner starts producing them at volume. |
-
----
-
-# STANDING RULES (binding — never violate)
-
-- **#1 (Brand DNA in GM):** every LLM agent's GM has Brand DNA baked in at seed time. Reseed via `node scripts/reseed-all-gms.js` after Brand DNA edits.
-- **#2 (No grades = no GM changes):** GMs only change via human grade → PE edit → human approval → new version. Verified by `scripts/verify-no-grades-no-changes.ts`. Operator-delegated grading pipelines (Claude driving PE end-to-end at explicit owner request) are NOT what this rule guards against — see `memory/feedback_delegation_vs_self_training.md`.
-- **No eslint-disable, no @ts-ignore, no stubs.**
-- **No silent guardrail bypasses.** If code can't pass cleanly, STOP and ask.
-- **Commit per CLAUDE.md §5.** Co-author: `Claude Opus 4.7 (1M context) <noreply@anthropic.com>`. Push to `dev`. Then sync into `D:/rapid-dev` via `git merge origin/dev --no-edit` + `rm -rf .next`. Never copy files between worktrees manually.
-- **Jasper's only job is intent interpretation.** Every layer around him must serve that.
-
----
-
-# AT END OF SESSION
-
-1. Write a session-handoff memory under `memory/` summarizing what shipped, what passed mechanically, what failed and was fixed, what deliverables await operator review, any new known issues.
-2. Update this CONTINUATION_PROMPT.md with the new state — **update, don't pile on.**
-3. Confirm everything is committed + pushed to `origin/dev` and synced into `D:/rapid-dev`.
+| **inbound-social-dispatcher architecture** | Direct LLM auto-reply bypasses Jasper. Disabled in vercel.json. | **Critical** | **Lead task next session.** |
+| Twilio toll-free SMS | Resubmitted with CTIA opt-in URL — under review | Medium | Owner waits on Twilio reviewer; nothing to do until response |
+| campaign-001 flake | Jasper occasionally substitutes a second `delegate_to_content` for the outreach drip step | Low | Pre-existing, ~5% at 20 iter. Surgical PE edit candidate |
+| Bug F | Only COMPETITOR_RESEARCHER — no INDUSTRY_RESEARCHER | Medium | Every "research our product" prompt scrapes competitors instead |
+| Bug H | Zombie work after mission cancel/halt | Medium | `detect-zombie-work.ts` flags it |
+| Bug L | Content Manager registers BLOG_WRITER / PODCAST_SPECIALIST / MUSIC_PLANNER but never invokes them | Medium | Audit all managers for unreachable specialists |
+| FULL_PACKAGE timeout (closed?) | Was failing; classifier + parallelism fix shipped. Verify still clean on next sweep. | Low | Closed pending re-test |
+| Apollo Technographic Scout | Tries to scrape topic strings as URLs | Low | Errors but doesn't halt |
+| Cleanup script gaps | Doesn't yet touch every collection by default | Low | Extend when E2E runner produces new pollution shapes |
+| `multi-004` planner shape | Jasper picks `delegate_to_content` instead of expected `produce_video` for video deliverables. **FIXTURE bug, not planner bug** per `feedback_jasper_delegation_is_always_correct.md`. Update fixture to accept `delegate_to_content`. | Low | Trivial fixture fix |
