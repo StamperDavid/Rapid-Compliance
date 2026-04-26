@@ -67,20 +67,36 @@ function extractComposedReplyFromMission(
   steps: { toolName: string; status: string; toolResult?: string }[],
 ): { replyText: string; inboundEventId?: string } | null {
   // Walk newest-first so a rerun's output wins over the original.
+  // Accepts either toolName: 'compose_dm_reply' (direct-orchestration
+  // path) or 'delegate_to_marketing' (legacy path that wrapped the
+  // composedReply inside .data). The shape check is what matters, not
+  // the tool name.
   for (let i = steps.length - 1; i >= 0; i--) {
     const step = steps[i];
     if (step.status !== 'COMPLETED') { continue; }
-    if (step.toolName !== 'delegate_to_marketing') { continue; }
     if (typeof step.toolResult !== 'string') { continue; }
     let parsed: unknown;
     try { parsed = JSON.parse(step.toolResult); } catch { continue; }
     if (!parsed || typeof parsed !== 'object') { continue; }
-    const result = parsed as MarketingStepResultShape;
-    if (result.composedReply && typeof result.composedReply.replyText === 'string') {
+
+    // Direct-orchestration shape: composedReply at the top level.
+    const top = parsed as MarketingStepResultShape;
+    if (top.composedReply && typeof top.composedReply.replyText === 'string') {
       return {
-        replyText: result.composedReply.replyText,
-        ...(typeof result.inboundEventId === 'string' ? { inboundEventId: result.inboundEventId } : {}),
+        replyText: top.composedReply.replyText,
+        ...(typeof top.inboundEventId === 'string' ? { inboundEventId: top.inboundEventId } : {}),
       };
+    }
+    // Legacy delegate_to_marketing shape: composedReply nested under .data
+    const dataField = (parsed as Record<string, unknown>).data;
+    if (dataField && typeof dataField === 'object') {
+      const wrapped = dataField as MarketingStepResultShape;
+      if (wrapped.composedReply && typeof wrapped.composedReply.replyText === 'string') {
+        return {
+          replyText: wrapped.composedReply.replyText,
+          ...(typeof wrapped.inboundEventId === 'string' ? { inboundEventId: wrapped.inboundEventId } : {}),
+        };
+      }
     }
   }
   return null;
