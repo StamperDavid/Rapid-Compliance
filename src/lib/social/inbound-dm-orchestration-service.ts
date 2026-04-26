@@ -36,7 +36,40 @@ import { logger } from '@/lib/logger/logger';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 
-export type InboundDmPlatform = 'x' | 'bluesky';
+export type InboundDmPlatform =
+  | 'x'
+  | 'bluesky'
+  | 'linkedin'
+  | 'facebook'
+  | 'instagram'
+  | 'pinterest';
+
+const SPECIALIST_BY_PLATFORM: Record<InboundDmPlatform, string> = {
+  x: 'TWITTER_X_EXPERT',
+  bluesky: 'BLUESKY_EXPERT',
+  linkedin: 'LINKEDIN_EXPERT',
+  facebook: 'FACEBOOK_ADS_EXPERT',
+  instagram: 'INSTAGRAM_EXPERT',
+  pinterest: 'PINTEREST_EXPERT',
+};
+
+const SOURCE_EVENT_KIND_BY_PLATFORM: Record<InboundDmPlatform, NonNullable<import('@/lib/orchestrator/mission-persistence').Mission['sourceEvent']>['kind']> = {
+  x: 'inbound_x_dm',
+  bluesky: 'inbound_bluesky_dm',
+  linkedin: 'inbound_linkedin_dm',
+  facebook: 'inbound_facebook_dm',
+  instagram: 'inbound_instagram_dm',
+  pinterest: 'inbound_pinterest_dm',
+};
+
+const PLATFORM_LABELS: Record<InboundDmPlatform, string> = {
+  x: 'X',
+  bluesky: 'Bluesky',
+  linkedin: 'LinkedIn',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  pinterest: 'Pinterest',
+};
 
 export interface InboundDmInput {
   platform: InboundDmPlatform;
@@ -99,21 +132,49 @@ async function composeReplyDirect(input: InboundDmInput): Promise<ComposeDmReply
     traceId: `inbound_dm_${input.platform}_${input.inboundEventId}`,
   };
 
-  if (input.platform === 'bluesky') {
-    const { getBlueskyExpert } = await import('@/lib/agents/marketing/bluesky/specialist');
-    const expert = getBlueskyExpert();
-    await expert.initialize();
-    const report = await expert.execute(message);
-    if (report.status !== 'COMPLETED' || !report.data) {
-      const errMsg = report.errors?.join('; ') ?? `${input.platform} specialist returned ${report.status}`;
-      throw new Error(errMsg);
+  // Resolve the platform-specific specialist via dynamic import. Each
+  // specialist exposes a `get<Platform>Expert()` singleton getter that
+  // implements BaseSpecialist; once initialized, calling
+  // `expert.execute(message)` with payload.action='compose_dm_reply'
+  // dispatches to the shared compose-dm-reply mixin.
+  let expert: { initialize: () => Promise<void>; execute: (m: typeof message) => Promise<{ status: string; data?: unknown; errors?: string[] }> };
+  switch (input.platform) {
+    case 'x': {
+      const m = await import('@/lib/agents/marketing/twitter/specialist');
+      expert = m.getTwitterExpert();
+      break;
     }
-    return report.data as ComposeDmReplyData;
+    case 'bluesky': {
+      const m = await import('@/lib/agents/marketing/bluesky/specialist');
+      expert = m.getBlueskyExpert();
+      break;
+    }
+    case 'linkedin': {
+      const m = await import('@/lib/agents/marketing/linkedin/specialist');
+      expert = m.getLinkedInExpert();
+      break;
+    }
+    case 'facebook': {
+      const m = await import('@/lib/agents/marketing/facebook/specialist');
+      expert = m.getFacebookAdsExpert();
+      break;
+    }
+    case 'instagram': {
+      const m = await import('@/lib/agents/marketing/instagram/specialist');
+      expert = m.getInstagramExpert();
+      break;
+    }
+    case 'pinterest': {
+      const m = await import('@/lib/agents/marketing/pinterest/specialist');
+      expert = m.getPinterestExpert();
+      break;
+    }
+    default: {
+      const _exhaustive: never = input.platform;
+      throw new Error(`Unsupported inbound DM platform: ${String(_exhaustive)}`);
+    }
   }
 
-  // platform === 'x'
-  const { getTwitterExpert } = await import('@/lib/agents/marketing/twitter/specialist');
-  const expert = getTwitterExpert();
   await expert.initialize();
   const report = await expert.execute(message);
   if (report.status !== 'COMPLETED' || !report.data) {
@@ -143,7 +204,7 @@ export async function orchestrateInboundDmReply(input: InboundDmInput): Promise<
   const composeDurationMs = Date.now() - composeStart;
   const completedAt = new Date().toISOString();
 
-  const specialistId = input.platform === 'bluesky' ? 'BLUESKY_EXPERT' : 'TWITTER_X_EXPERT';
+  const specialistId = SPECIALIST_BY_PLATFORM[input.platform];
   const missionId = `mission_inbound_dm_${input.platform}_${input.inboundEventId}_${Date.now()}`;
   const conversationId = `conv_inbound_dm_${input.platform}_${input.inboundEventId}`;
 
@@ -173,7 +234,7 @@ export async function orchestrateInboundDmReply(input: InboundDmInput): Promise<
   };
 
   const senderLabel = input.senderHandle ?? input.senderId.slice(0, 12);
-  const platformLabel = input.platform === 'bluesky' ? 'Bluesky' : 'X';
+  const platformLabel = PLATFORM_LABELS[input.platform];
   const mission: Mission = {
     missionId,
     conversationId,
@@ -186,7 +247,7 @@ export async function orchestrateInboundDmReply(input: InboundDmInput): Promise<
     completedAt,
     plannedAt: startedAt,
     sourceEvent: {
-      kind: input.platform === 'bluesky' ? 'inbound_bluesky_dm' : 'inbound_x_dm',
+      kind: SOURCE_EVENT_KIND_BY_PLATFORM[input.platform],
       eventId: input.inboundEventId,
       senderId: input.senderId,
       ...(input.senderHandle ? { senderHandle: input.senderHandle } : {}),

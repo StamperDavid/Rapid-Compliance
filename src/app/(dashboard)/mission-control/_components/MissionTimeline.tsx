@@ -707,7 +707,7 @@ function StepCard({
           )}
 
           {(() => {
-            const isInboundDm = sourceEvent?.kind === 'inbound_x_dm' || sourceEvent?.kind === 'inbound_bluesky_dm';
+            const isInboundDm = sourceEvent?.kind?.startsWith('inbound_') === true && sourceEvent.kind.endsWith('_dm');
             if (!isInboundDm) { return null; }
             if (step.status !== 'COMPLETED') { return null; }
             // Render whenever the step has a composedReply attached.

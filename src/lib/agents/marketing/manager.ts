@@ -946,16 +946,23 @@ export class MarketingManager extends BaseManager {
       );
     }
 
-    if (platform !== 'x' && platform !== 'bluesky') {
+    const SPECIALIST_BY_INBOUND_PLATFORM: Record<string, string> = {
+      x: 'TWITTER_X_EXPERT',
+      bluesky: 'BLUESKY_EXPERT',
+      linkedin: 'LINKEDIN_EXPERT',
+      facebook: 'FACEBOOK_ADS_EXPERT',
+      instagram: 'INSTAGRAM_EXPERT',
+      pinterest: 'PINTEREST_EXPERT',
+    };
+    const specialistId = SPECIALIST_BY_INBOUND_PLATFORM[platform];
+    if (!specialistId) {
       return this.createReport(
         taskId,
         'FAILED',
         null,
-        [`Inbound DM reply for platform="${platform}" is not yet wired. Currently supported: x, bluesky`],
+        [`Inbound DM reply for platform="${platform}" is not yet wired. Currently supported: ${Object.keys(SPECIALIST_BY_INBOUND_PLATFORM).join(', ')}`],
       );
     }
-
-    const specialistId = platform === 'bluesky' ? 'BLUESKY_EXPERT' : 'TWITTER_X_EXPERT';
     this.log('INFO', `Inbound ${platform} DM fast-path: routing to ${specialistId}.compose_dm_reply for event ${inboundEventId}`);
 
     // Pass brand context through the same way orchestrateCampaign does
@@ -971,9 +978,17 @@ export class MarketingManager extends BaseManager {
       avoidPhrases: brand.avoidPhrases,
     } : undefined;
 
-    const expert = platform === 'bluesky'
-      ? (await import('./bluesky/specialist')).getBlueskyExpert()
-      : getTwitterExpert();
+    const expert = await (async () => {
+      switch (platform) {
+        case 'bluesky': return (await import('./bluesky/specialist')).getBlueskyExpert();
+        case 'linkedin': return (await import('./linkedin/specialist')).getLinkedInExpert();
+        case 'facebook': return (await import('./facebook/specialist')).getFacebookAdsExpert();
+        case 'instagram': return (await import('./instagram/specialist')).getInstagramExpert();
+        case 'pinterest': return (await import('./pinterest/specialist')).getPinterestExpert();
+        case 'x':
+        default: return getTwitterExpert();
+      }
+    })();
     await expert.initialize();
 
     const composeMessage = this.createDelegationMessage(
