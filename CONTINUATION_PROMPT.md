@@ -1,7 +1,29 @@
 # SalesVelocity.ai — Full-Orchestration Verification Plan
 
-> **Updated:** April 26, 2026 (early morning, post-handoff).
-> **Status:** Orchestration code complete and verified end-to-end. **Real DM round-trip BLOCKED on X-side webhook delivery — X is not POSTing events to our webhook despite valid configuration.** All diagnostic + remediation paths attempted; investigation paused for sleep.
+> **Updated:** April 26, 2026 (afternoon).
+> **Status:** Bluesky inbound-DM auto-reply LIVE end-to-end. DM-only Jasper-bypass architecture shipped. compose_dm_reply on 6 specialists via shared mixin. Training loop validated. X DM still blocked X-side (waiting on X's webhook delivery to resume; orchestration code verified working — see open issue below).
+
+---
+
+# ✅ TODAY'S WIN — Bluesky inbound DM auto-reply works end-to-end
+
+Real round-trip verified: DM from `@rapidcompliance.bsky.social` → polled by `/api/cron/jasper-bluesky-dm-dispatcher` → `inbound-dm-orchestration-service` calls `BlueskyExpert.compose_dm_reply` directly → mission created in Firestore with `status: COMPLETED` → operator opens Mission Control, reads "Customer's message" + "Composed reply" in the human-readable detail view → clicks Send Reply → DM lands in sender's thread.
+
+**Owner-confirmed architecture for inbound social DMs only**: dispatcher → platform specialist directly. NO Jasper plan, NO Marketing Manager, NO plan-approval rubber-stamp. Reasoning: inbound DMs have machine-detected fixed intent — Jasper has nothing to interpret. Outbound posts, scheduled campaigns, workflow runs, user-typed Jasper prompts, and inbound SMS still go through full Jasper orchestration.
+
+Key file: `src/lib/social/inbound-dm-orchestration-service.ts` (`orchestrateInboundDmReply(input)`).
+
+**Specialists with `compose_dm_reply` action wired** (via shared `src/lib/agents/social/compose-dm-reply-shared.ts` mixin):
+- TWITTER_X_EXPERT (custom impl, will refactor to mixin later)
+- BLUESKY_EXPERT (custom impl, will refactor to mixin later)
+- LINKEDIN_EXPERT (mixin) — compose ready, send not wired
+- FACEBOOK_ADS_EXPERT (mixin) — compose ready, send not wired
+- INSTAGRAM_EXPERT (mixin) — compose ready, send not wired
+- PINTEREST_EXPERT (mixin) — compose ready, send not wired
+
+**Training loop validated**: 5-star + positive → no edit; 1-star + vague → no edit; 1-star + actionable correction → PE produces real proposal in 3-box popup. Standing Rule #2 holds.
+
+---
 
 ---
 
