@@ -148,13 +148,16 @@ export async function POST(
     return NextResponse.json({ success: false, error: 'Mission not found' }, { status: 404 });
   }
 
-  if (mission.sourceEvent?.kind !== 'inbound_x_dm') {
+  const sourceEvent = mission.sourceEvent;
+  const sourceKind = sourceEvent?.kind;
+  if (!sourceEvent || (sourceKind !== 'inbound_x_dm' && sourceKind !== 'inbound_bluesky_dm')) {
     return NextResponse.json(
-      { success: false, error: 'Mission is not an inbound X DM mission (sourceEvent.kind !== inbound_x_dm)' },
+      { success: false, error: `Mission is not an inbound DM mission (sourceEvent.kind=${String(sourceKind)})` },
       { status: 400 },
     );
   }
-  const eventId = mission.sourceEvent.eventId;
+  const eventId = sourceEvent.eventId;
+  const platform: 'x' | 'bluesky' = sourceKind === 'inbound_bluesky_dm' ? 'bluesky' : 'x';
 
   const composed = extractComposedReplyFromMission(mission.steps);
   const replyText = (bodyOverride.replyText ?? composed?.replyText ?? '').trim();
@@ -168,8 +171,10 @@ export async function POST(
     );
   }
 
-  const recipientUserId = mission.sourceEvent.senderId
-    ?? await loadInboundEventSenderId(eventId);
+  // For X: senderId is the X numeric user id (used directly by sendXDirectMessage).
+  // For Bluesky: senderId is the sender DID (or handle) — passed straight to BlueskyService.
+  const recipientUserId = sourceEvent.senderId
+    ?? (platform === 'x' ? await loadInboundEventSenderId(eventId) : null);
   if (!recipientUserId) {
     return NextResponse.json(
       {
@@ -182,6 +187,7 @@ export async function POST(
 
   logger.info('[send-dm-reply] dispatching', {
     missionId,
+    platform,
     eventId,
     recipientUserId,
     replyTextLen: replyText.length,
@@ -189,21 +195,31 @@ export async function POST(
     actorUid: user.uid,
   });
 
-  const sendResult = await sendXDirectMessage({
-    recipientUserId,
-    text: replyText,
-  });
+  let sendResult: { success: boolean; messageId?: string; error?: string; httpStatus?: number };
+  if (platform === 'bluesky') {
+    const { createBlueskyService } = await import('@/lib/integrations/bluesky-service');
+    const service = await createBlueskyService();
+    if (!service) {
+      sendResult = { success: false, error: 'Bluesky credentials missing — run scripts/save-bluesky-config.ts' };
+    } else {
+      const r = await service.sendDirectMessage({ recipient: recipientUserId, text: replyText });
+      sendResult = { success: r.success, messageId: r.messageId, error: r.error };
+    }
+  } else {
+    sendResult = await sendXDirectMessage({ recipientUserId, text: replyText });
+  }
 
   if (!sendResult.success) {
-    logger.error('[send-dm-reply] X DM send failed', new Error(sendResult.error ?? 'unknown'), {
+    logger.error('[send-dm-reply] DM send failed', new Error(sendResult.error ?? 'unknown'), {
       missionId,
+      platform,
       eventId,
       httpStatus: sendResult.httpStatus,
     });
     return NextResponse.json(
       {
         success: false,
-        error: sendResult.error ?? 'X DM send failed',
+        error: sendResult.error ?? `${platform} DM send failed`,
         httpStatus: sendResult.httpStatus,
       },
       { status: 502 },

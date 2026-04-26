@@ -707,7 +707,8 @@ function StepCard({
           )}
 
           {(() => {
-            if (sourceEvent?.kind !== 'inbound_x_dm') { return null; }
+            const isInboundDm = sourceEvent?.kind === 'inbound_x_dm' || sourceEvent?.kind === 'inbound_bluesky_dm';
+            if (!isInboundDm) { return null; }
             if (step.toolName !== 'delegate_to_marketing') { return null; }
             if (step.status !== 'COMPLETED') { return null; }
             const composed = extractComposedReplyText(step.toolResult);

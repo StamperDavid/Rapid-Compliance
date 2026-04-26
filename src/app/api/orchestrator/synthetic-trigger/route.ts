@@ -49,7 +49,7 @@ const triggerBodySchema = z.object({
   scope: z.enum(SUPPORTED_SCOPES),
   syntheticUserMessage: z.string().min(20).max(8000),
   sourceEvent: z.object({
-    kind: z.literal('inbound_x_dm'),
+    kind: z.enum(['inbound_x_dm', 'inbound_bluesky_dm']),
     eventId: z.string().min(1),
     senderId: z.string().optional(),
     senderHandle: z.string().optional(),

@@ -946,16 +946,17 @@ export class MarketingManager extends BaseManager {
       );
     }
 
-    if (platform !== 'x') {
+    if (platform !== 'x' && platform !== 'bluesky') {
       return this.createReport(
         taskId,
         'FAILED',
         null,
-        [`Inbound DM reply for platform="${platform}" is not yet wired. Currently supported: x`],
+        [`Inbound DM reply for platform="${platform}" is not yet wired. Currently supported: x, bluesky`],
       );
     }
 
-    this.log('INFO', `Inbound X DM fast-path: routing to TWITTER_X_EXPERT.compose_dm_reply for event ${inboundEventId}`);
+    const specialistId = platform === 'bluesky' ? 'BLUESKY_EXPERT' : 'TWITTER_X_EXPERT';
+    this.log('INFO', `Inbound ${platform} DM fast-path: routing to ${specialistId}.compose_dm_reply for event ${inboundEventId}`);
 
     // Pass brand context through the same way orchestrateCampaign does
     // so the X Expert's compose_dm_reply prompt has tone-of-voice and
@@ -970,15 +971,17 @@ export class MarketingManager extends BaseManager {
       avoidPhrases: brand.avoidPhrases,
     } : undefined;
 
-    const xExpert = getTwitterExpert();
-    await xExpert.initialize();
+    const expert = platform === 'bluesky'
+      ? (await import('./bluesky/specialist')).getBlueskyExpert()
+      : getTwitterExpert();
+    await expert.initialize();
 
     const composeMessage = this.createDelegationMessage(
       `dm_compose_${Date.now()}`,
-      'TWITTER_X_EXPERT',
+      specialistId,
       {
         action: 'compose_dm_reply',
-        platform: 'x' as const,
+        platform,
         inboundEventId,
         inboundText,
         ...(senderHandle ? { senderHandle } : {}),
@@ -987,14 +990,14 @@ export class MarketingManager extends BaseManager {
       },
     );
 
-    const composeResult = await xExpert.execute(composeMessage);
+    const composeResult = await expert.execute(composeMessage);
 
     if (composeResult.status !== 'COMPLETED') {
       return this.createReport(
         taskId,
         'FAILED',
         null,
-        composeResult.errors ?? ['Twitter/X Expert compose_dm_reply failed'],
+        composeResult.errors ?? [`${specialistId} compose_dm_reply failed`],
       );
     }
 
@@ -1009,7 +1012,7 @@ export class MarketingManager extends BaseManager {
       ...(senderHandle ? { senderHandle } : {}),
       ...(senderId ? { senderId } : {}),
       composedReply: composeResult.data,
-      specialistsUsed: ['TWITTER_X_EXPERT'],
+      specialistsUsed: [specialistId],
     });
   }
 

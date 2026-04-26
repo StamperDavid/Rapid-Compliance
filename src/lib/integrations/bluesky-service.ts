@@ -144,6 +144,90 @@ export class BlueskyService {
     }
   }
 
+  /**
+   * Send a direct message via Bluesky's chat service.
+   *
+   * Bluesky DMs route through a separate service (`api.bsky.chat`)
+   * accessed via the AT Protocol's service-proxy header. The flow is:
+   *   1. Resolve the recipient's DID (we accept either a handle or a did)
+   *   2. Get-or-create a conversation between the brand and the recipient
+   *   3. Send the message to that conversation
+   *
+   * Requires the app password to have been created with the "Allow access
+   * to direct messages" option enabled. If the password lacks DM scope,
+   * step 2 returns 401 with a clear error.
+   */
+  async sendDirectMessage(input: { recipient: string; text: string }): Promise<{ success: boolean; messageId?: string; convoId?: string; error?: string }> {
+    const text = input.text.trim();
+    if (!input.recipient) { return { success: false, error: 'recipient is required' }; }
+    if (!text) { return { success: false, error: 'text is required' }; }
+    if (text.length > 1000) { return { success: false, error: `text is ${text.length} chars; Bluesky DM limit is 1000` }; }
+
+    try {
+      const session = await this.ensureSession();
+
+      // 1. Resolve recipient to a DID. Caller can pass either a handle
+      // (e.g. "rapidcompliance.bsky.social") or a did directly.
+      let recipientDid = input.recipient;
+      if (!recipientDid.startsWith('did:')) {
+        const profileResp = await fetch(
+          `${this.pdsUrl}/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(input.recipient)}`,
+          { headers: { Authorization: `Bearer ${session.accessJwt}` } },
+        );
+        if (!profileResp.ok) {
+          return { success: false, error: `Could not resolve handle ${input.recipient}: HTTP ${profileResp.status}` };
+        }
+        const profile = await profileResp.json() as { did?: string };
+        if (!profile.did) {
+          return { success: false, error: `Profile for ${input.recipient} missing did field` };
+        }
+        recipientDid = profile.did;
+      }
+
+      // 2. Get-or-create the conversation. Chat lexicons are served by
+      // the Bluesky chat service at api.bsky.chat — NOT by the personal
+      // data server (bsky.social). The session token from createSession
+      // is recognized by the chat service. The atproto-proxy header is
+      // included for forward compatibility with proxy-aware infra.
+      const chatHost = 'https://api.bsky.chat';
+      const proxyHeaders = {
+        Authorization: `Bearer ${session.accessJwt}`,
+        'atproto-proxy': 'did:web:api.bsky.chat#bsky_chat',
+      };
+
+      const convoResp = await fetch(
+        `${chatHost}/xrpc/chat.bsky.convo.getConvoForMembers?members=${encodeURIComponent(recipientDid)}`,
+        { headers: proxyHeaders },
+      );
+      if (!convoResp.ok) {
+        const errText = await convoResp.text();
+        return { success: false, error: `getConvoForMembers failed: HTTP ${convoResp.status} ${errText.slice(0, 200)}` };
+      }
+      const convoData = await convoResp.json() as { convo?: { id?: string } };
+      const convoId = convoData.convo?.id;
+      if (!convoId) {
+        return { success: false, error: 'getConvoForMembers returned no convo id' };
+      }
+
+      // 3. Send the message.
+      const sendResp = await fetch(`${chatHost}/xrpc/chat.bsky.convo.sendMessage`, {
+        method: 'POST',
+        headers: { ...proxyHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ convoId, message: { text } }),
+      });
+      if (!sendResp.ok) {
+        const errText = await sendResp.text();
+        return { success: false, convoId, error: `sendMessage failed: HTTP ${sendResp.status} ${errText.slice(0, 200)}` };
+      }
+      const sentData = await sendResp.json() as { id?: string };
+      return { success: true, convoId, messageId: sentData.id };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error('[BlueskyService] sendDirectMessage failed', error instanceof Error ? error : new Error(msg));
+      return { success: false, error: msg };
+    }
+  }
+
   async getProfile(): Promise<BlueskyProfile | null> {
     try {
       const session = await this.ensureSession();

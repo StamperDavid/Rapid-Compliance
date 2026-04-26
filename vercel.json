@@ -64,6 +64,10 @@
     {
       "path": "/api/cron/jasper-dm-dispatcher",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/jasper-bluesky-dm-dispatcher",
+      "schedule": "* * * * *"
     }
   ],
   "headers": [

@@ -1666,7 +1666,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           inboundContext: {
             type: 'object',
-            description: 'Inbound DM/comment context, present ONLY when this delegation is responding to an inbound social event. When present, the Marketing Manager fast-paths to the platform-specific specialist with action=compose_dm_reply (no full campaign orchestration). REQUIRED keys when this object is present: platform (e.g. "x"), inboundEventId (the source inboundSocialEvents doc id), inboundText (the full inbound message body). OPTIONAL keys: senderHandle (display @handle), senderId (platform user id used by send_social_reply at send time). Pass the values through verbatim from the synthetic-trigger prompt — do not modify them.',
+            description: 'Inbound DM/comment context, present ONLY when this delegation is responding to an inbound social event. When present, the Marketing Manager fast-paths to the platform-specific specialist with action=compose_dm_reply (no full campaign orchestration). REQUIRED keys when this object is present: platform (one of "x" or "bluesky"), inboundEventId (the source inboundSocialEvents doc id), inboundText (the full inbound message body). OPTIONAL keys: senderHandle (display @handle), senderId (platform user id used by send_social_reply at send time — for Bluesky this should be the sender DID). Pass the values through verbatim from the synthetic-trigger prompt — do not modify them.',
           },
         },
         required: ['goal'],
@@ -2428,15 +2428,15 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           platform: {
             type: 'string',
             description: 'The social platform to send through',
-            enum: ['x'],
+            enum: ['x', 'bluesky'],
           },
           recipientUserId: {
             type: 'string',
-            description: 'The platform-specific user id of the original DM sender (X numeric user id, etc.). NOT the @handle.',
+            description: 'The platform-specific user id of the original DM sender. For X: numeric user id. For Bluesky: the sender DID (did:plc:...) OR handle (e.g. someone.bsky.social). NOT the @handle for X.',
           },
           replyText: {
             type: 'string',
-            description: 'The exact reply text to send. Must be ≤500 chars (X DM limit). For brand-voiced concise replies, the X Expert specialist enforces ≤240 chars at compose time.',
+            description: 'The exact reply text to send. X DM limit: ≤500 chars (X Expert composes ≤240). Bluesky DM limit: ≤1000 chars (Bluesky Expert composes ≤300).',
           },
           inboundEventId: {
             type: 'string',
@@ -6262,30 +6262,44 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           break;
         }
 
-        if (platformArg !== 'x') {
+        if (platformArg !== 'x' && platformArg !== 'bluesky') {
           trackMissionStep(context, 'send_social_reply', 'FAILED', {
             error: `platform=${platformArg} not supported yet`,
             durationMs: Date.now() - sendReplyStart,
           });
           content = JSON.stringify({
             success: false,
-            error: `send_social_reply does not yet support platform=${platformArg}. Currently: x only.`,
+            error: `send_social_reply does not yet support platform=${platformArg}. Currently: x, bluesky.`,
           });
           break;
         }
 
         try {
-          const { sendXDirectMessage, markInboundEventReplied } = await import('@/lib/integrations/twitter-dm-service');
-          const sendResult = await sendXDirectMessage({ recipientUserId, text: replyText });
+          const { markInboundEventReplied } = await import('@/lib/integrations/twitter-dm-service');
+          let sendResult: { success: boolean; messageId?: string; error?: string; httpStatus?: number };
+
+          if (platformArg === 'bluesky') {
+            const { createBlueskyService } = await import('@/lib/integrations/bluesky-service');
+            const service = await createBlueskyService();
+            if (!service) {
+              sendResult = { success: false, error: 'Bluesky credentials missing — run scripts/save-bluesky-config.ts' };
+            } else {
+              const r = await service.sendDirectMessage({ recipient: recipientUserId, text: replyText });
+              sendResult = { success: r.success, messageId: r.messageId, error: r.error };
+            }
+          } else {
+            const { sendXDirectMessage } = await import('@/lib/integrations/twitter-dm-service');
+            sendResult = await sendXDirectMessage({ recipientUserId, text: replyText });
+          }
 
           if (!sendResult.success) {
             trackMissionStep(context, 'send_social_reply', 'FAILED', {
-              error: sendResult.error ?? 'X DM send failed',
+              error: sendResult.error ?? `${platformArg} DM send failed`,
               durationMs: Date.now() - sendReplyStart,
             });
             content = JSON.stringify({
               success: false,
-              error: sendResult.error ?? 'X DM send failed',
+              error: sendResult.error ?? `${platformArg} DM send failed`,
               httpStatus: sendResult.httpStatus,
             });
             break;
@@ -6299,10 +6313,11 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           });
 
           trackMissionStep(context, 'send_social_reply', 'COMPLETED', {
-            summary: `Reply sent on ${platformArg} to user ${recipientUserId}`,
+            summary: `Reply sent on ${platformArg} to ${recipientUserId}`,
             durationMs: Date.now() - sendReplyStart,
             toolResult: JSON.stringify({
               success: true,
+              platform: platformArg,
               messageId: sendResult.messageId,
               recipientUserId,
               replyText,
