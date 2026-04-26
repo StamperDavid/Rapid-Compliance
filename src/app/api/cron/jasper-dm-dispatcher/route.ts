@@ -36,12 +36,12 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
+import { orchestrateInboundDmReply } from '@/lib/social/inbound-dm-orchestration-service';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const MAX_EVENTS_PER_RUN = 5;
-const SCOPE = 'inbound_dm_reply';
 
 interface InboundDmEvent {
   id: string;
@@ -70,53 +70,12 @@ interface DispatchedEventOutcome {
   autoApproved?: boolean;
 }
 
-function appBaseUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL;
-  if (explicit && explicit.length > 0) { return explicit.replace(/\/+$/, ''); }
-  const vercel = process.env.VERCEL_URL;
-  if (vercel && vercel.length > 0) { return `https://${vercel}`; }
-  return 'http://localhost:3000';
-}
-
-function buildSyntheticPrompt(args: {
-  senderHandle?: string;
-  senderId?: string;
-  inboundText: string;
-  inboundEventId: string;
-}): string {
-  const senderLine = args.senderHandle
-    ? `from ${args.senderHandle}${args.senderId ? ` (X user id ${args.senderId})` : ''}`
-    : (args.senderId ? `from X user id ${args.senderId}` : 'from an X user');
-  return [
-    `An inbound X / Twitter direct message arrived for the brand and needs a reply.`,
-    ``,
-    `INBOUND DM CONTEXT (pass these values verbatim into delegate_to_marketing.inboundContext — do not modify):`,
-    `- platform: x`,
-    `- inboundEventId: ${args.inboundEventId}`,
-    args.senderHandle ? `- senderHandle: ${args.senderHandle}` : '',
-    args.senderId ? `- senderId: ${args.senderId}` : '',
-    `- inboundText: """`,
-    args.inboundText,
-    `"""`,
-    ``,
-    `YOUR JOB:`,
-    `Plan exactly ONE step: delegate_to_marketing with goal "Compose a brand-voiced reply to the inbound X DM ${senderLine}", platform "twitter", contentType "dm_reply", and the inboundContext above.`,
-    `Do not plan a send step — the operator will review the X Expert's draft in Mission Control and click "Send reply" themselves.`,
-    `Use propose_mission_plan to draft the plan.`,
-  ].filter(Boolean).join('\n');
-}
-
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const authError = verifyCronAuth(request, '/api/cron/jasper-dm-dispatcher');
   if (authError) { return authError; }
 
   if (!adminDb) {
     return NextResponse.json({ error: 'Firestore admin not initialized' }, { status: 500 });
-  }
-
-  const cronSecret = process.env.CRON_SECRET ?? '';
-  if (!cronSecret) {
-    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
   }
 
   const collectionPath = getSubCollection('inboundSocialEvents');
@@ -188,84 +147,46 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       continue;
     }
 
-    const triggerId = `${SCOPE}_${event.id}_${Date.now()}`;
-    const syntheticPrompt = buildSyntheticPrompt({
-      inboundEventId: event.id,
-      senderId,
-      inboundText,
-    });
-
-    const triggerUrl = `${appBaseUrl()}/api/orchestrator/synthetic-trigger`;
-    let triggerResponseJson: { success: boolean; missionId?: string; autoApproved?: boolean; error?: string } | null = null;
+    // Direct-orchestrate: dispatcher → TwitterExpert → mission record.
+    // SCOPED EXCEPTION to the "everything goes through Jasper" rule,
+    // applies ONLY to inbound social DMs because the intent
+    // ("compose a reply to this incoming message") is fixed and
+    // machine-detected — Jasper's intent-interpretation role adds
+    // nothing. See `inbound-dm-orchestration-service.ts` for the rule.
     try {
-      const triggerResp = await fetch(triggerUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${cronSecret}`,
-        },
-        body: JSON.stringify({
-          scope: SCOPE,
-          syntheticUserMessage: syntheticPrompt,
-          sourceEvent: {
-            kind: 'inbound_x_dm',
-            eventId: event.id,
-            senderId,
-          },
-          triggerId,
-        }),
+      const result = await orchestrateInboundDmReply({
+        platform: 'x',
+        inboundEventId: event.id,
+        inboundText,
+        senderId,
       });
-
-      const triggerText = await triggerResp.text();
-      try { triggerResponseJson = JSON.parse(triggerText) as { success: boolean; missionId?: string; autoApproved?: boolean; error?: string }; }
-      catch { triggerResponseJson = null; }
-
-      if (!triggerResp.ok || !triggerResponseJson?.success || !triggerResponseJson.missionId) {
-        outcomes.push({
-          eventId: event.id,
-          status: 'failed',
-          reason: triggerResponseJson?.error ?? `HTTP ${triggerResp.status} ${triggerText.slice(0, 200)}`,
-        });
-        // Don't mark processed — the next cron run can retry. Cap retries
-        // by setting an attemptCount field if this becomes a hot loop.
-        continue;
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logger.error('[jasper-dm-dispatcher] synthetic-trigger fetch threw', err instanceof Error ? err : new Error(msg), {
-        eventId: event.id,
-        triggerId,
+      const now = new Date().toISOString();
+      await doc.ref.update({
+        mission_initiated: true,
+        missionId: result.missionId,
+        mission_initiated_at: now,
       });
       outcomes.push({
         eventId: event.id,
-        status: 'failed',
-        reason: `synthetic-trigger fetch threw: ${msg}`,
+        status: 'dispatched',
+        missionId: result.missionId,
       });
+      dispatched++;
+    } catch (orchestrationErr) {
+      const errMsg = orchestrationErr instanceof Error ? orchestrationErr.message : String(orchestrationErr);
+      logger.error(
+        '[jasper-dm-dispatcher] orchestration failed',
+        orchestrationErr instanceof Error ? orchestrationErr : new Error(errMsg),
+        { eventId: event.id },
+      );
+      outcomes.push({
+        eventId: event.id,
+        status: 'failed',
+        reason: `orchestration failed: ${errMsg}`,
+      });
+      // Don't mark mission_initiated — next cron run will retry.
       continue;
     }
-
-    const missionId = triggerResponseJson.missionId;
-    const autoApproved = triggerResponseJson.autoApproved === true;
-
-    // Stamp the event so we never re-fire. When auto-approve was on and
-    // the DM was actually sent, the synthetic-trigger pipeline already
-    // marked the event processed=true via markInboundEventReplied. In
-    // that case our update here is redundant-but-safe (Firestore merges
-    // by field).
-    const now = new Date().toISOString();
-    await doc.ref.update({
-      mission_initiated: true,
-      missionId,
-      mission_initiated_at: now,
-    });
-
-    outcomes.push({
-      eventId: event.id,
-      status: 'dispatched',
-      missionId,
-      autoApproved,
-    });
-    dispatched++;
   }
 
   logger.info('[jasper-dm-dispatcher] run complete', {

@@ -709,8 +709,10 @@ function StepCard({
           {(() => {
             const isInboundDm = sourceEvent?.kind === 'inbound_x_dm' || sourceEvent?.kind === 'inbound_bluesky_dm';
             if (!isInboundDm) { return null; }
-            if (step.toolName !== 'delegate_to_marketing') { return null; }
             if (step.status !== 'COMPLETED') { return null; }
+            // Render whenever the step has a composedReply attached.
+            // Direct-orchestration path uses toolName=compose_dm_reply;
+            // legacy path used delegate_to_marketing — both fine.
             const composed = extractComposedReplyText(step.toolResult);
             if (!composed) { return null; }
             return (

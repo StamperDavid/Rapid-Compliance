@@ -30,12 +30,12 @@ import { logger } from '@/lib/logger/logger';
 import { createBlueskyService } from '@/lib/integrations/bluesky-service';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { orchestrateInboundDmReply } from '@/lib/social/inbound-dm-orchestration-service';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const MAX_EVENTS_PER_RUN = 5;
-const SCOPE = 'inbound_dm_reply';
 const CHAT_HOST = 'https://api.bsky.chat';
 
 interface BlueskyConvoMember { did: string; handle: string; displayName?: string }
@@ -64,42 +64,6 @@ interface DispatcherOutcome {
   missionId?: string;
 }
 
-function appBaseUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL;
-  if (explicit && explicit.length > 0) { return explicit.replace(/\/+$/, ''); }
-  const vercel = process.env.VERCEL_URL;
-  if (vercel && vercel.length > 0) { return `https://${vercel}`; }
-  return 'http://localhost:3000';
-}
-
-function buildSyntheticPrompt(args: {
-  senderHandle?: string;
-  senderDid: string;
-  inboundText: string;
-  inboundEventId: string;
-}): string {
-  const senderLine = args.senderHandle
-    ? `from ${args.senderHandle} (Bluesky DID ${args.senderDid})`
-    : `from Bluesky DID ${args.senderDid}`;
-  return [
-    `An inbound Bluesky direct message arrived for the brand and needs a reply.`,
-    ``,
-    `INBOUND DM CONTEXT (pass these values verbatim into delegate_to_marketing.inboundContext — do not modify):`,
-    `- platform: bluesky`,
-    `- inboundEventId: ${args.inboundEventId}`,
-    args.senderHandle ? `- senderHandle: ${args.senderHandle}` : '',
-    `- senderId: ${args.senderDid}`,
-    `- inboundText: """`,
-    args.inboundText,
-    `"""`,
-    ``,
-    `YOUR JOB:`,
-    `Plan exactly ONE step: delegate_to_marketing with goal "Compose a brand-voiced reply to the inbound Bluesky DM ${senderLine}", platform "bluesky", contentType "dm_reply", and the inboundContext above.`,
-    `Do not plan a send step — the operator will review the Bluesky Expert's draft in Mission Control and click "Send reply" themselves.`,
-    `Use propose_mission_plan to draft the plan.`,
-  ].filter(Boolean).join('\n');
-}
-
 interface FirestoreInboundEvent {
   id: string;
   provider: 'bluesky';
@@ -117,10 +81,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (!adminDb) {
     return NextResponse.json({ error: 'Firestore admin not initialized' }, { status: 500 });
-  }
-  const cronSecret = process.env.CRON_SECRET ?? '';
-  if (!cronSecret) {
-    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
   }
 
   // Ensure Bluesky is configured. createBlueskyService returns null when
@@ -241,58 +201,43 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       };
       await eventRef.set(eventDoc, { merge: true });
 
-      // 3b. Fire synthetic-trigger
-      const triggerId = `${SCOPE}_${eventDocId}_${Date.now()}`;
-      const syntheticPrompt = buildSyntheticPrompt({
-        senderDid: sender.did,
-        senderHandle,
-        inboundText: msg.text,
-        inboundEventId: eventDocId,
-      });
-      const triggerUrl = `${appBaseUrl()}/api/orchestrator/synthetic-trigger`;
-      let triggerJson: { success?: boolean; missionId?: string; error?: string } | null = null;
+      // 3b. Direct-orchestrate: dispatcher → BlueskyExpert → mission
+      // record. SCOPED EXCEPTION to the "everything goes through Jasper"
+      // rule, applies ONLY to inbound social DMs because the intent
+      // ("compose a reply to this incoming message") is fixed and
+      // machine-detected — Jasper's intent-interpretation role adds
+      // nothing. See `inbound-dm-orchestration-service.ts` for the rule.
       try {
-        const triggerResp = await fetch(triggerUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cronSecret}` },
-          body: JSON.stringify({
-            scope: SCOPE,
-            syntheticUserMessage: syntheticPrompt,
-            sourceEvent: {
-              kind: 'inbound_bluesky_dm',
-              eventId: eventDocId,
-              senderId: sender.did,
-              ...(senderHandle ? { senderHandle } : {}),
-            },
-            triggerId,
-          }),
+        const result = await orchestrateInboundDmReply({
+          platform: 'bluesky',
+          inboundEventId: eventDocId,
+          inboundText: msg.text,
+          senderId: sender.did,
+          ...(senderHandle ? { senderHandle } : {}),
         });
-        const txt = await triggerResp.text();
-        try { triggerJson = JSON.parse(txt) as { success?: boolean; missionId?: string; error?: string }; }
-        catch { triggerJson = null; }
-        if (!triggerResp.ok || triggerJson?.success !== true || !triggerJson.missionId) {
-          outcomes.push({
-            conversationId: convo.id,
-            messageId: msg.id,
-            status: 'failed',
-            reason: triggerJson?.error ?? `synthetic-trigger HTTP ${triggerResp.status}`,
-          });
-          continue;
-        }
-      } catch (err) {
-        const m = err instanceof Error ? err.message : String(err);
-        outcomes.push({ conversationId: convo.id, messageId: msg.id, status: 'failed', reason: `fetch threw: ${m}` });
+
+        await eventRef.update({
+          mission_initiated: true,
+          missionId: result.missionId,
+          mission_initiated_at: new Date().toISOString(),
+        });
+        outcomes.push({ conversationId: convo.id, messageId: msg.id, status: 'dispatched', missionId: result.missionId });
+        dispatched++;
+      } catch (orchestrationErr) {
+        const errMsg = orchestrationErr instanceof Error ? orchestrationErr.message : String(orchestrationErr);
+        logger.error(
+          '[bluesky-dm-dispatcher] orchestration failed',
+          orchestrationErr instanceof Error ? orchestrationErr : new Error(errMsg),
+          { eventId: eventDocId },
+        );
+        outcomes.push({
+          conversationId: convo.id,
+          messageId: msg.id,
+          status: 'failed',
+          reason: `orchestration failed: ${errMsg}`,
+        });
         continue;
       }
-
-      const missionId = triggerJson.missionId;
-      await eventRef.update({
-        mission_initiated: true,
-        missionId,
-        mission_initiated_at: new Date().toISOString(),
-      });
-      outcomes.push({ conversationId: convo.id, messageId: msg.id, status: 'dispatched', missionId });
-      dispatched++;
     }
 
     // 4. Mark this conversation read up to the latest message so we
