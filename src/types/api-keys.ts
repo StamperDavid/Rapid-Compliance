@@ -200,6 +200,19 @@ export interface APIKeysConfig {
     later?: {
       apiKey: string;
     };
+    bluesky?: {
+      /** Account handle, e.g. "salesvelocity.bsky.social" */
+      identifier?: string;
+      /** App password created via Bluesky → Settings → App Passwords */
+      password?: string;
+      /** Optional cached session — refreshed on demand by BlueskyService */
+      accessJwt?: string;
+      refreshJwt?: string;
+      did?: string;
+      handle?: string;
+      /** Personal Data Server URL — defaults to https://bsky.social if absent */
+      pdsUrl?: string;
+    };
   };
 
   // Other Integrations
