@@ -27,6 +27,7 @@ import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
 import MissionGradeCard from './_components/MissionGradeCard';
 import StepGradeWidget from './_components/StepGradeWidget';
+import { SendDmReplyButton } from './_components/SendDmReplyButton';
 import SpecialistVersionHistory from './_components/SpecialistVersionHistory';
 import ScheduleMissionDialog from './_components/ScheduleMissionDialog';
 import { getDashboardLink, getStepReviewLink, formatToolName } from './_components/dashboard-links';
@@ -623,11 +624,71 @@ function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
   }
 
   const outputType = (parsed.type as string)
+    ?? (parsed.mode === 'INBOUND_DM_REPLY' && parsed.composedReply ? 'inbound-dm-reply' : null)
     ?? (parsed.status === 'draft' ? 'draft' : null)
     ?? (parsed.briefId && (parsed.synthesis || parsed.competitorAnalysis) ? 'intelligence-brief' : null)
     ?? (parsed.detectedIntent && (parsed.blogContent || parsed.videoContent || parsed.musicContent || parsed.podcastContent || parsed.specialistOutputs) ? 'content-package' : null);
 
   switch (outputType) {
+    case 'inbound-dm-reply': {
+      const platform = String(parsed.platform ?? '');
+      const senderHandle = String(parsed.senderHandle ?? '');
+      const senderId = String(parsed.senderId ?? '');
+      const inboundText = String(parsed.inboundText ?? '');
+      const composed = parsed.composedReply as Record<string, unknown> | undefined;
+      const replyText = String(composed?.replyText ?? '');
+      const reasoning = String(composed?.reasoning ?? '');
+      const confidence = String(composed?.confidence ?? 'unknown');
+      const escalation = composed?.suggestEscalation === true;
+      const platformLabel = platform === 'bluesky' ? 'Bluesky' : platform === 'x' ? 'X (Twitter)' : platform;
+      const senderLabel = senderHandle || senderId.slice(0, 14);
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div>
+            <div style={sectionLabel}>From</div>
+            <div style={{ ...contentBox, padding: '0.5rem 0.75rem' }}>
+              <span style={{ fontWeight: 600 }}>{senderLabel}</span>
+              <span style={{ marginLeft: '0.5rem', color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
+                via {platformLabel}
+              </span>
+            </div>
+          </div>
+          <div>
+            <div style={sectionLabel}>Customer&apos;s message</div>
+            <div style={{ ...contentBox, whiteSpace: 'pre-wrap' }}>{inboundText}</div>
+          </div>
+          <div>
+            <div style={sectionLabel}>Composed reply</div>
+            <div style={{ ...contentBox, whiteSpace: 'pre-wrap', borderLeft: '3px solid var(--color-primary)' }}>
+              {replyText}
+            </div>
+            <div style={{
+              marginTop: '0.375rem',
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'center',
+              fontSize: '0.6875rem',
+              color: 'var(--color-text-disabled)',
+            }}>
+              <span>{replyText.length} chars</span>
+              <span>•</span>
+              <span>Confidence: <strong style={{ color: 'var(--color-text-primary)' }}>{confidence}</strong></span>
+              {escalation && (
+                <>
+                  <span>•</span>
+                  <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>Specialist suggests human escalation</span>
+                </>
+              )}
+            </div>
+          </div>
+          {reasoning && (
+            <CollapsibleSection title="Why the agent wrote this">
+              {reasoning}
+            </CollapsibleSection>
+          )}
+        </div>
+      );
+    }
     case 'research': {
       const findings = parsed.findings as string | undefined;
       const insights = parsed.keyInsights as string[] | undefined;
@@ -1642,6 +1703,29 @@ function StepDetailPanel({
           {displayStep.toolResult && (
             <DetailOutputRenderer toolResult={displayStep.toolResult} />
           )}
+
+          {/* Send Reply affordance for inbound DM mission steps */}
+          {displayStep.status === 'COMPLETED' && missionId && displayStep.toolResult && (() => {
+            try {
+              const parsed = JSON.parse(displayStep.toolResult) as Record<string, unknown>;
+              if (parsed.mode !== 'INBOUND_DM_REPLY') { return null; }
+              const composed = parsed.composedReply as Record<string, unknown> | undefined;
+              const replyText = typeof composed?.replyText === 'string' ? composed.replyText : '';
+              if (!replyText) { return null; }
+              const senderHandle = typeof parsed.senderHandle === 'string' ? parsed.senderHandle : undefined;
+              return (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <SendDmReplyButton
+                    missionId={missionId}
+                    composedReply={replyText}
+                    senderHandle={senderHandle}
+                  />
+                </div>
+              );
+            } catch {
+              return null;
+            }
+          })()}
 
           {/* M6 — quick manual edit path */}
           {(displayStep.status === 'COMPLETED' || displayStep.status === 'FAILED') && missionId && (
