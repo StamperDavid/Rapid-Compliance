@@ -1,7 +1,58 @@
 # SalesVelocity.ai — Full-Orchestration Verification Plan
 
-> **Updated:** April 26, 2026 (overnight).
-> **Status:** Inbound X DM auto-reply now flows through the proper Jasper path (architecture violation closed). Auto-approve toggle wired but defaults OFF. Real DM round-trip verification awaits the operator manually DMing `@salesvelocityai` from another account.
+> **Updated:** April 26, 2026 (early morning, post-handoff).
+> **Status:** Orchestration code complete and verified end-to-end. **Real DM round-trip BLOCKED on X-side webhook delivery — X is not POSTing events to our webhook despite valid configuration.** All diagnostic + remediation paths attempted; investigation paused for sleep.
+
+---
+
+# 🛑 OPEN ISSUE — X webhook delivery is broken (X-side)
+
+**Symptom**: Inbound DMs to `@salesveloc42339` arrive in the brand inbox on X but X never POSTs them to our webhook URL. Two events fired at 03:34 / 03:41 UTC this morning during initial setup, then nothing for 6+ hours. Multiple test DMs sent throughout — all silently dropped.
+
+**Confirmed clean from data**:
+- Webhook URL `https://rapidcompliance.us/api/webhooks/twitter` returns 200 to CRC challenges (just verified)
+- v2 webhook record `valid: true` (just re-CRC'd via PUT)
+- Account Activity subscription exists per `/list`
+- Brand handle is `@salesveloc42339` (verified via `verify_credentials`); display name "SalesVelocity.ai"
+- OAuth 1.0a tokens were rotated and re-saved (script: `scripts/rotate-twitter-access-token.ts`)
+- OAuth 2.0 user-context tokens obtained with `dm.read` scope (script: `scripts/authorize-x-and-subscribe-dm.ts`) — saved at `apiKeys/social.twitter.oauth2User`
+- X Activity API subscription created via `/2/activity/subscriptions` with OAuth2 (subscription_id `2048327771349532672`, but may be stale — see reset below)
+- **Full webhook reset performed**: deleted old webhook, registered fresh, resubscribed brand. New webhook id `2048332975511879680` saved at `apiKeys/social.twitter.webhookId`. Result: X still not delivering.
+- Vercel logs confirmed zero POSTs to `/api/webhooks/twitter` across multiple multi-minute windows
+- Credit balance healthy: $24.98 of $25, 30 days remaining in cycle, $0.01 spent this cycle
+- Auth scope on access tokens shows "Read and Write and Direct messages"
+
+**Eliminated hypotheses**:
+- ~~Wrong handle / wrong account~~ — `@salesveloc42339` matches access token; user confirmed via screenshots
+- ~~DM scope missing~~ — token has DM read+write scope per dev portal
+- ~~Subscription orphaned by token rotation~~ — full reset didn't fix
+- ~~Credit balance issue~~ — only $0.01 spent
+- ~~Code-side bug returning non-200 to X POSTs~~ — Vercel logs show ZERO POSTs of any status
+- ~~Polling-too-slow / cron-latency~~ — events aren't arriving at all
+
+**Remaining hypothesis (unverifiable from our side)**:
+- Brand account is **less than 9 hours old** (created 2026-04-26T00:36:26Z). X commonly throttles webhook event delivery for very new accounts as a spam/abuse safeguard. Consistent with the symptom pattern (initial events fired, then silently throttled). The failed DM-reply attempt at 03:41 UTC (old dispatcher returning HTTP 403 trying to DM a non-following user) may have escalated the throttle. This isn't documented but is widely reported on the X dev forum.
+
+**Next-session paths**:
+1. **File X developer support ticket** at developer.x.com. Reference: subscription_id `2048327771349532672`, webhook_id `2048332975511879680`, brand user_id `2048199442067755008`, app id `32832766`. Ask why DM events are accepted into the subscription queue but never delivered to the webhook URL. X has internal delivery logs we can't see.
+2. **Wait 24-72h** for new-account throttling to clear with organic account activity (post tweets, get followers, etc.).
+3. **DO NOT propose polling X DM API as a workaround** — owner has expressly forbidden workarounds; webhooks must be made to work.
+
+**New product requirement (to address when delivery resumes)**: end-to-end latency from inbound DM to mission visible in Mission Control must be ≤10 seconds. The current cron-based `jasper-dm-dispatcher` (every 1 min) adds up to 60s of latency and must be replaced with webhook-driven inline dispatch (the webhook handler invokes the synthetic-trigger directly when it persists an `inboundSocialEvents` doc with `kind=direct_message_events`).
+
+**Diagnostic scripts shipped this session** (all in `scripts/`):
+- `diagnose-twitter-webhook.ts`, `diagnose-twitter-dm-delivery.ts` — X webhook health probes
+- `list-twitter-webhooks-v2.ts`, `check-twitter-subscription.ts`, `check-x-activity-subscriptions.ts` — subscription state queries
+- `lookup-x-handles.ts`, `probe-twitter-scope.ts` — auth + identity verification
+- `rotate-twitter-access-token.ts` — rotate OAuth1 tokens after dev-portal regen
+- `refresh-twitter-subscription.ts` — DELETE+POST subscription cycle
+- `reset-twitter-webhook.ts` — full DELETE + re-register + resubscribe (the nuclear reset)
+- `authorize-x-and-subscribe-dm.ts` — OAuth2 PKCE flow + create X Activity API subscription
+- `create-x-dm-subscription.ts` — re-create the X Activity API subscription using saved OAuth2 token
+- `find-recent-inbound-events.ts`, `find-recent-dm-missions.ts` — Firestore-side diagnostics
+- `watch-inbound-social-events.ts` — long-running poller that emits stdout when a new inbound event lands (used as a Monitor source)
+
+---
 
 ---
 
