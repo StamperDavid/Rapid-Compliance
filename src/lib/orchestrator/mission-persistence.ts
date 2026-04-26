@@ -133,7 +133,13 @@ export interface Mission {
    * double-firing the same event.
    */
   sourceEvent?: {
-    kind: 'inbound_x_dm' | 'inbound_bluesky_dm';
+    kind:
+      | 'inbound_x_dm'
+      | 'inbound_bluesky_dm'
+      | 'inbound_linkedin_dm'
+      | 'inbound_facebook_dm'
+      | 'inbound_instagram_dm'
+      | 'inbound_pinterest_dm';
     eventId: string;
     senderId?: string;
     senderHandle?: string;

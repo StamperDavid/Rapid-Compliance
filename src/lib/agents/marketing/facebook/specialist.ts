@@ -22,6 +22,11 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import {
+  ComposeDmReplyRequestSchema,
+  executeComposeDmReply,
+  type ComposeDmReplyResult,
+} from '@/lib/agents/social/compose-dm-reply-shared';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -32,8 +37,16 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'marketing/facebook/specialist.ts';
 const SPECIALIST_ID = 'FACEBOOK_ADS_EXPERT';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['generate_content'] as const;
+const SUPPORTED_ACTIONS = ['generate_content', 'compose_dm_reply'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
+
+const DM_REPLY_OPTIONS = {
+  platformLabel: 'Facebook Messenger',
+  maxReplyChars: 2000,
+  playbookCharsTarget: 300,
+  brandUrl: 'https://www.salesvelocity.ai',
+  forbidEmoji: true,
+} as const;
 
 /**
  * Realistic max_tokens floor for the worst-case Facebook Ads Expert response.
@@ -85,10 +98,10 @@ const CONFIG: SpecialistConfig = {
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'MARKETING_MANAGER',
-    capabilities: ['generate_content'],
+    capabilities: ['generate_content', 'compose_dm_reply'],
   },
   systemPrompt: '', // Loaded from Firestore Golden Master at runtime
-  tools: ['generate_content'],
+  tools: ['generate_content', 'compose_dm_reply'],
   outputSchema: {
     type: 'object',
     properties: {
@@ -399,23 +412,34 @@ export class FacebookAdsExpert extends BaseSpecialist {
 
       logger.info(`[FacebookAdsExpert] Executing action=${action} taskId=${taskId}`, { file: FILE });
 
-      const inputValidation = GenerateContentRequestSchema.safeParse({
-        ...payload,
-        action,
-      });
-      if (!inputValidation.success) {
-        const issueSummary = inputValidation.error.issues
-          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-          .join('; ');
-        return this.createReport(taskId, 'FAILED', null, [
-          `Facebook Ads Expert generate_content: invalid input payload: ${issueSummary}`,
-        ]);
-      }
-
       const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
 
-      const data = await executeGenerateContent(inputValidation.data, ctx);
-      return this.createReport(taskId, 'COMPLETED', data);
+      if (action === 'generate_content') {
+        const inputValidation = GenerateContentRequestSchema.safeParse({ ...payload, action });
+        if (!inputValidation.success) {
+          const issueSummary = inputValidation.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
+          return this.createReport(taskId, 'FAILED', null, [`Facebook Ads Expert generate_content: invalid input payload: ${issueSummary}`]);
+        }
+        const data = await executeGenerateContent(inputValidation.data, ctx);
+        return this.createReport(taskId, 'COMPLETED', data);
+      }
+
+      if (action === 'compose_dm_reply') {
+        const inputValidation = ComposeDmReplyRequestSchema.safeParse({ ...payload, action });
+        if (!inputValidation.success) {
+          const issueSummary = inputValidation.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
+          return this.createReport(taskId, 'FAILED', null, [`Facebook Ads Expert compose_dm_reply: invalid input payload: ${issueSummary}`]);
+        }
+        const data: ComposeDmReplyResult = await executeComposeDmReply(
+          inputValidation.data,
+          { resolvedSystemPrompt: ctx.resolvedSystemPrompt, model: ctx.gm.model, temperature: ctx.gm.temperature, maxTokens: 1200 },
+          DM_REPLY_OPTIONS,
+        );
+        return this.createReport(taskId, 'COMPLETED', data);
+      }
+
+      const _exhaustive: never = action;
+      return this.createReport(taskId, 'FAILED', null, [`Facebook Ads Expert: action '${_exhaustive}' has no handler in execute()`]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[FacebookAdsExpert] Execution failed', error instanceof Error ? error : new Error(errorMessage), { file: FILE });

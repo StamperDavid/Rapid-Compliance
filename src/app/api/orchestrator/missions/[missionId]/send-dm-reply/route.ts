@@ -166,14 +166,22 @@ export async function POST(
 
   const sourceEvent = mission.sourceEvent;
   const sourceKind = sourceEvent?.kind;
-  if (!sourceEvent || (sourceKind !== 'inbound_x_dm' && sourceKind !== 'inbound_bluesky_dm')) {
+  const PLATFORM_BY_KIND: Record<string, 'x' | 'bluesky' | 'linkedin' | 'facebook' | 'instagram' | 'pinterest'> = {
+    inbound_x_dm: 'x',
+    inbound_bluesky_dm: 'bluesky',
+    inbound_linkedin_dm: 'linkedin',
+    inbound_facebook_dm: 'facebook',
+    inbound_instagram_dm: 'instagram',
+    inbound_pinterest_dm: 'pinterest',
+  };
+  const platform = sourceKind ? PLATFORM_BY_KIND[sourceKind] : undefined;
+  if (!sourceEvent || !platform) {
     return NextResponse.json(
       { success: false, error: `Mission is not an inbound DM mission (sourceEvent.kind=${String(sourceKind)})` },
       { status: 400 },
     );
   }
   const eventId = sourceEvent.eventId;
-  const platform: 'x' | 'bluesky' = sourceKind === 'inbound_bluesky_dm' ? 'bluesky' : 'x';
 
   const composed = extractComposedReplyFromMission(mission.steps);
   const replyText = (bodyOverride.replyText ?? composed?.replyText ?? '').trim();
@@ -212,17 +220,41 @@ export async function POST(
   });
 
   let sendResult: { success: boolean; messageId?: string; error?: string; httpStatus?: number };
-  if (platform === 'bluesky') {
-    const { createBlueskyService } = await import('@/lib/integrations/bluesky-service');
-    const service = await createBlueskyService();
-    if (!service) {
-      sendResult = { success: false, error: 'Bluesky credentials missing — run scripts/save-bluesky-config.ts' };
-    } else {
-      const r = await service.sendDirectMessage({ recipient: recipientUserId, text: replyText });
-      sendResult = { success: r.success, messageId: r.messageId, error: r.error };
+  switch (platform) {
+    case 'bluesky': {
+      const { createBlueskyService } = await import('@/lib/integrations/bluesky-service');
+      const service = await createBlueskyService();
+      sendResult = service
+        ? await (async () => {
+          const r = await service.sendDirectMessage({ recipient: recipientUserId, text: replyText });
+          return { success: r.success, messageId: r.messageId, error: r.error };
+        })()
+        : { success: false, error: 'Bluesky credentials missing — run scripts/save-bluesky-config.ts' };
+      break;
     }
-  } else {
-    sendResult = await sendXDirectMessage({ recipientUserId, text: replyText });
+    case 'x': {
+      sendResult = await sendXDirectMessage({ recipientUserId, text: replyText });
+      break;
+    }
+    case 'linkedin':
+    case 'facebook':
+    case 'instagram':
+    case 'pinterest': {
+      // Compose works (specialist composed the draft) but the send-side
+      // service hasn't been built yet — needs platform OAuth + DM API
+      // wiring. The mission's draft is preserved so once the send path
+      // exists, the operator can re-trigger send. For now surface a
+      // clear "send not wired" error that the operator can act on.
+      sendResult = {
+        success: false,
+        error: `${platform} DM send is not yet wired. The compose path is ready; the platform's send service still needs OAuth + DM API integration.`,
+      };
+      break;
+    }
+    default: {
+      const _exhaustive: never = platform;
+      sendResult = { success: false, error: `Unsupported platform: ${String(_exhaustive)}` };
+    }
   }
 
   if (!sendResult.success) {
