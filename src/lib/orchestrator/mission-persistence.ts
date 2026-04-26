@@ -108,6 +108,36 @@ export interface Mission {
    * the Mission Control "needs your review" bucket.
    */
   plannedAt?: string;
+  /**
+   * Auto-approve policy that the synthetic-trigger pipeline stamps on
+   * inbound-event-driven missions when the corresponding org automation
+   * flag is on (e.g. `automation/inbound.xDmReply.autoApprove === true`).
+   *
+   * - `'inbound_dm_reply'`: synthetic-trigger drives plan/approve + step
+   *    execution + send_social_reply without any operator click. The
+   *    Jasper → manager → specialist delegation path itself is unchanged
+   *    — only the operator gates are skipped.
+   * - undefined (default): the operator must approve in Mission Control
+   *    as normal.
+   *
+   * Auto-approve is a separate capability from delegation per
+   * `feedback_no_jasper_bypass_even_for_simple_replies`. It is only
+   * intended to be turned on AFTER an operator has graded enough live
+   * runs to trust the agent at the channel level.
+   */
+  autoApprove?: 'inbound_dm_reply';
+  /**
+   * Source event identifier for inbound-event-driven missions. Lets the
+   * send-dm-reply endpoint find the original `inboundSocialEvents` doc
+   * (to pull the sender's user id) and prevents the cron dispatcher from
+   * double-firing the same event.
+   */
+  sourceEvent?: {
+    kind: 'inbound_x_dm';
+    eventId: string;
+    senderId?: string;
+    senderHandle?: string;
+  };
 }
 
 export interface ListMissionsOptions {
@@ -233,6 +263,42 @@ export async function createMissionWithPlan(input: {
       missionId: input.missionId,
       error: errorMsg,
     });
+  }
+}
+
+/**
+ * Stamp inbound-event metadata + an auto-approve policy onto an existing
+ * mission. Idempotent — a second call overwrites with the same values.
+ *
+ * The synthetic-trigger pipeline calls this AFTER Jasper proposed the
+ * plan (so the mission already exists in PLAN_PENDING_APPROVAL) but
+ * BEFORE the operator (or the auto-approve driver) approves. Stamping
+ * before approval means the auto-approve driver can read these fields
+ * to decide whether to drive the mission programmatically.
+ */
+export async function stampMissionSourceAndAutoApprove(input: {
+  missionId: string;
+  sourceEvent: NonNullable<Mission['sourceEvent']>;
+  autoApprove?: Mission['autoApprove'];
+}): Promise<boolean> {
+  if (!adminDb) { return false; }
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(input.missionId);
+    const updates: Record<string, unknown> = {
+      sourceEvent: input.sourceEvent,
+      updatedAt: new Date().toISOString(),
+    };
+    if (input.autoApprove) {
+      updates.autoApprove = input.autoApprove;
+    }
+    await docRef.update(updates);
+    return true;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] stampMissionSourceAndAutoApprove failed', err instanceof Error ? err : undefined, {
+      missionId: input.missionId, error: errorMsg,
+    });
+    return false;
   }
 }
 

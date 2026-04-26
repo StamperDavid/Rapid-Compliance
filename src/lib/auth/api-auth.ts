@@ -201,6 +201,116 @@ export async function requirePermission(
 }
 
 /**
+ * Synthetic-trigger auth. Lets backend code (cron jobs, webhooks) drive
+ * an authenticated route as a synthetic admin user — gated by the
+ * CRON_SECRET + the explicit `x-synthetic-trigger` header + a `scope`
+ * value the route opts into. The scope is the mechanism that prevents
+ * a leaked CRON_SECRET from being used to drive arbitrary user-facing
+ * routes — each route declares which scopes it accepts.
+ *
+ * The synthetic user has uid = `synthetic_<scope>_<timestamp>` so audit
+ * logs can trace which trigger fired which mission. role='admin' so
+ * the user passes role-gated routes (mission approval, etc.) — but the
+ * scope-allowlist on the calling route is the real security boundary.
+ *
+ * Usage:
+ *   const synthetic = verifySyntheticTriggerAuth(request, ['inbound_dm_reply']);
+ *   if (synthetic) { ...use synthetic.user... }
+ *   else { ...fall through to requireAuth... }
+ *
+ * Note: this NEVER returns a user object on a normal user request — it
+ * only fires when CRON_SECRET + x-synthetic-trigger + scope all match.
+ * Routes that accept it should still call requireAuth as the fallback
+ * for normal user traffic.
+ */
+export interface SyntheticTriggerAuth {
+  user: AuthenticatedUser;
+  scope: string;
+  triggerId: string;
+}
+
+export function verifySyntheticTriggerAuth(
+  request: NextRequest,
+  allowedScopes: readonly string[],
+): SyntheticTriggerAuth | null {
+  const triggerHeader = request.headers.get('x-synthetic-trigger');
+  if (triggerHeader !== 'true') { return null; }
+
+  const scopeHeader = request.headers.get('x-synthetic-trigger-scope');
+  if (!scopeHeader || !allowedScopes.includes(scopeHeader)) {
+    logger.warn('[API Auth] synthetic-trigger rejected: scope not allowed', {
+      scopeHeader,
+      allowedScopes: [...allowedScopes],
+    });
+    return null;
+  }
+
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    logger.error('[API Auth] CRON_SECRET not configured — rejecting synthetic-trigger', new Error('Missing CRON_SECRET'));
+    return null;
+  }
+
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) { return null; }
+  const expected = `Bearer ${cronSecret}`;
+  if (authHeader.length !== expected.length) { return null; }
+
+  const encoder = new TextEncoder();
+  const a = encoder.encode(authHeader);
+  const b = encoder.encode(expected);
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) { mismatch |= a[i] ^ b[i]; }
+  if (mismatch !== 0) {
+    logger.warn('[API Auth] synthetic-trigger rejected: bad CRON_SECRET');
+    return null;
+  }
+
+  const triggerIdHeader = request.headers.get('x-synthetic-trigger-id');
+  const triggerId = triggerIdHeader && triggerIdHeader.length > 0
+    ? triggerIdHeader
+    : `${scopeHeader}_${Date.now()}`;
+
+  const syntheticUser: AuthenticatedUser = {
+    uid: `synthetic_${scopeHeader}_${triggerId}`,
+    email: null,
+    emailVerified: true,
+    role: 'admin',
+  };
+
+  logger.info('[API Auth] synthetic-trigger accepted', {
+    scope: scopeHeader,
+    triggerId,
+    syntheticUid: syntheticUser.uid,
+  });
+
+  return { user: syntheticUser, scope: scopeHeader, triggerId };
+}
+
+/**
+ * Auth helper that accepts EITHER a normal Firebase ID token OR a
+ * synthetic-trigger header set. Routes use this when they need to be
+ * callable from both the UI (real user) and from a backend driver
+ * (cron / webhook → synthetic-trigger).
+ *
+ * The route declares which synthetic scopes it accepts. A leaked
+ * CRON_SECRET cannot be used to drive a route that does not list the
+ * attacker's scope.
+ */
+export async function requireAuthOrSynthetic(
+  request: NextRequest,
+  allowedSyntheticScopes: readonly string[],
+): Promise<{ user: AuthenticatedUser; isSynthetic: boolean; syntheticScope?: string } | NextResponse> {
+  const synthetic = verifySyntheticTriggerAuth(request, allowedSyntheticScopes);
+  if (synthetic) {
+    return { user: synthetic.user, isSynthetic: true, syntheticScope: synthetic.scope };
+  }
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) { return authResult; }
+  return { user: authResult.user, isSynthetic: false };
+}
+
+/**
  * Verify cron endpoint authentication using timing-safe comparison.
  * Returns null on success, or a NextResponse error on failure.
  *

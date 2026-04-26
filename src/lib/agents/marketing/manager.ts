@@ -617,7 +617,23 @@ export class MarketingManager extends BaseManager {
         }
       }
 
-      const payload = message.payload as CampaignGoal;
+      const rawPayload = (message.payload ?? {}) as Record<string, unknown>;
+
+      // ─── Inbound DM fast-path ────────────────────────────────────────
+      // When Jasper passes `inboundContext` on delegate_to_marketing, the
+      // task is replying to a single inbound DM, not running a campaign.
+      // Skip orchestrateCampaign + SEO loop + multi-specialist fan-out
+      // and go straight to the platform-specific specialist's
+      // compose_dm_reply action. The send happens AFTER mission completes
+      // — either via the operator clicking "Send reply" in Mission
+      // Control, or auto-fired by the synthetic-trigger when the
+      // `automation/inbound.xDmReply.autoApprove` flag is on.
+      const inboundCtx = rawPayload.inboundContext;
+      if (inboundCtx && typeof inboundCtx === 'object') {
+        return await this.executeInboundDmReply(inboundCtx as Record<string, unknown>, taskId);
+      }
+
+      const payload = rawPayload as unknown as CampaignGoal;
 
       // Penthouse model system: uses PLATFORM_ID internally where needed
 
@@ -894,6 +910,107 @@ export class MarketingManager extends BaseManager {
       requiresResponse: true,
       traceId: `mm-${id}`,
     };
+  }
+
+  // ==========================================================================
+  // INBOUND DM REPLY FAST-PATH — single specialist, no campaign orchestration
+  // ==========================================================================
+
+  /**
+   * Compose a reply to an inbound social DM by delegating to the
+   * platform-specific specialist (currently TwitterExpert for X DMs).
+   * The send itself happens AFTER mission completes — either via the
+   * operator clicking "Send reply" in Mission Control, or auto-fired
+   * by the synthetic-trigger when `automation/inbound.xDmReply.autoApprove`
+   * is on. Either path uses the `send_social_reply` Jasper tool.
+   *
+   * The inboundEventId is preserved verbatim in the result so the send
+   * step can mark the source `inboundSocialEvents` doc processed.
+   */
+  private async executeInboundDmReply(
+    inboundContext: Record<string, unknown>,
+    taskId: string,
+  ): Promise<AgentReport> {
+    const platform = typeof inboundContext.platform === 'string' ? inboundContext.platform.toLowerCase() : '';
+    const inboundEventId = typeof inboundContext.inboundEventId === 'string' ? inboundContext.inboundEventId : '';
+    const inboundText = typeof inboundContext.inboundText === 'string' ? inboundContext.inboundText : '';
+    const senderHandle = typeof inboundContext.senderHandle === 'string' ? inboundContext.senderHandle : undefined;
+    const senderId = typeof inboundContext.senderId === 'string' ? inboundContext.senderId : undefined;
+
+    if (!platform || !inboundEventId || !inboundText) {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        null,
+        ['inboundContext missing required fields: platform, inboundEventId, inboundText'],
+      );
+    }
+
+    if (platform !== 'x') {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        null,
+        [`Inbound DM reply for platform="${platform}" is not yet wired. Currently supported: x`],
+      );
+    }
+
+    this.log('INFO', `Inbound X DM fast-path: routing to TWITTER_X_EXPERT.compose_dm_reply for event ${inboundEventId}`);
+
+    // Pass brand context through the same way orchestrateCampaign does
+    // so the X Expert's compose_dm_reply prompt has tone-of-voice and
+    // avoid-phrases. Brand DNA is already baked into the GM systemPrompt
+    // per Standing Rule #1 — this is the SECONDARY hint the specialist
+    // accepts for runtime-overridable tweaks.
+    const brand = await getBrandDNA();
+    const brandContext = brand ? {
+      industry: brand.industry,
+      toneOfVoice: brand.toneOfVoice,
+      keyPhrases: brand.keyPhrases,
+      avoidPhrases: brand.avoidPhrases,
+    } : undefined;
+
+    const xExpert = getTwitterExpert();
+    await xExpert.initialize();
+
+    const composeMessage = this.createDelegationMessage(
+      `dm_compose_${Date.now()}`,
+      'TWITTER_X_EXPERT',
+      {
+        action: 'compose_dm_reply',
+        platform: 'x' as const,
+        inboundEventId,
+        inboundText,
+        ...(senderHandle ? { senderHandle } : {}),
+        ...(senderId ? { senderId } : {}),
+        ...(brandContext ? { brandContext } : {}),
+      },
+    );
+
+    const composeResult = await xExpert.execute(composeMessage);
+
+    if (composeResult.status !== 'COMPLETED') {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        null,
+        composeResult.errors ?? ['Twitter/X Expert compose_dm_reply failed'],
+      );
+    }
+
+    // Surface the inbound context alongside the composed draft so the
+    // operator (and the auto-approve auto-send path) has everything
+    // needed to fire send_social_reply without re-reading Firestore.
+    return this.createReport(taskId, 'COMPLETED', {
+      mode: 'INBOUND_DM_REPLY',
+      platform,
+      inboundEventId,
+      inboundText,
+      ...(senderHandle ? { senderHandle } : {}),
+      ...(senderId ? { senderId } : {}),
+      composedReply: composeResult.data,
+      specialistsUsed: ['TWITTER_X_EXPERT'],
+    });
   }
 
   // ==========================================================================

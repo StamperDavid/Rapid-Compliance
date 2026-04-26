@@ -24,6 +24,7 @@ import Image from 'next/image';
 import AgentAvatar from './AgentAvatar';
 import { getDashboardLink, getStepReviewLink, formatToolName } from './dashboard-links';
 import type { Mission, MissionStep, MissionStepStatus } from '@/lib/orchestrator/mission-persistence';
+import { SendDmReplyButton } from './SendDmReplyButton';
 
 interface MissionTimelineProps {
   mission: Mission;
@@ -416,12 +417,14 @@ function StepCard({
   isSelected,
   onSelect,
   missionId,
+  sourceEvent,
 }: {
   step: MissionStep;
   stepNumber: number;
   isSelected: boolean;
   onSelect: () => void;
   missionId: string;
+  sourceEvent?: Mission['sourceEvent'];
 }) {
   const [expanded, setExpanded] = useState(false);
   const dashboardLink = getDashboardLink(step.toolName, step.toolResult);
@@ -702,10 +705,59 @@ function StepCard({
           {step.toolResult && (
             <ExpandedOutputRenderer raw={step.toolResult} parsed={parsedOutput} />
           )}
+
+          {(() => {
+            if (sourceEvent?.kind !== 'inbound_x_dm') { return null; }
+            if (step.toolName !== 'delegate_to_marketing') { return null; }
+            if (step.status !== 'COMPLETED') { return null; }
+            const composed = extractComposedReplyText(step.toolResult);
+            if (!composed) { return null; }
+            return (
+              <SendDmReplyButton
+                missionId={missionId}
+                composedReply={composed}
+                senderHandle={sourceEvent.senderHandle}
+              />
+            );
+          })()}
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * Extract the X Expert's composed reply text from a delegate_to_marketing
+ * step's toolResult. Returns null when the step result does not contain
+ * a `composedReply.replyText` (e.g., when the step was a normal campaign
+ * delegation rather than the inbound-DM fast-path).
+ */
+function extractComposedReplyText(toolResult: string | undefined): string | null {
+  if (!toolResult) { return null; }
+  try {
+    const parsed = JSON.parse(toolResult) as Record<string, unknown>;
+    // delegate_to_marketing wraps the manager result in `data`.
+    const dataField = parsed.data;
+    if (dataField && typeof dataField === 'object') {
+      const data = dataField as Record<string, unknown>;
+      if (data.composedReply && typeof data.composedReply === 'object') {
+        const composedReply = data.composedReply as Record<string, unknown>;
+        if (typeof composedReply.replyText === 'string' && composedReply.replyText.length > 0) {
+          return composedReply.replyText;
+        }
+      }
+    }
+    // Some result shapes set composedReply at the top level.
+    if (parsed.composedReply && typeof parsed.composedReply === 'object') {
+      const composedReply = parsed.composedReply as Record<string, unknown>;
+      if (typeof composedReply.replyText === 'string' && composedReply.replyText.length > 0) {
+        return composedReply.replyText;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 /**
@@ -1143,6 +1195,7 @@ export default function MissionTimeline({ mission, onStepSelect, selectedStepId 
               isSelected={selectedStepId === step.stepId}
               onSelect={() => onStepSelect?.(step.stepId)}
               missionId={mission.missionId}
+              sourceEvent={mission.sourceEvent}
             />
           ))}
 

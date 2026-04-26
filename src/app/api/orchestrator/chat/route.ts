@@ -18,7 +18,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { OpenRouterProvider, type ChatMessage, type ToolCall, type ChatCompletionResponse } from '@/lib/ai/openrouter-provider';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuthOrSynthetic } from '@/lib/auth/api-auth';
 
 // Force dynamic rendering - required for Firebase Auth token verification
 export const dynamic = 'force-dynamic';
@@ -314,16 +314,26 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // Authentication - Require valid Firebase ID token
-    // Allow all authenticated users - admin vs merchant context determined below
-    const authResult = await requireAuth(request);
+    // Authentication. Accepts either a real Firebase ID token (UI traffic)
+    // or a synthetic-trigger from a backend driver (cron / webhook) that
+    // is rebuilding inbound DM auto-reply via the proper Jasper path.
+    // The synthetic-trigger scope `inbound_dm_reply` is explicitly opted
+    // in here — a leaked CRON_SECRET cannot be used to invoke this
+    // route under a different scope.
+    const authResult = await requireAuthOrSynthetic(request, ['inbound_dm_reply']);
 
     if (authResult instanceof NextResponse) {
       logger.error('[Jasper] Auth failed - no valid token', new Error('Auth failed - no valid token'), { file: 'orchestrator/chat/route.ts' });
       return authResult;
     }
 
-    const { user } = authResult;
+    const { user, isSynthetic, syntheticScope } = authResult;
+    if (isSynthetic) {
+      logger.info('[Jasper] Synthetic-trigger authenticated', {
+        scope: syntheticScope,
+        syntheticUid: user.uid,
+      });
+    }
 
     // All authenticated users get Jasper tool access
     // Jasper is the primary interface for every employee on the platform

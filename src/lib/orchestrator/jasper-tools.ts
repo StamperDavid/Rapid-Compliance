@@ -575,6 +575,7 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   voice_agent: '/voice',
   place_call: '/voice',
   send_sms: '/sms-messages',
+  send_social_reply: '/mission-control',
   create_campaign: '/mission-control',
   create_workflow: '/mission-control',
 };
@@ -1633,13 +1634,13 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'delegate_to_marketing',
       description:
-        'Delegate a marketing campaign or content request to the Marketing Department. The Marketing Manager coordinates 9 specialists: SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, Growth Analyst, YouTube Expert, Instagram Expert, Pinterest Expert. ENABLED: TRUE.',
+        'Delegate a marketing campaign or content request to the Marketing Department. The Marketing Manager coordinates 9 specialists: SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, Growth Analyst, YouTube Expert, Instagram Expert, Pinterest Expert. For an inbound DM reply task, pass `inboundContext` and the Marketing Manager will fast-path to the X Expert specialist (single-specialist compose, not full campaign orchestration). ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           goal: {
             type: 'string',
-            description: 'The marketing goal or campaign request (e.g., "Launch a viral TikTok campaign for fitness niche", "Create a Twitter thread about AI trends", "Generate Facebook ads for real estate leads")',
+            description: 'The marketing goal or campaign request (e.g., "Launch a viral TikTok campaign for fitness niche", "Create a Twitter thread about AI trends", "Compose a brand-voiced reply to an inbound X DM")',
           },
           platform: {
             type: 'string',
@@ -1660,8 +1661,12 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           contentType: {
             type: 'string',
-            description: 'Type of content to create',
-            enum: ['viral_hook', 'thread', 'ad_creative', 'engagement', 'campaign'],
+            description: 'Type of content to create. Use "dm_reply" together with `inboundContext` for inbound DM reply tasks.',
+            enum: ['viral_hook', 'thread', 'ad_creative', 'engagement', 'campaign', 'dm_reply'],
+          },
+          inboundContext: {
+            type: 'object',
+            description: 'Inbound DM/comment context, present ONLY when this delegation is responding to an inbound social event. When present, the Marketing Manager fast-paths to the platform-specific specialist with action=compose_dm_reply (no full campaign orchestration). REQUIRED keys when this object is present: platform (e.g. "x"), inboundEventId (the source inboundSocialEvents doc id), inboundText (the full inbound message body). OPTIONAL keys: senderHandle (display @handle), senderId (platform user id used by send_social_reply at send time). Pass the values through verbatim from the synthetic-trigger prompt — do not modify them.',
           },
         },
         required: ['goal'],
@@ -2404,6 +2409,41 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
         },
         required: ['to', 'message'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INBOUND SOCIAL DM REPLY (X / Twitter — operator-approved)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'send_social_reply',
+      description:
+        'Send a previously-composed reply to an inbound social DM. ONLY call this after a specialist (X Expert / LinkedIn Expert / etc.) has composed the reply and either the operator approved it in Mission Control or auto-approve is on for this channel. The text MUST be the operator-approved version — never compose new text inside this tool. The source inbound event is marked processed on success so the dispatcher does not re-fire. Currently supports platform=x only; other platforms return NOT_IMPLEMENTED until their send services land. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          platform: {
+            type: 'string',
+            description: 'The social platform to send through',
+            enum: ['x'],
+          },
+          recipientUserId: {
+            type: 'string',
+            description: 'The platform-specific user id of the original DM sender (X numeric user id, etc.). NOT the @handle.',
+          },
+          replyText: {
+            type: 'string',
+            description: 'The exact reply text to send. Must be ≤500 chars (X DM limit). For brand-voiced concise replies, the X Expert specialist enforces ≤240 chars at compose time.',
+          },
+          inboundEventId: {
+            type: 'string',
+            description: 'The id of the source `inboundSocialEvents` document this reply is responding to. Used to mark the event processed and to prevent duplicate sends from the dispatcher.',
+          },
+        },
+        required: ['platform', 'recipientUserId', 'replyText', 'inboundEventId'],
       },
     },
   },
@@ -4936,6 +4976,9 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             budget: args.budget as string | undefined,
             contentType: args.contentType as string | undefined,
           };
+          if (args.inboundContext && typeof args.inboundContext === 'object') {
+            marketingPayload.inboundContext = args.inboundContext;
+          }
 
           const marketingResult = await withTimeout(marketingMgr.execute({
             id: `marketing_${Date.now()}`,
@@ -6194,6 +6237,94 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             durationMs: Date.now() - smsStart,
           });
           content = JSON.stringify({ success: false, error: smsErrorMsg });
+        }
+        break;
+      }
+
+      case 'send_social_reply': {
+        const sendReplyStart = Date.now();
+        trackMissionStep(context, 'send_social_reply', 'RUNNING', { toolArgs: args });
+
+        const platformArg = typeof args.platform === 'string' ? args.platform.toLowerCase() : '';
+        const recipientUserId = typeof args.recipientUserId === 'string' ? args.recipientUserId : '';
+        const replyText = typeof args.replyText === 'string' ? args.replyText.trim() : '';
+        const inboundEventId = typeof args.inboundEventId === 'string' ? args.inboundEventId : '';
+
+        if (!platformArg || !recipientUserId || !replyText || !inboundEventId) {
+          trackMissionStep(context, 'send_social_reply', 'FAILED', {
+            error: 'Missing required arg(s): platform, recipientUserId, replyText, inboundEventId',
+            durationMs: Date.now() - sendReplyStart,
+          });
+          content = JSON.stringify({
+            success: false,
+            error: 'platform, recipientUserId, replyText, and inboundEventId are all required',
+          });
+          break;
+        }
+
+        if (platformArg !== 'x') {
+          trackMissionStep(context, 'send_social_reply', 'FAILED', {
+            error: `platform=${platformArg} not supported yet`,
+            durationMs: Date.now() - sendReplyStart,
+          });
+          content = JSON.stringify({
+            success: false,
+            error: `send_social_reply does not yet support platform=${platformArg}. Currently: x only.`,
+          });
+          break;
+        }
+
+        try {
+          const { sendXDirectMessage, markInboundEventReplied } = await import('@/lib/integrations/twitter-dm-service');
+          const sendResult = await sendXDirectMessage({ recipientUserId, text: replyText });
+
+          if (!sendResult.success) {
+            trackMissionStep(context, 'send_social_reply', 'FAILED', {
+              error: sendResult.error ?? 'X DM send failed',
+              durationMs: Date.now() - sendReplyStart,
+            });
+            content = JSON.stringify({
+              success: false,
+              error: sendResult.error ?? 'X DM send failed',
+              httpStatus: sendResult.httpStatus,
+            });
+            break;
+          }
+
+          await markInboundEventReplied({
+            eventId: inboundEventId,
+            replyText,
+            messageId: sendResult.messageId,
+            missionId: context?.missionId,
+          });
+
+          trackMissionStep(context, 'send_social_reply', 'COMPLETED', {
+            summary: `Reply sent on ${platformArg} to user ${recipientUserId}`,
+            durationMs: Date.now() - sendReplyStart,
+            toolResult: JSON.stringify({
+              success: true,
+              messageId: sendResult.messageId,
+              recipientUserId,
+              replyText,
+              inboundEventId,
+            }),
+          });
+          content = JSON.stringify({
+            success: true,
+            platform: platformArg,
+            messageId: sendResult.messageId,
+            recipientUserId,
+            replyText,
+            inboundEventId,
+            reviewLink: getReviewLink('send_social_reply', context?.missionId),
+          });
+        } catch (sendErr) {
+          const sendErrMsg = sendErr instanceof Error ? sendErr.message : String(sendErr);
+          trackMissionStep(context, 'send_social_reply', 'FAILED', {
+            error: sendErrMsg,
+            durationMs: Date.now() - sendReplyStart,
+          });
+          content = JSON.stringify({ success: false, error: sendErrMsg });
         }
         break;
       }
