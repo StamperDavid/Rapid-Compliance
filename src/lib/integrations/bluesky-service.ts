@@ -68,26 +68,24 @@ export class BlueskyService {
   }
 
   private async ensureSession(): Promise<BlueskySession> {
+    // Reuse the in-memory session for the lifetime of this service
+    // instance. We do NOT cache across instances — every fresh
+    // BlueskyService starts with no session and mints one on the first
+    // operation that needs auth. Bluesky access JWTs expire after a
+    // couple of hours; the in-memory cache covers the few seconds of
+    // a typical request, which is the only window where reuse helps.
     if (this.session) {
       return this.session;
     }
 
-    if (this.config.accessJwt) {
-      // Use existing JWT
-      this.session = {
-        accessJwt: this.config.accessJwt,
-        refreshJwt: this.config.refreshJwt ?? '',
-        did: '',
-        handle: '',
-      };
-      return this.session;
-    }
-
     if (!this.config.identifier || !this.config.password) {
-      throw new Error('Bluesky credentials not configured');
+      throw new Error('Bluesky credentials not configured (identifier + app password required)');
     }
 
-    // Create session via app password
+    // Create a fresh session via app password. Cached `accessJwt` from
+    // Firestore is intentionally ignored because the saved value goes
+    // stale within hours of the initial save script — which previously
+    // caused every send to fail with HTTP 400 ExpiredToken.
     const response = await fetch(`${this.pdsUrl}/xrpc/com.atproto.server.createSession`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -98,7 +96,8 @@ export class BlueskyService {
     });
 
     if (!response.ok) {
-      throw new Error(`Bluesky auth failed: ${response.status}`);
+      const errText = await response.text().catch(() => '');
+      throw new Error(`Bluesky auth failed: ${response.status} ${errText.slice(0, 200)}`);
     }
 
     const data = (await response.json()) as BlueskySession;
