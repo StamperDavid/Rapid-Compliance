@@ -37,6 +37,9 @@ export default function BlogPostEditorPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduledForInput, setScheduledForInput] = useState('');
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [leftPanelTab, setLeftPanelTab] = useState<'widgets' | 'settings'>('widgets');
 
@@ -128,8 +131,8 @@ export default function BlogPostEditorPage() {
     }
   }, [postId, loadCategories, loadPost, createBlankPost]);
 
-  async function savePost() {
-    if (!post) {return;}
+  async function savePost(opts?: { redirect?: boolean }): Promise<{ id: string } | null> {
+    if (!post) { return null; }
 
     try {
       setSaving(true);
@@ -153,18 +156,83 @@ export default function BlogPostEditorPage() {
         }),
       });
 
-      if (!response.ok) {throw new Error('Failed to save post');}
+      if (!response.ok) { throw new Error('Failed to save post'); }
 
-      await response.json();
+      const json = await response.json() as { post?: { id?: string } };
+      const savedId = (json.post?.id !== '' && json.post?.id != null) ? json.post.id : postId;
+
       toast.success('Post saved successfully!');
 
-      // Redirect to posts list
-      router.push(`/website/blog`);
+      if (opts?.redirect !== false) {
+        router.push(`/website/blog`);
+      }
+
+      return savedId ? { id: savedId } : null;
     } catch (error) {
       logger.error('[Blog Editor] Save error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to save post');
+      return null;
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePublish(scheduledFor?: string): Promise<void> {
+    if (!post) { return; }
+
+    // Save the latest content first so the publish stamps reflect what's
+    // currently in the editor — the publish endpoint only flips status +
+    // metadata; it doesn't write content.
+    let activeId = postId;
+    if (!activeId) {
+      const saved = await savePost({ redirect: false });
+      if (!saved) { return; }
+      activeId = saved.id;
+    } else {
+      const saved = await savePost({ redirect: false });
+      if (!saved) { return; }
+    }
+
+    try {
+      setPublishing(true);
+      const response = await authFetch(`/api/website/blog/posts/${activeId}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scheduledFor ? { scheduledFor } : {}),
+      });
+      const json = await response.json() as { success?: boolean; status?: string; error?: string; message?: string };
+      if (!response.ok || json.success !== true) {
+        throw new Error(json.error ?? json.message ?? `HTTP ${response.status}`);
+      }
+      updatePost({ status: (json.status as 'draft' | 'published' | 'scheduled') ?? 'published' });
+      toast.success(scheduledFor ? `Post scheduled for ${new Date(scheduledFor).toLocaleString()}` : 'Post published!');
+      router.push(`/website/blog`);
+    } catch (err) {
+      logger.error('[Blog Editor] Publish error', err instanceof Error ? err : new Error(String(err)));
+      toast.error(err instanceof Error ? `Publish failed: ${err.message}` : 'Publish failed');
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function handleUnpublish(): Promise<void> {
+    if (!postId) { return; }
+    try {
+      setPublishing(true);
+      const response = await authFetch(`/api/website/blog/posts/${postId}/publish`, {
+        method: 'DELETE',
+      });
+      const json = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || json.success !== true) {
+        throw new Error(json.error ?? `HTTP ${response.status}`);
+      }
+      updatePost({ status: 'draft' });
+      toast.success('Post moved back to draft');
+    } catch (err) {
+      logger.error('[Blog Editor] Unpublish error', err instanceof Error ? err : new Error(String(err)));
+      toast.error(err instanceof Error ? `Unpublish failed: ${err.message}` : 'Unpublish failed');
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -337,7 +405,7 @@ export default function BlogPostEditorPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button
             onClick={() => router.push(`/website/blog`)}
             style={{
@@ -354,22 +422,123 @@ export default function BlogPostEditorPage() {
           </button>
           <button
             onClick={() => void savePost()}
-            disabled={saving}
+            disabled={saving || publishing}
             style={{
               padding: '0.5rem 1.5rem',
-              background: saving ? 'var(--color-text-disabled)' : 'var(--color-success)',
+              background: (saving || publishing) ? 'var(--color-text-disabled)' : 'var(--color-info)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: saving ? 'not-allowed' : 'pointer',
+              cursor: (saving || publishing) ? 'not-allowed' : 'pointer',
               fontSize: '0.875rem',
               fontWeight: '600',
             }}
           >
-            {saving ? 'Saving...' : 'Save Post'}
+            {saving ? 'Saving...' : 'Save Draft'}
           </button>
+          {post.status === 'published' ? (
+            <button
+              onClick={() => void handleUnpublish()}
+              disabled={saving || publishing}
+              style={{
+                padding: '0.5rem 1.5rem',
+                background: (saving || publishing) ? 'var(--color-text-disabled)' : 'var(--color-warning)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: (saving || publishing) ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+              }}
+            >
+              {publishing ? 'Working...' : 'Unpublish'}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => void handlePublish()}
+                disabled={saving || publishing}
+                style={{
+                  padding: '0.5rem 1.5rem',
+                  background: (saving || publishing) ? 'var(--color-text-disabled)' : 'var(--color-success)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: (saving || publishing) ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                }}
+              >
+                {publishing ? 'Publishing...' : 'Publish Now'}
+              </button>
+              <button
+                onClick={() => setScheduleOpen((prev) => !prev)}
+                disabled={saving || publishing}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'transparent',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border-strong)',
+                  borderRadius: '4px',
+                  cursor: (saving || publishing) ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {scheduleOpen ? 'Hide schedule' : 'Schedule…'}
+              </button>
+            </>
+          )}
         </div>
       </div>
+      {scheduleOpen && post.status !== 'published' && (
+        <div style={{
+          padding: '0.75rem 1.5rem',
+          background: 'var(--color-bg-elevated)',
+          borderBottom: '1px solid var(--color-border-light)',
+          display: 'flex',
+          gap: '0.75rem',
+          alignItems: 'center',
+          fontSize: '0.875rem',
+        }}>
+          <label style={{ color: 'var(--color-text-secondary)' }}>Publish at:</label>
+          <input
+            type="datetime-local"
+            value={scheduledForInput}
+            onChange={(e) => setScheduledForInput(e.target.value)}
+            style={{
+              padding: '0.375rem 0.5rem',
+              border: '1px solid var(--color-border-light)',
+              borderRadius: '4px',
+              fontSize: '0.875rem',
+              background: 'var(--color-bg-paper)',
+              color: 'var(--color-text-primary)',
+            }}
+          />
+          <button
+            onClick={() => {
+              if (!scheduledForInput) { return; }
+              const iso = new Date(scheduledForInput).toISOString();
+              void handlePublish(iso);
+            }}
+            disabled={saving || publishing || !scheduledForInput}
+            style={{
+              padding: '0.375rem 1rem',
+              background: (saving || publishing || !scheduledForInput) ? 'var(--color-text-disabled)' : 'var(--color-success)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: (saving || publishing || !scheduledForInput) ? 'not-allowed' : 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+            }}
+          >
+            {publishing ? 'Scheduling...' : 'Schedule'}
+          </button>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
+            The cron at /api/cron/scheduled-publisher runs every 5 min and publishes scheduled posts when their time arrives.
+          </span>
+        </div>
+      )}
 
       {/* Three-Panel Layout */}
       <div style={{

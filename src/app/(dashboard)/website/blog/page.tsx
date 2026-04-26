@@ -117,6 +117,42 @@ export default function BlogManagementPage() {
     }
   }
 
+  async function quickPublish(post: BlogPost) {
+    try {
+      const response = await authFetch(`/api/website/blog/posts/${post.id}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const json = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || json.success !== true) {
+        throw new Error(json.error ?? `HTTP ${response.status}`);
+      }
+      toast.success('Post published');
+      await loadPosts();
+    } catch (error) {
+      logger.error('[Blog] Quick publish error', error instanceof Error ? error : new Error(String(error)));
+      toast.error(error instanceof Error ? `Publish failed: ${error.message}` : 'Publish failed');
+    }
+  }
+
+  async function quickUnpublish(post: BlogPost) {
+    try {
+      const response = await authFetch(`/api/website/blog/posts/${post.id}/publish`, {
+        method: 'DELETE',
+      });
+      const json = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || json.success !== true) {
+        throw new Error(json.error ?? `HTTP ${response.status}`);
+      }
+      toast.success('Post moved back to draft');
+      await loadPosts();
+    } catch (error) {
+      logger.error('[Blog] Quick unpublish error', error instanceof Error ? error : new Error(String(error)));
+      toast.error(error instanceof Error ? `Unpublish failed: ${error.message}` : 'Unpublish failed');
+    }
+  }
+
   function handleDeleteClick(postId: string) {
     setDeleteConfirm(postId);
   }
@@ -292,6 +328,21 @@ export default function BlogManagementPage() {
                   >
                     Edit
                   </button>
+                  {post.status === 'published' ? (
+                    <button
+                      onClick={() => void quickUnpublish(post)}
+                      className="px-4 py-2 bg-warning text-white rounded cursor-pointer border-none text-sm"
+                    >
+                      Unpublish
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => void quickPublish(post)}
+                      className="px-4 py-2 bg-success text-white rounded cursor-pointer border-none text-sm"
+                    >
+                      Publish
+                    </button>
+                  )}
                   <button
                     onClick={() => void toggleFeatured(post)}
                     className={`px-4 py-2 text-white rounded cursor-pointer border-none text-sm ${post.featured ? 'bg-muted' : 'bg-warning'}`}
