@@ -222,23 +222,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   }
 
-  // OPERATOR PATH: leave the mission in PLAN_PENDING_APPROVAL.
-  if (!autoApproveOn) {
-    return NextResponse.json({
-      success: true,
-      missionId,
-      autoApproved: false,
-      message: 'Mission created and waiting for operator review in Mission Control.',
-    });
-  }
-
-  // AUTO-APPROVE PATH: drive the mission programmatically.
-  // Same gates the operator would click — Jasper-→-manager-→-specialist
-  // delegation path itself is unchanged.
-  logger.info('[synthetic-trigger] auto-approve enabled — driving mission to completion', {
+  // For inbound-DM-reply missions, Jasper's plan is always the same:
+  // delegate_to_marketing → platform specialist composes a reply. The
+  // operator gains nothing from rubber-stamping that plan. So the
+  // synthetic-trigger ALWAYS drives plan-approval + step execution,
+  // landing the mission COMPLETED with the composed reply visible in
+  // Mission Control. The operator's real decision is whether to send
+  // that reply, which is gated by the SendDmReplyButton click (or the
+  // auto-approve toggle below).
+  logger.info('[synthetic-trigger] auto-running plan + compose; reply send gated separately', {
     missionId,
     scope,
     triggerId,
+    autoSendReply: autoApproveOn,
   });
 
   const allApproved = await approveAllPlanSteps(missionId);
@@ -278,13 +274,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     userPrompt: planMission.userPrompt,
   });
 
-  // After steps complete, the X Expert specialist's compose_dm_reply
+  // After steps complete, the platform specialist's compose_dm_reply
   // result lives in the delegate_to_marketing step's toolResult. The
-  // auto-approve driver fires the send-dm-reply endpoint internally to
-  // dispatch the actual DM. The operator path skips this — the operator
-  // clicks "Send reply" manually in Mission Control instead.
+  // mission is now COMPLETED with a draft reply visible in Mission
+  // Control — the operator reviews + clicks "Send reply" themselves.
+  // The autoApprove flag below is the SEPARATE per-channel toggle that
+  // skips the operator's send click and dispatches the DM immediately.
   let sendOutcome: { sent: boolean; messageId?: string; error?: string } | null = null;
-  if (runResult.success && runResult.finalStatus === 'COMPLETED') {
+  if (autoApproveOn && runResult.success && runResult.finalStatus === 'COMPLETED') {
     try {
       const sendUrl = `${appBaseUrl()}/api/orchestrator/missions/${encodeURIComponent(missionId)}/send-dm-reply`;
       const sendResp = await fetch(sendUrl, {
@@ -316,9 +313,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   return NextResponse.json({
-    success: runResult.success && (sendOutcome?.sent ?? false),
+    success: runResult.success && (autoApproveOn ? (sendOutcome?.sent ?? false) : true),
     missionId,
-    autoApproved: true,
+    autoApproved: autoApproveOn,
     finalStatus: runResult.finalStatus,
     stepsRun: runResult.stepsRun,
     stepsFailed: runResult.stepsFailed,
