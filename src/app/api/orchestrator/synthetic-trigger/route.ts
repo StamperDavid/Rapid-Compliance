@@ -70,9 +70,30 @@ interface JasperChatResponseShape {
   response?: string;
   metadata?: {
     missionId?: string;
+    reviewLink?: string;
+    toolExecuted?: string;
     [k: string]: unknown;
   };
   error?: string;
+}
+
+/**
+ * The chat route does not populate `metadata.missionId` consistently
+ * across every iteration shape, but it does always populate
+ * `metadata.reviewLink` to `/mission-control?mission=<missionId>` when
+ * propose_mission_plan ran. Extract the id from that as a fallback so
+ * we don't depend on the chat route's metadata being internally
+ * consistent.
+ */
+function extractMissionIdFromResponse(resp: JasperChatResponseShape): string | undefined {
+  const direct = resp.metadata?.missionId;
+  if (typeof direct === 'string' && direct.length > 0) { return direct; }
+  const link = resp.metadata?.reviewLink;
+  if (typeof link === 'string') {
+    const match = link.match(/[?&]mission=([^&]+)/);
+    if (match?.[1]) { return decodeURIComponent(match[1]); }
+  }
+  return undefined;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -166,7 +187,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ success: false, error: `Chat fetch failed: ${msg}` }, { status: 502 });
   }
 
-  const missionId = chatResponseJson.metadata?.missionId;
+  const missionId = extractMissionIdFromResponse(chatResponseJson);
   if (!missionId || typeof missionId !== 'string') {
     logger.error('[synthetic-trigger] chat returned no missionId', new Error('no missionId'), {
       triggerId,
