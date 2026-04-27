@@ -88,6 +88,7 @@ export class BlueskyService {
     // caused every send to fail with HTTP 400 ExpiredToken.
     const response = await fetch(`${this.pdsUrl}/xrpc/com.atproto.server.createSession`, {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         identifier: this.config.identifier,
@@ -118,6 +119,7 @@ export class BlueskyService {
 
       const response = await fetch(`${this.pdsUrl}/xrpc/com.atproto.repo.createRecord`, {
         method: 'POST',
+        cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.accessJwt}`,
@@ -171,7 +173,7 @@ export class BlueskyService {
       if (!recipientDid.startsWith('did:')) {
         const profileResp = await fetch(
           `${this.pdsUrl}/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(input.recipient)}`,
-          { headers: { Authorization: `Bearer ${session.accessJwt}` } },
+          { cache: 'no-store', headers: { Authorization: `Bearer ${session.accessJwt}` } },
         );
         if (!profileResp.ok) {
           return { success: false, error: `Could not resolve handle ${input.recipient}: HTTP ${profileResp.status}` };
@@ -196,7 +198,7 @@ export class BlueskyService {
 
       const convoResp = await fetch(
         `${chatHost}/xrpc/chat.bsky.convo.getConvoForMembers?members=${encodeURIComponent(recipientDid)}`,
-        { headers: proxyHeaders },
+        { cache: 'no-store', headers: proxyHeaders },
       );
       if (!convoResp.ok) {
         const errText = await convoResp.text();
@@ -211,6 +213,7 @@ export class BlueskyService {
       // 3. Send the message.
       const sendResp = await fetch(`${chatHost}/xrpc/chat.bsky.convo.sendMessage`, {
         method: 'POST',
+        cache: 'no-store',
         headers: { ...proxyHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ convoId, message: { text } }),
       });
@@ -234,7 +237,7 @@ export class BlueskyService {
 
       const response = await fetch(
         `${this.pdsUrl}/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(handle)}`,
-        { headers: { Authorization: `Bearer ${session.accessJwt}` } },
+        { cache: 'no-store', headers: { Authorization: `Bearer ${session.accessJwt}` } },
       );
 
       if (!response.ok) {

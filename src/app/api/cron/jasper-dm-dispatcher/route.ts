@@ -99,6 +99,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const event = doc.data() as InboundDmEvent;
 
+    // Defensive kind guard — auto-reply applies to PRIVATE DMs only,
+    // never to public mentions, replies, follows, retweets, etc. The
+    // Firestore query above already filters `kind == 'direct_message_events'`,
+    // but enforce here too in case the query is ever loosened or a
+    // doc was hand-written with the wrong kind. Public engagement
+    // events (tweet_create_events, follow_events, favorite_events,
+    // etc.) must never trigger an automated response — those are
+    // visible to everyone and a tone-deaf auto-reply gets seen by all.
+    if (event.kind !== 'direct_message_events') {
+      logger.warn('[jasper-dm-dispatcher] non-DM event slipped past Firestore query — skipping', {
+        eventId: event.id,
+        kind: event.kind,
+        provider: event.provider,
+      });
+      outcomes.push({
+        eventId: event.id,
+        status: 'skipped',
+        reason: `non-DM kind: ${event.kind}`,
+      });
+      continue;
+    }
+
     // Skip events already initiated — the cron is at-least-once delivery,
     // we should never double-fire a mission for the same event.
     if (event.mission_initiated === true) {

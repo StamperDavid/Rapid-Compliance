@@ -131,6 +131,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // Brand's own outgoing DM — skip
       continue;
     }
+    // Defensive visibility guard — the conversations endpoint by design
+    // only returns direct-visibility statuses, but we enforce the rule
+    // explicitly in code so a future API change or federation oddity
+    // can't silently let a public mention into the auto-reply pipeline.
+    // RULE: auto-reply applies to private DMs only; public mentions /
+    // replies / boosts must NOT trigger an automated response — they
+    // are visible to everyone and a tone-deaf auto-reply gets seen by
+    // all. Public-mention engagement should go through a separate
+    // operator-approved path, not this cron.
+    if (status.visibility !== 'direct') {
+      logger.warn('[mastodon-dm-dispatcher] non-direct status leaked into conversations endpoint — skipping', {
+        statusId: status.id,
+        visibility: status.visibility,
+        from: status.account.acct,
+      });
+      continue;
+    }
     const plainText = stripStatusHtml(status.content);
     if (!plainText) { continue; }
 
