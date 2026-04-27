@@ -140,12 +140,13 @@ export function ThreadsPostPreview({
           {/* Media */}
           {mediaUrl && (
             <div className="mt-3 overflow-hidden rounded-xl border border-border-light">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={mediaUrl}
                 alt=""
+                width={500}
+                height={384}
                 className="max-h-96 w-full object-cover"
-                loading="lazy"
+                unoptimized
               />
             </div>
           )}

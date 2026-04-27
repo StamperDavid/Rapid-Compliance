@@ -5,6 +5,7 @@
  */
 
 import * as React from 'react';
+import Image from 'next/image';
 import { BadgeCheck, CheckCheck } from 'lucide-react';
 
 import type { SocialMediaPost } from '@/types/social';
@@ -85,12 +86,13 @@ export function WhatsAppBusinessPostPreview({
         {/* Media at top of bubble */}
         {mediaUrl && (
           <div className="mb-2 overflow-hidden rounded-md">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={mediaUrl}
               alt=""
+              width={500}
+              height={288}
               className="max-h-72 w-full object-cover"
-              loading="lazy"
+              unoptimized
             />
           </div>
         )}
