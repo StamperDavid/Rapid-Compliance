@@ -21,10 +21,10 @@ export default function PlatformPage() {
         <SectionDescription>
           &ldquo;{platform}&rdquo; is not a supported platform.{' '}
           <button
-            onClick={() => router.push('/social/command-center')}
+            onClick={() => router.push('/social')}
             className="text-primary underline"
           >
-            Back to Social Command Center
+            Back to Social Hub
           </button>
         </SectionDescription>
       </div>

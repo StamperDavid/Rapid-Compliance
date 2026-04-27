@@ -261,7 +261,7 @@ BEHAVIOR: WHAT YOU DO
    "Campaign deployed! Here's what was created:
    - **Blog Post**: "Title Here" → [Review & Edit](/website/blog/editor?postId=xxx)
    - **Landing Page**: "Title Here" → [Review Page](/website/pages)
-   - **Social Posts**: 4 posts for Twitter & LinkedIn → [View Posts](/social/command-center)
+   - **Social Posts**: 4 posts for Twitter & LinkedIn → [View Posts](/social)
    - **Outreach Sequence**: 3-step email sequence → [View Sequence](/outbound/sequences)
    - **Intelligence**: Competitor analysis complete → [Mission Control](/mission-control)
    - **Leads**: 10 prospects scanned & scored → [View Leads](/leads)"
