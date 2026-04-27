@@ -647,7 +647,8 @@ Only execute tools if the user explicitly says to go ahead (e.g., "yes do it", "
 You MAY call read-only tools like get_system_state, query_docs, or list_crm_leads to inform your recommendation.`;
 
       if (messages.length > 0 && messages[0].role === 'system') {
-        messages[0].content += advisoryGuardrail;
+        const current = messages[0].content;
+        messages[0].content = (typeof current === 'string' ? current : '') + advisoryGuardrail;
       }
     }
 

@@ -2,8 +2,8 @@
  * Golden Master Factory
  *
  * Creates initial Golden Masters for each agent type.
- * Handles migration from legacy formats (voice toolTraining, SEO toolTraining,
- * GoldenPlaybook for social) into the unified GM structure.
+ * Handles migration from legacy formats (voice toolTraining, SEO toolTraining)
+ * into the unified GM structure.
  *
  * @module training/golden-master-factory
  */
@@ -11,7 +11,7 @@
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
-import type { GoldenMaster, GoldenPlaybook, AgentPersona, BehaviorConfig, OnboardingData, KnowledgeBase } from '@/types/agent-memory';
+import type { GoldenMaster, AgentPersona, BehaviorConfig, OnboardingData, KnowledgeBase } from '@/types/agent-memory';
 import type { AgentDomain } from '@/types/training';
 
 // ============================================================================
@@ -256,8 +256,6 @@ function getDefaultKnowledgeBase(): KnowledgeBase {
  *
  * For voice/seo: if legacy Firestore config exists in `toolTraining/{type}`,
  * it will be migrated into the GM format.
- *
- * For social: if a GoldenPlaybook exists, it will be bridged into the GM format.
  */
 export async function createInitialGoldenMaster(
   agentType: AgentDomain,
@@ -281,9 +279,6 @@ export async function createInitialGoldenMaster(
       break;
     case 'seo':
       goldenMaster = await buildFromSeoConfig(userId);
-      break;
-    case 'social':
-      goldenMaster = await buildFromPlaybook(userId);
       break;
     default:
       goldenMaster = buildDefaultGoldenMaster(agentType, userId);
@@ -424,60 +419,3 @@ async function buildFromSeoConfig(userId: string): Promise<GoldenMaster> {
   return gm;
 }
 
-/**
- * Bridge existing GoldenPlaybook data → proper GM format for social agents.
- */
-async function buildFromPlaybook(userId: string): Promise<GoldenMaster> {
-  const gm = buildDefaultGoldenMaster('social', userId);
-
-  if (!adminDb) { return gm; }
-
-  try {
-    const playbookSnap = await adminDb
-      .collection(getSubCollection('goldenPlaybooks'))
-      .where('agentType', '==', 'social')
-      .limit(1)
-      .get();
-
-    if (!playbookSnap.empty) {
-      const playbook = playbookSnap.docs[0].data() as GoldenPlaybook;
-      logger.info('[GM Factory] Bridging GoldenPlaybook to GM format for social agent');
-
-      // Map brand voice DNA → persona
-      if (playbook.brandVoiceDNA) {
-        gm.agentPersona.tone = playbook.brandVoiceDNA.tone;
-        gm.knowledgeBase.brandVoice = {
-          tone: playbook.brandVoiceDNA.tone,
-          keyMessages: playbook.brandVoiceDNA.keyMessages,
-          commonPhrases: playbook.brandVoiceDNA.commonPhrases,
-        };
-      }
-
-      // Map explicit rules → persona rules
-      if (playbook.explicitRules) {
-        gm.agentPersona.rules = {
-          prohibitedBehaviors: playbook.explicitRules.neverPostAbout,
-          behavioralBoundaries: playbook.explicitRules.topicRestrictions,
-          neverMention: playbook.explicitRules.neverPostAbout,
-        };
-      }
-
-      // Preserve compiled prompt if present
-      if (playbook.compiledPrompt) {
-        gm.systemPrompt = playbook.compiledPrompt;
-      }
-
-      // Carry training score and scenarios
-      gm.trainingScore = playbook.trainingScore ?? 0;
-      gm.trainedScenarios = playbook.trainedScenarios ?? [];
-
-      gm.notes = `Bridged from GoldenPlaybook ${playbook.id} (${playbook.version})`;
-    }
-  } catch (error) {
-    logger.warn('[GM Factory] Failed to read GoldenPlaybook, using defaults', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  return gm;
-}

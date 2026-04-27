@@ -12,6 +12,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { ApprovalService } from '@/lib/social/approval-service';
+import { createTrainingFeedback } from '@/lib/training/training-feedback-service';
 import { SOCIAL_PLATFORMS, type ApprovalStatus, type SocialPlatform } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
@@ -131,23 +132,39 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Capture correction for Golden Playbook training when user approves with edits
+    // Write a TrainingFeedback record when the operator approves with edits,
+    // so the correction enters the real training loop (grade → Prompt Engineer → new GM version).
     if (status === 'approved' && correctedContent && originalContent && correctedContent !== originalContent) {
-      try {
-        const { CorrectionCaptureService } = await import('@/lib/social/correction-capture-service');
-        await CorrectionCaptureService.captureCorrection({
-          approvalId,
-          postId: updated.postId,
-          original: originalContent,
-          corrected: correctedContent,
-          platform: updated.platform,
-          flagReason: updated.flagReason,
-          capturedBy: authResult.user.uid,
-        });
-        logger.info('Approvals API: Correction captured for playbook training', { approvalId });
-      } catch (captureError) {
-        // Non-blocking — don't fail the approval if capture fails
-        logger.error('Approvals API: Failed to capture correction', captureError instanceof Error ? captureError : new Error(String(captureError)));
+      const SPECIALIST_BY_PLATFORM: Partial<Record<SocialPlatform, { id: string; name: string }>> = {
+        twitter:   { id: 'TWITTER_X_EXPERT',    name: 'Twitter/X Expert' },
+        bluesky:   { id: 'BLUESKY_EXPERT',       name: 'Bluesky Expert' },
+        mastodon:  { id: 'MASTODON_EXPERT',      name: 'Mastodon Expert' },
+        linkedin:  { id: 'LINKEDIN_EXPERT',      name: 'LinkedIn Expert' },
+        facebook:  { id: 'FACEBOOK_ADS_EXPERT',  name: 'Facebook Ads Expert' },
+        instagram: { id: 'INSTAGRAM_EXPERT',     name: 'Instagram Expert' },
+        pinterest: { id: 'PINTEREST_EXPERT',     name: 'Pinterest Expert' },
+        tiktok:    { id: 'TIKTOK_EXPERT',        name: 'TikTok Expert' },
+        youtube:   { id: 'YOUTUBE_EXPERT',       name: 'YouTube Expert' },
+      };
+      const specialist = SPECIALIST_BY_PLATFORM[updated.platform];
+      if (!specialist) {
+        logger.debug('Approvals API: No specialist mapped for platform — skipping TrainingFeedback write', { platform: updated.platform, approvalId });
+      } else {
+        try {
+          await createTrainingFeedback({
+            targetSpecialistId: specialist.id,
+            targetSpecialistName: specialist.name,
+            sourceReportTaskId: updated.postId,
+            sourceReportExcerpt: correctedContent,
+            grade: 'approve_with_notes',
+            explanation: `Approved with operator edits — original: "${originalContent.slice(0, 200)}"`,
+            graderUserId: authResult.user.uid,
+          });
+          logger.info('Approvals API: TrainingFeedback written for specialist training', { approvalId, specialist: specialist.id });
+        } catch (feedbackError) {
+          // Non-blocking — don't fail the approval if the feedback write fails
+          logger.error('Approvals API: Failed to write TrainingFeedback', feedbackError instanceof Error ? feedbackError : new Error(String(feedbackError)));
+        }
       }
     }
 

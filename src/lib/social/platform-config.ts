@@ -8,16 +8,34 @@
 
 import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
 
+// ─── Color Helper ────────────────────────────────────────────────────────────
+
+/**
+ * Darken a hex color by the given fraction (0–1).
+ * Each RGB channel is multiplied by (1 - amount) and rounded to the nearest integer.
+ * Example: darkenHex('#1DA1F2', 0.2) → '#177EC2'
+ */
+export function darkenHex(hex: string, amount: number): string {
+  const clean = hex.replace('#', '');
+  const r = Math.round(parseInt(clean.slice(0, 2), 16) * (1 - amount));
+  const g = Math.round(parseInt(clean.slice(2, 4), 16) * (1 - amount));
+  const b = Math.round(parseInt(clean.slice(4, 6), 16) * (1 - amount));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
 // ─── Platform Metadata ──────────────────────────────────────────────────────
 
 export interface PlatformMeta {
   label: string;
-  icon: string;        // Short text/emoji icon for compact display
-  emoji: string;       // Emoji for badges/notifications
-  color: string;       // Primary brand hex color
-  tailwind: string;    // Tailwind border/bg/text for unselected state
-  tailwindSelected: string; // Tailwind classes for selected state
-  charLimit: number;   // Max characters per post (0 = no text limit)
+  icon: string;              // Short text/emoji icon for compact display
+  emoji: string;             // Emoji for badges/notifications
+  color: string;             // Primary brand hex color
+  hoverColor: string;        // ~20% darker shade of color for hover/active states
+  tailwind: string;          // Tailwind border/bg/text for unselected state
+  tailwindSelected: string;  // Tailwind classes for selected state
+  charLimit: number;         // Max characters per post (0 = no text limit)
+  verb: string;              // Platform-native noun for a post (e.g. "Tweet", "Toot")
+  previewComponent: string;  // Name of the PostPreview component for this platform
 }
 
 export const PLATFORM_META: Record<SocialPlatform, PlatformMeta> = {
@@ -26,135 +44,180 @@ export const PLATFORM_META: Record<SocialPlatform, PlatformMeta> = {
     icon: '𝕏',
     emoji: '🐦',
     color: '#000000',
+    hoverColor: darkenHex('#000000', 0.2),
     tailwind: 'border-zinc-500 bg-zinc-900 text-white',
     tailwindSelected: 'border-zinc-400 bg-zinc-800 ring-2 ring-zinc-500',
     charLimit: 280,
+    verb: 'Tweet',
+    previewComponent: 'TwitterPostPreview',
   },
   linkedin: {
     label: 'LinkedIn',
     icon: 'in',
     emoji: '💼',
     color: '#0A66C2',
+    hoverColor: darkenHex('#0A66C2', 0.2),
     tailwind: 'border-blue-600 bg-blue-950 text-blue-400',
     tailwindSelected: 'border-blue-500 bg-blue-900 ring-2 ring-blue-500',
     charLimit: 3000,
+    verb: 'Post',
+    previewComponent: 'LinkedInPostPreview',
   },
   facebook: {
     label: 'Facebook',
     icon: 'f',
     emoji: '👤',
     color: '#1877F2',
+    hoverColor: darkenHex('#1877F2', 0.2),
     tailwind: 'border-blue-500 bg-blue-950 text-blue-400',
     tailwindSelected: 'border-blue-400 bg-blue-900 ring-2 ring-blue-400',
     charLimit: 63206,
+    verb: 'Post',
+    previewComponent: 'FacebookPostPreview',
   },
   instagram: {
     label: 'Instagram',
     icon: '📷',
     emoji: '📷',
     color: '#E1306C',
+    hoverColor: darkenHex('#E1306C', 0.2),
     tailwind: 'border-pink-500 bg-pink-950 text-pink-400',
     tailwindSelected: 'border-pink-400 bg-pink-900 ring-2 ring-pink-400',
     charLimit: 2200,
+    verb: 'Post',
+    previewComponent: 'InstagramPostPreview',
   },
   youtube: {
     label: 'YouTube',
     icon: '▶',
     emoji: '▶️',
     color: '#FF0000',
+    hoverColor: darkenHex('#FF0000', 0.2),
     tailwind: 'border-red-500 bg-red-950 text-red-400',
     tailwindSelected: 'border-red-400 bg-red-900 ring-2 ring-red-400',
     charLimit: 5000,
+    verb: 'Post',
+    previewComponent: 'YouTubePostPreview',
   },
   tiktok: {
     label: 'TikTok',
     icon: '♪',
     emoji: '🎵',
     color: '#00F2EA',
+    hoverColor: darkenHex('#00F2EA', 0.2),
     tailwind: 'border-cyan-400 bg-cyan-950 text-cyan-400',
     tailwindSelected: 'border-cyan-300 bg-cyan-900 ring-2 ring-cyan-300',
     charLimit: 2200,
+    verb: 'Video',
+    previewComponent: 'TikTokPostPreview',
   },
   bluesky: {
     label: 'Bluesky',
     icon: '🦋',
     emoji: '🦋',
     color: '#0085FF',
+    hoverColor: darkenHex('#0085FF', 0.2),
     tailwind: 'border-sky-500 bg-sky-950 text-sky-400',
     tailwindSelected: 'border-sky-400 bg-sky-900 ring-2 ring-sky-400',
     charLimit: 300,
+    verb: 'Skeet',
+    previewComponent: 'BlueskyPostPreview',
   },
   threads: {
     label: 'Threads',
     icon: '@',
     emoji: '🧵',
     color: '#000000',
+    hoverColor: darkenHex('#000000', 0.2),
     tailwind: 'border-zinc-500 bg-zinc-900 text-zinc-300',
     tailwindSelected: 'border-zinc-400 bg-zinc-800 ring-2 ring-zinc-400',
     charLimit: 500,
+    verb: 'Post',
+    previewComponent: 'ThreadsPostPreview',
   },
   truth_social: {
     label: 'Truth Social',
     icon: 'T',
     emoji: '🗽',
     color: '#5448EE',
+    hoverColor: darkenHex('#5448EE', 0.2),
     tailwind: 'border-indigo-500 bg-indigo-950 text-indigo-400',
     tailwindSelected: 'border-indigo-400 bg-indigo-900 ring-2 ring-indigo-400',
     charLimit: 500,
+    verb: 'Truth',
+    previewComponent: 'TruthSocialPostPreview',
   },
   mastodon: {
     label: 'Mastodon',
     icon: 'M',
     emoji: '🐘',
     color: '#6364FF',
+    hoverColor: darkenHex('#6364FF', 0.2),
     tailwind: 'border-purple-500 bg-purple-950 text-purple-400',
     tailwindSelected: 'border-purple-400 bg-purple-900 ring-2 ring-purple-400',
     charLimit: 500,
+    verb: 'Toot',
+    previewComponent: 'MastodonPostPreview',
   },
   telegram: {
     label: 'Telegram',
     icon: '✈',
     emoji: '✈️',
     color: '#26A5E4',
+    hoverColor: darkenHex('#26A5E4', 0.2),
     tailwind: 'border-sky-400 bg-sky-950 text-sky-400',
     tailwindSelected: 'border-sky-300 bg-sky-900 ring-2 ring-sky-300',
     charLimit: 4096,
+    verb: 'Message',
+    previewComponent: 'TelegramPostPreview',
   },
   reddit: {
     label: 'Reddit',
     icon: 'R',
     emoji: '🤖',
     color: '#FF4500',
+    hoverColor: darkenHex('#FF4500', 0.2),
     tailwind: 'border-orange-500 bg-orange-950 text-orange-400',
     tailwindSelected: 'border-orange-400 bg-orange-900 ring-2 ring-orange-400',
     charLimit: 40000,
+    verb: 'Post',
+    previewComponent: 'RedditPostPreview',
   },
   pinterest: {
     label: 'Pinterest',
     icon: 'P',
     emoji: '📌',
     color: '#E60023',
+    hoverColor: darkenHex('#E60023', 0.2),
     tailwind: 'border-red-500 bg-red-950 text-red-400',
     tailwindSelected: 'border-red-400 bg-red-900 ring-2 ring-red-400',
     charLimit: 500,
+    verb: 'Pin',
+    previewComponent: 'PinterestPostPreview',
   },
   whatsapp_business: {
     label: 'WhatsApp Business',
     icon: 'W',
     emoji: '💬',
     color: '#25D366',
+    hoverColor: darkenHex('#25D366', 0.2),
     tailwind: 'border-green-500 bg-green-950 text-green-400',
     tailwindSelected: 'border-green-400 bg-green-900 ring-2 ring-green-400',
     charLimit: 4096,
+    verb: 'Broadcast',
+    previewComponent: 'WhatsAppBusinessPostPreview',
   },
   google_business: {
     label: 'Google Business',
     icon: 'G',
     emoji: '📍',
     color: '#4285F4',
+    hoverColor: darkenHex('#4285F4', 0.2),
     tailwind: 'border-blue-500 bg-blue-950 text-blue-400',
     tailwindSelected: 'border-blue-400 bg-blue-900 ring-2 ring-blue-400',
     charLimit: 1500,
+    verb: 'Update',
+    previewComponent: 'GoogleBusinessPostPreview',
   },
 };
 

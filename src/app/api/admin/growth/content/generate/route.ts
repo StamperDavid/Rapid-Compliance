@@ -70,29 +70,7 @@ export async function POST(request: NextRequest) {
       // Non-blocking — generate without Brand DNA if unavailable
     }
 
-    // Load Golden Playbook for social content generation
-    let systemInstruction: string | undefined;
-    if (type === 'social') {
-      try {
-        const { getActivePlaybook } = await import('@/lib/social/golden-playbook-builder');
-        const activePlaybook = await getActivePlaybook();
-        if (activePlaybook?.compiledPrompt) {
-          systemInstruction = brandDnaContext
-            ? `${brandDnaContext}\n\n${activePlaybook.compiledPrompt}`
-            : activePlaybook.compiledPrompt;
-        } else if (brandDnaContext) {
-          systemInstruction = brandDnaContext;
-        }
-      } catch {
-        if (brandDnaContext) {
-          systemInstruction = brandDnaContext;
-        }
-        logger.warn('[AdminContent] Could not load Golden Playbook for social generation', { file: 'content/generate/route.ts' });
-      }
-    } else if (brandDnaContext) {
-      // Blog generation — use Brand DNA as system instruction
-      systemInstruction = brandDnaContext;
-    }
+    const systemInstruction: string | undefined = brandDnaContext || undefined;
 
     let prompt = '';
     if (type === 'blog') {

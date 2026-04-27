@@ -1851,33 +1851,7 @@ export class AutonomousPostingAgent {
         // Non-blocking — generate without Brand DNA if unavailable
       }
 
-      // Load active Golden Playbook for brand voice + learned corrections
-      let systemInstruction: string | undefined;
-      try {
-        const { getActivePlaybook } = await import('@/lib/social/golden-playbook-builder');
-        const activePlaybook = await getActivePlaybook();
-        if (activePlaybook?.compiledPrompt) {
-          systemInstruction = brandDnaContext
-            ? `${brandDnaContext}\n\n${activePlaybook.compiledPrompt}`
-            : activePlaybook.compiledPrompt;
-          logger.info('AutonomousPostingAgent: Using Golden Playbook for generation', {
-            version: activePlaybook.version,
-            isActive: activePlaybook.isActive,
-            file: 'autonomous-posting-agent.ts',
-          });
-        } else if (brandDnaContext) {
-          systemInstruction = brandDnaContext;
-        }
-      } catch (playbookError) {
-        // Non-blocking — generate without playbook if unavailable
-        if (brandDnaContext) {
-          systemInstruction = brandDnaContext;
-        }
-        logger.warn('AutonomousPostingAgent: Could not load Golden Playbook, generating without it', {
-          error: playbookError instanceof Error ? playbookError.message : String(playbookError),
-          file: 'autonomous-posting-agent.ts',
-        });
-      }
+      const systemInstruction: string | undefined = brandDnaContext || undefined;
 
       const platformGuide = options.platform === 'twitter'
         ? 'Keep it under 280 characters. Be concise and engaging.'
