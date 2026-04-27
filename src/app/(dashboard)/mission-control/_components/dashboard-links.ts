@@ -32,7 +32,7 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   // Image
   create_image: { route: '/content/image-generator', label: 'Image Generator' },
   // Other tools
-  social_post: { route: '/social/command-center', label: 'Social Command Center' },
+  social_post: { route: '/social', label: 'Social Hub' },
   voice_agent: { route: '/calls', label: 'Voice Calls' },
   save_blog_draft: { route: '/website/blog', label: 'Blog' },
   research_trending_topics: { route: '/growth/keywords', label: 'Keywords & Research' },
@@ -43,7 +43,7 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   batch_produce_videos: { route: '/content/video/calendar', label: 'Content Calendar' },
   // Campaign deliverable steps (fallbacks — toolResult.reviewLink takes priority)
   campaign_video: { route: '/content/video', label: 'Video Studio' },
-  campaign_social: { route: '/social/command-center', label: 'Social Command Center' },
+  campaign_social: { route: '/social', label: 'Social Hub' },
   campaign_email: { route: '/email/campaigns', label: 'Email Campaigns' },
   campaign_blog: { route: '/website/blog', label: 'Blog' },
   campaign_research: { route: '/mission-control', label: 'Campaign Review' },

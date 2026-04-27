@@ -101,7 +101,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'campaigns', label: 'Campaigns', href: '/campaigns', icon: Rocket, iconColor: 'var(--color-accent)' },
-      { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
+      { id: 'social-hub', label: 'Social Hub', href: '/social', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
       { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
       { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
@@ -275,8 +275,8 @@ export default function AdminSidebar() {
     }
 
     // Social Hub — all /social/* (analytics now absorbed as tab)
-    if (href === '/social/command-center') {
-      return pathname.startsWith('/social/') && !pathname.startsWith('/social/training');
+    if (href === '/social') {
+      return pathname === '/social' || (pathname.startsWith('/social/') && !pathname.startsWith('/social/training'));
     }
 
     // Content Generator hub — video, image, editor, library, voice lab

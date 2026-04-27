@@ -462,7 +462,7 @@ export default function WorkspaceDashboardPage() {
           <div className="flex flex-col gap-3 mt-3">
             <NavRow icon={<Mail size={14} />} label="Email Campaigns" href="/email/campaigns" />
             <NavRow icon={<Send size={14} />} label="Sequences" href="/outbound/sequences" />
-            <NavRow icon={<Share2 size={14} />} label="Social Hub" href="/social/command-center" />
+            <NavRow icon={<Share2 size={14} />} label="Social Hub" href="/social" />
             <NavRow icon={<FileText size={14} />} label="Forms" href="/forms" />
           </div>
           <SectionFooter text="View outreach" />
