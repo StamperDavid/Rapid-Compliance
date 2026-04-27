@@ -23,6 +23,11 @@
  * - PAID_ADS_SPECIALIST: Campaign strategy, budget allocation, ad optimization
  * - SEO_EXPERT: Keyword research, content optimization
  * - GROWTH_ANALYST: Performance analytics, mutation directives, growth tracking
+ * - REDDIT_EXPERT: Community engagement, subreddit-aware posts, AMA-style content
+ * - THREADS_EXPERT: Meta Threads minimalist posts, thread chains, conversational tone
+ * - GOOGLE_BUSINESS_EXPERT: Local business updates, CTA-driven posts, Google Business Profile
+ * - TELEGRAM_EXPERT: Telegram channel announcements, broadcasts, longer-form content
+ * - WHATSAPP_BUSINESS_EXPERT: WhatsApp Business broadcasts, template messages, opt-in comms
  *
  * @module agents/marketing/manager
  */
@@ -42,6 +47,11 @@ import { getPinterestExpert } from './pinterest/specialist';
 import { getBlueskyExpert } from './bluesky/specialist';
 import { getMastodonExpert } from './mastodon/specialist';
 import { getPaidAdsSpecialist } from './paid-ads/specialist';
+import { getRedditExpert } from './reddit/specialist';
+import { getThreadsExpert } from './threads/specialist';
+import { getGoogleBusinessExpert } from './google-business/specialist';
+import { getTelegramExpert } from './telegram/specialist';
+import { getWhatsAppBusinessExpert } from './whatsapp-business/specialist';
 import {
   getMemoryVault,
   shareInsight,
@@ -87,6 +97,11 @@ SPECIALISTS YOU ORCHESTRATE:
 - PAID_ADS_SPECIALIST: Paid campaign strategy, budget allocation, audience targeting, ad optimization across all platforms
 - SEO_EXPERT: Keyword research, content optimization, search visibility
 - GROWTH_ANALYST: Performance analytics, pattern identification, strategy mutations, growth tracking
+- REDDIT_EXPERT: Community engagement, subreddit-aware posts, AMA-style content, organic discussion
+- THREADS_EXPERT: Meta Threads minimalist posts, thread chains, conversational tone
+- GOOGLE_BUSINESS_EXPERT: Local business updates, CTA-driven posts, Google Business Profile
+- TELEGRAM_EXPERT: Telegram channel announcements, broadcasts, longer-form content with formatting
+- WHATSAPP_BUSINESS_EXPERT: WhatsApp Business broadcasts, template messages, opt-in audience comms
 
 ## INDUSTRY-AGNOSTIC APPROACH
 - NEVER assume a specific industry (trucking, SaaS, retail, etc.)
@@ -138,6 +153,21 @@ Best for: Cross-platform paid campaign strategy, budget allocation, audience tar
 
 ### SEO (SEO_EXPERT)
 Best for: Keyword strategy, content optimization, organic search visibility
+
+### Reddit (REDDIT_EXPERT)
+Best for: Community engagement, subreddit-specific posts, AMA-style content, organic discussion threads
+
+### Threads (THREADS_EXPERT)
+Best for: Meta Threads short posts, thread chains, conversational and minimalist content style
+
+### Google Business Profile (GOOGLE_BUSINESS_EXPERT)
+Best for: Local business updates, CTA-driven posts on Google Business Profile, Google Maps visibility
+
+### Telegram (TELEGRAM_EXPERT)
+Best for: Telegram channel broadcasts, longer-form announcements, Markdown-formatted content, subscriber updates
+
+### WhatsApp Business (WHATSAPP_BUSINESS_EXPERT)
+Best for: WhatsApp Business broadcast messages, template-driven communications, opt-in audience outreach
 
 ## BRAND VOICE CONSISTENCY
 All content must reflect the organization's Brand DNA:
@@ -215,13 +245,13 @@ const INTENT_KEYWORDS: Record<CampaignIntent, string[]> = {
  * Specialist mapping by intent
  */
 const INTENT_SPECIALISTS: Record<CampaignIntent, string[]> = {
-  FULL_FUNNEL: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST'],
-  AWARENESS: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT'],
-  LEAD_GENERATION: ['SEO_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST'],
-  THOUGHT_LEADERSHIP: ['SEO_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT'],
-  VIRAL_CONTENT: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'INSTAGRAM_EXPERT'],
+  FULL_FUNNEL: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST', 'REDDIT_EXPERT', 'THREADS_EXPERT', 'GOOGLE_BUSINESS_EXPERT', 'TELEGRAM_EXPERT', 'WHATSAPP_BUSINESS_EXPERT'],
+  AWARENESS: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT', 'GOOGLE_BUSINESS_EXPERT'],
+  LEAD_GENERATION: ['SEO_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST', 'GOOGLE_BUSINESS_EXPERT'],
+  THOUGHT_LEADERSHIP: ['SEO_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'REDDIT_EXPERT', 'THREADS_EXPERT'],
+  VIRAL_CONTENT: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'INSTAGRAM_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT'],
   PAID_ADVERTISING: ['FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'INSTAGRAM_EXPERT', 'PAID_ADS_SPECIALIST'],
-  ORGANIC_GROWTH: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT'],
+  ORGANIC_GROWTH: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT', 'GOOGLE_BUSINESS_EXPERT'],
   SINGLE_PLATFORM: [], // Determined dynamically
 };
 
@@ -276,6 +306,11 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     'PAID_ADS_SPECIALIST',
     'SEO_EXPERT',
     'GROWTH_ANALYST',
+    'REDDIT_EXPERT',
+    'THREADS_EXPERT',
+    'GOOGLE_BUSINESS_EXPERT',
+    'TELEGRAM_EXPERT',
+    'WHATSAPP_BUSINESS_EXPERT',
   ],
   delegationRules: [
     // TikTok - Viral, short-form video
@@ -352,6 +387,41 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     {
       triggerKeywords: ['seo', 'keyword', 'search engine', 'organic traffic', 'ranking', 'serp', 'google', 'content optimization', 'traffic', 'visitors', 'unique visitors', 'domain analysis', 'backlinks', 'referring domains', 'domain rank', 'website traffic', 'competitor analysis', '.com', '.net', '.org', '.io'],
       delegateTo: 'SEO_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Reddit - Community, subreddit engagement
+    {
+      triggerKeywords: ['reddit', 'subreddit', 'r/', 'upvote', 'karma', 'AMA', 'crosspost'],
+      delegateTo: 'REDDIT_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Threads - Meta Threads platform
+    {
+      triggerKeywords: ['threads', '@threads', 'threads.net', 'thread post', 'meta threads'],
+      delegateTo: 'THREADS_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Google Business Profile - Local listing, maps
+    {
+      triggerKeywords: ['google business', 'google business profile', 'gbp', 'gmb', 'google my business', 'business profile post', 'local listing', 'maps post'],
+      delegateTo: 'GOOGLE_BUSINESS_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Telegram - Channel broadcasts
+    {
+      triggerKeywords: ['telegram', 't.me', 'telegram channel', 'telegram bot', 'telegram broadcast'],
+      delegateTo: 'TELEGRAM_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // WhatsApp Business - Broadcast template messages
+    {
+      triggerKeywords: ['whatsapp', 'whatsapp business', 'wa broadcast', 'whatsapp template', 'wa.me', 'whatsapp message'],
+      delegateTo: 'WHATSAPP_BUSINESS_EXPERT',
       priority: 10,
       requiresApproval: false,
     },
@@ -583,6 +653,11 @@ export class MarketingManager extends BaseManager {
       { name: 'PAID_ADS_SPECIALIST', factory: getPaidAdsSpecialist },
       { name: 'SEO_EXPERT', factory: getSEOExpert },
       { name: 'GROWTH_ANALYST', factory: getGrowthAnalyst },
+      { name: 'REDDIT_EXPERT', factory: getRedditExpert },
+      { name: 'THREADS_EXPERT', factory: getThreadsExpert },
+      { name: 'GOOGLE_BUSINESS_EXPERT', factory: getGoogleBusinessExpert },
+      { name: 'TELEGRAM_EXPERT', factory: getTelegramExpert },
+      { name: 'WHATSAPP_BUSINESS_EXPERT', factory: getWhatsAppBusinessExpert },
     ];
 
     for (const { name, factory } of specialistFactories) {
@@ -1118,6 +1193,13 @@ export class MarketingManager extends BaseManager {
       facebook: 'FACEBOOK_ADS_EXPERT',
       instagram: 'INSTAGRAM_EXPERT',
       pinterest: 'PINTEREST_EXPERT',
+      reddit: 'REDDIT_EXPERT',
+      threads: 'THREADS_EXPERT',
+      'google-business': 'GOOGLE_BUSINESS_EXPERT',
+      googlebusiness: 'GOOGLE_BUSINESS_EXPERT',
+      telegram: 'TELEGRAM_EXPERT',
+      whatsapp: 'WHATSAPP_BUSINESS_EXPERT',
+      'whatsapp-business': 'WHATSAPP_BUSINESS_EXPERT',
     };
     const specialistId = SPECIALIST_BY_PLATFORM[platform];
     if (!specialistId) {
@@ -1150,6 +1232,13 @@ export class MarketingManager extends BaseManager {
         case 'instagram': return (await import('./instagram/specialist')).getInstagramExpert();
         case 'pinterest': return (await import('./pinterest/specialist')).getPinterestExpert();
         case 'mastodon': return (await import('./mastodon/specialist')).getMastodonExpert();
+        case 'reddit': return (await import('./reddit/specialist')).getRedditExpert();
+        case 'threads': return (await import('./threads/specialist')).getThreadsExpert();
+        case 'google-business':
+        case 'googlebusiness': return (await import('./google-business/specialist')).getGoogleBusinessExpert();
+        case 'telegram': return (await import('./telegram/specialist')).getTelegramExpert();
+        case 'whatsapp':
+        case 'whatsapp-business': return (await import('./whatsapp-business/specialist')).getWhatsAppBusinessExpert();
         default: throw new Error(`Unhandled platform: ${platform}`);
       }
     })();
