@@ -154,6 +154,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const senderId = dm.message_create.sender_id;
     const inboundText = dm.message_create.message_data?.text;
+    // X media-attachment extraction goes here when X webhook delivery
+    // is unblocked. X's payload shape (per Account Activity API docs):
+    //   dm.message_create.message_data.attachment = {
+    //     type: 'media',
+    //     media: {
+    //       type: 'photo' | 'video' | 'animated_gif',
+    //       media_url_https: 'https://...'
+    //     }
+    //   }
+    // Mirror the Mastodon dispatcher's mediaAttachments extraction:
+    // map X's media.type → 'image' | 'video' | 'unknown', pull
+    // media_url_https into url, no alt-text concept on X DM media.
+    // Pass as orchestrateInboundDmReply's mediaAttachments arg so the
+    // specialist's vision-capable LLM call sees the image. UNTESTED
+    // until X's webhook delivers DM events again — see CONTINUATION_PROMPT
+    // open issue.
     if (!senderId || !inboundText) {
       const now = new Date().toISOString();
       await doc.ref.update({

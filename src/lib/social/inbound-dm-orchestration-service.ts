@@ -75,6 +75,25 @@ const PLATFORM_LABELS: Record<InboundDmPlatform, string> = {
   mastodon: 'Mastodon',
 };
 
+/**
+ * A media attachment on the inbound DM. The platform-specific
+ * dispatcher extracts these from the inbound message and forwards
+ * them so the specialist's LLM call can actually see the image
+ * (vision-capable model) or at least know the attachment exists +
+ * what its alt text says.
+ */
+export interface InboundDmMediaAttachment {
+  /** Public URL of the media. For an image, this is the URL the LLM's
+   *  vision input can fetch. */
+  url: string;
+  /** Media type — drives whether the LLM gets vision content (image)
+   *  or just text-context fallback (video/audio). */
+  type: 'image' | 'video' | 'audio' | 'unknown';
+  /** Operator-/sender-provided alt text describing the media. Falls
+   *  back to "(no alt text provided)" in the user prompt when absent. */
+  altText?: string;
+}
+
 export interface InboundDmInput {
   platform: InboundDmPlatform;
   /** Stable id used for the Mission and inboundSocialEvents linkage */
@@ -85,6 +104,14 @@ export interface InboundDmInput {
   senderId: string;
   /** Sender's display @handle (optional) */
   senderHandle?: string;
+  /**
+   * Media attachments on the inbound DM. Forwarded to the platform
+   * specialist's compose_dm_reply call so the LLM can actually see
+   * images (or at least know they exist + what they're about) and
+   * compose a context-aware reply rather than asking "what 'all new
+   * look' are you referring to?" when there's a clear image attached.
+   */
+  mediaAttachments?: InboundDmMediaAttachment[];
 }
 
 export interface InboundDmOrchestrationResult {
@@ -131,6 +158,9 @@ async function composeReplyDirect(input: InboundDmInput): Promise<ComposeDmReply
       senderId: input.senderId,
       ...(input.senderHandle ? { senderHandle: input.senderHandle } : {}),
       ...(brandContext ? { brandContext } : {}),
+      ...(input.mediaAttachments && input.mediaAttachments.length > 0
+        ? { mediaAttachments: input.mediaAttachments }
+        : {}),
     },
     requiresResponse: true,
     traceId: `inbound_dm_${input.platform}_${input.inboundEventId}`,
@@ -224,6 +254,9 @@ export async function orchestrateInboundDmReply(input: InboundDmInput): Promise<
     inboundText: input.inboundText,
     senderId: input.senderId,
     ...(input.senderHandle ? { senderHandle: input.senderHandle } : {}),
+    ...(input.mediaAttachments && input.mediaAttachments.length > 0
+      ? { mediaAttachments: input.mediaAttachments }
+      : {}),
     composedReply: composed,
     specialistsUsed: [specialistId],
   };

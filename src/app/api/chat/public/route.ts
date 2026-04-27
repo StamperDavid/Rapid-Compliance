@@ -180,7 +180,10 @@ async function handlePublicChat(request: NextRequest) {
       const { enhanceChatWithRAG } = await import('@/lib/agent/rag-service');
       const ragMessages = messages.map(m => ({
         role: m.role === 'user' ? 'user' as const : 'model' as const,
-        parts: [{ text: m.content }],
+        // Public chatbot messages are always plain text — flatten
+        // defensively since ChatMessage.content is now string | array
+        // for vision support elsewhere in the system.
+        parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
       }));
       const ragResult = await enhanceChatWithRAG(ragMessages, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
@@ -196,11 +199,15 @@ async function handlePublicChat(request: NextRequest) {
     const provider = AIProviderFactory.createProvider(selectedModel);
     
     const startTime = Date.now();
-    // Filter to only valid AI provider roles (messages are already user/assistant, this narrows the type)
-    const validMessages = messages.filter(
-      (msg): msg is ChatMessage & { role: 'user' | 'system' | 'assistant' } =>
-        msg.role === 'user' || msg.role === 'system' || msg.role === 'assistant'
-    );
+    // Filter to only valid AI provider roles AND flatten content
+    // (ChatMessage.content is now string|array for vision support; the
+    // provider's generateResponse signature is string-only).
+    const validMessages = messages
+      .filter((msg) => msg.role === 'user' || msg.role === 'system' || msg.role === 'assistant')
+      .map((msg) => ({
+        role: msg.role as 'user' | 'system' | 'assistant',
+        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+      }));
     const response = await provider.generateResponse(
       validMessages,
       enhancedSystemPrompt,

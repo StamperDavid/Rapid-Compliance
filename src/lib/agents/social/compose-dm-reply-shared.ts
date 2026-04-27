@@ -45,6 +45,22 @@ interface BrandContextInput {
   avoidPhrases?: string[];
 }
 
+/**
+ * A media attachment on the inbound DM. The dispatcher forwards these
+ * so the specialist's LLM call can see images directly (vision-capable
+ * model gets image_url content blocks) and reason about them. Without
+ * this, the AI gets text-only and produces confused replies when the
+ * inbound text is ambiguous but the image makes it clear (e.g. the
+ * sender posts an image of a logo with caption "All new look!" — the
+ * AI without vision asks "what new look?", with vision says "love it,
+ * the new logo really pops").
+ */
+export interface InboundMediaAttachment {
+  url: string;
+  type: 'image' | 'video' | 'audio' | 'unknown';
+  altText?: string;
+}
+
 export interface ComposeDmReplyRequest {
   action: 'compose_dm_reply';
   platform: string;
@@ -53,7 +69,14 @@ export interface ComposeDmReplyRequest {
   senderId?: string;
   inboundText: string;
   brandContext?: BrandContextInput;
+  mediaAttachments?: InboundMediaAttachment[];
 }
+
+const MediaAttachmentSchema = z.object({
+  url: z.string().url(),
+  type: z.enum(['image', 'video', 'audio', 'unknown']),
+  altText: z.string().optional(),
+});
 
 export const ComposeDmReplyRequestSchema = z.object({
   action: z.literal('compose_dm_reply'),
@@ -63,6 +86,7 @@ export const ComposeDmReplyRequestSchema = z.object({
   senderId: z.string().optional(),
   inboundText: z.string().min(1),
   brandContext: z.record(z.unknown()).optional(),
+  mediaAttachments: z.array(MediaAttachmentSchema).optional(),
 });
 
 export interface ComposeDmReplyResult {
@@ -148,6 +172,28 @@ function buildUserPrompt(req: ComposeDmReplyRequest, opts: ComposeDmReplyOptions
   sections.push('"""');
   sections.push('');
 
+  // Media-attachment context. When the inbound DM has attachments,
+  // describe them in the prompt so the LLM knows they exist + what
+  // their alt text says. For images specifically, the actual image
+  // content is also passed as a vision content block in the messages
+  // array (executeComposeDmReply handles that), so the model can SEE
+  // the image. Video/audio are described in text only since OpenRouter
+  // doesn't currently support video/audio input for the models we use.
+  if (req.mediaAttachments && req.mediaAttachments.length > 0) {
+    sections.push('Media attachments on this DM:');
+    for (let i = 0; i < req.mediaAttachments.length; i++) {
+      const m = req.mediaAttachments[i];
+      const altLine = m.altText ? `alt: "${m.altText}"` : 'alt: (sender did not provide alt text)';
+      const visionLine = m.type === 'image'
+        ? '(this image is also attached as vision input — describe what you actually see in your reasoning)'
+        : '(no vision input — reason from alt text + type only)';
+      sections.push(`  [${i + 1}] type=${m.type} ${altLine} ${visionLine}`);
+    }
+    sections.push('');
+    sections.push('When media is attached, your reply MUST acknowledge what the sender shared (the image/video/etc.), not just the text. Generic replies that ignore the attachment read as inattentive.');
+    sections.push('');
+  }
+
   const brand = req.brandContext;
   if (brand) {
     sections.push('Brand context from caller:');
@@ -206,12 +252,30 @@ export async function executeComposeDmReply(
 ): Promise<ComposeDmReplyResult> {
   const userPrompt = buildUserPrompt(req, opts);
 
+  // Build the user message — text-only when no images, multipart with
+  // image_url blocks when the DM has image attachments. Claude (the
+  // default model for these specialists) supports vision via OpenRouter
+  // using the OpenAI-compatible image_url content part. Non-image
+  // attachments (video/audio) are described in the text prompt only;
+  // the vision pass is image-only.
+  const imageAttachments = (req.mediaAttachments ?? []).filter((m) => m.type === 'image');
+  type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>;
+  const userContent: UserContent = imageAttachments.length > 0
+    ? [
+      { type: 'text' as const, text: userPrompt },
+      ...imageAttachments.map((m) => ({
+        type: 'image_url' as const,
+        image_url: { url: m.url },
+      })),
+    ]
+    : userPrompt;
+
   const provider = new OpenRouterProvider(PLATFORM_ID);
   const response = await provider.chat({
     model: ctx.model,
     messages: [
       { role: 'system', content: ctx.resolvedSystemPrompt },
-      { role: 'user', content: userPrompt },
+      { role: 'user', content: userContent },
     ],
     temperature: ctx.temperature,
     maxTokens: ctx.maxTokens,

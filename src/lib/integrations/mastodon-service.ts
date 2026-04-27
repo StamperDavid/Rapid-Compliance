@@ -290,6 +290,19 @@ export interface MastodonConversation {
       username: string;
       acct: string;
     };
+    /**
+     * Mastodon's media attachment array. When a sender attaches an
+     * image/video/audio to their DM, it appears here. The dispatcher
+     * forwards URL + alt-text to the specialist so the AI can actually
+     * see the attachment instead of replying confused-by-text-only.
+     */
+    media_attachments?: Array<{
+      id: string;
+      type: 'image' | 'video' | 'audio' | 'gifv' | 'unknown';
+      url: string;
+      preview_url?: string;
+      description?: string | null; // Mastodon's term for alt text
+    }>;
   } | null;
 }
 
