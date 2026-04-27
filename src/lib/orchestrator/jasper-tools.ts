@@ -295,14 +295,56 @@ interface VoiceAgentArgs {
   valueProposition?: string;
 }
 
+// Aligns with SocialPlatform type in src/types/social.ts (which is what
+// autonomous-posting-agent.executeAction expects). Adding new platforms
+// here requires adding them to SOCIAL_PLATFORMS in social.ts as well.
+type SocialPostPlatform =
+  | 'twitter'
+  | 'linkedin'
+  | 'facebook'
+  | 'instagram'
+  | 'pinterest'
+  | 'bluesky'
+  | 'mastodon'
+  | 'tiktok'
+  | 'youtube'
+  | 'threads'
+  | 'reddit'
+  | 'telegram'
+  | 'whatsapp_business'
+  | 'google_business'
+  | 'truth_social';
+
 interface SocialPostArgs {
   action: 'POST' | 'REPLY' | 'LIKE' | 'FOLLOW' | 'REPOST' | 'RECYCLE' | 'get_status';
-  platform?: 'twitter' | 'linkedin';
+  platform?: SocialPostPlatform;
   content?: string;
   targetPostId?: string;
   targetAccountId?: string;
   mediaUrls?: string[];
   hashtags?: string[];
+}
+
+const VALID_SOCIAL_POST_PLATFORMS: readonly SocialPostPlatform[] = [
+  'twitter', 'linkedin', 'facebook', 'instagram', 'pinterest',
+  'bluesky', 'mastodon', 'tiktok', 'youtube', 'threads', 'reddit',
+  'telegram', 'whatsapp_business', 'google_business', 'truth_social',
+];
+
+/**
+ * Normalize incoming platform aliases to canonical platform names.
+ * Jasper's social_post schema accepts both 'x' and 'twitter' (since
+ * the rebrand) — we map 'x' → 'twitter' here so the autonomous-posting-
+ * agent switch (which is keyed on 'twitter') doesn't fall through.
+ */
+function normalizeSocialPostPlatform(raw: unknown): SocialPostPlatform | undefined {
+  if (typeof raw !== 'string') { return undefined; }
+  const lower = raw.trim().toLowerCase();
+  if (lower === 'x') { return 'twitter'; }
+  if ((VALID_SOCIAL_POST_PLATFORMS as readonly string[]).includes(lower)) {
+    return lower as SocialPostPlatform;
+  }
+  return undefined;
 }
 
 // ============================================================================
@@ -389,11 +431,20 @@ function parseSocialPostArgs(args: Record<string, unknown>): SocialPostArgs | nu
     }
   }
 
+  // Platform validation: accept any of the platforms enumerated by the
+  // social_post tool's schema. Previously this was hardcoded to
+  // twitter|linkedin, which silently stripped the platform value when
+  // Jasper plans against any other platform — the autonomous-posting-
+  // agent would then fall through to the twitter default and 403 with
+  // "wrong auth method" because it was hitting Twitter's API for
+  // Mastodon/Bluesky/etc. content. Bug fixed Apr 26 2026.
+  // 'x' is normalized to 'twitter' here so the autonomous-posting-agent
+  // switch (keyed on 'twitter') matches.
+  const platform = normalizeSocialPostPlatform(args.platform);
+
   return {
     action: args.action as SocialPostArgs['action'],
-    platform: typeof args.platform === 'string' && (args.platform === 'twitter' || args.platform === 'linkedin')
-      ? args.platform
-      : undefined,
+    platform,
     content: typeof args.content === 'string' ? args.content : undefined,
     targetPostId: typeof args.targetPostId === 'string' ? args.targetPostId : undefined,
     targetAccountId: typeof args.targetAccountId === 'string' ? args.targetAccountId : undefined,
@@ -6545,16 +6596,67 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             });
           } else {
             const platform = socialArgs.platform ?? 'twitter';
+
+            // ─── Step-output reference resolution ─────────────────────
+            // Jasper's 2-step social plan has step 1 = delegate_to_marketing
+            // (Marketing Manager produces post + image) and step 2 = social_post
+            // (publish). Step 2's toolArgs reference step 1's output via
+            // strings like "step_1_output_primaryPost" or "step_1_output_mediaUrls".
+            // The step runner does NOT auto-resolve these — we resolve them
+            // here, in the social_post handler, by looking up the prior
+            // delegate_to_marketing step on the same mission and extracting
+            // primaryPost / mediaUrls from its toolResult.
+            //
+            // If `content` looks like a step reference, resolve it. If
+            // resolution fails or there's no prior step, fall back to whatever
+            // string Jasper wrote (graceful degrade to "post the literal
+            // string" rather than fail mysteriously).
+            let resolvedContent = socialArgs.content;
+            let resolvedMediaUrls = socialArgs.mediaUrls;
+
+            const isStepRef = (val: string | undefined): val is string =>
+              typeof val === 'string' && /^step[_\s-]?\d+_output/i.test(val.trim());
+
+            if ((isStepRef(socialArgs.content) || isStepRef(args.mediaUrls as string | undefined)) && context?.missionId) {
+              const { getMission } = await import('@/lib/orchestrator/mission-persistence');
+              const mission = await getMission(context.missionId);
+              const prior = mission?.steps?.find(
+                (s: { toolName?: string; status?: string; toolResult?: string }) =>
+                  s.toolName === 'delegate_to_marketing'
+                  && s.status === 'COMPLETED'
+                  && typeof s.toolResult === 'string',
+              );
+              if (prior?.toolResult) {
+                try {
+                  const parsed = JSON.parse(prior.toolResult) as {
+                    primaryPost?: string;
+                    mediaUrls?: string[];
+                    data?: { primaryPost?: string; mediaUrls?: string[] };
+                  };
+                  const stepPrimaryPost = parsed.primaryPost ?? parsed.data?.primaryPost;
+                  const stepMediaUrls = parsed.mediaUrls ?? parsed.data?.mediaUrls;
+                  if (isStepRef(socialArgs.content) && typeof stepPrimaryPost === 'string') {
+                    resolvedContent = stepPrimaryPost;
+                  }
+                  if (isStepRef(args.mediaUrls as string | undefined) && Array.isArray(stepMediaUrls)) {
+                    resolvedMediaUrls = stepMediaUrls;
+                  }
+                } catch {
+                  // Fall through with unresolved content — caller sees the literal
+                }
+              }
+            }
+
             const { createPostingAgent } = await import('@/lib/social/autonomous-posting-agent');
             const agent = await createPostingAgent({ platforms: [platform] });
 
             const actionResult = await agent.executeAction({
               type: socialArgs.action,
               platform,
-              content: socialArgs.content,
+              content: resolvedContent,
               targetPostId: socialArgs.targetPostId,
               targetAccountId: socialArgs.targetAccountId,
-              mediaUrls: socialArgs.mediaUrls,
+              mediaUrls: resolvedMediaUrls,
               hashtags: socialArgs.hashtags,
             });
 
