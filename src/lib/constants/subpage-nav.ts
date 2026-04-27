@@ -129,7 +129,6 @@ export const PROPOSALS_TABS: SubpageNavItem[] = [
 export const TRAINING_HUB_TABS: SubpageNavItem[] = [
   { label: 'AI Training', href: '/settings/ai-agents/training' },
   { label: 'Voice', href: '/voice/training' },
-  { label: 'Social', href: '/social/training' },
   { label: 'SEO', href: '/seo/training' },
 ];
 

@@ -276,7 +276,7 @@ export default function AdminSidebar() {
 
     // Social Hub — all /social/* (analytics now absorbed as tab)
     if (href === '/social') {
-      return pathname === '/social' || (pathname.startsWith('/social/') && !pathname.startsWith('/social/training'));
+      return pathname === '/social' || pathname.startsWith('/social/');
     }
 
     // Content Generator hub — video, image, editor, library, voice lab
@@ -298,7 +298,6 @@ export default function AdminSidebar() {
         pathname.startsWith('/mission-control') ||
         pathname.startsWith('/settings/ai-agents/') ||
         pathname.startsWith('/voice/training') ||
-        pathname.startsWith('/social/training') ||
         pathname.startsWith('/seo/training') ||
         pathname.startsWith('/ai/') ||
         pathname === '/ai-agents';

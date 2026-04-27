@@ -132,7 +132,6 @@ export function buildNavigationStructure(): NavSection[] {
       items: [
         { id: 'agent_training', href: '/settings/ai-agents/training', icon: '🤖', label: 'Agent Training', featureId: 'agent_training' },
         { id: 'voice_ai', href: '/voice/training', icon: '🎙️', label: 'Voice AI Lab', featureId: 'voice_ai' },
-        { id: 'social_ai', href: '/social/training', icon: '📢', label: 'Social AI Lab', featureId: 'social_ai' },
         { id: 'seo_ai', href: '/seo/training', icon: '🔍', label: 'SEO AI Lab', featureId: 'seo_ai' },
         { id: 'datasets', href: '/ai/datasets', icon: '📚', label: 'Datasets', featureId: 'datasets' },
         { id: 'fine_tuning', href: '/ai/fine-tuning', icon: '🎯', label: 'Fine-Tuning', featureId: 'fine_tuning' },
