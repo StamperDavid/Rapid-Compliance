@@ -271,16 +271,13 @@ export default function SpecialistIdentityCard({
             <ul className="space-y-1.5">
               {specialist.currentlyWorking.map((item) => (
                 <li key={`${item.missionId}-${item.stepName}`}>
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
                     onClick={() => {
-                      // Mission Control's actual deep-link param is `mission`;
-                      // we send `missionId` too so the spec-named param works
-                      // if Stream A adds an alias.
                       const id = encodeURIComponent(item.missionId);
                       router.push(`/mission-control?mission=${id}&missionId=${id}`);
                     }}
-                    className="w-full text-left flex items-center justify-between gap-2 rounded-md border border-border-light bg-card px-3 py-2 hover:bg-surface-elevated transition-colors"
+                    className="w-full justify-between h-auto py-2"
                   >
                     <span className="text-sm text-foreground truncate">
                       {item.stepName}
@@ -290,7 +287,7 @@ export default function SpecialistIdentityCard({
                     >
                       {workStatusLabel(item.status)}
                     </span>
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
