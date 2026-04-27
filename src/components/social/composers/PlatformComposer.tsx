@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { CardTitle } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { PLATFORM_META } from '@/lib/social/platform-config';
@@ -265,9 +266,9 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-foreground">
+            <CardTitle as="h3">
               Compose for {meta.label}
-            </h3>
+            </CardTitle>
             {connected === true && (
               <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
                 <CheckCircle2 className="h-3.5 w-3.5" />

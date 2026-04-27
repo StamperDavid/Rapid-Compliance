@@ -14,6 +14,8 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 
+import Image from 'next/image';
+
 import type { SocialMediaPost } from '@/types/social';
 import { cn } from '@/lib/utils';
 
@@ -132,12 +134,13 @@ export function RedditPostPreview({
 
         {mediaUrl && (
           <div className="mt-3 overflow-hidden rounded-md border border-border-light">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={mediaUrl}
               alt=""
+              width={500}
+              height={384}
               className="max-h-96 w-full object-contain"
-              loading="lazy"
+              unoptimized
             />
           </div>
         )}

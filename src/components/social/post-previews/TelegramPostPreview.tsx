@@ -124,12 +124,13 @@ export function TelegramPostPreview({
         {/* Media — bleed to card edges */}
         {mediaUrl && (
           <div className={cn('mt-3 overflow-hidden', compact ? '-mx-3' : '-mx-4')}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={mediaUrl}
               alt=""
+              width={500}
+              height={384}
               className="max-h-96 w-full object-cover"
-              loading="lazy"
+              unoptimized
             />
           </div>
         )}

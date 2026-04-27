@@ -149,12 +149,12 @@ export function GoogleBusinessPostPreview({
         {/* Media */}
         {mediaUrl && (
           <div className="relative mt-3 aspect-[4/3] overflow-hidden rounded-md bg-surface-elevated">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={mediaUrl}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
+              fill
+              className="object-cover"
+              unoptimized
             />
           </div>
         )}

@@ -41,7 +41,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Caption } from '@/components/ui/typography';
+import { Caption, SectionTitle } from '@/components/ui/typography';
 
 import PlatformHeaderBand, {
   type PlatformHeaderStatus,
@@ -647,9 +647,9 @@ function ParkedNotice({ platform, config }: ParkedNoticeProps): React.ReactEleme
             <AlertCircle className="h-8 w-8 text-destructive" />
           </span>
         </div>
-        <h2 className="text-2xl font-bold text-foreground">
+        <SectionTitle className="text-2xl font-bold">
           {meta.label} is parked
-        </h2>
+        </SectionTitle>
         {config.blockReason && (
           <p className="mx-auto max-w-2xl text-sm text-muted-foreground">
             {config.blockReason}
