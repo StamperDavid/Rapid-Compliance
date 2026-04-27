@@ -1,19 +1,22 @@
 /**
- * Bluesky Expert — REAL AI AGENT (compose_dm_reply only, lean v1)
+ * Bluesky Expert — REAL AI AGENT (LLM-backed, full coverage)
  *
- * Composes brand-voiced replies to inbound Bluesky DMs. Mirrors the
- * Twitter/X Expert's `compose_dm_reply` action but for Bluesky's voice
- * + ergonomics (longer text limit — 1000 chars vs X's 240 — but the
- * brand playbook still asks for short, conversational replies).
+ * Covers both organic post creation and inbound DM auto-reply for the
+ * brand's Bluesky account on the AT Protocol network.
  *
  * Loads its Golden Master from Firestore (collection
  * `specialistGoldenMasters`, doc id `sgm_bluesky_expert_<industry>_v<n>`).
  * Brand DNA is baked into the GM at seed time per Standing Rule #1.
  *
  * Supported actions:
- *   - compose_dm_reply  (Marketing Manager's inbound-DM fast-path is
- *     the only caller anywhere in the codebase; called when
- *     delegate_to_marketing.inboundContext.platform === 'bluesky')
+ *   - generate_content    Marketing Manager's organic-post path. Produces
+ *                         platform-shaped posts (≤300 char Bluesky limit,
+ *                         ≤240 char target), 2-3 alternatives, hashtag
+ *                         strategy, suggested alt-text, best posting
+ *                         time, strategy reasoning.
+ *   - compose_dm_reply    Inbound DM dispatcher's path. Produces a single
+ *                         brand-voice reply to a DM the brand received
+ *                         via the AT Protocol chat service.
  */
 
 import { z } from 'zod';
@@ -25,13 +28,37 @@ import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golde
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
 const FILE = 'marketing/bluesky/specialist.ts';
 const SPECIALIST_ID = 'BLUESKY_EXPERT';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['compose_dm_reply'] as const;
+const SUPPORTED_ACTIONS = ['generate_content', 'compose_dm_reply'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
 const DM_REPLY_MAX_TOKENS = 1200;
+
+/**
+ * Realistic max_tokens floor for the worst-case Bluesky Expert
+ * generate_content response.
+ *
+ * Derivation:
+ *   primaryPost 300 + 3 × alternativePosts 300 = 1200
+ *   5 hashtags × 30 = 150
+ *   imageAltTextSuggestion 300
+ *   bestPostingTime 300
+ *   strategyReasoning 2000
+ *   ≈ 3950 chars total prose
+ *   /3.0 chars/token = 1320 tokens
+ *   + JSON structure (~200 tokens)
+ *   + 25% safety margin
+ *   ≈ 1900 tokens minimum.
+ *
+ *   Setting to 2500 for comfortable headroom.
+ */
+const GENERATE_CONTENT_MAX_TOKENS = 2500;
 
 interface BlueskyExpertGMConfig {
   systemPrompt: string;
@@ -48,20 +75,26 @@ const CONFIG: SpecialistConfig = {
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'MARKETING_MANAGER',
-    capabilities: ['compose_dm_reply'],
+    capabilities: ['generate_content', 'compose_dm_reply'],
   },
-  systemPrompt: '', // Loaded from Firestore Golden Master at runtime
-  tools: ['compose_dm_reply'],
+  systemPrompt: '',
+  tools: ['generate_content', 'compose_dm_reply'],
   outputSchema: {
     type: 'object',
     properties: {
-      replyText: { type: 'string' },
-      reasoning: { type: 'string' },
+      primaryPost: { type: 'string' },
+      alternativePosts: { type: 'array' },
+      hashtags: { type: 'array' },
+      strategyReasoning: { type: 'string' },
     },
   },
-  maxTokens: DM_REPLY_MAX_TOKENS,
+  maxTokens: GENERATE_CONTENT_MAX_TOKENS,
   temperature: 0.7,
 };
+
+// ============================================================================
+// INPUT CONTRACT — generate_content
+// ============================================================================
 
 interface BrandContextInput {
   industry?: string;
@@ -69,6 +102,42 @@ interface BrandContextInput {
   keyPhrases?: string[];
   avoidPhrases?: string[];
 }
+
+interface SeoKeywordsInput {
+  primary?: string;
+  secondary?: string[];
+  recommendations?: string[];
+}
+
+export interface GenerateContentRequest {
+  action: 'generate_content';
+  topic: string;
+  contentType: string;
+  targetAudience?: string;
+  tone?: string;
+  campaignGoal?: string;
+  brandContext?: BrandContextInput;
+  seoKeywords?: SeoKeywordsInput;
+  /** When the operator provides exact post text, the LLM uses it as-is
+   *  rather than drafting fresh copy. */
+  verbatimText?: string;
+}
+
+const GenerateContentRequestSchema = z.object({
+  action: z.literal('generate_content'),
+  topic: z.string().min(1),
+  contentType: z.string().min(1).default('post'),
+  targetAudience: z.string().optional(),
+  tone: z.string().optional(),
+  campaignGoal: z.string().optional(),
+  brandContext: z.record(z.unknown()).optional(),
+  seoKeywords: z.record(z.unknown()).optional(),
+  verbatimText: z.string().optional(),
+});
+
+// ============================================================================
+// INPUT CONTRACT — compose_dm_reply
+// ============================================================================
 
 export interface ComposeDmReplyRequest {
   action: 'compose_dm_reply';
@@ -99,6 +168,39 @@ const ComposeDmReplyResultSchema = z.object({
 
 export type ComposeDmReplyResult = z.infer<typeof ComposeDmReplyResultSchema>;
 
+// ============================================================================
+// OUTPUT CONTRACT — generate_content
+// ============================================================================
+
+const BlueskyContentResultSchema = z.object({
+  /** Primary post text — what the brand should publish. Bluesky's
+   *  hard char limit is 300; we cap at 290 to leave a small buffer
+   *  for any post-process formatting (e.g. handle expansion). */
+  primaryPost: z.string().min(10).max(290),
+  /** 2-3 alternative phrasings the operator can pick from. */
+  alternativePosts: z.array(z.string().min(10).max(290)).min(2).max(3),
+  /** 0-5 hashtags. Bluesky supports them but they're not discovery-
+   *  primary like Mastodon. The brand voice prefers ≤2 well-chosen
+   *  tags or none at all. */
+  hashtags: z.array(z.string().min(1).max(50)).min(0).max(5),
+  /** Suggested alt text if the post will have an attached image.
+   *  Bluesky has alt text support and the culture values it. */
+  imageAltTextSuggestion: z.string().max(300).nullable(),
+  /** Brief description of the best posting window for this content. */
+  bestPostingTime: z.string().min(10).max(300),
+  /** Engagement projection. Honest assessment, not optimistic theater. */
+  estimatedEngagement: z.enum(['low', 'medium', 'high']),
+  /** Why this content/strategy fits Bluesky culture + brand voice.
+   *  Operator reads this in Mission Control during plan review. */
+  strategyReasoning: z.string().min(50).max(2000),
+});
+
+export type BlueskyContentResult = z.infer<typeof BlueskyContentResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
 interface LlmCallContext {
   gm: BlueskyExpertGMConfig;
   resolvedSystemPrompt: string;
@@ -109,7 +211,7 @@ async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
   if (!gmRecord) {
     throw new Error(
       `Bluesky Expert GM not found for industryKey=${industryKey}. ` +
-      `Run scripts/seed-bluesky-expert-gm.ts to seed.`,
+      `Run npx tsx scripts/seed-bluesky-expert-gm.ts to seed.`,
     );
   }
   const config = gmRecord.config as Partial<BlueskyExpertGMConfig>;
@@ -119,11 +221,13 @@ async function loadGMConfig(industryKey: string): Promise<LlmCallContext> {
       `Bluesky Expert GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
     );
   }
+  const gmMaxTokens = config.maxTokens ?? GENERATE_CONTENT_MAX_TOKENS;
+  const effectiveMaxTokens = Math.max(gmMaxTokens, GENERATE_CONTENT_MAX_TOKENS);
   const gm: BlueskyExpertGMConfig = {
     systemPrompt,
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
-    maxTokens: Math.max(config.maxTokens ?? DM_REPLY_MAX_TOKENS, DM_REPLY_MAX_TOKENS),
+    maxTokens: effectiveMaxTokens,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
   return { gm, resolvedSystemPrompt: systemPrompt };
@@ -135,6 +239,144 @@ function stripJsonFences(raw: string): string {
     .replace(/\n?\s*```[\s\S]*$/i, '')
     .trim();
 }
+
+async function callOpenRouter(
+  ctx: LlmCallContext,
+  userPrompt: string,
+  maxTokens: number,
+): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens,
+  });
+
+  if (response.finishReason === 'length') {
+    throw new Error(
+      `Bluesky Expert: LLM response truncated at maxTokens=${maxTokens}. ` +
+      'Either raise the budget or shorten the brief.',
+    );
+  }
+
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('Bluesky Expert: OpenRouter returned empty response');
+  }
+  return rawContent;
+}
+
+// ============================================================================
+// ACTION: generate_content
+// ============================================================================
+
+function buildGenerateContentUserPrompt(req: GenerateContentRequest): string {
+  const sections: string[] = [
+    'ACTION: generate_content',
+    '',
+    `Platform: Bluesky (AT Protocol)`,
+    `Topic: ${req.topic}`,
+    `Content type: ${req.contentType}`,
+  ];
+
+  if (req.targetAudience) { sections.push(`Target audience: ${req.targetAudience}`); }
+  if (req.tone) { sections.push(`Tone override: ${req.tone}`); }
+  if (req.campaignGoal) { sections.push(`Campaign goal: ${req.campaignGoal}`); }
+
+  if (req.verbatimText) {
+    sections.push('');
+    sections.push('Operator-provided verbatim text (use as primary post unless it exceeds Bluesky\'s 300-char limit):');
+    sections.push('"""');
+    sections.push(req.verbatimText);
+    sections.push('"""');
+  }
+
+  const brand = req.brandContext;
+  if (brand) {
+    sections.push('');
+    sections.push('Brand context:');
+    if (brand.industry) { sections.push(`  Industry: ${brand.industry}`); }
+    if (brand.toneOfVoice) { sections.push(`  Tone of voice: ${brand.toneOfVoice}`); }
+    if (brand.keyPhrases && brand.keyPhrases.length > 0) {
+      sections.push(`  Key phrases: ${brand.keyPhrases.join(', ')}`);
+    }
+    if (brand.avoidPhrases && brand.avoidPhrases.length > 0) {
+      sections.push(`  Avoid phrases: ${brand.avoidPhrases.join(', ')}`);
+    }
+  }
+
+  const seo = req.seoKeywords;
+  if (seo) {
+    sections.push('');
+    sections.push('SEO keywords:');
+    if (seo.primary) { sections.push(`  Primary: ${seo.primary}`); }
+    if (seo.secondary && seo.secondary.length > 0) {
+      sections.push(`  Secondary: ${seo.secondary.join(', ')}`);
+    }
+  }
+
+  sections.push('');
+  sections.push('Produce a complete Bluesky content plan. Respond with ONLY a valid JSON object — no markdown fences, no preamble. Schema:');
+  sections.push('');
+  sections.push('{');
+  sections.push('  "primaryPost": "<the post text — 10-290 chars, target ≤240>",');
+  sections.push('  "alternativePosts": ["<2-3 alternative phrasings, each 10-290 chars>"],');
+  sections.push('  "hashtags": ["<0-5 hashtags WITHOUT the # symbol>"],');
+  sections.push('  "imageAltTextSuggestion": "<descriptive alt text 50-300 chars if image attached, else null>",');
+  sections.push('  "bestPostingTime": "<window guidance, 10-300 chars>",');
+  sections.push('  "estimatedEngagement": "<low | medium | high>",');
+  sections.push('  "strategyReasoning": "<why this approach fits Bluesky culture + brand voice, 50-2000 chars>"');
+  sections.push('}');
+  sections.push('');
+  sections.push('Hard rules:');
+  sections.push('- primaryPost MUST be 10-290 chars (Bluesky\'s hard limit is 300; we leave a small buffer).');
+  sections.push('- Bluesky culture skews tech-fluent, decentralization-curious, anti-corporate, conversational. Sound like a smart human at a small company, not a brand.');
+  sections.push('- Bluesky users dislike marketing-speak more than X users do. "Revolutionary", "industry-leading", "game-changing", "unlock", "transform", "leverage" — forbidden.');
+  sections.push('- No exclamation overload (zero or one ! in primaryPost).');
+  sections.push('- No emoji unless the brand voice playbook specifically allows it (most brands: zero).');
+  sections.push('- Hashtags: prefer 0-2 well-chosen tags. Bluesky uses hashtags less prominently than Mastodon — clutter looks spammy.');
+  sections.push('- imageAltTextSuggestion: if the post would benefit from an image, provide descriptive alt text. If the post stands alone, null.');
+  sections.push('- If verbatimText was provided, primaryPost MUST be the verbatim text (or the closest version that fits 290 chars). Alternative posts can vary slightly.');
+  sections.push('- If brandContext.avoidPhrases is provided, never use those phrases.');
+  sections.push('- If brandContext.keyPhrases is provided, weave at least one in naturally (do NOT force them).');
+  sections.push('- Output ONLY the JSON object.');
+
+  return sections.join('\n');
+}
+
+async function executeGenerateContent(
+  req: GenerateContentRequest,
+  ctx: LlmCallContext,
+): Promise<BlueskyContentResult> {
+  const userPrompt = buildGenerateContentUserPrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt, GENERATE_CONTENT_MAX_TOKENS);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Bluesky Expert generate_content output was not valid JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  const result = BlueskyContentResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Bluesky Expert generate_content output did not match schema: ${issueSummary}`);
+  }
+  return result.data;
+}
+
+// ============================================================================
+// ACTION: compose_dm_reply
+// ============================================================================
 
 function buildComposeDmReplyUserPrompt(req: ComposeDmReplyRequest): string {
   const sections: string[] = [
@@ -173,7 +415,7 @@ function buildComposeDmReplyUserPrompt(req: ComposeDmReplyRequest): string {
   sections.push('  "replyText": "<the reply text the brand will send, 1-1000 chars; brand playbook target ≤300>",');
   sections.push('  "reasoning": "<why this reply is appropriate given the inbound message and brand voice, 20-1500 chars>",');
   sections.push('  "confidence": "<low | medium | high>",');
-  sections.push('  "suggestEscalation": <true | false — set true if a human should review before send because the inbound is hostile, off-topic, contains a complaint, or asks for something the brand cannot promise>');
+  sections.push('  "suggestEscalation": <true | false>');
   sections.push('}');
   sections.push('');
   sections.push('Hard rules:');
@@ -183,7 +425,7 @@ function buildComposeDmReplyUserPrompt(req: ComposeDmReplyRequest): string {
   sections.push('- If the sender asks about pricing, point to https://www.salesvelocity.ai instead of quoting prices in the DM.');
   sections.push('- Hostile / complaining / requests for things the brand cannot promise → suggestEscalation=true and a polite holding reply.');
   sections.push('- No marketing-speak, no emoji, no exclamation overload.');
-  sections.push('- Plain text. No URLs unless the inbound message explicitly asks where to find something — default destination is https://www.salesvelocity.ai.');
+  sections.push('- Plain text. No URLs unless the inbound message explicitly asks.');
   sections.push('- Output ONLY the JSON object.');
 
   return sections.join('\n');
@@ -194,28 +436,7 @@ async function executeComposeDmReply(
   ctx: LlmCallContext,
 ): Promise<ComposeDmReplyResult> {
   const userPrompt = buildComposeDmReplyUserPrompt(req);
-  const provider = new OpenRouterProvider(PLATFORM_ID);
-  const response = await provider.chat({
-    model: ctx.gm.model,
-    messages: [
-      { role: 'system', content: ctx.resolvedSystemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    temperature: ctx.gm.temperature,
-    maxTokens: DM_REPLY_MAX_TOKENS,
-  });
-
-  if (response.finishReason === 'length') {
-    throw new Error(
-      `Bluesky Expert compose_dm_reply: LLM truncated at maxTokens=${DM_REPLY_MAX_TOKENS}. ` +
-      'Either raise the budget or shorten the inbound text.',
-    );
-  }
-
-  const rawContent = (response.content ?? '').trim();
-  if (rawContent.length === 0) {
-    throw new Error('Bluesky Expert compose_dm_reply: LLM returned empty response');
-  }
+  const rawContent = await callOpenRouter(ctx, userPrompt, DM_REPLY_MAX_TOKENS);
 
   let parsed: unknown;
   try {
@@ -233,6 +454,10 @@ async function executeComposeDmReply(
   }
   return result.data;
 }
+
+// ============================================================================
+// BLUESKY EXPERT CLASS
+// ============================================================================
 
 export class BlueskyExpert extends BaseSpecialist {
   constructor() { super(CONFIG); }
@@ -263,6 +488,20 @@ export class BlueskyExpert extends BaseSpecialist {
       logger.info(`[BlueskyExpert] Executing action=${action} taskId=${taskId}`, { file: FILE });
 
       const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+
+      if (action === 'generate_content') {
+        const validation = GenerateContentRequestSchema.safeParse({ ...payload, action });
+        if (!validation.success) {
+          const issueSummary = validation.error.issues
+            .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+            .join('; ');
+          return this.createReport(taskId, 'FAILED', null, [
+            `Bluesky Expert generate_content: invalid input payload: ${issueSummary}`,
+          ]);
+        }
+        const data = await executeGenerateContent(validation.data, ctx);
+        return this.createReport(taskId, 'COMPLETED', data);
+      }
 
       if (action === 'compose_dm_reply') {
         const validation = ComposeDmReplyRequestSchema.safeParse({ ...payload, action });
@@ -302,7 +541,7 @@ export class BlueskyExpert extends BaseSpecialist {
   hasRealLogic(): boolean { return true; }
 
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 200, boilerplate: 50 };
+    return { functional: 320, boilerplate: 50 };
   }
 }
 
@@ -317,9 +556,14 @@ export const __internal = {
   DEFAULT_INDUSTRY_KEY,
   SUPPORTED_ACTIONS,
   DM_REPLY_MAX_TOKENS,
+  GENERATE_CONTENT_MAX_TOKENS,
   loadGMConfig,
+  buildGenerateContentUserPrompt,
   buildComposeDmReplyUserPrompt,
+  executeGenerateContent,
   executeComposeDmReply,
   ComposeDmReplyRequestSchema,
   ComposeDmReplyResultSchema,
+  GenerateContentRequestSchema,
+  BlueskyContentResultSchema,
 };

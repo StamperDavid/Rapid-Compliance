@@ -25,6 +25,7 @@ import { createYouTubeService } from '@/lib/integrations/youtube-service';
 import { createTikTokService } from '@/lib/integrations/tiktok-service';
 import { createBlueskyService } from '@/lib/integrations/bluesky-service';
 import { createThreadsService } from '@/lib/integrations/threads-service';
+import { createMastodonService } from '@/lib/integrations/mastodon-service';
 // Truth Social posting parked (Apr 26 2026) — Cloudflare TLS wall blocks
 // Node fetch in production. See CONTINUATION_PROMPT integration matrix.
 // import { createTruthSocialService } from '@/lib/integrations/truth-social-service';
@@ -988,6 +989,18 @@ export class AutonomousPostingAgent {
             imageUrl: mediaUrls?.[0],
           });
           return { success: threadsResult.success, platform, postId, platformPostId: threadsResult.postId, error: threadsResult.error };
+        }
+
+        case 'mastodon': {
+          const mastodonService = await createMastodonService();
+          if (!mastodonService) {
+            return { success: false, platform, postId, error: 'Mastodon service not configured — run scripts/connect-mastodon.ts to authorize and save the access token' };
+          }
+          const mastodonResult = await mastodonService.postStatus({
+            status: content,
+            visibility: 'public',
+          });
+          return { success: mastodonResult.success, platform, postId, platformPostId: mastodonResult.postId, error: mastodonResult.error };
         }
 
         case 'truth_social': {

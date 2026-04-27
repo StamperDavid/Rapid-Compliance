@@ -102,6 +102,15 @@ export const PLATFORM_META: Record<SocialPlatform, PlatformMeta> = {
     tailwindSelected: 'border-indigo-400 bg-indigo-900 ring-2 ring-indigo-400',
     charLimit: 500,
   },
+  mastodon: {
+    label: 'Mastodon',
+    icon: 'M',
+    emoji: '🐘',
+    color: '#6364FF',
+    tailwind: 'border-purple-500 bg-purple-950 text-purple-400',
+    tailwindSelected: 'border-purple-400 bg-purple-900 ring-2 ring-purple-400',
+    charLimit: 500,
+  },
   telegram: {
     label: 'Telegram',
     icon: '✈',
