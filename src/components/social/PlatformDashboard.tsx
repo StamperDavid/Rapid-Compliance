@@ -793,8 +793,24 @@ export function PlatformDashboard({
             <ComingSoonCard platform={platform} config={config} />
           )}
 
-          {/* Composer — the unified composer handles parked/disabled states */}
-          <PlatformComposer platform={platform} />
+          {/* Composer — suppressed for coming_soon platforms (specialist not yet
+              built; credentials alone are not enough to post safely). The
+              unified composer handles every other state including parked. */}
+          {config.state === 'coming_soon' ? (
+            <Card className="border-border-light">
+              <CardContent className="py-5">
+                <p className="text-sm text-muted-foreground">
+                  Composer will activate when{' '}
+                  <span className="font-medium text-foreground">
+                    {config.specialistName ?? `${PLATFORM_META[platform].label} specialist`}
+                  </span>{' '}
+                  is ready.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <PlatformComposer platform={platform} />
+          )}
 
           {/* Recent posts */}
           <RecentPostsList platform={platform} account={headerAccount} />
