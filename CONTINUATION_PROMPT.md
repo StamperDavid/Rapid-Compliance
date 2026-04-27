@@ -1,11 +1,67 @@
 # SalesVelocity.ai — Full-Orchestration Verification Plan
 
-> **Updated:** April 26, 2026 (afternoon).
-> **Status:** Bluesky inbound-DM auto-reply LIVE end-to-end. DM-only Jasper-bypass architecture shipped. compose_dm_reply on 6 specialists via shared mixin. Training loop validated. X DM still blocked X-side (waiting on X's webhook delivery to resume; orchestration code verified working — see open issue below).
+> **Updated:** April 27, 2026 (overnight session, 12+ hours).
+> **Status:** Mastodon outbound post auto-orchestration LIVE end-to-end. First fully Jasper-orchestrated social post landed at https://mastodon.social/@SalesVelocity_Ai/116474951515339832 — content + DALL-E image, both via the operator-approved 2-step plan. Bluesky inbound DM still LIVE. X DM webhook still blocked X-side. Truth Social parked. Next gap: Jasper GM still hasn't been told about Reddit; Reddit specialist not yet built; "media required" rule lives in Jasper v13 only for posts (blogs already had a similar rule, fixed bug there too tonight).
 
 ---
 
-# ✅ TODAY'S WIN — Bluesky inbound DM auto-reply works end-to-end
+# ✅ APR 26-27 OVERNIGHT WINS
+
+## Outbound social post via Jasper orchestration — LIVE end-to-end on Mastodon
+
+First fully successful Jasper-orchestrated social post landed tonight. Real chain:
+
+```
+User prompt → Jasper v13 plans 2 steps with media required
+  → Step 1: delegate_to_marketing(platform=mastodon, verbatimText, topic)
+    → Marketing Manager single-platform fast-path
+      → MASTODON_EXPERT.generate_content (real LLM, ~10s)
+      → generateAndStoreSocialPostImage (DALL-E + Firestore cache, ~30s)
+    → returns { primaryPost, imageUrl, mediaUrls }
+  → Step 2: social_post(platform=mastodon, content=step_1_output_primaryPost,
+                         mediaUrls=step_1_output_mediaUrls)
+    → step_N_output references resolved by social_post handler
+    → MastodonService.postStatus → real Mastodon API → status id 116474951515339832
+```
+
+Live post: https://mastodon.social/@SalesVelocity_Ai/116474951515339832
+
+Same pipeline now works for Bluesky, X (twitter), LinkedIn, Facebook, Instagram, Pinterest — Marketing Manager fast-path handles all of them; only the OAuth setup + posting service implementation differs per platform.
+
+## Image-resolution rule live for both blogs and posts
+
+Operator-provided image URL is used AS-IS (no DALL-E call, no API spend). Only when no media is provided, a fresh image is generated. Same logic in:
+- `src/lib/content/blog-featured-image.ts` (fixed pre-existing bug — was firing unconditionally)
+- `src/lib/content/social-post-image.ts` (new, mirrors the blog helper)
+- `delegate_to_content` accepts `providedMediaUrls`
+- `delegate_to_marketing` accepts `providedMediaUrls`
+
+## Specialists rebuilt — full coverage
+
+- `MASTODON_EXPERT` v2 GM: now supports both `compose_dm_reply` AND `generate_content` actions
+- `BLUESKY_EXPERT` v2 GM: same — was missing generate_content for organic posts
+- Both registered in Marketing Manager's specialist registry, factory list, delegationRules, and inbound-DM platform map
+- `autonomous-posting-agent` got a real `case 'mastodon'` calling `MastodonService.postStatus`
+
+## Jasper GM v13 — 2-step social post rule
+
+Operator-delegated GM edit per `feedback_delegation_vs_self_training`. Replaces the v12 line `"NOTE: For SOCIAL MEDIA POSTS, use social_post directly."` with a multi-paragraph directive enforcing:
+- Social posts MUST plan exactly 2 steps (delegate_to_marketing → social_post)
+- Even with verbatim text, both steps required
+- Even with operator-provided media, both steps required (Marketing Manager handles media pass-through)
+- Single-step plans calling social_post directly are FORBIDDEN
+
+Source TrainingFeedback: `tfb_jasper_2step_social_post_1777259809358` (status: applied)
+Rollback: `deployJasperGMVersion(12, '<reason>')`
+
+## Two infrastructure bugs fixed during the live test
+
+1. **`parseSocialPostArgs` platform whitelist** — was hardcoded to twitter|linkedin only. Stripped 'mastodon' to undefined, defaulted to twitter, sent posts to Twitter API which 403'd. Now accepts all 15 platforms enumerated in `SOCIAL_PLATFORMS`.
+2. **`social_post` handler step-output resolution** — Jasper plans step 2 with literal strings `"step_1_output_primaryPost"` / `"step_1_output_mediaUrls"`; the step runner doesn't auto-resolve these. The `social_post` handler now detects the pattern and pulls the actual values from the prior `delegate_to_marketing` step's `toolResult`.
+
+---
+
+# ✅ EARLIER SESSION WIN — Bluesky inbound DM auto-reply works end-to-end
 
 Real round-trip verified: DM from `@rapidcompliance.bsky.social` → polled by `/api/cron/jasper-bluesky-dm-dispatcher` → `inbound-dm-orchestration-service` calls `BlueskyExpert.compose_dm_reply` directly → mission created in Firestore with `status: COMPLETED` → operator opens Mission Control, reads "Customer's message" + "Composed reply" in the human-readable detail view → clicks Send Reply → DM lands in sender's thread.
 
