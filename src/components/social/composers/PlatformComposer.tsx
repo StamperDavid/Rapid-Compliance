@@ -187,6 +187,7 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
   const postDisabled =
     isParked ||
     posting ||
+    connected === null ||
     connected === false ||
     !hasContent ||
     (requiresMedia && !hasMedia) ||
@@ -258,7 +259,7 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
     router.push('/social/calendar');
   }, [router]);
 
-  const inputsDisabled = posting || isParked || connected === false;
+  const inputsDisabled = posting || isParked || connected === null || connected === false;
 
   return (
     <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-5">

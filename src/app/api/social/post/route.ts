@@ -57,17 +57,12 @@ export async function POST(request: NextRequest) {
     const { AutonomousPostingAgent } = await import('@/lib/social/autonomous-posting-agent');
     const agent = AutonomousPostingAgent.getInstance();
 
-    // Build the content string — for some content types we need to
-    // merge metadata fields into the content (e.g., Reddit needs title
-    // separate from body, YouTube needs title + description + tags).
-    let postContent = content;
-    if (metadata?.title) {
-      postContent = `${metadata.title}\n\n${content}`;
-    }
-
-    // Post to the platform via the autonomous posting agent's dispatcher
-    // which calls the real per-platform service (Twitter API, Graph API, etc.)
-    const result = await agent.publishNow(platform, postContent, {
+    // Pass content verbatim. Each per-platform handler in autonomous-posting-agent
+    // reads metadata.title separately and decides how to combine title + body
+    // (e.g. Reddit's submitPost, Pinterest's createPin). Prepending the title
+    // here would cause it to appear both in the body AND in the platform's
+    // native title field — visible duplication for readers.
+    const result = await agent.publishNow(platform, content, {
       contentType,
       ...metadata,
     });
