@@ -133,6 +133,7 @@ export async function sendXDirectMessage(input: {
   try {
     response = await fetch(url, {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Authorization': auth, 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     });

@@ -94,6 +94,7 @@ export class MastodonService {
 
       const response = await fetch(`${this.baseUrl}/api/v1/statuses`, {
         method: 'POST',
+        cache: 'no-store',
         headers: {
           ...BROWSER_HEADERS,
           'Content-Type': 'application/json',
@@ -122,6 +123,7 @@ export class MastodonService {
       }
 
       const res = await fetch(`${this.baseUrl}/api/v1/accounts/verify_credentials`, {
+        cache: 'no-store',
         headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${this.config.accessToken}` },
       });
 
@@ -182,6 +184,7 @@ export class MastodonService {
 
       const response = await fetch(`${this.baseUrl}/api/v1/statuses`, {
         method: 'POST',
+        cache: 'no-store',
         headers: {
           ...BROWSER_HEADERS,
           'Content-Type': 'application/json',
@@ -223,6 +226,7 @@ export class MastodonService {
     }
     try {
       const response = await fetch(`${this.baseUrl}/api/v1/conversations?limit=40`, {
+        cache: 'no-store',
         headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${this.config.accessToken}` },
       });
       if (!response.ok) {
@@ -250,6 +254,7 @@ export class MastodonService {
     try {
       const response = await fetch(`${this.baseUrl}/api/v1/conversations/${encodeURIComponent(conversationId)}/read`, {
         method: 'POST',
+        cache: 'no-store',
         headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${this.config.accessToken}` },
       });
       if (!response.ok) {

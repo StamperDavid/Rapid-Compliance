@@ -67,7 +67,16 @@ class APIKeyService {
   private static instance: APIKeyService;
   private keysCache: APIKeysConfig | null = null;
   private cacheTimestamp: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  // Cache TTL — short window to keep the read-side fast while bounding
+  // the worst-case staleness when external processes (save scripts,
+  // OAuth exchange flows, the settings UI) write directly to Firestore
+  // and bypass the in-process invalidation hook in saveKeys(). Combined
+  // with the Firestore onSnapshot listener below, the effective stale
+  // window is whichever resolves first: the listener fires (typically
+  // sub-second) or the TTL expires (60s).
+  private readonly CACHE_DURATION = 60 * 1000;
+  private firestoreListenerAttached = false;
+  private firestoreUnsubscribe: (() => void) | null = null;
 
   private constructor() {
     logger.info('[APIKeyService] Initialized. Ready to fetch keys from Firestore.', { file: 'api-key-service.ts' });
@@ -78,6 +87,78 @@ class APIKeyService {
       APIKeyService.instance = new APIKeyService();
     }
     return APIKeyService.instance;
+  }
+
+  /**
+   * Force-clear the in-memory cache. Public so external code can flush
+   * after a known mutation (e.g. an admin endpoint that updates keys
+   * out-of-band, a one-shot maintenance script). Idempotent.
+   */
+  clearCache(): void {
+    if (this.keysCache !== null) {
+      logger.info('[APIKeyService] Cache cleared explicitly', { file: 'api-key-service.ts' });
+    }
+    this.keysCache = null;
+    this.cacheTimestamp = 0;
+  }
+
+  /**
+   * Lazily attach a Firestore onSnapshot listener to the apiKeys doc.
+   * When the doc changes (e.g. a save script writes new credentials
+   * directly to Firestore, bypassing this service), the listener fires
+   * and we clear the in-memory cache so the next getKeys() call re-reads.
+   *
+   * Lazy attachment — we don't subscribe until the first getKeys() call
+   * because some build-time / tooling code paths import this module
+   * without ever needing the cache (e.g. type-only imports during tsc),
+   * and we don't want to open a Firestore listener for those.
+   *
+   * Idempotent — safe to call repeatedly. Only ever attaches once per
+   * process lifetime.
+   */
+  private async attachFirestoreListener(): Promise<void> {
+    if (this.firestoreListenerAttached) { return; }
+    this.firestoreListenerAttached = true; // set early to prevent re-entry races
+    try {
+      const { adminDb } = await import('../firebase/admin');
+      if (!adminDb) {
+        // Admin SDK not initialized in this runtime (e.g. Edge runtime,
+        // browser-side import). Silently skip — TTL-based invalidation
+        // still works; we just lose the real-time channel.
+        return;
+      }
+      const { getSubCollection } = await import('../firebase/collections');
+      const docRef = adminDb.collection(getSubCollection('apiKeys')).doc(PLATFORM_ID);
+      this.firestoreUnsubscribe = docRef.onSnapshot(
+        () => {
+          // Any change at all — clear cache so the next read fetches
+          // fresh. We don't try to be clever about diffing; the read is
+          // cheap and the cost of stale keys is real.
+          if (this.keysCache !== null) {
+            logger.info('[APIKeyService] Firestore apiKeys doc changed — invalidating cache', { file: 'api-key-service.ts' });
+          }
+          this.keysCache = null;
+          this.cacheTimestamp = 0;
+        },
+        (err: unknown) => {
+          // Listener errored. Reset the flag so a future getKeys() will
+          // try to re-attach. TTL invalidation continues to work.
+          logger.warn('[APIKeyService] Firestore listener error — falling back to TTL-only cache', {
+            file: 'api-key-service.ts',
+            error: err instanceof Error ? err.message : String(err),
+          });
+          this.firestoreListenerAttached = false;
+          this.firestoreUnsubscribe = null;
+        },
+      );
+    } catch (err: unknown) {
+      // Module load failed — same fallback (TTL only).
+      logger.warn('[APIKeyService] Failed to attach Firestore listener — TTL-only cache', {
+        file: 'api-key-service.ts',
+        error: err instanceof Error ? err.message : String(err),
+      });
+      this.firestoreListenerAttached = false;
+    }
   }
 
   /**
@@ -92,6 +173,11 @@ class APIKeyService {
       return this.fetchKeysFromFirestore(PLATFORM_ID);
     }
 
+    // Lazily attach the Firestore listener on the first real read so
+    // out-of-band writes (save scripts, OAuth exchange flows) flush
+    // the cache automatically. No-op after first attach.
+    await this.attachFirestoreListener();
+
     // Return cached keys if still valid
     if (this.keysCache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
       // In penthouse model, cache is org-agnostic
@@ -100,7 +186,7 @@ class APIKeyService {
 
     // Fetch from Firestore
     const keys = await this.fetchKeysFromFirestore(PLATFORM_ID);
-    
+
     if (keys) {
       this.keysCache = keys;
       this.cacheTimestamp = now;
@@ -313,14 +399,6 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
   async isServiceConfigured(service: APIServiceName): Promise<boolean> {
       const key = await this.getServiceKey(PLATFORM_ID, service);
     return key !== null && key !== undefined;
-  }
-
-  /**
-   * Clear cache (useful after key updates)
-   */
-  clearCache(): void {
-    this.keysCache = null;
-    this.cacheTimestamp = 0;
   }
 
   // Private helper methods

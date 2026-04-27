@@ -103,6 +103,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // Refresh a session — the cached accessJwt may be stale across cron runs.
   const sessionResp = await fetch('https://bsky.social/xrpc/com.atproto.server.createSession', {
     method: 'POST',
+    cache: 'no-store',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifier: keys.identifier, password: keys.password }),
   });
@@ -124,7 +125,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   };
 
   // 1. List conversations with unread messages
-  const convosResp = await fetch(`${CHAT_HOST}/xrpc/chat.bsky.convo.listConvos`, { headers: proxyHeaders });
+  const convosResp = await fetch(`${CHAT_HOST}/xrpc/chat.bsky.convo.listConvos`, { cache: 'no-store', headers: proxyHeaders });
   if (!convosResp.ok) {
     const errText = await convosResp.text();
     return NextResponse.json({ error: `listConvos failed: HTTP ${convosResp.status} ${errText.slice(0, 200)}` }, { status: 502 });
@@ -142,7 +143,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // 2. Pull the unread messages for this conversation
     const messagesResp = await fetch(
       `${CHAT_HOST}/xrpc/chat.bsky.convo.getMessages?convoId=${encodeURIComponent(convo.id)}&limit=20`,
-      { headers: proxyHeaders },
+      { cache: 'no-store', headers: proxyHeaders },
     );
     if (!messagesResp.ok) {
       outcomes.push({
@@ -159,6 +160,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const ordered = [...messagesData.messages].reverse();
     for (const msg of ordered) {
       if (dispatched >= MAX_EVENTS_PER_RUN) { break; }
+
+      // Defensive structural guard — auto-reply applies to private DMs
+      // ONLY. Bluesky's `chat.bsky.convo.*` lexicons are DM-only by spec
+      // (public posts go through `app.bsky.feed.post`, a separate code
+      // path), so this loop already operates on chat-channel data. The
+      // `id`/`sender.did`/`text` shape check below asserts that — if a
+      // future Bluesky API change ever returns non-chat events here,
+      // the guard fails closed (skip + log) rather than silently feeding
+      // public engagement into the auto-reply pipeline.
+      const looksLikeChatMessage = (
+        typeof msg.id === 'string' && msg.id.length > 0
+        && typeof msg.sender?.did === 'string' && msg.sender.did.length > 0
+        && typeof msg.text === 'string'
+      );
+      if (!looksLikeChatMessage) {
+        logger.warn('[bluesky-dm-dispatcher] non-chat-shaped message in chat.bsky.convo.getMessages — skipping', {
+          msgId: msg.id,
+          hasSender: Boolean(msg.sender?.did),
+        });
+        continue;
+      }
+
       if (!msg.sender || msg.sender.did === brandDid) { continue; } // skip own messages
       if (!msg.text || msg.text.trim().length === 0) { continue; }
 
@@ -248,6 +271,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (latestMessageId) {
       await fetch(`${CHAT_HOST}/xrpc/chat.bsky.convo.updateRead`, {
         method: 'POST',
+        cache: 'no-store',
         headers: { ...proxyHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ convoId: convo.id, messageId: latestMessageId }),
       }).catch(() => { /* noop — best effort */ });
