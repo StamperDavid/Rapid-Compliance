@@ -32,13 +32,26 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) { return authResult; }
 
-    const { where, orderBy, limit } = await import('firebase/firestore');
+    const { where } = await import('firebase/firestore');
 
-    // Fetch published posts (up to 100, most recent first)
-    const publishedPosts = (await AdminFirestoreService.getAll(
+    // Fetch all published posts via single-field where (no composite
+    // orderBy — the composite index isn't deployed and was spamming
+    // FAILED_PRECONDITION errors every poll). Sort/slice in JS.
+    // Result sets are tiny (~100s max for any tenant we care about),
+    // so the perf delta is negligible. firestore.indexes.json carries
+    // the matching composite for the day someone wants to push the
+    // orderBy back into Firestore.
+    const allPublished = (await AdminFirestoreService.getAll(
       SOCIAL_POSTS_COLLECTION,
-      [where('status', '==', 'published'), orderBy('publishedAt', 'desc'), limit(100)]
+      [where('status', '==', 'published')]
     ).catch(() => [])) as SocialMediaPost[];
+    const publishedPosts = [...allPublished]
+      .sort((a, b) => {
+        const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        return bTime - aTime; // descending
+      })
+      .slice(0, 100);
 
     // Filter to posts that have metrics data
     const postsWithMetrics = publishedPosts.filter(
