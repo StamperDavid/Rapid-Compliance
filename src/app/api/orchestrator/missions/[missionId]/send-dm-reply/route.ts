@@ -244,7 +244,36 @@ export async function POST(
         sendResult = { success: false, error: 'Mastodon credentials missing — run scripts/connect-mastodon.ts' };
         break;
       }
-      const r = await service.sendDirectMessage({ recipient: recipientUserId, text: replyText });
+      // Mastodon recipient MUST be a handle (e.g. "Rapidcompliance_US"
+      // or "user@otherinstance.example" for federated). Mention by
+      // numeric account id renders as plain text and never notifies
+      // the recipient — bug caught Apr 27 2026 when a reply landed as
+      // visibility:direct but contained "@116473936184474494" instead
+      // of "@Rapidcompliance_US" and the recipient never saw it.
+      const mastodonRecipient = sourceEvent.senderHandle ?? recipientUserId;
+      // Look up the original inbound status id so the reply threads
+      // under the existing DM conversation (Mastodon uses
+      // in_reply_to_id for threading; without it a new DM creates a
+      // separate conversation).
+      let inReplyToStatusId: string | undefined;
+      try {
+        const inboundSnap = await adminDb
+          ?.collection(getSubCollection('inboundSocialEvents'))
+          .doc(eventId)
+          .get();
+        const inboundData = inboundSnap?.data() as { payload?: { statusId?: string } } | undefined;
+        if (typeof inboundData?.payload?.statusId === 'string') {
+          inReplyToStatusId = inboundData.payload.statusId;
+        }
+      } catch {
+        // Threading is a nice-to-have; if the lookup fails, send
+        // unthreaded rather than blocking the reply.
+      }
+      const r = await service.sendDirectMessage({
+        recipient: mastodonRecipient,
+        text: replyText,
+        ...(inReplyToStatusId ? { inReplyToStatusId } : {}),
+      });
       sendResult = { success: r.success, messageId: r.messageId, error: r.error };
       break;
     }
