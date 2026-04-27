@@ -47,9 +47,25 @@ export interface ToolCall {
   };
 }
 
+/**
+ * A single content block within a multipart message. OpenAI/OpenRouter's
+ * spec accepts an array of these for vision-capable models. Claude
+ * (Sonnet/Opus) supports multipart input via OpenRouter — the array is
+ * forwarded through unchanged.
+ */
+export type ChatMessageContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'auto' | 'low' | 'high' } };
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string;
+  /**
+   * Either a plain string (the common case) or an array of content
+   * parts for multipart messages (text + images for vision-capable
+   * models). String form is accepted unchanged; the array form is
+   * forwarded through to OpenRouter as-is.
+   */
+  content: string | ChatMessageContentPart[];
   tool_calls?: ToolCall[];
   tool_call_id?: string;
 }
@@ -168,7 +184,7 @@ export class OpenRouterProvider {
    */
   async chat(params: {
     model: ModelName;
-    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | ChatMessageContentPart[] }>;
     temperature?: number;
     maxTokens?: number;
     topP?: number;
@@ -180,7 +196,7 @@ export class OpenRouterProvider {
   private async makeRequest(
     model: string,
     params: {
-      messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+      messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | ChatMessageContentPart[] }>;
       temperature?: number;
       maxTokens?: number;
       topP?: number;

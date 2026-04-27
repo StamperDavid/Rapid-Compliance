@@ -48,10 +48,17 @@ interface OpenAIFunction {
   parameters: Record<string, unknown>;
 }
 
-/** OpenAI message format */
+/** OpenAI message format. Content accepts a string OR an array of
+ *  multipart content blocks (text + image_url) for vision input.
+ *  OpenAI's API forwards the array shape unchanged to vision-capable
+ *  models. The structure mirrors ChatMessage in @/types/ai-models. */
+type OpenAIContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'auto' | 'low' | 'high' } };
+
 interface OpenAIMessage {
   role: string;
-  content: string;
+  content: string | OpenAIContentPart[];
   name?: string;
   function_call?: {
     name: string;

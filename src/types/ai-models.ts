@@ -57,9 +57,25 @@ export interface ModelCapabilities {
   isDeprecated: boolean;
 }
 
+/**
+ * Single content block for multipart messages. OpenAI/OpenRouter spec
+ * — vision-capable models (Claude Sonnet/Opus, GPT-4o) accept arrays
+ * of these mixed text + image blocks.
+ */
+export type ChatMessageContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'auto' | 'low' | 'high' } };
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'function';
-  content: string;
+  /**
+   * String for the common single-text-block case, or an array of
+   * content parts for multipart messages (vision input). Providers
+   * that don't support vision should pass the message through
+   * unchanged — the provider/API will reject it cleanly if the model
+   * isn't vision-capable.
+   */
+  content: string | ChatMessageContentPart[];
   name?: string; // For function calls
   functionCall?: {
     name: string;

@@ -222,7 +222,10 @@ async function handleFacebookMessage(senderId: string, text: string): Promise<vo
     const { enhanceChatWithRAG } = await import('@/lib/agent/rag-service');
     const ragMessages = messages.map(m => ({
       role: m.role === 'user' ? 'user' as const : 'model' as const,
-      parts: [{ text: m.content }],
+      // Public chatbot messages are always plain text strings (not
+      // multipart with images), but flatten defensively in case the
+      // upstream type ever surfaces array content here.
+      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
     }));
     const ragResult = await enhanceChatWithRAG(ragMessages, instance.systemPrompt);
     enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
@@ -234,10 +237,16 @@ async function handleFacebookMessage(senderId: string, text: string): Promise<vo
   const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
   const provider = AIProviderFactory.createProvider(selectedModel);
 
-  const validMessages = messages.filter(
-    (msg): msg is ChatMessage & { role: 'user' | 'system' | 'assistant' } =>
-      msg.role === 'user' || msg.role === 'system' || msg.role === 'assistant'
-  );
+  // Flatten ChatMessage.content (now widened to string|array for vision
+  // support) back to string before handing to providers whose
+  // generateResponse signature is string-only. Public chatbot inputs
+  // are always plain text; this just satisfies the stricter consumer.
+  const validMessages = messages
+    .filter((msg) => msg.role === 'user' || msg.role === 'system' || msg.role === 'assistant')
+    .map((msg) => ({
+      role: msg.role as 'user' | 'system' | 'assistant',
+      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+    }));
   const response = await provider.generateResponse(
     validMessages,
     enhancedSystemPrompt,

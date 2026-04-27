@@ -265,12 +265,26 @@ export class AnthropicProvider implements ModelProvider {
   }
 
   /**
-   * Convert messages to Anthropic format
+   * Convert messages to Anthropic format. Anthropic's native API
+   * accepts content arrays for vision input (text + image blocks),
+   * but THIS provider's downstream call signature has historically
+   * been string-only. To stay compatible without re-shaping the rest
+   * of this file, we flatten array content to a string here. Vision-
+   * aware DM-reply flow goes through OpenRouter (which handles the
+   * multipart shape natively), not this direct Anthropic path.
    */
   private convertMessages(messages: ChatMessage[]): Array<{ role: string; content: string }> {
     return messages.map(msg => ({
       role: msg.role === 'assistant' ? 'assistant' : 'user',
-      content: msg.content,
+      content: typeof msg.content === 'string'
+        ? msg.content
+        : msg.content
+          .map((part) => {
+            if (part.type === 'text') { return part.text; }
+            if (part.type === 'image_url') { return `[image: ${part.image_url.url}]`; }
+            return '';
+          })
+          .join('\n'),
     }));
   }
 

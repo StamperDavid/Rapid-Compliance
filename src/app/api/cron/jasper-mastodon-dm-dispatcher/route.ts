@@ -174,6 +174,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const senderHandle = status.account.acct || status.account.username;
     const senderId = status.account.id;
 
+    // Extract media attachments so the specialist's vision-capable LLM
+    // call can actually see images (and reason about videos/audio via
+    // alt-text + type). Mapped to the orchestration service's narrower
+    // shape — image|video|audio|unknown rather than Mastodon's full set
+    // (gifv, etc., collapse to image-or-unknown).
+    type MediaType = 'image' | 'video' | 'audio' | 'unknown';
+    const normalizeMediaType = (t: string): MediaType => {
+      if (t === 'image' || t === 'gifv') { return 'image'; }
+      if (t === 'video') { return 'video'; }
+      if (t === 'audio') { return 'audio'; }
+      return 'unknown';
+    };
+    const mediaAttachments = (status.media_attachments ?? [])
+      .filter((m) => typeof m.url === 'string' && m.url.length > 0)
+      .map((m) => ({
+        url: m.url,
+        type: normalizeMediaType(m.type),
+        ...(typeof m.description === 'string' && m.description.length > 0
+          ? { altText: m.description }
+          : {}),
+      }));
+
     const eventDoc: FirestoreInboundEvent = {
       id: eventDocId,
       provider: 'mastodon',
@@ -187,6 +209,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         text: plainText,
         recipientAccountId: brandAccountId,
         visibility: status.visibility,
+        ...(mediaAttachments.length > 0 ? { mediaAttachments } : {}),
       },
     };
     await eventRef.set(eventDoc, { merge: true });
@@ -198,6 +221,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         inboundText: plainText,
         senderId,
         ...(senderHandle ? { senderHandle } : {}),
+        ...(mediaAttachments.length > 0 ? { mediaAttachments } : {}),
       });
 
       await eventRef.update({
