@@ -42,7 +42,8 @@ export type InboundDmPlatform =
   | 'linkedin'
   | 'facebook'
   | 'instagram'
-  | 'pinterest';
+  | 'pinterest'
+  | 'mastodon';
 
 const SPECIALIST_BY_PLATFORM: Record<InboundDmPlatform, string> = {
   x: 'TWITTER_X_EXPERT',
@@ -51,6 +52,7 @@ const SPECIALIST_BY_PLATFORM: Record<InboundDmPlatform, string> = {
   facebook: 'FACEBOOK_ADS_EXPERT',
   instagram: 'INSTAGRAM_EXPERT',
   pinterest: 'PINTEREST_EXPERT',
+  mastodon: 'MASTODON_EXPERT',
 };
 
 const SOURCE_EVENT_KIND_BY_PLATFORM: Record<InboundDmPlatform, NonNullable<import('@/lib/orchestrator/mission-persistence').Mission['sourceEvent']>['kind']> = {
@@ -60,6 +62,7 @@ const SOURCE_EVENT_KIND_BY_PLATFORM: Record<InboundDmPlatform, NonNullable<impor
   facebook: 'inbound_facebook_dm',
   instagram: 'inbound_instagram_dm',
   pinterest: 'inbound_pinterest_dm',
+  mastodon: 'inbound_mastodon_dm',
 };
 
 const PLATFORM_LABELS: Record<InboundDmPlatform, string> = {
@@ -69,6 +72,7 @@ const PLATFORM_LABELS: Record<InboundDmPlatform, string> = {
   facebook: 'Facebook',
   instagram: 'Instagram',
   pinterest: 'Pinterest',
+  mastodon: 'Mastodon',
 };
 
 export interface InboundDmInput {
@@ -167,6 +171,11 @@ async function composeReplyDirect(input: InboundDmInput): Promise<ComposeDmReply
     case 'pinterest': {
       const m = await import('@/lib/agents/marketing/pinterest/specialist');
       expert = m.getPinterestExpert();
+      break;
+    }
+    case 'mastodon': {
+      const m = await import('@/lib/agents/marketing/mastodon/specialist');
+      expert = m.getMastodonExpert();
       break;
     }
     default: {

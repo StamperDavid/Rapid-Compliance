@@ -120,6 +120,50 @@ Everything here overrides older sections. Do not ask the operator to remind you 
 
 ---
 
+# 📋 INTEGRATION STATUS MATRIX — Social DM Auto-Reply (Apr 26 2026 evening)
+
+Per-platform breakdown of what's wired, what's blocked, what's skipped and why. "Compose" = specialist has `compose_dm_reply` action via shared mixin. "Send" = OAuth + DM API send service. "Inbound" = webhook receiver or polling cron writing to `inboundSocialEvents`.
+
+| Platform | Compose | Send | Inbound | E2E | Blocker / Notes |
+|---|---|---|---|---|---|
+| **X (Twitter)** | ✅ | ✅ | ⚠️ | ⚠️ | Orchestration code verified live (`scripts/verify-jasper-dm-reply-live.ts`). X-side issue: webhook accepts subscription, returns `valid: true`, but stops delivering `direct_message_events` events. Likely cause: account <9hrs old + failed reply attempts triggering silent throttle. **Path forward**: file X dev support ticket. **Polling workaround forbidden by owner.** |
+| **Bluesky** | ✅ | ✅ | ✅ poll | ✅ | LIVE end-to-end. Real round-trip verified. Polling cron `/api/cron/jasper-bluesky-dm-dispatcher` (1 min, Vercel min). Latency 60s + ~10s compose ≈ 70s typical. Owner asked for ≤10s — pending webhook-equivalent solution (Bluesky has no native DM webhook). |
+| **LinkedIn** | ✅ | ❌ | ❌ | ❌ | **BLOCKED**: Send requires LinkedIn Marketing Developer Platform approval (gated, multi-day review). Compose mixin is wired; send service is the only missing piece. Resume when MDP approval clears OR when an alternate path (RapidAPI bridge?) is qualified. |
+| **Facebook Messenger** | ✅ | ❌ | ❌ | ❌ | **BLOCKED**: Meta Business Verification required for `pages_messaging` permission in production. Test Mode works for own Page only. Compose mixin done. Path: kick off Meta Business Verification (off-Claude task). |
+| **Instagram** | ✅ | ❌ | ❌ | ❌ | **BLOCKED**: same Meta Business Verification gate (`instagram_manage_messages`). Compose mixin done. Bundled with Facebook above — single OAuth flow when verification clears. |
+| **Pinterest** | ✅ | ❌ | ❌ | ❌ | **DEFERRED**: Compose mixin done. Pinterest DM API is documented but very low priority — Pinterest is a discovery surface, not a conversation surface. Resume when higher-priority platforms are clear. |
+| **Reddit** | ❌ | ❌ | ❌ | ❌ | **BLOCKED**: Reddit dev app creation silently failing on the new `u/Huckleberry1119199` account (form submits, page reloads, no app appears, no error). Likely cause: Reddit's undocumented ~24h new-account age gate. Existing `reddit-service.ts` has post + identity but no DM methods. **Path forward**: wait 24h, retry app creation. If still blocked, file Reddit support. |
+| **Truth Social** | ✅ | ❌ | ❌ | ❌ | **PARKED — FUTURE RELEASE.** Truth Social fronts its Mastodon-compatible API with Cloudflare bot management that fingerprints the TLS handshake itself (not just headers). Node fetch fails the fingerprint check; only browser-class TLS (curl, Chromium) passes. Vercel serverless = Node fetch = 403s in production. **No best-practice path exists**: no official API, no developer portal, no partner program; none of Hootsuite/Buffer/Later/Sprout support the platform; existing access tools (truthbrush, Apify, ScrapeCreators) are all unofficial reverse-engineering. Parked Apr 26 2026 — code preserved, cron removed, GM marked inactive, OAuth pending creds moved to `truth_social_parked` slot. Re-evaluate if Truth Social opens an official API. |
+| **Mastodon** (mastodon.social, hachyderm.io, etc.) | ✅ | ✅ | ✅ poll | ⚠️ | Code complete + renamed Apr 26 2026 from `truth_social` to `mastodon` for clarity (the integration is generic Mastodon-API, not Truth-Social-specific). MastodonExpert specialist + cron + service in place. GM `sgm_mastodon_expert_saas_sales_ops_v1` seeded with Brand DNA baked in. Pending: brand creates account on chosen instance, runs `scripts/register-mastodon-app.ts` + `scripts/exchange-mastodon-code.ts`, then real DM round-trip. |
+| **Threads** | ❌ | ❌ | ❌ | ❌ | **SKIPPED — API gate**: Threads public API supports posting and reading only. DMs are not exposed in the Threads API as of Apr 2026. Revisit when Meta opens DM scope. |
+| **TikTok** | ❌ | ❌ | ❌ | ❌ | **SKIPPED — API gate**: TikTok DM API is gated behind app review (1-2 weeks). Lower priority; TikTok is also primarily a discovery/posting surface, not a DM surface for B2B. |
+| **YouTube** | n/a | n/a | n/a | n/a | **N/A**: YouTube has no first-party DM API. Skipped by design. |
+
+## Other comms channels (non-social DM)
+
+| Channel | Outbound | Inbound | E2E | Blocker / Notes |
+|---|---|---|---|---|
+| **Email (SendGrid)** | ✅ | partial | ✅ outbound | Domain auth on `salesvelocity.ai`, real send verified. Inbound parse endpoint exists; hasn't been wired into Jasper inbound-comms framework. |
+| **SMS (Twilio)** | ⚠️ | ⚠️ | ❌ | **BLOCKED**: Twilio toll-free verification under review. Code plumbed; CTIA opt-in checkbox shipped on `/onboarding/industry`. Inbound SMS receive webhook still TODO once verification clears. |
+
+## Skipped categories (with reasons)
+
+- **Paid ads (X, Meta, TikTok, LinkedIn, YouTube/Google)** — separate ad-account approval queues. Stage E in roadmap. Not started by design — organic must work first.
+- **Customer X OAuth (per-tenant Architecture A)** — requires X Basic tier $200/mo. Deferred to launch; not blocking single-tenant E2E.
+- **Telegram, Discord, WhatsApp** — not in the current product surface. Revisit post-launch if customer demand surfaces.
+
+## Quick reference: what unblocks what
+
+| Action | Unblocks |
+|---|---|
+| File X dev support ticket | X DM webhook delivery |
+| Wait 24h + retry Reddit dev app | Reddit DM integration |
+| Start Meta Business Verification | Facebook + Instagram DM (bundled) |
+| Apply for LinkedIn MDP | LinkedIn DM send |
+| Twilio toll-free verification approval | SMS bidirectional + inbound webhook |
+
+---
+
 # 🔴 STEP 0 — Automatic setup when this session opens (do without being asked)
 
 1. **Read memory in this order** — ground truth:
