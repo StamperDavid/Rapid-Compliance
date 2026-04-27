@@ -1,11 +1,16 @@
 /**
  * Blog Featured Image Helper
  *
- * Generates a featured image for a blog post via DALL-E, downloads it, stores
- * the base64 in Firestore under `blog_featured_images/{postId}`, and returns
- * the public URL path that the blog post document should reference.
+ * Resolves the featured image for a blog post in priority order:
+ *   1. If the operator provided a `providedImageUrl`, use it AS-IS — no
+ *      DALL-E call, no Firestore persist. Operator-provided media is
+ *      trusted and never replaced or "improved" by the system.
+ *   2. Otherwise, generate via DALL-E, download (DALL-E URLs expire in
+ *      a few hours), compress to JPEG, persist the base64 in Firestore
+ *      under `blog_featured_images/{postId}`, and return the public
+ *      URL path the BlogPost doc should reference.
  *
- * Why the base64/proxy pattern:
+ * Why the base64/proxy pattern (case 2):
  * DALL-E returns temporary URLs that expire within a few hours. If we stored
  * the raw DALL-E URL on the BlogPost doc, every blog would ship with a broken
  * image icon by the next day. We mirror the scene_previews pattern used for
@@ -36,6 +41,17 @@ export interface BlogFeaturedImageInput {
    * corporate" vs "vibrant, playful").
    */
   brandStyleHint?: string;
+  /**
+   * Operator-provided featured image URL. When supplied, the helper
+   * returns this URL unchanged — no DALL-E call, no Firestore persist,
+   * no API spend. This is the explicit opt-out for content workflows
+   * where the operator has already chosen the hero image.
+   *
+   * Caller is responsible for validating the URL is a real image they
+   * trust to keep the blog rendering correctly long-term (e.g. their
+   * own CDN, not a temporary share link).
+   */
+  providedImageUrl?: string;
 }
 
 export interface BlogFeaturedImageResult {
@@ -74,6 +90,20 @@ function buildImagePrompt(input: BlogFeaturedImageInput): string {
 export async function generateAndStoreBlogFeaturedImage(
   input: BlogFeaturedImageInput,
 ): Promise<BlogFeaturedImageResult | null> {
+  // OPERATOR-PROVIDED PATH — short-circuit before any API spend.
+  // When the operator gives us a real image URL, that's the hero image.
+  // We don't second-guess, regenerate, or "enhance" it.
+  if (input.providedImageUrl && input.providedImageUrl.trim().length > 0) {
+    logger.info('[BlogFeaturedImage] Using operator-provided image — skipping DALL-E', {
+      postId: input.postId,
+      providedImageUrl: input.providedImageUrl,
+    });
+    return {
+      url: input.providedImageUrl.trim(),
+      revisedPrompt: 'operator-provided (no DALL-E call)',
+    };
+  }
+
   if (!adminDb) {
     logger.warn('[BlogFeaturedImage] Firestore admin not available — skipping', {
       postId: input.postId,

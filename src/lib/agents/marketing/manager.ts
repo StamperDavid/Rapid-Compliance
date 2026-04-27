@@ -39,6 +39,8 @@ import { getGrowthAnalyst } from './growth-analyst/specialist';
 import { getYouTubeExpert } from './youtube/specialist';
 import { getInstagramExpert } from './instagram/specialist';
 import { getPinterestExpert } from './pinterest/specialist';
+import { getBlueskyExpert } from './bluesky/specialist';
+import { getMastodonExpert } from './mastodon/specialist';
 import { getPaidAdsSpecialist } from './paid-ads/specialist';
 import {
   getMemoryVault,
@@ -269,6 +271,8 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     'YOUTUBE_EXPERT',
     'INSTAGRAM_EXPERT',
     'PINTEREST_EXPERT',
+    'BLUESKY_EXPERT',
+    'MASTODON_EXPERT',
     'PAID_ADS_SPECIALIST',
     'SEO_EXPERT',
     'GROWTH_ANALYST',
@@ -320,6 +324,20 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     {
       triggerKeywords: ['pinterest', 'pin', 'board', 'pins', 'idea pin', 'rich pin', 'visual search', 'seasonal content', 'pinning'],
       delegateTo: 'PINTEREST_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Bluesky - AT Protocol, decentralized
+    {
+      triggerKeywords: ['bluesky', 'bsky', 'at protocol', 'atproto', 'skeet', 'skeets'],
+      delegateTo: 'BLUESKY_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Mastodon - federated, fediverse
+    {
+      triggerKeywords: ['mastodon', 'fediverse', 'federated social', 'hachyderm', 'fosstodon', 'mastodon.social', 'toot', 'toots'],
+      delegateTo: 'MASTODON_EXPERT',
       priority: 10,
       requiresApproval: false,
     },
@@ -560,6 +578,8 @@ export class MarketingManager extends BaseManager {
       { name: 'YOUTUBE_EXPERT', factory: getYouTubeExpert },
       { name: 'INSTAGRAM_EXPERT', factory: getInstagramExpert },
       { name: 'PINTEREST_EXPERT', factory: getPinterestExpert },
+      { name: 'BLUESKY_EXPERT', factory: getBlueskyExpert },
+      { name: 'MASTODON_EXPERT', factory: getMastodonExpert },
       { name: 'PAID_ADS_SPECIALIST', factory: getPaidAdsSpecialist },
       { name: 'SEO_EXPERT', factory: getSEOExpert },
       { name: 'GROWTH_ANALYST', factory: getGrowthAnalyst },
@@ -631,6 +651,25 @@ export class MarketingManager extends BaseManager {
       const inboundCtx = rawPayload.inboundContext;
       if (inboundCtx && typeof inboundCtx === 'object') {
         return await this.executeInboundDmReply(inboundCtx as Record<string, unknown>, taskId);
+      }
+
+      // ─── Single-platform organic post fast-path ──────────────────────
+      // When Jasper passes a single string platform + topic (no full
+      // campaign goal), skip orchestrateCampaign and dispatch directly to
+      // the platform specialist's generate_content. This is the path
+      // hit by "Post this to Mastodon: ..." style prompts. Returns
+      // { primaryPost, imageUrl, ... } so Mission Control + the publish
+      // step have everything they need.
+      const singlePlatform = rawPayload.platform;
+      const singleTopic = rawPayload.topic ?? rawPayload.message;
+      const isSinglePostRequest =
+        typeof singlePlatform === 'string' &&
+        singlePlatform.length > 0 &&
+        typeof singleTopic === 'string' &&
+        singleTopic.length > 0 &&
+        !rawPayload.platforms; // CampaignGoal.platforms is an array — only fast-path when not multi-platform
+      if (isSinglePostRequest) {
+        return await this.executeSinglePlatformPost(rawPayload, taskId);
       }
 
       const payload = rawPayload as unknown as CampaignGoal;
@@ -953,6 +992,7 @@ export class MarketingManager extends BaseManager {
       facebook: 'FACEBOOK_ADS_EXPERT',
       instagram: 'INSTAGRAM_EXPERT',
       pinterest: 'PINTEREST_EXPERT',
+      mastodon: 'MASTODON_EXPERT',
     };
     const specialistId = SPECIALIST_BY_INBOUND_PLATFORM[platform];
     if (!specialistId) {
@@ -985,6 +1025,7 @@ export class MarketingManager extends BaseManager {
         case 'facebook': return (await import('./facebook/specialist')).getFacebookAdsExpert();
         case 'instagram': return (await import('./instagram/specialist')).getInstagramExpert();
         case 'pinterest': return (await import('./pinterest/specialist')).getPinterestExpert();
+        case 'mastodon': return (await import('./mastodon/specialist')).getMastodonExpert();
         case 'x':
         default: return getTwitterExpert();
       }
@@ -1027,6 +1068,178 @@ export class MarketingManager extends BaseManager {
       ...(senderHandle ? { senderHandle } : {}),
       ...(senderId ? { senderId } : {}),
       composedReply: composeResult.data,
+      specialistsUsed: [specialistId],
+    });
+  }
+
+  // ==========================================================================
+  // SINGLE-PLATFORM ORGANIC POST FAST-PATH
+  // ==========================================================================
+
+  /**
+   * Dispatch a single-platform organic post request directly to the platform
+   * specialist's generate_content action, then resolve the accompanying image
+   * (operator-provided OR auto-generated via DALL-E). Returns the post +
+   * image URL together so the publish step (social_post tool) can attach
+   * media in one shot.
+   *
+   * This is the post-side parallel to executeInboundDmReply — same pattern,
+   * different action. Skips the multi-platform orchestrateCampaign machinery
+   * which is overkill (and produces incorrect plans) for single-platform asks.
+   *
+   * Image resolution rule (mirrors blog flow):
+   *   - If `providedMediaUrls[0]` is set, use it AS-IS — no DALL-E call
+   *   - Otherwise, generate via the social-post-image helper
+   *   - Image gen failure is non-fatal — the post returns with imageUrl: null
+   */
+  private async executeSinglePlatformPost(
+    payload: Record<string, unknown>,
+    taskId: string,
+  ): Promise<AgentReport> {
+    const platform = String(payload.platform).trim().toLowerCase();
+    const topic = String(payload.topic ?? payload.message ?? '').trim();
+    const verbatimText = typeof payload.verbatimText === 'string' && payload.verbatimText.trim().length > 0
+      ? payload.verbatimText.trim()
+      : undefined;
+    const tone = typeof payload.tone === 'string' ? payload.tone : undefined;
+    const targetAudience = typeof payload.targetAudience === 'string' ? payload.targetAudience : undefined;
+    const campaignGoal = typeof payload.campaignGoal === 'string' ? payload.campaignGoal : undefined;
+    const providedMediaUrls = Array.isArray(payload.providedMediaUrls)
+      ? (payload.providedMediaUrls as unknown[]).filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+      : [];
+    const operatorImageUrl = providedMediaUrls.length > 0 ? providedMediaUrls[0] : undefined;
+
+    const SPECIALIST_BY_PLATFORM: Record<string, string> = {
+      x: 'TWITTER_X_EXPERT',
+      twitter: 'TWITTER_X_EXPERT',
+      bluesky: 'BLUESKY_EXPERT',
+      mastodon: 'MASTODON_EXPERT',
+      linkedin: 'LINKEDIN_EXPERT',
+      facebook: 'FACEBOOK_ADS_EXPERT',
+      instagram: 'INSTAGRAM_EXPERT',
+      pinterest: 'PINTEREST_EXPERT',
+    };
+    const specialistId = SPECIALIST_BY_PLATFORM[platform];
+    if (!specialistId) {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        null,
+        [`Single-platform post for platform="${platform}" is not yet wired. Currently supported: ${Object.keys(SPECIALIST_BY_PLATFORM).join(', ')}`],
+      );
+    }
+    this.log('INFO', `Single-platform post fast-path: dispatching to ${specialistId}.generate_content for platform=${platform}`);
+
+    // Brand context for downstream specialist + image gen
+    const brand = await getBrandDNA();
+    const brandContext = brand ? {
+      industry: brand.industry,
+      toneOfVoice: brand.toneOfVoice,
+      keyPhrases: brand.keyPhrases,
+      avoidPhrases: brand.avoidPhrases,
+    } : undefined;
+
+    // Dispatch to the specialist
+    const expert = await (async () => {
+      switch (platform) {
+        case 'x':
+        case 'twitter': return getTwitterExpert();
+        case 'bluesky': return (await import('./bluesky/specialist')).getBlueskyExpert();
+        case 'linkedin': return (await import('./linkedin/specialist')).getLinkedInExpert();
+        case 'facebook': return (await import('./facebook/specialist')).getFacebookAdsExpert();
+        case 'instagram': return (await import('./instagram/specialist')).getInstagramExpert();
+        case 'pinterest': return (await import('./pinterest/specialist')).getPinterestExpert();
+        case 'mastodon': return (await import('./mastodon/specialist')).getMastodonExpert();
+        default: throw new Error(`Unhandled platform: ${platform}`);
+      }
+    })();
+    await expert.initialize();
+
+    const generateMessage = this.createDelegationMessage(
+      `single_post_generate_${Date.now()}`,
+      specialistId,
+      {
+        action: 'generate_content',
+        topic,
+        contentType: 'post',
+        ...(tone ? { tone } : {}),
+        ...(targetAudience ? { targetAudience } : {}),
+        ...(campaignGoal ? { campaignGoal } : {}),
+        ...(verbatimText ? { verbatimText } : {}),
+        ...(brandContext ? { brandContext } : {}),
+      },
+    );
+
+    const generateResult = await expert.execute(generateMessage);
+    if (generateResult.status !== 'COMPLETED') {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        null,
+        generateResult.errors ?? [`${specialistId} generate_content failed`],
+      );
+    }
+
+    // Extract the primaryPost from the specialist's structured output. Each
+    // specialist's schema differs slightly, but they all expose `primaryPost`
+    // when generate_content shipped (post-rebuild specialists) OR a similar
+    // first-position post text. We accept either shape.
+    const data = generateResult.data as Record<string, unknown> | null | undefined;
+    const primaryPost = (() => {
+      if (!data || typeof data !== 'object') { return ''; }
+      if (typeof data.primaryPost === 'string') { return data.primaryPost; }
+      if (typeof data.standaloneTweet === 'string') { return data.standaloneTweet; }
+      if (typeof data.pinTitle === 'string' && typeof data.pinDescription === 'string') {
+        return `${data.pinTitle}\n\n${data.pinDescription}`;
+      }
+      return '';
+    })();
+    if (!primaryPost) {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        null,
+        [`${specialistId} returned no extractable primary post text. Specialist data shape: ${JSON.stringify(Object.keys(data ?? {}))}`],
+      );
+    }
+
+    // Resolve the image — operator URL or auto-generate
+    let imageUrl: string | null = null;
+    let imageOperatorProvided = false;
+    try {
+      const { generateAndStoreSocialPostImage } = await import('@/lib/content/social-post-image');
+      const imageResult = await generateAndStoreSocialPostImage({
+        imageId: `socimg_${platform}_${taskId}_${Date.now()}`,
+        platform,
+        postText: primaryPost,
+        topic,
+        ...(brandContext?.toneOfVoice ? { brandStyleHint: brandContext.toneOfVoice } : {}),
+        ...(operatorImageUrl ? { providedImageUrl: operatorImageUrl } : {}),
+      });
+      if (imageResult) {
+        imageUrl = imageResult.url;
+        imageOperatorProvided = imageResult.operatorProvided;
+        this.log(
+          'INFO',
+          `Image resolved (${imageOperatorProvided ? 'operator-provided' : 'DALL-E generated'}): ${imageResult.url}`,
+        );
+      } else {
+        this.log('WARN', 'Image resolution returned null — post will publish without media');
+      }
+    } catch (err) {
+      this.log('WARN', `Image generation failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    return this.createReport(taskId, 'COMPLETED', {
+      mode: 'SINGLE_PLATFORM_POST',
+      platform,
+      topic,
+      ...(verbatimText ? { verbatimText } : {}),
+      generatedContent: data,
+      primaryPost,
+      imageUrl,
+      imageOperatorProvided,
+      mediaUrls: imageUrl ? [imageUrl] : [],
       specialistsUsed: [specialistId],
     });
   }

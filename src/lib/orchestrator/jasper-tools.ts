@@ -1141,7 +1141,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           platform: {
             type: 'string',
             description: 'Target platform for social content',
-            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'truth_social', 'telegram', 'reddit', 'pinterest', 'whatsapp_business', 'google_business'],
+            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'mastodon', 'truth_social', 'telegram', 'reddit', 'pinterest', 'whatsapp_business', 'google_business'],
           },
           topic: {
             type: 'string',
@@ -1644,8 +1644,28 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           platform: {
             type: 'string',
-            description: 'Optional: Specific platform to target. If not provided, Marketing Manager will select best platform(s) based on goal.',
-            enum: ['tiktok', 'twitter', 'facebook', 'linkedin', 'youtube', 'instagram', 'pinterest', 'seo', 'all', 'auto'],
+            description: 'Optional: Specific platform to target. If not provided, Marketing Manager will select best platform(s) based on goal. Pass a single platform value (e.g. "mastodon") to trigger the single-platform fast-path which dispatches directly to the platform specialist + auto-resolves an accompanying image (via providedMediaUrls if supplied, otherwise DALL-E).',
+            enum: ['tiktok', 'twitter', 'x', 'facebook', 'linkedin', 'youtube', 'instagram', 'pinterest', 'bluesky', 'mastodon', 'seo', 'all', 'auto'],
+          },
+          topic: {
+            type: 'string',
+            description: 'For single-platform organic post requests: the topic or subject the post should cover. Used by the platform specialist when generating post text. Required for the single-platform fast-path; when both `platform` and `topic` are provided, Marketing Manager skips multi-platform orchestration and dispatches the platform specialist directly.',
+          },
+          tone: {
+            type: 'string',
+            description: 'Optional: tone for the generated post (e.g. "professional", "casual", "playful", "authoritative").',
+          },
+          targetAudience: {
+            type: 'string',
+            description: 'Optional: target audience for the generated post.',
+          },
+          verbatimText: {
+            type: 'string',
+            description: 'Optional: when the user provides the EXACT post text they want published (a "post this verbatim" request), pass it here. The platform specialist will use this text as the primary post rather than drafting fresh copy. Alternative phrasings may still vary slightly so the operator has options.',
+          },
+          providedMediaUrls: {
+            type: 'string',
+            description: 'JSON-encoded array of operator-provided media URLs (e.g., \'["https://example.com/image.jpg"]\'). When supplied for a single-platform post, the Marketing Manager attaches these URLs to the post AS-IS — no DALL-E call. When omitted, an accompanying image is auto-generated via DALL-E. Pass through verbatim when the user has attached or linked their own image/video.',
           },
           niche: {
             type: 'string',
@@ -1971,6 +1991,10 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           trigger: {
             type: 'string',
             description: 'Email-sequence only: what event starts the sequence for a recipient (e.g., "trial_signup", "abandoned_cart", "form_submit").',
+          },
+          providedMediaUrls: {
+            type: 'string',
+            description: 'JSON-encoded array of operator-provided media URLs (e.g., \'["https://example.com/hero.jpg"]\'). When supplied, the Content Manager uses these URLs instead of generating new media. For blog_post: the first URL becomes the featured image (no DALL-E call). Pass through verbatim when the user has attached or linked their own image/video.',
           },
         },
         required: ['topic'],
@@ -2494,7 +2518,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           platform: {
             type: 'string',
             description: 'Target social media platform',
-            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'truth_social', 'telegram', 'reddit', 'pinterest', 'whatsapp_business', 'google_business'],
+            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'mastodon', 'truth_social', 'telegram', 'reddit', 'pinterest', 'whatsapp_business', 'google_business'],
           },
           content: {
             type: 'string',
@@ -2945,7 +2969,7 @@ async function routeThroughMarketing(
  * without dedicated specialist implementations (YouTube, Instagram, Pinterest, Truth Social).
  */
 async function routeThroughContent(
-  platform: 'youtube' | 'instagram' | 'truth_social' | 'pinterest',
+  platform: 'youtube' | 'instagram' | 'mastodon' | 'truth_social' | 'pinterest',
   action: string,
   params: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
@@ -2965,6 +2989,9 @@ async function routeThroughContent(
     create_truth_post: 'social_post',
     engage_truth_community: 'engagement_response',
     schedule_truth_content: 'content_calendar',
+    create_mastodon_post: 'social_post',
+    engage_mastodon_community: 'engagement_response',
+    schedule_mastodon_content: 'content_calendar',
     create_pinterest_pins: 'visual_concept',
     organize_pinterest_boards: 'content_strategy',
     optimize_pinterest_seo: 'seo_metadata',
@@ -3257,6 +3284,7 @@ async function routeToSpecialist(
     // Route through ContentManager (AI content generation)
     case 'youtube':
     case 'instagram':
+    case 'mastodon':
     case 'truth_social':
     case 'pinterest':
       return routeThroughContent(agentId, action, params);
@@ -4970,14 +4998,36 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
           const marketingPayload: Record<string, unknown> = {
             goal: args.goal as string,
+            message: args.goal as string,
             platform: args.platform as string | undefined,
             niche: args.niche as string | undefined,
             audience: args.audience as string | undefined,
             budget: args.budget as string | undefined,
             contentType: args.contentType as string | undefined,
+            // Single-platform post fast-path fields
+            topic: args.topic as string | undefined,
+            tone: args.tone as string | undefined,
+            targetAudience: args.targetAudience as string | undefined,
+            verbatimText: args.verbatimText as string | undefined,
           };
           if (args.inboundContext && typeof args.inboundContext === 'object') {
             marketingPayload.inboundContext = args.inboundContext;
+          }
+          // providedMediaUrls — operator-provided image/video URLs. When
+          // present, Marketing Manager passes through to image-gen helpers
+          // which short-circuit (no DALL-E call). Accept JSON-encoded array
+          // string or a real array.
+          if (typeof args.providedMediaUrls === 'string' && args.providedMediaUrls.trim().length > 0) {
+            try {
+              const parsed = JSON.parse(args.providedMediaUrls) as unknown;
+              if (Array.isArray(parsed)) {
+                marketingPayload.providedMediaUrls = parsed.filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
+              }
+            } catch {
+              marketingPayload.providedMediaUrls = [args.providedMediaUrls.trim()];
+            }
+          } else if (Array.isArray(args.providedMediaUrls)) {
+            marketingPayload.providedMediaUrls = args.providedMediaUrls.filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
           }
 
           const marketingResult = await withTimeout(marketingMgr.execute({
@@ -5114,6 +5164,25 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           }
           if (typeof args.cadence === 'string') { contentPayload.cadence = args.cadence; }
           if (typeof args.trigger === 'string') { contentPayload.trigger = args.trigger; }
+
+          // providedMediaUrls — operator-provided image/video URLs. When
+          // present, downstream image-gen helpers short-circuit (no
+          // DALL-E call). Accept either a JSON-encoded array string or
+          // a real array (for callers that don't go through the OpenAPI
+          // string round-trip).
+          if (typeof args.providedMediaUrls === 'string' && args.providedMediaUrls.trim().length > 0) {
+            try {
+              const parsed = JSON.parse(args.providedMediaUrls) as unknown;
+              if (Array.isArray(parsed)) {
+                contentPayload.providedMediaUrls = parsed.filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
+              }
+            } catch {
+              // If JSON parse fails, treat the raw string as a single URL — operator may have pasted a bare URL.
+              contentPayload.providedMediaUrls = [args.providedMediaUrls.trim()];
+            }
+          } else if (Array.isArray(args.providedMediaUrls)) {
+            contentPayload.providedMediaUrls = args.providedMediaUrls.filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
+          }
 
           const contentResult = await withTimeout(contentMgr.execute({
             id: `content_${Date.now()}`,
@@ -6472,7 +6541,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
               message: agentConfig.agentEnabled
                 ? 'Autonomous posting agent is active with compliance guardrails.'
                 : 'Autonomous posting agent is paused (kill switch active).',
-              platforms: ['twitter', 'linkedin'],
+              platforms: ['twitter', 'linkedin', 'bluesky', 'mastodon'],
             });
           } else {
             const platform = socialArgs.platform ?? 'twitter';

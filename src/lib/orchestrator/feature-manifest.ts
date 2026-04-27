@@ -14,6 +14,7 @@ export type SpecialistPlatform =
   | 'tiktok'
   | 'instagram'
   | 'x_twitter'
+  | 'mastodon'
   | 'truth_social'
   | 'linkedin'
   | 'pinterest'
@@ -128,13 +129,31 @@ export const SPECIALISTS: Specialist[] = [
     connectionLabel: 'X/Twitter Account',
   },
   {
+    id: 'mastodon',
+    name: 'Federated Voice',
+    role: 'Mastodon Engagement Specialist',
+    icon: '🐘',
+    color: '#6364FF',
+    category: 'social',
+    description: 'Posts to and engages with Mastodon-family instances (mastodon.social, hachyderm.io, fosstodon.org). Handles both organic posts and inbound DM auto-reply. Code is generic Mastodon-API and works against any compatible instance via instanceUrl config.',
+    capabilities: [
+      { id: 'mast_post', name: 'Create Post', description: 'Compose conversational, federated-friendly content', action: 'create_mastodon_post' },
+      { id: 'mast_engage', name: 'Engage Community', description: 'Reply to mentions and engage organically', action: 'engage_mastodon_community' },
+      { id: 'mast_schedule', name: 'Schedule Content', description: 'Plan post calendar', action: 'schedule_mastodon_content' },
+      { id: 'mast_dm_reply', name: 'Compose DM Reply', description: 'Brand-voice reply to inbound direct messages', action: 'compose_dm_reply' },
+    ],
+    triggerPhrases: ['mastodon', 'fediverse', 'federated social'],
+    requiresConnection: true,
+    connectionLabel: 'Mastodon Account',
+  },
+  {
     id: 'truth_social',
     name: 'Real-Time Voice (Community)',
     role: 'Truth Social Engagement Manager',
     icon: '🗽',
     color: '#5448EE',
     category: 'social',
-    description: 'Engages with community-focused audiences and manages alternative platform presence.',
+    description: 'PARKED Apr 26 2026 — Truth Social blocks server-side API access at the Cloudflare TLS layer. No official API or partner program. Code preserved for future re-evaluation.',
     capabilities: [
       { id: 'ts_post', name: 'Create Post', description: 'Write platform-appropriate content', action: 'create_truth_post' },
       { id: 'ts_engage', name: 'Community Engagement', description: 'Interact with followers', action: 'engage_truth_community' },

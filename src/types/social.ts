@@ -215,7 +215,7 @@ export const SOCIAL_PLATFORMS = [
   // Big 6 (original)
   'twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok',
   // Tier 1 expansion
-  'bluesky', 'threads', 'truth_social', 'telegram',
+  'bluesky', 'threads', 'mastodon', 'truth_social', 'telegram',
   'reddit', 'pinterest', 'whatsapp_business', 'google_business',
 ] as const;
 

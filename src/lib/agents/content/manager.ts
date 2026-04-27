@@ -569,6 +569,18 @@ export interface ContentRequest {
   count?: number;
   cadence?: string;
   trigger?: string;
+
+  /**
+   * Operator-provided media URLs (image or video). When supplied, the
+   * Content Manager passes these through to downstream image/video
+   * generation helpers, which short-circuit and use the operator's
+   * URLs instead of generating new media. Forwarded from the
+   * `providedMediaUrls` parameter on Jasper's delegate_to_content tool.
+   *
+   * For blogs: only the first URL is used as the featured image.
+   * For social: all URLs are attached to the eventual post.
+   */
+  providedMediaUrls?: string[];
 }
 
 // ============================================================================
@@ -1728,7 +1740,12 @@ export class ContentManager extends BaseManager {
         // Persist as a Blog Post doc so it shows up in /content/blog listing
         // AND the editor shows the generated content. Returns the postId on
         // success so ContentPackage can carry it for the review link.
-        const postId = await this.persistBlogAsPost(blogResult, taskId, brandContext).catch((err: unknown) => {
+        // If the operator provided a media URL, the first one is used as the
+        // featured image (no DALL-E call). Otherwise an image is generated.
+        const operatorImage = (request.providedMediaUrls && request.providedMediaUrls.length > 0)
+          ? request.providedMediaUrls[0]
+          : undefined;
+        const postId = await this.persistBlogAsPost(blogResult, taskId, brandContext, operatorImage).catch((err: unknown) => {
           this.log('WARN', `Blog post persistence failed: ${err instanceof Error ? err.message : String(err)}`);
           return null;
         });
@@ -1767,6 +1784,8 @@ export class ContentManager extends BaseManager {
     blog: BlogPostResult,
     taskId: string,
     brandContext?: BrandContext,
+    /** Operator-provided featured image URL. When supplied, no DALL-E call. */
+    providedImageUrl?: string,
   ): Promise<string | null> {
     if (!adminDb) {
       this.log('WARN', 'Firestore admin not available — blog persistence skipped');
@@ -1776,18 +1795,21 @@ export class ContentManager extends BaseManager {
     const now = new Date().toISOString();
     const postId = `post_blog_${taskId}_${Date.now()}`;
 
-    // Generate a featured image via DALL-E and cache it in Firestore so the
-    // URL doesn't expire. Non-fatal — blog persists without an image if this
-    // fails (operator sees a blog without a feature image rather than no blog
-    // at all).
+    // Resolve the featured image: if the operator provided one, use it
+    // unchanged (no DALL-E call). Otherwise generate via DALL-E and cache
+    // in Firestore. Non-fatal — blog persists without an image if generation
+    // fails (operator sees a blog without a feature image rather than no
+    // blog at all).
     const featuredImageResult = await generateAndStoreBlogFeaturedImage({
       postId,
       title: blog.title,
       excerpt: blog.metaDescription ?? blog.title,
       brandStyleHint: brandContext?.toneOfVoice,
+      ...(providedImageUrl ? { providedImageUrl } : {}),
     });
     if (featuredImageResult) {
-      this.log('INFO', `Blog featured image generated and cached: ${featuredImageResult.url}`);
+      const source = providedImageUrl ? 'operator-provided' : 'DALL-E generated';
+      this.log('INFO', `Blog featured image (${source}): ${featuredImageResult.url}`);
     }
     const readTimeMinutes = (() => {
       if (!blog.estimatedReadTime) { return 5; }
