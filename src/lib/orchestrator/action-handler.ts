@@ -104,7 +104,6 @@ const FEATURE_ALIASES: Record<string, string> = {
   'training': 'agent_training',
   'voice ai': 'voice_ai',
   'voice': 'voice_ai',
-  'social ai': 'social_ai',
   'seo ai': 'seo_ai',
   'seo': 'seo_ai',
   'datasets': 'datasets',

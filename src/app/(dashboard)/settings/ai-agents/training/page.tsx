@@ -1055,7 +1055,6 @@ export default function AgentTrainingPage() {
     { label: 'Persona', href: '/settings/ai-agents/persona' },
     { label: 'Voice & Speech', href: '/settings/ai-agents/voice' },
     { label: 'Voice AI Lab', href: '/voice/training' },
-    { label: 'Social AI Lab', href: '/social/training' },
     { label: 'SEO AI Lab', href: '/seo/training' },
   ];
 
