@@ -166,13 +166,14 @@ export async function POST(
 
   const sourceEvent = mission.sourceEvent;
   const sourceKind = sourceEvent?.kind;
-  const PLATFORM_BY_KIND: Record<string, 'x' | 'bluesky' | 'linkedin' | 'facebook' | 'instagram' | 'pinterest'> = {
+  const PLATFORM_BY_KIND: Record<string, 'x' | 'bluesky' | 'linkedin' | 'facebook' | 'instagram' | 'pinterest' | 'mastodon'> = {
     inbound_x_dm: 'x',
     inbound_bluesky_dm: 'bluesky',
     inbound_linkedin_dm: 'linkedin',
     inbound_facebook_dm: 'facebook',
     inbound_instagram_dm: 'instagram',
     inbound_pinterest_dm: 'pinterest',
+    inbound_mastodon_dm: 'mastodon',
   };
   const platform = sourceKind ? PLATFORM_BY_KIND[sourceKind] : undefined;
   if (!sourceEvent || !platform) {
@@ -234,6 +235,17 @@ export async function POST(
     }
     case 'x': {
       sendResult = await sendXDirectMessage({ recipientUserId, text: replyText });
+      break;
+    }
+    case 'mastodon': {
+      const { createMastodonService } = await import('@/lib/integrations/mastodon-service');
+      const service = await createMastodonService();
+      if (!service) {
+        sendResult = { success: false, error: 'Mastodon credentials missing — run scripts/connect-mastodon.ts' };
+        break;
+      }
+      const r = await service.sendDirectMessage({ recipient: recipientUserId, text: replyText });
+      sendResult = { success: r.success, messageId: r.messageId, error: r.error };
       break;
     }
     case 'linkedin':

@@ -213,6 +213,20 @@ export interface APIKeysConfig {
       /** Personal Data Server URL — defaults to https://bsky.social if absent */
       pdsUrl?: string;
     };
+    mastodon?: {
+      /** OAuth 2.0 access token from the chosen Mastodon-family instance */
+      accessToken?: string;
+      /** Instance URL, defaults to https://mastodon.social */
+      instanceUrl?: string;
+      /** Brand account id (cached from verify_credentials) */
+      accountId?: string;
+      /** Brand handle/acct (cached from verify_credentials) */
+      acct?: string;
+      /** OAuth client id from app registration (kept for reference / token refresh) */
+      clientId?: string;
+      /** OAuth client secret from app registration (kept for reference) */
+      clientSecret?: string;
+    };
   };
 
   // Other Integrations
@@ -336,7 +350,8 @@ export type APIServiceName =
   | 'tiktok'           // TikTok Content Posting API
   | 'bluesky'          // Bluesky — AT Protocol
   | 'threads'          // Threads — Meta Threads API
-  | 'truth_social'     // Truth Social — Mastodon-compatible API
+  | 'truth_social'     // Truth Social — Mastodon-compatible API (PARKED Apr 26 2026 — Cloudflare TLS wall)
+  | 'mastodon'         // Mastodon — generic Mastodon-API integration (mastodon.social, hachyderm.io, etc.)
   | 'telegram'         // Telegram Bot API
   | 'reddit'           // Reddit API (OAuth 2.0)
   | 'pinterest'        // Pinterest API v5

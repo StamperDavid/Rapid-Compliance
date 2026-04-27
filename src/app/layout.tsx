@@ -17,6 +17,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="me" href="https://mastodon.social/@SalesVelocity_Ai" />
+      </head>
       <body className={inter.className}>
         <ClientProviders>
           {children}

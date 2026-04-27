@@ -25,7 +25,9 @@ import { createYouTubeService } from '@/lib/integrations/youtube-service';
 import { createTikTokService } from '@/lib/integrations/tiktok-service';
 import { createBlueskyService } from '@/lib/integrations/bluesky-service';
 import { createThreadsService } from '@/lib/integrations/threads-service';
-import { createTruthSocialService } from '@/lib/integrations/truth-social-service';
+// Truth Social posting parked (Apr 26 2026) — Cloudflare TLS wall blocks
+// Node fetch in production. See CONTINUATION_PROMPT integration matrix.
+// import { createTruthSocialService } from '@/lib/integrations/truth-social-service';
 import { createTelegramService } from '@/lib/integrations/telegram-service';
 import { createRedditService } from '@/lib/integrations/reddit-service';
 import { createPinterestService } from '@/lib/integrations/pinterest-service';
@@ -989,12 +991,16 @@ export class AutonomousPostingAgent {
         }
 
         case 'truth_social': {
-          const truthService = await createTruthSocialService();
-          if (!truthService) {
-            return { success: false, platform, postId, error: 'Truth Social service not configured — add credentials in Settings > API Keys' };
-          }
-          const truthResult = await truthService.postStatus({ status: content });
-          return { success: truthResult.success, platform, postId, platformPostId: truthResult.postId, error: truthResult.error };
+          // PARKED Apr 26 2026 — Truth Social fronts its API with Cloudflare
+          // bot management that fingerprints the TLS handshake; Node fetch
+          // 403s in production. No official API or partner program exists.
+          // Re-enable if Truth Social opens server-side access.
+          return {
+            success: false,
+            platform,
+            postId,
+            error: 'Truth Social posting is parked: platform blocks server-side API access (Cloudflare TLS fingerprinting). No official API exists. See CONTINUATION_PROMPT integration matrix.',
+          };
         }
 
         case 'telegram': {

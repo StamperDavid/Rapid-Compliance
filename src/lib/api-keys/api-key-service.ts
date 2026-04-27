@@ -236,6 +236,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         return keys.social?.linkedin ?? null;
       case 'bluesky':
         return keys.social?.bluesky ?? null;
+      case 'mastodon':
+        return keys.social?.mastodon ?? null;
 
       default:
         return null;

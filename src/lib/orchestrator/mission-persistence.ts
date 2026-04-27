@@ -139,7 +139,8 @@ export interface Mission {
       | 'inbound_linkedin_dm'
       | 'inbound_facebook_dm'
       | 'inbound_instagram_dm'
-      | 'inbound_pinterest_dm';
+      | 'inbound_pinterest_dm'
+      | 'inbound_mastodon_dm';
     eventId: string;
     senderId?: string;
     senderHandle?: string;
