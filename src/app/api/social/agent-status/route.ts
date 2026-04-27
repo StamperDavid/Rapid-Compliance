@@ -38,10 +38,23 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) { return authResult; }
 
-    const { where, orderBy, limit } = await import('firebase/firestore');
+    const { where, orderBy } = await import('firebase/firestore');
 
     // Parallel fetch: config, queue, scheduled posts, recent published, accounts, pending approvals
-    const [config, queuedPosts, scheduledPosts, recentPublished, accounts, pendingApprovals] = await Promise.all([
+    //
+    // Query design — single-field equality filter only, no composite
+    // orderBy. Firestore requires a composite index for `where(X) +
+    // orderBy(Y)` on different fields, and our deploys haven't kept
+    // those indexes in sync. The error was spamming the dev log
+    // every 30 seconds (status-page polling). Fixing by removing the
+    // server-side orderBy and sorting/slicing in JS — these queries
+    // already use small bounded result sets (max ~50 docs in practice
+    // since the brand only schedules a handful at a time), so the
+    // perf delta is negligible and we don't need a Firestore deploy.
+    // The corresponding composite indexes are still added to
+    // firestore.indexes.json for the day someone wants to put the
+    // orderBy back without index errors.
+    const [config, queuedPosts, allScheduled, allPublished, accounts, pendingApprovals] = await Promise.all([
       AgentConfigService.getConfig(),
       AdminFirestoreService.getAll(
         SOCIAL_QUEUE_COLLECTION,
@@ -49,11 +62,11 @@ export async function GET(request: NextRequest) {
       ).catch(() => []).then(r => r as QueuedPost[]),
       AdminFirestoreService.getAll(
         SOCIAL_POSTS_COLLECTION,
-        [where('status', '==', 'scheduled'), orderBy('scheduledAt', 'asc'), limit(5)]
+        [where('status', '==', 'scheduled')]
       ).catch(() => []).then(r => r as SocialMediaPost[]),
       AdminFirestoreService.getAll(
         SOCIAL_POSTS_COLLECTION,
-        [where('status', '==', 'published'), orderBy('publishedAt', 'desc'), limit(10)]
+        [where('status', '==', 'published')]
       ).catch(() => []).then(r => r as SocialMediaPost[]),
       SocialAccountService.listAccounts().catch(() => [] as SocialAccount[]),
       AdminFirestoreService.getAll(
@@ -61,6 +74,22 @@ export async function GET(request: NextRequest) {
         [where('status', '==', 'pending_review')]
       ).catch(() => []).then(r => r as ApprovalItem[]),
     ]);
+
+    // Sort + limit in JS (composite-index-free path).
+    const scheduledPosts = [...allScheduled]
+      .sort((a, b) => {
+        const aTime = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Infinity;
+        const bTime = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Infinity;
+        return aTime - bTime; // ascending
+      })
+      .slice(0, 5);
+    const recentPublished = [...allPublished]
+      .sort((a, b) => {
+        const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        return bTime - aTime; // descending
+      })
+      .slice(0, 10);
 
     // Compute next scheduled post time
     const nextScheduledPost = scheduledPosts[0] ?? null;
