@@ -54,23 +54,33 @@ const faqItems: FAQItem[] = [
   // Pricing & Billing
   {
     category: 'Pricing & Billing',
+    question: 'How does pricing work?',
+    answer: '$299/month flat. Every customer gets every feature — no tiers, no record limits, no upsells. You bring your own AI keys (BYOK) so you pay raw market rates directly to OpenAI / Anthropic / OpenRouter — we don’t mark up your AI costs. Fair-use limits apply on storage and outbound volume; see the pricing page for details.'
+  },
+  {
+    category: 'Pricing & Billing',
+    question: 'Do I have to choose a plan?',
+    answer: 'No. There’s only one plan — $299/month flat. Every customer gets every feature on day one.'
+  },
+  {
+    category: 'Pricing & Billing',
     question: 'How does the free trial work?',
-    answer: 'You get 14 days of full access to all features. A credit card is required to start the trial, but you wont be charged until the trial ends. You can cancel anytime during the trial with no charges.'
+    answer: 'You get 14 days of full access to all features. No credit card required to start. After the trial, it’s $299/month flat if you decide to continue. Cancel anytime, no questions asked.'
   },
   {
     category: 'Pricing & Billing',
     question: 'What happens after my trial ends?',
-    answer: 'After your trial, your chosen plan will be billed automatically. Your AI agent and all configurations remain intact. If you dont want to continue, simply cancel before the trial ends.'
+    answer: 'Your account converts to the standard $299/month flat plan. Your AI agent and all configurations remain intact. If you don’t want to continue, simply cancel before the trial ends.'
   },
   {
     category: 'Pricing & Billing',
-    question: 'Can I upgrade or downgrade my plan?',
-    answer: 'Yes! You can change your plan at any time. Upgrades take effect immediately with prorated billing. Downgrades take effect at the start of your next billing cycle.'
+    question: 'What’s included in BYOK and why does it matter?',
+    answer: 'BYOK means Bring Your Own Keys. You connect your own OpenAI / Anthropic / OpenRouter API key, and the platform uses your key to make AI calls — so you pay raw market rates directly to the provider with zero markup from us. Most AI platforms mark up tokens by 300-500%; we don’t touch your AI costs. We recommend OpenRouter for one-key access to 200+ models.'
   },
   {
     category: 'Pricing & Billing',
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards (Visa, Mastercard, American Express, Discover) through our secure Stripe integration. For Enterprise plans, we also offer invoice billing.'
+    answer: 'We accept all major credit cards (Visa, Mastercard, American Express, Discover) through our secure Stripe integration.'
   },
   
   // Features
