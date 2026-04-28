@@ -229,10 +229,10 @@ export default function SignupPage() {
               Sign In Instead
             </Link>
             <Link
-              href="/onboarding/industry"
+              href="/early-access"
               className="inline-block px-6 py-3 bg-white/5 hover:bg-white/10 text-gray-300 font-medium rounded-xl border border-white/10 transition-colors"
             >
-              Create a New Account
+              Get early access
             </Link>
           </div>
         </div>

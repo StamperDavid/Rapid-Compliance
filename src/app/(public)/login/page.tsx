@@ -222,11 +222,11 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Sign Up Link */}
+          {/* Early Access Link */}
           <p className="text-center text-gray-400 mt-8">
-            Don&apos;t have an account?{' '}
-            <Link href="/onboarding/industry" className="text-indigo-400 hover:text-indigo-300 font-medium transition">
-              Sign up free
+            Don&apos;t have an account yet?{' '}
+            <Link href="/early-access" className="text-indigo-400 hover:text-indigo-300 font-medium transition">
+              Get early access
             </Link>
           </p>
         </div>
