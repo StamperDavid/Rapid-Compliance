@@ -3,7 +3,6 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
-import PasscodeGate from '@/components/PasscodeGate';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import {
   Zap,
@@ -33,8 +32,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <PasscodeGate>
-      <PublicLayout>
+    <PublicLayout>
 
       {/* Hero Section */}
       <section className="pt-44 pb-20 px-4 sm:px-6 lg:px-8">
@@ -656,8 +654,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      </PublicLayout>
-    </PasscodeGate>
+    </PublicLayout>
   );
 }
 

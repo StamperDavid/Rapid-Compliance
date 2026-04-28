@@ -11,7 +11,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
-import PasscodeGate from '@/components/PasscodeGate';
 import { logger } from '@/lib/logger/logger';
 import { Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
 
@@ -89,8 +88,7 @@ export default function EarlyAccessPage() {
     'w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition';
 
   return (
-    <PasscodeGate>
-      <PublicLayout>
+    <PublicLayout>
         <section className="pt-44 pb-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto">
             {/* Hero */}
@@ -287,7 +285,6 @@ export default function EarlyAccessPage() {
             )}
           </div>
         </section>
-      </PublicLayout>
-    </PasscodeGate>
+    </PublicLayout>
   );
 }
