@@ -223,7 +223,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // --------------------------------------------------------------------------
   // Send invitation email
   // --------------------------------------------------------------------------
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rapidcompliance.us';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://salesvelocity.ai';
   const signupUrl = `${appUrl}/signup?invite=${inviteId}`;
 
   const emailHtml = `

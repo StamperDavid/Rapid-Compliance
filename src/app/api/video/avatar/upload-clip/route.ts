@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     // Build public URL
     const origin = request.headers.get('origin')
       ?? request.headers.get('x-forwarded-host')
-      ?? 'https://rapidcompliance.us';
+      ?? 'https://salesvelocity.ai';
     const protocol = request.headers.get('x-forwarded-proto') ?? 'https';
     const host = request.headers.get('host') ?? origin.replace(/^https?:\/\//, '');
     const publicUrl = `${protocol}://${host}/api/video/avatar/clip/${clipId}`;
