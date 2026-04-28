@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import { logger } from '@/lib/logger/logger';
+import EarlyAccessBanner from '@/components/EarlyAccessBanner';
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -99,10 +100,16 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.backgroundColor, color: theme.textColor, fontFamily: theme.fontFamily }}>
+      {/* Site-wide early-access banner — stacks ABOVE the nav. */}
+      <EarlyAccessBanner />
+
       {/* Navigation */}
-      <nav 
-        className="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg border-b border-white/10"
-        style={{ backgroundColor: theme.navBackground ?? 'rgba(15, 23, 42, 0.8)' }}
+      <nav
+        className="fixed left-0 right-0 z-50 backdrop-blur-lg border-b border-white/10"
+        style={{
+          backgroundColor: theme.navBackground ?? 'rgba(15, 23, 42, 0.8)',
+          top: 'var(--early-access-banner-h, 0px)',
+        }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center" style={{ height: `${navHeight}px` }}>
@@ -151,11 +158,11 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 Login
               </Link>
               <Link
-                href="/onboarding/industry"
+                href="/early-access"
                 className="px-4 py-2 rounded-lg font-semibold transition hover:opacity-90"
                 style={{ backgroundColor: theme.primaryColor ?? 'var(--color-primary)', color: 'var(--color-text-primary)' }}
               >
-                Start Free Trial
+                Early Access
               </Link>
             </div>
 
@@ -198,12 +205,12 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   Login
                 </Link>
                 <Link
-                  href="/onboarding/industry"
+                  href="/early-access"
                   className="px-4 py-2 rounded-lg font-semibold transition text-center"
                   style={{ backgroundColor: theme.primaryColor ?? 'var(--color-primary)', color: 'var(--color-text-primary)' }}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Start Free Trial
+                  Early Access
                 </Link>
               </div>
             </div>

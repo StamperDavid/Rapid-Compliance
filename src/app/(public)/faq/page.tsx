@@ -233,11 +233,11 @@ export default function FAQPage() {
               Contact Us
             </Link>
             <Link
-              href="/onboarding/industry"
+              href="/early-access"
               className="px-8 py-4 rounded-lg font-semibold transition"
               style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
             >
-              Start Free Trial
+              Join the early access list
             </Link>
           </div>
         </div>

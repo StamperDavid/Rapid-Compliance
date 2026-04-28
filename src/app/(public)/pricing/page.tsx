@@ -435,11 +435,11 @@ function FallbackContent() {
             14-day free trial • No credit card required • Cancel anytime
           </p>
           <Link
-            href="/onboarding/industry"
+            href="/early-access"
             className="inline-block px-12 py-4 rounded-lg text-xl font-semibold transition hover:scale-105"
             style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
           >
-            Start Your Free Trial →
+            Get early access →
           </Link>
           <p className="text-sm text-gray-500 mt-6">
             Start with 1,000 free records. Upgrade when you need more capacity.

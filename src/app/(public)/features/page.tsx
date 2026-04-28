@@ -61,11 +61,11 @@ function FallbackContent() {
             No credit card required. Full access to all features.
           </p>
           <Link
-            href="/onboarding/industry"
+            href="/early-access"
             className="inline-block px-12 py-4 rounded-lg text-xl font-semibold transition shadow-lg"
             style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
           >
-            Get Started Free →
+            Get early access →
           </Link>
         </div>
       </section>
