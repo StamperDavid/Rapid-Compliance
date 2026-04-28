@@ -63,8 +63,8 @@ export default function LandingPage() {
             {/* Key Differentiators */}
             <div className="flex flex-wrap justify-center gap-4 mb-12">
               <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-lg">
-                <div className="text-sm text-gray-400">Starting at</div>
-                <div className="text-xl font-bold text-white">$400/month</div>
+                <div className="text-sm text-gray-400">Flat — every customer, every feature</div>
+                <div className="text-xl font-bold text-white">$299/month</div>
                 <div className="text-xs text-gray-500">All features included</div>
               </div>
               <div className="px-6 py-3 bg-green-500/10 border border-green-500/30 rounded-lg">
@@ -73,9 +73,9 @@ export default function LandingPage() {
                 <div className="text-xs text-green-400">Pay raw market rates</div>
               </div>
               <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-lg">
-                <div className="text-sm text-gray-400">Simple Pricing</div>
-                <div className="text-xl font-bold text-white">Records Based</div>
-                <div className="text-xs text-gray-500">Not feature gated</div>
+                <div className="text-sm text-gray-400">Flat Pricing</div>
+                <div className="text-xl font-bold text-white">One Price for All</div>
+                <div className="text-xs text-gray-500">No tiers, no record limits</div>
               </div>
             </div>
             
@@ -127,7 +127,7 @@ export default function LandingPage() {
               What&apos;s Included in Every Plan
             </h2>
             <p className="text-xl text-gray-300">
-              The $400 user gets the <span className="text-indigo-400 font-semibold">same features</span> as the $1,250 user. You only pay based on CRM records stored.
+              Every customer gets every feature. <span className="text-indigo-400 font-semibold">No tiers, no upsells, no record limits.</span>
             </p>
           </div>
 
@@ -244,11 +244,11 @@ export default function LandingPage() {
                 </div>
                 <div className="border-t border-indigo-500/50 pt-3 mt-3 flex justify-between items-center">
                   <span className="text-white font-bold">TOTAL</span>
-                  <span className="text-indigo-300 font-bold text-2xl">$400-1,250/mo</span>
+                  <span className="text-indigo-300 font-bold text-2xl">$299/mo flat</span>
                 </div>
               </div>
               <div className="mt-4 text-indigo-300/70 text-xs">
-                Plus: Everything synced, one dashboard, one support team, BYOK pricing
+                Plus: Everything synced, one dashboard, one support team, BYOK on AI
               </div>
             </div>
           </div>
@@ -256,10 +256,10 @@ export default function LandingPage() {
           <div className="text-center">
             <div className="inline-block bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-xl px-8 py-4">
               <p className="text-indigo-300 font-bold text-2xl mb-1">
-                Save $322-3,147 per month
+                Save $423-4,098 per month
               </p>
               <p className="text-white text-sm">
-                That&apos;s $3,864-37,764 saved per year
+                That&apos;s $5,076-49,176 saved per year
               </p>
             </div>
           </div>
@@ -328,8 +328,8 @@ export default function LandingPage() {
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between items-baseline mb-1">
-                    <span className="text-gray-300">Platform Fee <span className="text-xs text-indigo-400">(from us)</span></span>
-                    <span className="text-white font-semibold">$400/mo</span>
+                    <span className="text-gray-300">Platform Fee <span className="text-xs text-indigo-400">(flat, from us)</span></span>
+                    <span className="text-white font-semibold">$299/mo</span>
                   </div>
                 </div>
                 <div>
@@ -341,7 +341,7 @@ export default function LandingPage() {
                 </div>
                 <div className="border-t border-indigo-500/50 pt-4 mt-4 flex justify-between items-center">
                   <span className="text-white font-bold text-lg">TOTAL YOU PAY</span>
-                  <span className="text-indigo-300 font-bold text-3xl">$500/mo</span>
+                  <span className="text-indigo-300 font-bold text-3xl">$399/mo</span>
                 </div>
               </div>
             </div>
@@ -350,10 +350,10 @@ export default function LandingPage() {
           <div className="text-center">
             <div className="inline-block bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-xl px-8 py-4">
               <p className="text-indigo-300 font-bold text-2xl mb-1">
-                You Save: $1,400/month
+                You Save: $1,501/month
               </p>
               <p className="text-white text-sm">
-                That&apos;s $16,800 saved per year with complete transparency
+                That&apos;s $18,012 saved per year with complete transparency
               </p>
             </div>
           </div>
@@ -651,7 +651,7 @@ export default function LandingPage() {
             Reserve my spot →
           </Link>
           <div className="mt-6 text-sm text-gray-400">
-            14-day free trial • No credit card required • 1,000 records included
+            14-day free trial • No credit card required • $299/month flat after trial
           </div>
         </div>
       </section>
