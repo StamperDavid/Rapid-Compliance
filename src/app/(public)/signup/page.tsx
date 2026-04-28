@@ -45,10 +45,12 @@ export default function SignupPage() {
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get('invite');
 
-  // If no invite token, redirect to normal onboarding
+  // If no invite token, redirect to the early-access list (the public signup
+  // surface during pre-launch). The invite-token flow below is unchanged —
+  // existing teams adding members still works.
   useEffect(() => {
     if (!inviteToken) {
-      router.replace('/onboarding/industry');
+      router.replace('/early-access');
     }
   }, [inviteToken, router]);
 
@@ -190,7 +192,7 @@ export default function SignupPage() {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4" />
-          <p className="text-slate-400">Redirecting to onboarding...</p>
+          <p className="text-slate-400">Redirecting to the early-access list...</p>
         </div>
       </div>
     );

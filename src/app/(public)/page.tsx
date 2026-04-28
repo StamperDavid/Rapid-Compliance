@@ -81,11 +81,11 @@ export default function LandingPage() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/onboarding/industry"
+                href="/early-access"
                 className="px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
                 style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
               >
-                Start Free Trial →
+                Reserve my spot →
               </Link>
               <Link
                 href="/demo"
@@ -644,11 +644,11 @@ export default function LandingPage() {
             Join hundreds of businesses using AI to close more deals
           </p>
           <Link
-            href="/onboarding/industry"
+            href="/early-access"
             className="inline-block px-12 py-4 rounded-lg text-xl font-semibold transition shadow-lg"
             style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
           >
-            Start Your Free Trial →
+            Reserve my spot →
           </Link>
           <div className="mt-6 text-sm text-gray-400">
             14-day free trial • No credit card required • 1,000 records included
