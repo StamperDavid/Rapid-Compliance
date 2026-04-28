@@ -120,41 +120,84 @@ The "auto-reply applies to private DMs ONLY, never public mentions" rule is now 
 
 ---
 
-# 📋 INTEGRATION STATUS MATRIX (current)
+# 📋 PLATFORM VIABILITY MATRIX (revised Apr 27 2026 — tier-based, research-validated)
 
-Per-platform reality. "Compose" = specialist has compose_dm_reply via mixin. "Send (DM)" = OAuth + DM API send service. "Inbound" = webhook receiver or polling cron writing to inboundSocialEvents. "Outbound (post)" = social_post → autonomous-posting-agent dispatch wired.
+**Critical change from previous session:** Apr 27 2026 the owner called out 2× operator-time waste on platforms that turned out to be incompatible with our SaaS commercial use case (Telegram + Reddit). New rule: **apply the platform viability rubric BEFORE any operator setup walkthrough.** See `memory/project_platform_viability_matrix.md` for the binding rubric.
 
-| Platform | Compose | Send (DM) | Inbound | Outbound (post) | E2E | Notes |
-|---|---|---|---|---|---|---|
-| **Mastodon** (mastodon.social, hachyderm.io, etc.) | ✅ | ✅ | ✅ poll | ✅ | ✅ both directions LIVE | Full stack verified Apr 27. Real round-trip on @SalesVelocity_Ai. Vision-aware DM compose shipped (sees image attachments). |
-| **Bluesky** | ✅ | ✅ | ✅ poll | ✅ via Marketing fast-path | ✅ inbound; ⚠ outbound needs fresh real test | Inbound verified earlier session. Outbound code path exists (autonomous-posting-agent has bluesky case) but a fresh real-post test post-Jasper-v13 hasn't run. |
-| **X (Twitter)** | ✅ | ✅ | ⚠ webhook X-side broken | ✅ | ⚠ inbound blocked X-side | Orchestration code verified live; X webhook delivery itself fails X-side. |
-| **LinkedIn** | ✅ | ❌ | ❌ | ✅ via Marketing fast-path | ❌ DM blocked | Send requires Marketing Developer Platform approval (gated, multi-day). Compose mixin done. |
-| **Facebook Messenger** | ✅ | ❌ | ❌ | ✅ via Marketing fast-path | ❌ DM blocked | Meta Business Verification required for `pages_messaging` in production. |
-| **Instagram** | ✅ | ❌ | ❌ | ✅ via Marketing fast-path | ❌ DM blocked | Same Meta Business Verification gate (`instagram_manage_messages`). Bundled with Facebook (single OAuth when verification clears). |
-| **Pinterest** | ✅ | ❌ | ❌ | ✅ via Marketing fast-path | ❌ DM deferred | DM API exists but low priority — Pinterest is discovery, not conversation. |
-| **Reddit** | ❌ | ❌ | ❌ | partial (post case in autonomous-posting-agent, no specialist) | ❌ blocked | New-account 24h gate on dev app creation (Apr 26 attempt failed). REDDIT_EXPERT specialist not built yet. |
-| **Truth Social** | ✅ (parked) | ❌ | ❌ | ❌ stub | ❌ PARKED | Cloudflare TLS-fingerprint wall. No best-practice path. Code preserved; future-release. |
-| **Threads** | ❌ | ❌ | ❌ | ✅ via Marketing fast-path | ❌ DM N/A | Threads public API supports posts/reads only — DMs not exposed. |
-| **TikTok** | ❌ | ❌ | ❌ | ✅ via Marketing fast-path | ❌ DM N/A | TikTok DM API in beta, US-EXCLUDED — unusable from a US deployment. |
-| **YouTube** | n/a | n/a | n/a | ✅ via Marketing fast-path | n/a | YouTube has no DM concept. Posting only (videos/community posts). |
+The 6-check rubric:
+1. Public API for posting + reading?
+2. Commercial access without enterprise-budget approval ($10K+/mo)?
+3. Self-service or pre-approval-gated?
+4. Supports our shape (cross-account SaaS posting on behalf of clients, inbound DM auto-reply)?
+5. UI-side filter that nullifies API value (e.g. X Chat encryption)?
+6. User base aligned with US SMB target?
+
+A platform must pass ALL 6 to make Tier 1 or Tier 2.
+
+## TIER 1 — Posting + DM both viable for SaaS (PURSUE FULLY)
+
+| Platform | Status today | DM use case | Approval gate |
+|---|---|---|---|
+| **Bluesky** | ✅ both directions LIVE Apr 27 (real outbound + inbound DM round-trip) | open chat lexicon, polling | none — open API |
+| **Mastodon** | ✅ both directions LIVE Apr 27 (vision-aware DM compose) | direct visibility statuses, polling | none — open protocol |
+| **X (Twitter)** | ⚠ outbound LIVE; inbound DM blocked at receiver per Apr 27 cost decision | LEGACY DMs only (X Chat E2E encrypted, API can't see); spam-filtered by X UI | Pay-Per-Use ($25 floor) |
+| **Facebook Messenger** | external block | customer-initiated 24h window — fits auto-reply pattern | Meta Business Verification (3-7 days typical, 1-2 wk worst case) |
+| **Instagram** | external block | same Meta gate as FB, instagram_manage_messages | Meta Business Verification (bundled w/ FB) |
+
+## TIER 2 — Posting only, no DM, valuable for distribution (PURSUE)
+
+| Platform | Approval gate | Notes |
+|---|---|---|
+| **LinkedIn** | Marketing Developer Platform (1-3 wk, selective) | DM API requires Partner status — months/never; treat as POSTING ONLY |
+| **YouTube** | Google OAuth verification (1-4 wk) | No DM concept on YouTube; community posts |
+| **Threads** | Meta gate (bundled with FB/IG) | Threads public API exposes posts/reads only — DMs not in API |
+| **Pinterest** | Developer Portal review (1-3 days, fastest external) | DM API exists but Pinterest is discovery, not conversation — defer DM |
+| **Google Business** | Google Profile verify (postcard 5-14 d, phone faster) + GCP OAuth | No DM concept (Business Profile is publish-only) |
+
+## TIER 3 — Skip / Delete (NOT VIABLE for our use case)
+
+| Platform | Reason | Status |
+|---|---|---|
+| **Reddit** | Commercial API "effectively impossible" without $10K+/mo enterprise. Devvit is community-scoped. Verified Apr 27. | **MARKED FOR DELETION** — see `memory/project_reddit_parked.md`. Code exists (REDDIT_EXPERT + GM + scripts) pending cleanup. Brand account `u/HuckleberryIII9199` dormant. |
+| **Telegram** | US SMB <10% adoption. Requires personal phone for SMS verification. No commercial brand-account flow. | **MARKED FOR DELETION** — see `memory/project_telegram_marked_for_deletion.md`. Code exists (TELEGRAM_EXPERT + GM + scripts) pending cleanup. |
+| **TikTok** | DM API US-EXCLUDED. Content Posting API selective approval. Audience misalignment for B2B SMB targeting. | DEFER — re-evaluate if Gen Z SMB pivot |
+| **WhatsApp Business** | Customer-initiated only (24h window). Narrow use case for marketing/outreach. Better fit for inbound customer support. | DEFER — re-evaluate when customer-support automation is on roadmap |
+| **Truth Social** | Cloudflare TLS-fingerprint wall blocks Node fetch in production. No path forward. | PARKED (existing) |
+
+## Competitive validation (Apr 27 2026)
+
+The tier matrix was cross-checked against established competitors:
+
+- **Sintra.ai** (closest competitor — AI agent for SMBs): supports only Facebook + Instagram POSTING. NO DMs. NO other social platforms. Our scope already exceeds theirs (Bluesky + Mastodon both directions live).
+- **ManyChat** (DM automation leader): Instagram, Facebook Messenger, WhatsApp DM only. Validates customer-initiated 24h-window DM auto-reply as the proven commercial pattern.
+- **Hootsuite + Buffer + Sprout Social** (multi-platform standard): all support FB/IG/LinkedIn/X/YouTube/TikTok. Sprout adds Threads. **None support Reddit or Telegram for marketing automation** — confirms Tier 3 verdict.
 
 ## Other comms channels
 
 | Channel | Outbound | Inbound | E2E | Notes |
 |---|---|---|---|---|
-| **Email (SendGrid)** | ✅ | partial | ✅ outbound | Domain auth on `salesvelocity.ai`, real send verified. Inbound parse endpoint exists; not yet routed through Jasper inbound-comms framework. |
+| **Email (SendGrid)** | ✅ Pro 100K active Apr 27 | partial | ✅ outbound LIVE Apr 27 (real send verified, inbox placement, no "via sendgrid.net" indicator — domain auth working) | Domain auth on em3994.salesvelocity.ai + em2756.rapidcompliance.us. Single sender dstamper@salesvelocity.ai. Subuser infra ready for multi-tenant flip. Inbound parse endpoint exists; not yet routed through Jasper inbound-comms framework. |
 | **SMS (Twilio)** | ⚠ | ⚠ | ❌ | Toll-free verification still under Twilio review. CTIA opt-in checkbox shipped on `/onboarding/industry`. Inbound SMS receive webhook still TODO once verification clears. |
 
-## What unblocks what
+## What unblocks what (revised)
 
-| Action (off-Claude / external) | Unblocks |
-|---|---|
-| File X dev support ticket | X DM webhook delivery |
-| Wait 24h+ then retry Reddit dev app | Reddit DM integration (and later REDDIT_EXPERT build) |
-| Start Meta Business Verification | Facebook + Instagram DM (bundled OAuth flow) |
-| Apply for LinkedIn Marketing Developer Platform | LinkedIn DM send |
-| Twilio toll-free verification approval | SMS bidirectional + inbound webhook |
+| Action (off-Claude / external) | Unblocks | Expected timeline |
+|---|---|---|
+| **Meta Business Verification** | Facebook + Instagram + Threads (3 platforms in 1 application) | 3-7 days typical, 1-2 wk worst case |
+| **LinkedIn Marketing Developer Platform** | LinkedIn POSTING (DM is enterprise-gated, treat as posting only) | 1-3 weeks, selective approval |
+| **YouTube / Google OAuth verification** | YouTube community posts | 1-4 weeks (slowest gate) |
+| **Pinterest Developer Portal** | Pinterest pin posting | 1-3 days (fastest gate) |
+| **Google Business Profile claim/verify + GCP OAuth** | Google Business local posts | days (postcard mail can be 5-14 d) |
+| **Twilio toll-free verification** | SMS bidirectional + inbound webhook | under Twilio review (no operator action) |
+| **X dev support ticket** | X DM webhook delivery — but practical value is low (X Chat blocks 95%+ of legitimate DMs anyway, legacy DMs are mostly spam) | days (deprioritized) |
+
+**Operator priority order tonight (week-to-launch deadline):**
+1. **Pinterest Developer Portal** (fastest, 1-3 d)
+2. **Meta Business Verification** (biggest single unlock — FB + IG + Threads, 3-7 d)
+3. **LinkedIn MDP** (selective, start clock now)
+4. **YouTube / Google verification** (slowest, start clock now)
+5. **Google Business Profile verification** (start postcard process)
+6. Skip: Reddit, Telegram, TikTok DM, WhatsApp Business, Truth Social
 
 ---
 
