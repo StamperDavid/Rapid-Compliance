@@ -260,7 +260,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                   <span style={{ color: 'var(--color-text-secondary)' }}>{plan.period}</span>
                 </div>
                 <Link
-                  href="/onboarding/industry"
+                  href="/early-access"
                   style={{
                     display: 'block',
                     width: '100%',
