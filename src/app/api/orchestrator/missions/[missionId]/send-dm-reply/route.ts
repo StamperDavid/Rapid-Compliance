@@ -184,6 +184,40 @@ export async function POST(
   }
   const eventId = sourceEvent.eventId;
 
+  // ── Idempotency guard (server-side, primary fix) ──────────────────────────
+  // Read the inboundSocialEvents doc BEFORE dispatching.  If reply.sentAt is
+  // already populated a previous send succeeded — return 409 so the caller
+  // knows not to retry and the platform receives only ONE message.
+  if (adminDb) {
+    const inboundSnap = await adminDb
+      .collection(getSubCollection('inboundSocialEvents'))
+      .doc(eventId)
+      .get();
+    if (inboundSnap.exists) {
+      const inboundData = inboundSnap.data() as {
+        reply?: { sentAt?: string; messageId?: string; text?: string };
+      } | undefined;
+      if (inboundData?.reply?.sentAt) {
+        logger.warn('[send-dm-reply] duplicate send blocked — already_sent', {
+          missionId,
+          eventId,
+          sentAt: inboundData.reply.sentAt,
+          messageId: inboundData.reply.messageId,
+        });
+        return NextResponse.json(
+          {
+            ok: false,
+            reason: 'already_sent',
+            sentAt: inboundData.reply.sentAt,
+            messageId: inboundData.reply.messageId ?? null,
+          },
+          { status: 409 },
+        );
+      }
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const composed = extractComposedReplyFromMission(mission.steps);
   const replyText = (bodyOverride.replyText ?? composed?.replyText ?? '').trim();
   if (!replyText) {
