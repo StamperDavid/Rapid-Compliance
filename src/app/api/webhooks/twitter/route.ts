@@ -119,6 +119,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
+  const kind = detectEventKind(payload);
+
+  // X DM auto-reply is impractical and operator decided to incur zero cost
+  // on it (Apr 27 2026):
+  //   1. Real customer DMs use X Chat (E2E encrypted) which X never delivers
+  //      to any webhook — confirmed by tay (X Staff) in dev community threads
+  //   2. The DMs that DO reach us via Account Activity webhook are exclusively
+  //      flagged as low-quality by X's own UI filter (visible at
+  //      x.com/settings/direct_messages → "Filter low-quality messages")
+  //   3. Processing them costs LLM tokens per DM and produces zero customer value
+  // Drop direct_message_events at the receiver so they never land in
+  // inboundSocialEvents and never trigger the dispatcher / specialist.
+  // Other event types (tweets, follows, mentions) still flow through.
+  // To re-enable: delete this guard. Reconsider only if X exposes X Chat to API.
+  if (kind === 'direct_message_events') {
+    logger.info(
+      '[twitter-webhook] Dropping direct_message_events (X Chat unreachable, legacy DMs are spam — see route comment)',
+      { route: '/api/webhooks/twitter' },
+    );
+    return NextResponse.json({ ok: true, dropped: 'direct_message_events' });
+  }
+
   // Persist the raw event for downstream consumers. The agent dispatcher
   // can poll this collection or watch via a Firestore listener and
   // dispatch each unprocessed event to the right handler (DM reply
@@ -130,7 +152,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       provider: 'twitter',
       receivedAt: new Date().toISOString(),
       processed: false,
-      kind: detectEventKind(payload),
+      kind,
       payload,
     };
     try {
