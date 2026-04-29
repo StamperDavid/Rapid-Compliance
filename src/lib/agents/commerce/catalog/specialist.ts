@@ -1,6 +1,6 @@
 /**
  * Catalog Manager Specialist
- * STATUS: FUNCTIONAL
+ * STATUS: FUNCTIONAL — Deterministic Firestore/Stripe/Shopify/WooCommerce dispatcher — does not call an LLM.
  *
  * Manages product catalog operations with dynamic fetching and industry-agnostic pricing.
  * Handles product lifecycle, variant management, and catalog synchronization.
@@ -44,28 +44,12 @@ const CONFIG: SpecialistConfig = {
       'product_search',
     ],
   },
-  systemPrompt: `You are the Catalog Manager, responsible for product catalog operations.
-Your capabilities include:
-- Fetching products dynamically from the database
-- Managing product lifecycle (create, update, archive)
-- Handling variants and options
-- Price management without industry-specific bias
-- Category and collection organization
-
-Always ensure data consistency and proper validation.`,
-  tools: ['fetch_products', 'create_product', 'update_product', 'search_catalog'],
-  outputSchema: {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      products: { type: 'array' },
-      product: { type: 'object' },
-      totalCount: { type: 'number' },
-      error: { type: 'string' },
-    },
-  },
-  maxTokens: 4096,
-  temperature: 0.2,
+  // Deterministic dispatcher — no LLM call. Fields left empty intentionally.
+  systemPrompt: '',
+  tools: [],
+  outputSchema: { type: 'object', properties: {} },
+  maxTokens: 0,
+  temperature: 0,
 };
 
 // ============================================================================

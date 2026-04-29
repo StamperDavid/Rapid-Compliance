@@ -1,6 +1,6 @@
 /**
  * Payment Specialist
- * STATUS: FUNCTIONAL
+ * STATUS: FUNCTIONAL — Deterministic Stripe/provider dispatcher — does not call an LLM.
  *
  * Handles checkout session creation, payment intent management, and webhook coordination.
  * Routes through the configured payment provider (Stripe, PayPal, Paddle, Adyen, etc.).
@@ -39,29 +39,12 @@ const CONFIG: SpecialistConfig = {
       'checkout_session_status',
     ],
   },
-  systemPrompt: `You are the Payment Specialist, responsible for secure payment orchestration.
-Your capabilities include:
-- Creating checkout sessions via the configured payment provider
-- Managing payment intents across all supported providers
-- Validating payment completion
-- Processing refunds
-- Coordinating webhook events
-
-Supported providers: Stripe, PayPal, Square, Authorize.Net, 2Checkout, Mollie, Razorpay, Braintree, Paddle, Adyen, Chargebee, Hyperswitch.
-Always ensure PCI compliance and never store sensitive card data.`,
-  tools: ['initialize_checkout', 'create_payment_intent', 'validate_payment', 'process_refund'],
-  outputSchema: {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      sessionId: { type: 'string' },
-      paymentIntentId: { type: 'string' },
-      status: { type: 'string' },
-      error: { type: 'string' },
-    },
-  },
-  maxTokens: 4096,
-  temperature: 0.2,
+  // Deterministic dispatcher — no LLM call. Fields left empty intentionally.
+  systemPrompt: '',
+  tools: [],
+  outputSchema: { type: 'object', properties: {} },
+  maxTokens: 0,
+  temperature: 0,
 };
 
 // ============================================================================

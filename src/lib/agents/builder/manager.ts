@@ -328,12 +328,18 @@ export interface ResponsiveConfig {
  */
 export interface AssetPackage {
   logo: {
-    primary: string;
-    icon: string;
-    monochrome: string;
+    /**
+     * Null when the ASSET_GENERATOR did not return a logo. Downstream callers
+     * must render an explicit "assets needed" state rather than substituting a
+     * placeholder URL — a fabricated path surfaced as real would mislead users.
+     */
+    primary: string | null;
+    icon: string | null;
+    monochrome: string | null;
   };
   favicon: {
-    ico: string;
+    /** Null when the ASSET_GENERATOR did not return a favicon. */
+    ico: string | null;
     sizes: Record<string, string>;
   };
   socialGraphics: Record<string, string>;
@@ -947,7 +953,10 @@ export class BuilderManager extends BaseManager {
         stages: [],
         conversionPoints: [],
         automations: [],
-        estimatedConversionRate: 0.05,
+        // No measured or modelled estimate available in this fallback path.
+        // Downstream callers must treat null as "unknown" — do not substitute
+        // a default number (e.g., 0.05) as that would be a fabricated metric.
+        estimatedConversionRate: null,
         optimizationPriorities: [],
       },
       navigation: {
@@ -974,7 +983,10 @@ export class BuilderManager extends BaseManager {
         derivedFromBrandDNA: false,
         intelligenceBriefsUsed: [],
         specialistContributions: {},
-        confidence: 0.6,
+        // No confidence calculation was performed for this minimal fallback.
+        // Null signals "unknown" to assembleFromBlueprint — the caller skips
+        // the confidence multiplication path and logs a warning instead.
+        confidence: null,
         warnings: ['Minimal blueprint generated - full architecture recommended'],
       },
     };
@@ -1055,7 +1067,14 @@ export class BuilderManager extends BaseManager {
 
     // Calculate final confidence
     const specialistConfidence = specialistResults.filter(r => r.status === 'SUCCESS').length / specialistResults.length;
-    const finalConfidence = Math.round(blueprint.metadata.confidence * specialistConfidence * overallConfidence * 100) / 100;
+    // blueprint.metadata.confidence is null for minimal-fallback blueprints;
+    // treat null as 0 so the resulting finalConfidence signals "no confidence
+    // data" rather than collapsing to NaN which would break downstream display.
+    const blueprintConfidence = blueprint.metadata.confidence ?? 0;
+    if (blueprint.metadata.confidence === null) {
+      warnings.push('Blueprint confidence is unknown (minimal fallback) — assembly confidence reported as 0.');
+    }
+    const finalConfidence = Math.round(blueprintConfidence * specialistConfidence * overallConfidence * 100) / 100;
 
     this.log('INFO', `Assembly complete: ${pages.length} pages, confidence: ${finalConfidence}`);
 
@@ -1087,7 +1106,10 @@ export class BuilderManager extends BaseManager {
           action: 'generate_design_system',
           context: `Generate design system for ${blueprint.brandContext.industry} site`,
           requirements: {
-            brandColors: [], // Would come from Brand DNA
+            // Brand DNA does not expose a color palette today; the UX/UI
+            // Architect generates the palette from industry + tone-of-voice.
+            // When Brand DNA gains a colors field, pass it here.
+            brandColors: [] as string[],
             targetAudience: blueprint.brandContext.targetAudience,
             accessibilityLevel: 'AA',
             industryHint: blueprint.brandContext.industry,
@@ -1370,12 +1392,14 @@ export class BuilderManager extends BaseManager {
 
     return {
       logo: {
-        primary: (logoAsset?.variations as Array<{ url: string }>)?.[0]?.url ?? '/assets/logo.png',
-        icon: (logoAsset?.variations as Array<{ url: string }>)?.[1]?.url ?? '/assets/logo-icon.png',
-        monochrome: (logoAsset?.variations as Array<{ url: string }>)?.[2]?.url ?? '/assets/logo-mono.png',
+        // Null when ASSET_GENERATOR returned no variations — callers must
+        // render an "assets needed" state rather than a broken image path.
+        primary: (logoAsset?.variations as Array<{ url: string }>)?.[0]?.url ?? null,
+        icon: (logoAsset?.variations as Array<{ url: string }>)?.[1]?.url ?? null,
+        monochrome: (logoAsset?.variations as Array<{ url: string }>)?.[2]?.url ?? null,
       },
       favicon: {
-        ico: (faviconAsset?.icopUrl as string) ?? '/favicon.ico',
+        ico: (faviconAsset?.icopUrl as string) ?? null,
         sizes: {},
       },
       socialGraphics: {},
@@ -1518,7 +1542,7 @@ export class BuilderManager extends BaseManager {
         assets.logo.icon,
         assets.favicon.ico,
         ...assets.banners,
-      ].filter(Boolean),
+      ].filter((a): a is string => typeof a === 'string'),
       redirects: [
         { from: '/home', to: '/', status: 301 },
         { from: '/index.html', to: '/', status: 301 },

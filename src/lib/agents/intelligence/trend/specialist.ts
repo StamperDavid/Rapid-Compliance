@@ -617,6 +617,57 @@ type TrendPayload =
   | PivotTriggerRequest;
 
 // ============================================================================
+// PER-ACTION LLM SCHEMAS (analyze_trend, trigger_pivot, track_competitor)
+// ============================================================================
+
+const TrendAnalysisLLMSchema = z.object({
+  currentState: z.enum(['NASCENT', 'GROWING', 'PEAKING', 'DECLINING', 'STABLE']),
+  projectedTrajectory: z.enum(['ACCELERATING', 'STEADY', 'DECELERATING', 'REVERSING']),
+  confidence: z.number().min(0).max(1),
+  forecastNarrative: z.string().min(30).max(1500),
+  keyDrivers: z.array(z.string().min(5).max(300)).min(1).max(6),
+  potentialDisruptors: z.array(z.string().min(5).max(300)).min(0).max(4),
+  competitorPositioning: z.array(z.object({
+    competitor: z.string().min(2).max(100),
+    position: z.string().min(5).max(300),
+  })).min(0).max(5),
+  actionPlan: z.array(z.string().min(10).max(400)).min(1).max(6),
+  relatedTrends: z.array(z.object({
+    name: z.string().min(2).max(200),
+    correlation: z.number().min(0).max(1),
+  })).min(0).max(8),
+});
+
+const PivotTriggerLLMSchema = z.object({
+  pivotWarranted: z.boolean(),
+  pivotRationale: z.string().min(30).max(1000),
+  urgencyAssessment: z.enum(['IMMEDIATE', 'HIGH', 'MEDIUM', 'LOW']),
+  pivots: z.array(z.object({
+    targetAgent: z.string().min(2).max(100),
+    pivotType: z.enum(['CONTENT', 'MARKETING', 'SALES', 'OUTREACH', 'STRATEGY']),
+    currentState: z.string().min(5).max(300),
+    recommendedState: z.string().min(10).max(400),
+    rationale: z.string().min(20).max(600),
+    implementationSteps: z.array(z.string().min(5).max(300)).min(1).max(5),
+    rollbackPlan: z.string().min(10).max(300),
+  })).min(0).max(8),
+});
+
+const CompetitorTrackingLLMSchema = z.object({
+  competitiveNarrative: z.string().min(30).max(2000),
+  threatLevel: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
+  movements: z.array(z.object({
+    competitorName: z.string().min(2).max(100),
+    movementType: z.enum(['PRICING', 'FEATURE', 'MARKETING', 'POSITIONING', 'EXPANSION', 'PARTNERSHIP']),
+    description: z.string().min(10).max(500),
+    impactAssessment: z.enum(['MINIMAL', 'MODERATE', 'SIGNIFICANT', 'CRITICAL']),
+    recommendedResponse: z.string().min(10).max(400),
+    sourceUrls: z.array(z.string()).min(0).max(3),
+  })).min(0).max(20),
+  strategicRecommendations: z.array(z.string().min(10).max(400)).min(1).max(6),
+});
+
+// ============================================================================
 // IMPLEMENTATION
 // ============================================================================
 
@@ -1345,7 +1396,10 @@ export class TrendScout extends BaseSpecialist {
   // ==========================================================================
 
   /**
-   * Handle trend analysis request
+   * Handle trend analysis request.
+   * Collects DataForSEO + Serper data first, then passes it to the LLM for
+   * strategic synthesis. The LLM replaces the threshold-based forecast logic
+   * and can reason about cross-signal patterns the data reveals.
    */
   private async handleTrendAnalysis(
     taskId: string,
@@ -1358,9 +1412,9 @@ export class TrendScout extends BaseSpecialist {
     const analysisId = `trend-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const horizon = timeHorizon ?? '3_MONTHS';
 
-    // Run all analyses in parallel for speed
-    const [forecast, relatedTrends, historicalData, competitorPositioning] = await Promise.all([
-      this.buildTrendForecast(trendKeyword, horizon),
+    // Step 1: Collect real data from all upstream sources in parallel
+    const [keywordTrends, relatedTrendsRaw, historicalData, competitorPositioningRaw] = await Promise.all([
+      this.analyzeTrendingKeywords([trendKeyword]),
       this.findRelatedTrends(trendKeyword, industry),
       this.generateHistoricalData(trendKeyword),
       request.includeCompetitorAnalysis
@@ -1368,23 +1422,102 @@ export class TrendScout extends BaseSpecialist {
         : Promise.resolve(undefined),
     ]);
 
-    // Generate action plan from forecast
-    const actionPlan = this.generateTrendActionPlan(forecast);
+    const keywordTrend = keywordTrends[0];
 
-    const result: TrendAnalysisResult = {
-      analysisId,
-      analyzedAt: new Date().toISOString(),
-      forecast,
-      relatedTrends,
-      historicalData,
-      competitorPositioning,
-      actionPlan,
-    };
+    // Step 2: LLM synthesis — reason about what the collected data means strategically
+    try {
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
 
-    // Share forecast to Memory Vault
-    await this.shareTrendForecastToVault(forecast).catch(() => { /* non-blocking */ });
+      const dataContext = JSON.stringify({
+        trendKeyword,
+        industry: industry ?? 'unspecified',
+        timeHorizon: horizon,
+        keywordTrendData: keywordTrend ?? null,
+        relatedTrends: relatedTrendsRaw.slice(0, 8),
+        historicalVolumePoints: historicalData.slice(-12), // last 12 months
+        competitorSERPPositions: competitorPositioningRaw ?? [],
+      }, null, 2);
 
-    return this.createReport(taskId, 'COMPLETED', result);
+      const userPrompt = `ACTION: analyze_trend
+
+Analyze the collected keyword and market data below for the trend "${trendKeyword}" and produce a strategic trend assessment. Do NOT hallucinate data — reason only from what is provided.
+
+## COLLECTED DATA
+${dataContext}
+
+Respond with ONLY a valid JSON object:
+{
+  "currentState": "<NASCENT|GROWING|PEAKING|DECLINING|STABLE>",
+  "projectedTrajectory": "<ACCELERATING|STEADY|DECELERATING|REVERSING>",
+  "confidence": <0.0-1.0>,
+  "forecastNarrative": "<2-3 sentence synthesis of what this data says about the trend's trajectory>",
+  "keyDrivers": ["<specific driver visible in the data, citing sources or keywords where possible>"],
+  "potentialDisruptors": ["<forces visible in the data that could shift the trend>"],
+  "competitorPositioning": [
+    { "competitor": "<domain>", "position": "<strategic read of their SERP presence vs this trend>" }
+  ],
+  "actionPlan": ["<specific action the operator should take, ordered by priority>"],
+  "relatedTrends": [
+    { "name": "<related trend name>", "correlation": <0.0-1.0> }
+  ]
+}`;
+
+      const rawContent = await callOpenRouter(ctx, userPrompt);
+      const parsed: unknown = JSON.parse(stripJsonFences(rawContent));
+      const llmResult = TrendAnalysisLLMSchema.parse(parsed);
+
+      const forecast: TrendForecast = {
+        trendId: `trend-${trendKeyword.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+        trendName: trendKeyword,
+        currentState: llmResult.currentState,
+        projectedTrajectory: llmResult.projectedTrajectory,
+        timeHorizon: horizon,
+        confidence: llmResult.confidence,
+        keyDrivers: llmResult.keyDrivers,
+        potentialDisruptors: llmResult.potentialDisruptors,
+        recommendations: llmResult.actionPlan,
+      };
+
+      const result: TrendAnalysisResult = {
+        analysisId,
+        analyzedAt: new Date().toISOString(),
+        forecast,
+        relatedTrends: llmResult.relatedTrends,
+        historicalData,
+        competitorPositioning: llmResult.competitorPositioning,
+        actionPlan: llmResult.actionPlan,
+      };
+
+      await this.shareTrendForecastToVault(forecast).catch(() => { /* non-blocking */ });
+
+      return this.createReport(taskId, 'COMPLETED', {
+        ...result,
+        forecastNarrative: llmResult.forecastNarrative,
+        analysisMethod: 'llm',
+        analysisModel: ctx.gm.model,
+      });
+    } catch (err: unknown) {
+      // Fallback: deterministic forecast from keyword data alone
+      const msg = err instanceof Error ? err.message : String(err);
+      this.log('WARN', `analyze_trend LLM synthesis failed — using keyword-data fallback: ${msg}`);
+
+      const forecast = await this.buildTrendForecast(trendKeyword, horizon);
+      const actionPlan = this.generateTrendActionPlan(forecast);
+
+      const result: TrendAnalysisResult = {
+        analysisId,
+        analyzedAt: new Date().toISOString(),
+        forecast,
+        relatedTrends: relatedTrendsRaw,
+        historicalData,
+        competitorPositioning: competitorPositioningRaw,
+        actionPlan,
+      };
+
+      await this.shareTrendForecastToVault(forecast).catch(() => { /* non-blocking */ });
+
+      return this.createReport(taskId, 'COMPLETED', { ...result, analysisMethod: 'deterministic_fallback' });
+    }
   }
 
   /**
@@ -1605,13 +1738,15 @@ export class TrendScout extends BaseSpecialist {
   // ==========================================================================
 
   /**
-   * Handle pivot trigger request
+   * Handle pivot trigger request.
+   * Loads the cached signal and passes it to the LLM to reason about whether
+   * a pivot is warranted and what specific pivots each agent should make.
+   * Falls back to template-based pivots if the LLM call fails.
    */
   private async handlePivotTrigger(
     taskId: string,
     request: PivotTriggerRequest
   ): Promise<AgentReport> {
-    await Promise.resolve();
     const { signalId, targetAgents, priority, dryRun } = request;
 
     this.log('INFO', `Triggering pivot for signal ${signalId}`);
@@ -1623,37 +1758,126 @@ export class TrendScout extends BaseSpecialist {
       return this.createReport(taskId, 'FAILED', null, [`Signal ${signalId} not found in cache`]);
     }
 
-    // Determine target agents
     const agents = targetAgents ?? signal.affectedAgents;
-    const pivotPriority = priority ?? this.urgencyToPriority(signal.urgency);
 
-    // Generate pivot recommendations for each agent
-    const pivots: PivotRecommendation[] = [];
+    // Primary path: LLM reasons about whether and how to pivot given the signal
+    let pivots: PivotRecommendation[] = [];
 
-    for (const agent of agents) {
-      const pivot = this.generatePivotForAgent(signal, agent, pivotPriority);
-      if (pivot) {
-        pivots.push(pivot);
-      }
+    try {
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+
+      const signalContext = JSON.stringify({
+        signal: {
+          id: signal.id,
+          type: signal.type,
+          title: signal.title,
+          description: signal.description,
+          urgency: signal.urgency,
+          confidence: signal.confidence,
+          dataPoints: signal.dataPoints,
+          source: signal.source,
+        },
+        targetAgents: agents,
+        requestedPriority: priority ?? null,
+      }, null, 2);
+
+      const userPrompt = `ACTION: trigger_pivot
+
+A market signal has been flagged for pivot evaluation. Reason about whether this signal genuinely warrants a strategic pivot and, if so, what specific pivots each affected agent should make. Do not generate generic template pivots — ground recommendations in the signal content.
+
+## SIGNAL DATA
+${signalContext}
+
+Respond with ONLY a valid JSON object:
+{
+  "pivotWarranted": <true|false>,
+  "pivotRationale": "<why this signal does or does not warrant a pivot — cite signal content>",
+  "urgencyAssessment": "<IMMEDIATE|HIGH|MEDIUM|LOW>",
+  "pivots": [
+    {
+      "targetAgent": "<agent from the targetAgents list>",
+      "pivotType": "<CONTENT|MARKETING|SALES|OUTREACH|STRATEGY>",
+      "currentState": "<what the agent is presumably doing now>",
+      "recommendedState": "<specific recommended new state>",
+      "rationale": "<why this agent specifically needs to pivot, grounded in the signal>",
+      "implementationSteps": ["<ordered step>"],
+      "rollbackPlan": "<how to revert if the pivot doesn't improve outcomes>"
     }
+  ]
+}`;
 
-    // If not dry run, emit pivot signals to agents
-    if (!dryRun) {
-      this.log('INFO', `Emitting ${pivots.length} pivot signals`);
-      await this.broadcastPivotSignals(pivots).catch((err: unknown) => {
-        this.log('WARN', `Pivot signal broadcast failed: ${err instanceof Error ? err.message : String(err)}`);
+      const rawContent = await callOpenRouter(ctx, userPrompt);
+      const parsed: unknown = JSON.parse(stripJsonFences(rawContent));
+      const llmResult = PivotTriggerLLMSchema.parse(parsed);
+
+      if (llmResult.pivotWarranted) {
+        pivots = llmResult.pivots.map((p, idx) => ({
+          id: `pivot-llm-${signalId}-${idx}-${Date.now()}`,
+          triggeredBy: signalId,
+          targetAgent: p.targetAgent,
+          pivotType: p.pivotType,
+          priority: llmResult.urgencyAssessment,
+          currentState: p.currentState,
+          recommendedState: p.recommendedState,
+          rationale: p.rationale,
+          expectedImpact: 'see rationale',
+          implementationSteps: p.implementationSteps,
+          rollbackPlan: p.rollbackPlan,
+        }));
+      }
+
+      if (!dryRun && pivots.length > 0) {
+        this.log('INFO', `Emitting ${pivots.length} LLM-generated pivot signals`);
+        await this.broadcastPivotSignals(pivots).catch((err: unknown) => {
+          this.log('WARN', `Pivot signal broadcast failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
+      }
+
+      return this.createReport(taskId, 'COMPLETED', {
+        signalId,
+        triggeredAt: new Date().toISOString(),
+        dryRun: dryRun ?? false,
+        pivotWarranted: llmResult.pivotWarranted,
+        pivotRationale: llmResult.pivotRationale,
+        urgencyAssessment: llmResult.urgencyAssessment,
+        pivots,
+        analysisMethod: 'llm',
+        analysisModel: ctx.gm.model,
+        message: dryRun
+          ? `Dry run: ${llmResult.pivotWarranted ? `${pivots.length} pivots recommended` : 'no pivot warranted'}`
+          : `${pivots.length} pivot signals emitted to agents`,
+      });
+    } catch (err: unknown) {
+      // Fallback: template-based pivots per agent
+      const msg = err instanceof Error ? err.message : String(err);
+      this.log('WARN', `trigger_pivot LLM call failed — using template fallback: ${msg}`);
+
+      const pivotPriority = priority ?? this.urgencyToPriority(signal.urgency);
+      for (const agent of agents) {
+        const pivot = this.generatePivotForAgent(signal, agent, pivotPriority);
+        if (pivot) {
+          pivots.push(pivot);
+        }
+      }
+
+      if (!dryRun && pivots.length > 0) {
+        this.log('INFO', `Emitting ${pivots.length} template pivot signals (fallback)`);
+        await this.broadcastPivotSignals(pivots).catch((broadcastErr: unknown) => {
+          this.log('WARN', `Pivot signal broadcast failed: ${broadcastErr instanceof Error ? broadcastErr.message : String(broadcastErr)}`);
+        });
+      }
+
+      return this.createReport(taskId, 'COMPLETED', {
+        signalId,
+        triggeredAt: new Date().toISOString(),
+        dryRun: dryRun ?? false,
+        pivots,
+        analysisMethod: 'template-fallback',
+        message: dryRun
+          ? 'Dry run completed - no signals emitted'
+          : `${pivots.length} pivot signals emitted to agents`,
       });
     }
-
-    return this.createReport(taskId, 'COMPLETED', {
-      signalId,
-      triggeredAt: new Date().toISOString(),
-      dryRun: dryRun ?? false,
-      pivots,
-      message: dryRun
-        ? 'Dry run completed - no signals emitted'
-        : `${pivots.length} pivot signals emitted to agents`,
-    });
   }
 
   /**
@@ -1857,7 +2081,10 @@ export class TrendScout extends BaseSpecialist {
   }
 
   /**
-   * Handle competitor tracking request
+   * Handle competitor tracking request.
+   * Collects News, LinkedIn hiring, and Crunchbase funding data first, then
+   * passes the raw movements to the LLM to reason about patterns, strategic
+   * implications, and recommended responses.
    */
   private async handleCompetitorTracking(
     taskId: string,
@@ -1869,20 +2096,103 @@ export class TrendScout extends BaseSpecialist {
       return this.createReport(taskId, 'FAILED', null, ['No competitors specified']);
     }
 
-    const movements = await this.trackCompetitorMovements(competitors);
+    // Step 1: Collect raw competitor data from all upstream sources
+    const rawMovements = await this.trackCompetitorMovements(competitors);
 
-    return this.createReport(taskId, 'COMPLETED', {
-      trackedAt: new Date().toISOString(),
-      competitors,
-      movements,
-      summary: {
-        totalMovements: movements.length,
-        byType: this.groupMovementsByType(movements),
-        highImpactCount: movements.filter(m =>
-          m.impactAssessment === 'SIGNIFICANT' || m.impactAssessment === 'CRITICAL'
-        ).length,
-      },
-    });
+    // Step 2: LLM synthesis — reason about what the competitor data means strategically
+    try {
+      const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+
+      const movementsContext = JSON.stringify({
+        competitors,
+        rawMovements: rawMovements.map(m => ({
+          competitorName: m.competitorName,
+          movementType: m.movementType,
+          description: m.description,
+          impactAssessment: m.impactAssessment,
+          detectedAt: m.detectedAt,
+          recommendedResponse: m.recommendedResponse,
+          sourceUrls: m.sourceUrls.slice(0, 2),
+        })),
+        totalMovements: rawMovements.length,
+        byType: this.groupMovementsByType(rawMovements),
+      }, null, 2);
+
+      const userPrompt = `ACTION: track_competitor
+
+Analyze the collected competitor movement data below. Look for cross-competitor patterns — are multiple competitors making similar moves? What does the overall competitive landscape signal? Produce strategic recommendations grounded in the data, not generic advice.
+
+## COMPETITOR MOVEMENT DATA
+${movementsContext}
+
+Respond with ONLY a valid JSON object:
+{
+  "competitiveNarrative": "<2-4 sentence narrative of what the competitor data reveals about the competitive landscape>",
+  "threatLevel": "<CRITICAL|HIGH|MEDIUM|LOW — overall competitive threat level>",
+  "movements": [
+    {
+      "competitorName": "<competitor name>",
+      "movementType": "<PRICING|FEATURE|MARKETING|POSITIONING|EXPANSION|PARTNERSHIP>",
+      "description": "<refined description of the movement with strategic context>",
+      "impactAssessment": "<MINIMAL|MODERATE|SIGNIFICANT|CRITICAL>",
+      "recommendedResponse": "<specific response action grounded in the movement>",
+      "sourceUrls": []
+    }
+  ],
+  "strategicRecommendations": ["<cross-competitor strategic recommendation — cite specific competitors>"]
+}`;
+
+      const rawContent = await callOpenRouter(ctx, userPrompt);
+      const parsed: unknown = JSON.parse(stripJsonFences(rawContent));
+      const llmResult = CompetitorTrackingLLMSchema.parse(parsed);
+
+      const llmMovements: CompetitorMovement[] = llmResult.movements.map(m => ({
+        competitorId: m.competitorName.toLowerCase().replace(/\s+/g, '-'),
+        competitorName: m.competitorName,
+        movementType: m.movementType,
+        description: m.description,
+        detectedAt: new Date().toISOString(),
+        impactAssessment: m.impactAssessment,
+        sourceUrls: m.sourceUrls,
+        recommendedResponse: m.recommendedResponse,
+      }));
+
+      return this.createReport(taskId, 'COMPLETED', {
+        trackedAt: new Date().toISOString(),
+        competitors,
+        movements: llmMovements,
+        competitiveNarrative: llmResult.competitiveNarrative,
+        threatLevel: llmResult.threatLevel,
+        strategicRecommendations: llmResult.strategicRecommendations,
+        summary: {
+          totalMovements: llmMovements.length,
+          byType: this.groupMovementsByType(llmMovements),
+          highImpactCount: llmMovements.filter(m =>
+            m.impactAssessment === 'SIGNIFICANT' || m.impactAssessment === 'CRITICAL'
+          ).length,
+        },
+        analysisMethod: 'llm',
+        analysisModel: ctx.gm.model,
+      });
+    } catch (err: unknown) {
+      // Fallback: return raw collected movements without LLM synthesis
+      const msg = err instanceof Error ? err.message : String(err);
+      this.log('WARN', `track_competitor LLM synthesis failed — returning raw movements: ${msg}`);
+
+      return this.createReport(taskId, 'COMPLETED', {
+        trackedAt: new Date().toISOString(),
+        competitors,
+        movements: rawMovements,
+        summary: {
+          totalMovements: rawMovements.length,
+          byType: this.groupMovementsByType(rawMovements),
+          highImpactCount: rawMovements.filter(m =>
+            m.impactAssessment === 'SIGNIFICANT' || m.impactAssessment === 'CRITICAL'
+          ).length,
+        },
+        analysisMethod: 'raw-data-fallback',
+      });
+    }
   }
 
   /**

@@ -970,38 +970,6 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       },
     },
   },
-  {
-    type: 'function',
-    function: {
-      name: 'provision_organization',
-      description:
-        'Provision a new organization with full infrastructure setup. Creates Firestore documents, default settings, and welcome agent. ENABLED: TRUE.',
-      parameters: {
-        type: 'object',
-        properties: {
-          name: {
-            type: 'string',
-            description: 'Organization name',
-          },
-          ownerEmail: {
-            type: 'string',
-            description: 'Email of the organization owner',
-          },
-          plan: {
-            type: 'string',
-            description: 'Initial plan',
-            enum: ['trial', 'starter', 'professional', 'enterprise'],
-          },
-          industry: {
-            type: 'string',
-            description: 'Industry vertical for template selection',
-          },
-        },
-        required: ['name', 'ownerEmail'],
-      },
-    },
-  },
-
   // ═══════════════════════════════════════════════════════════════════════════
   // COUPON & PRICING TOOLS
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1240,74 +1208,6 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
         },
         required: [],
-      },
-    },
-  },
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CONTENT & OUTREACH TOOLS
-  // ═══════════════════════════════════════════════════════════════════════════
-  {
-    type: 'function',
-    function: {
-      name: 'generate_content',
-      description:
-        'Generate marketing content for various channels. Supports social posts, emails, blog articles, and ad copy. ENABLED: TRUE.',
-      parameters: {
-        type: 'object',
-        properties: {
-          contentType: {
-            type: 'string',
-            description: 'Type of content to generate',
-            enum: ['social_post', 'email', 'blog_article', 'ad_copy', 'newsletter', 'landing_page'],
-          },
-          platform: {
-            type: 'string',
-            description: 'Target platform for social content',
-            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'mastodon', 'truth_social', 'telegram', 'reddit', 'pinterest', 'whatsapp_business', 'google_business'],
-          },
-          topic: {
-            type: 'string',
-            description: 'Topic or subject matter',
-          },
-          tone: {
-            type: 'string',
-            description: 'Desired tone',
-            enum: ['professional', 'casual', 'urgent', 'friendly', 'authoritative'],
-          },
-          targetAudience: {
-            type: 'string',
-            description: 'Description of target audience',
-          },
-        },
-        required: ['contentType', 'topic'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'draft_outreach_email',
-      description:
-        'Draft a personalized outreach email for a lead or prospect. Uses AI to personalize based on lead data. ENABLED: TRUE.',
-      parameters: {
-        type: 'object',
-        properties: {
-          leadId: {
-            type: 'string',
-            description: 'Lead ID for personalization context',
-          },
-          template: {
-            type: 'string',
-            description: 'Email template type',
-            enum: ['cold_intro', 'follow_up', 'value_prop', 'meeting_request', 'custom'],
-          },
-          customPrompt: {
-            type: 'string',
-            description: 'Custom instructions for email content',
-          },
-        },
-        required: ['template'],
       },
     },
   },
@@ -1697,14 +1597,14 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'get_analytics',
       description:
-        'Retrieve analytics data for the platform or specific organization. Includes revenue, engagement, and conversion metrics. ENABLED: TRUE.',
+        'Retrieve platform analytics overview. Returns total organizations, active trials, and paid customer counts. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           reportType: {
             type: 'string',
-            description: 'Type of analytics report',
-            enum: ['overview', 'revenue', 'engagement', 'conversion', 'churn', 'growth'],
+            description: 'Type of analytics report (currently only "overview" is supported)',
+            enum: ['overview'],
           },
           PLATFORM_ID: {
             type: 'string',
@@ -1720,35 +1620,6 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       },
     },
   },
-  {
-    type: 'function',
-    function: {
-      name: 'generate_report',
-      description:
-        'Generate a comprehensive report document for export or presentation. ENABLED: TRUE.',
-      parameters: {
-        type: 'object',
-        properties: {
-          reportType: {
-            type: 'string',
-            description: 'Report type',
-            enum: ['executive_summary', 'sales_performance', 'pipeline_analysis', 'feature_usage', 'health_check'],
-          },
-          format: {
-            type: 'string',
-            description: 'Output format',
-            enum: ['summary', 'detailed', 'presentation'],
-          },
-          PLATFORM_ID: {
-            type: 'string',
-            description: 'Organization scope',
-          },
-        },
-        required: ['reportType'],
-      },
-    },
-  },
-
   // ═══════════════════════════════════════════════════════════════════════════
   // MARKETING DEPARTMENT TOOLS (The Handshake)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3893,17 +3764,6 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         break;
       }
 
-      case 'provision_organization': {
-        content = JSON.stringify({
-          status: 'queued',
-          message: `Provisioning organization "${args.name}" for ${args.ownerEmail}`,
-          plan: args.plan ?? 'trial',
-          industry: args.industry ?? 'general',
-          note: 'Use /api/admin/provision endpoint for full provisioning',
-        });
-        break;
-      }
-
       // ═══════════════════════════════════════════════════════════════════════
       // COUPON & PRICING TOOLS
       // ═══════════════════════════════════════════════════════════════════════
@@ -3962,11 +3822,16 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         if (typedArgs.yearlyPrice) {
           updates[`tiers.${typedArgs.tier}.yearly`] = parseFloat(typedArgs.yearlyPrice);
         }
+        if (Object.keys(updates).length === 0) {
+          content = JSON.stringify({ status: 'error', message: 'No pricing fields provided to update' });
+          break;
+        }
+        await AdminFirestoreService.update('platform-config', 'pricing', updates);
         content = JSON.stringify({
-          status: 'queued',
+          status: 'updated',
           tier: typedArgs.tier,
           updates,
-          note: 'Stripe price sync required via /api/admin/platform-pricing',
+          note: 'Persisted to platform-config/pricing. Stripe price IDs require a separate sync via /api/admin/platform-pricing.',
         });
         break;
       }
@@ -4378,33 +4243,6 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             durationMs: Date.now() - scoreStart,
           });
         }
-        break;
-      }
-
-      // ═══════════════════════════════════════════════════════════════════════
-      // CONTENT & OUTREACH TOOLS
-      // ═══════════════════════════════════════════════════════════════════════
-      case 'generate_content': {
-        content = JSON.stringify({
-          status: 'generated',
-          contentType: args.contentType,
-          platform: args.platform ?? 'general',
-          topic: args.topic,
-          tone: args.tone ?? 'professional',
-          message: `Content generation initiated for ${args.contentType} on topic: ${args.topic}`,
-          note: 'Use /api/admin/growth/content/generate for full AI content generation',
-        });
-        break;
-      }
-
-      case 'draft_outreach_email': {
-        content = JSON.stringify({
-          status: 'drafted',
-          template: args.template,
-          leadId: args.leadId ?? null,
-          message: `Outreach email drafted using ${args.template} template`,
-          note: 'Use /api/email-writer/generate for full email generation',
-        });
         break;
       }
 
@@ -5077,34 +4915,17 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ANALYTICS & REPORTING TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'get_analytics': {
-        const analytics: Record<string, unknown> = {
-          reportType: args.reportType,
+        const orgsData = await AdminFirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+        const orgs = (orgsData ?? []) as unknown as OrganizationRecord[];
+        content = JSON.stringify({
+          reportType: 'overview',
           dateRange: args.dateRange ?? 'month',
           timestamp: new Date().toISOString(),
-        };
-
-        if (args.reportType === 'overview' || args.reportType === 'all') {
-          const orgsData = await AdminFirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-          const orgs = (orgsData ?? []) as unknown as OrganizationRecord[];
-          analytics.overview = {
+          overview: {
             totalOrganizations: orgs.length,
             activeTrials: orgs.filter((o) => o.plan === 'trial').length,
             paidCustomers: orgs.filter((o) => o.plan !== 'trial').length,
-          };
-        }
-
-        content = JSON.stringify(analytics);
-        break;
-      }
-
-      case 'generate_report': {
-        content = JSON.stringify({
-          status: 'generating',
-          reportType: args.reportType,
-          format: args.format ?? 'summary',
-          PLATFORM_ID: args.PLATFORM_ID ?? 'platform',
-          message: `${args.reportType} report generation initiated`,
-          estimatedCompletion: '30 seconds',
+          },
         });
         break;
       }
