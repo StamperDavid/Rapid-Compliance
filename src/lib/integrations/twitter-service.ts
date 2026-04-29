@@ -1,14 +1,17 @@
 /**
  * Twitter/X Integration Service
- * Uses Twitter API v2 with OAuth 2.0
+ * Uses Twitter API v2 with OAuth 1.0a User Context for write operations
+ * and OAuth 2.0 App-Only Bearer for public reads.
  *
  * PRODUCTION READY:
  * - Raw fetch() calls to Twitter API v2 endpoints
- * - OAuth 2.0 authentication with PKCE support
+ * - OAuth 1.0a HMAC-SHA1 signing for /tweets, /likes, etc. (X's free tier
+ *   rejects OAuth 2.0 App-Only on write endpoints)
  * - Graceful rate limit handling with exponential backoff
  * - Graceful fallback if API keys not configured
  */
 
+import * as crypto from 'crypto';
 import { logger } from '@/lib/logger/logger';
 import type {
   TwitterConfig,
@@ -28,6 +31,60 @@ const TWITTER_OAUTH2_TOKEN_URL = 'https://api.twitter.com/2/oauth2/token';
 // Rate limit tracking
 const rateLimitCache = new Map<string, TwitterRateLimitInfo>();
 
+// OAuth 1.0a percent-encoding per RFC 5849 §3.6 (stricter than encodeURIComponent).
+function oauth1PercentEncode(s: string): string {
+  return encodeURIComponent(s)
+    .replace(/!/g, '%21')
+    .replace(/\*/g, '%2A')
+    .replace(/'/g, '%27')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29');
+}
+
+// Build an OAuth 1.0a Authorization header for a User Context request.
+// Returns null if any of the four required credentials are missing.
+function buildOAuth1Header(
+  method: string,
+  url: string,
+  config: TwitterConfig,
+): string | null {
+  const { consumerKey, consumerSecret, accessToken, accessTokenSecret } = config;
+  if (!consumerKey || !consumerSecret || !accessToken || !accessTokenSecret) {
+    return null;
+  }
+
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: consumerKey,
+    oauth_nonce: crypto.randomBytes(16).toString('hex'),
+    oauth_signature_method: 'HMAC-SHA1',
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_token: accessToken,
+    oauth_version: '1.0',
+  };
+
+  const paramString = Object.keys(oauthParams)
+    .sort()
+    .map((k) => `${oauth1PercentEncode(k)}=${oauth1PercentEncode(oauthParams[k])}`)
+    .join('&');
+
+  const baseString = [
+    method.toUpperCase(),
+    oauth1PercentEncode(url),
+    oauth1PercentEncode(paramString),
+  ].join('&');
+
+  const signingKey = `${oauth1PercentEncode(consumerSecret)}&${oauth1PercentEncode(accessTokenSecret)}`;
+  const signature = crypto.createHmac('sha1', signingKey).update(baseString).digest('base64');
+  oauthParams.oauth_signature = signature;
+
+  const headerParams = Object.keys(oauthParams)
+    .sort()
+    .map((k) => `${oauth1PercentEncode(k)}="${oauth1PercentEncode(oauthParams[k])}"`)
+    .join(', ');
+
+  return `OAuth ${headerParams}`;
+}
+
 /**
  * Twitter Service Class
  * Handles all Twitter API v2 operations
@@ -40,12 +97,26 @@ export class TwitterService {
   }
 
   /**
-   * Check if Twitter is configured
+   * Check if Twitter is configured for at least one auth flow.
    */
   isConfigured(): boolean {
     return !!(
       this.config.bearerToken ??
+      this.hasOAuth1Credentials() ??
       (this.config.accessToken && this.config.clientId)
+    );
+  }
+
+  /**
+   * True when all four OAuth 1.0a User Context credentials are present.
+   * Required for write operations (POST /tweets, likes, follows, DMs).
+   */
+  private hasOAuth1Credentials(): boolean {
+    return !!(
+      this.config.consumerKey &&
+      this.config.consumerSecret &&
+      this.config.accessToken &&
+      this.config.accessTokenSecret
     );
   }
 
@@ -82,14 +153,21 @@ export class TwitterService {
     }
 
     const url = `${TWITTER_API_BASE}${endpoint}`;
+    const method = (options.method ?? 'GET').toUpperCase();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
 
-    // Use Bearer token for app-only auth, or OAuth 2.0 access token for user context
-    if (useOAuth2 && this.config.accessToken) {
-      headers['Authorization'] = `Bearer ${this.config.accessToken}`;
+    // Auth selection — OAuth 1.0a User Context is the only flow that works on write
+    // endpoints under X's free tier. Prefer it whenever its four credentials are
+    // present; fall back to Bearer (App-Only) for reads when OAuth 1.0a is not set up.
+    // The `useOAuth2` parameter is retained for backwards-compatibility with the
+    // previous API but no longer has any callers — auth is config-driven now.
+    void useOAuth2;
+    const oauth1Header = buildOAuth1Header(method, url, this.config);
+    if (oauth1Header) {
+      headers['Authorization'] = oauth1Header;
     } else if (this.config.bearerToken) {
       headers['Authorization'] = `Bearer ${this.config.bearerToken}`;
     }
@@ -200,11 +278,11 @@ export class TwitterService {
    * Requires OAuth 2.0 User Context (write:tweets scope)
    */
   async postTweet(request: TwitterPostRequest): Promise<TwitterPostResponse> {
-    if (!this.config.accessToken) {
-      logger.warn('Twitter: Cannot post tweet - OAuth 2.0 access token required');
+    if (!this.hasOAuth1Credentials()) {
+      logger.warn('Twitter: Cannot post tweet — OAuth 1.0a User Context credentials required');
       return {
         success: false,
-        error: 'OAuth 2.0 access token required for posting tweets.',
+        error: 'OAuth 1.0a User Context credentials (consumerKey, consumerSecret, accessToken, accessTokenSecret) required for posting tweets.',
       };
     }
 
@@ -1085,6 +1163,9 @@ export async function createTwitterServiceForAccount(accountId: string): Promise
       accessToken?: string;
       refreshToken?: string;
       bearerToken?: string;
+      consumerKey?: string;
+      consumerSecret?: string;
+      accessTokenSecret?: string;
     };
 
     const config: TwitterConfig = {
@@ -1093,6 +1174,9 @@ export async function createTwitterServiceForAccount(accountId: string): Promise
       accessToken: creds.accessToken,
       refreshToken: creds.refreshToken,
       bearerToken: creds.bearerToken,
+      consumerKey: creds.consumerKey,
+      consumerSecret: creds.consumerSecret,
+      accessTokenSecret: creds.accessTokenSecret,
     };
 
     if (!config.bearerToken && !config.accessToken && !config.clientId) {
@@ -1139,17 +1223,21 @@ export async function createTwitterService(): Promise<TwitterService | null> {
       accessToken: twitterConfig.accessToken,
       refreshToken: twitterConfig.refreshToken,
       bearerToken: twitterConfig.bearerToken,
+      consumerKey: twitterConfig.consumerKey,
+      consumerSecret: twitterConfig.consumerSecret,
+      accessTokenSecret: twitterConfig.accessTokenSecret,
     };
 
     // Validate at least one auth method is configured
-    if (!config.bearerToken && !config.accessToken && !config.clientId) {
+    const hasOAuth1 = !!(config.consumerKey && config.consumerSecret && config.accessToken && config.accessTokenSecret);
+    if (!config.bearerToken && !hasOAuth1 && !config.clientId) {
       logger.debug('Twitter: No valid authentication credentials found');
       return null;
     }
 
     logger.info('Twitter: Service created successfully', {
       hasBearerToken: !!config.bearerToken,
-      hasAccessToken: !!config.accessToken,
+      hasOAuth1: hasOAuth1,
       hasClientId: !!config.clientId,
     });
 

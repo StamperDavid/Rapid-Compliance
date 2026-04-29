@@ -34,6 +34,7 @@ import { createMission, finalizeMission } from '@/lib/orchestrator/mission-persi
 import { getAgentCount, getDomainCount } from '@/lib/agents/agent-registry';
 import { getActiveJasperGoldenMaster } from '@/lib/orchestrator/jasper-golden-master';
 import { expandIntent } from '@/lib/orchestrator/intent-expander';
+import { buildConnectedPlatformsContext } from '@/lib/orchestrator/connected-platforms-context';
 
 // ============================================================================
 // Type Definitions
@@ -548,9 +549,15 @@ ${attachedMediaUrls.map((u, i) => `- [${i + 1}] ${u}`).join('\n')}
 `;
     }
 
+    // Runtime platform-connection context — keeps Jasper from planning posts
+    // to platforms that aren't OAuth-connected yet (LinkedIn, Meta, etc.).
+    // Sourced from src/components/social/_platform-state.ts so the list stays
+    // current as connections come online.
+    const connectedPlatformsContext = buildConnectedPlatformsContext();
+
     // Convert conversation history to provider format with tool support
     const messages: ChatMessage[] = [
-      { role: 'system', content: enhancedSystemPrompt + stateContext + advisoryContext + mediaContext },
+      { role: 'system', content: enhancedSystemPrompt + stateContext + advisoryContext + mediaContext + connectedPlatformsContext },
       ...conversationHistory.map((msg) => ({
         role: msg.role,
         content: msg.content,

@@ -427,7 +427,7 @@ function StepCard({
   sourceEvent?: Mission['sourceEvent'];
 }) {
   const [expanded, setExpanded] = useState(false);
-  const dashboardLink = getDashboardLink(step.toolName, step.toolResult);
+  const dashboardLink = getDashboardLink(step.toolName, step.toolResult, step.toolArgs);
   const reviewLink = getStepReviewLink(missionId, step.stepId);
   const parsedOutput = parseStepOutput(step.toolResult);
 

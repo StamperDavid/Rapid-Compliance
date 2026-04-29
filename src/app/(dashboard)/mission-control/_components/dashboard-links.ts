@@ -5,14 +5,37 @@
  * allowing the user to jump directly to the relevant page to review output.
  */
 
+// Social platforms recognized by delegate_to_marketing — link these to the Social Hub.
+// Any platform NOT in this set falls back to the email-campaigns dashboard, which
+// covers email/SMS/marketing-campaign deliverables.
+const SOCIAL_PLATFORMS = new Set([
+  'twitter', 'x',
+  'bluesky',
+  'mastodon',
+  'linkedin',
+  'facebook',
+  'instagram',
+  'threads',
+  'youtube',
+  'pinterest',
+  'tiktok',
+  'google_business', 'gbp',
+  'discord',
+  'twitch',
+  'reddit',
+  'telegram',
+  'whatsapp', 'whatsapp_business',
+]);
+
 const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   // Delegation agents
   delegate_to_builder: { route: '/website/editor', label: 'Website Editor' },
   delegate_to_architect: { route: '/website/editor', label: 'Website Editor' },
   delegate_to_sales: { route: '/contacts', label: 'Contacts' },
   delegate_to_revenue_director: { route: '/contacts', label: 'Contacts' },
-  delegate_to_marketing: { route: '/email/campaigns', label: 'Email Campaigns' },
-  delegate_to_marketing_manager: { route: '/email/campaigns', label: 'Email Campaigns' },
+  // delegate_to_marketing / delegate_to_marketing_manager intentionally omitted
+  // from this static map — they are resolved dynamically in getDashboardLink based
+  // on toolArgs.platform (social platform → Social Hub, otherwise → Email Campaigns).
   delegate_to_content: { route: '/website/blog', label: 'Content' },
   delegate_to_outreach: { route: '/leads', label: 'Lead Scanner' },
   // delegate_to_intelligence / delegate_to_trust intentionally omitted — their
@@ -59,9 +82,17 @@ export interface DashboardLink {
  * Get the dashboard link for a given tool name.
  * Returns null if no known route exists for the tool.
  *
- * If toolResult contains a reviewLink with a projectId, uses that for dynamic routing.
+ * Resolution order:
+ *   1. If toolResult contains a reviewLink starting with `/`, use that (dynamic routing).
+ *   2. delegate_to_marketing / delegate_to_marketing_manager branch on toolArgs.platform —
+ *      a recognized social platform routes to Social Hub, otherwise Email Campaigns.
+ *   3. Fall back to the static TOOL_ROUTE_MAP.
  */
-export function getDashboardLink(toolName: string, toolResult?: string): DashboardLink | null {
+export function getDashboardLink(
+  toolName: string,
+  toolResult?: string,
+  toolArgs?: Record<string, unknown>,
+): DashboardLink | null {
   // Check for dynamic review link in tool result
   if (toolResult) {
     try {
@@ -73,8 +104,19 @@ export function getDashboardLink(toolName: string, toolResult?: string): Dashboa
         };
       }
     } catch {
-      // Not JSON — fall through to static map
+      // Not JSON — fall through
     }
+  }
+
+  // Marketing delegation: route by platform argument so social posts link to Social Hub
+  // and non-social marketing work (email, SMS, etc.) links to Email Campaigns.
+  if (toolName === 'delegate_to_marketing' || toolName === 'delegate_to_marketing_manager') {
+    const platformRaw = toolArgs?.platform;
+    const platform = typeof platformRaw === 'string' ? platformRaw.toLowerCase() : '';
+    if (platform && SOCIAL_PLATFORMS.has(platform)) {
+      return { route: '/social', label: 'Social Hub' };
+    }
+    return { route: '/email/campaigns', label: 'Email Campaigns' };
   }
 
   return TOOL_ROUTE_MAP[toolName] ?? null;
