@@ -90,6 +90,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
       { id: 'products-services', label: 'Products & Services', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
       { id: 'subscriptions', label: 'Subscriptions', href: '/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)' },
+      { id: 'coupons', label: 'Coupons', href: '/coupons', icon: Tag, iconColor: 'var(--color-accent)' },
     ],
   },
   // ── Marketing (8 items — absorbed Outreach + Coupons) ─────────────
@@ -102,12 +103,15 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'campaigns', label: 'Campaigns', href: '/campaigns', icon: Rocket, iconColor: 'var(--color-accent)' },
       { id: 'social-hub', label: 'Social Hub', href: '/social', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
-      { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
+      // Content Generator gating intentionally limited to role only — feature module
+      // gate removed Apr 28 2026 because users were losing the link when their feature
+      // config didn't include video_production. Video/image/audio generation is a core
+      // platform capability and should always be reachable for owner/admin/manager.
+      { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
-      { id: 'coupons', label: 'Coupons', href: '/coupons', icon: Tag, iconColor: 'var(--color-accent)' },
     ],
   },
   // ── Website ────────────────────────────────────────────────────────

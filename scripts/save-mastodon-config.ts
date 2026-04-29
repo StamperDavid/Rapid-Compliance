@@ -123,6 +123,44 @@ async function main(): Promise<void> {
   console.log(`  accountId:   ${profile.id}`);
   console.log(`  acct:        ${profile.acct ?? profile.username}`);
   console.log(`  accessToken: ${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`);
+
+  // Also write/update the social_accounts row that the dashboard reads.
+  // Without this the Social Hub shows Mastodon as "Not connected" even
+  // though posting + DMs work. Idempotent.
+  const acctLocal = profile.acct ?? profile.username ?? '';
+  const instanceHost = (() => {
+    try { return new URL(instanceUrl).host; } catch { return 'mastodon.social'; }
+  })();
+  const fullHandle = acctLocal.includes('@') ? acctLocal : `${acctLocal}@${instanceHost}`;
+  const displayName = profile.display_name ?? acctLocal;
+  const accountsRef = db.collection(`organizations/${PLATFORM_ID}/social_accounts`);
+  const existingActive = await accountsRef
+    .where('platform', '==', 'mastodon')
+    .where('status', '==', 'active')
+    .limit(1)
+    .get();
+  if (existingActive.empty) {
+    const accountId = `social-acct-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    await accountsRef.doc(accountId).set({
+      id: accountId,
+      platform: 'mastodon',
+      accountName: displayName || fullHandle,
+      handle: fullHandle,
+      isDefault: true,
+      status: 'active',
+      credentials: { storedIn: 'apiKeys.social.mastodon' },
+      addedAt: new Date().toISOString(),
+    });
+    console.log(`✓ Created social_accounts/${accountId} for dashboard visibility`);
+  } else {
+    const existingId = existingActive.docs[0].id;
+    await accountsRef.doc(existingId).set({
+      accountName: displayName || fullHandle,
+      handle: fullHandle,
+      lastUsedAt: new Date().toISOString(),
+    }, { merge: true });
+    console.log(`✓ Updated existing social_accounts/${existingId}`);
+  }
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

@@ -8,8 +8,46 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import * as crypto from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs';
+
+// -----------------------------------------------------------------------------
+// OAuth 1.0a signing helpers (inlined — same shape as twitter-dm-service.ts)
+// -----------------------------------------------------------------------------
+
+function percentEncode(value: string): string {
+  return encodeURIComponent(value)
+    .replace(/!/g, '%21')
+    .replace(/\*/g, '%2A')
+    .replace(/'/g, '%27')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29');
+}
+
+function buildOAuth1Header(method: string, url: string, creds: {
+  consumerKey: string; consumerSecret: string; accessToken: string; accessTokenSecret: string;
+}): string {
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: creds.consumerKey,
+    oauth_nonce: crypto.randomBytes(16).toString('hex'),
+    oauth_signature_method: 'HMAC-SHA1',
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_token: creds.accessToken,
+    oauth_version: '1.0',
+  };
+  const paramString = Object.keys(oauthParams)
+    .sort()
+    .map((k) => `${percentEncode(k)}=${percentEncode(oauthParams[k])}`)
+    .join('&');
+  const baseString = [method.toUpperCase(), percentEncode(url), percentEncode(paramString)].join('&');
+  const signingKey = `${percentEncode(creds.consumerSecret)}&${percentEncode(creds.accessTokenSecret)}`;
+  oauthParams.oauth_signature = crypto.createHmac('sha1', signingKey).update(baseString).digest('base64');
+  return `OAuth ${Object.keys(oauthParams)
+    .sort()
+    .map((k) => `${percentEncode(k)}="${percentEncode(oauthParams[k])}"`)
+    .join(', ')}`;
+}
 
 function loadEnvLocal(): void {
   const envPath = path.resolve(process.cwd(), '.env.local');
@@ -95,6 +133,73 @@ async function main(): Promise<void> {
   if (consumerSecret) { console.log(`  consumerSecret:    ${consumerSecret.slice(0, 6)}...${consumerSecret.slice(-4)}`); }
   if (accessToken) { console.log(`  accessToken:       ${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`); }
   if (accessTokenSecret) { console.log(`  accessTokenSecret: ${accessTokenSecret.slice(0, 6)}...${accessTokenSecret.slice(-4)}`); }
+
+  // Also write/update the social_accounts row that the dashboard reads.
+  // Without this, the Social Hub shows Twitter/X as "Not connected" even
+  // though tweets + OAuth 1.0a DMs work end-to-end. Requires OAuth 1.0a
+  // user-context creds to fetch the handle via /1.1/account/verify_credentials.json.
+  if (consumerKey && consumerSecret && accessToken && accessTokenSecret) {
+    const verifyUrl = 'https://api.twitter.com/1.1/account/verify_credentials.json';
+    const auth = buildOAuth1Header('GET', verifyUrl, { consumerKey, consumerSecret, accessToken, accessTokenSecret });
+    let profile: { id_str?: string; screen_name?: string; name?: string; profile_image_url_https?: string } | null = null;
+    try {
+      const resp = await fetch(verifyUrl, { headers: { Authorization: auth } });
+      if (resp.ok) {
+        profile = await resp.json() as typeof profile;
+      } else {
+        console.warn(`  Twitter verify_credentials returned HTTP ${resp.status}; skipping social_accounts write`);
+      }
+    } catch (err) {
+      console.warn(`  Twitter verify_credentials failed: ${err instanceof Error ? err.message : String(err)}; skipping social_accounts write`);
+    }
+
+    if (profile?.id_str && profile.screen_name) {
+      // Stamp brandUserId on apiKeys for downstream uses (DM service, webhook routing)
+      await docRef.set({
+        social: {
+          ...updatedSocial,
+          twitter: { ...updatedSocial.twitter, brandUserId: profile.id_str },
+        },
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'save-twitter-config-script',
+      }, { merge: true });
+      console.log(`  ✓ Stamped brandUserId=${profile.id_str} on apiKeys.social.twitter`);
+
+      const handle = `@${profile.screen_name}`;
+      const accountsRef = db.collection(`organizations/${PLATFORM_ID}/social_accounts`);
+      const existingActive = await accountsRef
+        .where('platform', '==', 'twitter')
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+      if (existingActive.empty) {
+        const accountId = `social-acct-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        await accountsRef.doc(accountId).set({
+          id: accountId,
+          platform: 'twitter',
+          accountName: profile.name ?? profile.screen_name,
+          handle,
+          ...(profile.profile_image_url_https ? { profileImageUrl: profile.profile_image_url_https } : {}),
+          isDefault: true,
+          status: 'active',
+          credentials: { storedIn: 'apiKeys.social.twitter' },
+          addedAt: new Date().toISOString(),
+        });
+        console.log(`✓ Created social_accounts/${accountId} for dashboard visibility (${handle})`);
+      } else {
+        const existingId = existingActive.docs[0].id;
+        await accountsRef.doc(existingId).set({
+          accountName: profile.name ?? profile.screen_name,
+          handle,
+          ...(profile.profile_image_url_https ? { profileImageUrl: profile.profile_image_url_https } : {}),
+          lastUsedAt: new Date().toISOString(),
+        }, { merge: true });
+        console.log(`✓ Updated existing social_accounts/${existingId} (${handle})`);
+      }
+    }
+  } else {
+    console.log('  (OAuth 1.0a creds not provided — social_accounts row will be created next time you save with consumer/access tokens)');
+  }
 }
 
 main().catch((err) => {
