@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { DEALS_TABS } from '@/lib/constants/subpage-nav';
+import { CATALOG_TABS } from '@/lib/constants/subpage-nav';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { DataTable, type ColumnDef } from '@/components/ui/data-table';
@@ -160,7 +160,7 @@ export default function DealsPaymentsPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <SubpageNav items={DEALS_TABS} />
+      <SubpageNav items={CATALOG_TABS} />
 
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
