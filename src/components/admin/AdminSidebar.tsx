@@ -114,7 +114,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'website-editor', label: 'Editor', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
       { id: 'pages', label: 'Pages', href: '/website/pages', icon: LayoutTemplate, iconColor: 'var(--color-info)', featureModuleId: 'website_builder' },
       { id: 'blog-posts', label: 'Blog Posts', href: '/website/blog', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'website_builder' },
-      { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
+      { id: 'domain', label: 'Domain', href: '/website/domains', icon: Link2, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
       { id: 'website-analytics', label: 'Analytics', href: '/website/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
     ],
   },

@@ -54,7 +54,7 @@ export const WEBSITE_TABS: SubpageNavItem[] = [
   { label: 'Editor', href: '/website/editor' },
   { label: 'Pages', href: '/website/pages' },
   { label: 'Blog', href: '/website/blog' },
-  { label: 'Domains', href: '/website/domains' },
+  { label: 'Domain', href: '/website/domains' },
   { label: 'Analytics', href: '/website/analytics' },
   { label: 'Templates', href: '/website/templates' },
   { label: 'SEO', href: '/website/seo' },
@@ -75,7 +75,7 @@ export const WEBSITE_BLOG_TABS: SubpageNavItem[] = [
 export const WEBSITE_SEO_TABS: SubpageNavItem[] = [
   { label: 'SEO', href: '/website/seo' },
   { label: 'Competitors', href: '/website/seo/competitors' },
-  { label: 'Domains', href: '/website/domains' },
+  { label: 'Domain', href: '/website/domains' },
 ];
 
 // ── Mission Control ─────────────────────────────────────────────────────────
