@@ -421,7 +421,13 @@ export interface FunnelFlow {
   stages: FunnelStage[];
   conversionPoints: ConversionPoint[];
   automations: string[];
-  estimatedConversionRate: number;
+  /**
+   * Estimated conversion rate for this funnel (0–1).
+   * Null means no measured or modelled estimate is available — callers must
+   * treat null as "unknown" and must NOT substitute a default number, as that
+   * would be a fabricated metric surfaced as real data.
+   */
+  estimatedConversionRate: number | null;
   optimizationPriorities: string[];
 }
 
@@ -480,7 +486,13 @@ export interface SiteArchitecture {
     derivedFromBrandDNA: boolean;
     intelligenceBriefsUsed: string[];
     specialistContributions: Record<string, boolean>;
-    confidence: number;
+    /**
+     * Architect's confidence in this blueprint (0–1).
+     * Null means the blueprint was generated without a real confidence
+     * calculation (e.g., a minimal fallback). Callers that multiply
+     * confidence into scores must treat null as 0 or skip the blueprint.
+     */
+    confidence: number | null;
     warnings: string[];
   };
 }

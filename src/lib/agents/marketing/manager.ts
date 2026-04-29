@@ -63,6 +63,7 @@ import {
   type SignalEntry,
 } from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { logger } from '@/lib/logger/logger';
 
 // Minimal BrandDNA type for this manager (used by getBrandDNA return type)
@@ -1749,7 +1750,7 @@ export class MarketingManager extends BaseManager {
     this.log('INFO', `Detected campaign intent: ${detectedIntent}`);
 
     // Step 3: Analyze campaign goal with brand context
-    const campaignAnalysis = this.analyzeCampaignGoal(goal, brandContext, detectedIntent);
+    const campaignAnalysis = await this.analyzeCampaignGoal(goal, brandContext, detectedIntent);
     this.log('INFO', `Campaign analysis: ${campaignAnalysis.objective} targeting ${campaignAnalysis.targetAudience}`);
 
     // Step 4: Get SEO keyword guidance FIRST (for social content injection)
@@ -1762,7 +1763,7 @@ export class MarketingManager extends BaseManager {
     }
 
     // Step 5: Determine platform strategy with SEO keywords
-    const platformStrategy = this.determinePlatformStrategy(goal, campaignAnalysis, seoGuidance);
+    const platformStrategy = await this.determinePlatformStrategy(goal, campaignAnalysis, seoGuidance, brandContext);
     this.log('INFO', `Selected platforms: ${platformStrategy.platforms.join(', ')}`);
 
     // Step 6: Delegate to social specialists in parallel (with SEO keywords injected)
@@ -2057,48 +2058,145 @@ export class MarketingManager extends BaseManager {
   }
 
   /**
-   * Analyze and parse the campaign goal with brand context
+   * LLM response schema for campaign analysis + platform strategy.
+   * Returned by callLLMForCampaignInsights() — parsed from raw JSON.
    */
-  private analyzeCampaignGoal(
+  private parseLLMCampaignInsights(raw: string): {
+    targetAudience: string;
+    kpis: string[];
+    platforms: string[];
+    platformRationale: string;
+  } | null {
+    try {
+      const text = raw
+        .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, m => (m.includes('```') ? '' : m))
+        .replace(/\n?\s*```[\s\S]*$/i, '')
+        .trim();
+      const parsed: unknown = JSON.parse(text);
+      if (
+        parsed !== null &&
+        typeof parsed === 'object' &&
+        'targetAudience' in parsed &&
+        typeof (parsed as Record<string, unknown>).targetAudience === 'string' &&
+        'kpis' in parsed &&
+        Array.isArray((parsed as Record<string, unknown>).kpis) &&
+        'platforms' in parsed &&
+        Array.isArray((parsed as Record<string, unknown>).platforms) &&
+        'platformRationale' in parsed &&
+        typeof (parsed as Record<string, unknown>).platformRationale === 'string'
+      ) {
+        return {
+          targetAudience: (parsed as Record<string, string>).targetAudience,
+          kpis: (parsed as Record<string, string[]>).kpis,
+          platforms: (parsed as Record<string, string[]>).platforms,
+          platformRationale: (parsed as Record<string, string>).platformRationale,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Ask the LLM (via OpenRouter) to infer target audience, KPIs, and platform
+   * recommendations given the campaign goal + brand context.
+   *
+   * Returns null on any failure so callers can fall back to the hardcoded
+   * scoring tables. Failures are logged at WARN level so the fallback path
+   * is always visible in logs.
+   */
+  private async callLLMForCampaignInsights(
+    goal: CampaignGoal,
+    brandContext: BrandContext
+  ): Promise<{
+    targetAudience: string;
+    kpis: string[];
+    platforms: string[];
+    platformRationale: string;
+  } | null> {
+    try {
+      const provider = new OpenRouterProvider(PLATFORM_ID);
+      const userPrompt = [
+        'Analyze this marketing campaign goal and return a JSON object with platform and audience recommendations.',
+        '',
+        `Campaign message: ${goal.message ?? '(none)'}`,
+        `Explicit objective: ${goal.objective ?? '(not set)'}`,
+        `Budget: ${typeof goal.budget === 'number' ? `$${goal.budget.toLocaleString()}` : (goal.budget ?? 'Unspecified')}`,
+        `Content type preference: ${goal.contentType ?? '(not set)'}`,
+        `Explicit platforms requested: ${goal.targetAudience?.platforms?.join(', ') ?? '(none)'}`,
+        '',
+        'Brand DNA context:',
+        `  Industry: ${brandContext.industry}`,
+        `  Target audience (from Brand DNA): ${brandContext.targetAudience || '(not set)'}`,
+        `  Tone: ${brandContext.toneOfVoice}`,
+        `  Company: ${brandContext.companyDescription}`,
+        '',
+        'Return ONLY a valid JSON object — no markdown, no explanation:',
+        '{',
+        '  "targetAudience": "<specific audience description, 10-200 chars>",',
+        '  "kpis": ["<KPI 1>", "<KPI 2>", "<KPI 3>"],',
+        '  "platforms": ["<TIKTOK|X|FACEBOOK|LINKEDIN|YOUTUBE|INSTAGRAM|PINTEREST|THREADS>"],',
+        '  "platformRationale": "<why these platforms fit this campaign, 20-300 chars>"',
+        '}',
+        '',
+        'Rules:',
+        '- platforms must be from: TIKTOK, X, FACEBOOK, LINKEDIN, YOUTUBE, INSTAGRAM, PINTEREST, THREADS',
+        '- Return 1-4 platforms that genuinely fit the campaign and audience',
+        '- If explicit platforms were requested, include them',
+        '- KPIs must match the campaign objective (awareness=reach/impressions, leads=CPL/volume, etc.)',
+      ].join('\n');
+
+      const response = await provider.chat({
+        model: 'claude-sonnet-4.6',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.3,
+        maxTokens: 512,
+      });
+
+      if (response.finishReason === 'length') {
+        this.log('WARN', 'LLM campaign-insights call truncated — falling back to hardcoded scoring');
+        return null;
+      }
+
+      const parsed = this.parseLLMCampaignInsights(response.content ?? '');
+      if (!parsed) {
+        this.log('WARN', 'LLM campaign-insights response failed schema validation — falling back to hardcoded scoring');
+      }
+      return parsed;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.log('WARN', `LLM campaign-insights call failed (${msg}) — falling back to hardcoded scoring`);
+      return null;
+    }
+  }
+
+  /**
+   * Analyze and parse the campaign goal with brand context.
+   * Attempts an LLM call via OpenRouter first; falls back to hardcoded
+   * keyword-matching tables if the LLM call fails or returns invalid JSON.
+   */
+  private async analyzeCampaignGoal(
     goal: CampaignGoal,
     brandContext: BrandContext,
     detectedIntent: CampaignIntent
-  ): CampaignAnalysis {
+  ): Promise<CampaignAnalysis> {
     const message = goal.message ?? '';
     const messageLower = message.toLowerCase();
 
-    // Determine objective
-    let objective = goal.objective ?? 'awareness';
-    if (!goal.objective) {
-      if (messageLower.includes('convert') || messageLower.includes('sale') || messageLower.includes('purchase')) {
-        objective = 'conversions';
-      } else if (messageLower.includes('lead') || messageLower.includes('sign up') || messageLower.includes('demo')) {
-        objective = 'leads';
-      } else if (messageLower.includes('engage') || messageLower.includes('comment') || messageLower.includes('share')) {
-        objective = 'engagement';
-      }
-    }
+    // Timeline and budget are always derived deterministically from the goal.
+    const timeline = goal.timeline
+      ? `Launch: ${goal.timeline.launchDate ?? 'ASAP'}, Duration: ${goal.timeline.duration ?? 'Ongoing'}`
+      : 'ASAP, ongoing until results achieved';
 
-    // Determine target audience - prefer Brand DNA over inference
-    let targetAudience = brandContext.targetAudience || 'General audience';
-    if (goal.targetAudience?.demographics) {
-      targetAudience = goal.targetAudience.demographics;
-    } else if (!brandContext.targetAudience) {
-      // Fallback to inference from message
-      if (messageLower.includes('gen z') || messageLower.includes('young')) {
-        targetAudience = 'Gen Z and younger Millennials (16-34)';
-      } else if (messageLower.includes('millennial')) {
-        targetAudience = 'Millennials (25-40)';
-      } else if (messageLower.includes('boomer') || messageLower.includes('older')) {
-        targetAudience = 'Older demographics (45-65+)';
-      } else if (messageLower.includes('b2b') || messageLower.includes('business') || messageLower.includes('professional')) {
-        targetAudience = 'Business professionals and decision-makers';
-      } else if (messageLower.includes('local')) {
-        targetAudience = 'Local community members';
-      }
-    }
+    const budget = typeof goal.budget === 'number'
+      ? `$${goal.budget.toLocaleString()}`
+      : goal.budget ?? 'Unspecified';
 
-    // Determine content type
+    // Content type is also deterministic when explicitly set.
     let contentType = goal.contentType ?? 'mixed';
     if (!goal.contentType) {
       if (messageLower.includes('video')) {
@@ -2110,23 +2208,46 @@ export class MarketingManager extends BaseManager {
       }
     }
 
-    // Timeline
-    const timeline = goal.timeline
-      ? `Launch: ${goal.timeline.launchDate ?? 'ASAP'}, Duration: ${goal.timeline.duration ?? 'Ongoing'}`
-      : 'ASAP, ongoing until results achieved';
-
-    // Budget
-    const budget = typeof goal.budget === 'number'
-      ? `$${goal.budget.toLocaleString()}`
-      : goal.budget ?? 'Unspecified';
-
-    // KPIs
-    const kpis = goal.kpis ?? this.inferKPIs(objective);
-
-    // Industry context from Brand DNA (not hardcoded!)
+    // Industry context always comes from Brand DNA, never hardcoded.
     const industryContext = brandContext.industry !== 'General'
       ? `${brandContext.industry} industry - ${brandContext.companyDescription}`
       : 'General business context';
+
+    // ---- LLM path ----
+    // When the goal does not already carry explicit audience/objective/KPI
+    // data, ask the LLM to infer them from the campaign message + Brand DNA.
+    const needsLLMInference = !goal.targetAudience?.demographics || !goal.objective || !goal.kpis;
+    if (needsLLMInference) {
+      const llmInsights = await this.callLLMForCampaignInsights(goal, brandContext);
+      if (llmInsights) {
+        const objective = goal.objective ?? this.inferObjectiveFromMessage(messageLower);
+        const targetAudience = goal.targetAudience?.demographics
+          ?? (brandContext.targetAudience || llmInsights.targetAudience);
+        return {
+          objective,
+          targetAudience,
+          contentType,
+          timeline,
+          budget,
+          kpis: goal.kpis ?? llmInsights.kpis,
+          detectedIntent,
+          industryContext,
+        };
+      }
+      // LLM failed — fall through to hardcoded inference with a warning.
+      this.log('WARN', 'analyzeCampaignGoal: LLM unavailable, using hardcoded keyword inference');
+    }
+
+    // ---- Hardcoded fallback ----
+    const objective = goal.objective ?? this.inferObjectiveFromMessage(messageLower);
+
+    // Prefer explicit demographic > Brand DNA > hardcoded keyword match
+    let targetAudience = brandContext.targetAudience || 'General audience';
+    if (goal.targetAudience?.demographics) {
+      targetAudience = goal.targetAudience.demographics;
+    } else if (!brandContext.targetAudience) {
+      targetAudience = this.inferAudienceFromMessage(messageLower);
+    }
 
     return {
       objective,
@@ -2134,14 +2255,58 @@ export class MarketingManager extends BaseManager {
       contentType,
       timeline,
       budget,
-      kpis,
+      kpis: goal.kpis ?? this.inferKPIs(objective),
       detectedIntent,
       industryContext,
     };
   }
 
   /**
-   * Infer KPIs based on campaign objective
+   * Infer campaign objective from message keywords.
+   * Hardcoded fallback — used only when no explicit objective is set and the
+   * LLM call has failed.
+   */
+  private inferObjectiveFromMessage(messageLower: string): string {
+    if (messageLower.includes('convert') || messageLower.includes('sale') || messageLower.includes('purchase')) {
+      return 'conversions';
+    }
+    if (messageLower.includes('lead') || messageLower.includes('sign up') || messageLower.includes('demo')) {
+      return 'leads';
+    }
+    if (messageLower.includes('engage') || messageLower.includes('comment') || messageLower.includes('share')) {
+      return 'engagement';
+    }
+    return 'awareness';
+  }
+
+  /**
+   * Infer target audience from message keywords.
+   * Hardcoded fallback — used only when Brand DNA has no target audience and
+   * the LLM call has failed.
+   */
+  private inferAudienceFromMessage(messageLower: string): string {
+    if (messageLower.includes('gen z') || messageLower.includes('young')) {
+      return 'Gen Z and younger Millennials (16-34)';
+    }
+    if (messageLower.includes('millennial')) {
+      return 'Millennials (25-40)';
+    }
+    if (messageLower.includes('boomer') || messageLower.includes('older')) {
+      return 'Older demographics (45-65+)';
+    }
+    if (messageLower.includes('b2b') || messageLower.includes('business') || messageLower.includes('professional')) {
+      return 'Business professionals and decision-makers';
+    }
+    if (messageLower.includes('local')) {
+      return 'Local community members';
+    }
+    return 'General audience';
+  }
+
+  /**
+   * Infer KPIs based on campaign objective.
+   * Hardcoded fallback — used only when neither the goal nor the LLM provided
+   * explicit KPIs.
    */
   private inferKPIs(objective: string): string[] {
     const kpiMap: Record<string, string[]> = {
@@ -2155,113 +2320,101 @@ export class MarketingManager extends BaseManager {
   }
 
   /**
-   * Determine which platforms should be used for this campaign
-   * Now includes LinkedIn scoring and SEO keyword integration
+   * Determine which platforms should be used for this campaign.
+   * Attempts an LLM call via OpenRouter first; falls back to hardcoded scoring
+   * tables if the LLM call fails or returns invalid platform names.
    */
-  private determinePlatformStrategy(
+  private async determinePlatformStrategy(
     goal: CampaignGoal,
     analysis: CampaignAnalysis,
-    seoGuidance: SEOKeywordGuidance | null
-  ): PlatformStrategy {
+    seoGuidance: SEOKeywordGuidance | null,
+    brandContext: BrandContext
+  ): Promise<PlatformStrategy> {
+    // SEO keywords are derived deterministically regardless of the LLM path.
+    const seoKeywords = seoGuidance
+      ? [...seoGuidance.primaryKeywords, ...seoGuidance.secondaryKeywords.slice(0, 2)]
+      : [];
+
+    const budgetAllocation: Record<string, string> = {};
+
+    // ---- LLM path ----
+    const llmInsights = await this.callLLMForCampaignInsights(goal, brandContext);
+    if (llmInsights && llmInsights.platforms.length > 0) {
+      const platforms = llmInsights.platforms;
+      if (analysis.budget !== 'Unspecified') {
+        const allocation = this.allocateBudget(platforms, analysis);
+        Object.assign(budgetAllocation, allocation);
+      } else {
+        platforms.forEach(p => { budgetAllocation[p] = 'To be determined'; });
+      }
+      return {
+        platforms,
+        rationale: llmInsights.platformRationale,
+        budgetAllocation,
+        seoKeywords,
+      };
+    }
+
+    // LLM failed — log and fall through to hardcoded scoring.
+    this.log('WARN', 'determinePlatformStrategy: LLM unavailable, using hardcoded keyword scoring');
+
+    // ---- Hardcoded fallback ----
     const platforms: string[] = [];
     const rationales: string[] = [];
-    const budgetAllocation: Record<string, string> = {};
 
     const message = goal.message?.toLowerCase() ?? '';
     const audience = analysis.targetAudience.toLowerCase();
     const contentType = analysis.contentType.toLowerCase();
-
-    // Check for explicit platform mentions
     const explicitPlatforms = goal.targetAudience?.platforms ?? [];
 
     // TikTok scoring
     let tiktokScore = 0;
-    if (explicitPlatforms.some(p => p.toLowerCase() === 'tiktok')) {
-      tiktokScore += 50;
-    }
-    if (message.includes('tiktok') || message.includes('viral') || message.includes('trending')) {
-      tiktokScore += 30;
-    }
-    if (audience.includes('gen z') || audience.includes('16-34') || audience.includes('young')) {
-      tiktokScore += 20;
-    }
-    if (contentType.includes('video') || message.includes('video') || message.includes('short form')) {
-      tiktokScore += 15;
-    }
-    if (message.includes('hook') || message.includes('trending sound')) {
-      tiktokScore += 10;
-    }
+    if (explicitPlatforms.some(p => p.toLowerCase() === 'tiktok')) { tiktokScore += 50; }
+    if (message.includes('tiktok') || message.includes('viral') || message.includes('trending')) { tiktokScore += 30; }
+    if (audience.includes('gen z') || audience.includes('16-34') || audience.includes('young')) { tiktokScore += 20; }
+    if (contentType.includes('video') || message.includes('video') || message.includes('short form')) { tiktokScore += 15; }
+    if (message.includes('hook') || message.includes('trending sound')) { tiktokScore += 10; }
 
     // X/Twitter scoring
     let xScore = 0;
-    if (explicitPlatforms.some(p => ['x', 'twitter'].includes(p.toLowerCase()))) {
-      xScore += 50;
-    }
-    if (message.includes('twitter') || message.includes('tweet') || message.includes(' x ') || message.includes('thread')) {
-      xScore += 30;
-    }
-    if (audience.includes('b2b') || audience.includes('professional') || audience.includes('business')) {
-      xScore += 20;
-    }
-    if (message.includes('thought leadership') || message.includes('engage') || message.includes('conversation')) {
-      xScore += 15;
-    }
-    if (contentType.includes('text') || message.includes('thread')) {
-      xScore += 10;
-    }
+    if (explicitPlatforms.some(p => ['x', 'twitter'].includes(p.toLowerCase()))) { xScore += 50; }
+    if (message.includes('twitter') || message.includes('tweet') || message.includes(' x ') || message.includes('thread')) { xScore += 30; }
+    if (audience.includes('b2b') || audience.includes('professional') || audience.includes('business')) { xScore += 20; }
+    if (message.includes('thought leadership') || message.includes('engage') || message.includes('conversation')) { xScore += 15; }
+    if (contentType.includes('text') || message.includes('thread')) { xScore += 10; }
 
     // Facebook scoring
     let facebookScore = 0;
-    if (explicitPlatforms.some(p => ['facebook', 'fb'].includes(p.toLowerCase()))) {
-      facebookScore += 50;
-    }
-    if (message.includes('facebook') || message.includes('fb') || message.includes('meta')) {
-      facebookScore += 30;
-    }
-    if (audience.includes('45-65') || audience.includes('older') || audience.includes('local')) {
-      facebookScore += 20;
-    }
-    if (message.includes('ad') || message.includes('retarget') || message.includes('lead gen')) {
-      facebookScore += 15;
-    }
-    if (analysis.objective === 'leads' || analysis.objective === 'conversions') {
-      facebookScore += 10;
-    }
+    if (explicitPlatforms.some(p => ['facebook', 'fb'].includes(p.toLowerCase()))) { facebookScore += 50; }
+    if (message.includes('facebook') || message.includes('fb') || message.includes('meta')) { facebookScore += 30; }
+    if (audience.includes('45-65') || audience.includes('older') || audience.includes('local')) { facebookScore += 20; }
+    if (message.includes('ad') || message.includes('retarget') || message.includes('lead gen')) { facebookScore += 15; }
+    if (analysis.objective === 'leads' || analysis.objective === 'conversions') { facebookScore += 10; }
 
-    // LinkedIn scoring (NEW)
+    // LinkedIn scoring
     let linkedinScore = 0;
-    if (explicitPlatforms.some(p => p.toLowerCase() === 'linkedin')) {
-      linkedinScore += 50;
-    }
-    if (message.includes('linkedin') || message.includes('b2b') || message.includes('professional')) {
-      linkedinScore += 30;
-    }
-    if (audience.includes('b2b') || audience.includes('executive') || audience.includes('decision maker')) {
-      linkedinScore += 25;
-    }
-    if (message.includes('enterprise') || message.includes('corporate') || message.includes('c-suite')) {
-      linkedinScore += 15;
-    }
-    if (analysis.objective === 'leads' && audience.includes('professional')) {
-      linkedinScore += 10;
-    }
+    if (explicitPlatforms.some(p => p.toLowerCase() === 'linkedin')) { linkedinScore += 50; }
+    if (message.includes('linkedin') || message.includes('b2b') || message.includes('professional')) { linkedinScore += 30; }
+    if (audience.includes('b2b') || audience.includes('executive') || audience.includes('decision maker')) { linkedinScore += 25; }
+    if (message.includes('enterprise') || message.includes('corporate') || message.includes('c-suite')) { linkedinScore += 15; }
+    if (analysis.objective === 'leads' && audience.includes('professional')) { linkedinScore += 10; }
 
     // Select platforms based on scores (threshold: 15)
     if (tiktokScore >= 15) {
       platforms.push('TIKTOK');
-      rationales.push(`TikTok (score: ${tiktokScore}) - ${this.getTikTokRationale(message, audience, contentType)}`);
+      rationales.push(`TikTok (fallback score: ${tiktokScore}) - ${this.getTikTokRationale(message, audience, contentType)}`);
     }
     if (xScore >= 15) {
       platforms.push('X');
-      rationales.push(`X/Twitter (score: ${xScore}) - ${this.getXRationale(message, audience, contentType)}`);
+      rationales.push(`X/Twitter (fallback score: ${xScore}) - ${this.getXRationale(message, audience, contentType)}`);
     }
     if (facebookScore >= 15) {
       platforms.push('FACEBOOK');
-      rationales.push(`Facebook (score: ${facebookScore}) - ${this.getFacebookRationale(message, audience, contentType)}`);
+      rationales.push(`Facebook (fallback score: ${facebookScore}) - ${this.getFacebookRationale(message, audience, contentType)}`);
     }
     if (linkedinScore >= 15) {
       platforms.push('LINKEDIN');
-      rationales.push(`LinkedIn (score: ${linkedinScore}) - ${this.getLinkedInRationale(message, audience)}`);
+      rationales.push(`LinkedIn (fallback score: ${linkedinScore}) - ${this.getLinkedInRationale(message, audience)}`);
     }
 
     // If no platforms selected, use default based on objective
@@ -2283,15 +2436,8 @@ export class MarketingManager extends BaseManager {
       const allocation = this.allocateBudget(platforms, analysis);
       Object.assign(budgetAllocation, allocation);
     } else {
-      platforms.forEach(p => {
-        budgetAllocation[p] = 'To be determined';
-      });
+      platforms.forEach(p => { budgetAllocation[p] = 'To be determined'; });
     }
-
-    // Extract SEO keywords to inject into social content
-    const seoKeywords = seoGuidance
-      ? [...seoGuidance.primaryKeywords, ...seoGuidance.secondaryKeywords.slice(0, 2)]
-      : [];
 
     return {
       platforms,

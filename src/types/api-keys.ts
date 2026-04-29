@@ -189,6 +189,10 @@ export interface APIKeysConfig {
       accessToken?: string;
       refreshToken?: string;
       tokenExpiresAt?: Date;
+      // OAuth 1.0a User Context — required for POST /tweets and other writes
+      consumerKey?: string;
+      consumerSecret?: string;
+      accessTokenSecret?: string;
     };
     linkedin?: {
       clientId?: string;
@@ -295,6 +299,10 @@ export interface APIKeysConfig {
       bearerToken?: string;
       accessToken?: string;
       refreshToken?: string;
+      // OAuth 1.0a User Context — required for POST /tweets and other writes
+      consumerKey?: string;
+      consumerSecret?: string;
+      accessTokenSecret?: string;
     };
     custom?: Array<{
       name: string;

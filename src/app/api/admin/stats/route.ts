@@ -23,6 +23,11 @@ import {
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
+import {
+  getAgentCount,
+  getSwarmAgentCount,
+  getStandaloneCount,
+} from '@/lib/agents/agent-registry';
 
 // ============================================================================
 // TYPES
@@ -33,12 +38,18 @@ interface PlatformStats {
   totalOrgs: number;
   /** Number of active AI agents deployed */
   activeAgents: number;
-  /** Number of pending support tickets */
-  pendingTickets: number;
+  /**
+   * Number of pending support tickets.
+   * null when no support-ticket collection exists; never returns a fabricated zero.
+   */
+  pendingTickets: number | null;
   /** Number of organizations on trial plans */
   trialOrgs: number;
-  /** Monthly recurring revenue (if super admin) */
-  monthlyRevenue?: number;
+  /**
+   * Monthly recurring revenue (if super admin).
+   * null when no billing integration is wired; never returns a fabricated number.
+   */
+  monthlyRevenue: number | null;
   /** Total users across all organizations */
   totalUsers: number;
   /** Total AI agent count from agentConfig */
@@ -253,16 +264,21 @@ export async function GET(request: NextRequest) {
       // DEBUG: Log the raw counts
       logger.debug('[STATS DEBUG] Raw counts:', { totalOrgs, totalUsers, trialOrgs, totalAgentCount, totalConversations, totalPlaybooks });
 
-      // Active agents estimated from agent config count
-      const activeAgents = totalAgentCount > 0 ? totalAgentCount : totalOrgs;
+      // Agent counts come from the AGENT_REGISTRY (rebuilt in commit d8dfe345, 70 agents).
+      // These are static facts about the platform's agent topology — not Firestore queries.
+      const registryTotal = getAgentCount();
+      const registrySwarm = getSwarmAgentCount();
+      const registryStandalone = getStandaloneCount();
 
-      // Swarm vs standalone breakdown (47 swarm, rest standalone is the known breakdown if we have agents)
-      // In production, this would query agent type field. For now, use reasonable defaults.
-      const swarmAgentCount = totalAgentCount > 0 ? Math.min(47, totalAgentCount) : 47;
-      const standaloneAgentCount = totalAgentCount > swarmAgentCount ? totalAgentCount - swarmAgentCount : 4;
+      // Active agents: prefer the live Firestore agentConfig count (reflects what's seeded);
+      // fall back to the registry total only if nothing has been seeded yet.
+      const activeAgents = totalAgentCount > 0 ? totalAgentCount : registryTotal;
 
-      // Pending tickets would come from a support collection
-      const pendingTickets = 0; // Placeholder
+      // pendingTickets: no support-ticket collection exists yet — return null, not a fake 0.
+      const pendingTickets: number | null = null;
+
+      // monthlyRevenue: no billing integration wired — return null, not a fake 0.
+      const monthlyRevenue: number | null = null;
 
       stats = {
         totalOrgs,
@@ -270,16 +286,16 @@ export async function GET(request: NextRequest) {
         pendingTickets,
         trialOrgs,
         totalUsers,
-        totalAgentCount: totalAgentCount > 0 ? totalAgentCount : swarmAgentCount + standaloneAgentCount,
-        swarmAgentCount,
-        standaloneAgentCount,
+        totalAgentCount: registryTotal,
+        swarmAgentCount: registrySwarm,
+        standaloneAgentCount: registryStandalone,
         totalConversations,
         totalPlaybooks,
         trainingMaterialsCount,
         trainingSessionsCount,
         goldenMastersCount,
         workflowsCount,
-        monthlyRevenue: 0, // Would come from billing system
+        monthlyRevenue,
         fetchedAt: new Date().toISOString(),
         scope: 'global',
       };

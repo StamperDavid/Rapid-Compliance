@@ -136,6 +136,93 @@ export interface StrategicBriefing {
 }
 
 // ---------------------------------------------------------------------------
+// GROWTH STRATEGIST LLM RESPONSE SCHEMAS
+// ---------------------------------------------------------------------------
+
+const BusinessReviewLLMSchema = z.object({
+  healthScore: z.number().min(0).max(100),
+  executiveSummary: z.string().min(20).max(2000),
+  keyFindings: z.array(z.string().min(10).max(400)).min(1).max(10),
+  directives: z.array(z.object({
+    targetManager: z.string().min(2).max(80),
+    action: z.string().min(10).max(400),
+    rationale: z.string().min(10).max(400),
+    expectedImpact: z.string().min(10).max(400),
+    priority: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+    confidence: z.number().min(0).max(100),
+  })).min(1).max(10),
+  risksAndWarnings: z.array(z.string().min(10).max(400)).min(0).max(6),
+});
+
+const SEOStrategyLLMSchema = z.object({
+  seoHealth: z.enum(['strong', 'growing', 'weak', 'inactive']),
+  strategySummary: z.string().min(20).max(1000),
+  keywordOpportunities: z.array(z.string().min(5).max(200)).min(1).max(8),
+  contentGaps: z.array(z.string().min(5).max(200)).min(0).max(6),
+  directives: z.array(z.object({
+    targetManager: z.string().min(2).max(80),
+    action: z.string().min(10).max(400),
+    rationale: z.string().min(10).max(400),
+    expectedImpact: z.string().min(10).max(400),
+    priority: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+    confidence: z.number().min(0).max(100),
+  })).min(1).max(8),
+});
+
+const AdSpendLLMSchema = z.object({
+  budgetRecommendation: z.string().min(20).max(1000),
+  channelAssessments: z.array(z.object({
+    channel: z.string().min(2).max(80),
+    verdict: z.enum(['scale', 'maintain', 'reduce', 'pause']),
+    reasoning: z.string().min(10).max(400),
+  })).min(1).max(10),
+  directives: z.array(z.object({
+    targetManager: z.string().min(2).max(80),
+    action: z.string().min(10).max(400),
+    rationale: z.string().min(10).max(400),
+    expectedImpact: z.string().min(10).max(400),
+    priority: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+    confidence: z.number().min(0).max(100),
+  })).min(1).max(10),
+});
+
+const ChannelAttributionLLMSchema = z.object({
+  attributionNarrative: z.string().min(20).max(1000),
+  channelInsights: z.array(z.object({
+    channel: z.string().min(2).max(80),
+    revenueShare: z.number().min(0).max(100),
+    qualityAssessment: z.string().min(10).max(400),
+    recommendation: z.string().min(10).max(400),
+  })).min(1).max(10),
+  topChannel: z.string().min(2).max(80),
+  underutilizedChannels: z.array(z.string().min(2).max(80)).min(0).max(5),
+  directives: z.array(z.object({
+    targetManager: z.string().min(2).max(80),
+    action: z.string().min(10).max(400),
+    rationale: z.string().min(10).max(400),
+    expectedImpact: z.string().min(10).max(400),
+    priority: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+    confidence: z.number().min(0).max(100),
+  })).min(1).max(8),
+});
+
+const StrategicBriefingLLMSchema = z.object({
+  executiveSummary: z.string().min(50).max(3000),
+  topPriorities: z.array(z.string().min(10).max(400)).min(1).max(6),
+  risksAndWarnings: z.array(z.string().min(10).max(400)).min(0).max(6),
+  quickWins: z.array(z.string().min(10).max(400)).min(0).max(4),
+  thirtyDayOutlook: z.string().min(20).max(800),
+  directives: z.array(z.object({
+    targetManager: z.string().min(2).max(80),
+    action: z.string().min(10).max(400),
+    rationale: z.string().min(10).max(400),
+    expectedImpact: z.string().min(10).max(400),
+    priority: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+    confidence: z.number().min(0).max(100),
+  })).min(1).max(10),
+});
+
+// ---------------------------------------------------------------------------
 // DEMOGRAPHIC PERSONA — Zod schema + inferred type
 // ---------------------------------------------------------------------------
 
@@ -304,195 +391,371 @@ export class GrowthStrategist extends BaseSpecialist {
   }
 
   // ==========================================================================
+  // SHARED LLM HELPER
+  // ==========================================================================
+
+  /**
+   * Load the Growth Strategist's Golden Master and call the LLM via OpenRouter.
+   * Brand DNA is already baked into gm.config.systemPrompt at seed time —
+   * no second Firestore call required (Standing Rule #1).
+   */
+  private async callGMLLM(userPrompt: string): Promise<string> {
+    const { getActiveSpecialistGMByIndustry } = await import('@/lib/training/specialist-golden-master-service');
+    const gmRecord = await getActiveSpecialistGMByIndustry('GROWTH_STRATEGIST', 'saas_sales_ops');
+    if (!gmRecord) {
+      throw new Error(
+        'Growth Strategist GM not found. Run: node scripts/seed-growth-strategist-gm.js',
+      );
+    }
+    const gmConfig = gmRecord.config as { systemPrompt?: string } | undefined;
+    const resolvedSystemPrompt = gmConfig?.systemPrompt ?? gmRecord.systemPromptSnapshot ?? '';
+    if (resolvedSystemPrompt.length < 100) {
+      throw new Error(
+        `Growth Strategist GM ${gmRecord.id} has no usable systemPrompt (length=${resolvedSystemPrompt.length}).`,
+      );
+    }
+
+    const provider = new OpenRouterProvider(PLATFORM_ID);
+    const response = await provider.chat({
+      model: 'claude-sonnet-4.6',
+      messages: [
+        { role: 'system', content: resolvedSystemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.3,
+      maxTokens: 4096,
+    });
+
+    const rawContent = response.content
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim();
+
+    if (rawContent.length === 0) {
+      throw new Error('Growth Strategist: LLM returned empty response');
+    }
+
+    return rawContent;
+  }
+
+  // ==========================================================================
   // TASK HANDLERS
   // ==========================================================================
 
   private async conductBusinessReview(
     snapshot: BusinessSnapshot
   ): Promise<Record<string, unknown>> {
-    await Promise.resolve();
-    const directives: StrategicDirective[] = [];
+    const fallbackHealthScore = this.calculateHealthScore(snapshot);
 
-    // Revenue analysis
-    if (snapshot.revenue.churnRate > 5) {
-      directives.push(this.createDirective(
-        'BUSINESS_REVIEW',
-        'OUTREACH_MANAGER',
-        'Launch win-back email sequence for churned customers',
-        `Churn rate at ${snapshot.revenue.churnRate}% exceeds 5% threshold`,
-        'Recover 10-15% of churned revenue',
-        'HIGH',
-        85
-      ));
+    // Primary path: LLM-driven business review using the GM's baked-in Brand DNA
+    try {
+      const snapshotContext = JSON.stringify({
+        revenue: {
+          mrr: snapshot.revenue.mrr,
+          totalCustomers: snapshot.revenue.totalCustomers,
+          revenueGrowthRate: snapshot.revenue.revenueGrowthRate,
+          churnRate: snapshot.revenue.churnRate,
+          ltv: snapshot.revenue.ltv,
+          newCustomersThisPeriod: snapshot.revenue.newCustomersThisPeriod,
+        },
+        pipeline: {
+          totalLeads: snapshot.pipeline.totalLeads,
+          winRate: snapshot.pipeline.winRate,
+          dealsPipeline: snapshot.pipeline.dealsPipeline,
+          avgDealCycleDays: snapshot.pipeline.avgDealCycledays,
+        },
+        channels: snapshot.channels.map(c => ({
+          channel: c.channel,
+          roi: c.roi,
+          revenue: c.revenue,
+          conversionRate: c.conversionRate,
+          costPerAcquisition: c.costPerAcquisition,
+        })),
+        seo: { organicTraffic: snapshot.seo.organicTraffic, domainAuthority: snapshot.seo.domainAuthority },
+        social: { engagementRate: snapshot.social.engagementRate, topPlatform: snapshot.social.topPlatform },
+        email: { openRate: snapshot.email.openRate, clickRate: snapshot.email.clickRate },
+      }, null, 2);
+
+      const userPrompt = `TASK: BUSINESS_REVIEW
+
+Analyze the full business snapshot below and produce a cross-domain health assessment with strategic directives for the department managers.
+
+## BUSINESS SNAPSHOT
+${snapshotContext}
+
+Respond with ONLY a valid JSON object:
+{
+  "healthScore": <0-100 integer representing overall business health>,
+  "executiveSummary": "<2-4 sentence narrative summary of overall business health>",
+  "keyFindings": ["<1-3 key findings, each a complete sentence>"],
+  "directives": [
+    {
+      "targetManager": "<manager id, e.g. MARKETING_MANAGER>",
+      "action": "<specific action to take>",
+      "rationale": "<data-backed reason, cite specific numbers from snapshot>",
+      "expectedImpact": "<what will improve and by how much>",
+      "priority": "<HIGH|MEDIUM|LOW>",
+      "confidence": <0-100>
     }
+  ],
+  "risksAndWarnings": ["<risks or warning signals spotted in the data>"]
+}`;
 
-    if (snapshot.revenue.revenueGrowthRate < 0) {
-      directives.push(this.createDirective(
-        'BUSINESS_REVIEW',
-        'REVENUE_DIRECTOR',
-        'Review pricing strategy and pipeline velocity',
-        `Revenue declining at ${snapshot.revenue.revenueGrowthRate}%`,
-        'Stabilize revenue trajectory within 30 days',
-        'HIGH',
-        90
-      ));
+      const raw = await this.callGMLLM(userPrompt);
+      const parsed: unknown = JSON.parse(raw);
+      const llmResult = BusinessReviewLLMSchema.parse(parsed);
+
+      const directives: StrategicDirective[] = llmResult.directives.map(d =>
+        this.createDirective('BUSINESS_REVIEW', d.targetManager, d.action, d.rationale, d.expectedImpact, d.priority, d.confidence)
+      );
+
+      const vault = getMemoryVault();
+      vault.write('STRATEGY', `business_review_${Date.now()}`, {
+        snapshot,
+        directives,
+        recommendations: snapshot.topRecommendations,
+      }, 'GROWTH_STRATEGIST', {
+        tags: ['business-review', 'strategic-directive'],
+        priority: 'HIGH',
+      });
+
+      return {
+        healthScore: llmResult.healthScore,
+        executiveSummary: llmResult.executiveSummary,
+        keyFindings: llmResult.keyFindings,
+        risksAndWarnings: llmResult.risksAndWarnings,
+        directives,
+        recommendations: snapshot.topRecommendations,
+        analysisMethod: 'llm',
+        snapshot: {
+          mrr: snapshot.revenue.mrr,
+          totalCustomers: snapshot.revenue.totalCustomers,
+          pipeline: snapshot.pipeline.totalLeads,
+          winRate: snapshot.pipeline.winRate,
+          organicTraffic: snapshot.seo.organicTraffic,
+          socialEngagement: snapshot.social.engagementRate,
+          emailOpenRate: snapshot.email.openRate,
+        },
+      };
+    } catch (err: unknown) {
+      // Fallback: threshold-based directives
+      this.log('WARN', `BUSINESS_REVIEW LLM call failed — using threshold fallback: ${err instanceof Error ? err.message : String(err)}`);
+
+      const directives: StrategicDirective[] = [];
+
+      if (snapshot.revenue.churnRate > 5) {
+        directives.push(this.createDirective('BUSINESS_REVIEW', 'OUTREACH_MANAGER', 'Launch win-back email sequence for churned customers', `Churn rate at ${snapshot.revenue.churnRate}% exceeds 5% threshold`, 'Recover 10-15% of churned revenue', 'HIGH', 85));
+      }
+      if (snapshot.revenue.revenueGrowthRate < 0) {
+        directives.push(this.createDirective('BUSINESS_REVIEW', 'REVENUE_DIRECTOR', 'Review pricing strategy and pipeline velocity', `Revenue declining at ${snapshot.revenue.revenueGrowthRate}%`, 'Stabilize revenue trajectory within 30 days', 'HIGH', 90));
+      }
+      if (snapshot.pipeline.winRate < 20 && snapshot.pipeline.totalLeads > 0) {
+        directives.push(this.createDirective('BUSINESS_REVIEW', 'REVENUE_DIRECTOR', 'Tighten lead qualification criteria and improve sales process', `Win rate at ${snapshot.pipeline.winRate}% is below 20% threshold`, 'Improve win rate to 25%+ by qualifying better leads', 'HIGH', 80));
+      }
+      const bestChannel = snapshot.channels.reduce<{ channel: string; roi: number } | null>(
+        (best, ch) => (!best || ch.roi > best.roi) ? { channel: ch.channel, roi: ch.roi } : best,
+        null
+      );
+      if (bestChannel && bestChannel.roi > 100) {
+        directives.push(this.createDirective('BUSINESS_REVIEW', 'MARKETING_MANAGER', `Increase investment in ${bestChannel.channel} channel`, `${bestChannel.channel} showing ${bestChannel.roi}% ROI — highest performer`, 'Scale winning channel for 2x revenue impact', 'MEDIUM', 75));
+      }
+
+      const vault = getMemoryVault();
+      vault.write('STRATEGY', `business_review_${Date.now()}`, { snapshot, directives, recommendations: snapshot.topRecommendations }, 'GROWTH_STRATEGIST', { tags: ['business-review', 'strategic-directive'], priority: 'HIGH' });
+
+      return {
+        healthScore: fallbackHealthScore,
+        directives,
+        recommendations: snapshot.topRecommendations,
+        analysisMethod: 'threshold-fallback',
+        snapshot: {
+          mrr: snapshot.revenue.mrr,
+          totalCustomers: snapshot.revenue.totalCustomers,
+          pipeline: snapshot.pipeline.totalLeads,
+          winRate: snapshot.pipeline.winRate,
+          organicTraffic: snapshot.seo.organicTraffic,
+          socialEngagement: snapshot.social.engagementRate,
+          emailOpenRate: snapshot.email.openRate,
+        },
+      };
     }
-
-    // Pipeline analysis
-    if (snapshot.pipeline.winRate < 20 && snapshot.pipeline.totalLeads > 0) {
-      directives.push(this.createDirective(
-        'BUSINESS_REVIEW',
-        'REVENUE_DIRECTOR',
-        'Tighten lead qualification criteria and improve sales process',
-        `Win rate at ${snapshot.pipeline.winRate}% is below 20% threshold`,
-        'Improve win rate to 25%+ by qualifying better leads',
-        'HIGH',
-        80
-      ));
-    }
-
-    // Channel analysis
-    const bestChannel = snapshot.channels.reduce<{ channel: string; roi: number } | null>(
-      (best, ch) => (!best || ch.roi > best.roi) ? { channel: ch.channel, roi: ch.roi } : best,
-      null
-    );
-
-    if (bestChannel && bestChannel.roi > 100) {
-      directives.push(this.createDirective(
-        'BUSINESS_REVIEW',
-        'MARKETING_MANAGER',
-        `Increase investment in ${bestChannel.channel} channel`,
-        `${bestChannel.channel} showing ${bestChannel.roi}% ROI — highest performer`,
-        'Scale winning channel for 2x revenue impact',
-        'MEDIUM',
-        75
-      ));
-    }
-
-    // Store business review in MemoryVault
-    const vault = getMemoryVault();
-    vault.write('STRATEGY', `business_review_${Date.now()}`, {
-      snapshot,
-      directives,
-      recommendations: snapshot.topRecommendations,
-    }, 'GROWTH_STRATEGIST', {
-      tags: ['business-review', 'strategic-directive'],
-      priority: 'HIGH',
-    });
-
-    return {
-      healthScore: this.calculateHealthScore(snapshot),
-      directives,
-      recommendations: snapshot.topRecommendations,
-      snapshot: {
-        mrr: snapshot.revenue.mrr,
-        totalCustomers: snapshot.revenue.totalCustomers,
-        pipeline: snapshot.pipeline.totalLeads,
-        winRate: snapshot.pipeline.winRate,
-        organicTraffic: snapshot.seo.organicTraffic,
-        socialEngagement: snapshot.social.engagementRate,
-        emailOpenRate: snapshot.email.openRate,
-      },
-    };
   }
 
   private async analyzeSEOStrategy(
     snapshot: BusinessSnapshot
   ): Promise<Record<string, unknown>> {
-    const directives: StrategicDirective[] = [];
+    // Primary path: LLM-driven SEO strategy using the GM's baked-in Brand DNA
+    try {
+      const seoContext = JSON.stringify({
+        organicTraffic: snapshot.seo.organicTraffic,
+        domainAuthority: snapshot.seo.domainAuthority,
+        topKeywords: snapshot.seo.topKeywords.slice(0, 10),
+        channels: snapshot.channels.map(c => ({ channel: c.channel, roi: c.roi, revenue: c.revenue })),
+        pipeline: { totalLeads: snapshot.pipeline.totalLeads, leadSources: snapshot.pipeline.leadSources.slice(0, 5) },
+      }, null, 2);
 
-    if (snapshot.seo.organicTraffic === 0) {
-      directives.push(this.createDirective(
-        'SEO_STRATEGY',
-        'MARKETING_MANAGER',
-        'Initiate content marketing campaign targeting high-intent keywords',
-        'Zero organic traffic detected — no SEO foundation exists',
-        'Establish organic traffic baseline within 60 days',
-        'HIGH',
-        90
-      ));
+      const userPrompt = `TASK: SEO_STRATEGY
+
+Analyze the SEO and traffic data below and produce a strategic SEO directive with keyword opportunities and content gaps.
+
+## SEO DATA
+${seoContext}
+
+Respond with ONLY a valid JSON object:
+{
+  "seoHealth": "<strong|growing|weak|inactive>",
+  "strategySummary": "<2-3 sentence strategic overview of the SEO position>",
+  "keywordOpportunities": ["<specific keyword or keyword cluster to target>"],
+  "contentGaps": ["<topic or content type missing from the strategy>"],
+  "directives": [
+    {
+      "targetManager": "<MARKETING_MANAGER|CONTENT_MANAGER|SEO_EXPERT>",
+      "action": "<specific SEO action>",
+      "rationale": "<data-backed rationale citing numbers from the snapshot>",
+      "expectedImpact": "<expected traffic or ranking outcome>",
+      "priority": "<HIGH|MEDIUM|LOW>",
+      "confidence": <0-100>
     }
+  ]
+}`;
 
-    if (snapshot.seo.domainAuthority < 20) {
-      directives.push(this.createDirective(
-        'SEO_STRATEGY',
-        'CONTENT_MANAGER',
-        'Produce high-quality backlink-worthy content (guides, tools, research)',
-        `Domain authority at ${snapshot.seo.domainAuthority} — needs improvement`,
-        'Increase DA by 10+ points in 6 months',
-        'MEDIUM',
-        70
-      ));
+      const raw = await this.callGMLLM(userPrompt);
+      const parsed: unknown = JSON.parse(raw);
+      const llmResult = SEOStrategyLLMSchema.parse(parsed);
+
+      const directives: StrategicDirective[] = llmResult.directives.map(d =>
+        this.createDirective('SEO_STRATEGY', d.targetManager, d.action, d.rationale, d.expectedImpact, d.priority, d.confidence)
+      );
+
+      await shareInsight('GROWTH_STRATEGIST', 'PERFORMANCE', 'SEO Strategy Update', llmResult.strategySummary, { confidence: 80, tags: ['seo-strategy'] });
+
+      return {
+        seoHealth: llmResult.seoHealth,
+        strategySummary: llmResult.strategySummary,
+        keywordOpportunities: llmResult.keywordOpportunities,
+        contentGaps: llmResult.contentGaps,
+        directives,
+        currentMetrics: snapshot.seo,
+        analysisMethod: 'llm',
+      };
+    } catch (err: unknown) {
+      // Fallback: basic threshold directives
+      this.log('WARN', `SEO_STRATEGY LLM call failed — using threshold fallback: ${err instanceof Error ? err.message : String(err)}`);
+
+      const directives: StrategicDirective[] = [];
+      if (snapshot.seo.organicTraffic === 0) {
+        directives.push(this.createDirective('SEO_STRATEGY', 'MARKETING_MANAGER', 'Initiate content marketing campaign targeting high-intent keywords', 'Zero organic traffic detected — no SEO foundation exists', 'Establish organic traffic baseline within 60 days', 'HIGH', 90));
+      }
+      if (snapshot.seo.domainAuthority < 20) {
+        directives.push(this.createDirective('SEO_STRATEGY', 'CONTENT_MANAGER', 'Produce high-quality backlink-worthy content (guides, tools, research)', `Domain authority at ${snapshot.seo.domainAuthority} — needs improvement`, 'Increase DA by 10+ points in 6 months', 'MEDIUM', 70));
+      }
+
+      await shareInsight('GROWTH_STRATEGIST', 'PERFORMANCE', 'SEO Strategy Update', `Organic traffic: ${snapshot.seo.organicTraffic}, DA: ${snapshot.seo.domainAuthority}, Keywords tracked: ${snapshot.seo.topKeywords.length}`, { confidence: 80, tags: ['seo-strategy'] });
+
+      return {
+        seoHealth: snapshot.seo.organicTraffic > 0 ? 'active' : 'inactive',
+        directives,
+        currentMetrics: snapshot.seo,
+        analysisMethod: 'threshold-fallback',
+      };
     }
-
-    // Share insight for cross-agent visibility
-    await shareInsight(
-      'GROWTH_STRATEGIST',
-      'PERFORMANCE',
-      'SEO Strategy Update',
-      `Organic traffic: ${snapshot.seo.organicTraffic}, DA: ${snapshot.seo.domainAuthority}, Keywords tracked: ${snapshot.seo.topKeywords.length}`,
-      { confidence: 80, tags: ['seo-strategy'] }
-    );
-
-    return {
-      seoHealth: snapshot.seo.organicTraffic > 0 ? 'active' : 'inactive',
-      directives,
-      currentMetrics: snapshot.seo,
-    };
   }
 
   private async analyzeAdSpend(
     snapshot: BusinessSnapshot
   ): Promise<Record<string, unknown>> {
-    await Promise.resolve();
-    const directives: StrategicDirective[] = [];
     const channels = snapshot.channels;
-
-    // Sort channels by ROI
     const sortedByROI = [...channels].sort((a, b) => b.roi - a.roi);
-    const profitableChannels = sortedByROI.filter(c => c.roi > 0);
-    const unprofitableChannels = sortedByROI.filter(c => c.roi <= 0);
 
-    // Kill underperformers
-    for (const channel of unprofitableChannels) {
-      directives.push(this.createDirective(
-        'AD_SPEND_ANALYSIS',
-        'MARKETING_MANAGER',
-        `Pause or reduce spend on ${channel.channel}`,
-        `${channel.channel} has negative ROI of ${channel.roi}%`,
-        'Stop bleeding money on non-converting channel',
-        'HIGH',
-        85
-      ));
-    }
-
-    // Scale winners
-    for (const channel of profitableChannels.slice(0, 3)) {
-      if (channel.roi > 100) {
-        directives.push(this.createDirective(
-          'AD_SPEND_ANALYSIS',
-          'MARKETING_MANAGER',
-          `Increase budget allocation to ${channel.channel} by 25-50%`,
-          `${channel.channel} producing ${channel.roi}% ROI with CPA of $${channel.costPerAcquisition}`,
-          'Scale proven channel for higher revenue',
-          'MEDIUM',
-          75
-        ));
-      }
-    }
-
-    return {
-      totalChannels: channels.length,
-      profitable: profitableChannels.length,
-      unprofitable: unprofitableChannels.length,
-      directives,
-      channelRankings: sortedByROI.map(c => ({
+    // Primary path: LLM-driven ad spend analysis using the GM's baked-in Brand DNA
+    try {
+      const channelContext = JSON.stringify(sortedByROI.map(c => ({
         channel: c.channel,
         roi: c.roi,
-        cpa: c.costPerAcquisition,
         revenue: c.revenue,
-      })),
-    };
+        conversions: c.conversions,
+        conversionRate: c.conversionRate,
+        costPerAcquisition: c.costPerAcquisition,
+      })), null, 2);
+
+      const userPrompt = `TASK: AD_SPEND_ANALYSIS
+
+Analyze the channel performance data below and produce budget allocation recommendations that maximize ROI while cutting underperformers.
+
+## CHANNEL DATA (sorted by ROI, highest first)
+${channelContext}
+
+## BUSINESS CONTEXT
+Total channels: ${channels.length}
+Profitable (ROI > 0): ${sortedByROI.filter(c => c.roi > 0).length}
+Unprofitable (ROI ≤ 0): ${sortedByROI.filter(c => c.roi <= 0).length}
+
+Respond with ONLY a valid JSON object:
+{
+  "budgetRecommendation": "<2-3 sentence overall budget allocation strategy>",
+  "channelAssessments": [
+    {
+      "channel": "<channel name>",
+      "verdict": "<scale|maintain|reduce|pause>",
+      "reasoning": "<data-backed reasoning citing ROI and CPA numbers>"
+    }
+  ],
+  "directives": [
+    {
+      "targetManager": "<MARKETING_MANAGER|REVENUE_DIRECTOR>",
+      "action": "<specific budget action>",
+      "rationale": "<data-backed rationale>",
+      "expectedImpact": "<expected revenue or CPA improvement>",
+      "priority": "<HIGH|MEDIUM|LOW>",
+      "confidence": <0-100>
+    }
+  ]
+}`;
+
+      const raw = await this.callGMLLM(userPrompt);
+      const parsed: unknown = JSON.parse(raw);
+      const llmResult = AdSpendLLMSchema.parse(parsed);
+
+      const directives: StrategicDirective[] = llmResult.directives.map(d =>
+        this.createDirective('AD_SPEND_ANALYSIS', d.targetManager, d.action, d.rationale, d.expectedImpact, d.priority, d.confidence)
+      );
+
+      return {
+        totalChannels: channels.length,
+        profitable: sortedByROI.filter(c => c.roi > 0).length,
+        unprofitable: sortedByROI.filter(c => c.roi <= 0).length,
+        budgetRecommendation: llmResult.budgetRecommendation,
+        channelAssessments: llmResult.channelAssessments,
+        directives,
+        channelRankings: sortedByROI.map(c => ({ channel: c.channel, roi: c.roi, cpa: c.costPerAcquisition, revenue: c.revenue })),
+        analysisMethod: 'llm',
+      };
+    } catch (err: unknown) {
+      // Fallback: threshold-based channel scoring
+      this.log('WARN', `AD_SPEND_ANALYSIS LLM call failed — using threshold fallback: ${err instanceof Error ? err.message : String(err)}`);
+
+      const profitableChannels = sortedByROI.filter(c => c.roi > 0);
+      const unprofitableChannels = sortedByROI.filter(c => c.roi <= 0);
+      const directives: StrategicDirective[] = [];
+
+      for (const channel of unprofitableChannels) {
+        directives.push(this.createDirective('AD_SPEND_ANALYSIS', 'MARKETING_MANAGER', `Pause or reduce spend on ${channel.channel}`, `${channel.channel} has negative ROI of ${channel.roi}%`, 'Stop bleeding money on non-converting channel', 'HIGH', 85));
+      }
+      for (const channel of profitableChannels.slice(0, 3)) {
+        if (channel.roi > 100) {
+          directives.push(this.createDirective('AD_SPEND_ANALYSIS', 'MARKETING_MANAGER', `Increase budget allocation to ${channel.channel} by 25-50%`, `${channel.channel} producing ${channel.roi}% ROI with CPA of $${channel.costPerAcquisition}`, 'Scale proven channel for higher revenue', 'MEDIUM', 75));
+        }
+      }
+
+      return {
+        totalChannels: channels.length,
+        profitable: profitableChannels.length,
+        unprofitable: unprofitableChannels.length,
+        directives,
+        channelRankings: sortedByROI.map(c => ({ channel: c.channel, roi: c.roi, cpa: c.costPerAcquisition, revenue: c.revenue })),
+        analysisMethod: 'threshold-fallback',
+      };
+    }
   }
 
   private async analyzeDemographics(
@@ -778,24 +1041,88 @@ Respond with ONLY a JSON object with these exact fields:
   private async analyzeChannelAttribution(
     snapshot: BusinessSnapshot
   ): Promise<Record<string, unknown>> {
-    await Promise.resolve();
     const channels = snapshot.channels;
     const totalRevenue = channels.reduce((sum, c) => sum + c.revenue, 0);
-
     const attribution = channels.map(c => ({
       channel: c.channel,
       revenue: c.revenue,
-      revenueShare: totalRevenue > 0 ? ((c.revenue / totalRevenue) * 100) : 0,
+      revenueShare: totalRevenue > 0 ? Math.round((c.revenue / totalRevenue) * 100 * 10) / 10 : 0,
       conversions: c.conversions,
       conversionRate: c.conversionRate,
       roi: c.roi,
     }));
 
-    return {
-      totalRevenue,
-      attribution,
-      topChannel: attribution.sort((a, b) => b.revenueShare - a.revenueShare)[0] ?? null,
-    };
+    // Primary path: LLM-driven attribution analysis using the GM's baked-in Brand DNA
+    try {
+      const attributionContext = JSON.stringify({
+        totalRevenue,
+        channels: attribution,
+        leadSources: snapshot.pipeline.leadSources.slice(0, 8),
+        pipeline: { totalLeads: snapshot.pipeline.totalLeads, winRate: snapshot.pipeline.winRate },
+      }, null, 2);
+
+      const userPrompt = `TASK: CHANNEL_ATTRIBUTION
+
+Analyze the multi-channel attribution data below. Go beyond arithmetic revenue shares — reason about channel quality, lead-to-close efficiency, and underutilized channels.
+
+## ATTRIBUTION DATA
+${attributionContext}
+
+Respond with ONLY a valid JSON object:
+{
+  "attributionNarrative": "<2-3 sentence narrative explaining what the attribution data reveals>",
+  "channelInsights": [
+    {
+      "channel": "<channel name>",
+      "revenueShare": <0-100 number>,
+      "qualityAssessment": "<insight beyond raw share — e.g. high revenue but low conversion, low share but high ROI>",
+      "recommendation": "<specific action for this channel>"
+    }
+  ],
+  "topChannel": "<name of the strategically most important channel>",
+  "underutilizedChannels": ["<channels with potential that are underinvested>"],
+  "directives": [
+    {
+      "targetManager": "<MARKETING_MANAGER|REVENUE_DIRECTOR|OUTREACH_MANAGER>",
+      "action": "<specific attribution-informed action>",
+      "rationale": "<cite specific channel data>",
+      "expectedImpact": "<expected revenue or efficiency improvement>",
+      "priority": "<HIGH|MEDIUM|LOW>",
+      "confidence": <0-100>
+    }
+  ]
+}`;
+
+      const raw = await this.callGMLLM(userPrompt);
+      const parsed: unknown = JSON.parse(raw);
+      const llmResult = ChannelAttributionLLMSchema.parse(parsed);
+
+      const directives: StrategicDirective[] = llmResult.directives.map(d =>
+        this.createDirective('CHANNEL_ATTRIBUTION', d.targetManager, d.action, d.rationale, d.expectedImpact, d.priority, d.confidence)
+      );
+
+      return {
+        totalRevenue,
+        attribution,
+        attributionNarrative: llmResult.attributionNarrative,
+        channelInsights: llmResult.channelInsights,
+        topChannel: llmResult.topChannel,
+        underutilizedChannels: llmResult.underutilizedChannels,
+        directives,
+        analysisMethod: 'llm',
+      };
+    } catch (err: unknown) {
+      // Fallback: arithmetic attribution only
+      this.log('WARN', `CHANNEL_ATTRIBUTION LLM call failed — using arithmetic fallback: ${err instanceof Error ? err.message : String(err)}`);
+
+      const sortedByShare = [...attribution].sort((a, b) => b.revenueShare - a.revenueShare);
+      return {
+        totalRevenue,
+        attribution,
+        topChannel: sortedByShare[0] ?? null,
+        analysisMethod: 'arithmetic-fallback',
+      };
+    }
   }
 
   private async produceStrategicBriefing(
@@ -805,46 +1132,121 @@ Respond with ONLY a JSON object with these exact fields:
     const healthScore = review.healthScore as number;
     const directives = review.directives as StrategicDirective[];
 
-    const executiveSummary = this.buildExecutiveSummary(snapshot, healthScore, directives);
+    // Primary path: LLM-driven strategic briefing using the GM's baked-in Brand DNA
+    try {
+      const briefingContext = JSON.stringify({
+        healthScore,
+        revenue: {
+          mrr: snapshot.revenue.mrr,
+          totalCustomers: snapshot.revenue.totalCustomers,
+          revenueGrowthRate: snapshot.revenue.revenueGrowthRate,
+          churnRate: snapshot.revenue.churnRate,
+        },
+        pipeline: {
+          totalLeads: snapshot.pipeline.totalLeads,
+          winRate: snapshot.pipeline.winRate,
+          dealsPipeline: snapshot.pipeline.dealsPipeline,
+        },
+        channels: snapshot.channels.map(c => ({ channel: c.channel, roi: c.roi, revenue: c.revenue })),
+        seo: { organicTraffic: snapshot.seo.organicTraffic, domainAuthority: snapshot.seo.domainAuthority },
+        social: { engagementRate: snapshot.social.engagementRate, topPlatform: snapshot.social.topPlatform },
+        email: { openRate: snapshot.email.openRate },
+        existingDirectives: directives.map(d => ({ action: d.action, priority: d.priority, targetManager: d.targetManager })),
+        topRecommendations: snapshot.topRecommendations,
+      }, null, 2);
 
-    const briefing: StrategicBriefing = {
-      briefingId: `strat_brief_${Date.now()}`,
-      generatedAt: new Date().toISOString(),
-      snapshot,
-      directives,
-      executiveSummary,
-      topPriorities: directives
-        .filter(d => d.priority === 'HIGH')
-        .map(d => d.action),
-      risksAndWarnings: snapshot.topRecommendations.filter(r =>
-        r.toLowerCase().includes('decline') ||
-        r.toLowerCase().includes('negative') ||
-        r.toLowerCase().includes('below')
-      ),
-    };
+      const userPrompt = `TASK: STRATEGIC_BRIEFING
 
-    // Store briefing in MemoryVault for Jasper to access
-    const vault = getMemoryVault();
-    vault.write('STRATEGY', `strategic_briefing_${briefing.briefingId}`, briefing, 'GROWTH_STRATEGIST', {
-      tags: ['strategic-briefing', 'executive-summary', 'jasper-accessible'],
-      priority: 'HIGH',
-    });
+Synthesize the full business review data below into a concise executive briefing that Jasper can relay to the human operator. Be specific, cite numbers, and tell a coherent growth story.
 
-    // Share insight so Jasper picks it up
-    await shareInsight(
-      'GROWTH_STRATEGIST',
-      'PERFORMANCE',
-      'Strategic Briefing Ready',
-      executiveSummary,
-      { confidence: 90, tags: ['strategic-briefing', 'jasper-accessible'] }
-    );
+## BUSINESS REVIEW DATA
+${briefingContext}
 
-    return {
-      briefing,
-      healthScore,
-      directiveCount: directives.length,
-      highPriorityCount: briefing.topPriorities.length,
-    };
+Respond with ONLY a valid JSON object:
+{
+  "executiveSummary": "<3-5 sentence executive narrative: where we are, what's working, what needs fixing, what to do next>",
+  "topPriorities": ["<the 3-5 most important things to act on this period>"],
+  "risksAndWarnings": ["<risks or warning signals that need operator attention>"],
+  "quickWins": ["<actions that can move a metric within 7-14 days>"],
+  "thirtyDayOutlook": "<1-2 sentence projection: if current directives are executed, what should improve in 30 days>",
+  "directives": [
+    {
+      "targetManager": "<manager id>",
+      "action": "<specific high-priority action>",
+      "rationale": "<data-backed rationale>",
+      "expectedImpact": "<expected outcome>",
+      "priority": "<HIGH|MEDIUM|LOW>",
+      "confidence": <0-100>
+    }
+  ]
+}`;
+
+      const raw = await this.callGMLLM(userPrompt);
+      const parsed: unknown = JSON.parse(raw);
+      const llmResult = StrategicBriefingLLMSchema.parse(parsed);
+
+      const llmDirectives: StrategicDirective[] = llmResult.directives.map(d =>
+        this.createDirective('STRATEGIC_BRIEFING', d.targetManager, d.action, d.rationale, d.expectedImpact, d.priority, d.confidence)
+      );
+
+      const briefing: StrategicBriefing = {
+        briefingId: `strat_brief_${Date.now()}`,
+        generatedAt: new Date().toISOString(),
+        snapshot,
+        directives: llmDirectives,
+        executiveSummary: llmResult.executiveSummary,
+        topPriorities: llmResult.topPriorities,
+        risksAndWarnings: llmResult.risksAndWarnings,
+      };
+
+      const vault = getMemoryVault();
+      vault.write('STRATEGY', `strategic_briefing_${briefing.briefingId}`, briefing, 'GROWTH_STRATEGIST', {
+        tags: ['strategic-briefing', 'executive-summary', 'jasper-accessible'],
+        priority: 'HIGH',
+      });
+
+      await shareInsight('GROWTH_STRATEGIST', 'PERFORMANCE', 'Strategic Briefing Ready', llmResult.executiveSummary, { confidence: 90, tags: ['strategic-briefing', 'jasper-accessible'] });
+
+      return {
+        briefing,
+        healthScore,
+        directiveCount: llmDirectives.length,
+        highPriorityCount: llmResult.topPriorities.length,
+        quickWins: llmResult.quickWins,
+        thirtyDayOutlook: llmResult.thirtyDayOutlook,
+        analysisMethod: 'llm',
+      };
+    } catch (err: unknown) {
+      // Fallback: template-based summary using review directives
+      this.log('WARN', `STRATEGIC_BRIEFING LLM call failed — using template fallback: ${err instanceof Error ? err.message : String(err)}`);
+
+      const executiveSummary = this.buildExecutiveSummary(snapshot, healthScore, directives);
+
+      const briefing: StrategicBriefing = {
+        briefingId: `strat_brief_${Date.now()}`,
+        generatedAt: new Date().toISOString(),
+        snapshot,
+        directives,
+        executiveSummary,
+        topPriorities: directives.filter(d => d.priority === 'HIGH').map(d => d.action),
+        risksAndWarnings: snapshot.topRecommendations.filter(r =>
+          r.toLowerCase().includes('decline') || r.toLowerCase().includes('negative') || r.toLowerCase().includes('below')
+        ),
+      };
+
+      const vault = getMemoryVault();
+      vault.write('STRATEGY', `strategic_briefing_${briefing.briefingId}`, briefing, 'GROWTH_STRATEGIST', { tags: ['strategic-briefing', 'executive-summary', 'jasper-accessible'], priority: 'HIGH' });
+
+      await shareInsight('GROWTH_STRATEGIST', 'PERFORMANCE', 'Strategic Briefing Ready', executiveSummary, { confidence: 90, tags: ['strategic-briefing', 'jasper-accessible'] });
+
+      return {
+        briefing,
+        healthScore,
+        directiveCount: directives.length,
+        highPriorityCount: briefing.topPriorities.length,
+        analysisMethod: 'template-fallback',
+      };
+    }
   }
 
   // ==========================================================================

@@ -596,10 +596,12 @@ export interface SentimentAnalysis {
  * Brand health metrics
  */
 export interface BrandHealthMetrics {
-  nps: number;                  // -100 to 100
+  nps: number;                  // -100 to 100 (0 when no reviews — accurate, not fabricated)
   reviewVelocity: number;       // reviews per day
-  responseRate: number;         // % of reviews responded to
-  averageRating: number;        // 0-5 stars
+  // null when we have no reply-tracking source. Was hardcoded 85 before, plus
+  // an unrepliedReviews derivation (reviews * 0.15) that propagated the lie.
+  responseRate: number | null;
+  averageRating: number;        // 0-5 stars (0 when no reviews — accurate)
   starDistribution: {
     star5: number;              // % 5-star
     star4: number;              // % 4-star
@@ -608,7 +610,7 @@ export interface BrandHealthMetrics {
     star1: number;              // % 1-star
   };
   totalReviews: number;
-  unrepliedReviews: number;
+  unrepliedReviews: number | null;  // null when responseRate is null
   lastUpdated: Date;
 }
 
@@ -2191,12 +2193,14 @@ export class ReputationManager extends BaseManager {
       trend = 'STABLE';
     }
 
-    // Calculate breakdown
+    // Sentiment breakdown — zeros when there's no data are accurate (0% of 0
+    // signals). The previous fallback of 50/30/20 was an invented distribution
+    // that masked "no data" as if it were typical mid-quality reputation.
     const total = positiveCount + neutralCount + negativeCount;
     const breakdown = {
-      positive: total > 0 ? Math.round((positiveCount / total) * 100) : 50,
-      neutral: total > 0 ? Math.round((neutralCount / total) * 100) : 30,
-      negative: total > 0 ? Math.round((negativeCount / total) * 100) : 20,
+      positive: total > 0 ? Math.round((positiveCount / total) * 100) : 0,
+      neutral: total > 0 ? Math.round((neutralCount / total) * 100) : 0,
+      negative: total > 0 ? Math.round((negativeCount / total) * 100) : 0,
     };
 
     return {
@@ -2238,8 +2242,11 @@ export class ReputationManager extends BaseManager {
     // Calculate review velocity (reviews per day)
     const reviewVelocity = reviews.length > 0 ? reviews.length / 7 : this.historicalReviewVelocity; // Assume 7-day window
 
-    // Response rate (assume we're tracking this - placeholder)
-    const responseRate = 85; // Placeholder - would come from tracking system
+    // Response rate — null until a reply-tracking source is wired up. Previously
+    // hardcoded to 85, which propagated into unrepliedReviews and into Jasper's
+    // brand-health view as if it were a measured percentage.
+    const responseRate: number | null = null;
+    const unrepliedReviews: number | null = null;
 
     // Average rating
     let averageRating = 0;
@@ -2248,7 +2255,9 @@ export class ReputationManager extends BaseManager {
       averageRating = totalRating / reviews.length;
     }
 
-    // Star distribution
+    // Star distribution — zeros when there are no reviews. Previously fell back
+    // to an invented 60/25/8/4/3 distribution that masked an empty review state
+    // as if it were a typical good-reputation business.
     const starCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     reviews.forEach(r => {
       if (r.rating) {
@@ -2257,11 +2266,11 @@ export class ReputationManager extends BaseManager {
     });
 
     const starDistribution = {
-      star5: reviews.length > 0 ? Math.round((starCounts[5] / reviews.length) * 100) : 60,
-      star4: reviews.length > 0 ? Math.round((starCounts[4] / reviews.length) * 100) : 25,
-      star3: reviews.length > 0 ? Math.round((starCounts[3] / reviews.length) * 100) : 8,
-      star2: reviews.length > 0 ? Math.round((starCounts[2] / reviews.length) * 100) : 4,
-      star1: reviews.length > 0 ? Math.round((starCounts[1] / reviews.length) * 100) : 3,
+      star5: reviews.length > 0 ? Math.round((starCounts[5] / reviews.length) * 100) : 0,
+      star4: reviews.length > 0 ? Math.round((starCounts[4] / reviews.length) * 100) : 0,
+      star3: reviews.length > 0 ? Math.round((starCounts[3] / reviews.length) * 100) : 0,
+      star2: reviews.length > 0 ? Math.round((starCounts[2] / reviews.length) * 100) : 0,
+      star1: reviews.length > 0 ? Math.round((starCounts[1] / reviews.length) * 100) : 0,
     };
 
     return {
@@ -2271,7 +2280,7 @@ export class ReputationManager extends BaseManager {
       averageRating,
       starDistribution,
       totalReviews: reviews.length,
-      unrepliedReviews: Math.round(reviews.length * (1 - responseRate / 100)),
+      unrepliedReviews,
       lastUpdated: new Date(),
     };
   }
@@ -2375,8 +2384,10 @@ export class ReputationManager extends BaseManager {
       });
     }
 
-    // Response rate warning
-    if (brandHealth.responseRate < ESCALATION_RULES.RESPONSE_RATE_WARNING) {
+    // Response rate warning — only fires when we actually have a response-rate
+    // measurement. Null means no reply-tracking source is wired up; the right
+    // behavior is to skip rather than warn on a missing signal.
+    if (brandHealth.responseRate !== null && brandHealth.responseRate < ESCALATION_RULES.RESPONSE_RATE_WARNING) {
       escalations.push({
         target: 'L3_DIRECTOR',
         reason: `Response rate at ${brandHealth.responseRate}% (warning: < ${ESCALATION_RULES.RESPONSE_RATE_WARNING}%)`,
@@ -2432,7 +2443,7 @@ export class ReputationManager extends BaseManager {
     }
 
     // Brand health recommendations
-    if (brandHealth.responseRate < 90) {
+    if (brandHealth.responseRate !== null && brandHealth.responseRate < 90) {
       recommendations.push(`Improve response rate from ${brandHealth.responseRate}% to 95%+ target`);
     }
 
@@ -2467,7 +2478,7 @@ export class ReputationManager extends BaseManager {
       alerts.push('⚠️ Declining sentiment trend detected - monitor closely');
     }
 
-    if (brandHealth.unrepliedReviews > 10) {
+    if (brandHealth.unrepliedReviews !== null && brandHealth.unrepliedReviews > 10) {
       alerts.push(`📧 ${brandHealth.unrepliedReviews} unreplied reviews - response SLA at risk`);
     }
 
@@ -2475,7 +2486,7 @@ export class ReputationManager extends BaseManager {
       alerts.push('📉 NEGATIVE NPS - more detractors than promoters');
     }
 
-    if (brandHealth.responseRate < ESCALATION_RULES.RESPONSE_RATE_WARNING) {
+    if (brandHealth.responseRate !== null && brandHealth.responseRate < ESCALATION_RULES.RESPONSE_RATE_WARNING) {
       alerts.push(`⏰ Response rate at ${brandHealth.responseRate}% - below target`);
     }
 
@@ -2508,8 +2519,12 @@ export class ReputationManager extends BaseManager {
       confidence += 10;
     }
 
-    // Response rate confidence (30 points)
-    confidence += (brandHealth.responseRate / 100) * 30;
+    // Response rate confidence (30 points). When null, contribute zero rather
+    // than the full 30 from the previous hardcoded 85% — confidence should
+    // drop when we lack a measurement, not stay artificially high.
+    if (brandHealth.responseRate !== null) {
+      confidence += (brandHealth.responseRate / 100) * 30;
+    }
 
     return Math.round(Math.min(100, confidence)) / 100;
   }

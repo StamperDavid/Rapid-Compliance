@@ -12,13 +12,12 @@
  * [ACTION:HIDE_FEATURE:email_sequences]
  * [ACTION:SHOW_FEATURE:email_sequences]
  * [ACTION:HIDE_CATEGORY:sales]
- * [ACTION:DEPLOY_SPECIALIST:lead_hunter]
+ * [ACTION:NAVIGATE_TO:/settings/api-keys]
  *
  * @module action-handler
  */
 
 import { FeatureToggleService, type FeatureCategory } from './feature-toggle-service';
-import { SPECIALISTS } from './feature-manifest';
 
 // ============================================================================
 // TYPES
@@ -29,7 +28,6 @@ export type ActionType =
   | 'SHOW_FEATURE'
   | 'HIDE_CATEGORY'
   | 'SHOW_CATEGORY'
-  | 'DEPLOY_SPECIALIST'
   | 'SETUP_FEATURE'
   | 'NAVIGATE_TO';
 
@@ -275,33 +273,6 @@ export class ActionHandler {
             success: true,
             action,
             message: `Restored ${category} category to navigation`,
-          };
-        }
-
-        case 'DEPLOY_SPECIALIST': {
-          // Find the specialist by trigger or ID
-          const specialist = SPECIALISTS.find(
-            s => s.id === action.target ||
-              s.name.toLowerCase().includes(action.target.toLowerCase()) ||
-              s.triggerPhrases.some(t => action.target.toLowerCase().includes(t))
-          );
-
-          if (!specialist) {
-            return {
-              success: false,
-              action,
-              message: `Specialist "${action.target}" not found`,
-              error: 'Unknown specialist',
-            };
-          }
-
-          // Specialist dispatch is not yet wired to the agent swarm from this path.
-          // Use Jasper chat to delegate directly to a specialist.
-          return {
-            success: false,
-            action,
-            message: `Specialist deployment via action markers is not yet connected to agent dispatch. Use Jasper chat to delegate to ${specialist.name}.`,
-            error: 'Specialist deployment not yet wired to agent dispatch.',
           };
         }
 

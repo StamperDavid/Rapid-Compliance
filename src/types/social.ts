@@ -8,11 +8,17 @@
 // =============================================================================
 
 export interface TwitterConfig {
+  // OAuth 2.0 fields (App-Only Bearer covers public reads; User Context flow not yet wired)
   clientId: string;
   clientSecret: string;
-  accessToken?: string;
   refreshToken?: string;
   bearerToken?: string;
+  // OAuth 1.0a User Context — required for POST /tweets and other write endpoints.
+  // X's free tier rejects OAuth 2.0 App-Only on write operations.
+  consumerKey?: string;
+  consumerSecret?: string;
+  accessToken?: string;
+  accessTokenSecret?: string;
 }
 
 export interface TwitterUser {

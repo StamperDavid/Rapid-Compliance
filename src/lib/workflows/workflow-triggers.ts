@@ -5,9 +5,6 @@
 
 import type { Workflow, WorkflowTriggerData } from '@/types/workflow';
 import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { logger } from '@/lib/logger/logger';
-import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Trigger workflow manually
@@ -26,41 +23,6 @@ export async function triggerWorkflow(
 }
 
 /**
- * Log workflow event to Firestore
- */
-async function logWorkflowEvent(
-  eventType: string,
-  schemaId: string,
-  entityId: string,
-  data: Record<string, unknown>
-): Promise<void> {
-  try {
-    const eventId = `event_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-    const eventRecord = {
-      eventType,
-      entityType: schemaId,
-      entityId,
-      data,
-      timestamp: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    };
-
-    await FirestoreService.set(
-      getSubCollection('workflowEvents'),
-      eventId,
-      eventRecord,
-      false
-    );
-  } catch (error) {
-    logger.error('Failed to log workflow event', error instanceof Error ? error : new Error(String(error)), {
-      eventType,
-      schemaId,
-      entityId,
-    });
-  }
-}
-
-/**
  * Handle entity created event
  * Called by entity service when new entities are created
  */
@@ -69,10 +31,6 @@ export async function handleEntityCreated(
   entityData: Record<string, unknown>,
   workflows: Workflow[]
 ): Promise<void> {
-  const entityId = (entityData.id as string | undefined) ?? 'unknown';
-
-  await logWorkflowEvent('entity.created', schemaId, entityId, entityData);
-
   const matchingWorkflows = workflows.filter(w => {
     if (w.trigger.type === 'entity.created') {
       const trigger = w.trigger;
@@ -101,13 +59,6 @@ export async function handleEntityUpdated(
   previousData: Record<string, unknown>,
   workflows: Workflow[]
 ): Promise<void> {
-  const entityId = (entityData.id as string | undefined) ?? 'unknown';
-
-  await logWorkflowEvent('entity.updated', schemaId, entityId, {
-    current: entityData,
-    previous: previousData,
-  });
-
   const matchingWorkflows = workflows.filter(w => {
     if (w.trigger.type === 'entity.updated') {
       const trigger = w.trigger;
@@ -151,10 +102,6 @@ export async function handleEntityDeleted(
   entityData: Record<string, unknown>,
   workflows: Workflow[]
 ): Promise<void> {
-  const entityId = (entityData.id as string | undefined) ?? 'unknown';
-
-  await logWorkflowEvent('entity.deleted', schemaId, entityId, entityData);
-
   const matchingWorkflows = workflows.filter(w => {
     if (w.trigger.type === 'entity.deleted') {
       const trigger = w.trigger;

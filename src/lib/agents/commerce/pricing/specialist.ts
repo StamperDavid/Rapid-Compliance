@@ -1,4 +1,4 @@
-// STATUS: FUNCTIONAL - Pricing Strategist wired to Stripe/Payment service
+// STATUS: FUNCTIONAL — Deterministic Stripe/pricing dispatcher — does not call an LLM.
 // Pricing Strategist
 // FUNCTIONAL LOC: 280+
 
@@ -28,26 +28,12 @@ const CONFIG: SpecialistConfig = {
       'discount_strategy',
     ],
   },
-  systemPrompt: `You are a Pricing Strategist specialist responsible for payment processing and pricing strategy.
-Your capabilities include:
-- Processing payments via Stripe/Square/PayPal
-- Applying discounts and validating pricing
-- Calculating totals with tax and shipping
-- Optimizing margins and pricing strategies
-
-Always validate payment amounts, apply appropriate discounts, and ensure PCI compliance.`,
-  tools: ['process_payment', 'validate_pricing', 'apply_discount', 'calculate_total', 'refund'],
-  outputSchema: {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      transactionId: { type: 'string' },
-      amount: { type: 'number' },
-      error: { type: 'string' },
-    },
-  },
-  maxTokens: 4096,
-  temperature: 0.2,
+  // Deterministic dispatcher — no LLM call. Fields left empty intentionally.
+  systemPrompt: '',
+  tools: [],
+  outputSchema: { type: 'object', properties: {} },
+  maxTokens: 0,
+  temperature: 0,
 };
 
 // ============== Type Definitions ==============

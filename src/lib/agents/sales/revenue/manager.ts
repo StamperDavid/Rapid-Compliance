@@ -544,15 +544,20 @@ export interface RevenueBrief {
     velocity: {
       avgDaysToClose: number;
       trend: 'ACCELERATING' | 'STABLE' | 'DECELERATING';
-      changePercent: number;
+      // null until historical comparison is implemented — was fabricated as 0
+      // before, which the dashboard rendered as "0% change" (false signal).
+      changePercent: number | null;
     };
   };
+  // Conversion ratios are null when their denominator stage has zero signals
+  // recorded — never fabricate. Consumers should render "—" or "insufficient
+  // data" rather than displaying a fake number.
   conversion: {
-    leadToQualified: number;
-    qualifiedToOutreach: number;
-    outreachToNegotiation: number;
-    negotiationToWon: number;
-    overall: number;
+    leadToQualified: number | null;
+    qualifiedToOutreach: number | null;
+    outreachToNegotiation: number | null;
+    negotiationToWon: number | null;
+    overall: number | null;
   };
   winLoss: {
     wonDeals: number;
@@ -562,12 +567,16 @@ export interface RevenueBrief {
     avgWonDealSize: number;
     avgLostDealSize: number;
   };
+  // Specialist KPIs: counts come straight from signal tag matches (real). The
+  // average-score fields are null unless the source signals carry the score
+  // payload — they used to be fabricated (avgBANTScore: 72, responseRate: 0.28,
+  // etc.) and were broadcast to Jasper as if from the named specialists.
   specialists: {
-    leadQualifier: { dealsProcessed: number; avgBANTScore: number };
-    outreachSpecialist: { sequencesSent: number; responseRate: number };
-    merchandiser: { discountsApplied: number; avgDiscount: number };
-    dealCloser: { strategiesGenerated: number; avgReadinessScore: number };
-    objectionHandler: { objectionsHandled: number; resolutionRate: number };
+    leadQualifier: { dealsProcessed: number; avgBANTScore: number | null };
+    outreachSpecialist: { sequencesSent: number; responseRate: number | null };
+    merchandiser: { discountsApplied: number; avgDiscount: number | null };
+    dealCloser: { strategiesGenerated: number; avgReadinessScore: number | null };
+    objectionHandler: { objectionsHandled: number; resolutionRate: number | null };
   };
   recommendations: string[];
   confidence: number;
@@ -1817,14 +1826,24 @@ export class RevenueDirector extends BaseManager {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Query win/loss signals from MemoryVault
+    // Query the broader tag set so the conversion-funnel + specialist-KPI
+    // computations downstream actually have data to count against. Previously
+    // only deal.won/lost/created were queried, but the brief tried to count
+    // qualified / outreach / objection signals — those were never in the
+    // result set, so the counts were always 0 and the conversion ratios got
+    // hardcoded to mask the gap.
     const vault = this.memoryVault;
     const signals = await vault.query(this.identity.id, {
       category: 'SIGNAL',
-      tags: ['deal.won', 'deal.lost', 'deal.created'],
+      tags: [
+        'deal.won', 'deal.lost', 'deal.created',
+        'lead', 'qualified', 'outreach', 'negotiation',
+        'response_received', 'objection', 'objection_resolved',
+        'discount',
+      ],
       sortBy: 'createdAt',
       sortOrder: 'desc',
-      limit: 200,
+      limit: 500,
     });
 
     // Parse signals to extract win/loss data
@@ -1887,6 +1906,59 @@ export class RevenueDirector extends BaseManager {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
+    // Funnel-stage signal counts. These come straight from the broader signal
+    // query above — no fabrication. Conversion ratios use real numerator over
+    // real denominator and return null when the denominator is zero (i.e.
+    // there's no honest answer to give yet).
+    const leadCount = signals.filter(s => s.tags.includes('lead')).length;
+    const qualifiedCount = signals.filter(s => s.tags.includes('qualified')).length;
+    const outreachCount = signals.filter(s => s.tags.includes('outreach')).length;
+    const negotiationCount = signals.filter(s => s.tags.includes('negotiation')).length;
+    const responseReceivedCount = signals.filter(s => s.tags.includes('response_received')).length;
+    const objectionCount = signals.filter(s => s.tags.includes('objection')).length;
+    const objectionResolvedCount = signals.filter(s => s.tags.includes('objection_resolved')).length;
+    const discountCount = signals.filter(s => s.tags.includes('discount')).length;
+    const dealCreatedCount = signals.filter(s => s.tags.includes('deal.created')).length;
+
+    const ratio = (num: number, den: number): number | null =>
+      den > 0 ? num / den : null;
+
+    const leadToQualified = ratio(qualifiedCount, leadCount);
+    const qualifiedToOutreach = ratio(outreachCount, qualifiedCount);
+    const outreachToNegotiation = ratio(negotiationCount, outreachCount);
+    const negotiationToWon = totalDeals > 0 ? winRate : null;
+
+    // Overall conversion is the chain product — null if any link is null.
+    const overall: number | null =
+      leadToQualified !== null &&
+      qualifiedToOutreach !== null &&
+      outreachToNegotiation !== null &&
+      negotiationToWon !== null
+        ? leadToQualified * qualifiedToOutreach * outreachToNegotiation * negotiationToWon
+        : null;
+
+    // Specialist KPIs from real signal payloads. Each "average score" field
+    // is null unless the source signals carried the score in their payload.
+    // Previously these were fabricated (avgBANTScore: 72, etc.) and broadcast
+    // to Jasper as if from the named specialists — that was the worst of the
+    // mimic patterns.
+    const avgFromPayload = (
+      filterTag: string,
+      payloadField: string,
+    ): number | null => {
+      const matching = signals.filter(s => s.tags.includes(filterTag));
+      const values = matching
+        .map(s => (s.value as Record<string, unknown>)[payloadField])
+        .filter((v): v is number => typeof v === 'number');
+      return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+    };
+
+    const avgBANTScore = avgFromPayload('qualified', 'bantScore');
+    const responseRate = ratio(responseReceivedCount, outreachCount);
+    const avgDiscount = avgFromPayload('discount', 'discountPercent');
+    const avgReadinessScore = avgFromPayload('deal.created', 'readinessScore');
+    const objectionResolutionRate = ratio(objectionResolvedCount, objectionCount);
+
     // Build Revenue Brief
     const brief: RevenueBrief = {
       briefId: `rb_${taskId}_${Date.now()}`,
@@ -1904,20 +1976,22 @@ export class RevenueDirector extends BaseManager {
       pipeline: {
         totalValue: totalPipelineValue,
         weightedValue: totalWeightedValue,
-        dealCount: signals.filter(s => s.tags.includes('deal.created')).length,
-        avgDealSize: totalPipelineValue / Math.max(1, signals.filter(s => s.tags.includes('deal.created')).length),
+        dealCount: dealCreatedCount,
+        avgDealSize: totalPipelineValue / Math.max(1, dealCreatedCount),
         velocity: {
           avgDaysToClose,
           trend: avgDaysToClose < 25 ? 'ACCELERATING' : avgDaysToClose > 35 ? 'DECELERATING' : 'STABLE',
-          changePercent: 0, // Would need historical data to calculate
+          // null until historical-period comparison is implemented. Was 0
+          // before, which the dashboard rendered as "0% change" — false signal.
+          changePercent: null,
         },
       },
       conversion: {
-        leadToQualified: 0.65, // Placeholder - would calculate from actual data
-        qualifiedToOutreach: 0.75,
-        outreachToNegotiation: 0.40,
-        negotiationToWon: winRate,
-        overall: 0.65 * 0.75 * 0.40 * winRate,
+        leadToQualified,
+        qualifiedToOutreach,
+        outreachToNegotiation,
+        negotiationToWon,
+        overall,
       },
       winLoss: {
         wonDeals: wonDeals.length,
@@ -1928,14 +2002,26 @@ export class RevenueDirector extends BaseManager {
         avgLostDealSize: lostDeals.length > 0 ? lostDeals.reduce((sum, d) => sum + d.dealValue, 0) / lostDeals.length : 0,
       },
       specialists: {
-        leadQualifier: { dealsProcessed: signals.filter(s => s.tags.includes('qualified')).length, avgBANTScore: 72 },
-        outreachSpecialist: { sequencesSent: signals.filter(s => s.tags.includes('outreach')).length, responseRate: 0.28 },
-        merchandiser: { discountsApplied: signals.filter(s => s.tags.includes('discount')).length, avgDiscount: 12 },
-        dealCloser: { strategiesGenerated: wonDeals.length + lostDeals.length, avgReadinessScore: 78 },
-        objectionHandler: { objectionsHandled: signals.filter(s => s.tags.includes('objection')).length, resolutionRate: 0.72 },
+        leadQualifier: { dealsProcessed: qualifiedCount, avgBANTScore },
+        outreachSpecialist: { sequencesSent: outreachCount, responseRate },
+        merchandiser: { discountsApplied: discountCount, avgDiscount },
+        dealCloser: { strategiesGenerated: wonDeals.length + lostDeals.length, avgReadinessScore },
+        objectionHandler: { objectionsHandled: objectionCount, resolutionRate: objectionResolutionRate },
       },
       recommendations: this.generateRevenueRecommendations(winRate, avgDaysToClose, topLossReasons),
-      confidence: Math.min(0.95, 0.5 + (signals.length / 100) * 0.45),
+      // Confidence is reduced when key fields are null (we don't have the data
+      // to be confident — saying so is more useful than masking the gap).
+      confidence: (() => {
+        const baseline = Math.min(0.95, 0.5 + (signals.length / 100) * 0.45);
+        const nullPenalty =
+          (avgBANTScore === null ? 0.05 : 0) +
+          (responseRate === null ? 0.05 : 0) +
+          (avgDiscount === null ? 0.03 : 0) +
+          (avgReadinessScore === null ? 0.03 : 0) +
+          (objectionResolutionRate === null ? 0.03 : 0) +
+          (overall === null ? 0.10 : 0);
+        return Math.max(0.1, baseline - nullPenalty);
+      })(),
     };
 
     // Share the insight with other agents via MemoryVault

@@ -1,15 +1,13 @@
 /**
  * Lead Research Tools — 8-tool subset for the Lead Research chat endpoint.
  *
- * Reuses 6 existing tools from jasper-tools.ts + 2 new tools
- * (update_icp_profile, add_url_source).
+ * Reuses 6 existing tools from jasper-tools.ts + 1 new tool
+ * (update_icp_profile).
  */
 
 import type { ToolDefinition, ToolCall } from '@/lib/ai/openrouter-provider';
 import { JASPER_TOOLS, executeToolCalls as executeJasperToolCalls, type ToolCallContext, type ToolResult } from './jasper-tools';
 import { updateIcpProfile, getActiveIcpProfile } from '@/lib/services/icp-profile-service';
-import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import type { SeniorityLevel } from '@/types/icp-profile';
 
@@ -80,36 +78,13 @@ const updateIcpProfileTool: ToolDefinition = {
   },
 };
 
-const addUrlSourceTool: ToolDefinition = {
-  type: 'function',
-  function: {
-    name: 'add_url_source',
-    description:
-      'Add a URL as a research source for lead discovery. The URL will be scraped for business intelligence signals.',
-    parameters: {
-      type: 'object',
-      properties: {
-        url: {
-          type: 'string',
-          description: 'The URL to add as a research source',
-        },
-        label: {
-          type: 'string',
-          description: 'Optional friendly label for the URL source',
-        },
-      },
-      required: ['url'],
-    },
-  },
-};
-
 // ── Build tool array ──────────────────────────────────────────────────────
 
 function buildLeadResearchTools(): ToolDefinition[] {
   const reused = JASPER_TOOLS.filter(t =>
     REUSED_TOOL_NAMES.includes(t.function.name as typeof REUSED_TOOL_NAMES[number])
   );
-  return [...reused, updateIcpProfileTool, addUrlSourceTool];
+  return [...reused, updateIcpProfileTool];
 }
 
 export const LEAD_RESEARCH_TOOLS: ToolDefinition[] = buildLeadResearchTools();
@@ -205,34 +180,6 @@ export async function executeLeadResearchToolCalls(
         } catch (err: unknown) {
           logger.error('update_icp_profile tool failed', err instanceof Error ? err : new Error(String(err)));
           content = JSON.stringify({ status: 'error', message: 'Failed to update ICP profile' });
-        }
-        results.push({ tool_call_id: tc.id, role: 'tool', content });
-        break;
-      }
-
-      case 'add_url_source': {
-        try {
-          const url = args.url as string;
-          const label = (args.label as string) || undefined;
-          const id = `url-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-          const collection = getSubCollection('lead-research-url-sources');
-          await AdminFirestoreService.set(collection, id, {
-            id,
-            url,
-            label: label ?? null,
-            status: 'pending',
-            addedAt: new Date().toISOString(),
-            addedBy: context?.userId ?? 'system',
-          }, false);
-          content = JSON.stringify({
-            status: 'added',
-            id,
-            url,
-            message: `URL source "${url}" added successfully. It will be scraped for business intelligence.`,
-          });
-        } catch (err: unknown) {
-          logger.error('add_url_source tool failed', err instanceof Error ? err : new Error(String(err)));
-          content = JSON.stringify({ status: 'error', message: 'Failed to add URL source' });
         }
         results.push({ tool_call_id: tc.id, role: 'tool', content });
         break;

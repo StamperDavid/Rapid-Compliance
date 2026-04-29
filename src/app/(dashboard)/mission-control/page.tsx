@@ -1475,7 +1475,7 @@ function StepDetailPanel({
     );
   }
 
-  const dashboardLink = displayStep ? getDashboardLink(displayStep.toolName, displayStep.toolResult) : null;
+  const dashboardLink = displayStep ? getDashboardLink(displayStep.toolName, displayStep.toolResult, displayStep.toolArgs) : null;
   const reviewLink = displayStep ? getStepReviewLink(missionId, displayStep.stepId) : null;
   const statusColor = displayStep ? getStepStatusColor(displayStep.status) : 'var(--color-text-disabled)';
 

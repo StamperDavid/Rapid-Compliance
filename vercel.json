@@ -72,6 +72,14 @@
     {
       "path": "/api/cron/jasper-mastodon-dm-dispatcher",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/run-scheduled-missions",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/workflow-entity-poll",
+      "schedule": "*/5 * * * *"
     }
   ],
   "headers": [
