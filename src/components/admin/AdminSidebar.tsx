@@ -82,7 +82,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'companies', label: 'Companies', href: '/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
-      { id: 'products-pricing', label: 'Products & Pricing', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
+      { id: 'products-pricing-payments', label: 'Products, Pricing & Payments', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
     ],
   },
   // ── Marketing (8 items — absorbed Outreach + Coupons) ─────────────
@@ -225,14 +225,15 @@ export default function AdminSidebar() {
         pathname.startsWith('/battlecards');
     }
 
-    // Products & Pricing hub — products + services + orders + coupons + subscriptions
+    // Products, Pricing & Payments hub — products + services + orders + coupons + subscriptions + payments
     if (href === '/products') {
       return pathname === '/products' ||
         pathname.startsWith('/products/') ||
         pathname === '/orders' ||
         pathname.startsWith('/orders/') ||
         pathname === '/coupons' ||
-        pathname === '/subscriptions';
+        pathname === '/subscriptions' ||
+        pathname === '/deals/payments';
     }
 
     // Leads hub — leads list, intelligence, scoring, scraper
@@ -250,8 +251,9 @@ export default function AdminSidebar() {
     // Companies
     if (href === '/companies') { return pathname.startsWith('/companies'); }
 
-    // Deals hub — deals list + risk + living ledger
+    // Deals hub — deals list + risk + living ledger (Payments highlights Products, Pricing & Payments instead)
     if (href === '/deals') {
+      if (pathname === '/deals/payments') { return false; }
       return pathname.startsWith('/deals') || pathname.startsWith('/risk') || pathname.startsWith('/living-ledger');
     }
 

@@ -16,13 +16,14 @@ export const DASHBOARD_TABS: SubpageNavItem[] = [
   { label: 'Team', href: '/team/leaderboard' },
 ];
 
-// ── Products & Pricing (hub for products, services, orders, coupons, subscriptions) ─
+// ── Products, Pricing & Payments (hub for products, services, orders, coupons, subscriptions, payments) ─
 export const CATALOG_TABS: SubpageNavItem[] = [
   { label: 'Products', href: '/products' },
   { label: 'Services', href: '/products/services' },
   { label: 'Orders', href: '/orders' },
   { label: 'Coupons', href: '/coupons' },
   { label: 'Subscriptions', href: '/subscriptions' },
+  { label: 'Payments', href: '/deals/payments' },
 ];
 
 // ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
@@ -172,12 +173,12 @@ export const LEADS_TABS: SubpageNavItem[] = [
   { label: 'Scoring', href: '/lead-scoring' },
 ];
 
-// ── Deals Hub (Pipeline + Revenue + Risk + Health) ─────────────────────────
+// ── Deals Hub (Pipeline + Revenue + Risk + Health)
+//    Payments moved to Products, Pricing & Payments hub (CATALOG_TABS) Apr 29 2026.
 export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'All Deals', href: '/deals' },
   { label: 'Orders', href: '/deals/orders' },
   { label: 'Invoices', href: '/deals/invoices' },
-  { label: 'Payments', href: '/deals/payments' },
   { label: 'Tasks', href: '/deals/tasks' },
   { label: 'Risk', href: '/risk' },
   { label: 'Living Ledger', href: '/living-ledger' },
