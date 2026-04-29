@@ -1,22 +1,30 @@
 /**
- * VERIFY delegate_to_outreach IS REAL — the FRONT-DOOR pirate test (Task #45)
+ * GM LOAD PROOF — pirate prompt swap, NOT full delegation verification.
  *
- * Unlike verify-email-specialist-is-real.js and verify-sms-specialist-is-real.js
- * which test each specialist directly via its proof-of-life harness, this
- * script proves the FULL delegation chain end-to-end:
+ * What this DOES test:
+ *   - Both EMAIL_SPECIALIST and SMS_SPECIALIST load their systemPrompts from
+ *     Firestore at runtime when called through the OutreachManager delegation
+ *     chain (we swap both to pirate prompts and confirm the output reflects them)
+ *   - The OutreachManager.execute() → executeSingleChannel path reaches the
+ *     specialist's GM at all
  *
- *   jasper-tools delegate_to_outreach → OutreachManager.execute()
- *     → executeSingleChannel → EMAIL_SPECIALIST/SMS_SPECIALIST
- *       → loads (pirate) GM from Firestore → OpenRouter call
- *         → composed content bubbles back through manager → assert pirate
+ * What this does NOT test:
+ *   - That Jasper correctly plans a delegate_to_outreach intent when given a
+ *     real user prompt (this is exactly Bug L territory — if Jasper never
+ *     emits delegate_to_outreach for the relevant intent, OutreachManager
+ *     would never be reached, and this test still wouldn't catch it)
  *
- * If any link in that chain is fake (mock, bypass, hardcoded fallback,
- * direct LLM call without GM injection), the composed content will NOT
- * come back in pirate dialect and this test will fail.
+ * Renamed Apr 29 2026 from `verify-delegate-to-outreach-is-real.js` because
+ * "is real" implied complete agent verification. It only proves GM loading
+ * through the manager delegation hop.
  *
- * Both EMAIL_SPECIALIST and SMS_SPECIALIST GMs are swapped before the
- * smoke test runs, and both are restored in try/finally regardless of
- * outcome. The smoke test driver is `scripts/smoke-test-outreach-task45.ts`
+ * For full Jasper → manager → specialist delegation coverage, drive a Jasper
+ * prompt through `verify-prompt-matrix-e2e.ts` (or
+ * `verify-outreach-orchestrated-live.ts`) with an outreach intent.
+ *
+ * --- original implementation notes below ---
+ *
+ * The smoke test driver is `scripts/smoke-test-outreach-task45.ts`
  * which already runs both channels via OutreachManager.execute().
  *
  * Usage: node scripts/verify-delegate-to-outreach-is-real.js

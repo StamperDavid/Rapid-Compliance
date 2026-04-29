@@ -1,30 +1,25 @@
 /**
- * Live verify: drive BlueskyExpert.generate_content via a real LLM
- * call to OpenRouter, validate the structured response, and prove the
- * specialist is end-to-end functional (NOT a stub, NOT mocked).
+ * CREDENTIAL SMOKE TEST — direct specialist call, NOT product-path verification.
  *
- * Exercises:
- *   1. getActiveSpecialistGMByIndustry('BLUESKY_EXPERT', 'saas_sales_ops')
- *      pulls the v2 GM (with generate_content playbook + Brand DNA)
- *   2. BlueskyExpert.execute({action:'generate_content', topic, ...})
- *   3. Underlying OpenRouterProvider.chat(model='claude-sonnet-4.6', …)
- *      hits Anthropic via OpenRouter — real network call, real latency,
- *      real billing
- *   4. Response is JSON-parsed and Zod-validated against
- *      BlueskyContentResultSchema (primaryPost ≤290, alternatives,
- *      hashtags, etc.)
- *   5. Optional: same for verbatim-text path — when verbatimText is
- *      provided, primaryPost MUST equal/closely match the verbatim text
+ * What this DOES test:
+ *   - BlueskyExpert.execute({action:'generate_content'}) loads its GM from
+ *     Firestore (getActiveSpecialistGMByIndustry) and makes a real LLM call
+ *     via OpenRouterProvider to produce a Zod-validated BlueskyContentResult
+ *   - The specialist's schema contract (primaryPost ≤290 chars, alternatives,
+ *     hashtags, strategyReasoning) is upheld end-to-end by the specialist alone
  *
- * Pass criteria:
- *   - non-empty primaryPost between 10-290 chars
- *   - at least 2 alternative posts
- *   - strategyReasoning is a coherent multi-sentence explanation
- *   - compose duration > 1 second (anything sub-second proves it's mocked)
+ * What this does NOT test:
+ *   - The product path through Jasper → SocialMediaManager → BlueskyExpert
+ *     → social_post tool → Mission Control
+ *   - Whether the manager correctly delegates to this specialist when Jasper
+ *     plans a Bluesky post intent. This script calls BlueskyExpert directly,
+ *     bypassing all delegation layers.
  *
- * Usage:
- *   npx tsx scripts/verify-bluesky-generate-content-live.ts
- *   npx tsx scripts/verify-bluesky-generate-content-live.ts --topic="..." --verbatim="..."
+ * Renamed Apr 29 2026 from `verify-bluesky-generate-content-live.ts` because
+ * the old name implied full end-to-end coverage. The orchestrated product-path
+ * verify lives at `scripts/verify-bluesky-orchestrated-post-live.ts`.
+ *
+ * Real product path: see `scripts/verify-bluesky-orchestrated-post-live.ts`
  */
 
 /* eslint-disable no-console */

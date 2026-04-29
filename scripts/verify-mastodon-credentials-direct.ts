@@ -1,21 +1,23 @@
 /**
- * Live verify: post a real status to the brand's Mastodon account
- * (@SalesVelocity_Ai@mastodon.social or whichever instance the brand
- * is connected to) using the saved access token. The status appears
- * publicly on the brand's profile.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Exercises:
- *   1. apiKeyService.getServiceKey('mastodon') reads the saved config
- *   2. createMastodonService() builds a configured service instance
- *   3. MastodonService.postStatus() POSTs to /api/v1/statuses
- *   4. Mastodon returns the new status id + URL
+ * What this DOES test:
+ *   - Mastodon's /api/v1/statuses endpoint accepts our saved access token
+ *     from apiKeyService.getServiceKey('mastodon')
+ *   - MastodonService.postStatus() constructs a valid request and returns
+ *     the new status id + URL
  *
- * Usage:
- *   $env:MASTODON_POST_TEXT="Custom text"  # optional
- *   $env:MASTODON_POST_VISIBILITY="public" # optional: public | unlisted | private
- *   npx tsx scripts/verify-mastodon-post-live.ts
+ * What this does NOT test:
+ *   - The product path through Jasper → SocialMediaManager → MastodonExpert
+ *     → social_post tool → Mission Control
+ *   - Whether MastodonExpert.execute() (the function the orchestrator actually
+ *     calls) handles the response correctly. This script bypasses it entirely.
  *
- * Defaults to a clearly-test status visible publicly. Override via env.
+ * Renamed Apr 29 2026 from `verify-mastodon-post-live.ts` because the old name
+ * implied end-to-end coverage. The actual end-to-end product-path verify
+ * lives at `scripts/verify-mastodon-orchestrated-post-live.ts`.
+ *
+ * Real product path: see `scripts/verify-mastodon-orchestrated-post-live.ts`
  */
 
 /* eslint-disable no-console */

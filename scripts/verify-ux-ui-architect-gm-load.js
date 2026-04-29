@@ -1,10 +1,23 @@
 /**
- * VERIFY UX/UI ARCHITECT IS REAL — the pirate test
+ * GM LOAD PROOF — pirate prompt swap, NOT delegation verification.
  *
- * This script does exactly one thing: prove that the UX/UI Architect's
- * generate_design_system output actually comes from the system prompt
- * stored in Firestore, not from some hidden template or a hardcoded
- * direct-LLM call.
+ * What this DOES test:
+ *   - The UX/UI Architect loads its systemPrompt from Firestore at runtime
+ *     (we swap to a pirate prompt and confirm the output reflects it)
+ *
+ * What this does NOT test:
+ *   - That the parent manager actually invokes this specialist when
+ *     Jasper plans the relevant intent (this is exactly Bug L territory —
+ *     a manager registering a specialist but never calling it would still
+ *     pass this test)
+ *
+ * Renamed Apr 29 2026 from `verify-ux-ui-architect-is-real.js` because
+ * "is real" implied complete agent verification. It only proves GM loading.
+ *
+ * For full delegation coverage, drive a Jasper prompt through
+ * `verify-prompt-matrix-e2e.ts` that should route to UX_UI_ARCHITECT.
+ *
+ * --- original implementation notes below ---
  *
  * How it works:
  *   1. Reads the current UX/UI Architect GM from Firestore and backs it up

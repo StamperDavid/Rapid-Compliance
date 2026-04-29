@@ -1,9 +1,23 @@
 /**
- * VERIFY LINKEDIN EXPERT IS REAL — the pirate test
+ * GM LOAD PROOF — pirate prompt swap, NOT delegation verification.
  *
- * This script does exactly one thing: prove that the LinkedIn Expert's
- * generate_content output actually comes from the system prompt stored in
- * Firestore, not from some hidden template or a hardcoded direct-LLM call.
+ * What this DOES test:
+ *   - The LinkedIn Expert loads its systemPrompt from Firestore at runtime
+ *     (we swap to a pirate prompt and confirm the output reflects it)
+ *
+ * What this does NOT test:
+ *   - That the parent manager actually invokes this specialist when
+ *     Jasper plans the relevant intent (this is exactly Bug L territory —
+ *     a manager registering a specialist but never calling it would still
+ *     pass this test)
+ *
+ * Renamed Apr 29 2026 from `verify-linkedin-expert-is-real.js` because
+ * "is real" implied complete agent verification. It only proves GM loading.
+ *
+ * For full delegation coverage, drive a Jasper prompt through
+ * `verify-prompt-matrix-e2e.ts` that should route to LINKEDIN_EXPERT.
+ *
+ * --- original implementation notes below ---
  *
  * How it works:
  *   1. Reads the current LinkedIn Expert GM from Firestore and backs it up
@@ -16,7 +30,7 @@
  *     "ye", "plunder", "me hearties", "scurvy dog", "doubloons",
  *     "hornswoggled", "walk the plank" in the post.content, post.hook,
  *     post.callToAction, contentStrategy, and alternativeAngles fields →
- *     THE SPECIALIST IS REAL. The output literally cannot be pirate-flavored
+ *     THE GM IS BEING LOADED. The output literally cannot be pirate-flavored
  *     unless the Firestore prompt was actually sent to the LLM.
  *   - If the harness output is the same professional LinkedIn post as before →
  *     the specialist is fake. The Firestore prompt is being ignored and

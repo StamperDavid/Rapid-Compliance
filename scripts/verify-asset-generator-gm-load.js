@@ -1,9 +1,23 @@
 /**
- * VERIFY ASSET GENERATOR IS REAL — the pirate test
+ * GM LOAD PROOF — pirate prompt swap, NOT delegation verification.
  *
- * This script does exactly one thing: prove that the Asset Generator's
- * asset package plan actually comes from the system prompt stored in
- * Firestore, not from some hidden template or a hardcoded direct-LLM call.
+ * What this DOES test:
+ *   - The Asset Generator loads its systemPrompt from Firestore at runtime
+ *     (we swap to a pirate prompt and confirm the output reflects it)
+ *
+ * What this does NOT test:
+ *   - That the parent manager actually invokes this specialist when
+ *     Jasper plans the relevant intent (this is exactly Bug L territory —
+ *     a manager registering a specialist but never calling it would still
+ *     pass this test)
+ *
+ * Renamed Apr 29 2026 from `verify-asset-generator-is-real.js` because
+ * "is real" implied complete agent verification. It only proves GM loading.
+ *
+ * For full delegation coverage, drive a Jasper prompt through
+ * `verify-prompt-matrix-e2e.ts` that should route to ASSET_GENERATOR.
+ *
+ * --- original implementation notes below ---
  *
  * How it works:
  *   1. Reads the current Asset Generator GM from Firestore and backs it up
@@ -15,7 +29,7 @@
  *   - If the harness output contains pirate vocabulary ("arrr", "me hearties",
  *     "doubloons", "hornswoggle", "walk the plank", "quarterdeck", etc.) inside
  *     the strategy / prompt / altText / rationale fields of the generated asset
- *     package → THE SPECIALIST IS REAL. Those words CANNOT appear unless
+ *     package → THE GM IS BEING LOADED. Those words CANNOT appear unless
  *     the pirate prompt in Firestore was actually loaded and sent to the LLM.
  *   - If the harness output is the same professional SaaS asset package as
  *     before → the specialist is fake. The Firestore prompt is being ignored

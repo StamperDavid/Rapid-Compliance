@@ -1,7 +1,24 @@
 /**
- * Smoke test the Email Specialist's new compose_outreach_sequence action.
- * Hits the specialist directly (no Outreach Manager, no Jasper) so we
- * isolate the LLM + schema validation from the rest of the dispatch chain.
+ * CREDENTIAL SMOKE TEST — direct specialist call, NOT product-path verification.
+ *
+ * What this DOES test:
+ *   - EmailSpecialist.execute({action:'compose_outreach_sequence'}) loads its
+ *     GM from Firestore and makes a real LLM call to produce a Zod-validated
+ *     outreach sequence (subject / preview / body / cta / timing per email)
+ *   - The specialist's schema contract is upheld in isolation
+ *
+ * What this does NOT test:
+ *   - The product path through Jasper → OutreachManager → EmailSpecialist
+ *     → Mission Control approval → send
+ *   - Whether OutreachManager correctly delegates to EmailSpecialist when
+ *     Jasper plans an outreach intent. This script calls EmailSpecialist
+ *     directly, bypassing the Outreach Manager and all delegation layers.
+ *
+ * Renamed Apr 29 2026 from `verify-email-specialist-compose-live.ts` because
+ * the old name implied full end-to-end coverage. The orchestrated product-path
+ * verify lives at `scripts/verify-outreach-orchestrated-live.ts`.
+ *
+ * Real product path: see `scripts/verify-outreach-orchestrated-live.ts`
  */
 
 /* eslint-disable no-console */

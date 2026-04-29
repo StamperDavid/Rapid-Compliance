@@ -345,32 +345,9 @@ export async function enrichLead(
   return enrichment;
 }
 
-/**
- * Track lead activity
- */
-export async function trackLeadActivity(activity: LeadActivity): Promise<void> {
-  // In production, would:
-  // 1. Store activity in database
-  // 2. Update lead score based on activity
-  // 3. Trigger workflows if configured
-  // 4. Update analytics
-
-  // Store activity in Firestore
-  try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    await FirestoreService.set(
-      getSubCollection('leadActivities'),
-      `${activity.leadId}_${Date.now()}`,
-      {
-        ...activity,
-        timestamp: activity.timestamp.toISOString(),
-      },
-      false
-    );
-  } catch (error) {
-    logger.error('Failed to save lead activity to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'lead-nurturing.ts' });
-  }
-}
+// trackLeadActivity removed Apr 29 2026 — wrote to `leadActivities` collection
+// that no module reads. analyzeLeadLifecycle below already handles the
+// pre-load case by returning null until real data exists.
 
 /**
  * Get lead lifecycle analysis
@@ -416,71 +393,11 @@ export function getLeadAttribution(
   return null;
 }
 
-/**
- * Segment leads based on criteria
- */
-export interface LeadSegment {
-  id: string;
-  name: string;
-  criteria: {
-    scoreRange?: { min: number; max: number };
-    status?: string[];
-    source?: string[];
-    industry?: string[];
-    companySize?: { min?: number; max?: number };
-    lastActivityDays?: number;
-    customFields?: Record<string, unknown>;
-  };
-  leadCount: number;
-  createdAt: Date;
-}
-
-export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<LeadSegment> {
-  const segmentId = `segment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  const fullSegment: LeadSegment = {
-    id: segmentId,
-    name: (segment.name !== '' && segment.name != null) ? segment.name : 'Untitled Segment',
-    criteria: segment.criteria ?? {},
-    leadCount: 0,
-    createdAt: new Date(),
-  };
-
-  // Store segment in Firestore
-  try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    await FirestoreService.set(
-      getSubCollection('leadSegments'),
-      segmentId,
-      {
-        ...fullSegment,
-        createdAt: fullSegment.createdAt.toISOString(),
-      },
-      false
-    );
-  } catch (error: unknown) {
-    logger.error('Failed to save lead segment to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'lead-nurturing.ts' });
-    // Fallback to localStorage if Firestore fails (development only)
-    if (typeof window !== 'undefined') {
-      const segmentsJson = localStorage.getItem('leadSegments') ?? '[]';
-      const segments: LeadSegment[] = JSON.parse(segmentsJson) as LeadSegment[];
-      segments.push(fullSegment);
-      localStorage.setItem('leadSegments', JSON.stringify(segments));
-    }
-  }
-
-  return fullSegment;
-}
-
-/**
- * Get leads matching segment criteria
- */
-export function getLeadsInSegment(_segmentId: string): string[] {
-  // In production, would:
-  // 1. Load segment criteria
-  // 2. Query database for matching leads
-  // 3. Return lead IDs
-
-  // Mock implementation
-  return ['lead1', 'lead2', 'lead3'];
-}
+// LeadSegment / createLeadSegment / getLeadsInSegment removed Apr 29 2026 —
+// wrote to `leadSegments` collection that no module reads, and
+// getLeadsInSegment was a mock returning fake lead IDs ['lead1', 'lead2',
+// 'lead3'] regardless of segment criteria. The whole segmentation feature
+// was paid for at write time and produced fake reads. When real
+// segmentation is needed, build it on top of a real query against the
+// leads collection (filter by score range, status, source, etc.) — do not
+// re-introduce the writer-without-reader pattern.

@@ -1,9 +1,23 @@
 /**
- * VERIFY CALENDAR COORDINATOR IS REAL — the pirate test
+ * GM LOAD PROOF — pirate prompt swap, NOT delegation verification.
  *
- * This script does exactly one thing: prove that the Calendar Coordinator's
- * schedule output actually comes from the system prompt stored in Firestore,
- * not from some hidden template or a hardcoded direct-LLM call.
+ * What this DOES test:
+ *   - The Calendar Coordinator loads its systemPrompt from Firestore at runtime
+ *     (we swap to a pirate prompt and confirm the output reflects it)
+ *
+ * What this does NOT test:
+ *   - That the parent manager actually invokes this specialist when
+ *     Jasper plans the relevant intent (this is exactly Bug L territory —
+ *     a manager registering a specialist but never calling it would still
+ *     pass this test)
+ *
+ * Renamed Apr 29 2026 from `verify-calendar-coordinator-is-real.js` because
+ * "is real" implied complete agent verification. It only proves GM loading.
+ *
+ * For full delegation coverage, drive a Jasper prompt through
+ * `verify-prompt-matrix-e2e.ts` that should route to CALENDAR_COORDINATOR.
+ *
+ * --- original implementation notes below ---
  *
  * How it works:
  *   1. Reads the current Calendar Coordinator GM from Firestore and backs it up
@@ -15,7 +29,7 @@
  *   - If the harness output is filled with "arrr", "matey", "treasure",
  *     "ye", "plunder", "me hearties", "scallywag", "landlubber", and
  *     pirate grammar in the schedule[].rationale fields and
- *     frequencyRecommendation values → THE SPECIALIST IS REAL. The output
+ *     frequencyRecommendation values → THE GM IS BEING LOADED. The output
  *     literally cannot be pirate-flavored unless the Firestore prompt was
  *     actually sent to the LLM.
  *   - If the harness output is the same professional calendar as before →

@@ -1,13 +1,22 @@
 /**
- * Live verification: post a real tweet-equivalent to Bluesky from the
- * brand account. Mirrors scripts/verify-twitter-post-live.ts in shape so
- * the test bar is the same: real post lands on a real platform.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Reads creds from apiKeys/social.bluesky (saved via save-bluesky-config.ts).
+ * What this DOES test:
+ *   - Bluesky's AT Protocol endpoint accepts our saved credentials from
+ *     apiKeys/social.bluesky (saved via save-bluesky-config.ts)
+ *   - A raw createRecord call posts successfully and returns a uri + cid
  *
- * Usage:
- *   npx tsx scripts/verify-bluesky-post-live.ts
- *   npx tsx scripts/verify-bluesky-post-live.ts --text "Custom test message"
+ * What this does NOT test:
+ *   - The product path through Jasper → SocialMediaManager → BlueskyExpert
+ *     → social_post tool → Mission Control
+ *   - Whether BlueskyExpert.execute() (the function the orchestrator actually
+ *     calls) handles the response correctly. This script bypasses it entirely.
+ *
+ * Renamed Apr 29 2026 from `verify-bluesky-post-live.ts` because the old name
+ * implied end-to-end coverage. The actual end-to-end product-path verify
+ * lives at `scripts/verify-bluesky-orchestrated-post-live.ts`.
+ *
+ * Real product path: see `scripts/verify-bluesky-orchestrated-post-live.ts`
  */
 
 /* eslint-disable no-console */

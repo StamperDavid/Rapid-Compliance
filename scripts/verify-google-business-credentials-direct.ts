@@ -1,30 +1,23 @@
 /**
- * Live verify: create a real Local Post on the brand's Google Business
- * Profile listing using the saved OAuth access token.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Exercises:
- *   1. apiKeyService.getServiceKey('google_business') reads the saved config
- *   2. createGoogleBusinessService() builds a configured service instance
- *   3. GoogleBusinessService.createLocalPost() POSTs to /localPosts
- *   4. Google returns the new post resource name
+ * What this DOES test:
+ *   - Google Business Profile /localPosts endpoint accepts our saved OAuth
+ *     access token from apiKeyService.getServiceKey('google_business')
+ *   - GoogleBusinessService.createLocalPost() constructs a valid request
+ *     and returns the new post resource name
  *
- * WARNING: This script creates a REAL post on the live brand listing.
- * The post will be visible to anyone who finds the business on Google Maps
- * or Search. After running, MANUALLY DELETE the post from the Google
- * Business Profile dashboard — stale promotional posts hurt SEO trust.
- * Run from D:\Future Rapid Compliance: npx tsx scripts/verify-google-business-post-live.ts
+ * What this does NOT test:
+ *   - The product path through Jasper → SocialMediaManager → GoogleBusinessExpert
+ *     → social_post tool → Mission Control
+ *   - Whether GoogleBusinessExpert.execute() (the function the orchestrator
+ *     actually calls) handles the response correctly. This script bypasses it.
  *
- * Usage:
- *   npx tsx scripts/verify-google-business-post-live.ts
- *   npx tsx scripts/verify-google-business-post-live.ts --summary "Custom summary"
- *   npx tsx scripts/verify-google-business-post-live.ts --cta-url https://salesvelocity.ai/demo
+ * Renamed Apr 29 2026 from `verify-google-business-post-live.ts` because the
+ * old name implied end-to-end coverage. No orchestrated Google Business
+ * product-path verify exists yet — that is a KNOWN GAP.
  *
- * Defaults:
- *   summary    = timestamped pipeline-test summary
- *   actionType = LEARN_MORE
- *   url        = https://salesvelocity.ai
- *
- * Account ID and Location ID are read from the saved config (must be set).
+ * Real product path: KNOWN GAP — no `verify-google-business-orchestrated-post-live.ts` yet.
  */
 
 /* eslint-disable no-console */

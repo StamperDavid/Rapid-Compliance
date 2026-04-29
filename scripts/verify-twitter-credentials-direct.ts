@@ -1,8 +1,22 @@
 /**
- * Live test: post one real tweet from @salesvelocityai using OAuth 1.0a
- * User Context credentials saved in apiKeys/{PLATFORM_ID}/social.twitter.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * No mocks. Hits api.twitter.com/2/tweets directly.
+ * What this DOES test:
+ *   - Twitter's API endpoint (api.twitter.com/2/tweets) accepts our saved
+ *     OAuth 1.0a User Context credentials from apiKeys/{PLATFORM_ID}/social.twitter
+ *   - A raw POST to the tweets endpoint returns a valid tweet id
+ *
+ * What this does NOT test:
+ *   - The product path through Jasper → SocialMediaManager → TwitterExpert
+ *     → social_post tool → Mission Control
+ *   - Whether TwitterExpert.execute() (the function the orchestrator actually
+ *     calls) handles the response correctly. This script bypasses it entirely.
+ *
+ * Renamed Apr 29 2026 from `verify-twitter-post-live.ts` because the old name
+ * implied end-to-end coverage. The actual end-to-end product-path verify
+ * lives at `scripts/verify-twitter-orchestrated-post-live.ts`.
+ *
+ * Real product path: see `scripts/verify-twitter-orchestrated-post-live.ts`
  */
 
 /* eslint-disable no-console */

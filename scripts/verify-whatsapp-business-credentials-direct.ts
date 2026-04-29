@@ -1,28 +1,23 @@
 /**
- * Live verify: send a real WhatsApp message from the brand's WhatsApp
- * Business number via the saved Meta Cloud API access token.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Exercises:
- *   1. apiKeyService.getServiceKey('whatsapp_business') reads the saved config
- *   2. createWhatsAppBusinessService() builds a configured service instance
- *   3. WhatsAppBusinessService.sendTextMessage() POSTs to /messages
- *   4. WhatsApp returns the new message id
+ * What this DOES test:
+ *   - WhatsApp Business Cloud API /messages endpoint accepts our saved Meta
+ *     access token from apiKeyService.getServiceKey('whatsapp_business')
+ *   - WhatsAppBusinessService.sendTextMessage() constructs a valid request
+ *     and returns the new message id
  *
- * WARNING: This script sends a REAL message to a real WhatsApp number.
- * Free-form text messages can ONLY be sent to recipients who have messaged
- * the business in the last 24 hours (the WhatsApp customer service window).
- * Outside that window, only pre-approved templates are allowed — this script
- * does not exercise the template path; use sendTemplate() for that.
+ * What this does NOT test:
+ *   - The product path through Jasper → OutreachManager → WhatsAppExpert
+ *     → send_message tool → Mission Control
+ *   - Whether WhatsAppExpert.execute() (the function the orchestrator actually
+ *     calls) handles the response correctly. This script bypasses it entirely.
  *
- * After running, MANUALLY DELETE the message from the recipient's chat if
- * you have control over it. Run from D:\Future Rapid Compliance:
- *   npx tsx scripts/verify-whatsapp-business-post-live.ts --to +15551234567
+ * Renamed Apr 29 2026 from `verify-whatsapp-business-post-live.ts` because the
+ * old name implied end-to-end coverage. No orchestrated WhatsApp product-path
+ * verify exists yet — that is a KNOWN GAP.
  *
- * Usage:
- *   npx tsx scripts/verify-whatsapp-business-post-live.ts --to +15551234567
- *   npx tsx scripts/verify-whatsapp-business-post-live.ts --to +15551234567 --text "Custom"
- *
- * Phone number MUST be in E.164 format with country code (no spaces, no dashes).
+ * Real product path: KNOWN GAP — no `verify-whatsapp-orchestrated-live.ts` yet.
  */
 
 /* eslint-disable no-console */

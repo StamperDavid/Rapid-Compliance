@@ -1,27 +1,24 @@
 /**
- * Live verify: post a real submission to Reddit from the brand account
- * using the saved OAuth credentials.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Exercises:
- *   1. apiKeyService.getServiceKey('reddit') reads the saved config
- *   2. createRedditService() builds a configured service instance
- *   3. RedditService.submitPost() POSTs to /api/submit
- *   4. Reddit returns the new post id + URL
+ * What this DOES test:
+ *   - Reddit's /api/submit endpoint accepts our saved OAuth credentials
+ *     from apiKeyService.getServiceKey('reddit')
+ *   - RedditService.submitPost() constructs a valid request and returns
+ *     the new post id + URL
  *
- * WARNING: This script creates a REAL post on the live brand account.
- * The post will be visible publicly. After running, MANUALLY DELETE the
- * post from the platform — pinned/timeline pollution looks unprofessional.
- * Run from D:\Future Rapid Compliance: npx tsx scripts/verify-reddit-post-live.ts
+ * What this does NOT test:
+ *   - The product path through Jasper → SocialMediaManager → RedditExpert
+ *     → social_post tool → Mission Control
+ *   - Whether RedditExpert.execute() (the function the orchestrator actually
+ *     calls) handles the response correctly. This script bypasses it entirely.
  *
- * Usage:
- *   npx tsx scripts/verify-reddit-post-live.ts
- *   npx tsx scripts/verify-reddit-post-live.ts --subreddit test
- *   npx tsx scripts/verify-reddit-post-live.ts --title "Custom title" --text "Custom body"
+ * Renamed Apr 29 2026 from `verify-reddit-post-live.ts` because the old name
+ * implied end-to-end coverage. NOTE: Reddit is marked for deletion
+ * (commercial API blocked per project decision). No orchestrated product-path
+ * verify exists or will be built.
  *
- * Defaults:
- *   subreddit = "test" (the official Reddit testing subreddit)
- *   title     = timestamped pipeline-test title
- *   text      = timestamped pipeline-test body
+ * Real product path: KNOWN GAP — Reddit marked for deletion, no orchestrated verify.
  */
 
 /* eslint-disable no-console */

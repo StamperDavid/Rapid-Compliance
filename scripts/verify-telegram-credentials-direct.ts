@@ -1,25 +1,24 @@
 /**
- * Live verify: send a real message to the brand's Telegram channel/group
- * via the saved Bot API token.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Exercises:
- *   1. apiKeyService.getServiceKey('telegram') reads the saved config
- *   2. createTelegramService() builds a configured service instance
- *   3. TelegramService.sendMessage() POSTs to /sendMessage
- *   4. Telegram returns the new message id
+ * What this DOES test:
+ *   - Telegram's Bot API /sendMessage endpoint accepts our saved Bot API token
+ *     from apiKeyService.getServiceKey('telegram')
+ *   - TelegramService.sendMessage() constructs a valid request and returns
+ *     the new message id
  *
- * WARNING: This script creates a REAL message in the live channel/group.
- * The message will be visible to all members. After running, MANUALLY DELETE
- * the message from Telegram — pinned/timeline pollution looks unprofessional.
- * Run from D:\Future Rapid Compliance: npx tsx scripts/verify-telegram-post-live.ts
+ * What this does NOT test:
+ *   - The product path through Jasper → SocialMediaManager → TelegramExpert
+ *     → social_post tool → Mission Control
+ *   - Whether TelegramExpert.execute() (the function the orchestrator actually
+ *     calls) handles the response correctly. This script bypasses it entirely.
  *
- * Usage:
- *   npx tsx scripts/verify-telegram-post-live.ts
- *   npx tsx scripts/verify-telegram-post-live.ts --chat @SalesVelocityChannel
- *   npx tsx scripts/verify-telegram-post-live.ts --chat -1001234567890 --text "Custom"
+ * Renamed Apr 29 2026 from `verify-telegram-post-live.ts` because the old name
+ * implied end-to-end coverage. NOTE: Telegram is marked for deletion
+ * (US SMB market doesn't use it per project decision). No orchestrated
+ * product-path verify exists or will be built.
  *
- * If --chat is omitted, falls back to the saved defaultChatId. If that's
- * also missing, the script exits with an error (Telegram requires a target).
+ * Real product path: KNOWN GAP — Telegram marked for deletion, no orchestrated verify.
  */
 
 /* eslint-disable no-console */

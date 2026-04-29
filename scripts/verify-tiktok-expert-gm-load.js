@@ -1,13 +1,21 @@
 /**
- * VERIFY TIKTOK EXPERT IS REAL — the pirate test
+ * GM LOAD PROOF — pirate prompt swap, NOT delegation verification.
  *
- * Created April 13 2026 as part of the cross-cutting Task #45 follow-up
- * audit. Mirrors the verify-seo-expert-is-real.js pattern. Swaps the
- * Firestore GM systemPrompt for pirate-speak instructions, runs the
- * proof-of-life harness against real OpenRouter, restores the GM in
- * try/finally regardless of outcome.
+ * What this DOES test:
+ *   - The TikTok Expert loads its systemPrompt from Firestore at runtime
+ *     (we swap to a pirate prompt and confirm the output reflects it)
  *
- * Usage: node scripts/verify-tiktok-expert-is-real.js
+ * What this does NOT test:
+ *   - That the parent manager actually invokes this specialist when
+ *     Jasper plans the relevant intent (this is exactly Bug L territory —
+ *     a manager registering a specialist but never calling it would still
+ *     pass this test)
+ *
+ * Renamed Apr 29 2026 from `verify-tiktok-expert-is-real.js` because
+ * "is real" implied complete agent verification. It only proves GM loading.
+ *
+ * For full delegation coverage, drive a Jasper prompt through
+ * `verify-prompt-matrix-e2e.ts` that should route to TIKTOK_EXPERT.
  */
 
 const admin = require('firebase-admin');

@@ -1,16 +1,25 @@
 /**
- * VERIFY FUNNEL PATHOLOGIST IS REAL — the pirate test
+ * GM LOAD PROOF — pirate prompt swap, NOT delegation verification.
  *
- * Swaps the Firestore GM systemPrompt with pirate-speak, runs the
- * proof-of-life harness, and restores the GM via try/finally. If the output
- * comes back in pirate dialect, the specialist is provably loading its prompt
- * from Firestore at runtime.
+ * What this DOES test:
+ *   - The Funnel Pathologist loads its systemPrompt from Firestore at runtime
+ *     (we swap to a pirate prompt and confirm the output reflects it)
  *
- * Usage: node scripts/verify-funnel-pathologist-is-real.js
+ * What this does NOT test:
+ *   - That the parent manager actually invokes this specialist when
+ *     Jasper plans the relevant intent (this is exactly Bug L territory —
+ *     a manager registering a specialist but never calling it would still
+ *     pass this test)
+ *
+ * Renamed Apr 29 2026 from `verify-funnel-pathologist-is-real.js` because
+ * "is real" implied complete agent verification. It only proves GM loading.
  *
  * NOTE: This is the Architect-layer Funnel Pathologist (strategic funnel
  * diagnosis), NOT the Builder-layer Funnel Engineer. Different files,
  * different jobs.
+ *
+ * For full delegation coverage, drive a Jasper prompt through
+ * `verify-prompt-matrix-e2e.ts` that should route to FUNNEL_PATHOLOGIST.
  */
 
 const admin = require('firebase-admin');

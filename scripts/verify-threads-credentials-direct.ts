@@ -1,21 +1,23 @@
 /**
- * Live verify: post a real text Thread to the brand's Threads account
- * using the saved Meta access token.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Exercises:
- *   1. apiKeyService.getServiceKey('threads') reads the saved config
- *   2. createThreadsService() builds a configured service instance
- *   3. ThreadsService.publishPost() — two-step container + publish flow
- *   4. Threads returns the new post id
+ * What this DOES test:
+ *   - Threads' two-step container + publish API accepts our saved Meta access
+ *     token from apiKeyService.getServiceKey('threads')
+ *   - ThreadsService.publishPost() completes the container/publish flow and
+ *     returns the new post id
  *
- * WARNING: This script creates a REAL post on the live brand account.
- * The post will be visible publicly. After running, MANUALLY DELETE the
- * post from the platform — pinned/timeline pollution looks unprofessional.
- * Run from D:\Future Rapid Compliance: npx tsx scripts/verify-threads-post-live.ts
+ * What this does NOT test:
+ *   - The product path through Jasper → SocialMediaManager → ThreadsExpert
+ *     → social_post tool → Mission Control
+ *   - Whether ThreadsExpert.execute() (the function the orchestrator actually
+ *     calls) handles the response correctly. This script bypasses it entirely.
  *
- * Usage:
- *   npx tsx scripts/verify-threads-post-live.ts
- *   npx tsx scripts/verify-threads-post-live.ts --text "Custom text"
+ * Renamed Apr 29 2026 from `verify-threads-post-live.ts` because the old name
+ * implied end-to-end coverage. No orchestrated Threads product-path verify
+ * exists yet — that is a KNOWN GAP.
+ *
+ * Real product path: KNOWN GAP — no `verify-threads-orchestrated-post-live.ts` yet.
  */
 
 /* eslint-disable no-console */

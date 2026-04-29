@@ -1,13 +1,24 @@
 /**
- * Live email pipeline test. Creates one sequenceJob with fireAt=now,
- * dispatches it via fireReadySequenceJobs (the same path the cron uses),
- * reports the SendGrid messageId, then deletes the job.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Recipient is read from the TEST_EMAIL_RECIPIENT env var so it never
- * lands in source code.
+ * What this DOES test:
+ *   - Our SendGrid credentials are valid: fireReadySequenceJobs (the same
+ *     dispatcher the cron uses) creates a sequenceJob, dispatches it, and
+ *     receives a SendGrid messageId
+ *   - The sequenceJob write/delete cycle against Firestore works correctly
  *
- * Usage:
- *   $env:TEST_EMAIL_RECIPIENT="you@example.com"; npx tsx scripts/verify-email-pipeline-live.ts
+ * What this does NOT test:
+ *   - The product path through Jasper → OutreachManager → EmailSpecialist
+ *     → compose + schedule → Mission Control approval → send
+ *   - Whether EmailSpecialist.execute() (the function the orchestrator
+ *     actually calls) handles compose and schedule correctly. This script
+ *     bypasses it by writing a sequenceJob directly.
+ *
+ * Renamed Apr 29 2026 from `verify-email-pipeline-live.ts` because the old
+ * name implied end-to-end product coverage. The orchestrated product-path
+ * verify lives at `scripts/verify-outreach-orchestrated-live.ts`.
+ *
+ * Real product path: see `scripts/verify-outreach-orchestrated-live.ts`
  */
 
 /* eslint-disable no-console */

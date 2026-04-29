@@ -1,12 +1,21 @@
 /**
- * VERIFY WORKFLOW OPTIMIZER IS REAL — the pirate test
+ * GM LOAD PROOF — pirate prompt swap, NOT delegation verification.
  *
- * Swaps the Firestore GM systemPrompt with pirate-speak, runs the
- * proof-of-life harness, and restores the GM. If the output comes back
- * in pirate dialect, the specialist is provably loading its prompt from
- * Firestore.
+ * What this DOES test:
+ *   - The Workflow Optimizer loads its systemPrompt from Firestore at runtime
+ *     (we swap to a pirate prompt and confirm the output reflects it)
  *
- * Usage: node scripts/verify-workflow-optimizer-is-real.js
+ * What this does NOT test:
+ *   - That the parent manager actually invokes this specialist when
+ *     Jasper plans the relevant intent (this is exactly Bug L territory —
+ *     a manager registering a specialist but never calling it would still
+ *     pass this test)
+ *
+ * Renamed Apr 29 2026 from `verify-workflow-optimizer-is-real.js` because
+ * "is real" implied complete agent verification. It only proves GM loading.
+ *
+ * For full delegation coverage, drive a Jasper prompt through
+ * `verify-prompt-matrix-e2e.ts` that should route to WORKFLOW_OPTIMIZER.
  */
 
 const admin = require('firebase-admin');

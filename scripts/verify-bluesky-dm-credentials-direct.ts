@@ -1,12 +1,26 @@
 /**
- * Live verify: send a direct message from the brand Bluesky account
- * (`@salesvelocity.bsky.social`) to a recipient and confirm the AT
- * Protocol chat service accepts it.
+ * CREDENTIAL SMOKE TEST — direct service call, NOT product-path verification.
  *
- * Usage:
- *   $env:BLUESKY_DM_TARGET="rapidcompliance.bsky.social"
- *   $env:BLUESKY_DM_TEXT="Optional override text"
- *   npx tsx scripts/verify-bluesky-dm-live.ts
+ * What this DOES test:
+ *   - Bluesky's AT Protocol chat service accepts our saved credentials when
+ *     sending a DM from @salesvelocity.bsky.social to a recipient
+ *   - BlueskyService's DM dispatch produces a successful response from the
+ *     chat.bsky.convo API
+ *
+ * What this does NOT test:
+ *   - The product path through Jasper → inbound DM trigger →
+ *     MarketingManager → BlueskyExpert → compose_dm_reply → Mission Control
+ *     SendDmReplyButton → send-dm-reply
+ *   - Whether the DM reply orchestration chain (the function the product
+ *     actually calls) handles the response correctly. This script bypasses it.
+ *
+ * Renamed Apr 29 2026 from `verify-bluesky-dm-live.ts` because the old name
+ * implied end-to-end DM coverage. The inbound DM orchestration gold standard
+ * for X is `scripts/verify-jasper-dm-reply-live.ts`. No equivalent exists
+ * for Bluesky — that is a KNOWN GAP.
+ *
+ * Real product path: KNOWN GAP — no `verify-bluesky-dm-orchestrated-live.ts` yet.
+ * Reference: `scripts/verify-jasper-dm-reply-live.ts` (X only, same shape needed).
  */
 
 /* eslint-disable no-console */
