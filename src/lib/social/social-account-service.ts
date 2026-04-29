@@ -1,10 +1,17 @@
 /**
  * Social Account Service
  * CRUD operations for managing multiple social media accounts per platform.
- * Credentials stored in Firestore under organizations/{PLATFORM_ID}/social_accounts/{accountId}
+ *
+ * Storage: organizations/{PLATFORM_ID}/social_accounts/{accountId}
+ *
+ * IMPORTANT: This service is invoked from server routes (API handlers,
+ * cron jobs, integration services). It uses the Firebase Admin SDK so it
+ * is NOT subject to Firestore security rules — server code has no client
+ * auth context, so client SDK reads return [] silently and writes get
+ * blocked. See CLAUDE.md → "Server-Side Firestore — Use Admin SDK".
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialAccount, SocialPlatform } from '@/types/social';
@@ -15,20 +22,26 @@ function accountsPath(): string {
   return getSubCollection(SOCIAL_ACCOUNTS_COLLECTION);
 }
 
+function getDb() {
+  if (!adminDb) {
+    throw new Error('Firebase Admin not initialized — SocialAccountService requires server-side execution');
+  }
+  return adminDb;
+}
+
 export class SocialAccountService {
   /**
-   * List all social accounts, optionally filtered by platform
+   * List all social accounts, optionally filtered by platform.
+   * Sorted by `addedAt` desc.
    */
   static async listAccounts(platform?: SocialPlatform): Promise<SocialAccount[]> {
     try {
-      const { where, orderBy } = await import('firebase/firestore');
-      const constraints = [];
-      if (platform) {
-        constraints.push(where('platform', '==', platform));
-      }
-      constraints.push(orderBy('addedAt', 'desc'));
-
-      return await FirestoreService.getAll<SocialAccount>(accountsPath(), constraints);
+      const collectionRef = getDb().collection(accountsPath());
+      const query = platform
+        ? collectionRef.where('platform', '==', platform).orderBy('addedAt', 'desc')
+        : collectionRef.orderBy('addedAt', 'desc');
+      const snap = await query.get();
+      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SocialAccount, 'id'>) }));
     } catch (error) {
       logger.error('SocialAccountService: Failed to list accounts', error instanceof Error ? error : new Error(String(error)));
       return [];
@@ -40,7 +53,9 @@ export class SocialAccountService {
    */
   static async getAccount(accountId: string): Promise<SocialAccount | null> {
     try {
-      return await FirestoreService.get<SocialAccount>(accountsPath(), accountId);
+      const snap = await getDb().collection(accountsPath()).doc(accountId).get();
+      if (!snap.exists) { return null; }
+      return { id: snap.id, ...(snap.data() as Omit<SocialAccount, 'id'>) };
     } catch (error) {
       logger.error('SocialAccountService: Failed to get account', error instanceof Error ? error : new Error(String(error)));
       return null;
@@ -52,13 +67,15 @@ export class SocialAccountService {
    */
   static async getDefaultAccount(platform: SocialPlatform): Promise<SocialAccount | null> {
     try {
-      const { where, limit } = await import('firebase/firestore');
-      const accounts = await FirestoreService.getAll<SocialAccount>(accountsPath(), [
-        where('platform', '==', platform),
-        where('isDefault', '==', true),
-        limit(1),
-      ]);
-      return accounts[0] ?? null;
+      const snap = await getDb()
+        .collection(accountsPath())
+        .where('platform', '==', platform)
+        .where('isDefault', '==', true)
+        .limit(1)
+        .get();
+      if (snap.empty) { return null; }
+      const d = snap.docs[0];
+      return { id: d.id, ...(d.data() as Omit<SocialAccount, 'id'>) };
     } catch (error) {
       logger.error('SocialAccountService: Failed to get default account', error instanceof Error ? error : new Error(String(error)));
       return null;
@@ -84,7 +101,7 @@ export class SocialAccountService {
       addedAt: new Date().toISOString(),
     };
 
-    await FirestoreService.set(accountsPath(), accountId, account, false);
+    await getDb().collection(accountsPath()).doc(accountId).set(account);
 
     logger.info('SocialAccountService: Account added', {
       accountId,
@@ -112,7 +129,7 @@ export class SocialAccountService {
       await this.clearDefaultForPlatform(existing.platform);
     }
 
-    await FirestoreService.update(accountsPath(), accountId, updates);
+    await getDb().collection(accountsPath()).doc(accountId).update(updates);
 
     logger.info('SocialAccountService: Account updated', { accountId });
 
@@ -124,7 +141,7 @@ export class SocialAccountService {
    */
   static async removeAccount(accountId: string): Promise<boolean> {
     try {
-      await FirestoreService.delete(accountsPath(), accountId);
+      await getDb().collection(accountsPath()).doc(accountId).delete();
       logger.info('SocialAccountService: Account removed', { accountId });
       return true;
     } catch (error) {
@@ -138,14 +155,17 @@ export class SocialAccountService {
    */
   private static async clearDefaultForPlatform(platform: SocialPlatform): Promise<void> {
     try {
-      const { where } = await import('firebase/firestore');
-      const defaults = await FirestoreService.getAll<SocialAccount>(accountsPath(), [
-        where('platform', '==', platform),
-        where('isDefault', '==', true),
-      ]);
-
-      for (const acct of defaults) {
-        await FirestoreService.update(accountsPath(), acct.id, { isDefault: false });
+      const snap = await getDb()
+        .collection(accountsPath())
+        .where('platform', '==', platform)
+        .where('isDefault', '==', true)
+        .get();
+      const batch = getDb().batch();
+      for (const d of snap.docs) {
+        batch.update(d.ref, { isDefault: false });
+      }
+      if (!snap.empty) {
+        await batch.commit();
       }
     } catch (error) {
       logger.warn('SocialAccountService: Failed to clear defaults', {

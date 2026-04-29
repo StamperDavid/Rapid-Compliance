@@ -105,6 +105,40 @@ async function main(): Promise<void> {
   console.log(`  did:        ${session.did}`);
   console.log(`  handle:     ${session.handle ?? identifier}`);
   console.log(`  password:   ${password.slice(0, 4)}...${password.slice(-4)}`);
+
+  // Also write/update the social_accounts row that the dashboard reads.
+  // Without this, the Social Hub shows Bluesky as "Not connected" even
+  // though posting works. Idempotent: updates the existing active row if
+  // present, otherwise creates a new one.
+  const handle = session.handle ?? identifier;
+  const accountsRef = db.collection(`organizations/${PLATFORM_ID}/social_accounts`);
+  const existingActive = await accountsRef
+    .where('platform', '==', 'bluesky')
+    .where('status', '==', 'active')
+    .limit(1)
+    .get();
+  if (existingActive.empty) {
+    const accountId = `social-acct-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    await accountsRef.doc(accountId).set({
+      id: accountId,
+      platform: 'bluesky',
+      accountName: handle,
+      handle,
+      isDefault: true,
+      status: 'active',
+      credentials: { storedIn: 'apiKeys.social.bluesky' },
+      addedAt: new Date().toISOString(),
+    });
+    console.log(`✓ Created social_accounts/${accountId} for dashboard visibility`);
+  } else {
+    const existingId = existingActive.docs[0].id;
+    await accountsRef.doc(existingId).set({
+      accountName: handle,
+      handle,
+      lastUsedAt: new Date().toISOString(),
+    }, { merge: true });
+    console.log(`✓ Updated existing social_accounts/${existingId}`);
+  }
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
