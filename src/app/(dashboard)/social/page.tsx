@@ -558,12 +558,15 @@ function PlatformCard({ row }: { row: PlatformRow }) {
   const pill = getStatusPill(row.state, row.connected);
   const isInteractive = row.state !== 'parked';
 
-  // Per UX spec: only the icon + name section greys for non-connected
-  // platforms. The status pill stays at full color so the user can
-  // clearly read "Coming Soon" / "Not Available" / "Not connected, click
-  // to login" / "Live" against any background.
+  // Per UX spec: only the icon + name section is dimmed for
+  // non-connected platforms. The status pill stays at full color so
+  // the user can clearly read "Coming Soon" / "Not Available" / "Not
+  // connected, click to login" / "Live" against any background.
+  // Owner reconsidered the full grayscale: icons keep their brand
+  // color, just faded to 40% so it's obviously inactive without the
+  // washed-out look.
   const greyIconAndName = !row.connected;
-  const iconNameClass = greyIconAndName ? 'opacity-40 grayscale' : '';
+  const iconNameClass = greyIconAndName ? 'opacity-40' : '';
 
   const inner = (
     <>
