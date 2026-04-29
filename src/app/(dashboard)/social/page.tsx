@@ -182,15 +182,6 @@ function formatRelative(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-const STATE_PRIORITY: Record<PlatformState, number> = {
-  live_full: 0,
-  live_dm_blocked: 1,
-  live_no_dm: 2,
-  no_specialist: 3,
-  coming_soon: 4,
-  parked: 5,
-};
-
 interface StatusPillVisual {
   dot: string;
   label: string;
@@ -198,13 +189,13 @@ interface StatusPillVisual {
 
 function getStatusPill(state: PlatformState, connected: boolean): StatusPillVisual {
   if (state === 'parked') {
-    return { dot: 'bg-destructive', label: 'Parked' };
+    return { dot: 'bg-destructive', label: 'Not Available' };
   }
   if (state === 'coming_soon') {
-    return { dot: 'bg-amber-500', label: 'Coming soon' };
+    return { dot: 'bg-amber-500', label: 'Coming Soon' };
   }
   if (!connected) {
-    return { dot: 'bg-muted-foreground/40', label: 'Not connected' };
+    return { dot: 'bg-muted-foreground/40', label: 'Not connected, click to login' };
   }
   switch (state) {
     case 'live_full':
@@ -515,20 +506,19 @@ interface PlatformListProps {
 }
 
 function PlatformList({ loading, rows }: PlatformListProps) {
-  // Group: connected (sorted by state priority), then unconnected available, then coming-soon, then parked
-  const grouped = useMemo(() => {
-    const connected = rows.filter((r) => r.connected && r.state !== 'parked' && r.state !== 'coming_soon');
-    connected.sort((a, b) => STATE_PRIORITY[a.state] - STATE_PRIORITY[b.state]);
-
-    const unconnectedAvailable = rows.filter(
-      (r) => !r.connected && r.state !== 'coming_soon' && r.state !== 'parked',
-    );
-    unconnectedAvailable.sort((a, b) => STATE_PRIORITY[a.state] - STATE_PRIORITY[b.state]);
-
-    const comingSoon = rows.filter((r) => r.state === 'coming_soon');
-    const parked = rows.filter((r) => r.state === 'parked');
-
-    return { connected, unconnectedAvailable, comingSoon, parked };
+  // One unified list. Each card carries its own status pill ("Live",
+  // "Coming Soon", "Not Available", or "Not connected, click to login")
+  // so no section sub-headers are needed. Sort order: live + connected
+  // first, then implemented-but-not-signed-in (interactive), then coming
+  // soon, then not available (parked).
+  const sortedRows = useMemo(() => {
+    const orderForCard = (r: PlatformRow): number => {
+      if (r.connected) { return 0; }
+      if (r.state === 'parked') { return 3; }
+      if (r.state === 'coming_soon') { return 2; }
+      return 1; // implemented but not signed in
+    };
+    return [...rows].sort((a, b) => orderForCard(a) - orderForCard(b));
   }, [rows]);
 
   return (
@@ -544,7 +534,7 @@ function PlatformList({ loading, rows }: PlatformListProps) {
           </Link>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 space-y-4">
+      <CardContent className="pt-0">
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -552,38 +542,14 @@ function PlatformList({ loading, rows }: PlatformListProps) {
             ))}
           </div>
         ) : (
-          <>
-            {grouped.connected.length > 0 && (
-              <PlatformGroup title="Connected" rows={grouped.connected} />
-            )}
-            {grouped.unconnectedAvailable.length > 0 && (
-              <PlatformGroup title="Available — not connected" rows={grouped.unconnectedAvailable} />
-            )}
-            {grouped.comingSoon.length > 0 && (
-              <PlatformGroup title="Coming soon" rows={grouped.comingSoon} />
-            )}
-            {grouped.parked.length > 0 && (
-              <PlatformGroup title="Parked" rows={grouped.parked} />
-            )}
-          </>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {sortedRows.map((r) => (
+              <PlatformCard key={r.platform} row={r} />
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function PlatformGroup({ title, rows }: { title: string; rows: PlatformRow[] }) {
-  return (
-    <div className="space-y-2">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
-        {title}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {rows.map((r) => (
-          <PlatformCard key={r.platform} row={r} />
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -605,11 +571,11 @@ function PlatformCard({ row }: { row: PlatformRow }) {
           <div className="text-sm font-semibold text-foreground truncate">{meta.label}</div>
           {row.handle ? (
             <div className="text-xs text-muted-foreground truncate">@{row.handle}</div>
-          ) : (
+          ) : row.connected ? (
             <div className="text-xs text-muted-foreground truncate">
-              {row.connected ? row.accountName ?? 'Connected' : 'No account'}
+              {row.accountName ?? 'Connected'}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
       <div className="flex items-center justify-between mt-3">
@@ -627,13 +593,22 @@ function PlatformCard({ row }: { row: PlatformRow }) {
   );
 
   const baseClasses = 'block p-3 rounded-xl border border-border-light bg-card transition-colors';
+  // Per UX spec: only Live + connected platforms render at full opacity.
+  // Coming Soon, Not Available, and "Not connected, click to login" all
+  // render greyed-out. The click-to-login state is still interactive
+  // (Link wrapper) so the OAuth flow can fire when wired per platform.
+  const greyed = !row.connected || row.state === 'coming_soon' || row.state === 'parked';
+  const greyedClass = greyed ? 'opacity-60' : '';
 
   if (!isInteractive) {
-    return <div className={`${baseClasses} opacity-60`}>{inner}</div>;
+    return <div className={`${baseClasses} ${greyedClass}`}>{inner}</div>;
   }
 
   return (
-    <Link href={`/social/platforms/${row.platform}`} className={`${baseClasses} hover:bg-surface-elevated`}>
+    <Link
+      href={`/social/platforms/${row.platform}`}
+      className={`${baseClasses} ${greyedClass} hover:bg-surface-elevated`}
+    >
       {inner}
     </Link>
   );
