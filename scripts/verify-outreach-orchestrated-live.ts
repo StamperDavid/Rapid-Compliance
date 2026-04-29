@@ -34,7 +34,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
-import { initAdmin, mintIdToken, arg } from './lib/orchestrated-social-verify';
+import { initAdmin, mintIdToken, arg, extractMissionId, getSteps } from './lib/orchestrated-social-verify';
 
 initAdmin();
 
@@ -122,14 +122,14 @@ async function main(): Promise<void> {
   console.log(`${TAG} sending chat: ${prompt.slice(0, 100)}`);
 
   interface ChatResponse {
-    metadata?: { missionId?: string };
+    metadata?: { missionId?: string; reviewLink?: string };
   }
   const chatRes = await postJson<ChatResponse>({
     idToken,
     pathStr: '/api/orchestrator/chat',
     body: { message: prompt, conversationHistory: [], context: 'admin' },
   });
-  const missionId = chatRes?.metadata?.missionId;
+  const missionId = extractMissionId(chatRes);
   if (!missionId) {
     throw new Error(`chat did not return missionId. Response: ${JSON.stringify(chatRes)}`);
   }
@@ -141,7 +141,7 @@ async function main(): Promise<void> {
     (m) => m.status === 'PLAN_PENDING_APPROVAL',
     60_000,
   );
-  const plannedSteps = planMission.plannedSteps ?? [];
+  const plannedSteps = getSteps(planMission);
   console.log(`${TAG} plan has ${plannedSteps.length} steps:`);
   for (const s of plannedSteps) {
     console.log(`  ${s.order}. ${s.toolName}`);
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
   );
 
   console.log(`${TAG} terminal status: ${final.status}`);
-  const steps = final.steps ?? [];
+  const steps = getSteps(final);
   for (const s of steps) {
     console.log(`  step ${s.order} (${s.toolName}): ${s.status}${s.error ? ` — ${s.error}` : ''}`);
   }
@@ -208,8 +208,10 @@ async function main(): Promise<void> {
     throw new Error(`outreach step toolResult was not JSON: ${(outreachStep.toolResult ?? '').slice(0, 400)}`);
   }
 
-  // The Outreach Manager's executeChannelOutreach returns COMPOSED with the
-  // composed email shape attached. Tolerant extractor — try several shapes.
+  // The EmailSpecialist's compose_email action returns these fields directly
+  // on the toolResult JSON: subjectLine, previewText, bodyPlainText,
+  // bodyHtml (optional), emailPurpose, etc. Older shapes (composedEmail
+  // wrapper) supported as fallback for tolerance.
   const composed =
     (parsed.composedEmail as Record<string, unknown> | undefined) ??
     (parsed.composedContent as Record<string, unknown> | undefined) ??
@@ -217,8 +219,14 @@ async function main(): Promise<void> {
     ((parsed.result as Record<string, unknown> | undefined)?.composedEmail as Record<string, unknown> | undefined) ??
     parsed;
 
-  const subject = composed.subject as string | undefined;
-  const body = (composed.body as string | undefined) ?? (composed.bodyText as string | undefined) ?? (composed.content as string | undefined);
+  const subject =
+    (composed.subjectLine as string | undefined) ??
+    (composed.subject as string | undefined);
+  const body =
+    (composed.bodyPlainText as string | undefined) ??
+    (composed.body as string | undefined) ??
+    (composed.bodyText as string | undefined) ??
+    (composed.content as string | undefined);
 
   if (!subject || subject.length < 5) {
     throw new Error(`composed email subject missing or too short: ${JSON.stringify(subject)}. Full result: ${JSON.stringify(parsed).slice(0, 400)}`);
@@ -226,7 +234,9 @@ async function main(): Promise<void> {
   if (!body || body.length < 80) {
     throw new Error(`composed email body missing or too short (<80 chars): ${JSON.stringify(body)}`);
   }
-  // Hardcode/template detector — reject obvious LLM failure modes
+  // Hardcode/template detector — reject LLM failure modes. Note: `{{first_name}}`
+  // and other handlebars-style merge tags are EXPECTED in outreach emails
+  // (they get filled in per-lead at send time) and must NOT trip the detector.
   const lowerBody = body.toLowerCase();
   if (lowerBody.includes('lorem ipsum') || lowerBody.includes('[insert')) {
     throw new Error(`composed body looks like a template/placeholder: ${body.slice(0, 200)}`);
