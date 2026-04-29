@@ -41,7 +41,10 @@ import {
   VolumeX,
   Settings,
   Radio,
+  Paperclip,
+  Loader2,
 } from 'lucide-react';
+import Image from 'next/image';
 import { auth } from '@/lib/firebase/config';
 import { ASSISTANT_NAME } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
@@ -366,6 +369,18 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
   const [showSettings, setShowSettings] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Operator-attached media (drag/drop or paperclip). On send, the URLs are
+  // passed in the request body as `attachedMediaUrls`; Jasper sees them in
+  // the system prompt and threads them through to specialists as providedMediaUrls.
+  const [attachedMedia, setAttachedMedia] = useState<Array<{
+    url: string;
+    type: 'image' | 'video';
+    fileName: string;
+  }>>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Voice state
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
@@ -435,15 +450,23 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
    * JASPER BRAIN ACTIVATION - Live OpenRouter API Integration with Voice
    */
   const handleSendMessage = useCallback(async () => {
-    if (!input.trim() || isTyping) {
+    // Allow send if there's text OR attached media (so "post this image to X" works
+    // even when the message is just an instruction with the image carrying the content)
+    if ((!input.trim() && attachedMedia.length === 0) || isTyping) {
       return;
     }
 
     const userMessage = input.trim();
+    const mediaUrlsToSend = attachedMedia.map((m) => m.url);
     setInput('');
+    setAttachedMedia([]);
+    setUploadError(null);
 
-    // Add user message to chat history
-    addMessage({ role: 'user', content: userMessage });
+    // Add user message to chat history (with attachment annotation if any)
+    const displayContent = mediaUrlsToSend.length > 0
+      ? `${userMessage}${userMessage ? '\n\n' : ''}_📎 Attached ${mediaUrlsToSend.length} file${mediaUrlsToSend.length === 1 ? '' : 's'}_`
+      : userMessage;
+    addMessage({ role: 'user', content: displayContent });
 
     setTyping(true);
 
@@ -485,6 +508,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
           voiceId: voiceSettings.voiceId,
           ttsEngine: voiceSettings.ttsEngine,
           requestId,
+          ...(mediaUrlsToSend.length > 0 ? { attachedMediaUrls: mediaUrlsToSend } : {}),
         }),
       });
 
@@ -526,7 +550,62 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     } finally {
       setTyping(false);
     }
-  }, [input, isTyping, addMessage, setTyping, config, chatHistory, selectedModel, voiceSettings, playAudio]);
+  }, [input, isTyping, addMessage, setTyping, config, chatHistory, selectedModel, voiceSettings, playAudio, attachedMedia]);
+
+  /**
+   * Upload a file via /api/social/upload and queue its signed URL for the next send.
+   * Multiple files can be queued; they're all surfaced to Jasper as
+   * `attachedMediaUrls` when the user hits send.
+   */
+  const handleFilePick = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset the input immediately so the same file can be re-picked later
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    if (!file) {
+      return;
+    }
+    setUploadError(null);
+    setIsUploading(true);
+    try {
+      const currentUser = auth?.currentUser;
+      if (!currentUser) {
+        throw new Error('Not authenticated. Please log in.');
+      }
+      const idToken = await currentUser.getIdToken();
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/social/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${idToken}` },
+        body: formData,
+      });
+      const data = await response.json() as {
+        success: boolean;
+        url?: string;
+        type?: 'image' | 'video';
+        size?: number;
+        error?: string;
+      };
+      if (!response.ok || !data.success || !data.url || !data.type) {
+        throw new Error(data.error ?? `Upload failed with status ${response.status}`);
+      }
+      const newMedia = { url: data.url, type: data.type, fileName: file.name };
+      setAttachedMedia((prev) => [...prev, newMedia]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      setUploadError(message);
+      logger.error('[Jasper] Upload failed', err instanceof Error ? err : new Error(message));
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
+
+  const removeAttachedMedia = useCallback((url: string) => {
+    setAttachedMedia((prev) => prev.filter((m) => m.url !== url));
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -836,6 +915,50 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
 
             {/* Input Area */}
             <div className="p-4 border-t border-border-light bg-surface-main">
+              {/* Attached media preview row — shown above the input when files are queued */}
+              {(attachedMedia.length > 0 || isUploading || uploadError) && (
+                <div className="mb-2 flex flex-wrap gap-2 items-center">
+                  {attachedMedia.map((m) => (
+                    <div
+                      key={m.url}
+                      className="relative group rounded-lg overflow-hidden border border-border-light bg-surface-elevated"
+                      title={m.fileName}
+                    >
+                      {m.type === 'image' ? (
+                        <Image
+                          src={m.url}
+                          alt={m.fileName}
+                          width={56}
+                          height={56}
+                          unoptimized
+                          className="w-14 h-14 object-cover"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 flex items-center justify-center text-[var(--color-text-secondary)] text-xs">
+                          🎬
+                        </div>
+                      )}
+                      <button
+                        onClick={() => removeAttachedMedia(m.url)}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 hover:bg-error text-white flex items-center justify-center"
+                        aria-label={`Remove ${m.fileName}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {isUploading && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-elevated text-xs text-[var(--color-text-secondary)]">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Uploading...
+                    </div>
+                  )}
+                  {uploadError && (
+                    <div className="text-xs text-error">{uploadError}</div>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowCommands(!showCommands)}
@@ -843,6 +966,23 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 >
                   <ChevronDown className={`w-5 h-5 transition-transform ${showCommands ? 'rotate-180' : ''}`} />
                 </button>
+                {/* Paperclip — opens hidden file input. JPG/PNG/GIF/WebP/MP4/MOV/WebM, up to 100MB. */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading || attachedMedia.length >= 8}
+                  title={attachedMedia.length >= 8 ? 'Maximum 8 attachments' : 'Attach image or video'}
+                  className="p-2 rounded-lg bg-white/5 text-[var(--color-text-secondary)] hover:bg-surface-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
+                  onChange={(e) => { void handleFilePick(e); }}
+                  className="hidden"
+                  aria-label="Attach media"
+                />
                 <input
                   ref={inputRef}
                   type="text"
@@ -857,7 +997,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                   onClick={() => {
                     void handleSendMessage();
                   }}
-                  disabled={!input.trim() || isTyping}
+                  disabled={(!input.trim() && attachedMedia.length === 0) || isTyping || isUploading}
                   className="p-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white disabled:opacity-50 disabled:cursor-not-allowed hover:from-primary hover:to-secondary transition-all"
                 >
                   <Send className="w-5 h-5" />
