@@ -558,9 +558,16 @@ function PlatformCard({ row }: { row: PlatformRow }) {
   const pill = getStatusPill(row.state, row.connected);
   const isInteractive = row.state !== 'parked';
 
+  // Per UX spec: only the icon + name section greys for non-connected
+  // platforms. The status pill stays at full color so the user can
+  // clearly read "Coming Soon" / "Not Available" / "Not connected, click
+  // to login" / "Live" against any background.
+  const greyIconAndName = !row.connected;
+  const iconNameClass = greyIconAndName ? 'opacity-40 grayscale' : '';
+
   const inner = (
     <>
-      <div className="flex items-start gap-3">
+      <div className={`flex items-start gap-3 ${iconNameClass}`}>
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
           style={{ backgroundColor: meta.color }}
@@ -579,10 +586,10 @@ function PlatformCard({ row }: { row: PlatformRow }) {
         </div>
       </div>
       <div className="flex items-center justify-between mt-3">
-        <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${pill.dot}`} />
-          <span className="text-xs text-muted-foreground">{pill.label}</span>
-        </div>
+        <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold bg-white/15 text-white">
+          <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-full ${pill.dot}`} />
+          {pill.label}
+        </span>
         {row.todayPublished > 0 && (
           <span className="text-xs text-muted-foreground">
             {row.todayPublished} today
@@ -593,22 +600,15 @@ function PlatformCard({ row }: { row: PlatformRow }) {
   );
 
   const baseClasses = 'block p-3 rounded-xl border border-border-light bg-card transition-colors';
-  // Per UX spec: only Live + connected platforms render at full color.
-  // Everything else — Coming Soon, Not Available, and "Not connected,
-  // click to login" — renders fully greyed: grayscale filter desaturates
-  // the platform icon, opacity-40 dims the whole card, and pointer-events
-  // can stay enabled so click-to-login remains actionable when wired.
-  const greyed = !row.connected || row.state === 'coming_soon' || row.state === 'parked';
-  const greyedClass = greyed ? 'opacity-40 grayscale' : '';
 
   if (!isInteractive) {
-    return <div className={`${baseClasses} ${greyedClass}`}>{inner}</div>;
+    return <div className={baseClasses}>{inner}</div>;
   }
 
   return (
     <Link
       href={`/social/platforms/${row.platform}`}
-      className={`${baseClasses} ${greyedClass} hover:bg-surface-elevated`}
+      className={`${baseClasses} hover:bg-surface-elevated`}
     >
       {inner}
     </Link>
