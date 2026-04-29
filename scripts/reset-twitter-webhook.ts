@@ -85,7 +85,7 @@ async function getBearer(c: Creds): Promise<string> {
 
 const PLATFORM_ID = 'rapid-compliance-root';
 const OLD_WEBHOOK_ID = '2048240842830401536';
-const WEBHOOK_URL = 'https://rapidcompliance.us/api/webhooks/twitter';
+const WEBHOOK_URL = 'https://salesvelocity.ai/api/webhooks/twitter';
 
 async function main(): Promise<void> {
   const db = admin.firestore();

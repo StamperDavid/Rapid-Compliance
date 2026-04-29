@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       return errors.notFound('No active payment subscription found. Use the billing portal after completing checkout.');
     }
 
-    const origin = request.headers.get('origin') ?? 'https://rapidcompliance.us';
+    const origin = request.headers.get('origin') ?? 'https://salesvelocity.ai';
     const returnUrl = parseResult.data.returnUrl ?? `${origin}/settings/billing`;
 
     const result = await getPortalUrl(subscriptionId, returnUrl, provider);

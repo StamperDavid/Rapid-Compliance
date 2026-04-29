@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
         ${referralSource ? `<tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee;">How they heard about us</td><td style="padding:8px;border-bottom:1px solid #eee;">${escapeHtml(referralSource)}</td></tr>` : ''}
         <tr><td style="padding:8px;font-weight:bold;">Lead ID</td><td style="padding:8px;font-family:monospace;">${escapeHtml(lead.id)}</td></tr>
       </table>
-      <p style="margin-top:16px;color:#666;font-size:13px;">View this lead in the dashboard at <a href="https://rapidcompliance.us/entities/leads">/entities/leads</a>.</p>
+      <p style="margin-top:16px;color:#666;font-size:13px;">View this lead in the dashboard at <a href="https://salesvelocity.ai/entities/leads">/entities/leads</a>.</p>
     `;
 
     const textBody = [
