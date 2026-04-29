@@ -279,6 +279,11 @@ const orchestratorChatSchema = z.object({
   ttsEngine: z.enum(['elevenlabs', 'unreal']).optional(),
   /** Client-generated idempotency key. Retries with the same requestId reuse the same missionId. */
   requestId: z.string().optional(),
+  /** Image / video URLs the operator attached to this message via the chat composer.
+   * Surfaced to Jasper as operator-provided media so he can pass them down to
+   * delegate_to_marketing / delegate_to_content / save_blog_draft as
+   * providedMediaUrls — using them as-is, no DALL-E spend. */
+  attachedMediaUrls: z.array(z.string().url()).max(8).optional(),
 });
 
 type OrchestratorChatRequest = z.infer<typeof orchestratorChatSchema>;
@@ -372,6 +377,7 @@ export async function POST(request: NextRequest) {
       voiceId,
       ttsEngine,
       requestId,
+      attachedMediaUrls,
     } = parsedBody.data;
 
     // Determine model to use
@@ -522,9 +528,29 @@ Only execute tools if the user explicitly says to go ahead (e.g., "yes do it", "
 You MAY call read-only tools like get_system_state or query_docs to inform your recommendation.`;
     }
 
+    // Operator-attached media: when the user dragged files into the chat composer,
+    // their URLs flow through here. Jasper sees them in the system prompt and is
+    // expected to pass them to delegate_to_marketing / delegate_to_content /
+    // save_blog_draft as providedMediaUrls so the system uses them as-is and
+    // skips DALL-E generation.
+    let mediaContext = '';
+    if (attachedMediaUrls && attachedMediaUrls.length > 0) {
+      mediaContext = `
+
+## OPERATOR-PROVIDED MEDIA (attached to this message)
+The user attached the following media URLs to this message via the chat composer.
+When you plan tools that involve content posting, blog featured images, or social-post
+images, pass these URLs through as \`providedMediaUrls\` so the system uses them as-is
+without generating new images. Do NOT trigger DALL-E or any image generator while these
+URLs are available.
+
+${attachedMediaUrls.map((u, i) => `- [${i + 1}] ${u}`).join('\n')}
+`;
+    }
+
     // Convert conversation history to provider format with tool support
     const messages: ChatMessage[] = [
-      { role: 'system', content: enhancedSystemPrompt + stateContext + advisoryContext },
+      { role: 'system', content: enhancedSystemPrompt + stateContext + advisoryContext + mediaContext },
       ...conversationHistory.map((msg) => ({
         role: msg.role,
         content: msg.content,
