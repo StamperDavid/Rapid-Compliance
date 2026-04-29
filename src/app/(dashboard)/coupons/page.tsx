@@ -9,6 +9,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { CATALOG_TABS } from '@/lib/constants/subpage-nav';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -777,6 +779,8 @@ export default function CouponsPage() {
   // ---------------------------------------------------------------------------
   return (
     <div className="p-8 space-y-6">
+      <SubpageNav items={CATALOG_TABS} />
+
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

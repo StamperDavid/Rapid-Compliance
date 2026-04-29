@@ -27,11 +27,9 @@ import {
   Handshake,
   MessageSquare,
   Megaphone,
-  FlaskConical,
   Video,
   Bot,
   PhoneCall,
-  Workflow,
   Activity,
   Globe,
   Settings,
@@ -48,14 +46,10 @@ import {
   PenLine,
   Shield,
   Building2,
-  TrendingUp,
   LogOut,
-  Tag,
-  Repeat,
   LayoutTemplate,
   BookOpen,
   Link2,
-  Rocket,
 } from 'lucide-react';
 
 // ============================================================================
@@ -88,9 +82,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'companies', label: 'Companies', href: '/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
-      { id: 'products-services', label: 'Products & Services', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
-      { id: 'subscriptions', label: 'Subscriptions', href: '/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)' },
-      { id: 'coupons', label: 'Coupons', href: '/coupons', icon: Tag, iconColor: 'var(--color-accent)' },
+      { id: 'products-pricing', label: 'Products & Pricing', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
     ],
   },
   // ── Marketing (8 items — absorbed Outreach + Coupons) ─────────────
@@ -101,7 +93,6 @@ const NAV_SECTIONS: NavigationSection[] = [
     icon: Megaphone,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'campaigns', label: 'Campaigns', href: '/campaigns', icon: Rocket, iconColor: 'var(--color-accent)' },
       { id: 'social-hub', label: 'Social Hub', href: '/social', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
       // Content Generator gating intentionally limited to role only — feature module
       // gate removed Apr 28 2026 because users were losing the link when their feature
@@ -111,7 +102,6 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
-      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
     ],
   },
   // ── Website ────────────────────────────────────────────────────────
@@ -121,10 +111,11 @@ const NAV_SECTIONS: NavigationSection[] = [
     icon: Globe,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'website', label: 'Website', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
+      { id: 'website-editor', label: 'Editor', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
       { id: 'pages', label: 'Pages', href: '/website/pages', icon: LayoutTemplate, iconColor: 'var(--color-info)', featureModuleId: 'website_builder' },
       { id: 'blog-posts', label: 'Blog Posts', href: '/website/blog', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'website_builder' },
       { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
+      { id: 'website-analytics', label: 'Analytics', href: '/website/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
     ],
   },
   // ── AI Workforce (standalone — no section header) ──────────────────
@@ -136,18 +127,6 @@ const NAV_SECTIONS: NavigationSection[] = [
     standalone: true,
     items: [
       { id: 'ai-workforce', label: 'AI Workforce', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
-    ],
-  },
-  // ── Analytics & Growth ─────────────────────────────────────────────
-  {
-    id: 'analytics',
-    label: 'Analytics & Growth',
-    icon: PieChart,
-    allowedRoles: ['owner', 'admin', 'manager', 'member'],
-    items: [
-      { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
-      { id: 'growth', label: 'Growth', href: '/growth/command-center', icon: TrendingUp, iconColor: 'var(--color-success)', requiredPermission: 'canViewReports' },
-      { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)', featureModuleId: 'advanced_analytics' },
     ],
   },
   // ── System (standalone — owner only) ───────────────────────────────
@@ -230,21 +209,30 @@ export default function AdminSidebar() {
   const isActive = (href: string): boolean => {
     if (!pathname) { return false; }
 
-    // Dashboard hub — dashboard + all tab destinations (executive briefing, workforce, team)
+    // Dashboard hub — dashboard + all tab destinations (executive briefing, team, analytics & growth)
     if (href === '/dashboard') {
       return pathname === '/dashboard' ||
         pathname.startsWith('/executive-briefing') ||
-        pathname.startsWith('/workforce') ||
         pathname.startsWith('/team/') ||
         pathname.startsWith('/performance') ||
         pathname.startsWith('/coaching') ||
-        pathname === '/playbook';
+        pathname === '/playbook' ||
+        pathname === '/analytics' ||
+        pathname.startsWith('/analytics/') ||
+        pathname.startsWith('/growth/') ||
+        pathname.startsWith('/sequences/analytics') ||
+        pathname.startsWith('/compliance-reports') ||
+        pathname.startsWith('/battlecards');
     }
 
-    // Products & Services hub — products + services
+    // Products & Pricing hub — products + services + orders + coupons + subscriptions
     if (href === '/products') {
       return pathname === '/products' ||
-        pathname.startsWith('/products/');
+        pathname.startsWith('/products/') ||
+        pathname === '/orders' ||
+        pathname.startsWith('/orders/') ||
+        pathname === '/coupons' ||
+        pathname === '/subscriptions';
     }
 
     // Leads hub — leads list, intelligence, scoring, scraper
@@ -267,7 +255,7 @@ export default function AdminSidebar() {
       return pathname.startsWith('/deals') || pathname.startsWith('/risk') || pathname.startsWith('/living-ledger');
     }
 
-    // Email Studio — email writer + nurture + email builder + templates + sequences + email campaigns
+    // Email Studio — email writer + nurture + email builder + templates + sequences + email campaigns + workflows + campaigns
     if (href === '/email-writer') {
       return pathname.startsWith('/email-writer') ||
         pathname.startsWith('/nurture') ||
@@ -275,7 +263,11 @@ export default function AdminSidebar() {
         pathname === '/templates' ||
         pathname.startsWith('/outbound/sequences') ||
         pathname.startsWith('/email/campaigns') ||
-        pathname.startsWith('/entities/email_templates');
+        pathname.startsWith('/entities/email_templates') ||
+        pathname === '/workflows' ||
+        pathname.startsWith('/workflows/') ||
+        pathname === '/campaigns' ||
+        pathname.startsWith('/campaigns/');
     }
 
     // Social Hub — all /social/* (analytics now absorbed as tab)

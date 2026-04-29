@@ -10,19 +10,19 @@ import type { SubpageNavItem } from '@/components/ui/SubpageNav';
 // ── Dashboard ───────────────────────────────────────────────────────────────
 export const DASHBOARD_TABS: SubpageNavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Analytics & Growth', href: '/analytics' },
   { label: 'Activities', href: '/dashboard/activities' },
   { label: 'Executive Briefing', href: '/executive-briefing' },
-  { label: 'Workforce HQ', href: '/workforce' },
   { label: 'Team', href: '/team/leaderboard' },
 ];
 
-// ── Catalog (hub for products, services, orders, coupons, subscriptions) ─────
+// ── Products & Pricing (hub for products, services, orders, coupons, subscriptions) ─
 export const CATALOG_TABS: SubpageNavItem[] = [
   { label: 'Products', href: '/products' },
   { label: 'Services', href: '/products/services' },
   { label: 'Orders', href: '/orders' },
-  { label: 'Coupons', href: '/entities/coupons' },
-  { label: 'Subscriptions', href: '/entities/subscriptions' },
+  { label: 'Coupons', href: '/coupons' },
+  { label: 'Subscriptions', href: '/subscriptions' },
 ];
 
 // ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
@@ -52,8 +52,10 @@ export const ANALYTICS_TABS: SubpageNavItem[] = [
 export const WEBSITE_TABS: SubpageNavItem[] = [
   { label: 'Editor', href: '/website/editor' },
   { label: 'Pages', href: '/website/pages' },
-  { label: 'Templates', href: '/website/templates' },
   { label: 'Blog', href: '/website/blog' },
+  { label: 'Domains', href: '/website/domains' },
+  { label: 'Analytics', href: '/website/analytics' },
+  { label: 'Templates', href: '/website/templates' },
   { label: 'SEO', href: '/website/seo' },
   { label: 'Store', href: '/website/store' },
   { label: 'Navigation', href: '/website/navigation' },
@@ -97,6 +99,9 @@ export const LEAD_INTEL_TABS: SubpageNavItem[] = [
 // ── Email Studio ────────────────────────────────────────────────────────────
 export const EMAIL_STUDIO_TABS: SubpageNavItem[] = [
   { label: 'Email Writer', href: '/email-writer' },
+  { label: 'Campaigns', href: '/campaigns' },
+  { label: 'Email Campaigns', href: '/email/campaigns' },
+  { label: 'Workflows', href: '/workflows' },
   { label: 'Nurture', href: '/nurture' },
   { label: 'Email Builder', href: '/marketing/email-builder' },
   { label: 'Templates', href: '/templates' },

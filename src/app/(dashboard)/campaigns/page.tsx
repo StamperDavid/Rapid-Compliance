@@ -38,6 +38,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import type { Campaign, CampaignStatus, CampaignDeliverable } from '@/types/campaign';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
 
 // ============================================================================
 // TYPES
@@ -289,6 +291,8 @@ export default function CampaignsPage() {
 
   return (
     <div className="p-8 space-y-6">
+      <SubpageNav items={EMAIL_STUDIO_TABS} />
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

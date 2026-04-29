@@ -14,6 +14,8 @@ import { getCampaigns, deleteCampaign, type EmailCampaign } from '@/lib/email/ca
 import { usePagination } from '@/hooks/usePagination';
 import { logger } from '@/lib/logger/logger';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
 import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function EmailCampaignsPage() {
@@ -98,6 +100,8 @@ export default function EmailCampaignsPage() {
 
   return (
     <div className="p-8 space-y-6">
+      <SubpageNav items={EMAIL_STUDIO_TABS} />
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

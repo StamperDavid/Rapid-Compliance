@@ -103,6 +103,12 @@ export default function SettingsPage() {
       ]
     },
     {
+      title: 'Marketing Tools',
+      items: [
+        { icon: '🧪', label: 'A/B Testing', description: 'Run experiments on emails, pages, and copy — view results and pick winners', href: `/ab-tests`, permission: canManageOrganization },
+      ]
+    },
+    {
       title: 'Advanced',
       items: [
         { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: `/schemas`, permission: canManageOrganization },
