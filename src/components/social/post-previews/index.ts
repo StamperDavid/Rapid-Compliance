@@ -34,3 +34,7 @@ export { RedditPostPreview } from './RedditPostPreview';
 export { WhatsAppBusinessPostPreview } from './WhatsAppBusinessPostPreview';
 export { GoogleBusinessPostPreview } from './GoogleBusinessPostPreview';
 export { TruthSocialPostPreview } from './TruthSocialPostPreview';
+
+// Creator-track (Apr 28 2026) — Discord, Twitch
+export { DiscordPostPreview } from './DiscordPostPreview';
+export { TwitchPostPreview } from './TwitchPostPreview';

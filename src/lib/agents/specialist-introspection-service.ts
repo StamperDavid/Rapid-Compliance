@@ -138,6 +138,22 @@ const MARKETING_SPECIALIST_DIRECTORY: Record<string, AgentDefinition> = {
     parentId: 'MARKETING_MANAGER',
     capabilities: ['generate_content'],
   },
+  DISCORD_EXPERT: {
+    id: 'DISCORD_EXPERT',
+    name: 'Discord Expert',
+    role: 'specialist',
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['generate_content', 'compose_dm_reply'],
+  },
+  TWITCH_EXPERT: {
+    id: 'TWITCH_EXPERT',
+    name: 'Twitch Expert',
+    role: 'specialist',
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['generate_content'],
+  },
 };
 
 // ============================================================================

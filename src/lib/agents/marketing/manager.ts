@@ -52,6 +52,8 @@ import { getThreadsExpert } from './threads/specialist';
 import { getGoogleBusinessExpert } from './google-business/specialist';
 import { getTelegramExpert } from './telegram/specialist';
 import { getWhatsAppBusinessExpert } from './whatsapp-business/specialist';
+import { getDiscordExpert } from './discord/specialist';
+import { getTwitchExpert } from './twitch/specialist';
 import {
   getMemoryVault,
   shareInsight,
@@ -311,6 +313,8 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     'GOOGLE_BUSINESS_EXPERT',
     'TELEGRAM_EXPERT',
     'WHATSAPP_BUSINESS_EXPERT',
+    'DISCORD_EXPERT',
+    'TWITCH_EXPERT',
   ],
   delegationRules: [
     // TikTok - Viral, short-form video
@@ -422,6 +426,20 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     {
       triggerKeywords: ['whatsapp', 'whatsapp business', 'wa broadcast', 'whatsapp template', 'wa.me', 'whatsapp message'],
       delegateTo: 'WHATSAPP_BUSINESS_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Discord - Server posts, announcements, scheduled events
+    {
+      triggerKeywords: ['discord', 'server', 'guild', 'announcement', 'discord channel', 'scheduled event', 'community post'],
+      delegateTo: 'DISCORD_EXPERT',
+      priority: 10,
+      requiresApproval: false,
+    },
+    // Twitch - Stream metadata, chat announcements, clips
+    {
+      triggerKeywords: ['twitch', 'stream', 'streamer', 'broadcaster', 'helix', 'chat announcement', 'clip', 'going live'],
+      delegateTo: 'TWITCH_EXPERT',
       priority: 10,
       requiresApproval: false,
     },
@@ -658,6 +676,8 @@ export class MarketingManager extends BaseManager {
       { name: 'GOOGLE_BUSINESS_EXPERT', factory: getGoogleBusinessExpert },
       { name: 'TELEGRAM_EXPERT', factory: getTelegramExpert },
       { name: 'WHATSAPP_BUSINESS_EXPERT', factory: getWhatsAppBusinessExpert },
+      { name: 'DISCORD_EXPERT', factory: getDiscordExpert },
+      { name: 'TWITCH_EXPERT', factory: getTwitchExpert },
     ];
 
     for (const { name, factory } of specialistFactories) {
@@ -1068,6 +1088,7 @@ export class MarketingManager extends BaseManager {
       instagram: 'INSTAGRAM_EXPERT',
       pinterest: 'PINTEREST_EXPERT',
       mastodon: 'MASTODON_EXPERT',
+      discord: 'DISCORD_EXPERT',
     };
     const specialistId = SPECIALIST_BY_INBOUND_PLATFORM[platform];
     if (!specialistId) {
@@ -1101,6 +1122,7 @@ export class MarketingManager extends BaseManager {
         case 'instagram': return (await import('./instagram/specialist')).getInstagramExpert();
         case 'pinterest': return (await import('./pinterest/specialist')).getPinterestExpert();
         case 'mastodon': return (await import('./mastodon/specialist')).getMastodonExpert();
+        case 'discord': return (await import('./discord/specialist')).getDiscordExpert();
         case 'x':
         default: return getTwitterExpert();
       }
@@ -1200,6 +1222,8 @@ export class MarketingManager extends BaseManager {
       telegram: 'TELEGRAM_EXPERT',
       whatsapp: 'WHATSAPP_BUSINESS_EXPERT',
       'whatsapp-business': 'WHATSAPP_BUSINESS_EXPERT',
+      discord: 'DISCORD_EXPERT',
+      twitch: 'TWITCH_EXPERT',
     };
     const specialistId = SPECIALIST_BY_PLATFORM[platform];
     if (!specialistId) {
@@ -1239,6 +1263,8 @@ export class MarketingManager extends BaseManager {
         case 'telegram': return (await import('./telegram/specialist')).getTelegramExpert();
         case 'whatsapp':
         case 'whatsapp-business': return (await import('./whatsapp-business/specialist')).getWhatsAppBusinessExpert();
+        case 'discord': return (await import('./discord/specialist')).getDiscordExpert();
+        case 'twitch': return (await import('./twitch/specialist')).getTwitchExpert();
         default: throw new Error(`Unhandled platform: ${platform}`);
       }
     })();

@@ -1091,6 +1091,277 @@ export async function fetchPinterestProfile(accessToken: string): Promise<{
   };
 }
 
+// ─── Discord OAuth 2.0 ──────────────────────────────────────────────────────
+// Tenants OAuth into the central SalesVelocity Discord application to grant
+// the bot access to a server they administer. Scopes:
+//   - bot                 install the bot into a guild
+//   - applications.commands  register slash commands
+//   - identify             read connecting user identity for display
+//   - guilds               list servers the user can administer
+//
+// The `bot` scope makes Discord present a server-picker on consent — the
+// authenticating user selects which guild to install into. We persist
+// guildId from the callback's `guild` query param (Discord includes it
+// when the bot scope is requested with `permissions=`).
+
+export async function generateDiscordAuthUrl(userId: string): Promise<string> {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  if (!clientId) {
+    throw new Error('DISCORD_CLIENT_ID environment variable is not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/discord`;
+  const state = await storeOAuthState(userId, 'discord');
+
+  // Permissions integer: Send Messages (2048) + Manage Webhooks (536870912)
+  // + Create Events (8589934592) + View Channels (1024) = 9126805504.
+  // Operator can broaden in Discord dev portal post-install.
+  const permissions = '9126805504';
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    state,
+    redirect_uri: redirectUri,
+    scope: 'bot applications.commands identify guilds',
+    permissions,
+  });
+
+  return `https://discord.com/oauth2/authorize?${params.toString()}`;
+}
+
+export async function exchangeDiscordCode(
+  code: string,
+  stateToken: string,
+): Promise<{ tokens: SocialOAuthTokenResult; stateData: SocialOAuthState }> {
+  const stateData = await retrieveAndDeleteOAuthState(stateToken, 'discord');
+  if (!stateData) {
+    throw new Error('Invalid or expired OAuth state');
+  }
+
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('Discord OAuth credentials not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/discord`;
+
+  const response = await fetch('https://discord.com/api/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Discord token exchange failed', new Error(errorText));
+    throw new Error('Failed to exchange Discord authorization code');
+  }
+
+  const data = (await response.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
+
+  const tokens: SocialOAuthTokenResult = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    tokenExpiresAt: data.expires_in
+      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+      : undefined,
+    scope: data.scope,
+  };
+
+  return { tokens, stateData };
+}
+
+/**
+ * Fetch the connecting Discord user's identity (id + username) for display.
+ * Note: the connected RESOURCE is the guild (server), not the user — but
+ * we still capture the user who installed for audit purposes.
+ */
+export async function fetchDiscordProfile(accessToken: string): Promise<{
+  id: string;
+  username: string;
+  avatarUrl?: string;
+}> {
+  const response = await fetch('https://discord.com/api/users/@me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Discord profile fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch Discord profile');
+  }
+
+  const data = (await response.json()) as {
+    id: string;
+    username: string;
+    avatar?: string;
+  };
+
+  return {
+    id: data.id,
+    username: data.username,
+    avatarUrl: data.avatar
+      ? `https://cdn.discordapp.com/avatars/${data.id}/${data.avatar}.png`
+      : undefined,
+  };
+}
+
+// ─── Twitch OAuth 2.0 ───────────────────────────────────────────────────────
+// Tenants OAuth into the central SalesVelocity Twitch application to grant
+// the connected channel write access. Scopes:
+//   - channel:manage:broadcast        modify channel info (title, category, tags)
+//   - moderator:manage:announcements  send chat announcements
+//   - clips:edit                       create clips
+//   - channel:manage:schedule          create schedule segments
+//   - moderator:read:followers         read follower list (metrics)
+//   - user:read:email                  basic profile
+
+export async function generateTwitchAuthUrl(userId: string): Promise<string> {
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  if (!clientId) {
+    throw new Error('TWITCH_CLIENT_ID environment variable is not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/twitch`;
+  const state = await storeOAuthState(userId, 'twitch');
+
+  const scope = [
+    'channel:manage:broadcast',
+    'moderator:manage:announcements',
+    'clips:edit',
+    'channel:manage:schedule',
+    'moderator:read:followers',
+    'user:read:email',
+  ].join(' ');
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    state,
+    redirect_uri: redirectUri,
+    scope,
+  });
+
+  return `https://id.twitch.tv/oauth2/authorize?${params.toString()}`;
+}
+
+export async function exchangeTwitchCode(
+  code: string,
+  stateToken: string,
+): Promise<{ tokens: SocialOAuthTokenResult; stateData: SocialOAuthState }> {
+  const stateData = await retrieveAndDeleteOAuthState(stateToken, 'twitch');
+  if (!stateData) {
+    throw new Error('Invalid or expired OAuth state');
+  }
+
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('Twitch OAuth credentials not configured');
+  }
+
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/twitch`;
+
+  const response = await fetch('https://id.twitch.tv/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Twitch token exchange failed', new Error(errorText));
+    throw new Error('Failed to exchange Twitch authorization code');
+  }
+
+  const data = (await response.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string[] | string;
+  };
+
+  const tokens: SocialOAuthTokenResult = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    tokenExpiresAt: data.expires_in
+      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+      : undefined,
+    scope: Array.isArray(data.scope) ? data.scope.join(' ') : data.scope,
+  };
+
+  return { tokens, stateData };
+}
+
+/**
+ * Fetch the connected Twitch user (broadcaster id + login) via Helix.
+ * Required to get broadcaster_id for posting endpoints.
+ */
+export async function fetchTwitchProfile(accessToken: string): Promise<{
+  id: string;
+  login: string;
+  displayName: string;
+  profileImageUrl?: string;
+}> {
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  if (!clientId) {
+    throw new Error('TWITCH_CLIENT_ID environment variable is not configured');
+  }
+
+  const response = await fetch('https://api.twitch.tv/helix/users', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Client-Id': clientId,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('Twitch profile fetch failed', new Error(errorText));
+    throw new Error('Failed to fetch Twitch profile');
+  }
+
+  const data = (await response.json()) as {
+    data?: Array<{
+      id: string;
+      login: string;
+      display_name: string;
+      profile_image_url?: string;
+    }>;
+  };
+
+  const user = data.data?.[0];
+  if (!user) {
+    throw new Error('Twitch /users returned empty data array');
+  }
+
+  return {
+    id: user.id,
+    login: user.login,
+    displayName: user.display_name,
+    profileImageUrl: user.profile_image_url,
+  };
+}
+
 // ─── Token Encryption Helpers ─────────────────────────────────────────────────
 
 export function encryptCredentials(tokens: SocialOAuthTokenResult): {

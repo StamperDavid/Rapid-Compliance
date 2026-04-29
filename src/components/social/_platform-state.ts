@@ -163,21 +163,20 @@ const PLATFORM_CONFIG: Record<SocialPlatform, PlatformConfig> = {
   },
   google_business: {
     state: 'coming_soon',
+    specialistId: 'GOOGLE_BUSINESS_EXPERT',
+    specialistName: 'Google Business Expert',
+    dmCapability: 'na',
+    blockReason:
+      'Google Business Profile verification + GCP OAuth approval required (days). Specialist is built; awaiting external approval.',
+    unblockAction: 'Verify Google Business Profile and request GCP OAuth scope',
+  },
+  reddit: {
+    state: 'parked',
     specialistId: null,
     specialistName: null,
     dmCapability: 'na',
     blockReason:
-      'Google Business Profile verification + GCP OAuth approval required (days). No specialist built yet.',
-    unblockAction: 'Verify Google Business Profile, request GCP OAuth scope, then build GOOGLE_BUSINESS_EXPERT',
-  },
-  reddit: {
-    state: 'coming_soon',
-    specialistId: null,
-    specialistName: 'Reddit Expert',
-    dmCapability: 'pending',
-    blockReason:
-      'Reddit dev account on 24h account-age gate + REDDIT_EXPERT specialist not yet built',
-    unblockAction: 'Wait for account age + build REDDIT_EXPERT specialist',
+      'Reddit commercial API access is enterprise-only (~$10K+/mo). Per platform viability matrix (Apr 27 2026), Reddit is Tier 3 — no path forward without enterprise budget.',
   },
   truth_social: {
     state: 'parked',
@@ -186,6 +185,29 @@ const PLATFORM_CONFIG: Record<SocialPlatform, PlatformConfig> = {
     dmCapability: 'na',
     blockReason:
       'Cloudflare TLS-fingerprint wall blocks server-side posts. No path without browser-class TLS infra.',
+  },
+  // Creator-track additions (Apr 28 2026). Discord row added separately.
+  // DM capability is `pending`: Discord allows bot DMs only when the user
+  // shares a guild with the bot OR installed via user-context OAuth. The
+  // specialist supports compose_dm_reply but the dispatcher must verify
+  // delivery is permitted before sending.
+  discord: {
+    state: 'coming_soon',
+    specialistId: 'DISCORD_EXPERT',
+    specialistName: 'Discord Expert',
+    dmCapability: 'pending',
+    blockReason:
+      'Central Discord Developer App not yet registered. Self-service for <100 servers; Bot Verification + Message Content Intent review at scale.',
+    unblockAction: 'Register central Discord application at discord.com/developers',
+  },
+  twitch: {
+    state: 'coming_soon',
+    specialistId: 'TWITCH_EXPERT',
+    specialistName: 'Twitch Expert',
+    dmCapability: 'na',
+    blockReason:
+      'Central Twitch Developer App not yet registered at dev.twitch.tv. Self-service registration, no partner-tier required for Helix posting/metrics.',
+    unblockAction: 'Register central Twitch application at dev.twitch.tv',
   },
 };
 

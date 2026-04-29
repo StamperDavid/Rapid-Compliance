@@ -44,6 +44,8 @@ import { RedditComposer } from './RedditComposer';
 import { WhatsAppBusinessComposer } from './WhatsAppBusinessComposer';
 import { GoogleBusinessComposer } from './GoogleBusinessComposer';
 import { TruthSocialComposer } from './TruthSocialComposer';
+import { DiscordComposer } from './DiscordComposer';
+import { TwitchComposer } from './TwitchComposer';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -94,6 +96,8 @@ const COMPOSER_BY_PLATFORM: Record<SocialPlatform, React.ComponentType<PlatformC
   pinterest: PinterestComposer,
   whatsapp_business: WhatsAppBusinessComposer,
   google_business: GoogleBusinessComposer,
+  discord: DiscordComposer,
+  twitch: TwitchComposer,
 };
 
 const DEFAULT_CONTENT_TYPE: Record<SocialPlatform, string> = {
@@ -112,6 +116,8 @@ const DEFAULT_CONTENT_TYPE: Record<SocialPlatform, string> = {
   pinterest: 'pin',
   whatsapp_business: 'message',
   google_business: 'post',
+  discord: 'channel_post',
+  twitch: 'chat_announcement',
 };
 
 const REQUIRES_MEDIA: Partial<Record<SocialPlatform, boolean>> = {

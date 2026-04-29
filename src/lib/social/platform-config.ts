@@ -219,6 +219,30 @@ export const PLATFORM_META: Record<SocialPlatform, PlatformMeta> = {
     verb: 'Update',
     previewComponent: 'GoogleBusinessPostPreview',
   },
+  discord: {
+    label: 'Discord',
+    icon: 'D',
+    emoji: '🎮',
+    color: '#5865F2',
+    hoverColor: darkenHex('#5865F2', 0.2),
+    tailwind: 'border-indigo-500 bg-indigo-950 text-indigo-400',
+    tailwindSelected: 'border-indigo-400 bg-indigo-900 ring-2 ring-indigo-400',
+    charLimit: 2000,
+    verb: 'Message',
+    previewComponent: 'DiscordPostPreview',
+  },
+  twitch: {
+    label: 'Twitch',
+    icon: 'T',
+    emoji: '🎬',
+    color: '#9146FF',
+    hoverColor: darkenHex('#9146FF', 0.2),
+    tailwind: 'border-purple-500 bg-purple-950 text-purple-400',
+    tailwindSelected: 'border-purple-400 bg-purple-900 ring-2 ring-purple-400',
+    charLimit: 500,
+    verb: 'Announcement',
+    previewComponent: 'TwitchPostPreview',
+  },
 };
 
 // ─── Helper Functions ────────────────────────────────────────────────────────

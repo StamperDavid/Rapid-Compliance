@@ -52,6 +52,7 @@ import { PlatformComposer } from '@/components/social/composers';
 
 import {
   BlueskyPostPreview,
+  DiscordPostPreview,
   FacebookPostPreview,
   GoogleBusinessPostPreview,
   InstagramPostPreview,
@@ -63,6 +64,7 @@ import {
   ThreadsPostPreview,
   TikTokPostPreview,
   TruthSocialPostPreview,
+  TwitchPostPreview,
   TwitterPostPreview,
   WhatsAppBusinessPostPreview,
   YouTubePostPreview,
@@ -172,6 +174,8 @@ const PREVIEW_BY_PLATFORM: Record<SocialPlatform, PreviewComponent> = {
   pinterest: PinterestPostPreview as PreviewComponent,
   whatsapp_business: WhatsAppBusinessPostPreview as PreviewComponent,
   google_business: GoogleBusinessPostPreview as PreviewComponent,
+  discord: DiscordPostPreview as PreviewComponent,
+  twitch: TwitchPostPreview as PreviewComponent,
 };
 
 function getPostPreviewComponent(platform: SocialPlatform): PreviewComponent {

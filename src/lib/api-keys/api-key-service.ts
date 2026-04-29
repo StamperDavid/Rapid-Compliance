@@ -324,6 +324,10 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         return keys.social?.bluesky ?? null;
       case 'mastodon':
         return keys.social?.mastodon ?? null;
+      case 'discord':
+        return keys.social?.discord ?? null;
+      case 'twitch':
+        return keys.social?.twitch ?? null;
 
       default:
         return null;
