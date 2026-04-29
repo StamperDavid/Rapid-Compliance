@@ -18,6 +18,8 @@ import {
   exchangeTikTokCode,
   exchangeRedditCode,
   exchangePinterestCode,
+  exchangeDiscordCode,
+  exchangeTwitchCode,
   fetchTwitterProfile,
   fetchLinkedInProfile,
   fetchYouTubeChannel,
@@ -25,12 +27,22 @@ import {
   fetchTikTokProfile,
   fetchRedditProfile,
   fetchPinterestProfile,
+  fetchDiscordProfile,
+  fetchTwitchProfile,
   fetchThreadsProfile,
   fetchWhatsAppPhoneNumbers,
   encryptCredentials,
 } from '@/lib/social/social-oauth-service';
 import { SocialAccountService } from '@/lib/social/social-account-service';
-import type { MetaCredentials, GoogleSocialCredentials, TikTokCredentials, RedditCredentials, PinterestCredentials } from '@/types/social';
+import type {
+  MetaCredentials,
+  GoogleSocialCredentials,
+  TikTokCredentials,
+  RedditCredentials,
+  PinterestCredentials,
+  DiscordCredentials,
+  TwitchCredentials,
+} from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -389,6 +401,77 @@ export async function GET(
         });
 
         return NextResponse.redirect(`${settingsUrl}?success=pinterest&category=social`);
+      }
+
+      case 'discord': {
+        const { tokens } = await exchangeDiscordCode(code, state);
+        const profile = await fetchDiscordProfile(tokens.accessToken);
+        const encrypted = encryptCredentials(tokens);
+
+        // Discord includes guild_id in callback when bot scope is granted.
+        const guildId = searchParams.get('guild_id') ?? '';
+        const applicationId = process.env.DISCORD_CLIENT_ID ?? '';
+
+        const discordCreds: DiscordCredentials = {
+          botToken: process.env.DISCORD_BOT_TOKEN ?? '',
+          accessToken: encrypted.accessToken,
+          refreshToken: encrypted.refreshToken,
+          tokenExpiresAt: encrypted.tokenExpiresAt,
+          guildId,
+          applicationId,
+        };
+
+        await SocialAccountService.addAccount({
+          platform: 'discord',
+          accountName: profile.username,
+          handle: guildId || profile.id,
+          profileImageUrl: profile.avatarUrl,
+          isDefault: true,
+          status: 'active',
+          credentials: discordCreds,
+        });
+
+        logger.info('Discord server connected via OAuth', {
+          route: '/api/social/oauth/callback',
+          username: profile.username,
+          guildId,
+        });
+
+        return NextResponse.redirect(`${settingsUrl}?success=discord&category=social`);
+      }
+
+      case 'twitch': {
+        const { tokens } = await exchangeTwitchCode(code, state);
+        const profile = await fetchTwitchProfile(tokens.accessToken);
+        const encrypted = encryptCredentials(tokens);
+
+        const twitchCreds: TwitchCredentials = {
+          accessToken: encrypted.accessToken,
+          refreshToken: encrypted.refreshToken,
+          tokenExpiresAt: encrypted.tokenExpiresAt,
+          userId: profile.id,
+          login: profile.login,
+          displayName: profile.displayName,
+          scope: tokens.scope,
+        };
+
+        await SocialAccountService.addAccount({
+          platform: 'twitch',
+          accountName: profile.displayName,
+          handle: profile.login,
+          profileImageUrl: profile.profileImageUrl,
+          isDefault: true,
+          status: 'active',
+          credentials: twitchCreds,
+        });
+
+        logger.info('Twitch channel connected via OAuth', {
+          route: '/api/social/oauth/callback',
+          login: profile.login,
+          userId: profile.id,
+        });
+
+        return NextResponse.redirect(`${settingsUrl}?success=twitch&category=social`);
       }
 
       default:

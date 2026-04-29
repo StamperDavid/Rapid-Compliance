@@ -19,6 +19,8 @@ import {
   generateTikTokAuthUrl,
   generateRedditAuthUrl,
   generatePinterestAuthUrl,
+  generateDiscordAuthUrl,
+  generateTwitchAuthUrl,
 } from '@/lib/social/social-oauth-service';
 
 export const dynamic = 'force-dynamic';
@@ -92,6 +94,12 @@ export async function GET(
         break;
       case 'pinterest':
         authUrl = await generatePinterestAuthUrl(userId);
+        break;
+      case 'discord':
+        authUrl = await generateDiscordAuthUrl(userId);
+        break;
+      case 'twitch':
+        authUrl = await generateTwitchAuthUrl(userId);
         break;
       default:
         // Platforms without OAuth flow yet — return helpful error

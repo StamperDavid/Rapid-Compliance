@@ -217,6 +217,8 @@ export const SOCIAL_PLATFORMS = [
   // Tier 1 expansion
   'bluesky', 'threads', 'mastodon', 'truth_social', 'telegram',
   'reddit', 'pinterest', 'whatsapp_business', 'google_business',
+  // Creator-track (Apr 28 2026)
+  'discord', 'twitch',
 ] as const;
 
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
@@ -525,6 +527,36 @@ export interface TruthSocialCredentials {
   username: string;
 }
 
+export interface DiscordCredentials {
+  /** Bot token from Developer Portal — used for REST API calls */
+  botToken: string;
+  /** OAuth access token for the user/guild owner who installed the bot */
+  accessToken?: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+  /** Guild (server) ID where this bot is installed */
+  guildId: string;
+  /** Guild name for display */
+  guildName?: string;
+  /** Application (bot) ID */
+  applicationId: string;
+}
+
+export interface TwitchCredentials {
+  /** OAuth access token for the connected channel owner */
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+  /** Twitch user ID (broadcaster_id) */
+  userId: string;
+  /** Twitch login (username) */
+  login: string;
+  /** Display name */
+  displayName?: string;
+  /** OAuth scopes granted */
+  scope?: string;
+}
+
 export type SocialCredentials =
   | TwitterCredentials
   | LinkedInCredentials
@@ -535,7 +567,9 @@ export type SocialCredentials =
   | PinterestCredentials
   | BlueskyCredentials
   | TelegramCredentials
-  | TruthSocialCredentials;
+  | TruthSocialCredentials
+  | DiscordCredentials
+  | TwitchCredentials;
 
 export interface SocialAccount {
   id: string;

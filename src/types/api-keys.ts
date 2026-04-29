@@ -227,6 +227,36 @@ export interface APIKeysConfig {
       /** OAuth client secret from app registration (kept for reference) */
       clientSecret?: string;
     };
+    discord?: {
+      /** Bot token for the central SalesVelocity Discord application */
+      botToken?: string;
+      /** Application (client) id of the central Discord app */
+      applicationId?: string;
+      /** OAuth client secret for tenant-side OAuth flows */
+      clientSecret?: string;
+      /** Default guild (server) id this brand posts into */
+      guildId?: string;
+      /** Cached guild name for display */
+      guildName?: string;
+    };
+    twitch?: {
+      /** Central Twitch developer app client id */
+      clientId?: string;
+      /** Central Twitch developer app client secret */
+      clientSecret?: string;
+      /** OAuth user access token for the connected channel owner */
+      accessToken?: string;
+      /** OAuth refresh token */
+      refreshToken?: string;
+      /** Twitch broadcaster id (Helix user.id) */
+      userId?: string;
+      /** Twitch login (username) */
+      login?: string;
+      /** Cached display name */
+      displayName?: string;
+      /** OAuth scopes granted (space-separated) */
+      scope?: string;
+    };
   };
 
   // Other Integrations
@@ -357,6 +387,8 @@ export type APIServiceName =
   | 'pinterest'        // Pinterest API v5
   | 'whatsapp_business' // WhatsApp Business Cloud API
   | 'google_business'  // Google Business Profile API
+  | 'discord'          // Discord — bot REST + OAuth (creator-track Apr 28 2026)
+  | 'twitch'           // Twitch — Helix REST + OAuth (creator-track Apr 28 2026)
   | 'elevenlabs'   // ElevenLabs Voice AI
   | 'unrealSpeech' // Unreal Speech TTS
   | 'serper'        // Serper.dev Google Search API
