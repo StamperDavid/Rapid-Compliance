@@ -194,10 +194,10 @@ export default function CustomDomainsPage() {
     <div className="p-8 space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <PageTitle>Custom Domains</PageTitle>
+          <PageTitle>Custom Domain</PageTitle>
           <SectionDescription className="mt-1">Connect your own domain to your website</SectionDescription>
         </div>
-        <Button onClick={() => setShowAddModal(true)} variant="default">
+        <Button onClick={() => setShowAddModal(true)} variant="default" disabled={domains.length > 0}>
           <Plus size={16} className="mr-1" /> Add Domain
         </Button>
       </div>
@@ -218,10 +218,10 @@ export default function CustomDomainsPage() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/20 flex items-center justify-center">
             <Link2 size={32} className="text-primary" />
           </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">No custom domains yet</h3>
-          <p className="text-sm text-muted-foreground mb-4">Add a custom domain to use your own branded URL</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">No custom domain yet</h3>
+          <p className="text-sm text-muted-foreground mb-4">Connect your branded domain to your website</p>
           <Button onClick={() => setShowAddModal(true)} variant="default">
-            <Plus size={16} className="mr-1" /> Add Your First Domain
+            <Plus size={16} className="mr-1" /> Add Your Domain
           </Button>
         </div>
       )}
