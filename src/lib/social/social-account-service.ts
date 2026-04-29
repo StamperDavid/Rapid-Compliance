@@ -33,15 +33,28 @@ export class SocialAccountService {
   /**
    * List all social accounts, optionally filtered by platform.
    * Sorted by `addedAt` desc.
+   *
+   * NOTE: when a platform filter is supplied we sort in JS rather than
+   * via Firestore orderBy, because `where('platform') + orderBy('addedAt')`
+   * needs a composite index that is not deployed. Per-platform results
+   * are small (1-2 rows), so client-side sort is the simpler fix.
    */
   static async listAccounts(platform?: SocialPlatform): Promise<SocialAccount[]> {
     try {
       const collectionRef = getDb().collection(accountsPath());
-      const query = platform
-        ? collectionRef.where('platform', '==', platform).orderBy('addedAt', 'desc')
-        : collectionRef.orderBy('addedAt', 'desc');
-      const snap = await query.get();
-      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SocialAccount, 'id'>) }));
+      let docs;
+      if (platform) {
+        const snap = await collectionRef.where('platform', '==', platform).get();
+        docs = snap.docs;
+      } else {
+        const snap = await collectionRef.orderBy('addedAt', 'desc').get();
+        docs = snap.docs;
+      }
+      const rows = docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SocialAccount, 'id'>) }));
+      if (platform) {
+        rows.sort((a, b) => (b.addedAt ?? '').localeCompare(a.addedAt ?? ''));
+      }
+      return rows;
     } catch (error) {
       logger.error('SocialAccountService: Failed to list accounts', error instanceof Error ? error : new Error(String(error)));
       return [];
