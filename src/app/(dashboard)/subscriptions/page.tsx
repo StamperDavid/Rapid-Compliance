@@ -15,6 +15,8 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { CATALOG_TABS } from '@/lib/constants/subpage-nav';
 
 interface Subscription {
   id?: string;
@@ -127,6 +129,7 @@ export default function SubscriptionsPage() {
   if (loading) {
     return (
       <div className="p-8 space-y-6">
+        <SubpageNav items={CATALOG_TABS} />
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-surface-elevated rounded" />
           <div className="h-4 w-72 bg-surface-elevated rounded" />
@@ -140,6 +143,8 @@ export default function SubscriptionsPage() {
 
   return (
     <div className="p-8 space-y-6">
+      <SubpageNav items={CATALOG_TABS} />
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <PageTitle>Subscriptions</PageTitle>

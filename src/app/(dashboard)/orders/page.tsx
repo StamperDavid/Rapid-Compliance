@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { CATALOG_TABS } from '@/lib/constants/subpage-nav';
 
 interface OrderCustomer {
   firstName: string;
@@ -247,6 +249,8 @@ export default function OrdersPage() {
 
   return (
     <div className="p-8 space-y-6">
+      <SubpageNav items={CATALOG_TABS} />
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>

@@ -22,6 +22,8 @@ import {
   FileText
 } from 'lucide-react';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
 import { getWorkflows, setWorkflowStatus, deleteWorkflow } from '@/lib/workflows/workflow-service';
 import { usePagination } from '@/hooks/usePagination';
 import { logger } from '@/lib/logger/logger';
@@ -133,6 +135,8 @@ export default function WorkflowsPage() {
 
   return (
     <div className="p-8 space-y-6">
+      <SubpageNav items={EMAIL_STUDIO_TABS} />
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
