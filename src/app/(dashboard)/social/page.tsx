@@ -593,12 +593,13 @@ function PlatformCard({ row }: { row: PlatformRow }) {
   );
 
   const baseClasses = 'block p-3 rounded-xl border border-border-light bg-card transition-colors';
-  // Per UX spec: only Live + connected platforms render at full opacity.
-  // Coming Soon, Not Available, and "Not connected, click to login" all
-  // render greyed-out. The click-to-login state is still interactive
-  // (Link wrapper) so the OAuth flow can fire when wired per platform.
+  // Per UX spec: only Live + connected platforms render at full color.
+  // Everything else — Coming Soon, Not Available, and "Not connected,
+  // click to login" — renders fully greyed: grayscale filter desaturates
+  // the platform icon, opacity-40 dims the whole card, and pointer-events
+  // can stay enabled so click-to-login remains actionable when wired.
   const greyed = !row.connected || row.state === 'coming_soon' || row.state === 'parked';
-  const greyedClass = greyed ? 'opacity-60' : '';
+  const greyedClass = greyed ? 'opacity-40 grayscale' : '';
 
   if (!isInteractive) {
     return <div className={`${baseClasses} ${greyedClass}`}>{inner}</div>;
