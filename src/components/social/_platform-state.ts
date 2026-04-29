@@ -72,78 +72,103 @@ const PLATFORM_CONFIG: Record<SocialPlatform, PlatformConfig> = {
     specialistName: 'Mastodon Expert',
     dmCapability: 'live',
   },
+  // Apr 28 2026 — re-stated to reflect actual operator-facing reality.
+  // Previously these were `live_dm_blocked` / `live_no_dm` / `no_specialist`,
+  // which lumped them into "Available — not connected" and made the dashboard
+  // imply they were ready to OAuth into. They aren't — each is gated on an
+  // external approval that hasn't started or hasn't cleared. Anything not
+  // actually connectable today is `coming_soon` so the renderer puts it in
+  // the muted "Coming soon" group with a clear reason.
   linkedin: {
-    state: 'live_dm_blocked',
+    state: 'coming_soon',
     specialistId: 'LINKEDIN_EXPERT',
     specialistName: 'LinkedIn Expert',
     dmCapability: 'blocked',
     blockReason:
-      'LinkedIn DM send requires Marketing Developer Platform approval (multi-day external process)',
+      'LinkedIn requires Marketing Developer Platform approval (1–3 weeks) before client deployments can post.',
     unblockAction: 'Apply for LinkedIn Marketing Developer Platform',
   },
   facebook: {
-    state: 'live_dm_blocked',
+    state: 'coming_soon',
     specialistId: 'FACEBOOK_ADS_EXPERT',
     specialistName: 'Facebook Ads Expert',
     dmCapability: 'blocked',
     blockReason:
-      'Meta Business Verification required for pages_messaging in production',
+      'Meta Developer App registration paused on device-trust gate (Apr 28). Retry no sooner than May 1–2; Meta Business Verification follows.',
     unblockAction:
-      'Start Meta Business Verification (bundled with Instagram OAuth when verified)',
+      'Resume Meta Developer App registration after the device-trust window clears',
   },
   instagram: {
-    state: 'live_dm_blocked',
+    state: 'coming_soon',
     specialistId: 'INSTAGRAM_EXPERT',
     specialistName: 'Instagram Expert',
     dmCapability: 'blocked',
     blockReason:
-      'Same Meta Business Verification gate (instagram_manage_messages)',
+      'Same Meta gate as Facebook (bundled). Unblocks together once Meta Developer App + Business Verification clear.',
     unblockAction:
-      'Start Meta Business Verification (bundled with Facebook OAuth when verified)',
+      'Resume Meta Developer App registration (Instagram OAuth bundles with Facebook)',
   },
   pinterest: {
-    state: 'live_dm_blocked',
+    state: 'coming_soon',
     specialistId: 'PINTEREST_EXPERT',
     specialistName: 'Pinterest Expert',
     dmCapability: 'deferred',
     blockReason:
-      'Pinterest is discovery-focused, not conversational — DM integration low priority',
+      'Pinterest Developer Portal approval (1–3 days). Application not yet submitted.',
+    unblockAction: 'Submit Pinterest Developer Portal application',
   },
   tiktok: {
-    state: 'live_no_dm',
+    state: 'coming_soon',
     specialistId: 'TIKTOK_EXPERT',
     specialistName: 'TikTok Expert',
     dmCapability: 'na',
+    blockReason:
+      'TikTok Content Posting API + Login Kit submission in progress. Pending app icon, demo video, and scope selection (Apr 28).',
+    unblockAction: 'Upload icon, record demo video, finalize scopes, click Submit',
   },
   youtube: {
-    state: 'live_no_dm',
+    state: 'coming_soon',
     specialistId: 'YOUTUBE_EXPERT',
     specialistName: 'YouTube Expert',
     dmCapability: 'na',
+    blockReason:
+      'Google OAuth verification (1–4 weeks). Application not yet submitted.',
+    unblockAction: 'Submit Google OAuth verification for the YouTube scope',
   },
   threads: {
-    state: 'no_specialist',
+    state: 'coming_soon',
     specialistId: null,
     specialistName: null,
     dmCapability: 'na',
+    blockReason:
+      'Threads piggybacks on the Meta gate (same as Facebook/Instagram). No specialist yet — public Threads API exposes posts only, no DM.',
+    unblockAction: 'Resume Meta Developer App, then build THREADS_EXPERT',
   },
   telegram: {
-    state: 'no_specialist',
+    state: 'parked',
     specialistId: null,
     specialistName: null,
     dmCapability: 'na',
+    blockReason:
+      'US SMB adoption < 10%. Marked for deletion (Apr 27 2026) — no commercial brand-account flow worth the surface area.',
   },
   whatsapp_business: {
-    state: 'no_specialist',
+    state: 'coming_soon',
     specialistId: null,
     specialistName: null,
     dmCapability: 'na',
+    blockReason:
+      'Customer-initiated 24h messaging window only — narrow use case for outbound. Deferred until inbound customer-support automation is on the roadmap.',
+    unblockAction: 'Re-evaluate when customer-support automation is in scope',
   },
   google_business: {
-    state: 'no_specialist',
+    state: 'coming_soon',
     specialistId: null,
     specialistName: null,
     dmCapability: 'na',
+    blockReason:
+      'Google Business Profile verification + GCP OAuth approval required (days). No specialist built yet.',
+    unblockAction: 'Verify Google Business Profile, request GCP OAuth scope, then build GOOGLE_BUSINESS_EXPERT',
   },
   reddit: {
     state: 'coming_soon',
