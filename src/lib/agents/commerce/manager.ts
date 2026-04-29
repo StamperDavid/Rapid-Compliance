@@ -146,22 +146,26 @@ export interface CommerceBrief {
   taskId: string;
   generatedAt: string;
   executionTimeMs: number;
+  // Revenue + subscription metrics are null when no Stripe / order-aggregation
+  // source is wired into this manager. Previously every field was hardcoded to
+  // 0, which the dashboard rendered as "$0 MRR" — indistinguishable from a
+  // failing real business. Null is honest: "no data, not zero."
   revenue: {
-    mrr: number;
-    mrrGrowth: number;
-    arr: number;
-    transactionVolume: number;
-    transactionCount: number;
-    averageOrderValue: number;
+    mrr: number | null;
+    mrrGrowth: number | null;
+    arr: number | null;
+    transactionVolume: number | null;
+    transactionCount: number | null;
+    averageOrderValue: number | null;
   };
   subscriptions: {
-    total: number;
-    active: number;
-    trial: number;
-    pastDue: number;
-    cancelled: number;
-    churnRate: number;
-    trialConversionRate: number;
+    total: number | null;
+    active: number | null;
+    trial: number | null;
+    pastDue: number | null;
+    cancelled: number | null;
+    churnRate: number | null;
+    trialConversionRate: number | null;
   };
   catalog: {
     totalProducts: number;
@@ -830,27 +834,32 @@ export class CommerceManager extends BaseManager {
         recommendations.push(`${inventoryMetrics.lowStockItems} items low on stock - review reorder thresholds`);
       }
 
-      // Build CommerceBrief
+      // Build CommerceBrief.
+      // Revenue + subscription fields are null until a real Stripe aggregator
+      // or order-DB query is plumbed into this manager. Previously they were
+      // hardcoded to 0 across the board, which Jasper read as "the business
+      // has $0 MRR" instead of "we don't know yet." Null forces consumers to
+      // surface the gap rather than treat the placeholder as data.
       const brief: CommerceBrief = {
         taskId,
         generatedAt: new Date().toISOString(),
         executionTimeMs: Date.now() - startTime,
         revenue: {
-          mrr: 0,
-          mrrGrowth: 0,
-          arr: 0,
-          transactionVolume: 0,
-          transactionCount: 0,
-          averageOrderValue: 0,
+          mrr: null,
+          mrrGrowth: null,
+          arr: null,
+          transactionVolume: null,
+          transactionCount: null,
+          averageOrderValue: null,
         },
         subscriptions: {
-          total: 0,
-          active: 0,
-          trial: 0,
-          pastDue: 0,
-          cancelled: 0,
-          churnRate: 0,
-          trialConversionRate: 0,
+          total: null,
+          active: null,
+          trial: null,
+          pastDue: null,
+          cancelled: null,
+          churnRate: null,
+          trialConversionRate: null,
         },
         catalog: {
           totalProducts: catalogSummary.totalProducts,
@@ -870,7 +879,7 @@ export class CommerceManager extends BaseManager {
         this.identity.id,
         'PERFORMANCE' as InsightData['type'],
         'Commerce Revenue Brief',
-        `Transaction volume: ${brief.revenue.transactionVolume}, Products: ${catalogSummary.totalProducts}`,
+        `Transaction volume: ${brief.revenue.transactionVolume ?? 'unknown'}, Products: ${catalogSummary.totalProducts}`,
         {
           confidence: brief.confidence,
           sources: ['CATALOG_MANAGER', 'INVENTORY_MANAGER'],

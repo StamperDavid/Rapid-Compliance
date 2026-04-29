@@ -1,6 +1,29 @@
-// STATUS: FUNCTIONAL - Voice AI Specialist wired to VoiceProviderFactory (Twilio/Telnyx/Bandwidth/Vonage)
-// Voice AI Specialist
-// FUNCTIONAL LOC: 350+
+/**
+ * Voice Service — DETERMINISTIC TWILIO/TELNYX/BANDWIDTH/VONAGE DISPATCHER
+ *
+ * Despite the historical "VOICE_AI_SPECIALIST" name, this module does NOT
+ * call an LLM. It is a thin control-plane wrapper over VoiceProviderFactory
+ * that initiates calls, fetches status, ends calls, sends DTMF, transfers,
+ * and pulls recordings — all by directly invoking the provider SDK.
+ *
+ * It is registered as a "specialist" because it lives under
+ * src/lib/agents/outreach/voice/, reports to OUTREACH_MANAGER, and emits
+ * AgentReports — but per Standing Rule #1 ("every LLM agent has a Golden
+ * Master") this is NOT an LLM agent. There is no GM, no Brand DNA injection,
+ * and the previous decorative `systemPrompt` constant was never sent to any
+ * model — keeping it in the config implied AI-agent shape that didn't exist.
+ *
+ * Future work (explicit, NOT yet implemented):
+ *   - LLM-driven call planning (script generation per lead context)
+ *   - Transcript analysis post-call (sentiment, objection detection)
+ *   - Outcome classification (won/lost/needs-followup)
+ * When any of those land, they get their own action handlers, their own GM,
+ * and Brand DNA baked in at seed time — at which point the systemPrompt
+ * field comes back, but tied to a real LLM call.
+ *
+ * Action surface: make_call, get_call_status, end_call, send_dtmf,
+ * transfer_call, get_recording, log_outcome. All deterministic.
+ */
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, AgentStatus, SpecialistConfig, Signal } from '../../types';
@@ -12,10 +35,16 @@ import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============== Configuration ==============
 
+// Deterministic dispatcher — no LLM fields. The previous CONFIG carried
+// `systemPrompt`, `tools`, `outputSchema`, `maxTokens`, and `temperature`
+// from the SpecialistConfig type, all of which were never used by any code
+// path. They've been removed so the config matches what this module actually
+// does. SpecialistConfig.systemPrompt remains required by the type, so we
+// pass an empty string with a comment explaining why.
 const CONFIG: SpecialistConfig = {
   identity: {
     id: 'VOICE_AI_SPECIALIST',
-    name: 'Voice AI Specialist',
+    name: 'Voice Service (Twilio dispatcher)',
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'OUTREACH_MANAGER',
@@ -27,32 +56,18 @@ const CONFIG: SpecialistConfig = {
       'transfer_call',
       'get_recording',
       'call_tracking',
-      'ai_conversation',
     ],
   },
-  systemPrompt: `You are a Voice AI Specialist agent responsible for managing voice call operations.
-Your capabilities include:
-- Initiating AI-driven voice calls via Twilio, Telnyx, Bandwidth, or Vonage
-- Managing active calls (hold, transfer, hang up)
-- Recording calls and retrieving transcripts
-- Tracking call outcomes for lead scoring
-- DTMF-based IVR interactions
-
-Always validate phone numbers (E.164 format), respect DNC lists, and comply with TCPA regulations.
-Record all call outcomes for analytics and lead scoring.`,
-  tools: ['make_call', 'get_call_status', 'end_call', 'send_dtmf', 'transfer_call', 'get_recording'],
-  outputSchema: {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      callId: { type: 'string' },
-      status: { type: 'object' },
-      recording: { type: 'string' },
-      error: { type: 'string' },
-    },
-  },
-  maxTokens: 4096,
-  temperature: 0.3,
+  // The next four fields are required by SpecialistConfig (which assumes
+  // every specialist is LLM-driven) but never read by this module — it is a
+  // deterministic Twilio dispatcher. Empty/zero values document that fact;
+  // they cannot be removed without updating SpecialistConfig itself, which
+  // would touch every specialist file. Future structural cleanup.
+  systemPrompt: '',
+  tools: [],
+  outputSchema: { type: 'object', properties: {} },
+  maxTokens: 0,
+  temperature: 0,
 };
 
 // ============== Type Definitions ==============
