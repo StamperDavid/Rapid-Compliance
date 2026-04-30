@@ -168,10 +168,10 @@ export async function createLead(
     };
 
     if (options.useAdminSdk) {
-      await AdminFirestoreService.set(
+      await AdminFirestoreService.set<Lead>(
         getSubCollection('leads'),
         leadId,
-        lead as unknown as Record<string, unknown>,
+        lead,
       );
     } else {
       await FirestoreService.set(

@@ -60,21 +60,26 @@ function ensureAdminDb() {
 
 export class AdminFirestoreService {
   /**
-   * Get a single document by ID
+   * Get a single document by ID. Generic over the document shape so callers
+   * can read into a typed interface without a separate cast — mirrors the
+   * client-SDK FirestoreService.get pattern.
    */
-  static async get(collectionPath: string, docId: string): Promise<FirestoreDocument | null> {
+  static async get<T extends object = FirestoreDocument>(
+    collectionPath: string,
+    docId: string,
+  ): Promise<T | null> {
     try {
       const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
       const doc = await docRef.get();
-      
+
       if (!doc.exists) {
         return null;
       }
-      
+
       return {
         id: doc.id,
         ...doc.data(),
-      };
+      } as T;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error(`[Admin Firestore] Error getting document ${collectionPath}/${docId}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
@@ -246,21 +251,24 @@ export class AdminFirestoreService {
   }
 
   /**
-   * Set/create a document (creates if doesn't exist)
+   * Set/create a document (creates if doesn't exist). Generic over the
+   * document shape so callers can write a typed interface without an
+   * explicit `Record<string, unknown>` cast — mirrors the client-SDK
+   * FirestoreService.set pattern.
    */
-  static async set(
+  static async set<T extends object = Record<string, unknown>>(
     collectionPath: string,
     docId: string,
-    data: Record<string, unknown>,
+    data: T,
     merge: boolean = false
   ): Promise<void> {
     try {
       const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
-      
+
       if (merge) {
-        await docRef.set(data, { merge: true });
+        await docRef.set(data as Record<string, unknown>, { merge: true });
       } else {
-        await docRef.set(data);
+        await docRef.set(data as Record<string, unknown>);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
