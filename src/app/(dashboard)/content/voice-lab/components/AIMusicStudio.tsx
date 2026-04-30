@@ -1044,6 +1044,37 @@ export function AIMusicStudio() {
     );
   };
 
+  // ── Adapter: UnifiedMediaAsset (new API) → local GeneratedTrack shape ──
+  const adaptAssetToTrack = useCallback((
+    asset: {
+      id: string;
+      name: string;
+      url: string;
+      duration?: number;
+      aiPrompt?: string;
+      createdAt: string;
+      updatedAt: string;
+    },
+    opts: { isPreview: boolean; parentPreviewId: string | null },
+  ): GeneratedTrack => ({
+    id: asset.id,
+    title: asset.name,
+    audioUrl: asset.url,
+    duration: asset.duration ?? 0,
+    style: resolvedStyle,
+    mood: selectedMoods,
+    tempo,
+    hasVocals: !instrumental,
+    voiceStyle: !instrumental ? voiceStyle : null,
+    lyrics: !instrumental && lyrics.trim() ? lyrics.trim() : null,
+    prompt: asset.aiPrompt ?? prompt.trim(),
+    isFavorite: false,
+    isPreview: opts.isPreview,
+    parentPreviewId: opts.parentPreviewId,
+    createdAt: asset.createdAt,
+    updatedAt: asset.updatedAt,
+  }), [resolvedStyle, selectedMoods, tempo, instrumental, voiceStyle, lyrics, prompt]);
+
   // ── Generate Preview ──
   const handleGeneratePreview = async () => {
     if (!prompt.trim() || !selectedGenre) { return; }
@@ -1052,44 +1083,45 @@ export function AIMusicStudio() {
     setPreviewTrack(null);
 
     try {
-      const res = await authFetch('/api/audio/music/generate', {
+      const moodLabel = selectedMoods.length > 0 ? selectedMoods.join(', ') : undefined;
+      const res = await authFetch('/api/content/music/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: prompt.trim(),
-          style: resolvedStyle,
-          duration: 10,
-          instrumental,
-          mood: selectedMoods.length > 0 ? selectedMoods : undefined,
-          tempo,
-          voiceStyle: !instrumental ? voiceStyle : undefined,
-          lyrics: !instrumental && lyrics.trim() ? lyrics.trim() : undefined,
-          isPreview: true,
+          genre: resolvedStyle,
+          mood: moodLabel,
+          durationSeconds: 10,
         }),
       });
 
       const data = await res.json() as {
         success: boolean;
-        track?: GeneratedTrack;
+        asset?: {
+          id: string;
+          name: string;
+          url: string;
+          duration?: number;
+          aiPrompt?: string;
+          createdAt: string;
+          updatedAt: string;
+        };
         error?: string;
       };
 
-      if (!data.success) {
+      if (!data.success || !data.asset) {
         setError(data.error ?? 'Preview generation failed');
         return;
       }
 
-      if (data.track) {
-        setPreviewTrack(data.track);
-        setStep('preview');
+      const track = adaptAssetToTrack(data.asset, { isPreview: true, parentPreviewId: null });
+      setPreviewTrack(track);
+      setStep('preview');
 
-        // Auto-play the preview
-        setTimeout(() => {
-          if (data.track) {
-            playTrack(data.track);
-          }
-        }, 500);
-      }
+      // Auto-play the preview
+      setTimeout(() => {
+        playTrack(track);
+      }, 500);
     } catch {
       setError('Failed to generate preview. Check your API key configuration.');
     } finally {
@@ -1104,45 +1136,50 @@ export function AIMusicStudio() {
     setError(null);
 
     try {
-      const res = await authFetch('/api/audio/music/generate', {
+      const moodLabel = selectedMoods.length > 0 ? selectedMoods.join(', ') : undefined;
+      const res = await authFetch('/api/content/music/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: prompt.trim(),
-          style: resolvedStyle,
-          duration: selectedDuration,
-          instrumental,
-          mood: selectedMoods.length > 0 ? selectedMoods : undefined,
-          tempo,
-          voiceStyle: !instrumental ? voiceStyle : undefined,
-          lyrics: !instrumental && lyrics.trim() ? lyrics.trim() : undefined,
-          isPreview: false,
-          parentPreviewId: previewTrack?.id,
+          genre: resolvedStyle,
+          mood: moodLabel,
+          durationSeconds: selectedDuration,
         }),
       });
 
       const data = await res.json() as {
         success: boolean;
-        track?: GeneratedTrack;
+        asset?: {
+          id: string;
+          name: string;
+          url: string;
+          duration?: number;
+          aiPrompt?: string;
+          createdAt: string;
+          updatedAt: string;
+        };
         error?: string;
       };
 
-      if (!data.success) {
+      if (!data.success || !data.asset) {
         setError(data.error ?? 'Generation failed');
         return;
       }
 
-      if (data.track) {
-        setTracks((prev) => [data.track as GeneratedTrack, ...prev]);
-        setStep('genre');
-        setPreviewTrack(null);
-        setPrompt('');
-        setSelectedGenre('');
-        setSelectedMoods([]);
-        setCustomStyle('');
-        setLyrics('');
-        cleanupAudio();
-      }
+      const fullTrack = adaptAssetToTrack(data.asset, {
+        isPreview: false,
+        parentPreviewId: previewTrack?.id ?? null,
+      });
+      setTracks((prev) => [fullTrack, ...prev]);
+      setStep('genre');
+      setPreviewTrack(null);
+      setPrompt('');
+      setSelectedGenre('');
+      setSelectedMoods([]);
+      setCustomStyle('');
+      setLyrics('');
+      cleanupAudio();
     } catch {
       setError('Failed to generate music. Check your API key configuration.');
     } finally {

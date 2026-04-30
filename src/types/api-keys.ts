@@ -123,6 +123,10 @@ export interface APIKeysConfig {
     minimax?: {
       apiKey: string;
     };
+    /** Replicate.com — used for MusicGen (Meta) music synthesis */
+    replicate?: {
+      apiKey: string;
+    };
   };
 
   // Video Generation Services
@@ -404,6 +408,7 @@ export type APIServiceName =
   | 'dataforseo'   // DataForSEO (keyword data, SERP, domain metrics)
   | 'later'        // Later.com social media scheduling
   | 'minimax'       // MiniMax AI Music Generation
+  | 'replicate'     // Replicate — hosted MusicGen (Meta) for AI music
   | 'hedra'         // Hedra Character-3 talking head avatars
   | 'fal'           // Fal.ai — Flux, SDXL, Stable Diffusion image generation
   | 'google-ai-studio'  // Google AI Studio (Imagen 3) — photorealistic image generation

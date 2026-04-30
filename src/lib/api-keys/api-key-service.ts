@@ -265,6 +265,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       // Audio / Music Services
       case 'minimax':
         return keys.audio?.minimax?.apiKey ?? null;
+      case 'replicate':
+        return keys.audio?.replicate?.apiKey ?? null;
 
       // Video Services
       case 'hedra':

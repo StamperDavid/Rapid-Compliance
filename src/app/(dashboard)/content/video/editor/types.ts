@@ -9,6 +9,28 @@ import type { TransitionType } from '@/types/video-pipeline';
 // Timeline Types
 // ============================================================================
 
+/**
+ * Lighting / color effect parameters applied to a single clip.
+ * Defaults map to "no change" so an effect-less clip renders unchanged.
+ *  - brightness: -1.0 .. 1.0 (CSS brightness offset; 0 = none)
+ *  - contrast:    0.0 .. 2.0 (CSS contrast multiplier; 1 = none)
+ *  - saturation:  0.0 .. 2.0 (CSS saturate multiplier; 1 = none)
+ *  - hue:        -180 .. 180 (degrees; 0 = none)
+ */
+export interface ClipEffect {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  hue: number;
+}
+
+export const NEUTRAL_EFFECT: ClipEffect = {
+  brightness: 0,
+  contrast: 1,
+  saturation: 1,
+  hue: 0,
+};
+
 export interface EditorClip {
   id: string;
   name: string;
@@ -19,6 +41,7 @@ export interface EditorClip {
   trimEnd: number; // seconds from end to trim
   transitionType: TransitionType;
   source: 'library' | 'project' | 'upload' | 'url';
+  effect?: ClipEffect;
 }
 
 export interface EditorAudioTrack {
@@ -38,6 +61,13 @@ export interface TextOverlay {
   fontSize: number;
   fontColor: string;
   backgroundColor: string;
+  /** Optional canvas position as a normalized fraction (0..1) of the preview frame.
+   *  When set, the overlay is rendered at this absolute spot instead of the
+   *  position alias. Both client preview and ffmpeg render honour it. */
+  canvasX?: number;
+  canvasY?: number;
+  /** Optional font family override. Defaults to a sans-serif stack. */
+  fontFamily?: string;
 }
 
 // ============================================================================
