@@ -204,7 +204,11 @@ export async function exchangeZoomCode(
     });
 
     if (!response.ok) {
-      throw new Error('Failed to exchange Zoom code');
+      // Surface Zoom's actual error body — the generic "Failed to exchange"
+      // message hid the real cause (redirect URI mismatch, expired code,
+      // bad credentials, wrong grant type, etc.) for hours.
+      const errorBody = await response.text();
+      throw new Error(`Zoom token exchange failed (${response.status}): ${errorBody.slice(0, 500)}`);
     }
 
     const data = await response.json() as ZoomOAuthTokenResponse;
