@@ -48,7 +48,7 @@ export default function SettingsPage() {
         { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: `/settings/api-keys`, permission: canManageAPIKeys },
         { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, billing, and outbound feature limits', href: `/settings/billing`, permission: canManageBilling },
         { icon: '🎛️', label: 'Feature Toggles', description: 'Enable or disable platform modules for your organization', href: `/settings/features`, permission: canManageOrganization },
-        { icon: '📅', label: 'Meeting Scheduler', description: 'Configure automated meeting booking with round-robin assignment and Zoom integration', href: `/settings/meeting-scheduler`, permission: canManageOrganization },
+        // Meeting availability moved to per-day "Hours" popout on the dashboard calendar (Apr 29 2026).
         { icon: '✉️', label: 'Scheduling Messages', description: 'Edit the email + on-screen copy for early-access, demo confirmations, Zoom topic, and reminders', href: `/settings/scheduling-messages`, permission: canManageOrganization },
       ]
     },

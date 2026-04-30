@@ -23,7 +23,6 @@ import {
 } from '@/types/unified-rbac';
 import {
   LayoutDashboard,
-  CalendarDays,
   Users,
   Handshake,
   MessageSquare,
@@ -51,9 +50,6 @@ import {
   LayoutTemplate,
   BookOpen,
   Link2,
-  Wand2,
-  FolderOpen,
-  Scissors,
 } from 'lucide-react';
 
 // ============================================================================
@@ -62,6 +58,9 @@ import {
 
 const NAV_SECTIONS: NavigationSection[] = [
   // ── Dashboard (standalone — no section header) ─────────────────────
+  // Calendar lives ON the dashboard now (UnifiedCalendarSection), not as a
+  // separate top-level page. Per-day availability editing is a popout on
+  // each calendar day, not a Settings page.
   {
     id: 'dashboard',
     label: 'Dashboard',
@@ -70,7 +69,6 @@ const NAV_SECTIONS: NavigationSection[] = [
     standalone: true,
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
-      { id: 'calendar', label: 'Calendar', href: '/calendar', icon: CalendarDays, iconColor: 'var(--color-info)' },
     ],
   },
   // ── CRM (7 items) ─────────────────────────────────────────────────
@@ -99,15 +97,12 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'social-hub', label: 'Social Hub', href: '/social', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
-      // Studio — Magic Studio-pattern unified composer (image / video / music / text).
-      { id: 'studio', label: 'Studio', href: '/studio', icon: Wand2, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
-      // Content Generator gating intentionally limited to role only — feature module
-      // gate removed Apr 28 2026 because users were losing the link when their feature
-      // config didn't include video_production. Video/image/audio generation is a core
-      // platform capability and should always be reachable for owner/admin/manager.
+      // Content Generator hub absorbs Studio, Video Editor, and Media Library
+      // as tabs (Apr 29 2026). Per the integrate-don't-sprawl rule, those three
+      // top-level entries were removed and their content lives under
+      // /content/video/{studio,editor,library}. Feature-module gating
+      // intentionally limited to role only (Apr 28 2026 fix).
       { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'video-editor', label: 'Video Editor', href: '/content/video/editor', icon: Scissors, iconColor: 'var(--color-warning)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'media-library', label: 'Media Library', href: '/media', icon: FolderOpen, iconColor: 'var(--color-warning)', requiredPermission: 'canManageSocialMedia' },
       { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
@@ -286,22 +281,12 @@ export default function AdminSidebar() {
       return pathname === '/social' || pathname.startsWith('/social/');
     }
 
-    // Content Generator hub — video, image, library, voice lab.
-    // Note: /content/video/editor has its own dedicated sidebar entry so we
-    // explicitly exclude it here, otherwise both items would highlight at once.
+    // Content Generator hub — Studio, Video, Calendar, Image, Editor, Library, Audio Lab.
+    // The hub absorbs the former /studio, /content/video/editor, and /media
+    // top-level entries as tabs (Apr 29 2026), so all /content/* paths
+    // highlight this single sidebar entry.
     if (href === '/content/video') {
-      if (pathname.startsWith('/content/video/editor')) { return false; }
       return pathname.startsWith('/content/');
-    }
-
-    // Video Editor — standalone CapCut-feel editor
-    if (href === '/content/video/editor') {
-      return pathname.startsWith('/content/video/editor');
-    }
-
-    // Media Library — unified asset browser
-    if (href === '/media') {
-      return pathname === '/media' || pathname.startsWith('/media/');
     }
 
     // Proposals hub — list + builder

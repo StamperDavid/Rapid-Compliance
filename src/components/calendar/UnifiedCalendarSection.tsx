@@ -1,24 +1,34 @@
 'use client';
 
 /**
- * Unified Calendar Dashboard Page
+ * UnifiedCalendarSection
  *
- * One timeline across:
- *   - Meetings (operator-driven)
- *   - Demos (public booking form)
- *   - Google Calendar (synced events)
- *   - Scheduled social posts
- *   - CRM activities
+ * Embeddable dashboard section that renders the unified calendar timeline
+ * (meetings + demos + Google Calendar + scheduled posts + CRM activity)
+ * along with source filter chips and the side detail panel.
  *
- * Filter chips per source, click an event for a side detail panel.
+ * This is the chunk previously found at /calendar; we lifted it out so it
+ * could be mounted directly on /dashboard per the owner's request that
+ * the calendar live ON the dashboard, not on its own top-level page.
+ *
+ * The month-view day headers each carry an "Hours" link that opens an
+ * <AvailabilityPopout> scoped to that day — replaces the deleted
+ * /settings/meeting-scheduler page with a contextual edit affordance.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Calendar as CalendarIcon, ExternalLink, Video, Loader2 } from 'lucide-react';
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  ExternalLink,
+  Video,
+  Loader2,
+} from 'lucide-react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Button } from '@/components/ui/button';
-import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import { SectionTitle, SectionDescription } from '@/components/ui/typography';
+import AvailabilityPopout from '@/components/calendar/AvailabilityPopout';
 import type {
   UnifiedCalendarEvent,
   CalendarEventSource,
@@ -36,7 +46,7 @@ const UnifiedCalendar = dynamic(() => import('@/components/calendar/UnifiedCalen
 interface SourceChipDef {
   source: CalendarEventSource;
   label: string;
-  dot: string;       // tailwind bg color class for the legend dot
+  dot: string; // tailwind bg color class for the legend dot
 }
 
 const SOURCE_CHIPS: SourceChipDef[] = [
@@ -53,7 +63,7 @@ interface EventsApiResponse {
   error?: string;
 }
 
-export default function CalendarDashboardPage() {
+export default function UnifiedCalendarSection() {
   const authFetch = useAuthFetch();
   const [events, setEvents] = useState<UnifiedCalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,13 +72,13 @@ export default function CalendarDashboardPage() {
   const [enabledSources, setEnabledSources] = useState<Set<CalendarEventSource>>(
     new Set<CalendarEventSource>(['meeting', 'booking', 'gcal', 'social_post', 'activity']),
   );
+  const [popoutDate, setPopoutDate] = useState<Date | null>(null);
+  const [popoutOpen, setPopoutOpen] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Default window: 60 days back through 90 days forward — gives operators
-      // a useful look at recent past + booked future without paginating.
       const from = new Date();
       from.setDate(from.getDate() - 60);
       const to = new Date();
@@ -112,18 +122,50 @@ export default function CalendarDashboardPage() {
     { meeting: 0, booking: 0, gcal: 0, social_post: 0, activity: 0 },
   );
 
+  const handleOpenPopoutForDate = useCallback((date: Date) => {
+    setPopoutDate(date);
+    setPopoutOpen(true);
+  }, []);
+
+  // Custom month-view date header — adds the per-day "Hours" link the
+  // owner asked for. react-big-calendar passes `{ date, label }` to this
+  // component for every day cell in the month grid.
+  const calendarComponents = useMemo(() => {
+    const DateHeader = ({ date, label }: { date: Date; label: string }) => (
+      <div className="flex items-center justify-between gap-1 w-full">
+        <span>{label}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenPopoutForDate(date);
+          }}
+          className="inline-flex items-center gap-1 text-[0.6rem] text-muted-foreground hover:text-primary transition-colors"
+          title="Edit hours for this day"
+          aria-label={`Edit hours for ${date.toDateString()}`}
+        >
+          <Clock className="w-3 h-3" />
+          <span>Hours</span>
+        </button>
+      </div>
+    );
+    DateHeader.displayName = 'UnifiedCalendarDateHeader';
+    return { month: { dateHeader: DateHeader } };
+  }, [handleOpenPopoutForDate]);
+
   return (
-    <div className="p-8 space-y-6">
+    <section className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <CalendarIcon className="w-7 h-7 text-primary" />
-            <PageTitle>Calendar</PageTitle>
+          <div className="flex items-center gap-2 mb-1">
+            <CalendarIcon className="w-5 h-5 text-primary" />
+            <SectionTitle>Calendar</SectionTitle>
           </div>
           <SectionDescription>
             Everything in one place — meetings, demos, scheduled posts, CRM
-            activity, and your Google Calendar. Filter by source, drill in for
-            detail.
+            activity, and your Google Calendar. Click an event for detail, or
+            click <strong>Hours</strong> on any day in the month view to edit
+            availability.
           </SectionDescription>
         </div>
         <Button variant="outline" onClick={() => { void fetchEvents(); }} disabled={loading}>
@@ -167,6 +209,7 @@ export default function CalendarDashboardPage() {
           events={events}
           enabledSources={enabledSources}
           onSelectEvent={setSelected}
+          components={calendarComponents}
         />
 
         <aside className="bg-card border border-border-strong rounded-2xl p-6 self-start">
@@ -179,7 +222,13 @@ export default function CalendarDashboardPage() {
           )}
         </aside>
       </div>
-    </div>
+
+      <AvailabilityPopout
+        open={popoutOpen}
+        onOpenChange={setPopoutOpen}
+        date={popoutDate}
+      />
+    </section>
   );
 }
 
