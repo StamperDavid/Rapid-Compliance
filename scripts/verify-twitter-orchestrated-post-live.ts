@@ -32,7 +32,10 @@ runVerify({
   // Twitter API v2 returns { data: { id, text } }; social_post may unwrap.
   // Try several known shapes before failing.
   extractPublicUrl: (parsed) => {
+    // social_post tool returns shape: { status, platform, platformActionId,
+    // actionType, executedAt, ... }. platformActionId = the tweet ID.
     const id =
+      (parsed.platformActionId as string | undefined) ??
       (parsed.id as string | undefined) ??
       (parsed.tweetId as string | undefined) ??
       ((parsed.data as Record<string, unknown> | undefined)?.id as string | undefined) ??

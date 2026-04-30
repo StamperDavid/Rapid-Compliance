@@ -31,12 +31,15 @@ runVerify({
   // "at://did:plc:.../app.bsky.feed.post/<rkey>". The public URL is built
   // by combining the brand handle with the rkey.
   extractPublicUrl: (parsed) => {
-    const uri =
+    // social_post tool returns { platformActionId } where the value is
+    // either an AT URI ("at://did:plc:.../app.bsky.feed.post/<rkey>") or
+    // sometimes just the bare rkey. Handle both shapes.
+    const idOrUri =
+      (parsed.platformActionId as string | undefined) ??
       (parsed.uri as string | undefined) ??
-      ((parsed.data as Record<string, unknown> | undefined)?.uri as string | undefined) ??
-      ((parsed.result as Record<string, unknown> | undefined)?.uri as string | undefined);
-    if (!uri) { return null; }
-    const rkey = uri.split('/').pop();
+      ((parsed.data as Record<string, unknown> | undefined)?.uri as string | undefined);
+    if (!idOrUri) { return null; }
+    const rkey = idOrUri.includes('/') ? idOrUri.split('/').pop() : idOrUri;
     if (!rkey) { return null; }
     return `https://bsky.app/profile/salesvelocity.bsky.social/post/${rkey}`;
   },

@@ -37,17 +37,18 @@ runVerify({
   // Prefer .url since it's already absolute and platform-correct (handles
   // mastodon.social vs other instances). Fall back to constructing from .id.
   extractPublicUrl: (parsed) => {
+    // social_post tool returns { platformActionId } = Mastodon status ID.
+    // Status URL = https://{instance}/@{handle}/{statusId}
     const directUrl =
       (parsed.url as string | undefined) ??
-      ((parsed.data as Record<string, unknown> | undefined)?.url as string | undefined) ??
-      ((parsed.result as Record<string, unknown> | undefined)?.url as string | undefined);
+      ((parsed.data as Record<string, unknown> | undefined)?.url as string | undefined);
     if (typeof directUrl === 'string' && directUrl.startsWith('https://')) {
       return directUrl;
     }
     const id =
+      (parsed.platformActionId as string | undefined) ??
       (parsed.id as string | undefined) ??
-      ((parsed.data as Record<string, unknown> | undefined)?.id as string | undefined) ??
-      ((parsed.result as Record<string, unknown> | undefined)?.id as string | undefined);
+      ((parsed.data as Record<string, unknown> | undefined)?.id as string | undefined);
     return id ? `https://mastodon.social/@SalesVelocity_Ai/${id}` : null;
   },
 });

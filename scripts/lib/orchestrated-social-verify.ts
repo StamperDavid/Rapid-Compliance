@@ -152,9 +152,18 @@ export interface MissionStep {
 export interface Mission {
   missionId: string;
   status: string;
+  // The mission persistence layer uses `steps` for both plan-time and run-time
+  // step records. Older code referenced `plannedSteps`; supporting both for
+  // tolerance, but `steps` is the source of truth.
   plannedSteps?: MissionStep[];
   steps?: MissionStep[];
 }
+
+function getSteps(m: Mission): MissionStep[] {
+  return m.steps ?? m.plannedSteps ?? [];
+}
+
+export { getSteps };
 
 async function getMission(missionId: string): Promise<Mission | null> {
   const db = admin.firestore();
@@ -178,6 +187,26 @@ async function pollUntil(
   }
   const final = await getMission(missionId);
   throw new Error(`Timeout after ${timeoutMs / 1000}s. Last status: ${final?.status ?? 'unknown'}`);
+}
+
+// ---------------------------------------------------------------------------
+// Mission-ID extractor — handles both shapes the chat route returns:
+//   { metadata: { missionId } }                          (when set explicitly)
+//   { metadata: { reviewLink: "/mission-control?mission=mission_xyz" } }
+// Plus the legacy embedded-in-text fallback for older responses.
+// ---------------------------------------------------------------------------
+
+export function extractMissionId(chatRes: { metadata?: { missionId?: string; reviewLink?: string } } | null | undefined): string | null {
+  if (!chatRes?.metadata) { return null; }
+  if (typeof chatRes.metadata.missionId === 'string' && chatRes.metadata.missionId.length > 0) {
+    return chatRes.metadata.missionId;
+  }
+  const reviewLink = chatRes.metadata.reviewLink;
+  if (typeof reviewLink === 'string') {
+    const match = /[?&]mission=([^&\s]+)/.exec(reviewLink);
+    if (match) { return match[1]; }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +247,7 @@ export async function verifyOrchestratedSocialPost(opts: VerifyOptions): Promise
   console.log(`${tag} sending chat: ${prompt.slice(0, 100)}`);
 
   interface ChatResponse {
-    metadata?: { missionId?: string };
+    metadata?: { missionId?: string; reviewLink?: string };
   }
   const chatRes = await postJson<ChatResponse>({
     baseUrl,
@@ -226,7 +255,7 @@ export async function verifyOrchestratedSocialPost(opts: VerifyOptions): Promise
     pathStr: '/api/orchestrator/chat',
     body: { message: prompt, conversationHistory: [], context: 'admin' },
   });
-  const missionId = chatRes?.metadata?.missionId;
+  const missionId = extractMissionId(chatRes);
   if (!missionId) {
     throw new Error(`chat did not return missionId. Response: ${JSON.stringify(chatRes)}`);
   }
@@ -238,7 +267,7 @@ export async function verifyOrchestratedSocialPost(opts: VerifyOptions): Promise
     (m) => m.status === 'PLAN_PENDING_APPROVAL',
     60_000,
   );
-  const plannedSteps = planMission.plannedSteps ?? [];
+  const plannedSteps = getSteps(planMission);
   console.log(`${tag} plan has ${plannedSteps.length} steps:`);
   for (const s of plannedSteps) {
     console.log(`  ${s.order}. ${s.toolName}`);
@@ -287,7 +316,7 @@ export async function verifyOrchestratedSocialPost(opts: VerifyOptions): Promise
   );
 
   console.log(`${tag} terminal status: ${final.status}`);
-  const steps = final.steps ?? [];
+  const steps = getSteps(final);
   for (const s of steps) {
     console.log(`  step ${s.order} (${s.toolName}): ${s.status}${s.error ? ` — ${s.error}` : ''}`);
   }
