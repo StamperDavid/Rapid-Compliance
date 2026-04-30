@@ -26,6 +26,11 @@ const bookingSchema = z.object({
   phone: z.string().optional(),
   notes: z.string().max(500).optional(),
   duration: z.number().int().min(15).max(120).optional().default(30),
+  // Discriminator for the video-conferencing provider. 'zoom' is the only
+  // provider implemented today; the field exists so the unified calendar
+  // dashboard and future provider adapters can dispatch without a schema
+  // migration. Stage 3 will populate the corresponding *Url fields.
+  meetingProvider: z.enum(['zoom', 'google_meet', 'teams', 'none']).optional().default('zoom'),
 });
 
 // ---------------------------------------------------------------------------
@@ -46,16 +51,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'date query param required (YYYY-MM-DD)' }, { status: 400 });
     }
 
-    // Load booking config from Firestore (Admin SDK — public endpoint)
+    // Load availability config (per-day workingHours, with backward-compat
+    // fallback to the flat businessHoursStart/businessHoursEnd triple).
+    const { getAvailabilityConfig } = await import('@/lib/meetings/availability-config-service');
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getSubCollection } = await import('@/lib/firebase/collections');
 
-    const configDoc = await AdminFirestoreService.get(getSubCollection('settings'), 'booking');
-    const config = (configDoc ?? {}) as Record<string, unknown>;
-
-    const businessStart = typeof config.businessHoursStart === 'number' ? config.businessHoursStart : 9;
-    const businessEnd = typeof config.businessHoursEnd === 'number' ? config.businessHoursEnd : 17;
-    const timezone = typeof config.timezone === 'string' ? config.timezone : 'America/New_York';
+    const availability = await getAvailabilityConfig();
+    const timezone = availability.timezone;
 
     // Check if Google Calendar tokens exist for availability check
     const calendarTokenDoc = await AdminFirestoreService.get(getSubCollection('integrations'), 'google-calendar');
@@ -65,11 +68,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const nextDay = new Date(requestedDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
-    // Skip weekends
-    const dayOfWeek = requestedDate.getDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
+    // Resolve which day of the week the requested date falls on, then look up
+    // the operator's hours for that day. If the day is disabled, no slots.
+    const dayIndex = requestedDate.getDay(); // 0 = Sunday, 6 = Saturday
+    type ConfigDayKey = keyof typeof availability.workingHours;
+    const jsDayToConfigKey: Record<number, ConfigDayKey> = {
+      0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+      4: 'thursday', 5: 'friday', 6: 'saturday',
+    };
+    const dayHours = availability.workingHours[jsDayToConfigKey[dayIndex]];
+    if (!dayHours.enabled) {
       return NextResponse.json({ slots: [], date: dateStr, timezone });
     }
+
+    const [startHourStr, startMinuteStr] = dayHours.start.split(':');
+    const [endHourStr, endMinuteStr] = dayHours.end.split(':');
+    const businessStartHour = parseInt(startHourStr, 10);
+    const businessStartMinute = parseInt(startMinuteStr, 10);
+    const businessEndHour = parseInt(endHourStr, 10);
+    const businessEndMinute = parseInt(endMinuteStr, 10);
 
     let busyTimes: Array<{ start: string; end: string }> = [];
 
@@ -107,48 +124,46 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Generate available slots
+    // Generate available slots in 30-minute increments within the day's window.
     const slots: Array<{ start: string; end: string; display: string }> = [];
+    const windowEndMinutes = businessEndHour * 60 + businessEndMinute;
 
-    for (let hour = businessStart; hour < businessEnd; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const slotStart = new Date(requestedDate);
-        slotStart.setHours(hour, minute, 0, 0);
+    for (let totalMinutes = businessStartHour * 60 + businessStartMinute;
+         totalMinutes + duration <= windowEndMinutes;
+         totalMinutes += 30) {
+      const hour = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
+      const slotStart = new Date(requestedDate);
+      slotStart.setHours(hour, minute, 0, 0);
 
-        const slotEnd = new Date(slotStart);
-        slotEnd.setMinutes(slotEnd.getMinutes() + duration);
+      const slotEnd = new Date(slotStart);
+      slotEnd.setMinutes(slotEnd.getMinutes() + duration);
 
-        // Don't go past business hours
-        if (slotEnd.getHours() > businessEnd || (slotEnd.getHours() === businessEnd && slotEnd.getMinutes() > 0)) {
-          continue;
-        }
+      // Don't suggest past slots
+      if (slotStart < new Date()) {
+        continue;
+      }
 
-        // Don't suggest past slots
-        if (slotStart < new Date()) {
-          continue;
-        }
+      // Check conflicts with busy times
+      const hasConflict = busyTimes.some(busy => {
+        const busyStart = new Date(busy.start);
+        const busyEnd = new Date(busy.end);
+        return (slotStart >= busyStart && slotStart < busyEnd) ||
+               (slotEnd > busyStart && slotEnd <= busyEnd) ||
+               (slotStart <= busyStart && slotEnd >= busyEnd);
+      });
 
-        // Check conflicts with busy times
-        const hasConflict = busyTimes.some(busy => {
-          const busyStart = new Date(busy.start);
-          const busyEnd = new Date(busy.end);
-          return (slotStart >= busyStart && slotStart < busyEnd) ||
-                 (slotEnd > busyStart && slotEnd <= busyEnd) ||
-                 (slotStart <= busyStart && slotEnd >= busyEnd);
+      if (!hasConflict) {
+        const displayTime = slotStart.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
         });
-
-        if (!hasConflict) {
-          const displayTime = slotStart.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-          });
-          slots.push({
-            start: slotStart.toISOString(),
-            end: slotEnd.toISOString(),
-            display: displayTime,
-          });
-        }
+        slots.push({
+          start: slotStart.toISOString(),
+          end: slotEnd.toISOString(),
+          display: displayTime,
+        });
       }
     }
 
@@ -178,7 +193,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { date, time, name, email, phone, notes, duration } = parsed.data;
+    const { date, time, name, email, phone, notes, duration, meetingProvider } = parsed.data;
 
     // Build start/end times
     const startTime = new Date(`${date}T${time}:00`);
@@ -226,6 +241,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       phone: phone ?? null,
       notes: notes ?? null,
       status: 'confirmed' as const,
+      meetingProvider,
+      // Provider-specific URLs (populated by Stage 3 once Zoom create is wired
+      // into this route). Today the public booking flow only writes a Google
+      // Calendar event — no video link is created.
+      zoomMeetingId: null as string | null,
+      zoomJoinUrl: null as string | null,
+      zoomStartUrl: null as string | null,
       organizationId: PLATFORM_ID,
       createdAt: new Date().toISOString(),
     };
