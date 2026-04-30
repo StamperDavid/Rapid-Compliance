@@ -6,8 +6,12 @@
  *   2. organizations/{PLATFORM_ID}/integrations/zoom doc has accessToken + refreshToken
  *   3. Token expiry — flag if expired (refresh flow handles this at runtime, but stale
  *      tokens beyond the refresh window will block meeting creation)
+ *   4. End-to-end: GET https://api.zoom.us/v2/users/me with the stored access token —
+ *      proves the token actually works against Zoom's API, not just that bytes exist
+ *      in Firestore. Reports the connected email + name on success, the actual Zoom
+ *      error body on failure.
  *
- * Read-only against Firestore. No Zoom API calls. Run with:
+ * Reads Firestore + makes ONE Zoom API call. Run with:
  *   npx tsx scripts/verify-zoom-integration.ts
  */
 
@@ -16,6 +20,7 @@
 import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 
 function loadEnvLocal(): void {
   const envPath = path.resolve(process.cwd(), '.env.local');
@@ -49,6 +54,40 @@ function preview(value: unknown): string {
   return `${value.slice(0, 6)}...${value.slice(-4)}  (len=${value.length})`;
 }
 
+function decryptIfNeeded(value: string): string {
+  // Mirrors src/lib/security/token-encryption.ts decryptToken contract.
+  // Format on disk when encrypted: ivHex:authTagHex:cipherHex
+  const parts = value.split(':');
+  if (parts.length !== 3) { return value; } // legacy plaintext
+
+  const secret = process.env.TOKEN_ENCRYPTION_SECRET ?? process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('TOKEN_ENCRYPTION_SECRET or NEXTAUTH_SECRET must be set to decrypt');
+  }
+
+  const [ivHex, authTagHex, encrypted] = parts;
+  if (!ivHex || !authTagHex || !encrypted) {
+    throw new Error('Invalid encrypted token format');
+  }
+
+  const key = crypto.scryptSync(secret, 'oauth-token-salt', 32);
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  let out = decipher.update(encrypted, 'hex', 'utf8');
+  out += decipher.final('utf8');
+  return out;
+}
+
+interface ZoomMeResponse {
+  email?: string;
+  display_name?: string;
+  first_name?: string;
+  last_name?: string;
+  account_id?: string;
+}
+
 async function main(): Promise<void> {
   let pass = true;
 
@@ -71,6 +110,8 @@ async function main(): Promise<void> {
   const PLATFORM_ID = 'rapid-compliance-root';
   const doc = await db.collection(`organizations/${PLATFORM_ID}/integrations`).doc('zoom').get();
 
+  let accessTokenStr: string | null = null;
+
   if (!doc.exists) {
     console.log('   FAIL — integrations/zoom doc does not exist');
     console.log('   Connect Zoom at /settings/integrations to populate it');
@@ -79,21 +120,28 @@ async function main(): Promise<void> {
     const data = doc.data() as Record<string, unknown>;
     const accessToken = data.accessToken;
     const refreshToken = data.refreshToken;
-    const expiresAt = data.expiresAt;
+    const expiresAtRaw = data.expiresAt;
+    const encrypted = data.encrypted === true;
     console.log(`   accessToken:  ${preview(accessToken)}`);
     console.log(`   refreshToken: ${preview(refreshToken)}`);
-    console.log(`   expiresAt:    ${typeof expiresAt === 'string' ? expiresAt : '<not set>'}`);
+    console.log(`   encrypted:    ${encrypted}`);
 
-    if (!accessToken || !refreshToken) {
+    let expiresAtIso: string | null = null;
+    if (typeof expiresAtRaw === 'string') {
+      expiresAtIso = expiresAtRaw;
+    } else if (expiresAtRaw && typeof expiresAtRaw === 'object' && 'toDate' in expiresAtRaw) {
+      const ts = expiresAtRaw as admin.firestore.Timestamp;
+      expiresAtIso = ts.toDate().toISOString();
+    }
+    console.log(`   expiresAt:    ${expiresAtIso ?? '<not set>'}`);
+
+    if (typeof accessToken !== 'string' || accessToken.length === 0
+        || typeof refreshToken !== 'string' || refreshToken.length === 0) {
       console.log('   FAIL — tokens missing');
       pass = false;
     } else {
-      // Stale-token check: Zoom refresh tokens themselves expire after ~15 months
-      // of inactivity; if expiresAt is way in the past, the access token is stale
-      // but refresh should still work. If expiresAt is missing entirely, that's
-      // a wiring bug.
-      if (typeof expiresAt === 'string') {
-        const expiry = new Date(expiresAt).getTime();
+      if (expiresAtIso) {
+        const expiry = new Date(expiresAtIso).getTime();
         if (!Number.isFinite(expiry)) {
           console.log('   WARN — expiresAt is not a valid date');
         } else if (expiry < Date.now()) {
@@ -102,6 +150,52 @@ async function main(): Promise<void> {
           console.log(`   OK — access token valid for ~${Math.round((expiry - Date.now()) / 1000 / 60)} more minutes`);
         }
       }
+
+      try {
+        accessTokenStr = encrypted ? decryptIfNeeded(accessToken) : accessToken;
+      } catch (decErr) {
+        console.log(`   FAIL — could not decrypt accessToken: ${decErr instanceof Error ? decErr.message : String(decErr)}`);
+        pass = false;
+      }
+    }
+  }
+
+  console.log('\n3. Live Zoom API call (GET https://api.zoom.us/v2/users/me):');
+  if (!accessTokenStr) {
+    console.log('   SKIP — no usable access token from Section 2');
+    pass = false;
+  } else {
+    try {
+      const res = await fetch('https://api.zoom.us/v2/users/me', {
+        headers: { Authorization: `Bearer ${accessTokenStr}` },
+      });
+
+      if (res.ok) {
+        const me = (await res.json()) as ZoomMeResponse;
+        const composedName = [me.first_name, me.last_name].filter((p) => p && p.length > 0).join(' ').trim();
+        const displayName = (me.display_name && me.display_name.length > 0)
+          ? me.display_name
+          : (composedName.length > 0 ? composedName : '<no name>');
+        console.log('   OK — Zoom recognized the access token');
+        console.log(`   connectedEmail: ${me.email ?? '<no email>'}`);
+        console.log(`   connectedName:  ${displayName}`);
+        console.log(`   accountId:      ${me.account_id ?? '<no account id>'}`);
+      } else {
+        const bodyText = await res.text().catch(() => '');
+        console.log(`   FAIL — Zoom API returned ${res.status} ${res.statusText}`);
+        if (res.status === 401) {
+          console.log('   401 = bad/expired access token. Try disconnecting and reconnecting Zoom,');
+          console.log('   or wait for the next createMeeting call to trigger the refresh path.');
+        }
+        if (bodyText) {
+          console.log(`   Zoom response body: ${bodyText.slice(0, 500)}`);
+        }
+        pass = false;
+      }
+    } catch (apiErr) {
+      const apiMsg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+      console.log(`   FAIL — Zoom API call threw: ${apiMsg}`);
+      pass = false;
     }
   }
 

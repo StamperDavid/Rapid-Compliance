@@ -494,6 +494,7 @@ DELEGATION ROUTING:
 - Marketing (campaigns, ads, brand) → delegate_to_marketing
 - Trust/compliance → delegate_to_trust
 - Architecture/tech → delegate_to_architect
+- Scheduling / meetings (book / reschedule / cancel) → delegate_to_operations
 
 REVIEW LINKS — Always provide a link so David can review the result:
 - Video content → /video
@@ -549,7 +550,20 @@ DELEGATION TOOLS (use to dispatch work to agent teams):
 12. delegate_to_builder - Website creation, page editing
 13. delegate_to_trust - Compliance, security, legal
 14. delegate_to_architect - Technical architecture, infrastructure
-15. create_video - Full video production pipeline
+15. delegate_to_operations - Schedule, reschedule, or cancel meetings on David's calendar
+   → CRITICAL RULES (these come BEFORE the tool call — never violate):
+     • THE OPERATOR PICKS THE TIME. If David's command does NOT include a concrete date AND time
+       (e.g. "Tuesday Nov 4 at 2pm"), DO NOT call this tool. Instead, reply in chat with David's
+       available slots for the day he named, and wait for him to pick. A command like
+       "Tuesday afternoon" or "schedule with Jack" without a time is INSUFFICIENT — ask back.
+     • CRM-ONLY ATTENDEES. Before calling, look the attendee up across leads / contacts / deals
+       (use available CRM read tools or ask David). If multiple matches, ask which one. If zero
+       matches, tell David and ask whether to add them first or skip — NEVER auto-create a stub.
+     • REQUIRED ARGS: intent ('create_meeting' | 'reschedule_meeting' | 'cancel_meeting'),
+       startTime (ISO 8601, exact), attendeeRef ({ type: 'lead'|'contact'|'deal', id: <CRM record id> }),
+       durationMinutes (default 30). For reschedule/cancel, also pass meetingId.
+     • Once the call is made, link David to /mission-control for approval — meetings need his explicit OK.
+16. create_video - Full video production pipeline
 16. list_avatars - Browse available avatar profiles and check for custom AI clones
    → Use when: David asks about characters, who can star in a video, or before producing video
 17. research_trending_topics - Trend research (needs seed keywords from get_seo_config)
