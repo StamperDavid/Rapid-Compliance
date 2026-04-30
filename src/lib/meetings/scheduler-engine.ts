@@ -280,10 +280,15 @@ async function scheduleReminders(
 }
 
 /**
- * Send meeting reminder (called by cron job)
+ * Send meeting reminder (called by cron job).
+ *
+ * `hoursBeforeMeeting` selects which template the cron picks up — the
+ * 24h reminder uses one tone, the 1h reminder another. Defaults to 24h
+ * so legacy callers that don't pass the field keep working.
  */
 export async function sendMeetingReminder(
-  meetingId: string
+  meetingId: string,
+  hoursBeforeMeeting: number = 24,
 ): Promise<void> {
   try {
     const meeting = await FirestoreService.get<ScheduledMeeting>(
@@ -295,32 +300,30 @@ export async function sendMeetingReminder(
       throw new Error('Meeting not found');
     }
 
-    // Send email reminder
     const { sendEmail } = await import('@/lib/email/email-service');
+    const { getSchedulingMessages, renderTemplate, buildMeetingTemplateVars } =
+      await import('./scheduling-messages-service');
+    const messages = await getSchedulingMessages();
+
+    const useOneHourTemplate = hoursBeforeMeeting <= 2;
+    const subjectTpl = useOneHourTemplate ? messages.reminder1hSubject : messages.reminder24hSubject;
+    const bodyTpl = useOneHourTemplate ? messages.reminder1hBody : messages.reminder24hBody;
 
     for (const attendee of meeting.attendees) {
-      const subject = `Reminder: ${meeting.title}`;
-      const body = `
-This is a reminder about your upcoming meeting:
-
-Title: ${meeting.title}
-Time: ${meeting.startTime.toLocaleString()}
-Duration: ${meeting.duration} minutes
-
-${meeting.zoomJoinUrl ? `Join via Zoom: ${meeting.zoomJoinUrl}` : ''}
-
-${meeting.notes ?? ''}
-
-Looking forward to speaking with you!
-      `.trim();
-
-      await sendEmail({
-        to: attendee.email,
-        subject,
-        text: body,
+      const vars = buildMeetingTemplateVars({
+        attendeeName: attendee.name,
+        startTime: meeting.startTime,
+        durationMinutes: meeting.duration,
+        zoomJoinUrl: meeting.zoomJoinUrl,
+        orgName: 'SalesVelocity.ai',
       });
+      const subject = renderTemplate(subjectTpl, vars);
+      const body = renderTemplate(bodyTpl, vars);
 
-      // Send SMS reminder if phone provided
+      await sendEmail({ to: attendee.email, subject, text: body });
+
+      // Send SMS reminder if phone provided. SMS stays on the simpler legacy
+      // template since the messages config currently only covers email copy.
       if (attendee.phone) {
         const { sendSMS } = await import('@/lib/sms/sms-service');
         await sendSMS({

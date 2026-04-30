@@ -238,14 +238,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     let zoomCreationFailed = false;
     let zoomError: string | null = null;
 
+    // Load editable scheduling messages (template strings for emails, Zoom
+    // metadata, etc.). Falls back to DEFAULT_MESSAGES when the doc isn't set,
+    // so this works on a fresh deployment with no operator customization.
+    const { getSchedulingMessages, renderTemplate, buildMeetingTemplateVars } =
+      await import('@/lib/meetings/scheduling-messages-service');
+    const messages = await getSchedulingMessages();
+
     if (meetingProvider === 'zoom') {
       try {
         const { createZoomMeeting } = await import('@/lib/integrations/zoom');
+        const zoomTemplateVars = buildMeetingTemplateVars({
+          attendeeName: name,
+          startTime,
+          durationMinutes: duration,
+          orgName: 'SalesVelocity.ai',
+        });
+        const zoomTopic = renderTemplate(messages.zoomMeetingTopic, zoomTemplateVars);
+        const zoomAgenda = renderTemplate(messages.zoomMeetingAgenda, zoomTemplateVars);
         const zoomMeeting = await createZoomMeeting({
-          topic: `Meeting with ${name}`,
+          topic: zoomTopic,
           startTime,
           duration,
-          agenda: notes ?? undefined,
+          agenda: notes ?? zoomAgenda,
           attendees: [email],
         });
         zoomMeetingId = zoomMeeting.meetingId;
@@ -326,23 +341,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     })();
 
-    // Try to send confirmation email (non-blocking)
+    // Try to send confirmation email (non-blocking) — subject + body come
+    // from the scheduling-messages config so the operator can edit the copy
+    // from /settings/scheduling-messages without a deploy.
     void (async () => {
       try {
         const { sendEmail } = await import('@/lib/email/email-service');
-        const meetingLinkBlock = zoomJoinUrl
-          ? `<p><strong>Join the meeting:</strong> <a href="${zoomJoinUrl}">${zoomJoinUrl}</a></p>`
-          : '<p>We hit a snag generating your meeting link automatically — we will email it to you separately within the hour.</p>';
-        await sendEmail({
-          to: email,
-          subject: `Booking Confirmed — ${date} at ${time}`,
-          html: `<h2>Your booking is confirmed</h2>
-            <p>Hi ${name},</p>
-            <p>Your meeting has been scheduled for <strong>${date}</strong> at <strong>${time}</strong> (${duration} minutes).</p>
-            ${meetingLinkBlock}
-            ${notes ? `<p>Notes: ${notes}</p>` : ''}
-            <p>We look forward to speaking with you!</p>`,
+        const emailTemplateVars = buildMeetingTemplateVars({
+          attendeeName: name,
+          startTime,
+          durationMinutes: duration,
+          zoomJoinUrl,
+          orgName: 'SalesVelocity.ai',
         });
+        const subject = renderTemplate(messages.demoConfirmationEmailSubject, emailTemplateVars);
+        let html = renderTemplate(messages.demoConfirmationEmailBody, emailTemplateVars);
+
+        // If Zoom failed, the {zoomLink} placeholder rendered to empty string.
+        // Swap the join-link block for the fallback copy so the prospect knows
+        // the link is coming separately rather than seeing an empty <a>.
+        if (!zoomJoinUrl) {
+          html = html.replace(
+            /<p[^>]*>[^<]*<strong>Join the meeting[\s\S]*?<\/p>/i,
+            '<p>We hit a snag generating your meeting link automatically — we will email it to you separately within the hour.</p>',
+          );
+        }
+
+        if (notes) {
+          html += `<p>Notes: ${notes}</p>`;
+        }
+
+        await sendEmail({ to: email, subject, html });
       } catch (emailError) {
         logger.warn('Could not send booking confirmation email', {
           bookingId,
