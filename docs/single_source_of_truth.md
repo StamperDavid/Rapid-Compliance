@@ -1,7 +1,9 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** April 29, 2026 (evening, ~12-hour fake-AI sweep + UI redesign teed up). **Major fake-AI sweep closed:** ~15 patterns audited and fixed across 3 layers (manager-layer fake aggregation, specialist partial-LLM coverage, fake-LLM costumes on deterministic services). **Manager fakery fixed in 7 manager files:** RevenueDirector (fabricated specialist KPIs broadcast to Jasper as real → now computed from real signals or null), ReputationManager (hardcoded 85% responseRate + invented star/sentiment fallbacks → nullable), CommerceManager ($0-everything revenue brief → nullable), MarketingManager (regex+weights "platform scoring" → LLM-first via OpenRouter), OutreachManager (BLOCKED stubs → honest FAILED + extracted constants), BuilderManager (hardcoded asset URLs + fabricated metrics → nullable), MasterOrchestrator (optimistic 'HEALTHY' default → 'UNKNOWN'). **Specialist completeness:** GROWTH_STRATEGIST (1/6 → 6/6 actions LLM-driven via 5 new Zod schemas + callGMLLM helper), TREND_SCOUT (1/5 → 4/5; get_cached_signals stays deterministic by design). **AI-costume cleanup:** VOICE_AI_SPECIALIST + 3 commerce specialists (Pricing/Catalog/Payment) honestly relabeled — stripped decorative systemPrompt/tools/outputSchema/maxTokens/temperature. **8 Jasper tool stubs handled:** update_pricing wired to AdminFirestoreService, get_analytics restricted to ['overview'] enum, provision_organization + generate_content + draft_outreach_email + generate_report + DEPLOY_SPECIALIST + add_url_source REMOVED from tool list. **5 dead-end Firestore writers DELETED:** relationship-mapping.ts, predictive-scoring-training.ts, ab-testing/ directory, video-job-service.ts (obsolete after produce_video rewire), admin/video/render route. lead-nurturing.ts surgically edited (trackLeadActivity + createLeadSegment + getLeadsInSegment removed — last returned hardcoded ['lead1','lead2','lead3'] regardless of input). **Dashboard cleanup:** /api/admin/stats hardcoded swarm cap (47), pendingTickets=0, monthlyRevenue=0 → real AGENT_REGISTRY queries + nullable. Mission Control "Email Campaigns" label bug for every social step → platform-aware routing on toolArgs.platform. **Tier-2 structural fix — verify-script suite:** 33 misleading direct-service verifies renamed via `git mv` (verify-X-post-live → verify-X-credentials-direct, verify-Y-is-real → verify-Y-gm-load) with honest headers updated; **4 NEW product-path verifies** that drive the actual orchestration chain (verify-{twitter|bluesky|mastodon}-orchestrated-post-live + verify-outreach-orchestrated-live, plus shared driver scripts/lib/orchestrated-social-verify.ts) — all 4 PASS live. **The bug that proved everything: media not attaching to social posts.** Operator caught visually that orchestrated-post images didn't render. Three separate "function accepts media, layer below silently drops it" bugs in autonomous-posting-agent.ts: Twitter `_mediaUrls` underscore-ignored, Bluesky postRecord({text}) only, Mastodon postStatus({status,visibility}) only. Three sub-agents added uploadMediaFromUrl + postWithMedia methods to TwitterService (OAuth 1.0a /1.1/media/upload — also fixed a separate latent Bearer-auth bug on the existing uploadMedia), BlueskyService (AT Protocol uploadBlob + embed.images), MastodonService (POST /api/v2/media + media_ids). autonomous-posting-agent updated to actually pass mediaUrls through. **Verified live:** three real posts WITH IMAGES on three brand accounts (X 2049673177023004930, Bluesky 3mkojzxuim52h, Mastodon 116491235033176961). social_post step duration jumped from <1s to ~2.1-2.4s per platform — that delta is real upload work. **X OAuth 1.0a port** in TwitterService (commit 6e707940) — was using only Bearer auth which X rejects on POST /tweets. Ported HMAC-SHA1 signing into makeRequest. **Connected-platforms gating:** new src/lib/orchestrator/connected-platforms-context.ts reads _platform-state.ts at request time and injects "POSTABLE platforms" + "NOT connected — exclude" sections into Jasper's system prompt. No GM edit; stays current as connections come online. **Video tools wired** (produce_video / generate_video / assemble_video): VIDEO_SPECIALIST.script_to_storyboard → createProject → saveApprovedStoryboard → generateAllScenes (Hedra). assemble_video uses ffmpeg-utils for FFmpeg concat + Firebase Storage upload. **TWITTER_X_EXPERT GM v3** deployed atomically — surgical PE-style edit replaces v2's passive "Count carefully" 280-char rule with explicit pre-output audit step + ≤270 safety target + named cost of failure. Source feedback tfb_twitter_thread_char_limit_1777473795232. Rollback via deployIndustryGMVersion('TWITTER_X_EXPERT','saas_sales_ops',2). **CI auto-deploy for Firestore indexes:** .github/workflows/firestore-indexes.yml shipped; firestore.indexes.json now adds composite indexes for missions(status,createdAt) + socialPosts(platform,createdAt). Workflow run #2 deployed both successfully. **One-time setup pending:** operator runs firebase login:ci, stores token as FIREBASE_TOKEN GitHub secret. After that, all future index changes auto-deploy on merge to main. **Pending token rotation:** Firebase CI token was pasted in the Apr 29 evening transcript — must be rotated before launch per `memory/project_rotate_secrets_in_transcript.md`. **Next session is INTENTIONALLY scoped to UI redesign of Content Generator + Social Hub** — backend is in known-good state, do NOT audit/refactor/test backend code there. Specific design problems already audited: no /content/ hub page exists; image-generator is 16-line stub renders the video StudioModePanel; CONTENT_GENERATOR_TABS mixes tools and video-sub-pages as siblings; "Create with AI" button is a nav link (should be embedded chat panel scoped=content); Content Generator's "Calendar" tab points to video-batch-scheduler (real social calendar lives at /social/calendar). Architecture decisions made: "Create with AI" uses Option B (Jasper with scope hint, ~1 day); Content Library MVP at /content/library aggregates blog/video/missions/assets unified-timeline (~3-4 days); ONE chat-panel component, not N per hub (Linear pattern). See CONTINUATION_PROMPT.md "Next Session Focus" section for full handoff.
+**Last Updated:** April 30, 2026 (Scheduling rebuild Stages 1–6 + Zoom User-OAuth + content engine refresh: media library, Magic Studio, video editor, music gen, Hedra verify). **New L2 manager (OPERATIONS_MANAGER) + new L3 specialist (SCHEDULING_SPECIALIST)** raise the swarm to 10 L2 managers / 57 specialists / 72 agents total (1 L1 + 10 L2 + 57 L3 + 4 standalone). Three GMs seeded in dev Firestore: `gm_orchestrator_v1` (Jasper, re-seeded with `delegate_to_operations`), `mgm_operations_manager_saas_sales_ops_v1`, `sgm_scheduling_specialist_saas_sales_ops_v1`. **Scheduling system (Stages 1–6) shipped end-to-end:** new `meetingProvider` discriminator (`'zoom' | 'google_meet' | 'teams' | 'none'`) on every meeting record, per-day availability config + `/settings/meeting-scheduler` UI, demo-scheduling checkbox on `/early-access` (lead capture and booking are independent), unified calendar dashboard at `/calendar` reading from 5 sources (meetings, bookings, Google Calendar sync, scheduled posts, CRM activities) with filter chips, editable scheduling messages template at `/settings/scheduling-messages` (8 fields with `{firstName}`/`{meetingDate}`/`{zoomLink}`/etc. variables, defaults preserved when doc absent), full Zoom User-OAuth (`/api/integrations/zoom/{auth,callback,disconnect}`), `/settings/integrations` Zoom card with two-step disconnect, dual-write compat shim to legacy `integrations/all` map doc so the integrations UI shows ✓ Connected without refactor. New Jasper tool `delegate_to_operations` with intent rules (operator picks the time, attendees must already exist in CRM). **Content engine refresh:** Hedra verified live via new `scripts/verify-hedra-live.ts`; AI music generation via Replicate MusicGen (`src/lib/music/music-generation-service.ts` + `/api/content/music/generate` + AI Music tab in `/content/voice-lab`); unified media library (`src/types/media-library.ts` introduces canonical `UnifiedMediaAsset` with `MEDIA_CATEGORIES` enum — legacy `MediaItem` retained for back-compat with the existing video library page; service at `src/lib/media/media-library-service.ts`; browser at `/media`; backfill at `scripts/backfill-media-library.ts`); Magic Studio at `/studio` (single-canvas + command bar + Image/Video/Music/Text tools wired to their generate endpoints + recent-generations sidebar); standalone Video Editor at `/content/video/editor` (timeline trim/split/merge, drag-positioned text overlays, brightness/contrast/saturation/hue per clip, transitions, FFmpeg render via `/api/video/editor/render`). **Architectural / standing-rule fixes:** `useAdminSdk` opt-in flag added to `getIntegrationCredentials`, `saveIntegrationCredentials`, `disconnectIntegration` (and `createLead`) so public/server-context routes work without `request.auth`; `oauth-state.ts` migrated to Admin SDK throughout; `AdminFirestoreService.set` and `.get` are now generic (`<T extends object>`) so typed callers don't need `Record<string, unknown>` casts; sidebar nav additions (Calendar in Dashboard section; Studio + Video Editor + Media Library in Marketing section). **New standing rules logged to memory this session:** finish each thing to production-ready before moving on; never read credentials from screenshots — use Copy buttons; destructive UI actions need two-step confirmation; estimate in parallel-agent-hours, not solo dev-weeks.
+
+**Prior — April 29, 2026 (evening, ~12-hour fake-AI sweep + UI redesign teed up).** **Major fake-AI sweep closed:** ~15 patterns audited and fixed across 3 layers (manager-layer fake aggregation, specialist partial-LLM coverage, fake-LLM costumes on deterministic services). **Manager fakery fixed in 7 manager files:** RevenueDirector (fabricated specialist KPIs broadcast to Jasper as real → now computed from real signals or null), ReputationManager (hardcoded 85% responseRate + invented star/sentiment fallbacks → nullable), CommerceManager ($0-everything revenue brief → nullable), MarketingManager (regex+weights "platform scoring" → LLM-first via OpenRouter), OutreachManager (BLOCKED stubs → honest FAILED + extracted constants), BuilderManager (hardcoded asset URLs + fabricated metrics → nullable), MasterOrchestrator (optimistic 'HEALTHY' default → 'UNKNOWN'). **Specialist completeness:** GROWTH_STRATEGIST (1/6 → 6/6 actions LLM-driven via 5 new Zod schemas + callGMLLM helper), TREND_SCOUT (1/5 → 4/5; get_cached_signals stays deterministic by design). **AI-costume cleanup:** VOICE_AI_SPECIALIST + 3 commerce specialists (Pricing/Catalog/Payment) honestly relabeled — stripped decorative systemPrompt/tools/outputSchema/maxTokens/temperature. **8 Jasper tool stubs handled:** update_pricing wired to AdminFirestoreService, get_analytics restricted to ['overview'] enum, provision_organization + generate_content + draft_outreach_email + generate_report + DEPLOY_SPECIALIST + add_url_source REMOVED from tool list. **5 dead-end Firestore writers DELETED:** relationship-mapping.ts, predictive-scoring-training.ts, ab-testing/ directory, video-job-service.ts (obsolete after produce_video rewire), admin/video/render route. lead-nurturing.ts surgically edited (trackLeadActivity + createLeadSegment + getLeadsInSegment removed — last returned hardcoded ['lead1','lead2','lead3'] regardless of input). **Dashboard cleanup:** /api/admin/stats hardcoded swarm cap (47), pendingTickets=0, monthlyRevenue=0 → real AGENT_REGISTRY queries + nullable. Mission Control "Email Campaigns" label bug for every social step → platform-aware routing on toolArgs.platform. **Tier-2 structural fix — verify-script suite:** 33 misleading direct-service verifies renamed via `git mv` (verify-X-post-live → verify-X-credentials-direct, verify-Y-is-real → verify-Y-gm-load) with honest headers updated; **4 NEW product-path verifies** that drive the actual orchestration chain (verify-{twitter|bluesky|mastodon}-orchestrated-post-live + verify-outreach-orchestrated-live, plus shared driver scripts/lib/orchestrated-social-verify.ts) — all 4 PASS live. **The bug that proved everything: media not attaching to social posts.** Operator caught visually that orchestrated-post images didn't render. Three separate "function accepts media, layer below silently drops it" bugs in autonomous-posting-agent.ts: Twitter `_mediaUrls` underscore-ignored, Bluesky postRecord({text}) only, Mastodon postStatus({status,visibility}) only. Three sub-agents added uploadMediaFromUrl + postWithMedia methods to TwitterService (OAuth 1.0a /1.1/media/upload — also fixed a separate latent Bearer-auth bug on the existing uploadMedia), BlueskyService (AT Protocol uploadBlob + embed.images), MastodonService (POST /api/v2/media + media_ids). autonomous-posting-agent updated to actually pass mediaUrls through. **Verified live:** three real posts WITH IMAGES on three brand accounts (X 2049673177023004930, Bluesky 3mkojzxuim52h, Mastodon 116491235033176961). social_post step duration jumped from <1s to ~2.1-2.4s per platform — that delta is real upload work. **X OAuth 1.0a port** in TwitterService (commit 6e707940) — was using only Bearer auth which X rejects on POST /tweets. Ported HMAC-SHA1 signing into makeRequest. **Connected-platforms gating:** new src/lib/orchestrator/connected-platforms-context.ts reads _platform-state.ts at request time and injects "POSTABLE platforms" + "NOT connected — exclude" sections into Jasper's system prompt. No GM edit; stays current as connections come online. **Video tools wired** (produce_video / generate_video / assemble_video): VIDEO_SPECIALIST.script_to_storyboard → createProject → saveApprovedStoryboard → generateAllScenes (Hedra). assemble_video uses ffmpeg-utils for FFmpeg concat + Firebase Storage upload. **TWITTER_X_EXPERT GM v3** deployed atomically — surgical PE-style edit replaces v2's passive "Count carefully" 280-char rule with explicit pre-output audit step + ≤270 safety target + named cost of failure. Source feedback tfb_twitter_thread_char_limit_1777473795232. Rollback via deployIndustryGMVersion('TWITTER_X_EXPERT','saas_sales_ops',2). **CI auto-deploy for Firestore indexes:** .github/workflows/firestore-indexes.yml shipped; firestore.indexes.json now adds composite indexes for missions(status,createdAt) + socialPosts(platform,createdAt). Workflow run #2 deployed both successfully. **One-time setup pending:** operator runs firebase login:ci, stores token as FIREBASE_TOKEN GitHub secret. After that, all future index changes auto-deploy on merge to main. **Pending token rotation:** Firebase CI token was pasted in the Apr 29 evening transcript — must be rotated before launch per `memory/project_rotate_secrets_in_transcript.md`. **Next session is INTENTIONALLY scoped to UI redesign of Content Generator + Social Hub** — backend is in known-good state, do NOT audit/refactor/test backend code there. Specific design problems already audited: no /content/ hub page exists; image-generator is 16-line stub renders the video StudioModePanel; CONTENT_GENERATOR_TABS mixes tools and video-sub-pages as siblings; "Create with AI" button is a nav link (should be embedded chat panel scoped=content); Content Generator's "Calendar" tab points to video-batch-scheduler (real social calendar lives at /social/calendar). Architecture decisions made: "Create with AI" uses Option B (Jasper with scope hint, ~1 day); Content Library MVP at /content/library aggregates blog/video/missions/assets unified-timeline (~3-4 days); ONE chat-panel component, not N per hub (Linear pattern). See CONTINUATION_PROMPT.md "Next Session Focus" section for full handoff.
 
 **Prior — April 29, 2026 (early AM)** — **Creator-track platform additions: Discord + Twitch built end-to-end**. Both shipped: full LLM-backed specialists (DISCORD_EXPERT with `generate_content` + `compose_dm_reply`; TWITCH_EXPERT with `generate_content` only — Whispers inert, intentionally no DM action). Brand DNA baked into both Golden Masters per Standing Rule #1, seeded to Firestore + verified via `scripts/verify-brand-dna-injection.ts` (54/54 passing). Posting services wrap Discord REST v10 (channel messages, scheduled events, webhooks, channel listing) and Twitch Helix (modify-channel-info, chat-announcements, clip creation, schedule segments, follower/stream metrics). Composers + post-previews + `_platform-state.ts` entries shipped. OAuth handlers added to `social-oauth-service.ts` (`generateDiscordAuthUrl`, `generateTwitchAuthUrl`, exchange + profile fetch); auth/callback routes wired for both. New `/api/social/discord/channels` route powers the channel-picker dropdown. Manager registered both specialists (delegation rules, factory, inbound DM map for Discord, single-platform map for both). `apiKeys.social` schema + `APIServiceName` extended with `discord` + `twitch`. `_platform-state.ts` cleanup: Reddit flipped `coming_soon` → `parked` per Tier 3 verdict; Google Business `specialistId` reconciled to `GOOGLE_BUSINESS_EXPERT`. Phase 1 paperwork drafts produced (paste-ready) for Pinterest Developer Platform, LinkedIn MDP/CMA (note: legacy MDP scopes deprecated for new apps — Community Management API is the current product), and Google OAuth verification for YouTube scopes (CASA security assessment $3K-$15K/yr trigger flagged). Platforms NOT in this addition (rejected for core product, logged as spinoff candidates): Patreon, Substack, Snapchat, Kick — all too creator-heavy. **Pending operator-side only**: register central Discord developer app + Twitch developer app to obtain bot token / client_id / secret, then run save-config scripts and live-verify with real post.
 
@@ -88,9 +90,9 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 194 | Verified March 28, 2026 |
-| API Endpoints (route.ts) | 436 | Verified March 28, 2026 |
-| AI Agents | 51 | **57 FUNCTIONAL (1 Jasper orchestrator + 10 managers + 46 specialists)** |
+| Physical Routes (page.tsx) | 207 | Verified April 30, 2026 (incl. /calendar, /studio, /content/video/editor, /media, /settings/{meeting-scheduler,scheduling-messages}, etc.) |
+| API Endpoints (route.ts) | 507 | Verified April 30, 2026 (incl. /api/integrations/zoom/{auth,callback,disconnect}, /api/calendar/events, /api/content/{music,video,asset-generator}/generate, /api/video/editor/render, /api/booking POST, /api/media) |
+| AI Agents | 72 | **72 FUNCTIONAL (1 Jasper L1 + 10 L2 managers + 57 L3 specialists + 4 standalone)** — adds OPERATIONS_MANAGER + SCHEDULING_SPECIALIST (Apr 30) |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | ~1,746 | Verified March 28, 2026 |
 | Type Definition Files (src/types/) | 56 | 831+ interfaces/types across all files |
@@ -260,18 +262,22 @@ Standing rules codified in `CLAUDE.md`:
 1. **Standing Rule #1 — Brand DNA baked into every Golden Master at seed time.** No runtime merging. When Brand DNA is edited, every GM is reseeded via `node scripts/reseed-all-gms.js`. Shared helper: `scripts/lib/brand-dna-helper.js`.
 2. **Standing Rule #2 — No grades = no Golden Master changes. Ever.** The only path by which a specialist prompt can change in production is: human grade → TrainingFeedback record → Prompt Engineer surgical edit → human approval → new GM version → deploy. There is zero automated self-improvement. Enforced by `scripts/verify-no-grades-no-changes.ts` at runtime.
 3. **Jasper delegates to managers, never calls specialists directly.** Enforced by removing 4 bypass tools from Jasper's allowlist + pattern matcher + `jasper-thought-partner.ts` system prompt. Lead Research and Discovery Hub chat endpoints retain access to those tool definitions for their own purposes.
+4. **Finish each thing to production-ready before moving on** (Apr 30 2026). "Done" means walked end-to-end with real credentials and a real artifact (real meeting booked, real video rendered, real OAuth round-trip). No "ready for next?" while the current item is unverified. Adjacent capabilities count as separate items; name them explicitly.
+5. **Never read credentials from screenshots — use Copy buttons** (Apr 30 2026). When integrating a new service or rotating a secret, paste from the provider's Copy button, not from a screenshot of the dashboard. OCR mistakes have caused full debugging detours on token-shape errors that were really transcription errors.
+6. **Destructive UI actions need two-step confirmation** (Apr 30 2026). Disconnect, delete, archive, scrap — every one of these requires an explicit second click in a confirmation dialog. The Zoom disconnect (Apr 30) is the reference implementation.
+7. **Estimate in parallel-agent-hours, not solo dev-weeks** (Apr 30 2026). When scoping work, assume the operator runs N sub-agents in parallel. Rough rule: 4 hours of three concurrent agents ≈ 1 calendar day for a solo dev. Don't quote multi-week timelines that ignore parallelism.
 
 ### Agent inventory (post-rebuild)
 
 | Layer | Count | Status |
 |---|---|---|
-| Specialist rebuilds complete | **40 of 40** | 100% — all real LLM agents with Firestore Golden Masters |
-| Specialist Golden Masters seeded | **36 + 1** | 36 active specialists + the Prompt Engineer meta-specialist |
-| Manager Golden Masters seeded | **9 of 10** | Content, Marketing, Outreach, Intelligence, Revenue, Reputation, Commerce, Builder, Architect. Master Orchestrator skipped by design (it delegates to managers, not specialists — review happens one level down). |
-| Manager review gates wired | **10 of 10** | All managers now flow specialist calls through `delegateWithReview` per Phase 1. |
-| Jasper department delegations LIVE | **10 of 10** | All 9 `delegate_to_*` managers + `delegate_to_agent`. The `orchestrate_campaign` shortcut tool was removed Apr 25 2026 — it violated Jasper's delegation principle (would have run pipeline work itself rather than delegating). Multi-channel campaigns now plan as parallel `delegate_to_*` calls. |
-| Pirate-test verified specialists | **7 of 36** | Alex + Copywriter + Sentiment Analyst + Review Specialist + Deal Closer + Email Specialist + LinkedIn Expert. All 7 passed — proof the GM is loaded from Firestore at runtime. |
-| Behavior-change verified specialists | **1 of 36** | Copywriter — `scripts/verify-prompt-edit-changes-behavior.ts` proves v1 vs v2 produce demonstrably different output on the same task, not just different bytes in Firestore. |
+| Specialist rebuilds complete | **57 of 57** | 100% — all real LLM agents with Firestore Golden Masters |
+| Specialist Golden Masters seeded | **57 + 1** | 57 active specialists + the Prompt Engineer meta-specialist. Includes `sgm_scheduling_specialist_saas_sales_ops_v1` (Apr 30). |
+| Manager Golden Masters seeded | **10 of 10** | Architect, Builder, Commerce, Content, Intelligence, Marketing, Operations (NEW Apr 30 — `mgm_operations_manager_saas_sales_ops_v1`), Outreach, Reputation, Revenue. Master Orchestrator skipped by design (it delegates to managers, not specialists — review happens one level down). |
+| Manager review gates wired | **10 of 10** | All managers route specialist calls through `delegateWithReview`. (Note: `reviewOutput()` itself is currently disabled per `project_manager_auto_review_disabled` — synthetic PASS short-circuits while operator reviews every step manually in Mission Control. DO NOT "restore" — re-enable only after shadow-mode training data is collected.) |
+| Jasper department delegations LIVE | **10 of 10** | 9 `delegate_to_*` managers + `delegate_to_agent` + new `delegate_to_operations` (Apr 30). The `orchestrate_campaign` shortcut tool was removed Apr 25 2026 — it violated Jasper's delegation principle. Multi-channel campaigns now plan as parallel `delegate_to_*` calls. |
+| Pirate-test verified specialists | **7 of 57** | Alex + Copywriter + Sentiment Analyst + Review Specialist + Deal Closer + Email Specialist + LinkedIn Expert. All 7 passed — proof the GM is loaded from Firestore at runtime. |
+| Behavior-change verified specialists | **1 of 57** | Copywriter — `scripts/verify-prompt-edit-changes-behavior.ts` proves v1 vs v2 produce demonstrably different output on the same task, not just different bytes in Firestore. |
 
 ### Key files for the training loop
 
@@ -330,7 +336,7 @@ These are the mistakes the previous sessions left in the codebase that this sess
 |------|--------|
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated |
 | 4-role RBAC | **ENFORCED** — 100% of 436 routes protected (366 standard auth + 50 alternative auth + 20 intentionally public), 53 permissions, sidebar filtering |
-| Agent hierarchy | **100% COMPLETE** — 57 agents (1 orchestrator + 10 managers + 46 specialists), all managers orchestrate all specialists |
+| Agent hierarchy | **100% COMPLETE** — 72 agents (1 L1 orchestrator + 10 L2 managers + 57 L3 specialists + 4 standalone), counts authoritative from auto-generated `agent-registry.ts`. Includes new OPERATIONS_MANAGER + SCHEDULING_SPECIALIST (Apr 30 2026). |
 | Jasper delegation | **COMPLETE** — 46 tools (9 delegate_to_*, 37 utility). All tool handlers execute real services. 2 minor stubs (`generate_content`, `draft_outreach_email`) redirect to specialized endpoints. Mission Control SSE streaming + Campaign Review live |
 | CRM & Sales | **COMPLETE** — Lead scoring (0-100 BANT), proprietary enrichment (500x cheaper than Clearbit), 6-stage deal pipeline with signal bus, smart sequencer with score-based timing |
 | Type safety | **CLEAN** — `tsc --noEmit` passes. Zero `any`, zero `@ts-ignore`, zero `@ts-expect-error` |
@@ -558,7 +564,7 @@ All roadmaps fully complete. Details in git history and `docs/archive/`.
 
 ### Rule 2: Unified AI Workforce Registry
 
-**The 58 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts) + .claude/agents/ prompts, not per-user.**
+**The 72 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts, auto-generated) + .claude/agents/ prompts, not per-user.**
 
 | Aspect | Detail |
 |--------|--------|
@@ -572,21 +578,24 @@ All roadmaps fully complete. Details in git history and `docs/archive/`.
 
 ```
 MASTER_ORCHESTRATOR (L1 - Swarm CEO)
-├── INTELLIGENCE_MANAGER (L2) → 5 Specialists
-├── MARKETING_MANAGER (L2) → 6 Specialists
-├── BUILDER_MANAGER (L2) → 4 Specialists
-├── ARCHITECT_MANAGER (L2) → 3 Specialists
-├── COMMERCE_MANAGER (L2) → 4 Specialists
-├── OUTREACH_MANAGER (L2) → 2 Specialists
-├── CONTENT_MANAGER (L2) → 3 Specialists
-├── REVENUE_DIRECTOR (L2) → 5 Specialists
-└── REPUTATION_MANAGER (L2) → 4 Specialists
+├── ARCHITECT_MANAGER     (L2) → 3 specialists
+├── BUILDER_MANAGER       (L2) → 4 specialists
+├── COMMERCE_MANAGER      (L2) → 4 specialists
+├── CONTENT_MANAGER       (L2) → 6 specialists
+├── INTELLIGENCE_MANAGER  (L2) → 6 specialists
+├── MARKETING_MANAGER     (L2) → 19 specialists (incl. all platform Experts + GROWTH_STRATEGIST + PAID_ADS_SPECIALIST)
+├── OPERATIONS_MANAGER    (L2) → 1 specialist  (NEW Apr 30 — SCHEDULING_SPECIALIST)
+├── OUTREACH_MANAGER      (L2) → 3 specialists (EMAIL, SMS, VOICE_AI)
+├── REPUTATION_MANAGER    (L2) → 4 specialists
+└── REVENUE_DIRECTOR      (L2) → 6 specialists (incl. AI_CHAT_SALES_AGENT)
 
-Standalone: JASPER, VOICE_AGENT_HANDLER,
-           AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
+Plus PROMPT_ENGINEER (L3 meta-specialist — handles surgical GM edits)
+
+Standalone (4): JASPER, AI Chat Sales Agent (Alex), VOICE_AGENT_HANDLER,
+               AUTONOMOUS_POSTING_AGENT
 ```
 
-**Total: 51 Agents (1 Jasper orchestrator + 10 managers + 46 specialists)**
+**Total: 72 Agents (1 L1 + 10 L2 managers + 57 L3 specialists + 4 standalone). Counts authoritative from `src/lib/agents/agent-registry.ts` (auto-generated; CI fails on drift).**
 
 **Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
 
@@ -750,19 +759,19 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 
 ## Verified Live Route Map
 
-### Route Distribution (March 20, 2026)
+### Route Distribution (April 30, 2026)
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | ~120+ | 8 | **Flattened** single-tenant (incl. social, mission-control, content, settings; 12 redirects included) |
-| Public (`/(public)/*`) | ~20 | 1 (`[formId]`) | Marketing + auth pages |
+| Dashboard (`/(dashboard)/*`) | ~135+ | 8 | **Flattened** single-tenant (incl. social, mission-control, content, settings, **calendar, studio, media, content/video/editor, settings/{meeting-scheduler,scheduling-messages,integrations}**) |
+| Public (`/(public)/*`) | ~22 | 1 (`[formId]`) | Marketing + auth pages (incl. **/early-access** with demo-scheduling checkbox) |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | ~6 | 1 (`[productId]`) | E-commerce storefront + checkout |
 | Onboarding (`/onboarding/*`) | 5 | 0 | 5-step onboarding: industry category, niche drill-down, account creation, feature selection, API key setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Academy (`/academy/*`) | 3 | 1 (`[id]`) | Learning hub, courses, certifications |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **194** | **~13** | **Verified March 28, 2026** |
+| **TOTAL** | **207** | **~13** | **Verified April 30, 2026** |
 
 **DELETED:** `src/app/workspace/` (95 pages) and `src/app/admin/*` (92 pages) - legacy routes removed/consolidated into `(dashboard)`
 
@@ -827,11 +836,18 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 - `/leads/discovery` → `/leads/research` (March 5 — consolidated into Lead Research)
 - `/scraper` → `/leads/research` (March 5 — consolidated into Lead Research)
 
+**Unified Calendar (NEW April 30):**
+- `/calendar` — Single-pane calendar dashboard. Reads from 5 sources via `src/lib/calendar/event-aggregator.ts`: meetings (`meetingProvider` discriminated), bookings, Google Calendar sync, scheduled social posts, CRM activities. Filter chips for source type and date range. Backend: `GET /api/calendar/events`.
+
+**Magic Studio + Media Library (NEW April 30):**
+- `/studio` — Magic Studio composer. Single-canvas layout + command bar + tool palette (Image / Video / Music / Text). Each tool wired to its respective generate endpoint. Recent-generations sidebar persists per session.
+- `/media` — Unified media library browser. Reads from `src/lib/media/media-library-service.ts` (canonical `UnifiedMediaAsset` shape; legacy `MediaItem` retained for back-compat). Backend: `/api/media` (GET list/search, POST upload), `/api/media/[id]` (GET, DELETE), `/api/media/persist`. Backfill script: `scripts/backfill-media-library.ts`.
+
 **Video & Voice Lab:**
 - `/content/video` (Video Studio — Hedra-only engine + Character Studio + AI Video Director)
 - `/content/video/library` (Video Library gallery with grid view, filter tabs, detail expansion, edit/download/delete actions)
-- `/content/video/editor` (Standalone Video Editor — CapCut-style timeline, clip stitching, audio mixing, text overlays; accepts project clips or direct URL list)
-- `/content/voice-lab` (Voice Lab — recording studio, voice library with ElevenLabs voices, AI music generation)
+- `/content/video/editor` (Standalone Video Editor — timeline trim/split/merge, drag-positioned text overlays, brightness/contrast/saturation/hue per clip, transitions, FFmpeg render via `/api/video/editor/render`. Has a dedicated sidebar entry as of Apr 30. Accepts project clips or direct URL list.)
+- `/content/voice-lab` (Voice Lab — recording studio, voice library with ElevenLabs voices, **AI Music tab** wired to Replicate MusicGen via `src/lib/music/music-generation-service.ts` + `/api/content/music/generate`)
 - **Character Studio** — reusable character library: custom + Hedra stock characters, reference images, green screen clips, voice assignment, role/style tags. Auto-syncs all Hedra characters into avatar picker on mount.
 - **AI Video Director** — `produce_video`, `assemble_video`, `edit_video`, and `manage_media_library` Jasper tools, per-scene character assignment, Hedra prompt translator, scene review workflow (approve/reject/feedback/regenerate), brand preference memory.
 - **Current Status: FUNCTIONAL** — Hedra sole engine. Phases 1-4 complete (March 10). Video Editor, Media Library, and 2 new Jasper tools operational.
@@ -858,11 +874,11 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 - `/mission-control` (NEW Sprint 18 — 3-panel live delegation tracker: sidebar, timeline, step detail)
 - `/mission-control/history` (NEW Sprint 18 — paginated completed mission table)
 
-**Settings (19 sub-routes):**
+**Settings (21 sub-routes):**
 - `api-keys`, `accounting`, `storefront`, `promotions`
 - `email-templates`, `sms-messages`, `theme`, `users`
-- `security`, `integrations`, `webhooks`, `custom-tools`, `workflows`
-- `lead-routing`, `meeting-scheduler`
+- `security`, `integrations` (NEW Apr 30 — Zoom User-OAuth card with two-step disconnect; existing OAuth providers list also surfaced here), `webhooks`, `custom-tools`, `workflows`
+- `lead-routing`, `meeting-scheduler` (REAL IMPL Apr 30 — per-day availability config UI), `scheduling-messages` (NEW Apr 30 — 8 editable templates with `{firstName}`/`{meetingDate}`/`{meetingTime}`/`{duration}`/`{zoomLink}`/`{orgName}`/`{operatorName}` variables)
 - `features` (5 tabs: Your Business → Features → CRM Entities → API Keys → Summary)
 - `ai-agents/*` (6 routes: hub, business-setup, configuration, persona, training, voice)
 
@@ -931,12 +947,13 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 ### Agent Swarm Overview
 
-**Total Agents:** 51 (1 orchestrator + 10 managers + 46 specialists)
-- **Jasper (orchestrator):** 1 — user-facing chat brain, delegates to managers
-- **Department Managers:** 10 — Content, Marketing, Outreach, Intelligence, Builder, Architect, Commerce, Revenue Director, Reputation, Master Orchestrator. 9 of 10 have Golden Masters with LLM-backed review gates.
-- **Specialists:** 40 — all real LLM-backed agents with Firestore Golden Masters
+**Total Agents:** 72 (1 L1 orchestrator + 10 L2 managers + 57 L3 specialists + 4 standalone) — counts authoritative from auto-generated `src/lib/agents/agent-registry.ts` (regenerate via `npx tsx scripts/generate-agent-registry.ts`; CI fails on drift).
+- **Master Orchestrator (L1):** 1 — Swarm CEO
+- **Department Managers (L2):** 10 — Architect, Builder, Commerce, Content, Intelligence, Marketing, **Operations** (NEW Apr 30), Outreach, Reputation, Revenue Director. Master Orchestrator skipped by design (it delegates to managers, not specialists).
+- **Specialists (L3):** 57 — all real LLM-backed agents with Firestore Golden Masters. Includes the new **SCHEDULING_SPECIALIST** under Operations.
+- **Standalone (4):** Jasper (orchestrator/chat brain), AI Chat Sales Agent (Alex), Voice Agent Handler, Autonomous Posting Agent.
 
-Note: 6 Claude Code QA agents exist in `.claude/agents/` but those are development-time tools for running audits, not production agents in the platform. They are NOT counted in the 51.
+Note: 6 Claude Code QA agents exist in `.claude/agents/` but those are development-time tools for running audits, not production agents in the platform. They are NOT counted in the 72.
 
 | Status | Count | Description |
 |--------|-------|-------------|
@@ -951,7 +968,7 @@ Note: 6 Claude Code QA agents exist in `.claude/agents/` but those are developme
 |----------|------------|--------|--------|-------|
 | MASTER_ORCHESTRATOR | MasterOrchestrator | Swarm Coordination | FUNCTIONAL | **Swarm CEO** - 2000+ LOC implementing Command Pattern for task dispatching, Saga Pattern for multi-manager workflows with compensation, processGoal() hierarchical task decomposition, intent-based domain routing engine with 9 intent categories, cross-domain synchronization with dependency graph resolution, getSwarmStatus() global state aggregation from all 9 managers, MemoryVault integration for goal insights |
 
-### Managers (9) - L2 Orchestrators
+### Managers (10) - L2 Orchestrators
 
 | Agent ID | Class Name | Domain | Status | Notes |
 |----------|------------|--------|--------|-------|
@@ -964,10 +981,13 @@ Note: 6 Claude Code QA agents exist in `.claude/agents/` but those are developme
 | ARCHITECT_MANAGER | ArchitectManager | Site Architecture | FUNCTIONAL | **Strategic Infrastructure Commander** - 2100+ LOC with dynamic specialist resolution (3 specialists), Brand DNA integration, MemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis, SignalBus `site.blueprint_ready` broadcast, parallel execution, graceful degradation |
 | REVENUE_DIRECTOR | RevenueDirector | Sales Ops | FUNCTIONAL | **Sales Ops Commander** - 1800+ LOC with dynamic specialist resolution (5 specialists), Golden Master persona tuning, RevenueBrief synthesis, objection library battlecards, cross-agent signal sharing |
 | REPUTATION_MANAGER | ReputationManager | Trust & Reviews | FUNCTIONAL | **Brand Defense Commander** - 2000+ LOC with dynamic specialist resolution (4 specialists: REVIEW_SPECIALIST, GMB_SPECIALIST, REV_MGR, CASE_STUDY), automated review solicitation from sale.completed signals, AI-powered response engine with star-rating strategies, GMB profile optimization coordination, ReputationBrief trust score synthesis, webhook.review.received signal handling, Review-to-Revenue feedback loop |
+| OPERATIONS_MANAGER | OperationsManager | Scheduling & Calendar Integrity | FUNCTIONAL — **NEW April 30, 2026** | Scheduling-only manager. GM seeded as `mgm_operations_manager_saas_sales_ops_v1` with Brand DNA baked in. Capabilities: meeting_creation, meeting_rescheduling, meeting_cancellation, calendar_integrity, availability_enforcement, attendee_validation. Currently delegates to a single specialist (SCHEDULING_SPECIALIST). Routed via Jasper's `delegate_to_operations` tool with intent rules: operator picks the time, attendees must already exist in the CRM. Reads availability from per-day config service + writes meetings with `meetingProvider` discriminator. |
 
-> **Note:** All 9 managers and the MASTER_ORCHESTRATOR are now FUNCTIONAL with complete specialist orchestration, cross-agent signal communication, and saga-based workflow coordination. **100% Swarm Completion achieved.**
+> **Note:** All 10 managers and the MASTER_ORCHESTRATOR are now FUNCTIONAL with complete specialist orchestration, cross-agent signal communication, and saga-based workflow coordination. **100% Swarm Completion achieved.**
 
-### Specialists (38) - L3 Workers
+### Specialists (57) - L3 Workers
+
+> **Note (April 30, 2026):** This SSOT lists the historical core domain breakdowns below. The full authoritative list of all 57 specialists (with their parent manager and capabilities) lives in `src/lib/agents/agent-registry.ts` — it is auto-generated and CI fails on drift, so reference it for the canonical roster. Domains added since the original audit include all platform Experts (Bluesky, Discord, Facebook Ads, Google Business, Instagram, LinkedIn, Mastodon, Pinterest, Reddit, Telegram, Threads, TikTok, Twitch, Twitter/X, WhatsApp Business, YouTube), GROWTH_STRATEGIST, PAID_ADS_SPECIALIST, BLOG_WRITER, MUSIC_PLANNER, PODCAST_SPECIALIST, AI_CHAT_SALES_AGENT (under Revenue), VOICE_AI_SPECIALIST, PROMPT_ENGINEER (meta-specialist), and the new SCHEDULING_SPECIALIST under Operations.
 
 #### Intelligence Domain (5)
 
@@ -1029,6 +1049,14 @@ Note: 6 Claude Code QA agents exist in `.claude/agents/` but those are developme
 
 > Outreach orchestration details in `src/lib/agents/outreach/manager.ts`.
 
+#### Operations Domain (1) — NEW April 30, 2026
+
+| Agent ID | Class Name | Capabilities | Status |
+|----------|------------|--------------|--------|
+| SCHEDULING_SPECIALIST | SchedulingSpecialist | `create_meeting`, `reschedule_meeting`, `cancel_meeting` — checks per-day availability config, validates attendees against CRM, writes meeting record with `meetingProvider` discriminator (zoom/google_meet/teams/none), composes confirmation/reminder copy from editable scheduling-messages templates | FUNCTIONAL — Stage 1–6 rebuild (Apr 30) |
+
+> Operations orchestration details in `src/lib/agents/operations/manager.ts`. GM: `sgm_scheduling_specialist_saas_sales_ops_v1`. Source files: `src/lib/agents/operations/scheduling/specialist.ts`, `src/lib/meetings/scheduler-engine.ts`, `src/lib/calendar/event-aggregator.ts`.
+
 #### Content Domain (3)
 
 | Agent ID | Class Name | Capabilities | Status |
@@ -1060,13 +1088,15 @@ Note: 6 Claude Code QA agents exist in `.claude/agents/` but those are developme
 
 > Reputation Manager orchestration details in `src/lib/agents/trust/reputation/manager.ts`.
 
-### Standalone Agents (6) - Outside Swarm Hierarchy
+### Standalone Agents (4) - Outside Swarm Hierarchy
+
+> **Note:** As of the auto-generated `agent-registry.ts`, only 4 agents carry tier `STANDALONE`: Jasper, Voice Agent Handler, Autonomous Posting Agent, and Chat Session Service. AI Chat Sales Agent (Alex) was reclassified as an L3 specialist under REVENUE_DIRECTOR (`AI_CHAT_SALES_AGENT`) and Growth Strategist as an L3 under MARKETING_MANAGER (`GROWTH_STRATEGIST`) — both still appear in the table below for backward-compatibility narrative, but their authoritative tier classification is L3.
 
 These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **50 tools** across delegation, intelligence, content, video, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Video: `produce_video`, `assemble_video`, `edit_video` (opens Standalone Video Editor, pre-loads clips), `manage_media_library` (list/search/add media assets with type/category filters). Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
+| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **55 tools** across delegation, intelligence, content, video, and platform categories. Delegates to all 10 domain managers via `delegate_to_*` tools (incl. **`delegate_to_operations`** NEW Apr 30 — operator picks the time, attendees must already exist in CRM). Video: `produce_video`, `assemble_video`, `edit_video` (opens Standalone Video Editor, pre-loads clips), `manage_media_library` (list/search/add media assets with type/category filters). Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
 | AI Chat Sales Agent (Alex) | Customer-Facing Sales Agent — REAL LLM (Task #59) | `src/lib/agents/sales-chat/specialist.ts` | FUNCTIONAL | Customer-facing AI sales agent. Pure LLM specialist with a single action `respond_to_visitor` that produces both a conversational reply AND a structured intent/qualification/nextAction/rationale in one LLM call. REQUIRED Golden Master — refuses to run until `scripts/seed-sales-chat-agent-gm.js` has been executed against Firestore. Stateless (optional caller-provided `conversationHistory` + `priorQualification`). Two independent GM paths: **(1)** the JSON-output-mode specialist GM (`specialistGoldenMasters/sgm_ai_chat_sales_agent_saas_sales_ops_v1`) consumed by Jasper's `routeSalesChatAgent` delegation; **(2)** the free-form conversational Training Lab GM (`goldenMasters/gm_sales_chat_v1`) seeded via `/api/training/seed-sales-chat-gm` and consumed by the website chat widget (`/api/chat/public`) + Facebook Messenger (`/api/chat/facebook`) via `AgentInstanceManager`. Both paths coexist and serve different callers. |
 | Growth Strategist | Chief Growth Officer | `src/lib/agents/growth-strategist/specialist.ts` | FUNCTIONAL | Cross-domain business intelligence agent. Aggregates data from all analytics sources (revenue, SEO, social, email, pipeline). Produces strategic directives for domain managers. Briefings accessible through Jasper. Data aggregator: `src/lib/agents/growth-strategist/data-aggregator.ts`. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
@@ -1509,7 +1539,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (436 Total — Verified March 28, 2026)
+### API Routes (507 Total — Verified April 30, 2026)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
@@ -1622,6 +1652,27 @@ This script:
 | `/api/media` | POST | Upload and register a new media asset | FUNCTIONAL |
 | `/api/media/[mediaId]` | GET | Retrieve a single media item by ID | FUNCTIONAL |
 | `/api/media/[mediaId]` | DELETE | Delete a media item and its associated storage object | FUNCTIONAL |
+| `/api/media/persist` | POST | Persist a media asset to Firestore (used by Magic Studio + content engine) | FUNCTIONAL (NEW Apr 30) |
+
+#### Scheduling, Calendar & Zoom (NEW April 30)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/integrations/zoom/auth` | GET | Initiate Zoom User-OAuth flow (PKCE, scope-locked) | FUNCTIONAL |
+| `/api/integrations/zoom/callback` | GET | OAuth callback — exchanges code for tokens, writes per-integration doc, dual-writes summary into legacy `integrations/all` map for `/settings/integrations` UI compat | FUNCTIONAL |
+| `/api/integrations/zoom/disconnect` | POST | Two-step disconnect — clears tokens + removes Zoom key from `integrations/all` map | FUNCTIONAL |
+| `/api/calendar/events` | GET | Unified calendar feed — aggregates 5 sources (meetings, bookings, Google Calendar sync, scheduled posts, CRM activities) | FUNCTIONAL |
+| `/api/booking` | GET/POST | Public booking endpoint. GET returns availability slots; POST creates booking + meeting record (Zoom or `meetingProvider: 'none'`) | FUNCTIONAL — POST upgrade Apr 30 |
+| `/api/settings/scheduling-messages` | GET/PUT | Get / save the 8-field editable template doc at `organizations/{PLATFORM_ID}/settings/schedulingMessages` | FUNCTIONAL |
+
+#### Content Engine — Music, Video, Asset Generation (NEW April 30)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/content/music/generate` | POST | AI music generation via Replicate MusicGen (`src/lib/music/music-generation-service.ts`) | FUNCTIONAL |
+| `/api/content/video/generate` | POST | Magic Studio video generation entry point | FUNCTIONAL |
+| `/api/content/asset-generator/generate` | POST | Magic Studio image/asset generation entry point | FUNCTIONAL |
+| `/api/video/editor/render` | POST | Standalone Video Editor render — FFmpeg-backed assembly with timeline trim/split, text overlays, color/transition effects | FUNCTIONAL |
 
 #### Social Media Platform (NEW Feb 12)
 
@@ -1735,6 +1786,54 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | `/api/voice/twiml` | Audio fallback uses placeholder URL | LOW |
 
 **Resolved API Issues:** All previous gaps resolved across Sessions 7-37. See git history for details.
+
+**Meeting Record Schema (April 30, 2026):**
+
+Every meeting record now carries a `meetingProvider` discriminator so the unified calendar dashboard and future provider adapters can dispatch without a schema migration.
+
+```typescript
+// src/lib/meetings/scheduler-engine.ts
+export type MeetingProvider = 'zoom' | 'google_meet' | 'teams' | 'none';
+
+interface MeetingRecord {
+  // ... attendees, assignee, status, etc.
+  meetingProvider: MeetingProvider;
+  zoomMeetingId?: string;     // present iff meetingProvider === 'zoom'
+  zoomJoinUrl?: string;
+  zoomStartUrl?: string;
+}
+```
+
+`'zoom'` is the only provider with a working integration today; the discriminator exists so Google Meet / Teams adapters can land later without touching every consumer. `'none'` is set when the operator books a meeting without a video conference URL (in-person, phone, or async).
+
+**Unified Media Library Schema (April 30, 2026):**
+
+`src/types/media-library.ts` defines two shapes side-by-side:
+
+- **`UnifiedMediaAsset`** — Canonical shape for all NEW code. Every content engine agent (Copywriter, Alex, Video Pipeline, Voice Lab, Scraper) reads/writes this. Stored at `organizations/{PLATFORM_ID}/media/{id}`.
+  - `type: 'image' | 'video' | 'audio' | 'document'`
+  - `category: MediaAssetCategory` — one of 14 enumerated values in `MEDIA_CATEGORIES` (logo, social-graphic, banner, avatar-portrait, photo, graphic, music-track, voiceover, sound, video-clip, final-render, thumbnail, screenshot, other)
+  - `tags: string[]`, `name`, `url`, `thumbnailUrl?`, `mimeType`, `dimensions?`, `source: 'ai-generated' | 'user-upload' | 'imported' | 'derived'`
+- **`MediaItem`** — `@deprecated` legacy shape retained for back-compat with the existing `/content/video/library` page and `EditorMediaPanel`. New code MUST use `UnifiedMediaAsset`. A projection helper exists in the same file to map `UnifiedMediaAsset` → legacy `MediaItem`.
+
+Backfill of pre-existing media assets is handled by `scripts/backfill-media-library.ts`.
+
+**Scheduling Messages Templates (April 30, 2026):**
+
+`organizations/{PLATFORM_ID}/settings/schedulingMessages` holds 8 editable copy fields:
+`earlyAccessSuccessTitle`, `earlyAccessSuccessBody`, `demoConfirmationEmailSubject`, `demoConfirmationEmailBody`, `zoomMeetingTopic`, `zoomMeetingAgenda`, `reminder24hSubject`, `reminder24hBody`, `reminder1hSubject`, `reminder1hBody`.
+
+Template variables supported in any field via `{name}` syntax: `{firstName}`, `{fullName}`, `{meetingDate}` (e.g. "Tuesday, Nov 4"), `{meetingTime}` (e.g. "2:00 PM"), `{duration}` (minutes), `{zoomLink}`, `{orgName}`, `{operatorName}`. When the doc doesn't exist (fresh deployment, never edited), helpers in `src/lib/meetings/scheduling-messages-service.ts` return the hardcoded `DEFAULT_MESSAGES` so existing flows continue identically.
+
+**Integrations dual-write compat shim (April 30, 2026):**
+
+The new per-integration credential model writes tokens + metadata to a per-integration doc (one doc per integration). The existing `/settings/integrations` UI page still reads from a single `integrations/all` map doc keyed by integration id. To avoid a UI refactor on launch, the Zoom callback dual-writes a slim summary (status + connectedEmail/Name/At metadata) to the legacy `integrations/all` map so the integrations card shows ✓ Connected without a refactor. Tokens stay only in the per-integration doc. The two-step disconnect clears both. Future integrations should follow the same dual-write pattern until the UI is migrated to `listConnectedIntegrations`.
+
+**`useAdminSdk` opt-in flag (April 30, 2026):**
+
+`getIntegrationCredentials`, `saveIntegrationCredentials`, `disconnectIntegration` (in `src/lib/integrations/integration-manager.ts`) and `createLead` now accept an optional `useAdminSdk: true` flag. When set, both reads and writes route through the Firebase Admin SDK, bypassing Firestore security rules. **REQUIRED** for any code path that runs without an authenticated request context (public webhooks, public endpoints like `/early-access`, server-to-server crons). Default (`useAdminSdk: false` / omitted) preserves the original client-SDK behavior so auth-gated callers are unaffected. `oauth-state.ts` is fully migrated to Admin SDK as part of this same fix.
+
+`AdminFirestoreService.set` and `.get` are now generic (`<T extends object>`) so typed callers don't need `Record<string, unknown>` casts.
 
 **Onboarding Pipeline (February 27, 2026):**
 
@@ -2044,7 +2143,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **Salesforce** | **REAL** | REST API v58.0 — lead creation |
 | **Xero** | **REAL** | OAuth2, invoices, contacts, payments |
 | **QuickBooks** | **REAL** | OAuth2, invoices, customers, company info |
-| **Zoom** | **REAL** | Meetings API — create, cancel, recording, waiting room |
+| **Zoom** | **REAL — User-OAuth (Apr 30 2026)** | Full User-level OAuth — `/api/integrations/zoom/{auth,callback,disconnect}`. Per-integration token doc + dual-write summary into legacy `integrations/all` map for `/settings/integrations` UI compat. Two-step disconnect. Used by SCHEDULING_SPECIALIST + Operations Manager for meeting creation. |
 | **Twilio Verify** | **REAL** | OTP/2FA verification |
 | **Apollo.io** | **REAL** | Free-tier org search (`/api/v1/organizations/search`), company enrichment. Person enrichment requires paid plan. |
 | **Clay.com** | **KEY STORED** | API key configured. REST API deprecated by Clay — webhook-based integration only. |
@@ -2209,7 +2308,7 @@ The build pipeline now enforces **mandatory TypeScript type-checking** as a non-
 - **One organization:** `rapid-compliance-root` is the only org in the system (Rule 1)
 - All Firestore data scoped to `organizations/rapid-compliance-root/` or flat root collections (Rule 5)
 - Feature visibility configurable at the platform level
-- All 58 AI agents operate under the single org identity (Rule 2)
+- All 72 AI agents operate under the single org identity (Rule 2)
 - `DEFAULT_ORG_ID` constant used by all service classes — no dynamic org resolution
 - All service classes use `PLATFORM_ID` constant directly — no dynamic org parameters
 
