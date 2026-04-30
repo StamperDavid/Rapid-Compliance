@@ -2,8 +2,15 @@
  * Zoom OAuth — Start authentication flow
  * GET /api/integrations/zoom/auth
  *
- * User OAuth flow (NOT Server-to-Server) — operator clicks "Connect Zoom"
- * in /settings/integrations and is redirected to Zoom for consent.
+ * User OAuth flow (NOT Server-to-Server). Operator clicks "Connect Zoom"
+ * in /settings/integrations; the component calls this route via authFetch
+ * (which attaches the Firebase ID token in the Authorization header).
+ *
+ * Returns JSON `{ success: true, authUrl }` — the component then sets
+ * window.location.href to authUrl to navigate the browser to Zoom for
+ * consent. Cannot use a 302 redirect here because plain browser navigation
+ * (window.location.href) does NOT include the Authorization header, so a
+ * direct redirect from this route would 401 before reaching Zoom.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -60,7 +67,7 @@ export async function GET(request: NextRequest) {
     });
     const authUrl = `https://zoom.us/oauth/authorize?${params.toString()}`;
 
-    return NextResponse.redirect(authUrl);
+    return NextResponse.json({ success: true, authUrl });
   } catch (error: unknown) {
     logger.error('Zoom OAuth error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/zoom/auth' });
     return errors.externalService('Zoom OAuth', error instanceof Error ? error : undefined);
