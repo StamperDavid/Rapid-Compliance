@@ -5,6 +5,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -103,11 +104,22 @@ export async function getLead(
 }
 
 /**
- * Create a new lead with auto-enrichment
+ * Create a new lead with auto-enrichment.
+ *
+ * `useAdminSdk: true` writes via Admin SDK (bypasses Firestore rules) and is
+ * required for public/unauthenticated endpoints that have no `request.auth`
+ * context — e.g. `/api/public/early-access`. Per
+ * `feedback_server_routes_must_use_admin_sdk`: server routes called without
+ * an authed user must use Admin SDK or Firestore rules return PERMISSION_DENIED.
+ *
+ * When `useAdminSdk` is set, downstream services that use the client SDK
+ * (activity logging, event triggers, segmentation) may fail silently — they
+ * are already try/catch wrapped and that is acceptable for the public-lead
+ * path. Auto-enrichment also disabled by default for this case via the caller.
  */
 export async function createLead(
   data: Omit<Lead, 'id' | 'createdAt'>,
-  options: { autoEnrich?: boolean; skipDuplicateCheck?: boolean } = {}
+  options: { autoEnrich?: boolean; skipDuplicateCheck?: boolean; useAdminSdk?: boolean } = {}
 ): Promise<Lead> {
   try {
     const leadId = `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -155,12 +167,20 @@ export async function createLead(
       updatedAt: now,
     };
 
-    await FirestoreService.set(
-      getSubCollection('leads'),
-      leadId,
-      lead,
-      false
-    );
+    if (options.useAdminSdk) {
+      await AdminFirestoreService.set(
+        getSubCollection('leads'),
+        leadId,
+        lead as unknown as Record<string, unknown>,
+      );
+    } else {
+      await FirestoreService.set(
+        getSubCollection('leads'),
+        leadId,
+        lead,
+        false
+      );
+    }
 
     // Log activity
     try {

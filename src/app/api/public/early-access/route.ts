@@ -137,7 +137,10 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     };
 
-    const lead = await createLead(leadInput, { autoEnrich: false });
+    // Public endpoint — no auth context, so the Admin SDK must perform the
+    // Firestore write. Per `feedback_server_routes_must_use_admin_sdk`, the
+    // client SDK silently fails Firestore rules when there is no request.auth.
+    const lead = await createLead(leadInput, { autoEnrich: false, useAdminSdk: true });
 
     // Notification email to the operator. Best-effort — never block on it.
     const html = `
