@@ -111,6 +111,7 @@ export { ContentManager } from './content/manager';
 export { ArchitectManager } from './architect/manager';
 export { RevenueDirector } from './sales/revenue/manager';
 export { ReputationManager } from './trust/reputation/manager';
+export { OperationsManager } from './operations/manager';
 
 // ============================================================================
 // SPECIALISTS (L3 Workers)
@@ -154,6 +155,9 @@ export { SmsSpecialist } from './outreach/sms/specialist';
 export { Copywriter } from './content/copywriter/specialist';
 export { CalendarCoordinator } from './content/calendar/specialist';
 export { VideoSpecialist } from './content/video/specialist';
+
+// Operations Specialists
+export { SchedulingSpecialist } from './operations/scheduling/specialist';
 
 // Sales Specialists
 export { MerchandiserSpecialist } from './sales/merchandiser/specialist';
@@ -199,6 +203,7 @@ export const AGENT_IDS = {
   ARCHITECT_MANAGER: 'ARCHITECT_MANAGER',
   REVENUE_DIRECTOR: 'REVENUE_DIRECTOR',
   REPUTATION_MANAGER: 'REPUTATION_MANAGER',
+  OPERATIONS_MANAGER: 'OPERATIONS_MANAGER',
 
   // Intelligence Specialists
   COMPETITOR_RESEARCHER: 'COMPETITOR_RESEARCHER',
@@ -238,6 +243,9 @@ export const AGENT_IDS = {
   COPYWRITER: 'COPYWRITER',
   CALENDAR_COORDINATOR: 'CALENDAR_COORDINATOR',
   VIDEO_SPECIALIST: 'VIDEO_SPECIALIST',
+
+  // Operations Specialists
+  SCHEDULING_SPECIALIST: 'SCHEDULING_SPECIALIST',
 
   // Sales Specialists
   MERCHANDISER: 'MERCHANDISER',
