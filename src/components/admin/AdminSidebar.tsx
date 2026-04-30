@@ -23,6 +23,7 @@ import {
 } from '@/types/unified-rbac';
 import {
   LayoutDashboard,
+  CalendarDays,
   Users,
   Handshake,
   MessageSquare,
@@ -66,6 +67,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     standalone: true,
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
+      { id: 'calendar', label: 'Calendar', href: '/calendar', icon: CalendarDays, iconColor: 'var(--color-info)' },
     ],
   },
   // ── CRM (7 items) ─────────────────────────────────────────────────
