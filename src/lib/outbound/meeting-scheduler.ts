@@ -33,15 +33,17 @@ export interface MeetingSlot {
   conflictsWith?: string[]; // Other meetings during this time
 }
 
+export type OutboundMeetingProvider = 'zoom' | 'google_meet' | 'teams' | 'none';
+
 export interface ScheduledMeeting {
   id: string;
   prospectId?: string;
-  
+
   // Meeting details
   title: string;
   description: string;
   duration: number; // minutes
-  
+
   // Participants
   host: {
     name: string;
@@ -53,16 +55,21 @@ export interface ScheduledMeeting {
     email: string;
     status: 'pending' | 'accepted' | 'declined' | 'tentative';
   }[];
-  
+
   // Time
   startTime: string; // ISO datetime
   endTime: string;   // ISO datetime
   timezone: string;
-  
+
+  // Provider for the video conference. Set at creation. Today the outbound
+  // flow generates Google Meet links via Google Calendar's conferenceData.
+  // Stage 5 (SchedulingSpecialist rebuild) will reconcile this with the
+  // owner's Zoom-only direction.
+  meetingProvider: OutboundMeetingProvider;
   // Location/link
   meetingLink?: string; // Zoom, Google Meet, etc.
   location?: string;
-  
+
   // Integration
   calendarEventId?: string; // Google Calendar, Outlook, etc.
   conferenceLink?: string;  // Video conference link
@@ -219,6 +226,7 @@ export async function scheduleMeeting(
       startTime: bestSlot.startTime.toISOString(),
       endTime: bestSlot.endTime.toISOString(),
       timezone: bestSlot.timezone,
+      meetingProvider: 'google_meet',
       status: 'scheduled',
       reminders: [
         { minutes: 60, sent: false },      // 1 hour before
@@ -447,6 +455,7 @@ async function getUserMeetings(
       startTime: slot.start,
       endTime: slot.end,
       timezone: 'America/New_York',
+      meetingProvider: 'none' as const,
       status: 'scheduled',
       reminders: [],
       createdAt: new Date().toISOString(),

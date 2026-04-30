@@ -32,6 +32,8 @@ export interface MeetingSchedulerConfig {
   };
 }
 
+export type MeetingProvider = 'zoom' | 'google_meet' | 'teams' | 'none';
+
 export interface ScheduledMeeting {
   id: string;
   schedulerConfigId: string;
@@ -46,6 +48,11 @@ export interface ScheduledMeeting {
     email: string;
     phone?: string;
   }>;
+  // Video-conferencing provider for this meeting. Set at creation time.
+  // 'zoom' is the only provider implemented today; the discriminator exists
+  // so the unified calendar dashboard and future adapters (Google Meet,
+  // Teams) can dispatch on it without a schema migration.
+  meetingProvider: MeetingProvider;
   zoomMeetingId?: string;
   zoomJoinUrl?: string;
   zoomStartUrl?: string;
@@ -130,6 +137,7 @@ export async function scheduleMeeting(
       duration: schedulerConfig.duration,
       assignedTo: assignedUserId,
       attendees: config.attendees,
+      meetingProvider: zoomData.zoomMeetingId ? 'zoom' : 'none',
       ...zoomData,
       status: 'scheduled',
       reminders: [],
