@@ -227,6 +227,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Try to create the Zoom meeting inline. If Zoom is offline / rate-limited
+    // / not connected, the booking is still written so the slot is reserved
+    // and the operator can manually generate a link. The response signals
+    // `zoomCreationFailed: true` so the client can show "we'll email your
+    // meeting link separately" instead of a missing-link confirmation.
+    let zoomMeetingId: string | null = null;
+    let zoomJoinUrl: string | null = null;
+    let zoomStartUrl: string | null = null;
+    let zoomCreationFailed = false;
+    let zoomError: string | null = null;
+
+    if (meetingProvider === 'zoom') {
+      try {
+        const { createZoomMeeting } = await import('@/lib/integrations/zoom');
+        const zoomMeeting = await createZoomMeeting({
+          topic: `Meeting with ${name}`,
+          startTime,
+          duration,
+          agenda: notes ?? undefined,
+          attendees: [email],
+        });
+        zoomMeetingId = zoomMeeting.meetingId;
+        zoomJoinUrl = zoomMeeting.joinUrl;
+        zoomStartUrl = zoomMeeting.startUrl;
+      } catch (zoomErr) {
+        zoomCreationFailed = true;
+        zoomError = zoomErr instanceof Error ? zoomErr.message : String(zoomErr);
+        logger.warn('Zoom meeting creation failed for public booking — booking will be written without a join link', {
+          error: zoomError,
+          file: FILE,
+        });
+      }
+    }
+
     // Create booking
     const bookingId = `booking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const booking = {
@@ -242,19 +276,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       notes: notes ?? null,
       status: 'confirmed' as const,
       meetingProvider,
-      // Provider-specific URLs (populated by Stage 3 once Zoom create is wired
-      // into this route). Today the public booking flow only writes a Google
-      // Calendar event — no video link is created.
-      zoomMeetingId: null as string | null,
-      zoomJoinUrl: null as string | null,
-      zoomStartUrl: null as string | null,
+      zoomMeetingId,
+      zoomJoinUrl,
+      zoomStartUrl,
+      zoomCreationFailed,
       organizationId: PLATFORM_ID,
       createdAt: new Date().toISOString(),
     };
 
     await AdminFirestoreService.set(bookingsPath, bookingId, booking);
 
-    // Try to create Google Calendar event (non-blocking)
+    // Try to create Google Calendar event (non-blocking). The Zoom join URL
+    // is included in the description so the operator (and Google's calendar
+    // notifications) surface it alongside the standard booking metadata.
     void (async () => {
       try {
         const calendarTokenDoc = await AdminFirestoreService.get(getSubCollection('integrations'), 'google-calendar');
@@ -262,12 +296,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         if (calendarTokens?.access_token) {
           const { createEvent } = await import('@/lib/integrations/google-calendar-service');
+          const description = [
+            'Booked via SalesVelocity.ai',
+            '',
+            `Name: ${name}`,
+            `Email: ${email}`,
+            phone ? `Phone: ${phone}` : null,
+            notes ? `Notes: ${notes}` : null,
+            zoomJoinUrl ? `\nZoom: ${zoomJoinUrl}` : null,
+          ].filter(Boolean).join('\n');
           await createEvent(
             { access_token: calendarTokens.access_token, refresh_token: calendarTokens.refresh_token },
             'primary',
             {
               summary: `Meeting with ${name}`,
-              description: `Booked via SalesVelocity.ai\n\nName: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ''}${notes ? `\nNotes: ${notes}` : ''}`,
+              description,
               start: { dateTime: startTime.toISOString() },
               end: { dateTime: endTime.toISOString() },
               attendees: [{ email }],
@@ -287,12 +330,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     void (async () => {
       try {
         const { sendEmail } = await import('@/lib/email/email-service');
+        const meetingLinkBlock = zoomJoinUrl
+          ? `<p><strong>Join the meeting:</strong> <a href="${zoomJoinUrl}">${zoomJoinUrl}</a></p>`
+          : '<p>We hit a snag generating your meeting link automatically — we will email it to you separately within the hour.</p>';
         await sendEmail({
           to: email,
           subject: `Booking Confirmed — ${date} at ${time}`,
           html: `<h2>Your booking is confirmed</h2>
             <p>Hi ${name},</p>
             <p>Your meeting has been scheduled for <strong>${date}</strong> at <strong>${time}</strong> (${duration} minutes).</p>
+            ${meetingLinkBlock}
             ${notes ? `<p>Notes: ${notes}</p>` : ''}
             <p>We look forward to speaking with you!</p>`,
         });
@@ -314,6 +361,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         duration,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
+        zoomJoinUrl,
+        zoomCreationFailed,
       },
     });
   } catch (error: unknown) {
