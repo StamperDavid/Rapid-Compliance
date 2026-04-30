@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { logger } from '@/lib/logger/logger';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface ZoomConnection {
   status?: 'active' | 'inactive' | 'expired';
@@ -27,6 +28,7 @@ export default function ZoomIntegration({
   onUpdate: _onUpdate,
 }: ZoomIntegrationProps) {
   const { user: authUser } = useAuth();
+  const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
 
   const textColor = typeof window !== 'undefined'
@@ -39,7 +41,7 @@ export default function ZoomIntegration({
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
     : 'var(--color-primary)';
 
-  const handleConnect = (): void => {
+  const handleConnect = async (): Promise<void> => {
     setIsConnecting(true);
     try {
       if (!authUser?.id) {
@@ -51,7 +53,22 @@ export default function ZoomIntegration({
         setIsConnecting(false);
         return;
       }
-      window.location.href = '/api/integrations/zoom/auth';
+      // Fetch the Zoom authorize URL via authFetch (sets Authorization
+      // header). A plain window.location.href to the auth route would not
+      // include the Bearer token and would 401. Once we have the URL the
+      // component navigates the browser there directly — the redirect
+      // back from Zoom hits the public callback route which doesn't need
+      // the operator's auth header (it validates a CSRF state instead).
+      const res = await authFetch('/api/integrations/zoom/auth');
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `Auth route returned ${res.status}`);
+      }
+      const data = (await res.json()) as { success: boolean; authUrl?: string };
+      if (!data.success || !data.authUrl) {
+        throw new Error('Auth route did not return an authUrl');
+      }
+      window.location.href = data.authUrl;
     } catch (error) {
       logger.error(
         'Zoom connect failed',
@@ -89,7 +106,7 @@ export default function ZoomIntegration({
           </div>
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => { void handleConnect(); }}
           disabled={isConnecting}
           style={{
             width: '100%',

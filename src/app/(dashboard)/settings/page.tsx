@@ -98,7 +98,7 @@ export default function SettingsPage() {
       title: 'Integrations',
       items: [
         { icon: '📊', label: 'Accounting Software', description: 'Sync invoices, payments, and customers to QuickBooks, Xero, FreshBooks, Wave', href: `/settings/accounting`, permission: canManageIntegrations },
-        { icon: '🔌', label: 'Business Apps', description: 'Connect Slack, Zapier, and other third-party apps', href: `/settings/integrations`, permission: canManageIntegrations },
+        { icon: '🔌', label: 'Connected Apps & Integrations', description: 'Connect Zoom, Google Calendar, Slack, Teams, and other OAuth-based integrations', href: `/settings/integrations`, permission: canManageIntegrations },
         { icon: '🌐', label: 'Webhooks', description: 'Configure webhooks for real-time event notifications', href: `/settings/webhooks`, permission: canManageIntegrations },
         { icon: '🔧', label: 'Custom Tools', description: 'Add external apps and tools as sandboxed iframes in your workspace', href: `/settings/custom-tools`, permission: canManageOrganization },
       ]
