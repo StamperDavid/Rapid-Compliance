@@ -1,0 +1,170 @@
+'use client';
+
+import React, { useState } from 'react';
+import { logger } from '@/lib/logger/logger';
+import { useAuth } from '@/hooks/useAuth';
+
+interface ZoomConnection {
+  status?: 'active' | 'inactive' | 'expired';
+  metadata?: {
+    connectedEmail?: string;
+    connectedName?: string;
+    connectedAt?: string;
+  };
+}
+
+interface ZoomIntegrationProps {
+  integration: ZoomConnection | null;
+  onConnect: (integration: Partial<ZoomConnection>) => void;
+  onDisconnect: () => void;
+  onUpdate: (settings: Record<string, unknown>) => void;
+}
+
+export default function ZoomIntegration({
+  integration,
+  onConnect: _onConnect,
+  onDisconnect,
+  onUpdate: _onUpdate,
+}: ZoomIntegrationProps) {
+  const { user: authUser } = useAuth();
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const textColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
+  const borderColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-main)'
+    : 'var(--color-border-main)';
+  const primaryColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
+
+  const handleConnect = (): void => {
+    setIsConnecting(true);
+    try {
+      if (!authUser?.id) {
+        logger.error(
+          'User not found for Zoom connect',
+          new Error('Auth user missing'),
+          { file: 'ZoomIntegration.tsx' },
+        );
+        setIsConnecting(false);
+        return;
+      }
+      window.location.href = '/api/integrations/zoom/auth';
+    } catch (error) {
+      logger.error(
+        'Zoom connect failed',
+        error instanceof Error ? error : new Error(String(error)),
+        { file: 'ZoomIntegration.tsx' },
+      );
+      setIsConnecting(false);
+    }
+  };
+
+  // Treat any non-null integration with a not-explicitly-disconnected status as
+  // connected — both the existing 'active' and the OAuth-callback-written
+  // 'connected' values mean the same thing here. Stale-token detection is the
+  // verify script's job, not the UI's.
+  const isConnected = integration != null && integration.status !== 'inactive' && integration.status !== 'expired';
+  const connectedEmail = integration?.metadata?.connectedEmail;
+
+  if (!isConnected) {
+    return (
+      <div style={{
+        backgroundColor: 'var(--color-bg-paper)',
+        border: `1px solid ${borderColor}`,
+        borderRadius: '0.75rem',
+        padding: '1.5rem',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ fontSize: '3rem' }}>📹</div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
+              Zoom
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
+              Auto-create Zoom meetings for booked demos and operator-scheduled calls
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleConnect}
+          disabled={isConnecting}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: isConnecting ? 'var(--color-border-strong)' : primaryColor,
+            color: 'var(--color-text-primary)',
+            border: 'none',
+            borderRadius: '0.5rem',
+            cursor: isConnecting ? 'not-allowed' : 'pointer',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+          }}
+        >
+          {isConnecting ? 'Connecting…' : 'Connect Zoom'}
+        </button>
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem', textAlign: 'center' }}>
+          You&apos;ll be redirected to Zoom to authorize the connection
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      backgroundColor: 'var(--color-bg-paper)',
+      border: `1px solid ${primaryColor}`,
+      borderRadius: '0.75rem',
+      padding: '1.5rem',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '3rem' }}>📹</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
+                Zoom
+              </h3>
+              {connectedEmail ? (
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
+                  Connected as {connectedEmail}
+                </p>
+              ) : null}
+            </div>
+            <div style={{
+              padding: '0.375rem 0.75rem',
+              backgroundColor: 'var(--color-success-dark)',
+              border: '1px solid var(--color-success-light)',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
+              color: 'var(--color-success-light)',
+              fontWeight: 600,
+            }}>
+              ✓ Connected
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <button
+          onClick={onDisconnect}
+          style={{
+            padding: '0.75rem 1rem',
+            backgroundColor: 'var(--color-error-dark)',
+            color: 'var(--color-error-light)',
+            border: 'none',
+            borderRadius: '0.5rem',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+          }}
+        >
+          Disconnect
+        </button>
+      </div>
+    </div>
+  );
+}

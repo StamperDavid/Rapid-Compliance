@@ -5,6 +5,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -19,11 +20,34 @@ export interface IntegrationCredentials {
 }
 
 /**
+ * Options for credential CRUD helpers.
+ *
+ * `useAdminSdk: true` routes both reads and writes through the Firebase Admin
+ * SDK, bypassing Firestore security rules. REQUIRED for any code path that
+ * runs without an authenticated request context (public webhooks, public
+ * booking endpoints, OAuth callbacks, cron-triggered jobs). Without this flag
+ * the client SDK's request.auth is null and Firestore rules silently return
+ * empty results, which manifests as "credentials not found" in production.
+ *
+ * Default (`useAdminSdk: false`/omitted) preserves the original client-SDK
+ * behavior so existing auth-gated callers are unaffected.
+ */
+export interface CredentialAccessOptions {
+  useAdminSdk?: boolean;
+}
+
+/**
  * Save integration credentials
+ *
+ * Pass `{ useAdminSdk: true }` for callers without a Firebase auth context
+ * (public webhooks, OAuth callbacks, cron jobs). Without it, Firestore rules
+ * reject the write silently because `request.auth` is null on server routes
+ * that don't run `requireAuth`.
  */
 export async function saveIntegrationCredentials(
   integrationId: string,
-  credentials: Omit<IntegrationCredentials, 'integrationId' | 'createdAt' | 'updatedAt'>
+  credentials: Omit<IntegrationCredentials, 'integrationId' | 'createdAt' | 'updatedAt'>,
+  options: CredentialAccessOptions = {}
 ): Promise<void> {
   try {
     const now = new Date();
@@ -35,14 +59,23 @@ export async function saveIntegrationCredentials(
       updatedAt: now,
     };
 
-    await FirestoreService.set(
-      getSubCollection('integrations'),
-      integrationId,
-      credentialsDoc,
-      true // Merge to preserve metadata
-    );
+    if (options.useAdminSdk) {
+      await AdminFirestoreService.set(
+        getSubCollection('integrations'),
+        integrationId,
+        credentialsDoc as unknown as Record<string, unknown>,
+        true // Merge to preserve metadata
+      );
+    } else {
+      await FirestoreService.set(
+        getSubCollection('integrations'),
+        integrationId,
+        credentialsDoc,
+        true // Merge to preserve metadata
+      );
+    }
 
-    logger.info('Integration credentials saved', { integrationId });
+    logger.info('Integration credentials saved', { integrationId, useAdminSdk: options.useAdminSdk === true });
 
   } catch (error) {
     logger.error('Failed to save integration credentials', error instanceof Error ? error : undefined, { integrationId });
@@ -52,15 +85,30 @@ export async function saveIntegrationCredentials(
 
 /**
  * Get integration credentials
+ *
+ * Pass `{ useAdminSdk: true }` for callers without a Firebase auth context
+ * (public webhooks, OAuth callbacks, cron jobs). The flag propagates through
+ * any token-refresh side path so writes during refresh also bypass rules.
  */
 export async function getIntegrationCredentials(
-  integrationId: string
+  integrationId: string,
+  options: CredentialAccessOptions = {}
 ): Promise<IntegrationCredentials | null> {
   try {
-    const credentials = await FirestoreService.get<IntegrationCredentials>(
-      getSubCollection('integrations'),
-      integrationId
-    );
+    let credentials: IntegrationCredentials | null;
+
+    if (options.useAdminSdk) {
+      const raw = await AdminFirestoreService.get(
+        getSubCollection('integrations'),
+        integrationId
+      );
+      credentials = raw as unknown as IntegrationCredentials | null;
+    } else {
+      credentials = await FirestoreService.get<IntegrationCredentials>(
+        getSubCollection('integrations'),
+        integrationId
+      );
+    }
 
     if (!credentials) {
       return null;
@@ -68,15 +116,19 @@ export async function getIntegrationCredentials(
 
     // Check if token is expired
     if (credentials.expiresAt) {
-      const expiresAt = credentials.expiresAt instanceof Date
-        ? credentials.expiresAt
-        : new Date(credentials.expiresAt);
+      const expiresAtRaw: unknown = credentials.expiresAt;
+      const expiresAt = expiresAtRaw instanceof Date
+        ? expiresAtRaw
+        // Firestore Admin Timestamp -> Date
+        : (typeof expiresAtRaw === 'object' && expiresAtRaw !== null && 'toDate' in expiresAtRaw && typeof (expiresAtRaw as { toDate: () => Date }).toDate === 'function')
+          ? (expiresAtRaw as { toDate: () => Date }).toDate()
+          : new Date(expiresAtRaw as string | number);
 
       if (expiresAt < new Date()) {
         // Token expired, try to refresh
         if (credentials.refreshToken) {
           logger.info('Token expired, refreshing', { integrationId });
-          const refreshed = await refreshIntegrationToken(integrationId, credentials.refreshToken);
+          const refreshed = await refreshIntegrationToken(integrationId, credentials.refreshToken, options);
           if (refreshed) {
             return refreshed;
           }
@@ -97,10 +149,15 @@ export async function getIntegrationCredentials(
 
 /**
  * Refresh integration token
+ *
+ * Propagates the caller's `useAdminSdk` flag through the post-refresh save
+ * and the recursive read so the entire refresh round-trip stays on the
+ * Admin SDK when the caller is unauthenticated.
  */
 async function refreshIntegrationToken(
   integrationId: string,
-  refreshToken: string
+  refreshToken: string,
+  options: CredentialAccessOptions = {}
 ): Promise<IntegrationCredentials | null> {
   try {
     let newTokenData: { accessToken: string; refreshToken?: string; expiresIn: number } | null = null;
@@ -145,10 +202,10 @@ async function refreshIntegrationToken(
       accessToken: newTokenData.accessToken,
       refreshToken: newRefreshToken,
       expiresAt,
-    });
+    }, options);
 
-    // Return updated credentials
-    return await getIntegrationCredentials(integrationId);
+    // Return updated credentials (same SDK choice as the original caller)
+    return await getIntegrationCredentials(integrationId, options);
 
   } catch (error) {
     logger.error('Token refresh failed', error instanceof Error ? error : undefined, { integrationId });
@@ -356,17 +413,28 @@ async function refreshHubSpotToken(refreshToken: string): Promise<{ accessToken:
 
 /**
  * Disconnect integration
+ *
+ * Pass `{ useAdminSdk: true }` for callers without an authenticated context;
+ * otherwise the client SDK delete will be silently denied by Firestore rules.
  */
 export async function disconnectIntegration(
-  integrationId: string
+  integrationId: string,
+  options: CredentialAccessOptions = {}
 ): Promise<void> {
   try {
-    await FirestoreService.delete(
-      getSubCollection('integrations'),
-      integrationId
-    );
+    if (options.useAdminSdk) {
+      await AdminFirestoreService.delete(
+        getSubCollection('integrations'),
+        integrationId
+      );
+    } else {
+      await FirestoreService.delete(
+        getSubCollection('integrations'),
+        integrationId
+      );
+    }
 
-    logger.info('Integration disconnected', { integrationId });
+    logger.info('Integration disconnected', { integrationId, useAdminSdk: options.useAdminSdk === true });
 
   } catch (error) {
     logger.error('Failed to disconnect integration', error instanceof Error ? error : undefined, { integrationId });
@@ -395,9 +463,10 @@ export async function listConnectedIntegrations(): Promise<IntegrationCredential
  * Get a single integration by ID
  */
 export async function getIntegration(
-  integrationId: string
+  integrationId: string,
+  options: CredentialAccessOptions = {}
 ): Promise<IntegrationCredentials | null> {
-  return getIntegrationCredentials(integrationId);
+  return getIntegrationCredentials(integrationId, options);
 }
 
 /**
@@ -429,9 +498,10 @@ export async function updateIntegration(
  * Delete an integration
  */
 export async function deleteIntegration(
-  integrationId: string
+  integrationId: string,
+  options: CredentialAccessOptions = {}
 ): Promise<void> {
-  return disconnectIntegration(integrationId);
+  return disconnectIntegration(integrationId, options);
 }
 
 /**

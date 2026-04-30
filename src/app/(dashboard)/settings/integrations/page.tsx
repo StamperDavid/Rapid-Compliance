@@ -13,6 +13,7 @@ import PayPalIntegration from '@/components/integrations/PayPalIntegration';
 import GmailIntegration from '@/components/integrations/GmailIntegration';
 import OutlookIntegration from '@/components/integrations/OutlookIntegration';
 import GoogleCalendarIntegration from '@/components/integrations/GoogleCalendarIntegration';
+import ZoomIntegration from '@/components/integrations/ZoomIntegration';
 import OutlookCalendarIntegration from '@/components/integrations/OutlookCalendarIntegration';
 import SlackIntegration from '@/components/integrations/SlackIntegration';
 import TeamsIntegration from '@/components/integrations/TeamsIntegration';
@@ -247,6 +248,7 @@ export default function IntegrationsPage() {
       name: 'Communication',
       icon: '💬',
       integrations: [
+        { id: 'zoom', component: ZoomIntegration },
         { id: 'slack', component: SlackIntegration },
         { id: 'teams', component: TeamsIntegration },
       ],

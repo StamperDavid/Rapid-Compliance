@@ -54,10 +54,14 @@ export async function createZoomMeeting(
   options: ZoomMeetingOptions
 ): Promise<ZoomMeeting> {
   try {
-    // Get Zoom OAuth token for this organization
+    // Get Zoom OAuth token for this organization.
+    // useAdminSdk: true — createZoomMeeting is invoked from PUBLIC routes
+    // (e.g. /api/booking POST) that have no Firebase auth context. The client
+    // SDK would silently fail under Firestore rules; the Admin SDK bypasses
+    // them as required for legitimate server-side reads.
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials('zoom');
-    
+    const credentials = await getIntegrationCredentials('zoom', { useAdminSdk: true });
+
     if (!credentials?.accessToken) {
       throw new Error('Zoom not connected. Please connect Zoom in Integrations settings.');
     }
@@ -124,9 +128,11 @@ export async function cancelZoomMeeting(
   meetingId: string
 ): Promise<void> {
   try {
+    // useAdminSdk: true — cancellations can also be triggered from public/cron
+    // contexts without a request.auth. Match createZoomMeeting's posture.
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials('zoom');
-    
+    const credentials = await getIntegrationCredentials('zoom', { useAdminSdk: true });
+
     if (!credentials?.accessToken) {
       throw new Error('Zoom not connected');
     }
