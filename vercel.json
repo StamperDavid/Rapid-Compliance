@@ -18,6 +18,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/scheduled-reminders",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/scheduled-social-publisher",
       "schedule": "*/5 * * * *"
     },
