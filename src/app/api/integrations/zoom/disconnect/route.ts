@@ -30,6 +30,19 @@ export async function POST(request: NextRequest) {
 
     await disconnectIntegration('zoom', { useAdminSdk: true });
 
+    // Compatibility shim: also clear the zoom key in the legacy
+    // `integrations/all` map doc that the /settings/integrations page
+    // currently reads from. Without this, the UI keeps showing ✓ Connected
+    // even after the underlying tokens are gone.
+    const { adminDb } = await import('@/lib/firebase/admin');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
+    if (adminDb) {
+      await adminDb
+        .collection(getSubCollection('integrations'))
+        .doc('all')
+        .set({ zoom: null }, { merge: true });
+    }
+
     logger.info('Zoom integration disconnected', {
       route: '/api/integrations/zoom/disconnect',
       uid: authResult.user.uid,
