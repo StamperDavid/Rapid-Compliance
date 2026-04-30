@@ -1,18 +1,185 @@
 # SalesVelocity.ai — Full-Orchestration Continuation Prompt
 
-> **Updated:** April 27, 2026 (overnight + morning, ~14 hours).
+> **Updated:** April 29, 2026 (evening, ~12-hour fake-AI sweep + UI redesign teed up for next session).
 > **Status snapshot:**
->   - **Mastodon LIVE end-to-end** in BOTH directions: real outbound post (status `116474951515339832`) and real inbound DM round-trip (2 missions composed + sent successfully — see commits below).
->   - **Bluesky LIVE end-to-end** for inbound DM (verified earlier session). Outbound posting wired via Marketing Manager fast-path; needs a fresh real round-trip test.
->   - **X**: orchestration code verified live, but X-side webhook delivery still broken (X support ticket needed). Polling workaround forbidden by owner.
->   - **Jasper at v13** (was v12 yesterday). New rule: social posts MUST plan as 2 steps (delegate_to_marketing → social_post). Single-step plans calling social_post directly are forbidden.
->   - **Truth Social PARKED** — Cloudflare TLS fingerprinting blocks Node fetch in production. No path forward without browser-class TLS infra. Code preserved.
->   - **Specialists vision-aware**: MASTODON_EXPERT (and any DM-capable specialist using the shared mixin) now actually SEES image attachments via OpenRouter multipart/Claude vision. Caught when sender attached a brand banner with text "All new Look!" and the AI replied confused-by-text-only.
->   - **Three caching/safety bug classes fixed tonight**: Next.js fetch cache (cache:'no-store' on every external API call), api-key-service stale cache (60s TTL + Firestore onSnapshot real-time invalidation), social_posts query spam (composite-index-free rewrite + indexes added to firestore.indexes.json for future deploy).
+>   - **Backend health: GREEN.** Major fake-AI sweep closed today — ~15 patterns audited and fixed across managers, specialists, tool handlers, dashboards, dead-end Firestore writers, and verify scripts. Backend orchestration verified end-to-end via three real posts WITH IMAGES on three live brand accounts (Apr 29 evening run).
+>   - **NEXT SESSION FOCUS: UI redesign of Content Generator + Social Hub.** Backend is in a known-good state — do NOT audit, refactor, or test backend code in the next session. Specific scope captured below in "Next Session Focus" section.
+>   - **Three real posts with images** (Apr 29 evening orchestrated test, fix proven live):
+>     - X: https://x.com/salesvelocityai/status/2049673177023004930
+>     - Bluesky: https://bsky.app/profile/salesvelocity.bsky.social/post/3mkojzxuim52h
+>     - Mastodon: https://mastodon.social/@SalesVelocity_Ai/116491235033176961
+>   - **Jasper still at v13** + new runtime context injection: connected-platforms list flows through `/api/orchestrator/chat` so "all platforms" only fans out to platforms with state in [live_full, live_dm_blocked, live_no_dm] from `_platform-state.ts` (currently Bluesky / Mastodon / X — not LinkedIn / Meta / others).
+>   - **TWITTER_X_EXPERT at v3** (280-char rule strengthened with explicit pre-output audit + ≤270 safety target).
+>   - **CI auto-deploy for Firestore indexes** is now live (`.github/workflows/firestore-indexes.yml`). One-time setup pending: operator runs `firebase login:ci`, stores token as `FIREBASE_TOKEN` GitHub secret. After that, every future `firestore.indexes.json` change auto-deploys on merge to main.
+>   - **One pending token rotation:** Firebase CI token was pasted in the Apr 29 evening transcript to set up the workflow. Per `memory/project_rotate_secrets_in_transcript.md`, must be rotated before launch (task #43).
 
 ---
 
-# 🎯 TODAY'S WINS (April 26 evening → April 27 morning)
+# 🎯 TODAY'S WINS (April 29, 2026 evening — ~12-hour session)
+
+## 1. Fake-AI sweep — ~15 patterns audited + fixed across 3 layers
+
+7-agent parallel audit identified the structural rot the operator had been getting burned by: agents themselves call LLMs correctly, but the layers AROUND them (managers, tool handlers, dashboards, verify scripts) had been faking it.
+
+**Manager-layer fake aggregation** (the worst — managers fabricated metrics + broadcast to Jasper as real specialist data):
+- `RevenueDirector.synthesizeRevenueBrief` (`src/lib/agents/sales/revenue/manager.ts:1916-1935`) — invented avgBANTScore=72, responseRate=0.28, avgDiscount=12, avgReadinessScore=78, resolutionRate=0.72, plus hardcoded conversion ratios (0.65/0.75/0.40). Now computes from real signal counts; null where data isn't real. Confidence drops when fields are null instead of staying artificially high.
+- `ReputationManager.calculateBrandHealth` (`src/lib/agents/trust/reputation/manager.ts:2197-2274`) — hardcoded `responseRate = 85`, invented 60/25/8/4/3 star fallback distribution, invented 50/30/20 sentiment fallback. Now nullable + zeros instead of inventions. Downstream consumers skip-when-null.
+- `CommerceManager.generateRevenueBrief` (`src/lib/agents/commerce/manager.ts:838-854`) — returned $0 MRR / $0 ARR / $0 transactionVolume across the board (looked indistinguishable from a failing real business). Now nullable until Stripe wired.
+- `MarketingManager.determinePlatformStrategy` (`src/lib/agents/marketing/manager.ts:2161-2302`) — regex+weights table pretending to be analysis (TikTok+50, X+30, FB+20, LinkedIn+15). Now LLM-first via OpenRouter; hardcoded scoring labeled fallback only.
+- `OutreachManager.handleCartRecovery` (line 2391) — flipped from `BLOCKED` placeholder to honest FAILED status with "No specialist registered for CART_RECOVERY action." Ghosting recovery escalation extracted to `GHOSTING_RECOVERY_ESCALATION_PATH` const.
+- `BuilderManager.buildAssetPackage` — returned `null` instead of `/assets/logo.png` fallback URLs. `generateMinimalBlueprint` no longer fabricates `estimatedConversionRate: 0.05` or `confidence: 0.6` — both nullable now with warnings on null hits downstream.
+- `MasterOrchestrator.determineManagerHealth` — extended union with `'UNKNOWN'`, no-activity branch returns `'UNKNOWN'` instead of optimistic `'HEALTHY'`. Hardcoded duration estimates extracted to `TASK_DURATION_ESTIMATES_MS` const.
+
+**Specialist partial-LLM coverage** (specialists that imported OpenRouter but only used it for some advertised actions):
+- `GROWTH_STRATEGIST` — was 1/6 actions LLM-driven (DEMOGRAPHIC_TARGETING). Now 6/6 (BUSINESS_REVIEW, SEO_STRATEGY, AD_SPEND_ANALYSIS, CHANNEL_ATTRIBUTION, STRATEGIC_BRIEFING all wired). 5 new Zod schemas + `callGMLLM` helper. Threshold logic preserved as logged fallback.
+- `TREND_SCOUT` — was 1/5 actions LLM-driven (`scan_signals`). Now `analyze_trend`, `trigger_pivot`, `track_competitor` also LLM-driven. `get_cached_signals` stays deterministic by design (pure cache filter).
+
+**Specialist fake-LLM costumes** (modules that wore AI-agent shape but never called an LLM):
+- `VOICE_AI_SPECIALIST` (Twilio dispatcher), `PRICING_STRATEGIST`, `CATALOG_MANAGER`, `PAYMENT_SPECIALIST` (Stripe/Shopify/Woo dispatchers) — honestly relabeled. Stripped decorative `systemPrompt`, `tools`, `outputSchema`, `maxTokens`, `temperature` from each (kept as zeros for type compliance with comment that SpecialistConfig is shaped to assume every specialist is LLM-driven, future structural cleanup).
+
+**Jasper tool stubs handled** (8 tools that returned canned responses without doing real work):
+- `update_pricing` → wired to `AdminFirestoreService.update` on platform-config doc.
+- `get_analytics` → restricted `reportType` enum to `['overview']` (other branches were empty stubs).
+- `provision_organization`, `generate_content`, `draft_outreach_email`, `generate_report`, `DEPLOY_SPECIALIST` (action-handler), `add_url_source` (lead-research-tools) — REMOVED from Jasper's tool list (definitions deleted from `JASPER_TOOLS` array AND case handlers deleted).
+
+**Dead-end Firestore writers DELETED** (modules writing to collections nothing read):
+- `src/lib/crm/relationship-mapping.ts`, `src/lib/crm/predictive-scoring-training.ts`, `src/lib/ab-testing/ab-test-service.ts` (whole directory), `src/lib/video/video-job-service.ts`, `src/app/api/admin/video/render/route.ts`. `src/lib/analytics/lead-nurturing.ts` surgically edited: `trackLeadActivity` + `createLeadSegment` + `getLeadsInSegment` + `LeadSegment` interface removed (the last returned hardcoded `['lead1', 'lead2', 'lead3']` regardless of segment criteria).
+
+**Dashboard cleanup:**
+- `/api/admin/stats` (`src/app/api/admin/stats/route.ts:261-282`) — hardcoded swarm count cap (47), `pendingTickets = 0`, `monthlyRevenue = 0` placeholders → real queries from `AGENT_REGISTRY` (which the Apr 29 03:58 commit rebuilt to 70 agents) + nullable fields where source not yet wired.
+
+**Mission Control "Email Campaigns" label bug:**
+- `src/app/(dashboard)/mission-control/_components/dashboard-links.ts` had stale mapping causing every social step to display "View in Email Campaigns." Now branches on `toolArgs.platform`: social platforms → `/social` (Social Hub), otherwise → `/email/campaigns`. `getDashboardLink` signature extended with `toolArgs` param; both call sites updated.
+
+## 2. Verify-script suite restructured (Tier-2 structural rot)
+
+Every prior `verify-X-live.ts` hand-built auth and POSTed directly to platform APIs, completely bypassing TwitterService / BlueskyService / MastodonService, the social_post tool, the Marketing Manager, and Jasper. That's the trap that hid today's X OAuth-flow bug for weeks despite "verify-twitter-post-live.ts" passing.
+
+**33 misleading verify scripts renamed via `git mv`** (commit `5941f132`):
+- 13 `.ts`: `verify-{platform}-post-live` → `verify-{platform}-credentials-direct`
+- 19 `.js`: `verify-{x}-is-real` → `verify-{x}-gm-load` (these prove GM load, not delegation — Bug L is still latent because none verify the manager actually invokes the specialist)
+- Plus rename for 2 generate-content live scripts → `-direct`
+- `verify-mastodon-dm-live` → `verify-mastodon-dm-direct-orchestration` (was honest about being the architecture-violation path)
+- `verify-outreach-sequence-action` → `verify-email-specialist-compose-direct`
+- `verify-email-pipeline-live` → `verify-email-pipeline-credentials-direct`
+
+**33 file headers rewritten honestly** (commit `75843709`): each says what it DOES test, what it does NOT test, and points at the real product-path verify or flags KNOWN GAP if none exists.
+
+**4 NEW product-path verifies that drive the actual orchestrated chain:**
+- `scripts/verify-twitter-orchestrated-post-live.ts`
+- `scripts/verify-bluesky-orchestrated-post-live.ts`
+- `scripts/verify-mastodon-orchestrated-post-live.ts`
+- `scripts/verify-outreach-orchestrated-live.ts`
+- Plus shared driver at `scripts/lib/orchestrated-social-verify.ts`
+
+**All 4 PASS end-to-end live** with real posts on three brand accounts + real LLM-composed outreach email.
+
+## 3. The bug that exposed everything: media not attaching to social posts
+
+The first orchestrated test landed posts on all three platforms — but the operator caught visually that **the images were missing**. Logs showed `mediaUrls` was passed correctly through every step. Tracing revealed three separate "function accepts media, layer below silently drops it" bugs in `src/lib/social/autonomous-posting-agent.ts`:
+- **Twitter:** `private async postToTwitter(postId, content, _mediaUrls?, accountId?)` — the underscore prefix on `_mediaUrls` is the TypeScript convention for "intentionally unused." Twitter media upload wasn't even attempted.
+- **Bluesky:** `blueskyService.postRecord({ text: content })` — only text was passed; mediaUrls silently dropped.
+- **Mastodon:** `mastodonService.postStatus({ status: content, visibility: 'public' })` — same; media never passed.
+
+Three parallel sub-agents wired real media-upload methods on each service:
+- `TwitterService.uploadMediaFromUrl` (uses OAuth 1.0a `/1.1/media/upload` — also fixed a separate latent bug where the previous `uploadMedia` was using Bearer auth which X rejects) + `postTweetWithMedia({ text, mediaUrls })`.
+- `BlueskyService.uploadBlobFromUrl` (AT Protocol `com.atproto.repo.uploadBlob`, raw bytes) + `postRecordWithImages({ text, mediaUrls })` + `BlueskyBlobRef` type.
+- `MastodonService.uploadMediaFromUrl` (POST `/api/v2/media`, multipart) + `postStatusWithMedia({ status, mediaUrls, ... })`. Accepts both 200 (sync image) and 202 (async video — id still valid for attaching).
+
+`autonomous-posting-agent.ts` updated to actually pass `mediaUrls` through. Each platform caps at 4 attachments and slices/warns on overage.
+
+**Verified live Apr 29 evening:** images attached on all three brand-account posts. social_post step duration jumped from <1s to 2.1-2.4s per platform — that delta is real upload work (fetch bytes from Firebase Storage, upload to platform, get media id, attach to post).
+
+## 4. X OAuth 1.0a port (the morning's halt-on-X bug)
+
+The morning's first orchestrated multi-platform test halted on the X step with `403 OAuth 2.0 Application-Only is forbidden`. Root cause: `TwitterService.makeRequest` only knew Bearer auth; X's POST `/2/tweets` requires user-context auth. Verify script worked because it hand-built OAuth 1.0a HMAC headers separately.
+
+Ported the OAuth 1.0a signing logic into `TwitterService` (commit `6e707940`):
+- `oauth1PercentEncode` + `buildOAuth1Header` helpers
+- `makeRequest` now prefers OAuth 1.0a when its 4 creds present; falls back to Bearer for reads
+- `postTweet` pre-flight check + error message updated
+- Both factory functions (`createTwitterService` + `createTwitterServiceForAccount`) load consumerKey/consumerSecret/accessTokenSecret from apiKeys
+- `TwitterConfig` + `apiKeys.social.twitter` + `apiKeys.integrations.twitter` types extended
+
+## 5. Connected-platforms gating (LinkedIn excluded from "all platforms")
+
+Morning test had Jasper fan out to LinkedIn (not OAuth-connected), and the mission halted there. Built runtime context injection in `/api/orchestrator/chat` (commit `6e707940`):
+- `src/lib/orchestrator/connected-platforms-context.ts` reads `_platform-state.ts` `PLATFORM_CONFIG` and buckets platforms into POSTABLE (state in [live_full, live_dm_blocked, live_no_dm]) vs NOT-CONNECTED.
+- Chat route appends a "## Currently connected social platforms (POSTABLE)" + "## NOT connected — do NOT plan posts for these" section to the system prompt at request time.
+- No GM edit needed — the list stays current as connections come online.
+
+## 6. Video tools wired (`produce_video` + `generate_video` + `assemble_video`)
+
+These were `NOT_WIRED` stubs returning canned "Video Specialist rebuild in progress" errors despite the underlying `VIDEO_SPECIALIST` agent being real (Task #24 rebuild Apr 11). Wired to real services (commit `6e707940`):
+- `produce_video` — full pipeline: `VIDEO_SPECIALIST.script_to_storyboard` → `createProject` → `saveApprovedStoryboard` → `generateAllScenes` (Hedra dispatch).
+- `generate_video` — re-dispatches renders for an existing project's saved scenes.
+- `assemble_video` — fetches completed Hedra scene URLs via `getHedraVideoStatus`, runs FFmpeg concat via `ffmpeg-utils`, uploads final video to Firebase Storage.
+- 4 normalizers (`normalizeAspectRatio`, `normalizeResolution`, `normalizeVideoType`, `normalizeTargetPlatform`) map Jasper's loose strings onto strict pipeline unions.
+- Real Hedra render test on `produce_video` still pending (task #27 — costs ~$5-15 in Hedra credits + 5-15 min per render).
+
+## 7. TWITTER_X_EXPERT GM v3 — 280-char rule strengthened
+
+Surgical PE-style edit per Standing Rule #2. Replaces v2's passive "EVERY tweet text field MUST be 280 characters or fewer. Count carefully." with explicit pre-output audit step + ≤270 safety target + named cost of failure ("schema validation will reject the entire output"). Deployed atomically v2 → v3 (`scripts/deploy-twitter-expert-gm-v3-thread-char-limit.ts`). Source feedback: `tfb_twitter_thread_char_limit_1777473795232`. Rollback: `deployIndustryGMVersion('TWITTER_X_EXPERT', 'saas_sales_ops', 2)`.
+
+## 8. Firestore index automation (CI auto-deploy)
+
+`firestore.indexes.json` had two missing composite indexes that fired `FAILED_PRECONDITION` errors on Mission Control polling and Social Hub polling: `missions(status, createdAt)` and `socialPosts(platform, createdAt)`. Both added to the file (commit `e288ab53`). `.github/workflows/firestore-indexes.yml` shipped (commits `957dc3ac`, `51e6980a` Node 24 bump) — auto-deploys indexes whenever `firestore.indexes.json` changes on `main`. **One-time setup pending** to fully unblock: operator runs `firebase login:ci` interactively, stores the resulting token as `FIREBASE_TOKEN` GitHub secret. After that, all future index additions deploy automatically.
+
+Both indexes were deployed manually via the workflow's `workflow_dispatch` trigger (run #2 succeeded in 42s). Polling errors stopped within ~3 min as Firestore finished building.
+
+---
+
+# 🎯 NEXT SESSION FOCUS — UI redesign of Content Generator + Social Hub
+
+The next session is INTENTIONALLY scoped to UI work. Backend is in a known-good state. **Do NOT audit, refactor, or test backend code in the next session.**
+
+## Specific UI problems already audited (file:line refs)
+
+**Content Generator structural smells:**
+1. **No `/content/` hub page exists.** Opens to nowhere; sub-routes are siblings with no unifying surface. (No `src/app/(dashboard)/content/page.tsx` file.)
+2. **Image Generator (`src/app/(dashboard)/content/image-generator/page.tsx`) is 16 lines of stub.** Imports the video studio's `StudioModePanel` and renders it standalone. No image-specific UI, no library, no history.
+3. **`CONTENT_GENERATOR_TABS` (`src/lib/constants/subpage-nav.ts:188`) mixes tools and video-sub-pages as siblings:** Video / Calendar (video!) / Image / Editor (video!) / Library (video!) / Audio Lab. The middle three are video-sub-pages presented as first-class peers to the tools.
+4. **"Create with AI" button is a navigation link to AI Workforce.** Should be embedded chat panel scoped to Content Manager.
+
+**Calendar confusion:**
+- The "Calendar" tab in Content Generator's nav points to `/content/video/calendar` — a video-production batch scheduler (BatchProject docs).
+- The actual unified social content calendar already exists at `/social/calendar` (`src/app/(dashboard)/social/calendar/page.tsx`) — month/week/day views, platform/status filters, click-to-detail. Works.
+- Recommendation: rename Content Generator's "Calendar" tab to "Video Schedule" or remove from the nav (it lives under Video anyway).
+
+**Social Hub layout/design:** operator hasn't given specifics yet — drive a real test of the Social Hub via the live dev server, capture friction points, then redesign based on real friction (not abstract "good practices").
+
+## Architectural decisions already made (don't re-litigate)
+
+- **"Create with AI" architecture: Option B — Jasper-with-scope-hint** (the light path). Button opens an embedded chat panel inside the page (no navigation). Chat sends `scope: "content"` to the existing `/api/orchestrator/chat`. Jasper still plans, scoped to Content Manager's tools only via a system-prompt scope directive. ~1 day of work; chat-panel UI is the bulk, backend = small param.
+- **Manager call: Content Manager** (not Marketing Manager) for the Content Generator surface. Content scope = blog/video/text/music/image. Marketing handles social posting + ads (future scoped chat for Social Hub).
+- **Content Library MVP** (`/content/library` — does NOT exist yet): single page aggregating blog drafts (from blog collection) + video pipeline projects + missions with content-shaped step outputs (social posts, emails) + brand assets. Unified timeline, type badge, "View" → routes to original surface. NO tags / search / reuse / versions in MVP. ~3-4 days.
+- **One chat-panel component, not N per hub.** Linear-style universal pattern: one `<ScopedChatPanel>` component, props that scope it (which manager, what context, what page invoked it). Re-use everywhere.
+- **Specialist expansions** (NOT for the UI session, captured as task #39): newsletters (EMAIL_SPECIALIST), carousel posts (per-platform specialists), short-form / captions (VIDEO_SPECIALIST), press releases / case studies (BLOG_WRITER), Content Manager personality upgrade for memes/punchy/casual.
+- **Translation** deferred until international tenants exist (post multi-tenant flip). Build prompts with `language` as first-class arg now (task #41).
+
+## Hard guardrails for next session
+
+- **No backend agent / specialist / GM edits.**
+- **No Standing Rule #2 GM changes.**
+- **No Brand DNA reseeds** — Standing Rule #1 stays put.
+- **No commits without explicit operator request.**
+- **No re-testing of backend integrations** the previous session verified.
+- If you find a backend bug while doing UI work, log it (in the open-issues table below) and move on.
+
+## First actions for the next session
+
+1. Read `CLAUDE.md` (project standing rules)
+2. Read `memory/MEMORY.md` (auto-memory index — context on operator preferences + recent handoffs)
+3. Read `memory/project_live_test_monitoring_setup.md` (use the **Apr 29 evening updated filter** that includes `[ToolTrace]` — previous filter missed the per-step events)
+4. Verify environment: `git status` clean on `dev`; dev server running on port 3000 (start via direct node call if not — pattern in monitoring memory)
+5. Confirm Jasper GM v13 + TWITTER_X_EXPERT v3 active: `npx tsx scripts/dump-jasper-gm.ts | grep "GM id="` and `npx tsx scripts/dump-twitter-expert-gm.ts | grep "GM id="`
+6. Surface understanding to operator concisely: list the audited problems above, confirm scope is UI only, ask what specific friction to tackle first OR offer to drive a real Social Hub UI test together
+
+---
+
+# 🎯 PRIOR WINS — historical context
+
+# 🎯 PRIOR WINS (April 26 evening → April 27 morning)
 
 ## 1. Mastodon inbound DM auto-reply — real round-trip closed
 
