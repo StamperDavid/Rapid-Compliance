@@ -138,6 +138,7 @@ export async function GET(request: NextRequest) {
       .doc('zoom')
       .set({
         integrationId: 'zoom',
+        status: 'active', // status flag the integrations UI keys off
         accessToken: tokens.accessToken,   // plaintext — see file header
         refreshToken: tokens.refreshToken, // plaintext — see file header
         expiresAt,
@@ -151,6 +152,28 @@ export async function GET(request: NextRequest) {
         createdAt: now,
         updatedAt: now,
       });
+
+    // Compatibility shim: the existing /settings/integrations page reads
+    // from a single `integrations/all` map doc keyed by integration id.
+    // Until that page is migrated to use listConnectedIntegrations, we
+    // dual-write a slim summary so the UI shows ✓ Connected without a
+    // page refactor. Tokens stay only in the per-integration doc.
+    await adminDb
+      .collection(integrationsPath)
+      .doc('all')
+      .set(
+        {
+          zoom: {
+            status: 'active',
+            metadata: {
+              connectedEmail,
+              connectedName,
+              connectedAt: now.toISOString(),
+            },
+          },
+        },
+        { merge: true },
+      );
 
     logger.info('Zoom integration saved', {
       route: '/api/integrations/zoom/callback',

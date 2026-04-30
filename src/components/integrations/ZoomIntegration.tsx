@@ -30,6 +30,20 @@ export default function ZoomIntegration({
   const { user: authUser } = useAuth();
   const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  // Two-step disconnect: first click arms the confirmation, second click
+  // actually fires. Auto-disarms after 5 seconds so a stale armed state
+  // doesn't disconnect the operator unexpectedly later.
+  const [disconnectArmed, setDisconnectArmed] = useState(false);
+  const disarmTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (disarmTimerRef.current) {
+        clearTimeout(disarmTimerRef.current);
+      }
+    };
+  }, []);
 
   const textColor = typeof window !== 'undefined'
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
@@ -40,6 +54,51 @@ export default function ZoomIntegration({
   const primaryColor = typeof window !== 'undefined'
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
     : 'var(--color-primary)';
+
+  const armDisconnect = (): void => {
+    setDisconnectArmed(true);
+    if (disarmTimerRef.current) {
+      clearTimeout(disarmTimerRef.current);
+    }
+    disarmTimerRef.current = setTimeout(() => {
+      setDisconnectArmed(false);
+      disarmTimerRef.current = null;
+    }, 5000);
+  };
+
+  const cancelDisconnect = (): void => {
+    setDisconnectArmed(false);
+    if (disarmTimerRef.current) {
+      clearTimeout(disarmTimerRef.current);
+      disarmTimerRef.current = null;
+    }
+  };
+
+  const handleDisconnect = async (): Promise<void> => {
+    setIsDisconnecting(true);
+    if (disarmTimerRef.current) {
+      clearTimeout(disarmTimerRef.current);
+      disarmTimerRef.current = null;
+    }
+    try {
+      const res = await authFetch('/api/integrations/zoom/disconnect', { method: 'POST' });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `Disconnect returned ${res.status}`);
+      }
+    } catch (error) {
+      logger.error(
+        'Zoom disconnect API call failed',
+        error instanceof Error ? error : new Error(String(error)),
+        { file: 'ZoomIntegration.tsx' },
+      );
+      // Still notify the parent so local state clears even if the server call hiccupped
+    } finally {
+      setIsDisconnecting(false);
+      setDisconnectArmed(false);
+      onDisconnect();
+    }
+  };
 
   const handleConnect = async (): Promise<void> => {
     setIsConnecting(true);
@@ -165,22 +224,60 @@ export default function ZoomIntegration({
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button
-          onClick={onDisconnect}
-          style={{
-            padding: '0.75rem 1rem',
-            backgroundColor: 'var(--color-error-dark)',
-            color: 'var(--color-error-light)',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-          }}
-        >
-          Disconnect
-        </button>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        {disconnectArmed ? (
+          <>
+            <button
+              onClick={() => { void handleDisconnect(); }}
+              disabled={isDisconnecting}
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: 'var(--color-error)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: isDisconnecting ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                opacity: isDisconnecting ? 0.6 : 1,
+              }}
+            >
+              {isDisconnecting ? 'Disconnecting…' : 'Click again to confirm'}
+            </button>
+            <button
+              onClick={cancelDisconnect}
+              disabled={isDisconnecting}
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: 'transparent',
+                color: textColor,
+                border: `1px solid ${borderColor}`,
+                borderRadius: '0.5rem',
+                cursor: isDisconnecting ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+              }}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={armDisconnect}
+            style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'var(--color-error-dark)',
+              color: 'var(--color-error-light)',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+            }}
+          >
+            Disconnect
+          </button>
+        )}
       </div>
     </div>
   );
