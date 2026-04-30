@@ -46,6 +46,22 @@ export interface MastodonPostRequest {
   mediaIds?: string[];
 }
 
+export interface MastodonMediaAttachment {
+  id: string;
+  type: string;
+  url: string | null;
+  preview_url: string | null;
+}
+
+export interface MastodonPostWithMediaRequest {
+  status: string;
+  visibility?: 'public' | 'unlisted' | 'private' | 'direct';
+  /** Remote URLs of images/video to attach. Silently capped at 4 (Mastodon default limit). */
+  mediaUrls: string[];
+  /** Alt-text description applied to every uploaded attachment. */
+  mediaDescription?: string;
+}
+
 export interface MastodonPostResponse {
   success: boolean;
   postId?: string;
@@ -239,6 +255,120 @@ export class MastodonService {
       const msg = error instanceof Error ? error.message : String(error);
       logger.error('[MastodonService] pollDirectMessages failed', error instanceof Error ? error : new Error(msg));
       return { success: false, conversations: [], error: msg };
+    }
+  }
+
+  /**
+   * Upload a single media item from a remote URL to Mastodon's v2 media
+   * endpoint and return the resulting attachment id.
+   *
+   * Flow:
+   *   1. Fetch the remote URL to get raw bytes + content-type.
+   *   2. Wrap bytes in a `Blob` and append to `FormData` as `file`.
+   *   3. Optionally append `description` for alt-text accessibility.
+   *   4. POST multipart form to `{instanceUrl}/api/v2/media`.
+   *   5. Return the attachment `id` for use in `media_ids`.
+   *
+   * Note: Mastodon returns 202 for large videos (async processing) with
+   * `url: null`. For images this is rare; we accept either 200 or 202
+   * and return the id regardless — the status post will attach it once
+   * processing finishes. Callers that need synchronous `url` availability
+   * should poll `/api/v1/media/{id}` separately.
+   */
+  async uploadMediaFromUrl(url: string, description?: string): Promise<string> {
+    if (!this.config.accessToken) {
+      throw new Error('Mastodon not configured');
+    }
+
+    // Step 1 — Fetch the remote image bytes.
+    const fetchResponse = await fetch(url, { cache: 'no-store' });
+    if (!fetchResponse.ok) {
+      throw new Error(`Failed to fetch media from URL (${fetchResponse.status}): ${url}`);
+    }
+    const contentType = fetchResponse.headers.get('content-type') ?? 'application/octet-stream';
+    const arrayBuffer = await fetchResponse.arrayBuffer();
+
+    // Step 2 — Build multipart form with a named Blob so Mastodon can
+    // detect the MIME type without relying on a file extension.
+    const blob = new Blob([arrayBuffer], { type: contentType });
+    const form = new FormData();
+    form.append('file', blob, 'upload');
+
+    // Step 3 — Optional alt-text.
+    if (description) {
+      form.append('description', description);
+    }
+
+    // Step 4 — Upload to v2 endpoint.
+    const uploadResponse = await fetch(`${this.baseUrl}/api/v2/media`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        ...BROWSER_HEADERS,
+        // Do NOT set Content-Type manually — Node/browser sets it
+        // automatically with the correct multipart boundary.
+        Authorization: `Bearer ${this.config.accessToken}`,
+      },
+      body: form,
+    });
+
+    if (uploadResponse.status !== 200 && uploadResponse.status !== 202) {
+      const errText = await uploadResponse.text().catch(() => '');
+      throw new Error(`Mastodon media upload failed (${uploadResponse.status}): ${errText.slice(0, 200)}`);
+    }
+
+    // Step 5 — Parse and return the attachment id.
+    const data = (await uploadResponse.json()) as MastodonMediaAttachment;
+    if (!data.id) {
+      throw new Error('Mastodon media upload returned no attachment id');
+    }
+
+    logger.info('[MastodonService] Media uploaded', { id: data.id, type: data.type });
+    return data.id;
+  }
+
+  /**
+   * Post a status that includes one or more images/videos fetched from
+   * remote URLs.
+   *
+   * Mastodon's default cap is 4 attachments per status. Any extras beyond
+   * the first 4 are silently dropped here — callers that send > 4 URLs
+   * should be aware only the first 4 are posted.
+   *
+   * Media uploads run in parallel (`Promise.all`). If any single upload
+   * fails, the whole call rejects so the caller can surface the error
+   * rather than posting a status with missing attachments.
+   */
+  async postStatusWithMedia(request: MastodonPostWithMediaRequest): Promise<MastodonPostResponse> {
+    try {
+      if (!this.config.accessToken) {
+        return { success: false, error: 'Mastodon not configured' };
+      }
+
+      const MASTODON_MEDIA_LIMIT = 4;
+      const urlsToUpload = request.mediaUrls.slice(0, MASTODON_MEDIA_LIMIT);
+
+      if (request.mediaUrls.length > MASTODON_MEDIA_LIMIT) {
+        logger.warn(
+          `[MastodonService] postStatusWithMedia received ${request.mediaUrls.length} media URLs; only first ${MASTODON_MEDIA_LIMIT} will be uploaded`,
+        );
+      }
+
+      // Upload all media in parallel.
+      const mediaIds = await Promise.all(
+        urlsToUpload.map((url) => this.uploadMediaFromUrl(url, request.mediaDescription)),
+      );
+
+      // Delegate to the existing postStatus method with the resolved ids.
+      return await this.postStatus({
+        status: request.status,
+        visibility: request.visibility,
+        mediaIds,
+      });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error('[MastodonService] postStatusWithMedia failed', error instanceof Error ? error : new Error(msg));
+      return { success: false, error: msg };
     }
   }
 

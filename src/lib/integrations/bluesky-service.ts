@@ -51,6 +51,22 @@ export interface BlueskyPostResponse {
   error?: string;
 }
 
+/** The blob object returned by uploadBlob and required in embed.images[].image */
+export interface BlueskyBlobRef {
+  $type: 'blob';
+  ref: { $link: string };
+  mimeType: string;
+  size: number;
+}
+
+export interface BlueskyPostWithImagesRequest {
+  text: string;
+  mediaUrls: string[];
+  /** Optional alt text per image; index-aligned with mediaUrls */
+  alts?: string[];
+  langs?: string[];
+}
+
 // ─── Service ─────────────────────────────────────────────────────────────────
 
 export class BlueskyService {
@@ -226,6 +242,140 @@ export class BlueskyService {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       logger.error('[BlueskyService] sendDirectMessage failed', error instanceof Error ? error : new Error(msg));
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Upload a remote image/video to the Bluesky PDS blob store.
+   *
+   * Fetches raw bytes from `url`, then POSTs them to
+   * `com.atproto.repo.uploadBlob` as a raw (non-multipart) body.
+   * Content-Type is derived from the HTTP response header first,
+   * falling back to the URL file extension.
+   *
+   * Returns the full blob object that must be placed verbatim in
+   * `embed.images[].image` — Bluesky requires the complete blob
+   * shape, not just the CID ref.
+   */
+  async uploadBlobFromUrl(url: string): Promise<BlueskyBlobRef> {
+    const session = await this.ensureSession();
+
+    // Fetch the remote asset
+    const assetResponse = await fetch(url, { cache: 'no-store' });
+    if (!assetResponse.ok) {
+      throw new Error(`uploadBlobFromUrl: failed to fetch asset (${assetResponse.status}) from ${url}`);
+    }
+
+    // Detect MIME type — response header wins, URL extension is fallback
+    const contentTypeHeader = assetResponse.headers.get('content-type');
+    let mimeType = contentTypeHeader?.split(';')[0].trim() ?? '';
+    if (!mimeType) {
+      const lower = url.toLowerCase().split('?')[0];
+      if (lower.endsWith('.png')) { mimeType = 'image/png'; }
+      else if (lower.endsWith('.gif')) { mimeType = 'image/gif'; }
+      else if (lower.endsWith('.webp')) { mimeType = 'image/webp'; }
+      else if (lower.endsWith('.mp4')) { mimeType = 'video/mp4'; }
+      else { mimeType = 'image/jpeg'; } // safe default for social assets
+    }
+
+    const bytes = await assetResponse.arrayBuffer();
+
+    // POST raw bytes to the PDS blob store (NOT multipart)
+    const uploadResponse = await fetch(`${this.pdsUrl}/xrpc/com.atproto.repo.uploadBlob`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        Authorization: `Bearer ${session.accessJwt}`,
+        'Content-Type': mimeType,
+      },
+      body: bytes,
+    });
+
+    if (!uploadResponse.ok) {
+      const errText = await uploadResponse.text().catch(() => '');
+      throw new Error(`uploadBlob failed: HTTP ${uploadResponse.status} ${errText.slice(0, 200)}`);
+    }
+
+    const uploadData = (await uploadResponse.json()) as { blob?: BlueskyBlobRef };
+    if (!uploadData.blob) {
+      throw new Error('uploadBlob response missing blob field');
+    }
+    return uploadData.blob;
+  }
+
+  /**
+   * Post a record with up to 4 embedded images (Bluesky hard limit).
+   *
+   * Uploads each URL in parallel via `uploadBlobFromUrl`, then builds
+   * an `app.bsky.embed.images` embed and calls `createRecord` with it.
+   * Extra URLs beyond the 4-image limit are silently dropped — callers
+   * should slice beforehand if they need precise control over which
+   * images are included.
+   *
+   * Session-refresh edge case: `ensureSession` is called once inside
+   * `uploadBlobFromUrl` for each image (they share the same in-memory
+   * session because Promise.all resolves in the same service instance).
+   * If the access JWT expires mid-upload (> ~2 hours after the first
+   * call on this instance), all parallel uploads will fail with 401.
+   * The fix is to re-instantiate BlueskyService before calling this
+   * method — the constructor clears the cached session.
+   */
+  async postRecordWithImages(request: BlueskyPostWithImagesRequest): Promise<BlueskyPostResponse> {
+    const MAX_IMAGES = 4;
+    const urls = request.mediaUrls.slice(0, MAX_IMAGES);
+
+    if (urls.length === 0) {
+      // No images — fall back to plain text post
+      return this.postRecord({ text: request.text, langs: request.langs });
+    }
+
+    try {
+      // Upload all blobs in parallel (all share the same session)
+      const blobs = await Promise.all(urls.map((u) => this.uploadBlobFromUrl(u)));
+
+      const session = await this.ensureSession();
+
+      const embed = {
+        $type: 'app.bsky.embed.images',
+        images: blobs.map((blob, idx) => ({
+          alt: request.alts?.[idx] ?? '',
+          image: blob,
+        })),
+      };
+
+      const record = {
+        $type: 'app.bsky.feed.post',
+        text: request.text,
+        langs: request.langs ?? ['en'],
+        createdAt: new Date().toISOString(),
+        embed,
+      };
+
+      const response = await fetch(`${this.pdsUrl}/xrpc/com.atproto.repo.createRecord`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessJwt}`,
+        },
+        body: JSON.stringify({
+          repo: session.did || this.config.identifier,
+          collection: 'app.bsky.feed.post',
+          record,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = (await response.json()) as { message?: string };
+        return { success: false, error: errData.message ?? `Bluesky post failed: ${response.status}` };
+      }
+
+      const data = (await response.json()) as { uri?: string; cid?: string };
+      return { success: true, uri: data.uri, cid: data.cid };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error('[BlueskyService] postRecordWithImages failed', error instanceof Error ? error : new Error(msg));
       return { success: false, error: msg };
     }
   }

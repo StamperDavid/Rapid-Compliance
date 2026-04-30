@@ -974,7 +974,13 @@ export class AutonomousPostingAgent {
           if (!blueskyService) {
             return { success: false, platform, postId, error: 'Bluesky service not configured — add credentials in Settings > API Keys' };
           }
-          const blueskyResult = await blueskyService.postRecord({ text: content });
+          // Bluesky cap: 4 images per post (enforced inside postRecordWithImages).
+          // Use the with-images path when at least one mediaUrl is provided.
+          // Until Apr 29 2026 this case dropped mediaUrls silently — the
+          // post landed but appeared text-only in the user's feed.
+          const blueskyResult = mediaUrls && mediaUrls.length > 0
+            ? await blueskyService.postRecordWithImages({ text: content, mediaUrls })
+            : await blueskyService.postRecord({ text: content });
           return { success: blueskyResult.success, platform, postId, platformPostId: blueskyResult.uri, error: blueskyResult.error };
         }
 
@@ -996,10 +1002,20 @@ export class AutonomousPostingAgent {
           if (!mastodonService) {
             return { success: false, platform, postId, error: 'Mastodon service not configured — run scripts/connect-mastodon.ts to authorize and save the access token' };
           }
-          const mastodonResult = await mastodonService.postStatus({
-            status: content,
-            visibility: 'public',
-          });
+          // Mastodon cap: 4 attachments per status (enforced inside
+          // postStatusWithMedia). Use the with-media path when at least one
+          // mediaUrl is provided. Until Apr 29 2026 this case dropped mediaUrls
+          // silently — same bug as Twitter and Bluesky.
+          const mastodonResult = mediaUrls && mediaUrls.length > 0
+            ? await mastodonService.postStatusWithMedia({
+                status: content,
+                visibility: 'public',
+                mediaUrls,
+              })
+            : await mastodonService.postStatus({
+                status: content,
+                visibility: 'public',
+              });
           return { success: mastodonResult.success, platform, postId, platformPostId: mastodonResult.postId, error: mastodonResult.error };
         }
 
@@ -1107,12 +1123,18 @@ export class AutonomousPostingAgent {
   }
 
   /**
-   * Post to Twitter/X
+   * Post to Twitter/X. When mediaUrls are provided, each URL is uploaded via
+   * Twitter's v1.1 /media/upload endpoint (OAuth 1.0a) and attached to the
+   * tweet via media_ids. Twitter's per-tweet media cap is 4.
+   *
+   * Until Apr 29 2026 evening this method received `_mediaUrls` (underscore
+   * prefix = ignored) and dropped media silently. The "post landed but image
+   * didn't" bug was operator-caught when reviewing the actual published posts.
    */
   private async postToTwitter(
     postId: string,
     content: string,
-    _mediaUrls?: string[],
+    mediaUrls?: string[],
     accountId?: string
   ): Promise<PostingResult> {
     // Use account-specific service if accountId provided, otherwise default
@@ -1144,11 +1166,12 @@ export class AutonomousPostingAgent {
       tweetContent = content.length <= 280 ? content : `${content.substring(0, 277)}...`;
     }
 
-    const result = await service.postTweet({
-      text: tweetContent,
-      // Note: Media upload requires separate media upload API
-      // mediaIds would need to be obtained by uploading media first
-    });
+    // Use the with-media path when at least one media URL is provided. The
+    // service handles upload + attach atomically; falls back to plain postTweet
+    // when no media.
+    const result = mediaUrls && mediaUrls.length > 0
+      ? await service.postTweetWithMedia({ text: tweetContent, mediaUrls })
+      : await service.postTweet({ text: tweetContent });
 
     if (result.success) {
       return {

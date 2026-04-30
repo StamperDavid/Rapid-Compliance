@@ -709,46 +709,175 @@ export class TwitterService {
   }
 
   /**
-   * Upload media to Twitter (v1.1 media upload endpoint)
-   * Returns media_id string for use in tweet creation
+   * Upload media to Twitter (v1.1 media upload endpoint).
+   * Requires OAuth 1.0a User Context — the v1.1 upload endpoint rejects Bearer tokens.
+   * Returns media_id_string for use in tweet creation.
    */
   async uploadMedia(
     buffer: Buffer,
     mimeType: string
   ): Promise<{ mediaId: string | null; error?: string }> {
-    if (!this.config.accessToken) {
-      return { mediaId: null, error: 'OAuth 2.0 access token required for media upload' };
+    if (!this.hasOAuth1Credentials()) {
+      return {
+        mediaId: null,
+        error: 'OAuth 1.0a User Context credentials required for media upload.',
+      };
+    }
+
+    const uploadUrl = 'https://upload.twitter.com/1.1/media/upload.json';
+    const oauthHeader = buildOAuth1Header('POST', uploadUrl, this.config);
+    if (!oauthHeader) {
+      return { mediaId: null, error: 'Failed to build OAuth 1.0a header for media upload.' };
     }
 
     try {
-      // Twitter media upload uses v1.1 endpoint
+      // OAuth 1.0a signing for multipart: the signature base covers only the URL +
+      // oauth_ params — NOT the multipart body. FormData handles the multipart
+      // framing; the OAuth Authorization header is sent separately.
       const formData = new FormData();
       const blob = new Blob([new Uint8Array(buffer)], { type: mimeType });
       formData.append('media', blob);
-      formData.append('media_category', mimeType.startsWith('video/') ? 'tweet_video' : 'tweet_image');
+      formData.append(
+        'media_category',
+        mimeType.startsWith('video/') ? 'tweet_video' : 'tweet_image',
+      );
 
-      const response = await fetch('https://upload.twitter.com/1.1/media/upload.json', {
+      const response = await fetch(uploadUrl, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.config.accessToken}`,
-        },
+        headers: { Authorization: oauthHeader },
         body: formData,
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        logger.error('Twitter: Media upload failed', new Error(errorText), { status: response.status });
-        return { mediaId: null, error: `Media upload failed: ${response.status}` };
+        logger.error('Twitter: Media upload failed', new Error(errorText), {
+          status: response.status,
+        });
+        return { mediaId: null, error: `Media upload failed (${response.status}): ${errorText}` };
       }
 
-      const data = await response.json() as { media_id_string: string };
+      interface TwitterMediaUploadResponse {
+        media_id_string: string;
+      }
+
+      const data = await response.json() as TwitterMediaUploadResponse;
       logger.info('Twitter: Media uploaded', { mediaId: data.media_id_string, mimeType });
 
       return { mediaId: data.media_id_string };
     } catch (error) {
       logger.error('Twitter: Media upload error', error as Error);
-      return { mediaId: null, error: error instanceof Error ? error.message : 'Media upload failed' };
+      return {
+        mediaId: null,
+        error: error instanceof Error ? error.message : 'Media upload failed',
+      };
     }
+  }
+
+  /**
+   * Fetch an image/video from a URL and upload it to Twitter's v1.1 media endpoint.
+   * Content-type is detected first from the URL file extension, then from the
+   * response Content-Type header as a fallback.
+   *
+   * @param url - Publicly accessible URL of the media asset.
+   * @returns The media_id_string, ready to pass to postTweet({ mediaIds: [...] }).
+   * @throws Error with response body if the upload fails.
+   */
+  async uploadMediaFromUrl(url: string): Promise<string> {
+    if (!this.hasOAuth1Credentials()) {
+      throw new Error(
+        'OAuth 1.0a User Context credentials required for media upload.',
+      );
+    }
+
+    // --- Step 1: Determine MIME type from URL extension ---
+    const EXTENSION_MIME: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      mp4: 'video/mp4',
+    };
+
+    const extensionMatch = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(url);
+    const extensionMime =
+      extensionMatch ? EXTENSION_MIME[extensionMatch[1].toLowerCase()] : undefined;
+
+    // --- Step 2: Fetch image bytes ---
+    let mediaResponse: Response;
+    try {
+      mediaResponse = await fetch(url);
+    } catch (err) {
+      throw new Error(
+        `Twitter uploadMediaFromUrl: failed to fetch media from "${url}": ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    if (!mediaResponse.ok) {
+      throw new Error(
+        `Twitter uploadMediaFromUrl: upstream returned ${mediaResponse.status} for "${url}"`,
+      );
+    }
+
+    const arrayBuffer = await mediaResponse.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Extension MIME wins; fall back to Content-Type header; final fallback to jpeg.
+    const contentTypeMime = mediaResponse.headers.get('content-type')?.split(';')[0].trim();
+    const mimeType = extensionMime ?? contentTypeMime ?? 'image/jpeg';
+
+    // --- Step 3: Upload to Twitter v1.1 ---
+    const uploadResult = await this.uploadMedia(buffer, mimeType);
+
+    if (!uploadResult.mediaId) {
+      throw new Error(
+        `Twitter uploadMediaFromUrl: upload failed — ${uploadResult.error ?? 'unknown error'}`,
+      );
+    }
+
+    logger.info('Twitter: Media uploaded from URL', {
+      url,
+      mimeType,
+      mediaId: uploadResult.mediaId,
+    });
+
+    return uploadResult.mediaId;
+  }
+
+  /**
+   * Convenience wrapper that uploads all media URLs in parallel, then posts a
+   * single tweet with those media attachments.
+   *
+   * @param params.text     - Tweet body text (max 280 chars).
+   * @param params.mediaUrls - One to four publicly accessible media asset URLs.
+   * @returns The same shape as postTweet.
+   */
+  async postTweetWithMedia(params: {
+    text: string;
+    mediaUrls: string[];
+  }): Promise<TwitterPostResponse> {
+    if (params.mediaUrls.length === 0) {
+      return this.postTweet({ text: params.text });
+    }
+
+    if (params.mediaUrls.length > 4) {
+      return {
+        success: false,
+        error: 'Twitter allows at most 4 media attachments per tweet.',
+      };
+    }
+
+    let mediaIds: string[];
+    try {
+      mediaIds = await Promise.all(
+        params.mediaUrls.map((url) => this.uploadMediaFromUrl(url)),
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('Twitter: Media upload step failed in postTweetWithMedia', new Error(message));
+      return { success: false, error: message };
+    }
+
+    return this.postTweet({ text: params.text, mediaIds });
   }
 
   /**
