@@ -49,6 +49,7 @@ export default function SettingsPage() {
         { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, billing, and outbound feature limits', href: `/settings/billing`, permission: canManageBilling },
         { icon: '🎛️', label: 'Feature Toggles', description: 'Enable or disable platform modules for your organization', href: `/settings/features`, permission: canManageOrganization },
         { icon: '📅', label: 'Meeting Scheduler', description: 'Configure automated meeting booking with round-robin assignment and Zoom integration', href: `/settings/meeting-scheduler`, permission: canManageOrganization },
+        { icon: '✉️', label: 'Scheduling Messages', description: 'Edit the email + on-screen copy for early-access, demo confirmations, Zoom topic, and reminders', href: `/settings/scheduling-messages`, permission: canManageOrganization },
       ]
     },
     {
