@@ -4120,7 +4120,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           // Load lead from Firestore
           const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
           const { getSubCollection } = await import('@/lib/firebase/collections');
-          const lead = await AdminFirestoreService.get(getSubCollection('leads'), leadId) as Record<string, unknown> | null;
+          const lead = await AdminFirestoreService.get<Record<string, unknown>>(getSubCollection('leads'), leadId);
 
           if (!lead) {
             content = JSON.stringify({ status: 'error', message: `Lead not found: ${leadId}` });

@@ -276,7 +276,7 @@ export async function enrichLead(
       if (configured) {
         // Load the lead to get domain/email for enrichment
         const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-        const lead = await AdminFirestoreService.get(getSubCollection('leads'), leadId) as Record<string, unknown> | null;
+        const lead = await AdminFirestoreService.get<Record<string, unknown>>(getSubCollection('leads'), leadId);
 
         const domain = (lead?.company as string)?.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
           ?? (lead?.email as string)?.split('@')[1]

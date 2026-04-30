@@ -225,9 +225,7 @@ export async function POST(request: NextRequest) {
       period: requestData.period
     });
     
-    // Step 1: Get team members
-    // In a real implementation, fetch team members from database
-    // For now, using mock data - you would replace this with actual team member queries
+    // Step 1: Get team members from Firestore
     const teamMemberIds = await getTeamMembers(requestData.teamId);
     const teamName = await getTeamName(requestData.teamId);
     

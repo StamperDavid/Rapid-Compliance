@@ -24,6 +24,8 @@ import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
 import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { getDealsCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPES
@@ -125,9 +127,9 @@ export interface ForecastTrend {
  * console.log(`Quota Attainment: ${forecast.quotaAttainment}%`);
  * ```
  */
-export function generateRevenueForecast(
+export async function generateRevenueForecast(
   options: ForecastOptions
-): RevenueForecast {
+): Promise<RevenueForecast> {
   const startTime = Date.now();
   
   try {
@@ -142,8 +144,8 @@ export function generateRevenueForecast(
       template = getTemplateById(options.templateId);
     }
 
-    // 2. Fetch deals in pipeline (mock for now)
-    const deals = fetchPipelineDeals(options.period);
+    // 2. Fetch active pipeline deals from Firestore
+    const deals = await fetchPipelineDeals(options.period);
 
     // 3. Calculate stage-weighted revenue
     const byStage = calculateRevenueByStage(deals, template);
@@ -364,33 +366,24 @@ function calculateForecastConfidence(
 }
 
 /**
- * Analyze trend compared to previous period
+ * Analyze trend compared to previous period.
+ *
+ * Period-over-period comparison requires a `revenue_history` collection that
+ * snapshots forecasts at each generation. That collection is not yet wired,
+ * so we honestly return a flat/stable trend with the previous-period value
+ * equal to the current. Once historical snapshots exist, replace this body
+ * with a real query keyed on (orgId, periodStart).
  */
 function analyzeTrend(
   currentForecast: number
 ): ForecastTrend {
-  // Mock: simulate previous period forecast
-  const previousForecast = currentForecast * (0.8 + Math.random() * 0.4); // 80%-120% of current
-  
-  const change = currentForecast - previousForecast;
-  const changePercentage = Math.round((change / previousForecast) * 100);
-  
-  let direction: 'up' | 'down' | 'flat' = 'flat';
-  if (changePercentage > 5) {direction = 'up';}
-  else if (changePercentage < -5) {direction = 'down';}
-  
-  let momentum: 'accelerating' | 'stable' | 'decelerating' = 'stable';
-  if (Math.abs(changePercentage) > 15) {
-    momentum = changePercentage > 0 ? 'accelerating' : 'decelerating';
-  }
-  
   return {
     current: currentForecast,
-    previous: previousForecast,
-    change,
-    changePercentage,
-    direction,
-    momentum
+    previous: currentForecast,
+    change: 0,
+    changePercentage: 0,
+    direction: 'flat',
+    momentum: 'stable'
   };
 }
 
@@ -421,31 +414,26 @@ function calculateForecastDate(period: ForecastPeriod): Date {
 }
 
 /**
- * Mock function to fetch pipeline deals
+ * Fetch active pipeline deals from Firestore.
+ * Returns deals in active stages (prospecting, qualification, proposal, negotiation).
+ * Returns an empty array if Firestore is unavailable — callers render gracefully with zero deals.
  */
-function fetchPipelineDeals(
+async function fetchPipelineDeals(
   _period: ForecastPeriod
-): Deal[] {
-  // Mock: generate sample deals
-  const dealCount = Math.floor(Math.random() * 20) + 10; // 10-30 deals
-  const deals: Deal[] = [];
+): Promise<Deal[]> {
+  try {
+    const collectionPath = getDealsCollection();
+    const activeStageDocs = await AdminFirestoreService.getAll(collectionPath);
 
-  const stages = ['discovery', 'demo', 'proposal', 'negotiation'];
-
-  for (let i = 0; i < dealCount; i++) {
-    const stage = stages[Math.floor(Math.random() * stages.length)];
-    const value = Math.floor(Math.random() * 100000) + 10000; // $10K-$110K
-
-    deals.push({
-      id: `deal_${i}`,
-      value,
-      createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000),
-      updatedAt: new Date(),
-      stage
-    } as Deal);
+    // Filter server-side to active pipeline stages only (not closed_won / closed_lost)
+    const activeStages = new Set(['prospecting', 'qualification', 'proposal', 'negotiation']);
+    return activeStageDocs
+      .filter(doc => typeof doc.stage === 'string' && activeStages.has(doc.stage))
+      .map(doc => doc as unknown as Deal);
+  } catch (error) {
+    logger.error('fetchPipelineDeals: Firestore query failed, returning empty pipeline', error instanceof Error ? error : new Error(String(error)));
+    return [];
   }
-
-  return deals;
 }
 
 // ============================================================================
@@ -455,14 +443,14 @@ function fetchPipelineDeals(
 /**
  * Calculate quota performance
  */
-export function calculateQuotaPerformance(
+export async function calculateQuotaPerformance(
   period: ForecastPeriod,
   quota: number,
   templateId?: string
-): QuotaPerformance {
+): Promise<QuotaPerformance> {
   try {
     // Generate forecast
-    const forecast = generateRevenueForecast({
+    const forecast = await generateRevenueForecast({
       period,
       quota,
       templateId
@@ -513,15 +501,15 @@ export function calculateQuotaPerformance(
 /**
  * Compare forecasts across multiple periods
  */
-export function compareForecastPeriods(
+export async function compareForecastPeriods(
   periods: ForecastPeriod[],
   templateId?: string
-): Map<ForecastPeriod, RevenueForecast> {
+): Promise<Map<ForecastPeriod, RevenueForecast>> {
   const forecasts = new Map<ForecastPeriod, RevenueForecast>();
 
   for (const period of periods) {
     try {
-      const forecast = generateRevenueForecast({
+      const forecast = await generateRevenueForecast({
         period,
         templateId
       });

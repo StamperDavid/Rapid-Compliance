@@ -88,10 +88,10 @@ export async function POST(request: NextRequest) {
     const { customerInfo, shippingAddress, billingAddress, shippingMethodId } = parseResult.data;
 
     // Get cart
-    const cart = await AdminFirestoreService.get(
+    const cart = await AdminFirestoreService.get<Cart>(
       getCartsCollection(),
       authResult.user.uid
-    ) as Cart | null;
+    );
 
     if (!cart?.items || cart.items.length === 0) {
       return errors.badRequest('Cart is empty');
@@ -102,10 +102,10 @@ export async function POST(request: NextRequest) {
     const productSchema = ecomConfig?.productSchema ?? 'products';
     for (const item of cart.items) {
       if (item.productId) {
-        const product = await AdminFirestoreService.get(
+        const product = await AdminFirestoreService.get<{ stockLevel?: number }>(
           getSubCollection(productSchema),
           item.productId
-        ) as { stockLevel?: number } | null;
+        );
         if (product && typeof product.stockLevel === 'number' && product.stockLevel < item.quantity) {
           return errors.badRequest(
             `Insufficient stock for "${item.name}". Available: ${product.stockLevel}, Requested: ${item.quantity}`
@@ -128,10 +128,10 @@ export async function POST(request: NextRequest) {
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     // Determine configured payment provider
-    const ecommerceFullConfig = await AdminFirestoreService.get(
+    const ecommerceFullConfig = await AdminFirestoreService.get<EcommercePaymentConfig>(
       getSubCollection('ecommerce'),
       'config'
-    ) as EcommercePaymentConfig | null;
+    );
 
     const defaultProvider = ecommerceFullConfig?.payments?.providers?.find(
       (p) => p.isDefault && p.enabled

@@ -28,6 +28,9 @@ import {
   patternDetectionRequestSchema,
 } from './validation';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // CONSTANTS
@@ -142,9 +145,9 @@ export class SequenceIntelligenceEngine {
     const endDate = validatedInput.endDate ?? new Date();
     const startDate = validatedInput.startDate ?? new Date(endDate.getTime() - (DEFAULT_TIME_RANGE_DAYS * 24 * 60 * 60 * 1000));
 
-    // Fetch sequences and calculate metrics (currently using mock data)
-    const sequences = this.fetchSequences(validatedInput);
-    const metrics = this.calculateMetrics(sequences, startDate, endDate);
+    // Fetch sequences and calculate metrics from Firestore
+    const sequences = await this.fetchSequences(validatedInput);
+    const metrics = await this.calculateMetrics(sequences, startDate, endDate);
 
     // Generate analysis components based on input flags
     const patterns = validatedInput.includePatterns !== false
@@ -598,59 +601,196 @@ Return concise JSON:
   // ============================================================================
 
   /**
-   * Fetch sequences based on input
-   *
-   * Note: This is currently synchronous and returns mock data.
-   * Real implementation would need to be async and query Firestore:
-   * - Query: `organizations/{PLATFORM_ID}/sequences`
-   * - Filter by sequenceIds (if provided) using `where('id', 'in', sequenceIds)`
-   * - Filter by status: 'active' (using `where('status', '==', 'active')`)
-   * - Return EmailSequence[] from Firestore documents
+   * Fetch sequences from Firestore.
+   * Queries organizations/{PLATFORM_ID}/sequences, optionally filtered by sequenceIds.
+   * Returns an empty array if Firestore is unavailable.
    */
-  private fetchSequences(input: SequenceAnalysisInput): EmailSequence[] {
+  private async fetchSequences(input: SequenceAnalysisInput): Promise<EmailSequence[]> {
     const sequenceIds = input.sequenceIds ?? (input.sequenceId ? [input.sequenceId] : []);
 
-    // Returns placeholder structures for requested sequence IDs.
-    // Real data requires async Firestore query to organizations/{PLATFORM_ID}/sequences.
-    // These placeholders contain no fabricated metrics — only structural scaffolding.
-    return sequenceIds.map((id) => ({
-      id,
-      name: id, // Use the actual ID as name until real data is loaded
-      description: '',
-      status: 'active' as const,
-      steps: [],
-      targetAudience: '',
-      useCase: '',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: 'system',
-    }));
+    if (!adminDal) {
+      logger.error('[SequenceEngine] adminDal not initialized — returning empty sequence list');
+      return [];
+    }
+
+    const isSequenceStatus = (value: unknown): value is EmailSequence['status'] =>
+      typeof value === 'string' && (['draft', 'active', 'paused', 'completed', 'archived'] as const).includes(value as EmailSequence['status']);
+
+    try {
+      const collectionPath = getSubCollection('sequences');
+      const colRef = adminDal.getNestedCollection(collectionPath);
+
+      if (sequenceIds.length > 0) {
+        // Fetch only the requested sequences (Firestore 'in' supports up to 30 items)
+        const batchSize = 30;
+        const results: EmailSequence[] = [];
+        for (let i = 0; i < sequenceIds.length; i += batchSize) {
+          const batch = sequenceIds.slice(i, i + batchSize);
+          const snap = await colRef.where('__name__', 'in', batch).get();
+          for (const doc of snap.docs) {
+            const data = doc.data();
+            results.push({
+              id: doc.id,
+              name: typeof data.name === 'string' ? data.name : doc.id,
+              description: typeof data.description === 'string' ? data.description : '',
+              status: isSequenceStatus(data.status) ? data.status : 'active',
+              steps: Array.isArray(data.steps) ? (data.steps as EmailSequence['steps']) : [],
+              targetAudience: typeof data.targetAudience === 'string' ? data.targetAudience : '',
+              useCase: typeof data.useCase === 'string' ? data.useCase : '',
+              createdAt: data.createdAt && typeof (data.createdAt as { toDate?: unknown }).toDate === 'function'
+                ? (data.createdAt as { toDate: () => Date }).toDate()
+                : new Date(),
+              updatedAt: data.updatedAt && typeof (data.updatedAt as { toDate?: unknown }).toDate === 'function'
+                ? (data.updatedAt as { toDate: () => Date }).toDate()
+                : new Date(),
+              createdBy: typeof data.createdBy === 'string' ? data.createdBy : 'system',
+            });
+          }
+        }
+        return results;
+      }
+
+      // No filter — return all active sequences
+      const snap = await colRef.where('status', '==', 'active').get();
+      return snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: typeof data.name === 'string' ? data.name : doc.id,
+          description: typeof data.description === 'string' ? data.description : '',
+          status: 'active' as const,
+          steps: Array.isArray(data.steps) ? (data.steps as EmailSequence['steps']) : [],
+          targetAudience: typeof data.targetAudience === 'string' ? data.targetAudience : '',
+          useCase: typeof data.useCase === 'string' ? data.useCase : '',
+          createdAt: data.createdAt && typeof (data.createdAt as { toDate?: unknown }).toDate === 'function'
+            ? (data.createdAt as { toDate: () => Date }).toDate()
+            : new Date(),
+          updatedAt: data.updatedAt && typeof (data.updatedAt as { toDate?: unknown }).toDate === 'function'
+            ? (data.updatedAt as { toDate: () => Date }).toDate()
+            : new Date(),
+          createdBy: typeof data.createdBy === 'string' ? data.createdBy : 'system',
+        };
+      });
+    } catch (error) {
+      logger.error('[SequenceEngine] fetchSequences: Firestore query failed', error instanceof Error ? error : new Error(String(error)));
+      return [];
+    }
   }
 
   /**
-   * Calculate sequence metrics
-   *
-   * Note: This is currently synchronous and returns mock data.
-   * Real implementation would need to be async and query Firestore:
-   * - Query: `organizations/{PLATFORM_ID}/sequence_executions`
-   * - Filter by sequenceId and date range
-   * - Aggregate metrics: sent, delivered, opened, clicked, replied, etc.
-   * - Calculate rates and conversion metrics
-   * - Return SequenceMetrics[] with actual data
+   * Calculate sequence metrics by aggregating sequenceEnrollments from Firestore.
+   * Queries organizations/{PLATFORM_ID}/sequenceEnrollments filtered by sequenceId
+   * and the provided date range.  Returns zeroed metrics if Firestore is unavailable.
    */
-  private calculateMetrics(
+  private async calculateMetrics(
     sequences: EmailSequence[],
     startDate: Date,
     endDate: Date
-  ): SequenceMetrics[] {
-    return sequences.map(seq => this.generateMockMetrics(seq, startDate, endDate));
+  ): Promise<SequenceMetrics[]> {
+    if (!adminDal) {
+      logger.error('[SequenceEngine] adminDal not initialized — returning zeroed metrics');
+      return sequences.map(seq => this.buildEmptyMetrics(seq, startDate, endDate));
+    }
+
+    return Promise.all(sequences.map(seq =>
+      this.aggregateEnrollmentMetrics(seq, startDate, endDate)
+    ));
   }
 
   /**
-   * Generate empty metrics structure for a sequence.
-   * Real metrics require async Firestore query to sequence_executions collection.
+   * Aggregate metrics for a single sequence from its sequenceEnrollments.
    */
-  private generateMockMetrics(
+  private async aggregateEnrollmentMetrics(
+    sequence: EmailSequence,
+    startDate: Date,
+    endDate: Date
+  ): Promise<SequenceMetrics> {
+    const base = this.buildEmptyMetrics(sequence, startDate, endDate);
+
+    if (!adminDal) {
+      return base;
+    }
+
+    try {
+      const enrollmentsPath = getSubCollection('sequenceEnrollments');
+      const colRef = adminDal.getNestedCollection(enrollmentsPath);
+
+      const snap = await colRef
+        .where('sequenceId', '==', sequence.id)
+        .where('enrolledAt', '>=', startDate)
+        .where('enrolledAt', '<=', endDate)
+        .get();
+
+      let totalSent = 0;
+      let totalDelivered = 0;
+      let totalOpened = 0;
+      let totalClicked = 0;
+      let totalReplied = 0;
+      let totalUnsubscribed = 0;
+      let activeExecutions = 0;
+      let completedExecutions = 0;
+      let stoppedExecutions = 0;
+
+      for (const doc of snap.docs) {
+        const data = doc.data();
+
+        // Count enrollment status
+        if (data.status === 'active') { activeExecutions++; }
+        else if (data.status === 'completed') { completedExecutions++; }
+        else if (data.status === 'stopped' || data.status === 'unsubscribed') { stoppedExecutions++; }
+
+        // Aggregate step-level metrics
+        const steps = Array.isArray(data.executedSteps) ? data.executedSteps : [];
+        for (const step of steps) {
+          if (typeof step !== 'object' || step === null) { continue; }
+          const s = step as Record<string, unknown>;
+          if (s.success === true) {
+            totalSent++;
+            totalDelivered++;
+            // emailStatus fields if present
+            if (s.opened === true || s.status === 'opened' || s.status === 'clicked' || s.status === 'replied') { totalOpened++; }
+            if (s.clicked === true || s.status === 'clicked' || s.status === 'replied') { totalClicked++; }
+            if (s.replied === true || s.status === 'replied') { totalReplied++; }
+            if (s.unsubscribed === true || s.status === 'unsubscribed') { totalUnsubscribed++; }
+          } else if (s.success === false && s.error == null) {
+            // Sent but not delivered
+            totalSent++;
+          }
+        }
+      }
+
+      const totalRecipients = snap.size;
+      const dataPoints = totalSent;
+
+      return {
+        ...base,
+        totalRecipients,
+        activeExecutions,
+        completedExecutions,
+        stoppedExecutions,
+        totalSent,
+        totalDelivered,
+        totalOpened,
+        totalClicked,
+        totalReplied,
+        totalUnsubscribed,
+        overallDeliveryRate: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0,
+        overallOpenRate: totalDelivered > 0 ? (totalOpened / totalDelivered) * 100 : 0,
+        overallClickRate: totalDelivered > 0 ? (totalClicked / totalDelivered) * 100 : 0,
+        overallReplyRate: totalDelivered > 0 ? (totalReplied / totalDelivered) * 100 : 0,
+        overallUnsubscribeRate: totalDelivered > 0 ? (totalUnsubscribed / totalDelivered) * 100 : 0,
+        dataPoints,
+      };
+    } catch (error) {
+      logger.error('[SequenceEngine] aggregateEnrollmentMetrics failed', error instanceof Error ? error : new Error(String(error)), { sequenceId: sequence.id });
+      return base;
+    }
+  }
+
+  /**
+   * Build a zeroed SequenceMetrics structure — used as the safe empty result.
+   */
+  private buildEmptyMetrics(
     sequence: EmailSequence,
     startDate: Date,
     endDate: Date

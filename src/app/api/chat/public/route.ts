@@ -83,7 +83,7 @@ async function handlePublicChat(request: NextRequest) {
       // Ignore and fallback
     }
 
-    organization ??= await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID) as Organization | null;
+    organization ??= await AdminFirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     if (!organization) {
       return NextResponse.json(
         { success: false, error: 'Invalid organization' },
@@ -91,10 +91,10 @@ async function handlePublicChat(request: NextRequest) {
       );
     }
 
-    chatConfig ??= await AdminFirestoreService.get(
+    chatConfig ??= await AdminFirestoreService.get<{ enabled?: boolean }>(
       getSubCollection('settings'),
       'chatWidget'
-    ) as { enabled?: boolean } | null;
+    );
 
     // Default to enabled if no config exists
     if (chatConfig?.enabled === false) {
@@ -150,10 +150,10 @@ async function handlePublicChat(request: NextRequest) {
     } catch (_e) {
       // Ignore and fallback
     }
-    agentConfig ??= await AdminFirestoreService.get(
+    agentConfig ??= await AdminFirestoreService.get<AgentConfigData>(
       getSubCollection('agentConfig'),
       'default'
-    ) as AgentConfigData | null;
+    );
 
     const selectedModel = (agentConfig?.selectedModel ?? 'openrouter/anthropic/claude-sonnet-4.6') as ModelName;
     const modelConfig = agentConfig?.modelConfig ?? {

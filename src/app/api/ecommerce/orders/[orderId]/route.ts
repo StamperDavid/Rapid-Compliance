@@ -33,7 +33,7 @@ export async function GET(
       return authResult;
     }
 
-    const order = await AdminFirestoreService.get(ORDERS_PATH, orderId) as Order | null;
+    const order = await AdminFirestoreService.get<Order>(ORDERS_PATH, orderId);
 
     if (!order) {
       return errors.notFound('Order not found');

@@ -279,7 +279,7 @@ export async function addTrainingScenario(
   if (isServer) {
     // Server-side: Use Admin SDK
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-    const current = await AdminFirestoreService.get('baseModels', baseModelId) as BaseModel | null;
+    const current = await AdminFirestoreService.get<BaseModel>('baseModels', baseModelId);
     
     if (!current) {
       throw new Error('Base model not found');
