@@ -6,13 +6,13 @@
  * after adding or removing an agent file. CI runs the same script with
  * `--check` and fails the build on drift.
  *
- * Total agents: 70
+ * Total agents: 72
  *   L1 (Master Orchestrator): 1
- *   L2 (Managers):            9
- *   L3 (Specialists):         56
+ *   L2 (Managers):            10
+ *   L3 (Specialists):         57
  *   STANDALONE:               4
  *
- * Generated at: 2026-04-29T09:53:50.235Z
+ * Generated at: 2026-04-30T08:09:39.756Z
  *
  * @module lib/agents/agent-registry
  */
@@ -125,6 +125,18 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
     tier: 'L2',
     parentId: 'MASTER_ORCHESTRATOR',
     capabilities: ['campaign_goal_parsing', 'intent_detection', 'dynamic_specialist_resolution', 'brand_dna_integration', 'seo_social_feedback_loop', 'multi_specialist_coordination', 'cross_platform_campaigns', 'budget_allocation', 'campaign_brief_synthesis'],
+  },
+
+  // =========================================================================
+  // L2 - OPERATIONS MANAGER (1)
+  // =========================================================================
+  {
+    id: 'OPERATIONS_MANAGER',
+    name: "Operations Manager",
+    role: "Operations Manager",
+    tier: 'L2',
+    parentId: 'MASTER_ORCHESTRATOR',
+    capabilities: ['meeting_creation', 'meeting_rescheduling', 'meeting_cancellation', 'calendar_integrity', 'availability_enforcement', 'attendee_validation'],
   },
 
   // =========================================================================
@@ -528,6 +540,18 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
   },
 
   // =========================================================================
+  // L3 - OPERATIONS SPECIALISTS (1)
+  // =========================================================================
+  {
+    id: 'SCHEDULING_SPECIALIST',
+    name: "Scheduling Specialist",
+    role: "Scheduling Specialist",
+    tier: 'L3',
+    parentId: 'OPERATIONS_MANAGER',
+    capabilities: ['create_meeting', 'reschedule_meeting', 'cancel_meeting'],
+  },
+
+  // =========================================================================
   // L3 - OUTREACH SPECIALISTS (3)
   // =========================================================================
   {
@@ -548,11 +572,11 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
   },
   {
     id: 'VOICE_AI_SPECIALIST',
-    name: "Voice AI Specialist",
-    role: "Voice AI Specialist",
+    name: "Voice Service (Twilio dispatcher)",
+    role: "Voice Service (Twilio dispatcher)",
     tier: 'L3',
     parentId: 'OUTREACH_MANAGER',
-    capabilities: ['make_call', 'get_call_status', 'end_call', 'send_dtmf', 'transfer_call', 'get_recording', 'call_tracking', 'ai_conversation'],
+    capabilities: ['make_call', 'get_call_status', 'end_call', 'send_dtmf', 'transfer_call', 'get_recording', 'call_tracking'],
   },
 
   // =========================================================================
@@ -726,6 +750,7 @@ const DOMAIN_DISPLAY_NAMES: Record<string, string> = {
   ARCHITECT_MANAGER: 'Architecture',
   REVENUE_DIRECTOR: 'Revenue',
   REPUTATION_MANAGER: 'Reputation',
+  OPERATIONS_MANAGER: 'Operations',
 };
 
 // ============================================================================

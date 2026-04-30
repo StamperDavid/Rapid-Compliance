@@ -686,6 +686,7 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   delegate_to_outreach: '/mission-control',
   delegate_to_intelligence: '/mission-control',
   delegate_to_commerce: '/mission-control',
+  delegate_to_operations: '/mission-control',
   // Single-artifact tools → their specific pages
   create_video: '/content/video',
   generate_video: '/content/video',
@@ -1992,6 +1993,65 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
         },
         required: ['topic'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // OPERATIONS DEPARTMENT TOOLS (Scheduling)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_operations',
+      description:
+        'Delegate scheduling work (create/reschedule/cancel meetings) to the Operations Manager. The operator must always specify a concrete time and a CRM-resolved attendee — never call this with a fuzzy time or a raw attendee name. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          intent: {
+            type: 'string',
+            description: 'Which scheduling action to perform.',
+            enum: ['create_meeting', 'reschedule_meeting', 'cancel_meeting'],
+          },
+          startTime: {
+            type: 'string',
+            description: 'ISO 8601 datetime (e.g. "2026-05-04T15:30:00-05:00"). Required for create_meeting and reschedule_meeting. Never pass fuzzy phrases like "next Tuesday" — Jasper resolves those before calling this tool.',
+          },
+          durationMinutes: {
+            type: 'number',
+            description: 'Meeting length in minutes. Defaults to 30 if omitted.',
+          },
+          attendeeRef: {
+            type: 'object',
+            description: 'CRM record reference for the attendee. Shape: { type: "lead"|"contact"|"deal", id: string }. Both fields are required for create_meeting. Resolve any name to a real CRM id BEFORE calling this tool — the manager rejects raw names.',
+          },
+          meetingId: {
+            type: 'string',
+            description: 'Existing meeting document id. Required for reschedule_meeting and cancel_meeting.',
+          },
+          title: {
+            type: 'string',
+            description: 'Optional meeting title for create_meeting.',
+          },
+          notes: {
+            type: 'string',
+            description: 'Optional meeting notes for create_meeting or reschedule_meeting.',
+          },
+          reason: {
+            type: 'string',
+            description: 'Optional reason for cancel_meeting (included in the cancellation notice).',
+          },
+          urgency: {
+            type: 'string',
+            description: 'Optional urgency hint (e.g., "high", "normal", "low") used by the manager for prioritization.',
+          },
+          teamContext: {
+            type: 'string',
+            description: 'Optional context about which team or department the meeting concerns.',
+          },
+        },
+        required: ['intent'],
       },
     },
   },
@@ -5400,6 +5460,104 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             error: errorMsg,
           });
           content = JSON.stringify({ error: errorMsg, manager: 'CONTENT_MANAGER' });
+        }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // OPERATIONS DEPARTMENT EXECUTION (Scheduling)
+      //
+      // Jasper interprets the user's scheduling intent and resolves any fuzzy
+      // attendee name to a CRM record id BEFORE calling this tool. The handler
+      // here only forwards — no time parsing, no CRM lookup, no slot validation.
+      // The Operations Manager re-validates and rejects the request if Jasper
+      // tried to slip in a fuzzy time or a missing attendee id.
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_operations': {
+        const opsStart = Date.now();
+        trackMissionStep(context, 'delegate_to_operations', 'RUNNING', { toolArgs: args });
+
+        try {
+          const { getOperationsManager } = await import('@/lib/agents/operations/manager');
+          const opsMgr = getOperationsManager();
+          await opsMgr.initialize();
+
+          // Map the lowercase tool-level intent to the manager's uppercase
+          // discriminator. Anything outside the allowed set falls through and
+          // the manager will return FAILED with a clear "missing/unrecognized
+          // intent" error — we don't guess here.
+          const rawIntent = typeof args.intent === 'string' ? args.intent : '';
+          let mgrIntent: 'CREATE_MEETING' | 'RESCHEDULE_MEETING' | 'CANCEL_MEETING' | undefined;
+          if (rawIntent === 'create_meeting') { mgrIntent = 'CREATE_MEETING'; }
+          else if (rawIntent === 'reschedule_meeting') { mgrIntent = 'RESCHEDULE_MEETING'; }
+          else if (rawIntent === 'cancel_meeting') { mgrIntent = 'CANCEL_MEETING'; }
+
+          // Coerce attendeeRef to {type, id} only — the manager rejects any
+          // shape that isn't this exact pair.
+          let attendeeRef: { type: string; id: string } | undefined;
+          if (args.attendeeRef && typeof args.attendeeRef === 'object') {
+            const ar = args.attendeeRef as { type?: unknown; id?: unknown };
+            if (typeof ar.type === 'string' && typeof ar.id === 'string') {
+              attendeeRef = { type: ar.type, id: ar.id };
+            }
+          }
+
+          // durationMinutes can arrive as a number or as a string (OpenAPI
+          // round-trip on some clients). Coerce to number when possible;
+          // otherwise leave undefined and the manager applies its 30-minute
+          // default.
+          let durationMinutes: number | undefined;
+          if (typeof args.durationMinutes === 'number') {
+            durationMinutes = args.durationMinutes;
+          } else if (typeof args.durationMinutes === 'string') {
+            const n = parseInt(args.durationMinutes, 10);
+            if (Number.isFinite(n)) { durationMinutes = n; }
+          }
+
+          const operationsPayload: Record<string, unknown> = {
+            intent: mgrIntent,
+            startTime: typeof args.startTime === 'string' ? args.startTime : undefined,
+            durationMinutes,
+            attendeeRef,
+            meetingId: typeof args.meetingId === 'string' ? args.meetingId : undefined,
+            title: typeof args.title === 'string' ? args.title : undefined,
+            notes: typeof args.notes === 'string' ? args.notes : undefined,
+            reason: typeof args.reason === 'string' ? args.reason : undefined,
+          };
+
+          const operationsResult = await withTimeout(opsMgr.execute({
+            id: `operations_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'OPERATIONS_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: operationsPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Operations Manager');
+
+          const opsDuration = Date.now() - opsStart;
+          trackMissionStep(context, 'delegate_to_operations',
+            operationsResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Operations: ${operationsResult.status}`, durationMs: opsDuration, toolResult: JSON.stringify(operationsResult.data), specialistsUsed: operationsResult.specialistsUsed }
+          );
+
+          content = JSON.stringify({
+            status: operationsResult.status,
+            data: operationsResult.data,
+            errors: operationsResult.errors,
+            manager: 'OPERATIONS_MANAGER',
+            reviewLink: getReviewLink('delegate_to_operations', context?.missionId),
+          });
+        } catch (opsError: unknown) {
+          const errorMsg = opsError instanceof Error ? opsError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_operations', 'FAILED', {
+            summary: `Operations: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - opsStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'OPERATIONS_MANAGER' });
         }
         break;
       }

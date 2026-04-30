@@ -400,6 +400,7 @@ const DOMAIN_DISPLAY_NAMES: Record<string, string> = {
   ARCHITECT_MANAGER: 'Architecture',
   REVENUE_DIRECTOR: 'Revenue',
   REPUTATION_MANAGER: 'Reputation',
+  OPERATIONS_MANAGER: 'Operations',
 };
 
 // ============================================================================

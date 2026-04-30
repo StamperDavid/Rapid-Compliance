@@ -39,6 +39,7 @@ import { getContentManager } from './content/manager';
 import { getArchitectManager } from './architect/manager';
 import { getRevenueDirector } from './sales/revenue/manager';
 import { getReputationManager } from './trust/reputation/manager';
+import { getOperationsManager } from './operations/manager';
 
 // Intelligence Specialists (L3)
 import { getCompetitorResearcher } from './intelligence/competitor/specialist';
@@ -78,6 +79,9 @@ import { getSmsSpecialist } from './outreach/sms/specialist';
 import { getCopywriter } from './content/copywriter/specialist';
 import { getCalendarCoordinator } from './content/calendar/specialist';
 import { getVideoSpecialist } from './content/video/specialist';
+
+// Operations Specialists (L3)
+import { getSchedulingSpecialist } from './operations/scheduling/specialist';
 
 // Sales Specialists (L3)
 import { getMerchandiserSpecialist } from './sales/merchandiser/specialist';
@@ -123,6 +127,7 @@ const AGENT_FACTORY_REGISTRY: Record<AgentId, AgentGetter> = {
   [AGENT_IDS.ARCHITECT_MANAGER]: getArchitectManager,
   [AGENT_IDS.REVENUE_DIRECTOR]: getRevenueDirector,
   [AGENT_IDS.REPUTATION_MANAGER]: getReputationManager,
+  [AGENT_IDS.OPERATIONS_MANAGER]: getOperationsManager,
 
   // Intelligence Specialists (L3)
   [AGENT_IDS.COMPETITOR_RESEARCHER]: getCompetitorResearcher,
@@ -162,6 +167,9 @@ const AGENT_FACTORY_REGISTRY: Record<AgentId, AgentGetter> = {
   [AGENT_IDS.COPYWRITER]: getCopywriter,
   [AGENT_IDS.CALENDAR_COORDINATOR]: getCalendarCoordinator,
   [AGENT_IDS.VIDEO_SPECIALIST]: getVideoSpecialist,
+
+  // Operations Specialists (L3)
+  [AGENT_IDS.SCHEDULING_SPECIALIST]: getSchedulingSpecialist,
 
   // Sales Specialists (L3)
   [AGENT_IDS.MERCHANDISER]: getMerchandiserSpecialist,
@@ -233,6 +241,7 @@ export function getAgentIdsByTier(tier: 'L1' | 'L2' | 'L3'): AgentId[] {
       AGENT_IDS.ARCHITECT_MANAGER,
       AGENT_IDS.REVENUE_DIRECTOR,
       AGENT_IDS.REPUTATION_MANAGER,
+      AGENT_IDS.OPERATIONS_MANAGER,
     ],
     L3: [
       // Intelligence
@@ -266,6 +275,8 @@ export function getAgentIdsByTier(tier: 'L1' | 'L2' | 'L3'): AgentId[] {
       AGENT_IDS.COPYWRITER,
       AGENT_IDS.CALENDAR_COORDINATOR,
       AGENT_IDS.VIDEO_SPECIALIST,
+      // Operations
+      AGENT_IDS.SCHEDULING_SPECIALIST,
       // Sales
       AGENT_IDS.MERCHANDISER,
       AGENT_IDS.OUTREACH_SPECIALIST,
