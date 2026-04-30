@@ -15,7 +15,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { Calendar, dateFnsLocalizer, type View, type Event } from 'react-big-calendar';
+import { Calendar, dateFnsLocalizer, type View, type Event, type Components } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -46,12 +46,19 @@ interface UnifiedCalendarProps {
   events: UnifiedCalendarEvent[];
   onSelectEvent: (event: UnifiedCalendarEvent) => void;
   enabledSources: Set<CalendarEventSource>;
+  /**
+   * Optional react-big-calendar `components` overrides. Used by the
+   * dashboard section to inject a per-day "Hours" button into the
+   * month-view date headers without forking the calendar wrapper.
+   */
+  components?: Components<CalendarRenderEvent>;
 }
 
 export default function UnifiedCalendar({
   events,
   onSelectEvent,
   enabledSources,
+  components,
 }: UnifiedCalendarProps) {
   const [currentView, setCurrentView] = React.useState<View>('month');
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -103,6 +110,7 @@ export default function UnifiedCalendar({
         views={['month', 'week', 'day', 'agenda']}
         onSelectEvent={handleSelectEvent}
         eventPropGetter={eventPropGetter}
+        components={components}
         style={{ height: 720 }}
         popup
       />

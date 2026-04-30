@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
 import { JasperTaskReminder } from '@/components/dashboard/JasperTaskReminder';
+import UnifiedCalendarSection from '@/components/calendar/UnifiedCalendarSection';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import {
   Target,
@@ -422,6 +423,9 @@ export default function WorkspaceDashboardPage() {
           </SectionCard>
         </Link>
       </div>
+
+      {/* Unified calendar — meetings, demos, scheduled posts, CRM activity, Google Calendar in one place */}
+      <UnifiedCalendarSection />
 
       {/* Row 3: Pipeline + Marketing + Content */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

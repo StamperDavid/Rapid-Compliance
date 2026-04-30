@@ -184,8 +184,9 @@ export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'Living Ledger', href: '/living-ledger' },
 ];
 
-// ── Content Generator Hub (Video + Image + Editor + Library + Audio Lab) ─────
+// ── Content Generator Hub (Studio + Video + Image + Editor + Library + Audio Lab) ─────
 export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
+  { label: 'Studio', href: '/content/video/studio' },
   { label: 'Video', href: '/content/video' },
   { label: 'Calendar', href: '/content/video/calendar' },
   { label: 'Image', href: '/content/image-generator' },

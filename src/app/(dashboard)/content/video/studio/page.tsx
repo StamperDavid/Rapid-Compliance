@@ -1,7 +1,12 @@
 'use client';
 
 /**
- * /studio — Magic Studio-pattern content composer.
+ * Content Generator → Studio tab.
+ *
+ * Magic Studio-pattern unified composer for image / video / music / text.
+ * Lives under the Content Generator hub at /content/video/studio. The
+ * SubpageNav along the top is shared with the rest of the hub (Video,
+ * Calendar, Image, Editor, Library, Audio Lab).
  *
  * Layout:
  *   ┌──────────────┬──────────────────────────────────────┬──────────────┐
@@ -26,6 +31,8 @@
 import { useCallback, useState } from 'react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import { StudioToolPalette, type StudioTool } from '@/components/studio/StudioToolPalette';
 import {
   StudioCommandBar,
@@ -254,6 +261,11 @@ export default function StudioPage() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Hub-shared subpage nav along the top */}
+      <div className="px-6 pt-4 border-b border-border-light bg-card/30">
+        <SubpageNav items={CONTENT_GENERATOR_TABS} />
+      </div>
+
       {/* Header strip — page title sits above the workspace bands */}
       <header className="border-b border-border-light bg-card/30 px-6 py-4">
         <PageTitle>Studio</PageTitle>
