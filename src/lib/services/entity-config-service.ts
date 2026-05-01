@@ -19,8 +19,8 @@ const ENTITY_CONFIG_DOC = 'entity_config';
  */
 export async function getEntityConfig(): Promise<EntityConfig | null> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const data = await FirestoreService.get<EntityConfig>(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const data = await AdminFirestoreService.get<EntityConfig>(
       SETTINGS_COLLECTION,
       ENTITY_CONFIG_DOC,
     );
@@ -40,8 +40,8 @@ export async function getEntityConfig(): Promise<EntityConfig | null> {
  */
 export async function saveEntityConfig(config: EntityConfig): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    await FirestoreService.set(SETTINGS_COLLECTION, ENTITY_CONFIG_DOC, config, false);
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    await AdminFirestoreService.set(SETTINGS_COLLECTION, ENTITY_CONFIG_DOC, config, false);
     logger.info('Entity config saved', { file: 'entity-config-service.ts' });
   } catch (error) {
     logger.error(

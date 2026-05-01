@@ -88,12 +88,14 @@ export class AdminFirestoreService {
   }
 
   /**
-   * Get all documents in a collection with optional filters
+   * Get all documents in a collection with optional filters. Generic over the
+   * document shape so callers can read into a typed interface without a
+   * separate cast — mirrors the client-SDK FirestoreService.getAll pattern.
    */
-  static async getAll(
+  static async getAll<T extends object = FirestoreDocument>(
     collectionPath: string,
     constraints: QueryConstraint[] = []
-  ): Promise<FirestoreDocument[]> {
+  ): Promise<T[]> {
     try {
       let query: FirebaseFirestore.Query = ensureAdminDb().collection(collectionPath);
       
@@ -145,11 +147,11 @@ export class AdminFirestoreService {
       }
       
       const snapshot = await query.get();
-      
+
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-      }));
+      })) as T[];
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error(`[Admin Firestore] Error getting documents from ${collectionPath}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
@@ -158,15 +160,17 @@ export class AdminFirestoreService {
   }
 
   /**
-   * Get documents with pagination
+   * Get documents with pagination. Generic over the document shape so callers
+   * can read into a typed interface without a separate cast — mirrors the
+   * client-SDK FirestoreService.getAllPaginated pattern.
    */
-  static async getAllPaginated(
+  static async getAllPaginated<T extends object = FirestoreDocument>(
     collectionPath: string,
     constraints: QueryConstraint[] = [],
     pageSize: number = 50,
     lastDoc?: FirebaseFirestore.QueryDocumentSnapshot
   ): Promise<{
-    data: FirestoreDocument[];
+    data: T[];
     lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null;
     hasMore: boolean;
   }> {
@@ -231,8 +235,8 @@ export class AdminFirestoreService {
       const docs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-      }));
-      
+      })) as T[];
+
       // Determine if there are more pages
       const hasMore = docs.length > pageSize;
       const data = hasMore ? docs.slice(0, pageSize) : docs;

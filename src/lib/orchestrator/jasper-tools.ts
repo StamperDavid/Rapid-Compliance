@@ -3909,7 +3909,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const statusFilter = typeof args.status === 'string' && args.status !== 'all' ? args.status : null;
           const includeDemo = String(args.includeDemo ?? 'true') !== 'false';
 
-          const all = await AdminFirestoreService.getAll(getSubCollection('leads'), []) as Array<Record<string, unknown> & { id: string }>;
+          const all = await AdminFirestoreService.getAll<Record<string, unknown> & { id: string }>(getSubCollection('leads'), []);
           const filtered = all.filter((lead) => {
             if (!includeDemo && lead.isDemo === true) { return false; }
             if (statusFilter !== null && lead.status !== statusFilter) { return false; }

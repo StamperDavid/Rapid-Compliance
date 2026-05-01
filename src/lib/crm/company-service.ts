@@ -3,8 +3,10 @@
  * Business logic layer for company management
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+
+type QueryDocumentSnapshot = FirebaseFirestore.QueryDocumentSnapshot;
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Company, CompanyFilters, CreateCompanyInput, UpdateCompanyInput } from '@/types/company';
@@ -48,7 +50,7 @@ export async function getCompanies(
 
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Company>(
+    const result = await AdminFirestoreService.getAllPaginated<Company>(
       getSubCollection('companies'),
       constraints,
       options?.pageSize ?? 50,
@@ -75,7 +77,7 @@ export async function getCompanies(
  */
 export async function getCompany(companyId: string): Promise<Company | null> {
   try {
-    const company = await FirestoreService.get<Company>(
+    const company = await AdminFirestoreService.get<Company>(
       getSubCollection('companies'),
       companyId
     );
@@ -112,7 +114,7 @@ export async function createCompany(data: CreateCompanyInput): Promise<Company> 
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('companies'),
       companyId,
       company,
@@ -148,7 +150,7 @@ export async function updateCompany(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
+    await AdminFirestoreService.update(
       getSubCollection('companies'),
       companyId,
       updatedData
@@ -178,7 +180,7 @@ export async function updateCompany(
 export async function deleteCompany(companyId: string): Promise<void> {
   try {
     // Check for linked contacts
-    const linkedContacts = await FirestoreService.getAll(
+    const linkedContacts = await AdminFirestoreService.getAll(
       getSubCollection('contacts'),
       [where('company', '==', companyId)]
     );
@@ -189,7 +191,7 @@ export async function deleteCompany(companyId: string): Promise<void> {
     }
 
     // Check for linked deals
-    const linkedDeals = await FirestoreService.getAll(
+    const linkedDeals = await AdminFirestoreService.getAll(
       getSubCollection('deals'),
       [where('company', '==', companyId)]
     );
@@ -199,7 +201,7 @@ export async function deleteCompany(companyId: string): Promise<void> {
       );
     }
 
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('companies'),
       companyId
     );
@@ -258,11 +260,11 @@ export async function getCompanyRollup(companyId: string): Promise<{
 }> {
   try {
     const [contacts, deals] = await Promise.all([
-      FirestoreService.getAll(
+      AdminFirestoreService.getAll(
         getSubCollection('contacts'),
         [where('company', '==', companyId)]
       ),
-      FirestoreService.getAll<{ value?: number; stage?: string }>(
+      AdminFirestoreService.getAll<{ value?: number; stage?: string }>(
         getSubCollection('deals'),
         [where('company', '==', companyId)]
       ),

@@ -29,6 +29,7 @@ scripts/alex-knowledge.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+dev-server.log
 
 # Local env files
 .env*.local

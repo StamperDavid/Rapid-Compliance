@@ -109,10 +109,10 @@ export async function searchKnowledgeBase(
     }
 
     // Get all embeddings
-    const embeddings: KnowledgeEmbeddingDoc[] = await AdminFirestoreService.getAll(
+    const embeddings = await AdminFirestoreService.getAll<KnowledgeEmbeddingDoc>(
       getSubCollection('knowledgeEmbeddings'),
-      []
-    ) as KnowledgeEmbeddingDoc[];
+      [],
+    );
 
     // Calculate similarity scores
     const results: SearchResult[] = [];

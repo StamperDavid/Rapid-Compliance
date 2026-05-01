@@ -212,7 +212,7 @@ ${tierDescriptions}
     // This ensures customer-facing agents get the updated pricing
     let orgs: OrganizationDocument[] = [];
     try {
-      orgs = (await AdminFirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, [])) as OrganizationDocument[];
+      orgs = await AdminFirestoreService.getAll<OrganizationDocument>(COLLECTIONS.ORGANIZATIONS, []);
     } catch (fetchError: unknown) {
       const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
       logger.error('[Admin] Failed to fetch organizations:', fetchError instanceof Error ? fetchError : new Error(String(fetchError)));

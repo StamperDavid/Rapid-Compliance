@@ -6,7 +6,7 @@
  * Firestore path: organizations/{PLATFORM_ID}/settings/social_agent_config
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { AutonomousAgentSettings, EngagementActionType } from '@/types/social';
@@ -64,7 +64,7 @@ export class AgentConfigService {
     }
 
     try {
-      const saved = await FirestoreService.get<AutonomousAgentSettings>(
+      const saved = await AdminFirestoreService.get<AutonomousAgentSettings>(
         settingsPath(),
         CONFIG_DOC_ID
       );
@@ -99,7 +99,7 @@ export class AgentConfigService {
       updatedBy,
     };
 
-    await FirestoreService.set(settingsPath(), CONFIG_DOC_ID, updated);
+    await AdminFirestoreService.set(settingsPath(), CONFIG_DOC_ID, updated);
 
     // Bust cache
     this.cachedConfig = updated;
