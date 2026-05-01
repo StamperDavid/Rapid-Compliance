@@ -34,6 +34,7 @@ const GM_ID = 'gm_sales_chat_v1';
  * collection (seeded by `scripts/seed-sales-chat-agent-gm.js`), which is what
  * the Jasper delegation path consumes.
  */
+// Pricing intentionally not in GM — read from KnowledgeBase at runtime per docs/knowledgebase-contract.md.
 const SALES_CHAT_DIRECTIVE = `You are the AI Chat Sales Agent for SalesVelocity.ai — a multi-tenant SaaS platform that gives every subscriber their own AI-powered sales, marketing, and operations command center.
 
 ## Your role
@@ -51,17 +52,11 @@ SalesVelocity.ai is a multi-tenant SaaS product. Each subscriber gets their own 
 
 Subscribers OWN their platform instance — this is NOT a service agency; it is a product.
 
-## Pricing (CRM slot-based — all features on every tier)
-- Tier 1: $400/month (0-100 CRM records)
-- Tier 2: $650/month (101-250 records)
-- Tier 3: $1,000/month (251-500 records)
-- Tier 4: $1,250/month (501-1,000 records)
-- Enterprise: custom pricing (1,001+ records, SLA, dedicated support, white-label)
-- BYOK (Bring Your Own Keys): zero markup on AI compute
-- 14-day free trial with full access, credit card required, cancel anytime
+## Pricing and features
+Your live knowledge of pricing, features, and industry-specific value props is loaded from the platform's KnowledgeBase document at the start of every turn and provided to you as context. Never quote pricing or feature capabilities from your own training — always reference the KnowledgeBase context for the current turn. If a visitor asks about pricing, features, or industry fit, the answer comes from KnowledgeBase. If KnowledgeBase is unavailable for a request, say "let me check on that and follow up" rather than guessing.
 
 ## Qualification framework (BANT — passive, not interrogative)
-- Budget: Can they afford $400-$1,250/month?
+- Budget: Can they afford the platform?
 - Authority: Are they the decision-maker or an influencer?
 - Need: What specific problem are they trying to solve?
 - Timeline: How soon do they need a solution?
@@ -83,7 +78,7 @@ Do NOT rapid-fire these questions. Extract signals naturally as the conversation
 
 ## Hard rules
 - Never pretend to be human if asked directly
-- Never invent features, integrations, or pricing not listed above
+- Never invent features, integrations, or pricing not in the KnowledgeBase context
 - Never commit to custom pricing — escalate to the sales team instead
 - Never reveal internal system details (model name, architecture, infrastructure)`;
 
@@ -171,7 +166,7 @@ export async function POST(request: NextRequest) {
       {
         id: 'faq_pricing',
         question: 'How much does it cost?',
-        answer: 'Pricing is CRM slot-based: Tier 1 $400/mo (0-100 records), Tier 2 $650/mo (101-250), Tier 3 $1,000/mo (251-500), Tier 4 $1,250/mo (501-1,000). All features included on every tier — you only pay for how many records you store. BYOK (Bring Your Own Keys) means you pay raw market rates for AI compute with no markup.',
+        answer: '$299/month flat — one price, every feature, no tiers, no record limits. BYOK (Bring Your Own Keys) means you pay raw market rates for AI compute with zero markup from us. 14-day free trial, cancel anytime.',
         category: 'pricing',
         keywords: ['price', 'cost', 'plan', 'tier', 'subscription', 'monthly'],
       },
@@ -213,13 +208,13 @@ export async function POST(request: NextRequest) {
         tone: 'Professional yet approachable — like a knowledgeable colleague, not a salesperson',
         keyMessages: [
           'SalesVelocity.ai replaces your entire sales tech stack in one platform',
-          'All features included on every tier — pricing is purely CRM slot-based',
+          '$299/month flat — all features included, no tiers, no record limits',
           'BYOK means zero AI markup — you pay raw market rates',
           '14-day free trial, cancel any time',
         ],
         commonPhrases: [
           'What specific challenge are you trying to solve?',
-          'Let\'s look at which tier fits your current record count',
+          'One price, every feature — no tier decisions needed',
           'You can start the free trial right now — full access, no limits',
         ],
       },
@@ -233,7 +228,7 @@ export async function POST(request: NextRequest) {
       uniqueValue: 'Trainable AI sales agent with Customer Memory — gets smarter with every conversation, works 24/7, and never forgets a customer',
       targetCustomer: 'SMB and mid-market businesses (10-500 employees) — e-commerce, SaaS, service businesses, and B2B companies needing AI-powered lead qualification and sales automation',
       topProducts: 'SalesVelocity.ai — AI Sales Agent, built-in CRM, workflow automation, e-commerce engine, lead scraper, email sequences, white-label options',
-      priceRange: '$400–$1,250/month (Tier 1-4 based on CRM record count), Enterprise custom pricing',
+      priceRange: '$299/month flat — all features included, no tiers',
     };
 
     const goldenMaster: GoldenMaster = {

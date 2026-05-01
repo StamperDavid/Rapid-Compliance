@@ -192,6 +192,7 @@ export async function createLead(
         fieldChanged: 'status',
         previousValue: null,
         newValue: lead.status,
+        userId: 'system',
         userName: 'System',
       });
     } catch (activityError) {

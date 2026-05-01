@@ -2,7 +2,10 @@
  * Subscription Tiers Unit Tests
  *
  * Tests for the centralized pricing module at src/lib/pricing/subscription-tiers.ts
- * Validates all tier configs, pricing accuracy, rank ordering, and utility functions.
+ * Validates the single flat-rate 'pro' tier config, pricing accuracy, rank ordering,
+ * and utility functions.
+ *
+ * SalesVelocity.ai is $299/month flat — one tier, all features.
  */
 
 import { describe, it, expect } from '@jest/globals';
@@ -14,54 +17,35 @@ import {
   type SubscriptionTier,
   type SubscriptionTierKey,
 } from '@/lib/pricing/subscription-tiers';
+import { PRICING } from '@/lib/config/pricing';
 
 // ============================================================================
 // getTier — lookup by key
 // ============================================================================
 
 describe('getTier', () => {
-  it('returns the free tier with price 0', () => {
-    const tier = getTier('free');
+  it('returns the pro tier with correct pricing from PRICING config', () => {
+    const tier = getTier('pro');
 
     expect(tier).toBeDefined();
-    expect(tier?.key).toBe('free' satisfies SubscriptionTierKey);
-    expect(tier?.monthlyPrice).toBe(0);
-    expect(tier?.annualPrice).toBe(0);
-    expect(tier?.monthlyPriceCents).toBe(0);
-    expect(tier?.annualPriceCents).toBe(0);
+    expect(tier?.key).toBe('pro' satisfies SubscriptionTierKey);
+    expect(tier?.monthlyPrice).toBe(PRICING.monthlyPrice);
+    expect(tier?.monthlyPriceCents).toBe(PRICING.monthlyPrice * 100);
   });
 
-  it('returns the starter tier with correct pricing ($29 monthly / $290 yearly)', () => {
-    const tier = getTier('starter');
+  it('returns pro tier with correct annual pricing (10 months billed)', () => {
+    const tier = getTier('pro');
+    const expectedAnnual = PRICING.monthlyPrice * 10;
 
-    expect(tier).toBeDefined();
-    expect(tier?.key).toBe('starter' satisfies SubscriptionTierKey);
-    expect(tier?.monthlyPrice).toBe(29);
-    expect(tier?.annualPrice).toBe(290);
-    expect(tier?.monthlyPriceCents).toBe(2900);
-    expect(tier?.annualPriceCents).toBe(29000);
+    expect(tier?.annualPrice).toBe(expectedAnnual);
+    expect(tier?.annualPriceCents).toBe(expectedAnnual * 100);
   });
 
-  it('returns the professional tier with correct pricing ($79 monthly / $790 yearly)', () => {
-    const tier = getTier('professional');
-
-    expect(tier).toBeDefined();
-    expect(tier?.key).toBe('professional' satisfies SubscriptionTierKey);
-    expect(tier?.monthlyPrice).toBe(79);
-    expect(tier?.annualPrice).toBe(790);
-    expect(tier?.monthlyPriceCents).toBe(7900);
-    expect(tier?.annualPriceCents).toBe(79000);
-  });
-
-  it('returns the enterprise tier with correct pricing ($199 monthly / $1990 yearly)', () => {
-    const tier = getTier('enterprise');
-
-    expect(tier).toBeDefined();
-    expect(tier?.key).toBe('enterprise' satisfies SubscriptionTierKey);
-    expect(tier?.monthlyPrice).toBe(199);
-    expect(tier?.annualPrice).toBe(1990);
-    expect(tier?.monthlyPriceCents).toBe(19900);
-    expect(tier?.annualPriceCents).toBe(199000);
+  it('returns undefined for legacy tier keys that no longer exist', () => {
+    expect(getTier('free')).toBeUndefined();
+    expect(getTier('starter')).toBeUndefined();
+    expect(getTier('professional')).toBeUndefined();
+    expect(getTier('enterprise')).toBeUndefined();
   });
 
   it('returns undefined for a nonexistent tier key', () => {
@@ -71,7 +55,7 @@ describe('getTier', () => {
   });
 
   it('returns a tier with the required SubscriptionTier shape', () => {
-    const tier = getTier('professional') as SubscriptionTier;
+    const tier = getTier('pro') as SubscriptionTier;
 
     expect(tier).toHaveProperty('key');
     expect(tier).toHaveProperty('label');
@@ -92,51 +76,34 @@ describe('getTier', () => {
 // ============================================================================
 
 describe('getTierConfig', () => {
-  it('returns correct label and pricing for the free tier', () => {
-    const config = getTierConfig('free');
+  it('returns correct label and pricing for the pro tier', () => {
+    const config = getTierConfig('pro');
 
-    expect(config.label).toBe('Free');
-    expect(config.monthlyPrice).toBe(0);
-    expect(config.annualPrice).toBe(0);
+    expect(config.label).toBe('SalesVelocity Pro');
+    expect(config.monthlyPrice).toBe(PRICING.monthlyPrice);
+    expect(config.annualPrice).toBe(PRICING.monthlyPrice * 10);
   });
 
-  it('returns correct label and pricing for the starter tier', () => {
-    const config = getTierConfig('starter');
-
-    expect(config.label).toBe('Starter');
-    expect(config.monthlyPrice).toBe(29);
-    expect(config.annualPrice).toBe(290);
-  });
-
-  it('returns correct label and pricing for the professional tier', () => {
-    const config = getTierConfig('professional');
-
-    expect(config.label).toBe('Professional');
-    expect(config.monthlyPrice).toBe(79);
-    expect(config.annualPrice).toBe(790);
-  });
-
-  it('returns correct label and pricing for the enterprise tier', () => {
-    const config = getTierConfig('enterprise');
-
-    expect(config.label).toBe('Enterprise');
-    expect(config.monthlyPrice).toBe(199);
-    expect(config.annualPrice).toBe(1990);
-  });
-
-  it('returns free-tier defaults for an unknown key', () => {
+  it('returns pro-tier defaults for unknown keys (flat-rate fallback)', () => {
     const config = getTierConfig('unknown');
 
-    expect(config.label).toBe('Free');
-    expect(config.monthlyPrice).toBe(0);
-    expect(config.annualPrice).toBe(0);
+    expect(config.label).toBe('SalesVelocity Pro');
+    expect(config.monthlyPrice).toBe(PRICING.monthlyPrice);
   });
 
-  it('returns a badge (hex color) for the professional tier', () => {
-    const config = getTierConfig('professional');
+  it('returns pro-tier defaults for legacy tier keys', () => {
+    const legacyKeys = ['free', 'starter', 'professional', 'enterprise'];
+    legacyKeys.forEach((key) => {
+      const config = getTierConfig(key);
+      expect(config.monthlyPrice).toBe(PRICING.monthlyPrice);
+    });
+  });
+
+  it('returns a badge (hex color) for the pro tier', () => {
+    const config = getTierConfig('pro');
 
     // badge should be the raw hex color from the tier definition
-    expect(config.badge).toBe('#059669');
+    expect(config.badge).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
 });
 
@@ -145,26 +112,15 @@ describe('getTierConfig', () => {
 // ============================================================================
 
 describe('TIER_RANK', () => {
-  it('assigns free the lowest rank (0)', () => {
-    expect(TIER_RANK['free']).toBe(0);
+  it('assigns pro rank 1 (only paid tier)', () => {
+    expect(TIER_RANK['pro']).toBe(1);
   });
 
-  it('assigns starter rank 1', () => {
-    expect(TIER_RANK['starter']).toBe(1);
-  });
-
-  it('assigns professional rank 2', () => {
-    expect(TIER_RANK['professional']).toBe(2);
-  });
-
-  it('assigns enterprise the highest rank (3)', () => {
-    expect(TIER_RANK['enterprise']).toBe(3);
-  });
-
-  it('enforces strict ascending order: free < starter < professional < enterprise', () => {
-    expect(TIER_RANK['free']).toBeLessThan(TIER_RANK['starter']);
-    expect(TIER_RANK['starter']).toBeLessThan(TIER_RANK['professional']);
-    expect(TIER_RANK['professional']).toBeLessThan(TIER_RANK['enterprise']);
+  it('returns undefined for legacy tier keys not present in rank map', () => {
+    expect(TIER_RANK['free']).toBeUndefined();
+    expect(TIER_RANK['starter']).toBeUndefined();
+    expect(TIER_RANK['professional']).toBeUndefined();
+    expect(TIER_RANK['enterprise']).toBeUndefined();
   });
 });
 
@@ -177,17 +133,14 @@ describe('SUBSCRIPTION_TIERS', () => {
     expect(Array.isArray(SUBSCRIPTION_TIERS)).toBe(true);
   });
 
-  it('contains exactly 4 tiers', () => {
-    expect(SUBSCRIPTION_TIERS).toHaveLength(4);
+  it('contains exactly 1 tier (flat-rate model)', () => {
+    expect(SUBSCRIPTION_TIERS).toHaveLength(1);
   });
 
-  it('contains all four expected tier keys', () => {
+  it('contains the pro tier key', () => {
     const keys = SUBSCRIPTION_TIERS.map(t => t.key);
 
-    expect(keys).toContain('free');
-    expect(keys).toContain('starter');
-    expect(keys).toContain('professional');
-    expect(keys).toContain('enterprise');
+    expect(keys).toContain('pro');
   });
 
   it('has a unique key for each tier', () => {
@@ -197,12 +150,12 @@ describe('SUBSCRIPTION_TIERS', () => {
     expect(uniqueKeys.size).toBe(SUBSCRIPTION_TIERS.length);
   });
 
-  it('prices are non-negative for all tiers', () => {
+  it('prices are positive for the pro tier', () => {
     SUBSCRIPTION_TIERS.forEach(tier => {
-      expect(tier.monthlyPrice).toBeGreaterThanOrEqual(0);
-      expect(tier.annualPrice).toBeGreaterThanOrEqual(0);
-      expect(tier.monthlyPriceCents).toBeGreaterThanOrEqual(0);
-      expect(tier.annualPriceCents).toBeGreaterThanOrEqual(0);
+      expect(tier.monthlyPrice).toBeGreaterThan(0);
+      expect(tier.annualPrice).toBeGreaterThan(0);
+      expect(tier.monthlyPriceCents).toBeGreaterThan(0);
+      expect(tier.annualPriceCents).toBeGreaterThan(0);
     });
   });
 
@@ -217,5 +170,11 @@ describe('SUBSCRIPTION_TIERS', () => {
     SUBSCRIPTION_TIERS.forEach(tier => {
       expect(tier.features.length).toBeGreaterThan(0);
     });
+  });
+
+  it('pro tier monthly price matches PRICING config', () => {
+    const proTier = SUBSCRIPTION_TIERS[0];
+
+    expect(proTier.monthlyPrice).toBe(PRICING.monthlyPrice);
   });
 });

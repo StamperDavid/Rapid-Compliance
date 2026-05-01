@@ -815,17 +815,23 @@ ${this.summarizeRecentConversations(customerMemory)}
   private async storeActiveInstance(instance: AgentInstance): Promise<void> {
     // Store in Firestore for persistence (in production, also use Redis for fast access)
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set(
-        getSubCollection('activeInstances'),
-        instance.instanceId,
-        {
-          ...instance,
-          createdAt: instance.spawnedAt,
-          lastActivityAt: new Date().toISOString(),
-        },
-        true
-      );
+      const { adminDb } = await import('@/lib/firebase/admin');
+      const { getSubCollection: gsc } = await import('@/lib/firebase/collections');
+      if (adminDb) {
+        await adminDb
+          .collection(gsc('activeInstances'))
+          .doc(instance.instanceId)
+          .set(
+            {
+              ...instance,
+              createdAt: instance.spawnedAt,
+              lastActivityAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        return;
+      }
+      logger.warn('[Instance Manager] adminDb unavailable — active instance not persisted', { file: 'instance-manager.ts' });
     } catch (error) {
       logger.error('Error storing active instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
     }
@@ -889,16 +895,19 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private async archiveInstance(instance: AgentInstance): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set(
-        getSubCollection('archivedInstances'),
-        instance.instanceId,
-        {
-          ...instance,
-          archivedAt: new Date().toISOString(),
-        },
-        false
-      );
+      const { adminDb } = await import('@/lib/firebase/admin');
+      const { getSubCollection: gsc } = await import('@/lib/firebase/collections');
+      if (adminDb) {
+        await adminDb
+          .collection(gsc('archivedInstances'))
+          .doc(instance.instanceId)
+          .set({
+            ...instance,
+            archivedAt: new Date().toISOString(),
+          });
+        return;
+      }
+      logger.warn('[Instance Manager] adminDb unavailable — instance not archived', { file: 'instance-manager.ts' });
     } catch (error) {
       logger.error('Error archiving instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
     }
@@ -911,19 +920,24 @@ ${this.summarizeRecentConversations(customerMemory)}
       file: 'instance-manager.ts'
     });
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set(
-        getSubCollection('notifications'),
-        `escalation_${instance.instanceId}_${Date.now()}`,
-        {
-          type: 'agent_escalation',
-          instanceId: instance.instanceId,
-          goldenMasterId: instance.goldenMasterId,
-          reason,
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-        }
-      );
+      const { adminDb } = await import('@/lib/firebase/admin');
+      const { getSubCollection: gsc } = await import('@/lib/firebase/collections');
+      if (adminDb) {
+        const notifId = `escalation_${instance.instanceId}_${Date.now()}`;
+        await adminDb
+          .collection(gsc('notifications'))
+          .doc(notifId)
+          .set({
+            type: 'agent_escalation',
+            instanceId: instance.instanceId,
+            goldenMasterId: instance.goldenMasterId,
+            reason,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+          });
+        return;
+      }
+      logger.warn('[Instance Manager] adminDb unavailable — escalation notification not written', { file: 'instance-manager.ts' });
     } catch (error) {
       logger.error('Error sending escalation notification:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
     }

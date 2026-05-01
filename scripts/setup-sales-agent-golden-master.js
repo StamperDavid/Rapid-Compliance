@@ -44,7 +44,7 @@ async function setupSalesAgentGoldenMaster() {
     agentType: 'SALES_CHAT',
 
     // Core AI Configuration
-    model: 'openrouter/anthropic/claude-3.5-sonnet',
+    model: 'openrouter/anthropic/claude-sonnet-4.6',
     systemPrompt: `You are the AI sales agent for SalesVelocity.ai — a multi-tenant SaaS platform that gives every subscriber their own AI-powered sales, marketing, and operations command center.
 
 **Your Role:**

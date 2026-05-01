@@ -22,16 +22,48 @@ function FallbackContent() {
   const { theme } = useWebsiteTheme();
 
   const allFeatures = [
-    'Custom AI Sales Agent (Fully Trainable)',
-    'Lead Scraper & Enrichment',
-    'Email Sequences (Unlimited)',
-    'Multi-Channel Outreach (Email, LinkedIn, SMS)',
-    'Full CRM Suite',
+    // 69-agent workforce
+    '69-Agent AI Workforce (specialists + managers + Master Orchestrator)',
+    'Mission Control — review & approve every agent action',
+    'Training Lab — agents learn your brand voice via Delta-Snapshots',
+    'Brand DNA — train every agent on your tone, voice, and rules',
+    // Sales
+    'Full CRM Suite (Leads, Contacts, Deals, Companies)',
+    'AI Lead Scoring (0-100 with grade tiers)',
+    'AI Deal Scoring & Forecasting',
+    'AI Sales Coaching (per-rep insights)',
+    'Proposal & Document Builder',
     'Custom Schemas & Objects',
-    'Workflow Automation',
-    'Built-in E-Commerce Engine',
-    'API Access',
-    'White-Label Options',
+    // Marketing & Outreach
+    'Email Sequences & Campaigns (Unlimited)',
+    'SMS Outreach (Twilio-powered)',
+    'Social Media — post + schedule across all major platforms',
+    'Forms — drag-drop builder + lead capture',
+    'Lead Scraper & Enrichment',
+    'AI Conversations — 24/7 chat agent across web + Messenger',
+    // Voice
+    'Voice AI Closers (outbound) + AI Receptionist (inbound)',
+    // Content engine
+    'Magic Studio — Image + Video + Music + Copy generation',
+    'Video Production Pipeline (Hedra avatar + AI-narrated)',
+    'Music Generation (royalty-free, brand-tuned)',
+    'AI Copywriting (blog, ads, emails, scripts)',
+    'Media Library + Brand Kit',
+    // Website + SEO
+    'Website Builder (drag-drop + AI page generation)',
+    'SEO Suite — keyword research, content briefs, rank tracking',
+    'Custom Domain + White-Label Options',
+    // Commerce
+    'Built-in E-Commerce Storefront (Stripe + multi-provider)',
+    'Invoicing & Recurring Billing',
+    // Automation & Analytics
+    'Workflow Automation (visual builder)',
+    'A/B Testing across funnels',
+    'Real-Time Analytics Dashboard',
+    // Platform
+    'Full API Access',
+    'Risk Prediction (deal slippage)',
+    '69 Integrations including Stripe, Zoom, Google, Microsoft, Twilio',
     'Email & Chat Support',
   ];
 
@@ -128,7 +160,7 @@ function FallbackContent() {
 
       {/* Single Pricing Card */}
       <section className="pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="relative rounded-3xl p-[2px] bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-500 shadow-2xl shadow-indigo-500/20">
             <div className="bg-gray-950 rounded-3xl p-10 md:p-12">
               {/* Headline price */}
@@ -149,7 +181,7 @@ function FallbackContent() {
                 <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider text-center">
                   What&apos;s Included
                 </h3>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
                   {allFeatures.map((feature, index) => (
                     <li key={index} className="flex items-start gap-2 text-gray-200 text-sm">
                       <CheckCircle2 className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />

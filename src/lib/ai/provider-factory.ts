@@ -88,7 +88,7 @@ export class AIProviderFactory {
     // Convert to string and check
     const modelStr = String(model);
 
-    // Check for OpenRouter format first (e.g., openrouter/anthropic/claude-3.5-sonnet)
+    // Check for OpenRouter format first (e.g., openrouter/anthropic/claude-sonnet-4.6)
     if (modelStr.includes('openrouter/') || modelStr.startsWith('openrouter/')) {
       return 'openrouter';
     }

@@ -237,7 +237,7 @@ const TESTS: TestCase[] = [
       campaignName: 'Q2 SaaS founders outreach',
       targetAudience: 'SaaS founders and VP Sales at 50-500 person B2B SaaS companies who are struggling with outbound volume and want AI to qualify leads before reps touch them',
       goal: 'Book a 15-minute discovery call with the prospect',
-      brief: 'Cold outreach email introducing SalesVelocity.ai. Key points: AI agents handle qualification so reps only talk to hot leads, 14-day free trial with no credit card, pricing starts at $400/month with no feature gating. Tone: confident, direct, no fluff. Target: SaaS founders who have tried and failed with traditional outbound tools.',
+      brief: 'Cold outreach email introducing SalesVelocity.ai. Key points: AI agents handle qualification so reps only talk to hot leads, 14-day free trial, $299/month flat with no tiers and no feature gating. Tone: confident, direct, no fluff. Target: SaaS founders who have tried and failed with traditional outbound tools.',
     }),
     extractProseFields: extractAllProse,
   },

@@ -20,6 +20,7 @@ import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 import { getTwilioAuthToken } from '@/lib/security/twilio-verification';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 
 /**
  * Permissive schema for Telnyx/Twilio JSON webhook payloads.
@@ -292,9 +293,7 @@ async function loadAgentConfig(
   mode: 'prospector' | 'closer'
 ): Promise<VoiceAgentConfig> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-
-    const customConfig = await FirestoreService.get(
+    const customConfig = await AdminFirestoreService.get(
       getSubCollection('voiceAgents'),
       agentId
     );

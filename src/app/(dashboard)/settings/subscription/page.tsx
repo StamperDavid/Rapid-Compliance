@@ -8,10 +8,11 @@ import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { auth } from '@/lib/firebase/config';
 import { SUBSCRIPTION_TIERS, TIER_RANK, type SubscriptionTierKey } from '@/lib/pricing/subscription-tiers';
+import { PRICING } from '@/lib/config/pricing';
 
 interface Subscription {
   userId: string;
-  tier: 'free' | 'starter' | 'professional' | 'enterprise';
+  tier: string;
   billingPeriod?: 'monthly' | 'annual';
   status: 'active' | 'cancelled';
   stripeSubscriptionId?: string;
@@ -65,7 +66,7 @@ export default function SubscriptionPage() {
   }, [user, loadSubscription]);
 
   const searchParams = useSearchParams();
-  const currentTier = subscription?.tier ?? 'free';
+  const currentTier = (subscription?.tier ?? 'pro') as TierKey;
   const currentRank = TIER_RANK[currentTier] ?? 0;
 
   // Handle return from Stripe Checkout — runs once per mount via ref guard
@@ -96,7 +97,7 @@ export default function SubscriptionPage() {
           const data = (await res.json()) as SubscriptionResponse;
           if (data.success) {
             setSubscription(data.subscription ?? null);
-            toast.success(`Upgraded to ${tier}!`);
+            toast.success('Subscription activated!');
           } else {
             throw new Error(data.error ?? 'Activation failed');
           }
@@ -104,7 +105,6 @@ export default function SubscriptionPage() {
           toast.error(err instanceof Error ? err.message : 'Failed to activate subscription');
         } finally {
           setChangingTier(null);
-          // Clean up URL params
           window.history.replaceState({}, '', '/settings/subscription');
         }
       };
@@ -120,11 +120,10 @@ export default function SubscriptionPage() {
     if (targetTier === currentTier) { return; }
     const targetRank = TIER_RANK[targetTier] ?? 0;
     const isUpgrade = targetRank > currentRank;
-    const isPaidUpgrade = isUpgrade && targetTier !== 'free';
 
     setChangingTier(targetTier);
     try {
-      if (isPaidUpgrade) {
+      if (isUpgrade) {
         // Redirect to Stripe Checkout for paid upgrades
         const token = await auth?.currentUser?.getIdToken();
         const res = await fetch('/api/subscriptions/checkout', {
@@ -141,12 +140,11 @@ export default function SubscriptionPage() {
         const data = (await res.json()) as { success: boolean; url?: string; error?: string };
         if (data.success && data.url) {
           window.location.href = data.url;
-          return; // Don't clear changingTier — page is navigating away
+          return;
         } else {
           throw new Error(data.error ?? 'Failed to create checkout session');
         }
       } else {
-        // Downgrade (free or lower paid tier)
         const res = await authFetch('/api/subscriptions', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -155,7 +153,7 @@ export default function SubscriptionPage() {
         const data = (await res.json()) as SubscriptionResponse;
         if (data.success) {
           setSubscription(data.subscription ?? null);
-          toast.success(targetTier === 'free' ? 'Downgraded to Free plan' : `Changed to ${targetTier} plan`);
+          toast.success('Plan updated');
         } else {
           throw new Error(data.error ?? 'Plan change failed');
         }
@@ -182,7 +180,7 @@ export default function SubscriptionPage() {
             Settings
           </Link>
           <span style={{ color: 'var(--color-text-muted)' }}>/</span>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Subscription & Features</h1>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Subscription &amp; Features</h1>
         </div>
         <Link
           href="/settings/billing"
@@ -200,15 +198,23 @@ export default function SubscriptionPage() {
         </Link>
       </div>
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
-            Loading plans...
+            Loading plan...
           </div>
         ) : (
           <>
-            {/* Billing Toggle */}
+            {/* Flat-rate pricing header */}
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+                One Plan. Every Feature. No Tiers.
+              </h2>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem', marginBottom: '1.5rem' }}>
+                ${PRICING.monthlyPrice}/month flat &mdash; all features included, no record limits, no upsells.
+              </p>
+
+              {/* Billing toggle */}
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -249,23 +255,16 @@ export default function SubscriptionPage() {
                 </button>
                 {billingToggle === 'annual' && (
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600 }}>
-                    Save ~17%
+                    Save 2 months
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Plan Cards */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '1rem',
-            }}>
+            {/* Plan Card */}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
               {PLANS.map((plan) => {
                 const isCurrent = plan.key === currentTier;
-                const rank = TIER_RANK[plan.key] ?? 0;
-                const isUpgrade = rank > currentRank;
-                const isDowngrade = rank < currentRank;
                 const price = billingToggle === 'annual' ? plan.annualPrice : plan.monthlyPrice;
                 const isChanging = changingTier === plan.key;
 
@@ -274,82 +273,64 @@ export default function SubscriptionPage() {
                     key={plan.key}
                     style={{
                       backgroundColor: 'var(--color-bg-card)',
-                      border: plan.highlight && !isCurrent
-                        ? `2px solid ${plan.color}`
-                        : isCurrent
-                          ? '2px solid var(--color-primary)'
-                          : '1px solid var(--color-bg-elevated)',
+                      border: isCurrent
+                        ? '2px solid var(--color-primary)'
+                        : `2px solid ${plan.color}`,
                       borderRadius: '0.75rem',
-                      padding: '1.5rem',
-                      display: 'flex',
-                      flexDirection: 'column',
+                      padding: '2rem',
+                      maxWidth: '480px',
+                      width: '100%',
                       position: 'relative',
                     }}
                   >
-                    {/* Popular badge */}
-                    {plan.highlight && !isCurrent && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '-12px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        padding: '0.125rem 0.75rem',
-                        backgroundColor: plan.color,
-                        color: '#fff',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        borderRadius: '9999px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                      }}>
-                        Most Popular
-                      </div>
-                    )}
-
-                    {/* Current badge */}
-                    {isCurrent && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '-12px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        padding: '0.125rem 0.75rem',
-                        backgroundColor: 'var(--color-primary)',
-                        color: '#fff',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        borderRadius: '9999px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                      }}>
-                        Current Plan
-                      </div>
-                    )}
+                    {/* Badge */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-12px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      padding: '0.125rem 0.75rem',
+                      backgroundColor: isCurrent ? 'var(--color-primary)' : plan.color,
+                      color: '#fff',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      borderRadius: '9999px',
+                      textTransform: 'uppercase' as const,
+                      letterSpacing: '0.05em',
+                      whiteSpace: 'nowrap' as const,
+                    }}>
+                      {isCurrent ? 'Current Plan' : 'All Features Included'}
+                    </div>
 
                     {/* Icon + Name */}
                     <div style={{ textAlign: 'center', marginBottom: '1rem', marginTop: '0.5rem' }}>
                       <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{plan.icon}</div>
-                      <div style={{ fontSize: '1.125rem', fontWeight: 700, color: plan.color }}>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: plan.color }}>
                         {plan.label}
                       </div>
                     </div>
 
                     {/* Price */}
-                    <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                      <span style={{ fontSize: '2rem', fontWeight: 800 }}>
+                    <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                      <span style={{ fontSize: '2.5rem', fontWeight: 800 }}>
                         ${price}
                       </span>
                       <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                         /{billingToggle === 'annual' ? 'year' : 'mo'}
                       </span>
+                      {billingToggle === 'annual' && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-success)', marginTop: '0.25rem' }}>
+                          2 months free vs. monthly
+                        </div>
+                      )}
                     </div>
 
                     {/* Features */}
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem 0', flex: 1 }}>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem 0' }}>
                       {plan.features.map((feature) => (
                         <li key={feature} style={{
                           padding: '0.375rem 0',
-                          fontSize: '0.8125rem',
+                          fontSize: '0.875rem',
                           color: 'var(--color-text-secondary)',
                           display: 'flex',
                           alignItems: 'flex-start',
@@ -361,30 +342,18 @@ export default function SubscriptionPage() {
                       ))}
                     </ul>
 
-                    {/* CTA Button */}
+                    {/* CTA */}
                     <button
                       onClick={() => void handleChangePlan(plan.key)}
                       disabled={isCurrent || isChanging}
                       style={{
                         width: '100%',
-                        padding: '0.625rem',
-                        borderRadius: '0.375rem',
-                        border: isCurrent
-                          ? '1px solid var(--color-bg-elevated)'
-                          : isDowngrade
-                            ? '1px solid var(--color-text-muted)'
-                            : 'none',
-                        backgroundColor: isCurrent
-                          ? 'transparent'
-                          : isUpgrade
-                            ? plan.color
-                            : 'transparent',
-                        color: isCurrent
-                          ? 'var(--color-text-muted)'
-                          : isUpgrade
-                            ? '#fff'
-                            : 'var(--color-text-secondary)',
-                        fontSize: '0.875rem',
+                        padding: '0.75rem',
+                        borderRadius: '0.5rem',
+                        border: 'none',
+                        backgroundColor: isCurrent ? 'var(--color-bg-elevated)' : plan.color,
+                        color: isCurrent ? 'var(--color-text-muted)' : '#fff',
+                        fontSize: '0.9375rem',
                         fontWeight: 600,
                         cursor: isCurrent || isChanging ? 'not-allowed' : 'pointer',
                         opacity: isChanging ? 0.5 : 1,
@@ -394,78 +363,24 @@ export default function SubscriptionPage() {
                         ? 'Processing...'
                         : isCurrent
                           ? 'Current Plan'
-                          : isUpgrade
-                            ? 'Upgrade'
-                            : 'Downgrade'}
+                          : 'Start Free Trial'}
                     </button>
                   </div>
                 );
               })}
             </div>
 
-            {/* Feature Comparison Table */}
+            {/* Fair-use limits note */}
             <div style={{
-              marginTop: '3rem',
-              backgroundColor: 'var(--color-bg-card)',
-              border: '1px solid var(--color-bg-elevated)',
-              borderRadius: '0.75rem',
-              overflow: 'hidden',
+              marginTop: '2rem',
+              padding: '1rem 1.5rem',
+              backgroundColor: 'var(--color-bg-elevated)',
+              borderRadius: '0.5rem',
+              fontSize: '0.8125rem',
+              color: 'var(--color-text-secondary)',
+              textAlign: 'center',
             }}>
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Feature Comparison</h3>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                    <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Feature</th>
-                    {PLANS.map((plan) => (
-                      <th key={plan.key} style={{
-                        padding: '0.75rem 1rem',
-                        textAlign: 'center',
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        color: plan.key === currentTier ? 'var(--color-primary)' : plan.color,
-                      }}>
-                        {plan.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { feature: 'Contacts', values: ['100', '1,000', '10,000', 'Unlimited'] },
-                    { feature: 'Emails/month', values: ['500', '5,000', 'Unlimited', 'Unlimited'] },
-                    { feature: 'AI Credits/month', values: ['50', '500', '5,000', 'Unlimited'] },
-                    { feature: 'Lead Scoring', values: ['—', '✓', '✓', '✓'] },
-                    { feature: 'A/B Testing', values: ['—', '✓', '✓', '✓'] },
-                    { feature: 'Workflows', values: ['—', '—', '✓', '✓'] },
-                    { feature: 'Webhooks', values: ['—', '—', '✓', '✓'] },
-                    { feature: 'Custom Branding', values: ['—', '—', '✓', '✓'] },
-                    { feature: 'AI Agent Swarm', values: ['—', '—', '—', '✓'] },
-                    { feature: 'Voice AI', values: ['—', '—', '—', '✓'] },
-                    { feature: 'Video Generation', values: ['—', '—', '—', '✓'] },
-                    { feature: 'Support', values: ['Email', 'Priority', 'Phone', 'Dedicated'] },
-                  ].map((row, idx) => (
-                    <tr key={row.feature} style={{
-                      borderBottom: idx < 11 ? '1px solid var(--color-bg-elevated)' : 'none',
-                    }}>
-                      <td style={{ padding: '0.625rem 1.5rem', fontSize: '0.8125rem', color: 'var(--color-text-primary)' }}>
-                        {row.feature}
-                      </td>
-                      {row.values.map((value, i) => (
-                        <td key={`${row.feature}-${PLANS[i]?.key ?? i}`} style={{
-                          padding: '0.625rem 1rem',
-                          textAlign: 'center',
-                          fontSize: '0.8125rem',
-                          color: value === '—' ? 'var(--color-text-muted)' : value === '✓' ? 'var(--color-success)' : 'var(--color-text-secondary)',
-                        }}>
-                          {value}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              Fair-use limits: {PRICING.fairUseLimits.crmRecords.toLocaleString()} CRM records &bull; {PRICING.fairUseLimits.socialPostsPerMonth.toLocaleString()} social posts/month &bull; {PRICING.fairUseLimits.emailsPerDay.toLocaleString()} emails/day &bull; {PRICING.fairUseLimits.aiAgents} AI agents. Contact support for higher limits.
             </div>
           </>
         )}

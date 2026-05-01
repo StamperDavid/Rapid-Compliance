@@ -32,14 +32,11 @@ SalesVelocity.ai is the complete AI-powered sales automation platform that helps
 - Manage entire sales pipeline with built-in CRM
 - Automate workflows and close deals faster
 
-**Current Pricing (Volume-Based - All Features Included):**
-- Tier 1: $400/month for 0-100 records
-- Tier 2: $650/month for 101-250 records (MOST POPULAR)
-- Tier 3: $1,000/month for 251-500 records
-- Tier 4: $1,250/month for 501-1,000 records
-- Tier 5: Custom pricing for 1,000+ records
+// Pricing intentionally not in GM — read from KnowledgeBase at runtime per docs/knowledgebase-contract.md.
+**Pricing:**
+$299/month flat — all features included, no tiers, no record limits. BYOK for zero AI markup.
 
-**ALL plans include EVERY feature - no upsells, no hidden costs:**
+**ALL features included — no upsells, no hidden costs:**
 
 ✓ AI Sales Agents (Unlimited)
 - Deploy multiple AI agents trained on your business
@@ -134,7 +131,7 @@ Q: What makes you different from [competitor]?
 A: We're the only platform with ALL features included in every plan - lead scraping, AI agents, email sequences, CRM, and e-commerce in one place. Plus, bring your own API keys and pay zero AI markup.
 
 Q: How much does it really cost?
-A: Simple volume-based pricing starting at $400/month for 0-100 records. Every plan includes every feature - unlimited AI agents, unlimited emails, full CRM, everything.
+A: $299/month flat. Every feature included — unlimited AI agents, unlimited emails, full CRM, everything. No tiers, no record limits.
 
 Q: Is there a trial?
 A: Yes! 14 days free, full access to all features, no credit card required.
@@ -153,7 +150,7 @@ A: Most customers are up and running in under 15 minutes. Our AI agents can be t
       
       topProducts: 'AI Sales Agents, Lead Scraper & Enrichment, Email Sequences, Multi-Channel Outreach, Full CRM, Workflow Automation, E-Commerce Engine',
       
-      pricingStrategy: 'Volume-based pricing: Tier 1 ($400/mo, 0-100 records), Tier 2 ($650/mo, 101-250 records - POPULAR), Tier 3 ($1,000/mo, 251-500 records), Tier 4 ($1,250/mo, 501-1,000 records), Custom for 1,000+',
+      pricingStrategy: '$299/month flat — all features included, no tiers, no record limits',
       
       discountPolicy: 'Annual plans save 17%. Enterprise plans are custom. No setup fees.',
       returnPolicy: '14-day free trial, then 30-day money-back guarantee',
@@ -219,8 +216,8 @@ A: Most customers are up and running in under 15 minutes. Our AI agents can be t
       businessContext: businessContext,
       agentPersona: agentPersona,
       behaviorConfig: behaviorConfig,
-      modelId: 'openrouter/anthropic/claude-3.5-sonnet',
-      baseModelId: 'openrouter/anthropic/claude-3.5-sonnet',
+      modelId: 'openrouter/anthropic/claude-sonnet-4.6',
+      baseModelId: 'openrouter/anthropic/claude-sonnet-4.6',
       temperature: 0.7,
       maxTokens: 500,
       updatedAt: new Date(),

@@ -7,6 +7,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getCallsCollection } from '@/lib/firebase/collections';
 import { getTwilioCredentials } from '@/lib/security/twilio-verification';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import twilio from 'twilio';
 
 export const dynamic = 'force-dynamic';
@@ -92,11 +93,10 @@ export async function POST(request: NextRequest) {
       statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
     });
 
-    // Save call record to Firestore
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    // Save call record to Firestore via Admin SDK (bypasses auth rules on server)
     const callId = `call-${Date.now()}`;
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getCallsCollection(),
       callId,
       {

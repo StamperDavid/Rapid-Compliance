@@ -27,7 +27,11 @@ import { z } from 'zod';
 export const dynamic = 'force-dynamic';
 
 const checkoutSchema = z.object({
-  tier: z.enum(['starter', 'professional', 'enterprise']),
+  // Single flat-rate tier — 'pro' is the only paid plan.
+  // Legacy tier names are coerced so existing links/bookmarks don't break.
+  tier: z.enum(['pro', 'starter', 'professional', 'enterprise']).transform((v) =>
+    v === 'starter' || v === 'professional' || v === 'enterprise' ? 'pro' : v
+  ),
   billingPeriod: z.enum(['monthly', 'annual']).default('monthly'),
   couponCode: z.string().optional(),
   provider: z.enum(['stripe', 'authorizenet', 'paypal', 'square', 'paddle', 'chargebee']).optional(),

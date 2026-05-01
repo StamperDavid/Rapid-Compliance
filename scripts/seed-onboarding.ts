@@ -5,6 +5,13 @@
  * and the AI training pipeline have real business context to work with.
  *
  * Usage: npx tsx scripts/seed-onboarding.ts
+ *
+ * v2 note (knowledgebase-contract.md dehydration): hardcoded pricing ranges
+ * ('$97/month - $497/month') and price-objection quotes removed from
+ * onboardingData, businessSetupData, and buildSystemPrompt(). These fields
+ * now reference KnowledgeBase as the runtime source of truth. The Brand DNA
+ * block is unchanged — Brand DNA is correctly baked at seed time per
+ * Standing Rule #1.
  */
 
 import * as admin from 'firebase-admin';
@@ -105,9 +112,11 @@ const onboardingData = {
   topProducts:
     `Full AI business operations platform including: AI Agent Swarm (${getAgentCount()} agents), CRM & Sales Pipeline, Marketing Automation (social media, SEO, email, SMS), E-Commerce (Stripe payments, catalog, pricing), AI Website Builder, Reputation Management (reviews, GMB), Content Production (copy, video, blog), Competitive Intelligence (scraping, research, trends), Voice AI, and Mission Control dashboard.`,
 
-  // Pricing
-  priceRange: '$97/month - $497/month',
-  discountPolicy: 'Annual billing discount (2 months free). Launch pricing for early adopters.',
+  // Pricing — do not hardcode here. Runtime agents read current pricing from
+  // the KnowledgeBase document (organizations/{orgId}/knowledgeBase/current).
+  // Update seed-knowledge-base.ts when pricing changes, not this file.
+  priceRange: 'See KnowledgeBase — pricing is maintained in knowledgeBase/current, not baked here.',
+  discountPolicy: 'Annual billing discount available. See KnowledgeBase for current terms.',
 
   // Sales Process
   typicalSalesFlow:
@@ -121,7 +130,7 @@ const onboardingData = {
   commonObjections:
     '"It seems too good to be true — one platform can\'t replace all my tools." "I\'m not technical enough to set up AI agents." "How is this different from HubSpot/GoHighLevel?" "What happens to my data if I cancel?"',
   priceObjections:
-    'The platform replaces $500-2000/month in separate tool subscriptions. ROI is typically positive within the first month through time savings alone.',
+    'The platform replaces multiple separate tool subscriptions. ROI is typically positive within the first month through time savings alone. Refer to KnowledgeBase for current pricing context when addressing objections.',
 
   // Competitors
   competitors: ['GoHighLevel', 'HubSpot', 'Salesforce', 'Jasper AI', 'Copy.ai', 'Hootsuite', 'Mailchimp'],
@@ -146,7 +155,7 @@ const onboardingData = {
   // Escalation
   escalationRules: [
     'Customer requests human support',
-    'Billing dispute over $500',
+    'Billing dispute requiring human review',
     'Legal or compliance questions',
     'Customer expresses strong dissatisfaction after 2+ attempts to resolve',
     'Technical issue requiring backend access',
@@ -218,13 +227,13 @@ const businessSetupData = {
     problemSolved: onboardingData.problemSolved,
     uniqueValue: onboardingData.uniqueValue,
     whyBuy:
-      'Businesses buy SalesVelocity.ai to consolidate their entire marketing, sales, and operations stack into one AI-powered platform — saving $500-2000/month in separate tools and dozens of hours per week.',
+      'Businesses buy SalesVelocity.ai to consolidate their entire marketing, sales, and operations stack into one AI-powered platform — eliminating the cost of multiple separate tools and saving dozens of hours per week.',
     whyNotBuy:
       'Some prospects hesitate because it sounds too comprehensive to be real, they worry about the learning curve, or they\'re locked into long-term contracts with existing tools.',
   },
   productsServices: {
     primaryOffering: 'AI-powered all-in-one business operations platform',
-    priceRange: '$97/month - $497/month',
+    priceRange: 'See KnowledgeBase — pricing is maintained in knowledgeBase/current, not baked here.',
     targetCustomer: onboardingData.targetCustomer,
     customerDemographics: 'SMB owners (25-55), marketing agencies, solopreneurs, tech-savvy professionals',
   },
@@ -400,7 +409,10 @@ ${greeting}
 SalesVelocity.ai is an all-in-one AI-powered business operations platform. We replace the entire marketing/sales/ops tool stack with a coordinated AI swarm.
 
 Target customers: Small to mid-size business owners, solopreneurs, and marketing agencies.
-Pricing: $97/month - $497/month (all features included in every plan).
+
+## Live product knowledge
+
+Pricing, feature capabilities, trial details, and industry-specific value props are loaded from the platform's KnowledgeBase document and provided to you as context at the start of every turn. NEVER quote pricing or describe a capability from your own training — always pull the answer from the KnowledgeBase context for the current turn. If KnowledgeBase context is unavailable for a request, say "let me check on that and get back to you" rather than guessing or quoting from memory.
 
 ## RULES
 - Always mention: Free trial available, all features included, 24/7 AI support

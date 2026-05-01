@@ -15,6 +15,7 @@ import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 import { getTwilioAuthToken } from '@/lib/security/twilio-verification';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -207,10 +208,8 @@ async function loadAgentConfig(
   mode: 'prospector' | 'closer'
 ): Promise<VoiceAgentConfig> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-
-    // Try to load custom config
-    const customConfig = await FirestoreService.get(
+    // Use Admin SDK — this runs server-side and has no auth context for client SDK
+    const customConfig = await AdminFirestoreService.get(
       getSubCollection('voiceAgents'),
       agentId
     );
@@ -263,10 +262,8 @@ async function logConversationData(
   data: Record<string, unknown>
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-
     const logId = `${callId}-${event}-${Date.now()}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('conversationLogs'),
       logId,
       {

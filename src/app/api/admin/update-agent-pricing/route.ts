@@ -120,7 +120,6 @@ export async function POST(request: NextRequest) {
 
     const firstTierPrice = firstTier.price;
     const lastTierPrice = lastTier.price;
-    const firstTierRecordMax = firstTier.recordMax;
 
     const tierDescriptions = tiers
       .map((tier: PricingTier): string => {
@@ -135,19 +134,19 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
 
     const pricingKnowledge: PricingKnowledgeDocument = {
       category: 'pricing',
-      title: 'Current Pricing Tiers',
+      title: 'Current Pricing',
       content: `
-# SalesVelocity Pricing - Volume-Based Model
+# SalesVelocity Pricing — Flat Rate, All Features
 
-**Pricing Philosophy:** Success-Linked Pricing - Pay for what you store, not what you use.
+**Pricing Philosophy:** One price, every feature, no tiers, no record limits.
 
-## Current Pricing Tiers
+## Plan Details
 
 ${tierDescriptions}
 
 ## Key Points to Communicate to Customers
 
-1. **All-Inclusive Access:** Every tier gets access to ALL features:
+1. **All-Inclusive Access:** Every subscriber gets access to ALL features:
    - AI Sales Agents (Unlimited)
    - Lead Scraper & Enrichment
    - Email Sequences (Unlimited)
@@ -158,7 +157,7 @@ ${tierDescriptions}
    - API Access
    - White-Label Options
 
-2. **No Feature Gating:** The $${firstTierPrice} user gets the same AI Sales Engine as the $${lastTierPrice} user.
+2. **No Feature Gating:** $${firstTierPrice}/month gets you the full platform — same AI Sales Engine, same CRM, same automation as $${lastTierPrice} would have been on old plans.
 
 3. **BYOK (Bring Your Own Keys):** We don't markup AI tokens. Customers connect their own OpenRouter, OpenAI, or Anthropic API keys to pay raw market rates for compute.
 
@@ -168,32 +167,32 @@ ${tierDescriptions}
    - Sintra Social: $49-199/mo → Included
    - Zapier Automation: $29-599/mo → Included
    - **Total Competitor Cost:** $677-3,197/mo
-   - **Our Cost:** $${firstTierPrice}-$${lastTierPrice}/mo
-   - **Savings:** $${677 - firstTierPrice}-$${3197 - lastTierPrice}/mo
+   - **Our Cost:** $${firstTierPrice}/mo
+   - **Savings:** $${677 - firstTierPrice}-$${3197 - firstTierPrice}/mo
 
 5. **Trial Terms:**
    - 14-day free trial
    - Credit card required upfront
-   - Auto-bills at trial end based on record count
+   - Full access to all features during trial
    - Cancel anytime
 
-6. **How Billing Works:**
-   - Customers are automatically upgraded/downgraded based on their record count
-   - Records = Contacts + Leads + Companies + Deals + Products
-   - Billed monthly based on current tier
+6. **Fair-Use Limits:**
+   - CRM records up to fair-use threshold (see limits in admin)
+   - All features available regardless of usage level
+   - Limits exist to protect platform performance, not gate features
 
 ## When Customers Ask About Pricing
 
 **Example responses:**
 
 - "How much does this cost?"
-  → "We have success-linked pricing starting at $${firstTierPrice}/month for 0-${firstTierRecordMax} records. The best part? You get access to ALL features regardless of tier - no gated features!"
+  → "It's $${firstTierPrice}/month flat — one price, every feature, no tiers. You get the full platform including AI agents, CRM, automation, and more."
 
-- "What's the difference between tiers?"
-  → "The only difference is record capacity (how many contacts/leads you can store). Every tier has access to the full platform - AI agents, lead scraping, email sequences, everything."
+- "Are there different plans?"
+  → "No tiers — one plan, $${firstTierPrice}/month, everything included. No feature gating, no record-count upsells."
 
 - "Why is this better than [competitor]?"
-  → "Instead of paying $677-3,197/month for separate tools (lead data, AI agents, social media, automation), you get everything in one platform for $${firstTierPrice}-$${lastTierPrice}/month. Plus, we use BYOK so you're not paying marked-up AI token costs."
+  → "Instead of paying $677-3,197/month for separate tools (lead data, AI agents, social media, automation), you get everything in one platform for $${firstTierPrice}/month. Plus, we use BYOK so you're not paying marked-up AI token costs."
 
 **Last Updated:** ${new Date().toISOString()}
       `.trim(),
