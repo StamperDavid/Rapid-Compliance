@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       templateId
     });
 
-    const forecast = generateRevenueForecast({
+    const forecast = await generateRevenueForecast({
       period: period as ForecastPeriod,
       quota,
       templateId
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     // Optionally calculate quota performance
     let quotaPerformance = null;
     if (includeQuotaPerformance && quota) {
-      quotaPerformance = calculateQuotaPerformance(
+      quotaPerformance = await calculateQuotaPerformance(
         period as ForecastPeriod,
         quota,
         templateId

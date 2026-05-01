@@ -7,8 +7,10 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { addCORSHeaders } from '@/lib/middleware/security-headers';
+import { formatCatalogForAgent } from '@/lib/agent/catalog-formatter';
 import type { ChatMessage, ModelName } from '@/types/ai-models';
 import type { ConversationMessage } from '@/types/agent-memory';
+import type { KnowledgeBase } from '@/types/knowledge-base';
 
 const publicChatSchema = z.object({
   customerId: z.string().min(1, 'Customer ID is required').max(200),
@@ -83,7 +85,7 @@ async function handlePublicChat(request: NextRequest) {
       // Ignore and fallback
     }
 
-    organization ??= await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID) as Organization | null;
+    organization ??= await AdminFirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     if (!organization) {
       return NextResponse.json(
         { success: false, error: 'Invalid organization' },
@@ -91,10 +93,10 @@ async function handlePublicChat(request: NextRequest) {
       );
     }
 
-    chatConfig ??= await AdminFirestoreService.get(
+    chatConfig ??= await AdminFirestoreService.get<{ enabled?: boolean }>(
       getSubCollection('settings'),
       'chatWidget'
-    ) as { enabled?: boolean } | null;
+    );
 
     // Default to enabled if no config exists
     if (chatConfig?.enabled === false) {
@@ -150,10 +152,10 @@ async function handlePublicChat(request: NextRequest) {
     } catch (_e) {
       // Ignore and fallback
     }
-    agentConfig ??= await AdminFirestoreService.get(
+    agentConfig ??= await AdminFirestoreService.get<AgentConfigData>(
       getSubCollection('agentConfig'),
       'default'
-    ) as AgentConfigData | null;
+    );
 
     const selectedModel = (agentConfig?.selectedModel ?? 'openrouter/anthropic/claude-sonnet-4.6') as ModelName;
     const modelConfig = agentConfig?.modelConfig ?? {
@@ -174,6 +176,24 @@ async function handlePublicChat(request: NextRequest) {
       },
     ];
 
+    // Fetch live platform catalog and prepend to system prompt so Alex
+    // always has current pricing/features — never stale GM-baked facts.
+    let catalogContext = '';
+    try {
+      const catalog = await AdminFirestoreService.get<KnowledgeBase>(
+        getSubCollection('platformCatalog'),
+        'current'
+      );
+      if (catalog) {
+        catalogContext = formatCatalogForAgent(catalog);
+      }
+    } catch (error: unknown) {
+      logger.warn('Platform catalog fetch failed, agent runs without it', {
+        route: '/api/chat/public',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     // Enhance system prompt with RAG
     let enhancedSystemPrompt = instance.systemPrompt;
     try {
@@ -192,6 +212,24 @@ async function handlePublicChat(request: NextRequest) {
         route: '/api/chat/public',
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+
+    // Prepend catalog context so it appears before the agent's role/personality
+    // prompt. Catalog first ensures the LLM treats it as authoritative context
+    // rather than an afterthought.
+    if (catalogContext) {
+      enhancedSystemPrompt = `${catalogContext}\n\n${enhancedSystemPrompt}`;
+    }
+
+    // FIRST-TURN DIRECTIVE — when there is no prior conversation history, the
+    // visitor has just landed and this is the single most important moment of
+    // the funnel. Force the agent's strong opener instead of a flat
+    // "how can I help you". The trigger message ("hi", "hello", etc.) is just
+    // a synthetic mount signal from the chat UI; the real content is what the
+    // agent leads with.
+    const isFirstTurn = (instance.customerMemory.conversationHistory?.length ?? 0) === 0;
+    if (isFirstTurn) {
+      enhancedSystemPrompt = `${enhancedSystemPrompt}\n\n## CRITICAL — THIS IS THE FIRST TURN OF THIS CONVERSATION\n\nThe visitor has just opened the chat. They have not seen any prior message from you. This is your single best chance at a great first impression — do NOT waste it on a generic "how can I help you?" reply.\n\nMandatory: execute opening Shape A from your GM. That means: a warm one-line greeting that names you (Alex), ONE specific value hook tied to a real pain point you can pull from the LIVE PLATFORM CATALOG above (for example, the cost of duct-taping separate sales tools together, or the sting of paying multiple AI markups), and ONE open question that invites their story (NOT a yes/no question). 2-3 sentences total. Confident, curious, never desperate.\n\nThe trigger message you received from the user is a synthetic page-load signal — do NOT mirror or echo it. Lead with the opener.`;
     }
 
     // Generate response using AI

@@ -17,6 +17,7 @@ import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 import { getTwilioAuthToken } from '@/lib/security/twilio-verification';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 
 /**
  * Permissive schema for Telnyx speech recognition JSON payloads.
@@ -263,11 +264,9 @@ async function logSpeechTurn(
   state: string
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-
-    // Penthouse model - use environment-aware path
+    // Admin SDK — this runs server-side and has no auth context for client SDK
     const logId = `${callId}-turn-${Date.now()}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('conversationLogs'),
       logId,
       {

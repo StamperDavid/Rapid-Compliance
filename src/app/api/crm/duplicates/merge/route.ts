@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireRole } from '@/lib/auth/api-auth';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,11 +48,10 @@ export async function POST(request: NextRequest) {
 
     // Use batch write for transaction safety
     const collectionPath = getSubCollection(`${entityType}s`);
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    // Get both records
-    const keepRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, keepId);
-    const mergeRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, mergeId);
+    // Get both records via Admin SDK (bypasses Firestore security rules on server)
+    const keepRecord = await AdminFirestoreService.get<Record<string, unknown>>(collectionPath, keepId);
+    const mergeRecord = await AdminFirestoreService.get<Record<string, unknown>>(collectionPath, mergeId);
 
     if (!keepRecord || !mergeRecord) {
       return NextResponse.json(
@@ -77,20 +77,11 @@ export async function POST(request: NextRequest) {
     }
     merged.updatedAt = new Date().toISOString();
 
-    // Batch write for atomicity
-    await FirestoreService.batchWrite([
-      {
-        type: 'update',
-        collectionPath,
-        docId: keepId,
-        data: merged,
-      },
-      {
-        type: 'delete',
-        collectionPath,
-        docId: mergeId,
-      },
-    ]);
+    // Atomic batch write via Admin SDK
+    const batch = AdminFirestoreService.batch();
+    batch.update(AdminFirestoreService.doc(collectionPath, keepId), merged);
+    batch.delete(AdminFirestoreService.doc(collectionPath, mergeId));
+    await batch.commit();
 
     return NextResponse.json({
       success: true,

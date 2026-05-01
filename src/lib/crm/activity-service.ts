@@ -6,6 +6,7 @@
 
 import { getSubCollection } from '@/lib/firebase/collections';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot} from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type {
@@ -45,6 +46,30 @@ function toDate(value: Date | { toDate?: () => Date } | string | number): Date {
 }
 
 /**
+ * Best-effort: convert a Timestamp-shaped input to a plain Date. Returns
+ * undefined if the input is missing or unrecognized so the caller can fall
+ * back to a default. Used to bridge client-SDK Timestamp values into
+ * Admin-SDK writes (which reject foreign Timestamp instances).
+ */
+function timestampToDate(value: unknown): Date | undefined {
+  if (value == null) {return undefined;}
+  if (value instanceof Date) {return value;}
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+  if (typeof value === 'object') {
+    const ts = value as { toDate?: () => Date; seconds?: number; _seconds?: number };
+    if (typeof ts.toDate === 'function') {
+      try { return ts.toDate(); } catch { return undefined; }
+    }
+    if (typeof ts.seconds === 'number') {return new Date(ts.seconds * 1000);}
+    if (typeof ts._seconds === 'number') {return new Date(ts._seconds * 1000);}
+  }
+  return undefined;
+}
+
+/**
  * Create a new activity
  */
 export async function createActivity(
@@ -61,11 +86,25 @@ export async function createActivity(
       createdAt: Timestamp.fromDate(now),
     };
 
-    await FirestoreService.set(
+    // Use Admin SDK on the server so public/system flows (e.g. early-access
+    // lead creation) can write activity records without a client auth
+    // context. Client SDK on the server has no auth → Firestore rules deny.
+    //
+    // Admin SDK rejects client-SDK Timestamp instances ("doesn't match the
+    // expected instance"). Normalize any client-SDK Timestamp to a plain
+    // Date before the write — Firestore Admin auto-converts Date → server
+    // Timestamp. This keeps the in-memory Activity object as-is for the
+    // caller (returned with the original Timestamp values).
+    const writePayload: Record<string, unknown> = {
+      ...activity,
+      occurredAt: timestampToDate(activity.occurredAt) ?? now,
+      createdAt: timestampToDate(activity.createdAt) ?? now,
+    };
+
+    await AdminFirestoreService.set(
       getSubCollection('activities'),
       activityId,
-      activity,
-      false
+      writePayload
     );
 
     logger.info('Activity created', {

@@ -3,7 +3,8 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
-import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
+import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
+import { PRICING } from '@/lib/config/pricing';
 import {
   Zap,
   Lightbulb,
@@ -62,7 +63,7 @@ export default function LandingPage() {
             <div className="flex flex-wrap justify-center gap-4 mb-12">
               <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-lg">
                 <div className="text-sm text-gray-400">Flat — every customer, every feature</div>
-                <div className="text-xl font-bold text-white">$299/month</div>
+                <div className="text-xl font-bold text-white">${PRICING.monthlyPrice}/month</div>
                 <div className="text-xs text-gray-500">All features included</div>
               </div>
               <div className="px-6 py-3 bg-green-500/10 border border-green-500/30 rounded-lg">
@@ -89,7 +90,7 @@ export default function LandingPage() {
                 href="/demo"
                 className="px-8 py-4 bg-white/10 text-white rounded-lg text-lg font-semibold hover:bg-white/20 transition border border-white/20"
               >
-                See Demo
+                Ask Alex
               </Link>
             </div>
 
@@ -327,7 +328,7 @@ export default function LandingPage() {
                 <div>
                   <div className="flex justify-between items-baseline mb-1">
                     <span className="text-gray-300">Platform Fee <span className="text-xs text-indigo-400">(flat, from us)</span></span>
-                    <span className="text-white font-semibold">$299/mo</span>
+                    <span className="text-white font-semibold">${PRICING.monthlyPrice}/mo</span>
                   </div>
                 </div>
                 <div>
@@ -649,7 +650,7 @@ export default function LandingPage() {
             Reserve my spot →
           </Link>
           <div className="mt-6 text-sm text-gray-400">
-            14-day free trial • No credit card required • $299/month flat after trial
+            {PRICING.trial.days}-day free trial • No credit card required • ${PRICING.monthlyPrice}/month flat after trial
           </div>
         </div>
       </section>

@@ -76,7 +76,7 @@ export async function predictDealRisk(
     }
 
     // 2. Get deal score and health
-    const dealScore = calculateDealScore({
+    const dealScore = await calculateDealScore({
       dealId: request.dealId,
       deal,
     });

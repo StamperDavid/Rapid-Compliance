@@ -63,7 +63,7 @@ export async function POST(
       templateId
     });
 
-    const score = calculateDealScore({
+    const score = await calculateDealScore({
       dealId,
       templateId
     });

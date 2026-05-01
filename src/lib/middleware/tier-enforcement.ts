@@ -1,10 +1,18 @@
 /**
  * Tier Enforcement Middleware
- * Runtime enforcement of pricing tier limits
+ *
+ * SalesVelocity.ai is flat-rate ($299/month, all features).
+ * Fair-use limits are defined in PRICING.fairUseLimits.
+ * Every active subscriber gets identical limits — no tier gates.
+ *
+ * The getUserTier / getTierLimits / checkTierLimit API surface is
+ * preserved so callers do not need to change. All active-subscriber
+ * tiers map to the same 'pro' limits.
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { PRICING } from '@/lib/config/pricing';
 
 interface TierLimits {
   maxContacts: number;
@@ -20,7 +28,27 @@ interface SubscriptionRecord {
   status: string;
 }
 
+/**
+ * Fair-use limits for all active subscribers (flat-rate plan).
+ * Derived from PRICING.fairUseLimits so a single config edit propagates here.
+ */
+const PRO_LIMITS: TierLimits = {
+  maxContacts: PRICING.fairUseLimits.crmRecords,
+  maxEmailsPerMonth: PRICING.fairUseLimits.emailsPerDay * 30,
+  maxSMSPerMonth: 10000,
+  maxAgents: PRICING.fairUseLimits.aiAgents,
+  maxForms: -1, // unlimited
+  features: ['all'],
+};
+
 const TIER_LIMITS: Record<string, TierLimits> = {
+  // All paid tiers resolve to pro (flat-rate — no feature gating)
+  pro: PRO_LIMITS,
+  // Legacy tier keys kept for backward compat with existing Firestore records
+  starter: PRO_LIMITS,
+  professional: PRO_LIMITS,
+  enterprise: PRO_LIMITS,
+  // Unactivated/cancelled — minimal access until subscribed
   free: {
     maxContacts: 100,
     maxEmailsPerMonth: 500,
@@ -28,30 +56,6 @@ const TIER_LIMITS: Record<string, TierLimits> = {
     maxAgents: 1,
     maxForms: 3,
     features: ['crm_basic', 'email_basic'],
-  },
-  starter: {
-    maxContacts: 1000,
-    maxEmailsPerMonth: 5000,
-    maxSMSPerMonth: 500,
-    maxAgents: 3,
-    maxForms: 10,
-    features: ['crm_basic', 'email_basic', 'forms', 'social_basic'],
-  },
-  professional: {
-    maxContacts: 10000,
-    maxEmailsPerMonth: 25000,
-    maxSMSPerMonth: 2500,
-    maxAgents: 10,
-    maxForms: 50,
-    features: ['crm_full', 'email_full', 'forms', 'social_full', 'voice', 'analytics'],
-  },
-  enterprise: {
-    maxContacts: -1, // unlimited
-    maxEmailsPerMonth: -1,
-    maxSMSPerMonth: -1,
-    maxAgents: -1,
-    maxForms: -1,
-    features: ['all'],
   },
 };
 
@@ -74,7 +78,7 @@ export async function getUserTier(userId: string): Promise<string> {
 }
 
 /**
- * Get limits for a tier
+ * Get limits for a tier. All active-subscriber tiers return PRO_LIMITS.
  */
 export function getTierLimits(tier: string): TierLimits {
   return TIER_LIMITS[tier] ?? TIER_LIMITS.free;
@@ -105,7 +109,8 @@ export async function checkTierLimit(
 }
 
 /**
- * Check if a user has access to a specific feature
+ * Check if a user has access to a specific feature.
+ * All active subscribers have access to all features.
  */
 export async function checkFeatureAccess(
   userId: string,

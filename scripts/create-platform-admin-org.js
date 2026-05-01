@@ -62,7 +62,7 @@ async function createAdminOrg() {
       .collection('agentConfig')
       .doc('default')
       .set({
-        selectedModel: 'openrouter/anthropic/claude-3.5-sonnet',
+        selectedModel: 'openrouter/anthropic/claude-sonnet-4.6',
         modelConfig: {
           temperature: 0.7,
           maxTokens: 800,

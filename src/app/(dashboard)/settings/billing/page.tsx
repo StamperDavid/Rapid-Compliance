@@ -7,10 +7,11 @@ import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { getTierConfig } from '@/lib/pricing/subscription-tiers';
 import { PageTitle } from '@/components/ui/typography';
+import { PRICING } from '@/lib/config/pricing';
 
 interface Subscription {
   userId: string;
-  tier: 'free' | 'starter' | 'professional' | 'enterprise';
+  tier: string;
   billingPeriod?: 'monthly' | 'annual';
   status: 'active' | 'cancelled';
   stripeSubscriptionId?: string;
@@ -151,7 +152,7 @@ export default function BillingPage() {
     }
   };
 
-  const tier = subscription?.tier ?? 'free';
+  const tier = subscription?.tier ?? 'pro';
   const tierConfig = getTierConfig(tier);
   const billingPeriod = subscription?.billingPeriod ?? 'monthly';
   const price = billingPeriod === 'annual' ? tierConfig.annualPrice : tierConfig.monthlyPrice;
@@ -218,7 +219,7 @@ export default function BillingPage() {
                   className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
                   style={{ backgroundColor: tierConfig.badge }}
                 >
-                  {tier === 'free' ? '🆓' : tier === 'starter' ? '🚀' : tier === 'professional' ? '⭐' : '👑'}
+                  {'🚀'}
                 </div>
               </div>
 
@@ -278,7 +279,7 @@ export default function BillingPage() {
                   href="/settings/subscription"
                   className="px-4 py-2 bg-primary text-white rounded no-underline text-sm font-medium"
                 >
-                  {tier === 'free' ? 'Upgrade Plan' : 'Change Plan'}
+                  {'Manage Plan'}
                 </Link>
 
                 {isActive && subscription?.stripeSubscriptionId && !isProvisioned && (
@@ -291,7 +292,7 @@ export default function BillingPage() {
                   </button>
                 )}
 
-                {isActive && tier !== 'free' && (
+                {isActive && subscription?.stripeSubscriptionId && (
                   <button
                     onClick={() => void handleCancel()}
                     disabled={actionLoading}
@@ -318,9 +319,9 @@ export default function BillingPage() {
               <h3 className="text-base font-semibold mb-4">Usage This Period</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { label: 'Contacts', value: usage.contacts, limit: tier === 'free' ? '100' : 'Unlimited' },
-                  { label: 'Emails Sent', value: usage.emails, limit: tier === 'free' ? '500/mo' : tier === 'starter' ? '5,000/mo' : 'Unlimited' },
-                  { label: 'AI Credits', value: usage.aiCredits, limit: tier === 'free' ? '50/mo' : tier === 'starter' ? '500/mo' : tier === 'professional' ? '5,000/mo' : 'Unlimited' },
+                  { label: 'Contacts', value: usage.contacts, limit: `${PRICING.fairUseLimits.crmRecords.toLocaleString()} records` },
+                  { label: 'Emails Sent', value: usage.emails, limit: `${PRICING.fairUseLimits.emailsPerDay.toLocaleString()}/day` },
+                  { label: 'Social Posts', value: usage.aiCredits, limit: `${PRICING.fairUseLimits.socialPostsPerMonth.toLocaleString()}/month` },
                 ].map((metric) => (
                   <div key={metric.label} className="p-4 bg-background rounded-lg text-center">
                     <div className="text-xs text-muted-foreground mb-1">{metric.label}</div>

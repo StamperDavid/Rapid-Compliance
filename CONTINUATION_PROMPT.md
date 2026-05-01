@@ -1,6 +1,114 @@
 # SalesVelocity.ai — Full-Orchestration Continuation Prompt
 
-> **Updated:** April 29, 2026 (evening, ~12-hour fake-AI sweep + UI redesign teed up for next session).
+> **Updated:** April 30, 2026 (afternoon — YC pre-submission walkthrough in flight, see top section below).
+> **Earlier session updated:** April 29, 2026 (evening, fake-AI sweep — preserved below for context).
+
+---
+
+# 🚨 ACTIVE SESSION — YC PRE-SUBMISSION WALKTHROUGH (April 30, 2026)
+
+**YC submission deadline:** Friday May 1, 2026. Today is the only working day.
+
+**Plan:** Walk every page, every button, every feature in the platform top-to-bottom before submission. Fix anything blocking, surface anything questionable.
+
+## Phase progress
+
+| # | Phase | Status |
+|---|---|---|
+| 0 | Pre-flight (build/lint/tsc clean, dev running, monitor armed) | ✅ DONE |
+| 1 | Public marketing site (homepage, pricing, /demo, etc.) | 🔄 IN PROGRESS — homepage + /demo complete; rest pending |
+| 2 | Onboarding wizard (24 steps) | ⏸ Pending |
+| 3 | Dashboard hub + sidebar nav | ⏸ Pending |
+| 4 | Settings (29 pages) | ⏸ Pending |
+| 5 | Integrations (~30 platforms) | ⏸ Pending |
+| 6 | CRM stack (leads/contacts/deals/companies/activities/tasks/calls/conversations/lead-scoring/nurture) | ⏸ Pending |
+| 7 | Content + Magic Studio + media | ⏸ Pending |
+| 8 | Outbound (email/SMS/sequences/campaigns) | ⏸ Pending |
+| 9 | Social + approvals + calendar | ⏸ Pending |
+| 10 | Forms / Website builder / Workflows / Storefront / Voice | ⏸ Pending |
+| 11 | **Mission Control + Standing Rule #2 proof — CORE YC STORY** | ⏸ Pending (recommend tackle FIRST in next window) |
+| 12 | System / Cron / Health | ⏸ Pending |
+| 13 | Billing / Stripe / Webhooks | ⏸ Pending |
+| 14 | Profile / Sites / Store / Preview routes | ⏸ Pending |
+| 15 | End-to-end customer journey | ⏸ Pending |
+| 16 | Known-gaps triage (decide fix-or-hide for each before submission) | ⏸ Pending |
+| 17 | Orchestrated re-test plan | ⏸ Pending |
+
+## Phase 1 progress — what's been verified this session
+
+- ✅ Homepage `/` — loads, $299 flat showing, "Reserve my spot" + "Ask Alex" CTAs work, 9 feature cards present
+- ✅ "See Demo" → "Ask Alex" rename completed
+- ✅ /demo — Alex now real, hardcoded brand-tuned opener (the 69-agent pitch), GM scripted with 4 core scripts (Why Us / Easy Setup / Golden Master Flex / Anti-ChatGPT), live catalog injection per turn
+- ⏸ /pricing — to verify
+- ⏸ /features — to verify
+- ⏸ /early-access — to verify (form submit + demo booking)
+- ⏸ /contact — to verify
+- ⏸ /book — to verify
+- ⏸ /about, /faq, /docs, /security, /blog, /unsubscribe, /terms, /privacy — quick smoke
+- ⏸ /login + /forgot-password + /signup + /admin-login — auth flows
+
+## Today's wins (April 30 2026 session)
+
+### Build / lint / tsc unblocked
+- Production build was OOMing at 4GB heap; added `NODE_OPTIONS=--max-old-space-size=8192` to `package.json` build script
+- 14 `@typescript-eslint/no-unnecessary-type-assertion` errors fixed by switching `await AdminFirestoreService.get(...) as Foo | null` pattern to the generic `AdminFirestoreService.get<Foo>(...)`
+- TypeCheck clean (only stale `.next/types/` warnings + 4 pre-existing pricing-test errors)
+
+### Pricing centralized to single source of truth — $299 flat
+- Created `src/lib/config/pricing.ts` as canonical (PRICING object — flat $299/mo, 14-day trial, BYOK, fair-use limits)
+- `src/lib/pricing/subscription-tiers.ts` rewritten to single 'pro' tier; `SubscriptionTierKey` narrowed
+- `src/lib/middleware/tier-enforcement.ts` reads from PRICING
+- Stripe checkout schema coerces legacy tier names (`starter`, `professional`, `enterprise`) → `'pro'` so old links still work
+- Public homepage + `/settings/billing` + `/settings/subscription` + product-knowledge + sales-chat seed route + flow-manager + agent-pricing route + default-config + tests all updated
+- Replaced hardcoded `claude-3.5-sonnet` (deprecated on OpenRouter) with `claude-sonnet-4.6` in 7 seed scripts + 2 source files + Firestore agentConfig doc
+- Centralized pricing means a future change is one config edit, not a sweep
+
+### Server-routes-must-use-Admin-SDK sweep — caught the silent Alex memory bug
+- Pattern from memory `feedback_server_routes_must_use_admin_sdk.md`: server-side client SDK has no auth context → Firestore rules silently deny
+- The real Alex conversation-memory bug was in `src/lib/agent/instance-manager.ts` — three methods (`storeActiveInstance`, `archiveInstance`, `notifyHumanAgents`) used the client SDK unconditionally. activeInstances writes silently failed, so every /api/chat/public turn spawned a fresh blank instance and Alex had zero memory across turns. Now uses Admin SDK.
+- Same anti-pattern fixed in 6 other paths: `cron/workflow-entity-poll` (silently never fired triggers), `crm/duplicates/merge` (always 404), `voice/call`, `voice/twiml`, `voice/ai-agent`, `voice/ai-agent/speech` — all silent prod bugs.
+- `vector-search.ts` (RAG path called every /demo chat turn) — switched 5 reads/writes to Admin SDK, including the `storeEmbedding` write Stream B initially missed.
+
+### Universal product KnowledgeBase architecture
+- New collection: `organizations/{orgId}/platformCatalog/current` (renamed from `knowledgeBase/current` to avoid collision with legacy RAG-document collection)
+- 27 features × 20 industries seeded from real source files (`src/lib/constants/feature-modules.ts`, persona templates, settings/organization industry list). No fabricated industry talking points.
+- Type defs: `src/types/knowledge-base.ts`. Editable data: `src/lib/knowledge-base/universal-knowledge.ts`. Seed: `scripts/seed-platform-catalog.ts`.
+- Catalog loader added to `chat/public` route — fetches catalog at every turn via Admin SDK and prepends to system prompt before personality. Alex now has live product knowledge per turn.
+- Helper: `src/lib/agent/catalog-formatter.ts` — pure function formats catalog JSON into LLM-readable text.
+
+### GM dehydration — facts out of agent prompts, into KnowledgeBase
+- Architectural rule: GM holds personality + sales judgment + objection-handling shape + Brand DNA + JSON output contract. KnowledgeBase holds pricing + feature catalog + industry value props.
+- 64 GM seed scripts audited; only 3 had hardcoded facts removed (sales-chat, golden-masters legacy, onboarding). The other 61 were already clean.
+- Sales Chat seed (Alex's GM) — pricing tier table, BYOK explanation, trial details, feature list all stripped. Replaced with reference paragraph: "Your live knowledge of pricing, features, industry value props is loaded from the platform's KnowledgeBase document at the start of every turn — never quote from training."
+- 4 architectural follow-ups flagged for post-YC: legacy `seed-golden-masters.js` doesn't use brand-dna-helper (Standing Rule #1 violation, pre-existing); `src/app/api/training/seed-sales-chat-gm/route.ts` runtime API also has hardcoded pricing; `seed-onboarding.ts buildSystemPrompt()` doesn't go through brand-dna-helper; `priceRange` field in onboarding feeds persona-builder.
+- Reseed completed: Alex GM v2 deployed (15,115 chars resolved with Brand DNA). Brand DNA verify: 55/55 GMs baked correctly (Standing Rule #1 holds).
+
+### Alex's voice — 4 core scripts now in his GM
+Owner-written brand voice plugged in directly. Each script is non-negotiable when its trigger topic comes up:
+- **Why Us** ("what is this") — "You don't need another chatbot. You need a department." + Character Studio + Mission Control. Signature line: *"You stop being a doer and start being a director."*
+- **Easy Setup** ("how hard to set up", "do I need a developer") — onboarding wizard does the heavy lifting; running in under an hour. Signature line: *"No PhD in prompting required."*
+- **Golden Master Flex** ("will it sound like me", "quality") — Delta-Snapshots; agents learn brand voice over time. Signature line: *"We get smarter the more we work for you."*
+- **Anti-ChatGPT** ("I already use ChatGPT") — "ChatGPT is a blank page and a high-school intern. We are 350,000 lines of custom orchestration code and a 69-agent team with persistent memory." Signature line: *"ChatGPT gives you a paragraph; we give you a department."*
+- Demo /demo opener (hardcoded — every chat widget on the internet has one): *"I'm Alex. I represent a synthetic workforce of 69 specialized agents. Most business owners are 'prompting' themselves to death — I'm here to end that. Tell me your industry, and I'll show you exactly how my lead-gen and creative teams would attack your market today."*
+- Catalog content corrected: was naming "Jasper" as the customer-facing inbound chat agent; fixed — Jasper is the operator-facing orchestrator, the customer chat agent is what each customer names theirs.
+
+### Verified agent count (per current filesystem)
+- 57 specialists + 11 managers + 1 Master Orchestrator (Jasper) = **69 agents total**
+- (Registry's `totalAgents: 57` is stale — last audited Feb 27. Apr 29 commit said 70 but actual is 69.)
+
+### Standing rules respected
+- Standing Rule #1 (Brand DNA baked at seed time): every reseed today went through `scripts/lib/brand-dna-helper.js`. Verify script: 55/55 GMs baked.
+- Standing Rule #2 (only grades trigger GM changes): no auto-improvement loop touched. All seed reseeds were operator-initiated.
+
+### Live monitoring
+- Dev server running with persistent monitor (per memory `project_live_test_monitoring_setup.md`). Watching for ERROR / FATAL / Failed to compile / uncaught / API error / Missing or insufficient permissions / OpenRouter / 404 / 500 / ChunkLoadError / hydration. As of latest restart, the chat path produces ZERO permission errors per turn (vs the pre-fix flood).
+
+## Single source-of-truth rule (Apr 30 2026 lesson)
+
+The plan, the active checklist, and current state of any in-progress work ALL live in this file (`CONTINUATION_PROMPT.md`). Saved to memory as `feedback_plans_live_in_continuation_prompt.md`. Default = NO new doc files. The owner asks before any new `docs/*.md` is created. Three parallel docs were created during this session (`docs/manual_qa_test_plan.md`, `docs/yc-morning-report.md`, `docs/knowledgebase-contract.md`) — those have been merged into this file's content above and DELETED to prevent contradicting parallel plans.
+
+---
+
 > **Status snapshot:**
 >   - **Backend health: GREEN.** Major fake-AI sweep closed today — ~15 patterns audited and fixed across managers, specialists, tool handlers, dashboards, dead-end Firestore writers, and verify scripts. Backend orchestration verified end-to-end via three real posts WITH IMAGES on three live brand accounts (Apr 29 evening run).
 >   - **NEXT SESSION FOCUS: UI redesign of Content Generator + Social Hub.** Backend is in a known-good state — do NOT audit, refactor, or test backend code in the next session. Specific scope captured below in "Next Session Focus" section.

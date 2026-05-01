@@ -47,6 +47,12 @@ interface UnifiedCalendarProps {
   onSelectEvent: (event: UnifiedCalendarEvent) => void;
   enabledSources: Set<CalendarEventSource>;
   /**
+   * Optional callback for when the user clicks a day cell (empty space)
+   * in month or week view. Used by the dashboard to open a "day details"
+   * panel listing all events on that date before drilling into one.
+   */
+  onSelectDay?: (date: Date) => void;
+  /**
    * Optional react-big-calendar `components` overrides. Used by the
    * dashboard section to inject a per-day "Hours" button into the
    * month-view date headers without forking the calendar wrapper.
@@ -57,6 +63,7 @@ interface UnifiedCalendarProps {
 export default function UnifiedCalendar({
   events,
   onSelectEvent,
+  onSelectDay,
   enabledSources,
   components,
 }: UnifiedCalendarProps) {
@@ -96,6 +103,31 @@ export default function UnifiedCalendar({
     [onSelectEvent],
   );
 
+  // Day-click handlers: drill down (clicking the date number in month
+  // view) AND select-slot (clicking empty space inside a day cell).
+  // Both bubble the same date to the parent.
+  const handleDrillDown = useCallback(
+    (date: Date) => {
+      if (onSelectDay) {
+        onSelectDay(date);
+      } else {
+        // Default behavior — drill into day view.
+        setCurrentDate(date);
+        setCurrentView('day');
+      }
+    },
+    [onSelectDay],
+  );
+
+  const handleSelectSlot = useCallback(
+    (slot: { start: Date }) => {
+      if (onSelectDay) {
+        onSelectDay(slot.start);
+      }
+    },
+    [onSelectDay],
+  );
+
   return (
     <div className="bg-card border border-border-strong rounded-2xl p-4">
       <Calendar
@@ -109,6 +141,9 @@ export default function UnifiedCalendar({
         onNavigate={setCurrentDate}
         views={['month', 'week', 'day', 'agenda']}
         onSelectEvent={handleSelectEvent}
+        onDrillDown={handleDrillDown}
+        onSelectSlot={handleSelectSlot}
+        selectable={!!onSelectDay}
         eventPropGetter={eventPropGetter}
         components={components}
         style={{ height: 720 }}

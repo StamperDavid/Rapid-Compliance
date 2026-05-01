@@ -161,7 +161,7 @@ export async function generateSalesEmail(
     // 2. Get deal score (for personalization)
     let dealScore: DealScore | undefined = options.dealScore;
     if (!dealScore && options.deal) {
-      dealScore = calculateDealScore({
+      dealScore = await calculateDealScore({
         dealId: options.dealId,
         deal: options.deal,
         templateId: options.templateId,

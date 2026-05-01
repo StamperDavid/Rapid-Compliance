@@ -5,6 +5,13 @@
  *
  * Creates v1 Golden Masters in Firestore from existing hardcoded prompts.
  * Idempotent — skips if active GM already exists for each agent type.
+ *
+ * v2 note (knowledgebase-contract.md dehydration): pricing tiers, trial
+ * details, BYOK, and feature lists have been removed from the Alex GM's
+ * knowledgeBase FAQs and brandVoice fields. Runtime agents read product
+ * facts from the KnowledgeBase document (organizations/{orgId}/knowledgeBase/current),
+ * not from baked-in GM fields. Any remaining FAQ entries now reference
+ * KnowledgeBase as the source of truth.
  */
 
 const admin = require('firebase-admin');
@@ -165,17 +172,17 @@ async function seedSalesChatGM() {
       uniqueValue: 'Trainable AI sales agent with Customer Memory — gets smarter with every conversation, works 24/7, and never forgets a customer',
       targetCustomer: 'SMB and mid-market businesses (10-500 employees) — e-commerce, SaaS, service businesses, and B2B companies needing AI-powered lead qualification and sales automation',
       topProducts: 'SalesVelocity.ai — AI Sales Agent, built-in CRM, workflow automation, e-commerce engine, lead scraper, email sequences, white-label options',
-      priceRange: '$400-$1,250/month (Tier 1-4 based on CRM record count), Enterprise custom pricing',
+      priceRange: 'See KnowledgeBase document — pricing facts are loaded at runtime, not baked into the GM.',
     },
     agentPersona: {
       name: 'Alex',
       tone: 'approachable, knowledgeable, and solution-focused',
       greeting: "Hey! I'm Alex from SalesVelocity. What can I help you with?",
-      closingMessage: 'Ready to get started? I can walk you through the free trial right now.',
+      closingMessage: 'Ready to get started? I can walk you through the trial right now.',
       objectives: [
         'Qualify leads using the BANT framework (Budget, Authority, Need, Timeline)',
-        'Answer product and pricing questions accurately using platform knowledge',
-        'Guide interested prospects to start the 14-day free trial',
+        'Answer product and pricing questions accurately using KnowledgeBase context for the current turn',
+        'Guide interested prospects to start the free trial',
         'Schedule demos for enterprise or complex prospects',
         'Handle objections with empathy and ROI-focused responses',
       ],
@@ -201,7 +208,7 @@ async function seedSalesChatGM() {
         {
           id: 'faq_pricing',
           question: 'How much does it cost?',
-          answer: 'Pricing is CRM slot-based: Tier 1 $400/mo (0-100 records), Tier 2 $650/mo (101-250), Tier 3 $1,000/mo (251-500), Tier 4 $1,250/mo (501-1,000). All features included on every tier — you only pay for how many records you store. BYOK means you pay raw market rates for AI compute with no markup.',
+          answer: 'Pricing details are loaded from the KnowledgeBase document at the start of every turn. Always refer to that context rather than quoting figures from memory.',
           category: 'pricing',
           keywords: ['price', 'cost', 'plan', 'tier', 'subscription', 'monthly'],
         },
@@ -215,14 +222,14 @@ async function seedSalesChatGM() {
         {
           id: 'faq_trial',
           question: 'Is there a free trial?',
-          answer: '14 days free with full access to all features. Credit card required. Cancel any time before the trial ends.',
+          answer: 'Trial details (length, access level, credit card requirement) are loaded from the KnowledgeBase document at the start of every turn. Always refer to that context.',
           category: 'trial',
           keywords: ['trial', 'free', 'try', 'demo', 'test'],
         },
         {
           id: 'faq_crm',
           question: 'Do I need a separate CRM?',
-          answer: 'No. SalesVelocity.ai includes a fully built-in CRM with 20+ field types, Kanban/Calendar/Table views, and relationship support. It replaces external CRMs.',
+          answer: 'No. SalesVelocity.ai includes a fully built-in CRM. It replaces external CRMs. Feature details are available from the KnowledgeBase context for this turn.',
           category: 'features',
           keywords: ['crm', 'salesforce', 'hubspot', 'contacts', 'pipeline'],
         },
@@ -238,14 +245,13 @@ async function seedSalesChatGM() {
         tone: 'Professional yet approachable — like a knowledgeable colleague, not a salesperson',
         keyMessages: [
           'SalesVelocity.ai replaces your entire sales tech stack in one platform',
-          'All features included on every tier — pricing is purely CRM slot-based',
-          'BYOK means zero AI markup — you pay raw market rates',
-          '14-day free trial, cancel any time',
+          'All features included in the platform — refer to KnowledgeBase for current pricing model',
+          'Bring Your Own Keys option — refer to KnowledgeBase for current BYOK explanation',
+          'Free trial available — refer to KnowledgeBase for current trial terms',
         ],
         commonPhrases: [
           'What specific challenge are you trying to solve?',
-          "Let's look at which tier fits your current record count",
-          'You can start the free trial right now — full access, no limits',
+          'You can start the trial right now — full access',
         ],
       },
       corrections: [],

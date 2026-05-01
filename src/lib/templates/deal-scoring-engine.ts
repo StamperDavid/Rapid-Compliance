@@ -26,6 +26,8 @@ import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
 import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { getDealsCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPES
@@ -106,9 +108,9 @@ export interface BatchScoringResult {
  * console.log(`Score: ${score.score}, Probability: ${score.closeProbability}%`);
  * ```
  */
-export function calculateDealScore(
+export async function calculateDealScore(
   options: DealScoringOptions
-): DealScore {
+): Promise<DealScore> {
   const startTime = Date.now();
   
   try {
@@ -117,8 +119,8 @@ export function calculateDealScore(
       templateId: options.templateId
     });
     
-    // 1. Get deal data (mock for now)
-    const deal = options.deal ?? fetchDeal(options.dealId);
+    // 1. Get deal data from Firestore (or use pre-loaded deal from options)
+    const deal = options.deal ?? await fetchDeal(options.dealId);
     
     // 2. Get industry template for custom weights
     let template: SalesIndustryTemplate | null = null;
@@ -438,8 +440,12 @@ function calculateStageVelocityFactor(deal: Deal, template: SalesIndustryTemplat
 }
 
 /**
- * Calculate engagement factor
- * Activity level and recency
+ * Calculate engagement factor (activity level and recency).
+ *
+ * Real implementation requires aggregating the `activities` collection
+ * scoped to this deal — that join is not yet wired. We return a neutral
+ * placeholder labeled honestly, instead of synthesizing fake activity counts.
+ * Wire `activitiesService.getForDeal(dealId)` to replace.
  */
 function calculateEngagementFactor(_deal: Deal): {
   score: number;
@@ -448,56 +454,22 @@ function calculateEngagementFactor(_deal: Deal): {
   value: string;
   benchmark: string;
 } {
-  // Mock implementation - in real version, fetch activity stats
-  const lastActivityDays = Math.floor(Math.random() * 14); // Mock: 0-14 days ago
-  const totalActivities = Math.floor(Math.random() * 20) + 5; // Mock: 5-25 activities
-  
-  let score = 50;
-  let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
-  let description = '';
-  
-  // Recency score
-  let recencyScore = 50;
-  if (lastActivityDays === 0) {recencyScore = 100;}
-  else if (lastActivityDays === 1) {recencyScore = 90;}
-  else if (lastActivityDays <= 3) {recencyScore = 75;}
-  else if (lastActivityDays <= 7) {recencyScore = 60;}
-  else if (lastActivityDays <= 14) {recencyScore = 40;}
-  else {recencyScore = 20;}
-  
-  // Volume score
-  let volumeScore = 50;
-  if (totalActivities >= 20) {volumeScore = 90;}
-  else if (totalActivities >= 15) {volumeScore = 75;}
-  else if (totalActivities >= 10) {volumeScore = 60;}
-  else if (totalActivities >= 5) {volumeScore = 40;}
-  else {volumeScore = 20;}
-  
-  score = Math.round((recencyScore * 0.6) + (volumeScore * 0.4));
-  
-  if (score >= 75) {
-    impact = 'positive';
-    description = 'Highly engaged prospect';
-  } else if (score >= 50) {
-    impact = 'neutral';
-    description = 'Moderate engagement';
-  } else {
-    impact = 'negative';
-    description = 'Low engagement - at risk';
-  }
-  
   return {
-    score,
-    impact,
-    description,
-    value: `${totalActivities} activities, last ${lastActivityDays}d ago`,
+    score: 50,
+    impact: 'neutral',
+    description: 'Engagement scoring pending activity-history integration',
+    value: 'Not yet tracked',
     benchmark: '10+ activities, <7d recency'
   };
 }
 
 /**
- * Calculate decision maker factor
- * Is C-level involved?
+ * Calculate decision-maker factor (C-level involvement).
+ *
+ * Real implementation requires checking contact titles on contacts associated
+ * with the deal — that join is not yet wired. We return a neutral placeholder
+ * rather than fabricate "C-level engaged" / "no C-level" outcomes. Wire
+ * `contactsService.getForDeal(dealId)` + title classifier to replace.
  */
 function calculateDecisionMakerFactor(_deal: Deal): {
   score: number;
@@ -506,40 +478,23 @@ function calculateDecisionMakerFactor(_deal: Deal): {
   value: string;
   benchmark: string;
 } {
-  // Mock implementation - in real version, check contact titles
-  const hasDecisionMaker = Math.random() > 0.5; // Mock
-  const decisionMakerEngaged = Math.random() > 0.3; // Mock
-  
-  let score = 50;
-  let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
-  let description = '';
-  
-  if (hasDecisionMaker && decisionMakerEngaged) {
-    score = 90;
-    impact = 'positive';
-    description = 'C-level actively engaged';
-  } else if (hasDecisionMaker) {
-    score = 70;
-    impact = 'positive';
-    description = 'Decision maker identified';
-  } else {
-    score = 40;
-    impact = 'negative';
-    description = 'No decision maker engaged';
-  }
-  
   return {
-    score,
-    impact,
-    description,
-    value: hasDecisionMaker ? 'C-level involved' : 'No C-level',
+    score: 50,
+    impact: 'neutral',
+    description: 'Decision-maker scoring pending contact-title integration',
+    value: 'Not yet tracked',
     benchmark: 'C-level engaged'
   };
 }
 
 /**
- * Calculate budget factor
- * Deal value vs. stated budget
+ * Calculate budget factor (deal value vs. stated budget).
+ *
+ * The Deal model does not currently carry a stated-budget field — the prior
+ * implementation invented one (1.2× deal value). We return a neutral
+ * placeholder that exposes the deal value honestly without fabricating a
+ * comparison. Add a `statedBudget` field to the Deal schema (or query the
+ * proposal/discovery doc) to enable a real ratio.
  */
 function calculateBudgetFactor(deal: Deal): {
   score: number;
@@ -549,38 +504,12 @@ function calculateBudgetFactor(deal: Deal): {
   benchmark: string;
 } {
   const dealValue = deal.value || 0;
-  const statedBudget = dealValue * 1.2; // Mock: assume budget is 20% higher
-  
-  let score = 50;
-  let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
-  let description = '';
-  
-  const ratio = dealValue / statedBudget;
-  
-  if (ratio <= 0.8) {
-    score = 90;
-    impact = 'positive';
-    description = 'Well within budget';
-  } else if (ratio <= 1.0) {
-    score = 70;
-    impact = 'positive';
-    description = 'At budget';
-  } else if (ratio <= 1.2) {
-    score = 50;
-    impact = 'neutral';
-    description = 'Slightly over budget';
-  } else {
-    score = 30;
-    impact = 'negative';
-    description = 'Over budget - needs discount';
-  }
-  
   return {
-    score,
-    impact,
-    description,
+    score: 50,
+    impact: 'neutral',
+    description: 'Budget scoring pending stated-budget capture on Deal',
     value: `$${dealValue.toLocaleString()}`,
-    benchmark: `$${statedBudget.toLocaleString()} budget`
+    benchmark: 'Deal value vs. stated budget'
   };
 }
 
@@ -594,38 +523,15 @@ function calculateCompetitionFactor(_deal: Deal): {
   value: string;
   benchmark: string;
 } {
-  // Mock: assume competitor mentioned in some deals
-  const hasCompetitor = Math.random() > 0.6;
-  const competitorCount = hasCompetitor ? Math.floor(Math.random() * 3) + 1 : 0;
-  
-  let score = 50;
-  let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
-  let description = '';
-  
-  if (competitorCount === 0) {
-    score = 90;
-    impact = 'positive';
-    description = 'No competition detected';
-  } else if (competitorCount === 1) {
-    score = 70;
-    impact = 'neutral';
-    description = '1 competitor mentioned';
-  } else if (competitorCount === 2) {
-    score = 50;
-    impact = 'neutral';
-    description = '2 competitors mentioned';
-  } else {
-    score = 30;
-    impact = 'negative';
-    description = '3+ competitors - crowded deal';
-  }
-  
+  // Real implementation requires scanning notes/conversations for competitor
+  // mentions or a dedicated `dealCompetitors` collection. Neither is wired
+  // yet, so return a neutral placeholder labeled honestly.
   return {
-    score,
-    impact,
-    description,
-    value: competitorCount === 0 ? 'None' : `${competitorCount} competitors`,
-    benchmark: '0-1 competitors'
+    score: 50,
+    impact: 'neutral',
+    description: 'Competition scoring pending competitor-tracking integration',
+    value: 'Not yet tracked',
+    benchmark: 'No competitor mentioned'
   };
 }
 
@@ -823,31 +729,30 @@ function predictFinalValue(deal: Deal, factors: ScoringFactor[]): number {
 }
 
 /**
- * Mock function to fetch deal
- * In real implementation, this would fetch from Firestore
+ * Fetch a single deal from Firestore by ID.
+ * Throws if the deal is not found — caller already handles null/not-found by throwing.
  */
-function fetchDeal(dealId: string): Deal {
-  // Mock deal
-  return {
-    id: dealId,
-    value: 50000,
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
-    updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-  } as Deal;
+async function fetchDeal(dealId: string): Promise<Deal> {
+  const collectionPath = getDealsCollection();
+  const doc = await AdminFirestoreService.get<Deal>(collectionPath, dealId);
+  if (!doc) {
+    throw new Error(`Deal not found: ${dealId}`);
+  }
+  return doc;
 }
 
 /**
  * Batch score multiple deals
  */
-export function batchScoreDeals(
+export async function batchScoreDeals(
   dealIds: string[],
   templateId?: string
-): BatchScoringResult {
+): Promise<BatchScoringResult> {
   const scores = new Map<string, DealScore>();
 
   for (const dealId of dealIds) {
     try {
-      const score = calculateDealScore({
+      const score = await calculateDealScore({
         dealId,
         templateId
       });

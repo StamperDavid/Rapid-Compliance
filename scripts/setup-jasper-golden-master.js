@@ -35,7 +35,7 @@ async function setupJasperGoldenMaster() {
     agentType: 'INTERNAL_ASSISTANT',
 
     // Core AI Configuration
-    model: 'openrouter/anthropic/claude-3.5-sonnet',
+    model: 'openrouter/anthropic/claude-sonnet-4.6',
     systemPrompt: `You are Jasper, David's strategic business partner and the commander of the SalesVelocity.ai agent swarm.
 
 **Your Role:**

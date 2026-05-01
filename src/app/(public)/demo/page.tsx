@@ -19,17 +19,24 @@ interface ChatMessage {
 }
 
 function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: "Hi there! 👋 I'm the AI sales agent for SalesVelocity.ai. I can answer questions about our platform, help you understand pricing, or show you how our AI agents work. What would you like to know?",
-      timestamp: new Date(),
-    }
-  ]);
+  // Hardcoded opener — same way every chat widget on the internet has a fixed
+  // welcome. We tried sending a synthetic "hi" to Alex's GM on mount but the
+  // model mirrors the energy of a one-word greeting and produces a flat reply.
+  // Alex's GM still drives every real turn from here forward — only the
+  // welcome line is fixed copy.
+  const initialGreeting: ChatMessage = {
+    id: 'welcome',
+    role: 'assistant',
+    content:
+      "I'm Alex. I represent a synthetic workforce of 69 specialized agents. Most business owners are 'prompting' themselves to death — I'm here to end that. Tell me your industry, and I'll show you exactly how my lead-gen and creative teams would attack your market today.",
+    timestamp: new Date(),
+  };
+  const [messages, setMessages] = useState<ChatMessage[]>([initialGreeting]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // One stable customerId per page load so Alex retains context across turns.
+  const customerIdRef = useRef<string>(`demo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
 
   const scrollToBottom = () => {
     const container = messagesEndRef.current?.parentElement;
@@ -72,7 +79,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          customerId: `demo_${Date.now()}`,
+          customerId: customerIdRef.current,
         }),
       });
       let data: ChatResponse = {};
@@ -120,7 +127,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
           <span className="text-2xl">🤖</span>
         </div>
         <div>
-          <h3 className="text-white font-semibold text-lg">SalesVelocity AI Agent</h3>
+          <h3 className="text-white font-semibold text-lg">Alex</h3>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
             <span className="text-white/80 text-sm">Online now</span>
@@ -220,10 +227,10 @@ export default function DemoPage() {
             <span>Live AI Demo</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-            See Our AI Agent In Action
+            Chat with Alex
           </h1>
           <p className="text-xl text-gray-300 mb-4 max-w-3xl mx-auto">
-            This is a live AI sales agent powered by our platform. Go ahead - ask it anything about our platform, pricing, or features.
+            Alex is a live AI sales agent running on our platform. Ask him anything about SalesVelocity.ai — pricing, features, how the AI agents work, anything.
           </p>
           <p className="text-lg text-gray-400 mb-8">
             This is exactly what your customers will experience when you deploy your own trained AI agent.

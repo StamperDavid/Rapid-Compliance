@@ -55,7 +55,7 @@ export async function logAIChat(params: {
         entityId: params.relatedEntityId,
         entityName: params.relatedEntityName,
       }],
-      createdBy: params.userId,
+      createdBy: params.userId ?? 'system',
       createdByName: params.userName ?? 'AI Agent',
       occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
@@ -107,7 +107,7 @@ export async function logEmailSent(params: {
         entityId: params.relatedEntityId,
         entityName: params.relatedEntityName,
       }],
-      createdBy: params.userId,
+      createdBy: params.userId ?? 'system',
       createdByName: params.userName,
       occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
@@ -192,7 +192,7 @@ export async function logCall(params: {
         entityId: params.relatedEntityId,
         entityName: params.relatedEntityName,
       }],
-      createdBy: params.userId,
+      createdBy: params.userId ?? 'system',
       createdByName: params.userName,
       occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
@@ -244,7 +244,7 @@ export async function logMeeting(params: {
         entityId: params.relatedEntityId,
         entityName: params.relatedEntityName,
       }],
-      createdBy: params.userId,
+      createdBy: params.userId ?? 'system',
       createdByName: params.userName,
       occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
@@ -296,7 +296,7 @@ export async function logStatusChange(params: {
         entityId: params.relatedEntityId,
         entityName: params.relatedEntityName,
       }],
-      createdBy: params.userId,
+      createdBy: params.userId ?? 'system',
       createdByName: params.userName,
       occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
@@ -377,7 +377,7 @@ export async function logSequenceChange(params: {
         entityId: params.relatedEntityId,
         entityName: params.relatedEntityName,
       }],
-      createdBy: params.userId,
+      createdBy: params.userId ?? 'system',
       createdByName: params.userName,
       occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
@@ -419,7 +419,7 @@ export async function logNote(params: {
         entityId: params.relatedEntityId,
         entityName: params.relatedEntityName,
       }],
-      createdBy: params.userId,
+      createdBy: params.userId ?? 'system',
       createdByName: params.userName,
       occurredAt: Timestamp.fromDate(new Date()),
     };

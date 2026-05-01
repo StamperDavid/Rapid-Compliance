@@ -4,7 +4,7 @@
  */
 
 import { generateEmbedding, type EmbeddingResult } from './embeddings-service';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -98,21 +98,21 @@ export async function searchKnowledgeBase(
     // Generate embedding for query
     const queryEmbedding = await generateEmbedding(query);
     
-    // Get all knowledge base embeddings from Firestore
-    const knowledgeBase = await FirestoreService.get(
+    // Get all knowledge base embeddings from Firestore (uses Admin SDK — no permissions error)
+    const knowledgeBase = await AdminFirestoreService.get<KnowledgeBase>(
       getSubCollection('knowledgeBase'),
       'current'
     );
-    
+
     if (!knowledgeBase) {
       return [];
     }
-    
+
     // Get all embeddings
-    const embeddings: KnowledgeEmbeddingDoc[] = await FirestoreService.getAll(
+    const embeddings: KnowledgeEmbeddingDoc[] = await AdminFirestoreService.getAll(
       getSubCollection('knowledgeEmbeddings'),
       []
-    );
+    ) as KnowledgeEmbeddingDoc[];
 
     // Calculate similarity scores
     const results: SearchResult[] = [];
@@ -160,7 +160,7 @@ export async function storeEmbedding(
   try {
     const embeddingId = `emb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('knowledgeEmbeddings'),
       embeddingId,
       {
@@ -185,8 +185,8 @@ export async function storeEmbedding(
  */
 export async function indexKnowledgeBase(): Promise<void> {
   try {
-    // Get knowledge base
-    const knowledgeBaseData: KnowledgeBase | null = await FirestoreService.get(
+    // Get knowledge base (uses Admin SDK — no permissions error)
+    const knowledgeBaseData = await AdminFirestoreService.get<KnowledgeBase>(
       getSubCollection('knowledgeBase'),
       'current'
     );

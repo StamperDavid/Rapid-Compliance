@@ -440,7 +440,7 @@ const CONTACT_PAGE: EditorPage = {
           { icon: 'mail', title: 'Email Us', desc: 'support@salesvelocity.ai - We respond within 24 hours' },
           { icon: 'message-circle', title: 'Live Chat', desc: 'Available 9am-6pm EST - Click the chat widget' },
           { icon: 'book-open', title: 'Documentation', desc: 'Check our comprehensive guides at /docs' },
-          { icon: 'target', title: 'Sales Inquiries', desc: 'sales@salesvelocity.ai - For enterprise plans' },
+          { icon: 'target', title: 'Sales Inquiries', desc: 'sales@salesvelocity.ai - Questions and custom needs' },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', maxWidth: '800px', margin: '0 auto' } } },
       ],
     },

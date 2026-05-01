@@ -46,7 +46,7 @@ export async function PATCH(
     const couponsPath = getMerchantCouponsCollection();
 
     // Check if coupon exists
-    const existingCoupon = await AdminFirestoreService.get(couponsPath, couponId) as MerchantCoupon | null;
+    const existingCoupon = await AdminFirestoreService.get<MerchantCoupon>(couponsPath, couponId);
     if (!existingCoupon) {
       return NextResponse.json(
         { success: false, error: 'Coupon not found' },

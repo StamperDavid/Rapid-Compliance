@@ -170,6 +170,15 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
     content: [],
   };
 
+  // SendGrid requires text/plain to come BEFORE text/html in the content
+  // array (per their API: "If present, text/plain must be first, followed
+  // by text/html, followed by any other content."). Push plain first.
+  if (options.text) {
+    payload.content.push({
+      type: 'text/plain',
+      value: options.text,
+    });
+  }
   if (options.html) {
     const { html: modifiedHtml } = addTrackingPixel(
       options.html,
@@ -179,12 +188,6 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
     payload.content.push({
       type: 'text/html',
       value: modifiedHtml,
-    });
-  }
-  if (options.text) {
-    payload.content.push({
-      type: 'text/plain',
-      value: options.text,
     });
   }
 

@@ -6,7 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { handleEntityChange } from '@/lib/workflows/triggers/firestore-trigger';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -28,8 +28,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Get all registered entity triggers to know which collections to watch
+    // AdminFirestoreService.getAll uses native Admin SDK constraints \u2014 pass raw where objects
     const { where } = await import('firebase/firestore');
-    const triggers = await FirestoreService.getAll(
+    const triggers = await AdminFirestoreService.getAll(
       getSubCollection('workflowTriggers'),
       [where('triggerType', '>=', 'entity.'), where('triggerType', '<=', 'entity.\uf8ff')]
     );
@@ -48,10 +49,11 @@ export async function GET(request: NextRequest) {
     const since = new Date(Date.now() - pollWindowMs).toISOString();
 
     // Get unique schema IDs to poll
+    // AdminFirestoreService.getAll returns FirestoreDocument[] ({ id: string; [key: string]: unknown })
     const schemaIds = [...new Set(
       triggers
-        .filter((t): t is Record<string, unknown> & { schemaId: string } =>
-          typeof t === 'object' && t !== null && 'schemaId' in t && typeof t.schemaId === 'string'
+        .filter((t): t is typeof t & { schemaId: string } =>
+          'schemaId' in t && typeof t.schemaId === 'string'
         )
         .map(t => t.schemaId)
     )];
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
     for (const schemaId of schemaIds) {
       try {
         const { orderBy, limit: fbLimit } = await import('firebase/firestore');
-        const recentRecords = await FirestoreService.getAll(
+        const recentRecords = await AdminFirestoreService.getAll(
           getSubCollection(schemaId),
           [
             where('updatedAt', '>=', since),

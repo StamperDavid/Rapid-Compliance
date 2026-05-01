@@ -349,7 +349,7 @@ export class OpenRouterProvider {
    *
    * HONESTY RULE: every internal name must map to the OpenRouter id it
    * actually names. Never staple one version onto another's label (e.g.
-   * never map 'claude-3.5-sonnet' to 'anthropic/claude-sonnet-4'). A prior
+   * never map 'claude-sonnet-4' to 'anthropic/claude-sonnet-4-6'). A prior
    * version of this table did exactly that and the regression harness
    * would have no chance of detecting a silent upgrade if it saw a
    * mismatched alias answering as the declared model. If a model is sunset

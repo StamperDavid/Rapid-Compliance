@@ -35,31 +35,12 @@ async function syncTrainingPlatform() {
         'Provide excellent customer service and build trust'
       ],
       
+      // Pricing intentionally not in GM — read from KnowledgeBase at runtime per docs/knowledgebase-contract.md.
       products: [
         {
-          name: 'Tier 1',
-          price: '$400/month',
-          description: '0-100 records. All features included: AI Agents (unlimited), Lead Scraper, Email Sequences, CRM, Workflows, API Access, White-Label'
-        },
-        {
-          name: 'Tier 2',
-          price: '$650/month',
-          description: '101-250 records. All features included. MOST POPULAR choice for growing teams.'
-        },
-        {
-          name: 'Tier 3',
-          price: '$1,000/month',
-          description: '251-500 records. All features included. Great for established sales teams.'
-        },
-        {
-          name: 'Tier 4',
-          price: '$1,250/month',
-          description: '501-1,000 records. All features included. Scaled operations.'
-        },
-        {
-          name: 'Enterprise (Tier 5)',
-          price: 'Custom Pricing',
-          description: '1,000+ records. All features included. Dedicated support, custom development available.'
+          name: 'SalesVelocity Pro',
+          price: '$299/month flat',
+          description: 'All features included. No tiers, no record limits, no upsells. BYOK for zero AI markup.'
         }
       ],
       
@@ -71,9 +52,9 @@ async function syncTrainingPlatform() {
       
       topProducts: 'AI Sales Agents, Lead Scraper & Enrichment, Email Sequences (unlimited), Multi-Channel Outreach, Full CRM Suite, Workflow Automation, E-Commerce Engine, API Access, White-Label',
       
-      pricingStrategy: 'Simple volume-based pricing. Only pay based on number of records (contacts/companies). All features included in every tier. No per-seat fees, no hidden costs.',
-      
-      discountPolicy: 'Annual plans save 17%. Enterprise (1,000+ records) gets custom pricing. No setup fees ever.',
+      pricingStrategy: '$299/month flat — all features included, no tiers, no record limits. BYOK for zero AI markup.',
+
+      discountPolicy: 'Annual plan available. No setup fees.',
       
       returnPolicy: '14-day free trial (no credit card). Then 30-day money-back guarantee if not satisfied.',
       
@@ -89,7 +70,7 @@ async function syncTrainingPlatform() {
       
       commonObjections: 'Price concerns, AI accuracy/hallucination fears, implementation time, data security, "too good to be true" skepticism',
       
-      priceObjections: 'All features included means no hidden costs. Calculate cost of separate tools (CRM $100 + Email tool $200 + AI agent $300 = $600+). We\'re one platform at $400-$1,250. Free trial to prove value.',
+      priceObjections: 'All features included means no hidden costs. Calculate cost of separate tools (CRM $100 + Email tool $200 + AI agent $300 = $600+). We\'re one platform at $299/month flat. Free trial to prove value.',
       
       timeObjections: 'Setup in 15 minutes. AI agents ready immediately. No complex migration. Import your existing data via CSV or API.',
       
@@ -121,14 +102,11 @@ SalesVelocity.ai is the complete AI-powered sales automation platform that helps
 - Manage entire sales pipeline with built-in CRM
 - Automate workflows and close deals faster
 
-**Current Pricing (Volume-Based - All Features Included):**
-- Tier 1: $400/month for 0-100 records
-- Tier 2: $650/month for 101-250 records (MOST POPULAR)
-- Tier 3: $1,000/month for 251-500 records
-- Tier 4: $1,250/month for 501-1,000 records
-- Tier 5: Custom pricing for 1,000+ records
+// Pricing intentionally not in GM — read from KnowledgeBase at runtime per docs/knowledgebase-contract.md.
+**Pricing:**
+$299/month flat — all features included, no tiers, no record limits. BYOK for zero AI markup.
 
-**ALL plans include EVERY feature - no upsells, no hidden costs:**
+**ALL features included - no upsells, no hidden costs:**
 
 ✓ AI Sales Agents (Unlimited)
 ✓ Lead Scraper & Enrichment
@@ -164,7 +142,7 @@ Professional but approachable, data-driven, solution-focused, never pushy
     const goldenMasterUpdate = {
       systemInstructions: systemPrompt,
       systemPrompt: systemPrompt,
-      knowledgeBase: 'Volume-based pricing ($400-$1,250/mo), all features included, 14-day free trial, BYOK for zero AI markup, complete sales automation platform',
+      knowledgeBase: '$299/month flat, all features included, 14-day free trial, BYOK for zero AI markup, complete sales automation platform',
       
       businessContext: {
         companyName: 'SalesVelocity.ai',
@@ -173,7 +151,7 @@ Professional but approachable, data-driven, solution-focused, never pushy
         problemSolved: 'Automate entire sales process with AI - lead gen, qualification, outreach, CRM, closing',
         uniqueValue: 'All features included, BYOK for zero markup, one complete platform',
         topProducts: 'AI Agents, Lead Scraper, Email Sequences, CRM, Workflows, E-Commerce, API',
-        pricingStrategy: 'Volume-based: $400 (0-100), $650 (101-250), $1,000 (251-500), $1,250 (501-1K), Custom (1K+)',
+        pricingStrategy: '$299/month flat — all features included, no tiers',
         discountPolicy: 'Annual: 17% off. Enterprise: custom. No setup fees.',
         returnPolicy: '14-day free trial, 30-day money-back',
         warrantyTerms: '99.9% uptime SLA',
@@ -218,7 +196,7 @@ Professional but approachable, data-driven, solution-focused, never pushy
         formalityLevel: 'balanced'
       },
       
-      modelId: 'openrouter/anthropic/claude-3.5-sonnet',
+      modelId: 'openrouter/anthropic/claude-sonnet-4.6',
       baseModelId: 'platform-sales-agent-base',
       temperature: 0.7,
       maxTokens: 500,
@@ -258,7 +236,7 @@ Professional but approachable, data-driven, solution-focused, never pushy
     console.log('2. Go to training platform to add more training scenarios');
     console.log('3. Update knowledge base with additional docs\n');
     console.log('Current configuration:');
-    console.log('- Pricing: Tier-based ($400-$1,250/mo)');
+    console.log('- Pricing: $299/month flat');
     console.log('- Features: All included in every plan');
     console.log('- Free Trial: 14 days, no CC');
     console.log('- Persona: Jasper (professional, consultative)\n');

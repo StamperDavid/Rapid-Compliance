@@ -38,7 +38,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         const { getIndustryFeatureConfig } = await import('@/lib/constants/feature-modules');
 
         // Read org's industry category
-        const orgData = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID) as Record<string, unknown> | null;
+        const orgData = await AdminFirestoreService.get<Record<string, unknown>>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
         const industryCategory = typeof orgData?.industryCategory === 'string' ? orgData.industryCategory : '';
 
         config = getIndustryFeatureConfig(industryCategory);
@@ -61,10 +61,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       try {
         const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
         const { getSubCollection } = await import('@/lib/firebase/collections');
-        const storefrontData = await AdminFirestoreService.get(
+        const storefrontData = await AdminFirestoreService.get<Record<string, unknown>>(
           getSubCollection('storefrontConfig'),
           'default'
-        ) as Record<string, unknown> | null;
+        );
 
         if (storefrontData && typeof storefrontData.enabled === 'boolean') {
           if (config.modules.storefront !== storefrontData.enabled) {

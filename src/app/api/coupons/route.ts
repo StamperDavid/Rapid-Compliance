@@ -108,7 +108,7 @@ export async function POST(
     }
 
     // Get existing data if updating
-    const existingCoupon = isNew ? null : await AdminFirestoreService.get(couponsPath, couponId) as MerchantCoupon | null;
+    const existingCoupon = isNew ? null : await AdminFirestoreService.get<MerchantCoupon>(couponsPath, couponId);
 
     // Build coupon object
     const coupon: MerchantCoupon = {
