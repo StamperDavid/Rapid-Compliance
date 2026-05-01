@@ -1639,8 +1639,15 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           platform: {
             type: 'string',
-            description: 'Optional: Specific platform to target. If not provided, Marketing Manager will select best platform(s) based on goal. Pass a single platform value (e.g. "mastodon") to trigger the single-platform fast-path which dispatches directly to the platform specialist + auto-resolves an accompanying image (via providedMediaUrls if supplied, otherwise DALL-E).',
+            description: 'Optional: Specific platform to target. If not provided, Marketing Manager will select best platform(s) based on goal. Pass a single platform value (e.g. "mastodon") to trigger the single-platform fast-path which dispatches directly to the platform specialist + auto-resolves an accompanying image (via providedMediaUrls if supplied, otherwise DALL-E). Pass "all" to fan out to every connected social account.',
             enum: ['tiktok', 'twitter', 'x', 'facebook', 'linkedin', 'youtube', 'instagram', 'pinterest', 'bluesky', 'mastodon', 'seo', 'all', 'auto'],
+          },
+          platforms: {
+            type: 'array',
+            description: 'Optional: explicit list of platforms to publish to. Each item must be one of: tiktok, twitter, x, facebook, linkedin, youtube, instagram, pinterest, bluesky, mastodon, reddit, threads, google-business, telegram, whatsapp-business, discord, twitch. Example: ["twitter", "bluesky", "linkedin"]. When provided alongside `topic`, Marketing Manager fans the post out to each platform — drafting + image + publish per platform. Use this when the operator names specific platforms. For "all my connected platforms", pass platform: "all" instead.',
+            items: {
+              type: 'string',
+            },
           },
           topic: {
             type: 'string',
@@ -5243,6 +5250,9 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             goal: args.goal as string,
             message: args.goal as string,
             platform: args.platform as string | undefined,
+            // Multi-platform fan-out: array of platform names. Marketing
+            // Manager loops through each, drafts + publishes per platform.
+            platforms: Array.isArray(args.platforms) ? args.platforms : undefined,
             niche: args.niche as string | undefined,
             audience: args.audience as string | undefined,
             budget: args.budget as string | undefined,

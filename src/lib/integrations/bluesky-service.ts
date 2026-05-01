@@ -279,7 +279,51 @@ export class BlueskyService {
       else { mimeType = 'image/jpeg'; } // safe default for social assets
     }
 
-    const bytes = await assetResponse.arrayBuffer();
+    let bytes: ArrayBuffer = await assetResponse.arrayBuffer();
+
+    // Bluesky's PDS rejects blobs larger than 2,000,000 bytes (2 MB) with
+    // "Invalid app.bsky.feed.post record: blob too big". Auto-compress if
+    // the operator's image exceeds a safe margin so the user never has to
+    // know per-platform image limits — that's the point of the platform.
+    // Only compress images (skip video/gif).
+    const BLUESKY_MAX_BYTES = 1_900_000; // safe margin under hard 2 MB limit
+    const isCompressibleImage =
+      mimeType === 'image/jpeg'
+      || mimeType === 'image/png'
+      || mimeType === 'image/webp';
+    if (isCompressibleImage && bytes.byteLength > BLUESKY_MAX_BYTES) {
+      try {
+        const sharpModule = (await import('sharp')).default;
+        let quality = 85;
+        let compressed = await sharpModule(Buffer.from(bytes))
+          .rotate() // honor EXIF orientation
+          .resize({ width: 1600, withoutEnlargement: true })
+          .jpeg({ quality, mozjpeg: true })
+          .toBuffer();
+        while (compressed.byteLength > BLUESKY_MAX_BYTES && quality > 40) {
+          quality -= 10;
+          compressed = await sharpModule(Buffer.from(bytes))
+            .rotate()
+            .resize({ width: 1600, withoutEnlargement: true })
+            .jpeg({ quality, mozjpeg: true })
+            .toBuffer();
+        }
+        // Buffer.buffer can include other allocations — slice to the exact
+        // byteOffset/byteLength to get a clean ArrayBuffer for the upload.
+        bytes = compressed.buffer.slice(
+          compressed.byteOffset,
+          compressed.byteOffset + compressed.byteLength,
+        ) as ArrayBuffer;
+        mimeType = 'image/jpeg';
+      } catch (err) {
+        // If compression fails for any reason, surface the original error
+        // by letting the upload fail rather than silently posting a
+        // half-broken record. This is rare (sharp is bundled).
+        throw new Error(
+          `uploadBlobFromUrl: image exceeds 2MB and compression failed — ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
 
     // POST raw bytes to the PDS blob store (NOT multipart)
     const uploadResponse = await fetch(`${this.pdsUrl}/xrpc/com.atproto.repo.uploadBlob`, {

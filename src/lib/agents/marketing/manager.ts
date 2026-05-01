@@ -34,6 +34,7 @@
 
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
+import type { SocialPlatform } from '@/types/social';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getTikTokExpert } from './tiktok/specialist';
 import { getTwitterExpert } from './twitter/specialist';
@@ -749,6 +750,59 @@ export class MarketingManager extends BaseManager {
         return await this.executeInboundDmReply(inboundCtx as Record<string, unknown>, taskId);
       }
 
+      // ─── Multi-platform organic post fast-path ───────────────────────
+      // Triggered when the operator says "post this to all my connected
+      // platforms" or specifies platforms: [twitter, bluesky, linkedin].
+      // Two intake shapes:
+      //   1. rawPayload.platforms = ["twitter", "bluesky", ...]  (explicit)
+      //   2. rawPayload.platform === "all"  (expand to connected accounts)
+      const explicitPlatforms = Array.isArray(rawPayload.platforms)
+        ? (rawPayload.platforms as unknown[]).filter(
+            (p): p is string => typeof p === 'string' && p.trim().length > 0,
+          )
+        : [];
+      const wantsAll =
+        typeof rawPayload.platform === 'string' &&
+        rawPayload.platform.trim().toLowerCase() === 'all';
+      const multiTopic = rawPayload.topic ?? rawPayload.message;
+      if (
+        (explicitPlatforms.length > 0 || wantsAll) &&
+        typeof multiTopic === 'string' &&
+        multiTopic.length > 0
+      ) {
+        let platforms = explicitPlatforms;
+        if (wantsAll) {
+          try {
+            const { SocialAccountService } = await import(
+              '@/lib/social/social-account-service'
+            );
+            const accounts = await SocialAccountService.listAccounts();
+            const connected = Array.from(
+              new Set(
+                accounts
+                  .filter(a => a.status === 'active')
+                  .map(a => a.platform),
+              ),
+            );
+            platforms = connected;
+          } catch (err) {
+            this.log(
+              'ERROR',
+              `Failed to enumerate connected platforms for "all": ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        }
+        if (platforms.length > 0) {
+          return await this.executeMultiPlatformPost(rawPayload, platforms, taskId);
+        }
+        return this.createReport(
+          taskId,
+          'FAILED',
+          null,
+          ['No connected platforms found to post to. Connect at least one platform in Settings → Integrations.'],
+        );
+      }
+
       // ─── Single-platform organic post fast-path ──────────────────────
       // When Jasper passes a single string platform + topic (no full
       // campaign goal), skip orchestrateCampaign and dispatch directly to
@@ -761,6 +815,7 @@ export class MarketingManager extends BaseManager {
       const isSinglePostRequest =
         typeof singlePlatform === 'string' &&
         singlePlatform.length > 0 &&
+        singlePlatform.toLowerCase() !== 'all' &&
         typeof singleTopic === 'string' &&
         singleTopic.length > 0 &&
         !rawPayload.platforms; // CampaignGoal.platforms is an array — only fast-path when not multi-platform
@@ -1346,6 +1401,101 @@ export class MarketingManager extends BaseManager {
       this.log('WARN', `Image generation failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
     }
 
+    // ─── Publish to the platform ────────────────────────────────────────
+    // Without this step, "complete" missions never reach social platforms.
+    // Operators see the step marked complete but no real post anywhere —
+    // because all this function did before was draft + image. The
+    // autonomous-posting-agent.executeAction call below is what actually
+    // hits the platform API.
+    const PUBLISH_PLATFORM_MAP: Record<string, SocialPlatform> = {
+      'x': 'twitter',
+      'twitter': 'twitter',
+      'bluesky': 'bluesky',
+      'linkedin': 'linkedin',
+      'facebook': 'facebook',
+      'instagram': 'instagram',
+      'pinterest': 'pinterest',
+      'mastodon': 'mastodon',
+      'reddit': 'reddit',
+      'threads': 'threads',
+      'google-business': 'google_business',
+      'googlebusiness': 'google_business',
+      'telegram': 'telegram',
+      'whatsapp': 'whatsapp_business',
+      'whatsapp-business': 'whatsapp_business',
+      'discord': 'discord',
+      'twitch': 'twitch',
+    };
+    const publishPlatform = PUBLISH_PLATFORM_MAP[platform];
+    if (!publishPlatform) {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        null,
+        [`Cannot publish: platform "${platform}" has no mapping to SocialPlatform`],
+      );
+    }
+
+    let publishResult: {
+      success: boolean;
+      actionId?: string;
+      platformActionId?: string;
+      error?: string;
+      complianceBlocked?: boolean;
+      complianceReason?: string;
+    };
+    try {
+      const { createPostingAgent } = await import('@/lib/social/autonomous-posting-agent');
+      const postingAgent = await createPostingAgent({ platforms: [publishPlatform] });
+      const actionResult = await postingAgent.executeAction({
+        type: 'POST',
+        platform: publishPlatform,
+        content: primaryPost,
+        mediaUrls: imageUrl ? [imageUrl] : undefined,
+      });
+      publishResult = {
+        success: actionResult.success,
+        actionId: actionResult.actionId,
+        platformActionId: actionResult.platformActionId,
+        error: actionResult.error,
+        complianceBlocked: actionResult.complianceBlocked,
+        complianceReason: actionResult.complianceReason,
+      };
+      this.log(
+        actionResult.success ? 'INFO' : 'ERROR',
+        `Publish ${actionResult.success ? 'succeeded' : 'failed'} for ${publishPlatform}: ${actionResult.error ?? 'OK'} (platformActionId=${actionResult.platformActionId ?? 'n/a'})`,
+      );
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      this.log('ERROR', `Publish threw exception for ${publishPlatform}: ${errMsg}`);
+      publishResult = { success: false, error: errMsg };
+    }
+
+    if (!publishResult.success) {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        {
+          mode: 'SINGLE_PLATFORM_POST',
+          platform,
+          topic,
+          ...(verbatimText ? { verbatimText } : {}),
+          generatedContent: data,
+          primaryPost,
+          imageUrl,
+          imageOperatorProvided,
+          mediaUrls: imageUrl ? [imageUrl] : [],
+          specialistsUsed: [specialistId],
+          published: false,
+          publishError: publishResult.error,
+          ...(publishResult.complianceBlocked
+            ? { complianceBlocked: true, complianceReason: publishResult.complianceReason }
+            : {}),
+        },
+        [`Publish failed for ${platform}: ${publishResult.error ?? 'unknown error'}`],
+      );
+    }
+
     return this.createReport(taskId, 'COMPLETED', {
       mode: 'SINGLE_PLATFORM_POST',
       platform,
@@ -1357,12 +1507,95 @@ export class MarketingManager extends BaseManager {
       imageOperatorProvided,
       mediaUrls: imageUrl ? [imageUrl] : [],
       specialistsUsed: [specialistId],
+      published: true,
+      publishedActionId: publishResult.actionId,
+      publishedPlatformActionId: publishResult.platformActionId,
     });
   }
 
   // ==========================================================================
   // GROWTH LOOP ORCHESTRATION - Autonomous Continuous Growth Cycle
   // ==========================================================================
+
+  /**
+   * Multi-platform fast-path. Posts the same content to N platforms,
+   * looping the existing single-platform path per platform. Returns one
+   * aggregated report. Used when the operator says "post to all my
+   * connected platforms" or specifies platforms: [...] explicitly.
+   *
+   * Status: COMPLETED if at least one platform succeeded (data.results
+   * shows per-platform success/failure). FAILED only if every platform
+   * failed.
+   */
+  private async executeMultiPlatformPost(
+    payload: Record<string, unknown>,
+    platforms: string[],
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log(
+      'INFO',
+      `Multi-platform post fast-path: posting to ${platforms.length} platforms: ${platforms.join(', ')}`,
+    );
+
+    const results: Array<{
+      platform: string;
+      success: boolean;
+      primaryPost?: string;
+      imageUrl?: string | null;
+      publishedPlatformActionId?: string;
+      error?: string;
+    }> = [];
+
+    for (const platform of platforms) {
+      const platformPayload = { ...payload, platform };
+      const report = await this.executeSinglePlatformPost(
+        platformPayload,
+        `${taskId}_${platform}`,
+      );
+      const data = (report.data as Record<string, unknown> | null) ?? null;
+      const succeeded = report.status === 'COMPLETED' && data?.published === true;
+      results.push({
+        platform,
+        success: succeeded,
+        primaryPost: typeof data?.primaryPost === 'string' ? data.primaryPost : undefined,
+        imageUrl: typeof data?.imageUrl === 'string' ? data.imageUrl : null,
+        publishedPlatformActionId:
+          typeof data?.publishedPlatformActionId === 'string'
+            ? data.publishedPlatformActionId
+            : undefined,
+        error: report.errors?.[0],
+      });
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const totalCount = results.length;
+
+    if (successCount === 0) {
+      return this.createReport(
+        taskId,
+        'FAILED',
+        {
+          mode: 'MULTI_PLATFORM_POST',
+          platforms,
+          results,
+          successCount,
+          totalCount,
+        },
+        [
+          `All ${totalCount} platform posts failed. First error: ${results[0]?.error ?? 'unknown'}`,
+        ],
+      );
+    }
+
+    return this.createReport(taskId, 'COMPLETED', {
+      mode: 'MULTI_PLATFORM_POST',
+      platforms,
+      results,
+      successCount,
+      totalCount,
+      partial: successCount < totalCount,
+    });
+  }
 
   /**
    * Execute a single GROWTH_LOOP cycle
