@@ -40,8 +40,6 @@ import {
 import { PageTitle, SectionDescription, SectionTitle } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import SubpageNav from '@/components/ui/SubpageNav';
-import { SOCIAL_TABS } from '@/lib/constants/subpage-nav';
 import { formatCount } from '@/components/social/post-previews/_utils';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -932,8 +930,6 @@ export default function SocialHubPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <SubpageNav items={SOCIAL_TABS} />
-
       {/* Section 1: Header */}
       <div>
         <PageTitle>Social Media</PageTitle>
