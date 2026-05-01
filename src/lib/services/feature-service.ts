@@ -21,8 +21,8 @@ const BUSINESS_PROFILE_DOC = 'business_profile';
  */
 export async function getFeatureConfig(): Promise<FeatureConfig | null> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const data = await FirestoreService.get<FeatureConfig>(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const data = await AdminFirestoreService.get<FeatureConfig>(
       SETTINGS_COLLECTION,
       FEATURE_CONFIG_DOC,
     );
@@ -42,8 +42,8 @@ export async function getFeatureConfig(): Promise<FeatureConfig | null> {
  */
 export async function saveFeatureConfig(config: FeatureConfig): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    await FirestoreService.set(SETTINGS_COLLECTION, FEATURE_CONFIG_DOC, config, false);
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    await AdminFirestoreService.set(SETTINGS_COLLECTION, FEATURE_CONFIG_DOC, config, false);
     logger.info('Feature config saved', { file: 'feature-service.ts' });
   } catch (error) {
     logger.error(
@@ -60,8 +60,8 @@ export async function saveFeatureConfig(config: FeatureConfig): Promise<void> {
  */
 export async function getBusinessProfile(): Promise<BusinessProfile | null> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const data = await FirestoreService.get<BusinessProfile>(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const data = await AdminFirestoreService.get<BusinessProfile>(
       SETTINGS_COLLECTION,
       BUSINESS_PROFILE_DOC,
     );
@@ -81,8 +81,8 @@ export async function getBusinessProfile(): Promise<BusinessProfile | null> {
  */
 export async function saveBusinessProfile(profile: BusinessProfile): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    await FirestoreService.set(SETTINGS_COLLECTION, BUSINESS_PROFILE_DOC, profile, false);
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    await AdminFirestoreService.set(SETTINGS_COLLECTION, BUSINESS_PROFILE_DOC, profile, false);
     logger.info('Business profile saved', { file: 'feature-service.ts' });
   } catch (error) {
     logger.error(

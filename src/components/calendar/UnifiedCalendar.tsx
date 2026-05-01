@@ -15,9 +15,10 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { Calendar, dateFnsLocalizer, type View, type Event, type Components } from 'react-big-calendar';
+import { Calendar, dateFnsLocalizer, type View, type Event, type Components, type ToolbarProps } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '@/styles/social-calendar.css';
 import type {
@@ -58,6 +59,76 @@ interface UnifiedCalendarProps {
    * month-view date headers without forking the calendar wrapper.
    */
   components?: Components<CalendarRenderEvent>;
+  /**
+   * Fired whenever the operator navigates to a new date (Prev / Next /
+   * Today / drill-down). Lets the parent expand its event-fetch window
+   * when the operator scrolls beyond the cached range.
+   */
+  onNavigate?: (date: Date) => void;
+}
+
+// ============================================================================
+// CustomToolbar — replaces react-big-calendar's default toolbar with a
+// prominent set of buttons (Prev / Today / Next on the left, view switcher
+// on the right, current month label centered). Visibility was the main
+// complaint with the default toolbar — operators didn't realize the small
+// inline links were buttons.
+// ============================================================================
+
+function CustomToolbar({ label, onNavigate, onView, view, views }: ToolbarProps<CalendarRenderEvent>) {
+  const viewList = (Array.isArray(views) ? views : Object.keys(views as object)) as View[];
+  return (
+    <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+      <div className="inline-flex items-center gap-1 bg-card border border-border-strong rounded-lg p-1">
+        <button
+          type="button"
+          onClick={() => { onNavigate('PREV'); }}
+          className="inline-flex items-center justify-center w-9 h-9 rounded-md text-foreground hover:bg-surface-elevated transition-colors"
+          aria-label="Previous"
+          title="Previous"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => { onNavigate('TODAY'); }}
+          className="inline-flex items-center gap-1.5 px-3 h-9 rounded-md text-sm font-medium text-foreground hover:bg-surface-elevated transition-colors"
+          title="Jump to today"
+        >
+          <CalendarDays className="w-3.5 h-3.5" />
+          Today
+        </button>
+        <button
+          type="button"
+          onClick={() => { onNavigate('NEXT'); }}
+          className="inline-flex items-center justify-center w-9 h-9 rounded-md text-foreground hover:bg-surface-elevated transition-colors"
+          aria-label="Next"
+          title="Next"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      <h3 className="text-base font-semibold text-foreground flex-1 text-center">{label}</h3>
+
+      <div className="inline-flex items-center gap-0.5 bg-card border border-border-strong rounded-lg p-1">
+        {viewList.map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => { onView(v); }}
+            className={`px-3 h-9 rounded-md text-sm font-medium capitalize transition-colors ${
+              view === v
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-surface-elevated hover:text-foreground'
+            }`}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function UnifiedCalendar({
@@ -66,9 +137,28 @@ export default function UnifiedCalendar({
   onSelectDay,
   enabledSources,
   components,
+  onNavigate,
 }: UnifiedCalendarProps) {
   const [currentView, setCurrentView] = React.useState<View>('month');
   const [currentDate, setCurrentDate] = React.useState(new Date());
+
+  const handleNavigate = useCallback(
+    (date: Date) => {
+      setCurrentDate(date);
+      if (onNavigate) {
+        onNavigate(date);
+      }
+    },
+    [onNavigate],
+  );
+
+  const mergedComponents: Components<CalendarRenderEvent> = useMemo(
+    () => ({
+      ...(components ?? {}),
+      toolbar: CustomToolbar,
+    }),
+    [components],
+  );
 
   const renderEvents: CalendarRenderEvent[] = useMemo(() => {
     return events
@@ -138,14 +228,14 @@ export default function UnifiedCalendar({
         view={currentView}
         onView={setCurrentView}
         date={currentDate}
-        onNavigate={setCurrentDate}
+        onNavigate={handleNavigate}
         views={['month', 'week', 'day', 'agenda']}
         onSelectEvent={handleSelectEvent}
         onDrillDown={handleDrillDown}
         onSelectSlot={handleSelectSlot}
         selectable={!!onSelectDay}
         eventPropGetter={eventPropGetter}
-        components={components}
+        components={mergedComponents}
         style={{ height: 720 }}
         popup
       />

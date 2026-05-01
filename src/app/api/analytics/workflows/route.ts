@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     let allWorkflows: WorkflowRecord[] = [];
 
     try {
-      allWorkflows = (await AdminFirestoreService.getAll(workflowsPath, [])) as WorkflowRecord[];
+      allWorkflows = await AdminFirestoreService.getAll<WorkflowRecord>(workflowsPath, []);
     } catch (_e) {
       logger.debug('No workflows collection yet');
     }
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     let allExecutions: WorkflowExecutionRecord[] = [];
     
     try {
-      allExecutions = (await AdminFirestoreService.getAll(executionsPath, [])) as WorkflowExecutionRecord[];
+      allExecutions = await AdminFirestoreService.getAll<WorkflowExecutionRecord>(executionsPath, []);
     } catch (_e) {
       logger.debug('No workflow executions collection yet');
     }

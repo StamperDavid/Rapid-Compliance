@@ -203,10 +203,10 @@ async function calculateAttributionAnalytics(period: string): Promise<Attributio
   let allOrders: OrderRecord[] = [];
   let allFormSubmissions: FormSubmissionRecord[] = [];
 
-  try { allLeads = (await AdminFirestoreService.getAll(leadsPath, [])) as LeadRecord[]; } catch { logger.debug('No leads collection yet'); }
-  try { allDeals = (await AdminFirestoreService.getAll(dealsPath, [])) as DealRecord[]; } catch { logger.debug('No deals collection yet'); }
-  try { allOrders = (await AdminFirestoreService.getAll(ordersPath, [])) as OrderRecord[]; } catch { logger.debug('No orders collection yet'); }
-  try { allFormSubmissions = (await AdminFirestoreService.getAll(formSubmissionsPath, [])) as FormSubmissionRecord[]; } catch { logger.debug('No form submissions collection yet'); }
+  try { allLeads = await AdminFirestoreService.getAll<LeadRecord>(leadsPath, []); } catch { logger.debug('No leads collection yet'); }
+  try { allDeals = await AdminFirestoreService.getAll<DealRecord>(dealsPath, []); } catch { logger.debug('No deals collection yet'); }
+  try { allOrders = await AdminFirestoreService.getAll<OrderRecord>(ordersPath, []); } catch { logger.debug('No orders collection yet'); }
+  try { allFormSubmissions = await AdminFirestoreService.getAll<FormSubmissionRecord>(formSubmissionsPath, []); } catch { logger.debug('No form submissions collection yet'); }
 
   // Filter by date range
   const leads = allLeads.filter(l => {

@@ -444,7 +444,7 @@ async function assertNoDoubleBooking(
 ): Promise<void> {
   const endTime = new Date(startTime.getTime() + durationMinutes * 60_000);
   const meetingsPath = getSubCollection('meetings');
-  const all = (await AdminFirestoreService.getAll(meetingsPath, [])) as MeetingRecordSlim[];
+  const all = await AdminFirestoreService.getAll<MeetingRecordSlim>(meetingsPath, []);
 
   for (const m of all) {
     if (excludeMeetingId && m.id === excludeMeetingId) { continue; }

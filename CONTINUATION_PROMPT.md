@@ -540,6 +540,71 @@ The user's preference is to finish ONE thing completely before moving to the nex
 
 9. **Latency reduction for inbound DM polling** — ≤10s requirement. Bluesky and Mastodon both poll every 60s; webhooks would be near-instant but neither platform offers them for chat. Options: Firestore listener bridge + worker, or accept polling cadence.
 10. **Marketing Manager `checkIntelligenceSignals` error** — pre-existing low-severity error logged on every Marketing Manager invocation. Doesn't block flow but spams logs.
+11. **POST-YC TECH DEBT — Finish the server-side Admin-SDK sweep (silent Firestore permission-denied bug)**
+
+    **The bug, in one paragraph.** Firebase has two SDKs. The **Client SDK** (`@/lib/db/firestore-service` → `FirestoreService`) talks to Firestore *as the logged-in browser user* and is gated by Firestore Security Rules. The **Admin SDK** (`@/lib/db/admin-firestore-service` → `AdminFirestoreService`) uses a service-account credential and bypasses rules. Anything running on the server (API routes, lib services called from routes, cron handlers, webhook receivers) has **no logged-in user context**. So when server code uses the Client SDK, Firestore sees "unauthenticated user" and the rules deny every read and write. The error in the dev log is `FirebaseError: Missing or insufficient permissions.` — surface symptom is `7 PERMISSION_DENIED` on writes and silent empty reads on gets. Memory ref: `feedback_server_routes_must_use_admin_sdk.md`.
+
+    **Why it's silent and dangerous.** The wrappers around `FirestoreService.get` typically `try { ... } catch { return null; }`. So a denied read returns `null`, the route falls back to defaults, and the page renders fine — but the user's saved settings appear *not to exist*. Writes throw, and most routes log + swallow. Nothing crashes; nothing visibly breaks; data quietly fails to persist. This is the same class of bug that produced the Apr 30 Alex memory regression (every chat turn spawned a fresh blank instance because `storeActiveInstance` silently failed) and the Apr 28 SocialAccountService bug (handle/cred dual-store wrote to one collection only).
+
+    **Files fixed so far** (3 in this YC-eve session, plus 8 in prior sweeps):
+    - `src/lib/services/feature-service.ts` (May 1, 2026 — this session)
+    - `src/lib/services/entity-config-service.ts` (May 1, 2026 — this session)
+    - `src/lib/social/agent-config-service.ts` (May 1, 2026 — this session)
+    - `src/lib/agent/instance-manager.ts` — `storeActiveInstance`, `archiveInstance`, `notifyHumanAgents` (Apr 30)
+    - `src/app/api/cron/workflow-entity-poll/route.ts` (Apr 30)
+    - `src/app/api/crm/duplicates/merge/route.ts` (Apr 30)
+    - `src/app/api/voice/call/route.ts`, `voice/twiml/route.ts`, `voice/ai-agent/route.ts`, `voice/ai-agent/speech/route.ts` (Apr 30)
+    - `src/lib/agent/vector-search.ts` (Apr 30 — RAG read/write path on every /demo chat turn)
+    - `src/lib/social/social-account-service.ts` (Apr 28)
+
+    **Files still suspected** — `grep -l "from ['\"]@/lib/db/firestore-service['\"]" src` returns **102 hits** (run May 1, 2026). The page/hook/component hits are mostly correct (they run in the browser with auth context) and should NOT be touched. The server-side `lib/*` hits are the suspect set. Estimated **~50–60 server-side files** still on the wrong SDK. Triage rule: any `src/lib/**/*-service.ts` or `src/lib/**/*-engine.ts` that is imported by an `app/api/**/route.ts` or by a cron handler is a candidate.
+
+    **Suspect server-side files (high-priority — services called from API routes):**
+    - `src/lib/crm/*` — `activity-service`, `lead-service`, `deal-service`, `contact-service`, `company-service`, `quote-service`, `payment-service`, `invoice-service`, `lead-routing`, `duplicate-detection`
+    - `src/lib/social/*` — `autonomous-posting-agent`, `social-oauth-service`, `social-post-service`, `listening-service`, `approval-service`, `engagement-metrics-collector`, `sentiment-analyzer`
+    - `src/lib/email/*` — `email-template-service`, `campaign-service`, `email-sync`, `email-builder`
+    - `src/lib/ecommerce/*` — `cart-service`, `product-service`, `tax-service`, `shipping-service`
+    - `src/lib/integrations/*` — `integration-manager`, `oauth-service`, `gmail-sync-service`, `outlook-sync-service`, `calendar-sync-service`, `email-sync`
+    - `src/lib/workflows/*` + `src/lib/workflow/*` — `workflow-service`, `workflow-engine`, `triggers/*`
+    - `src/lib/training/*` — `golden-master-updater`
+    - `src/lib/agent/*` — `chat-session-service`, `golden-master-builder`, `knowledge-processor-enhanced`
+    - `src/lib/agents/*` — `outreach/voice/specialist`, `commerce/catalog/specialist`
+    - `src/lib/ai/*` — `fine-tuning/vertex-tuner`, `fine-tuning/openai-tuner`, `fine-tuning/data-collector`, `learning/ab-testing-service`, `learning/continuous-learning-engine`
+    - `src/lib/analytics/*` — `analytics-service`, `workflow-analytics`, `ecommerce-analytics`
+    - `src/lib/middleware/tier-enforcement.ts`
+    - `src/lib/meetings/scheduler-engine.ts`
+    - `src/lib/notifications/notification-service.ts`
+    - `src/lib/outbound/sequence-engine.ts`, `nurture-service.ts`
+    - `src/lib/orchestrator/feature-toggle-service.ts`
+    - `src/lib/team/collaboration.ts`
+    - `src/lib/promotions/promotion-service.ts`
+    - `src/lib/cache/cached-firestore.ts`
+    - `src/lib/battlecard/competitive-monitor.ts`
+    - `src/lib/compliance/tcpa-service.ts`
+    - `src/lib/config/api-keys.ts`
+    - `src/lib/ai/fine-tuning/*`
+
+    **Files NOT to touch** (already correctly using Client SDK from browser context):
+    - `src/app/(dashboard)/**/page.tsx` — dashboard pages
+    - `src/app/profile/page.tsx`, `src/app/store/products/**/*page.tsx`
+    - `src/hooks/*` — `useAuth`, `useUnifiedAuth`, `useUnifiedData`, `useRecords`
+    - `src/components/AuthProvider.tsx`, `src/components/LookupFieldPicker.tsx`
+
+    **The fix recipe (drop-in for most files).** `FirestoreService.get<T>` and `FirestoreService.set` have identical signatures to `AdminFirestoreService.get<T>` and `AdminFirestoreService.set`. Three-step swap per file:
+    1. `import { FirestoreService } from '@/lib/db/firestore-service';` → `import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';`
+    2. `FirestoreService.get<T>(...)` → `AdminFirestoreService.get<T>(...)` (same args)
+    3. `FirestoreService.set(...)` → `AdminFirestoreService.set(...)` (same args)
+    Type-check should stay green. *Caveats:* Admin SDK does not expose Firestore real-time listeners (`onSnapshot`) — if a server file uses one, it's actually a wrong place to listen, not a drop-in swap. Also, queries with custom `where` constraint constructors may need conversion; AdminFirestoreService's `getAll` already handles the common `where`/`orderBy`/`limit` shapes.
+
+    **Verification per file.** After swapping, hit the route that calls the service and watch dev-server.log. The error monitor catches `Missing or insufficient permissions` and `7 PERMISSION_DENIED` — silence on first invocation = good. Don't claim done until the route has actually been exercised.
+
+    **Effort estimate:** Sweep-by-grep + drop-in for ~50 files → roughly 3–5 hours including a smoke test per service. Some files will need real refactoring (any that mix client and server callers, or use `onSnapshot`). Add 1–2 hours of buffer for edge cases.
+
+    **Why this is post-YC, not pre-YC:** Risk of touching 50+ files in the hours before YC submission far exceeds the cost of the current bug class. Page loads work; only certain *save-actions* silently fail. The whack-a-mole approach (live error monitor + fix-as-they-fire) is sufficient to keep the YC demo flow clean.
+
+12. ~~Meeting cancel / reschedule UI on the dashboard~~ — **DONE May 1, 2026 in this session.** EventDetail panel in `UnifiedCalendarSection.tsx` now shows Cancel (two-step confirm) and Reschedule buttons for `meeting`/`booking` events. New `PATCH /api/meetings/[meetingId]` handler cancels the old Zoom meeting + creates a new one at the new time. New `RescheduleDialog` with datetime-local + duration inputs.
+
+13. ~~Dashboard calendar month navigation~~ — **DONE May 1, 2026 in this session.** Custom toolbar built into `UnifiedCalendar.tsx` with prominent Prev / Today / Next buttons + view switcher (month / week / day / agenda). Replaces the small inline default react-big-calendar toolbar that operators were missing.
 
 ---
 

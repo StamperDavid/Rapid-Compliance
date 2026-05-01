@@ -90,6 +90,8 @@ export default function UnifiedCalendarSection() {
   );
   const [popoutDate, setPopoutDate] = useState<Date | null>(null);
   const [popoutOpen, setPopoutOpen] = useState(false);
+  const [rescheduleEvent, setRescheduleEvent] = useState<UnifiedCalendarEvent | null>(null);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
@@ -264,6 +266,11 @@ export default function UnifiedCalendarSection() {
                 event={selected}
                 onClose={() => { setSelected(null); }}
                 onBack={selectedDay ? () => { setSelected(null); } : undefined}
+                onAfterAction={() => { void fetchEvents(); }}
+                onRequestReschedule={(ev) => {
+                  setRescheduleEvent(ev);
+                  setRescheduleOpen(true);
+                }}
               />
             ) : selectedDay ? (
               <DayDetail
@@ -291,6 +298,19 @@ export default function UnifiedCalendarSection() {
         open={popoutOpen}
         onOpenChange={setPopoutOpen}
         date={popoutDate}
+      />
+
+      <RescheduleDialog
+        event={rescheduleEvent}
+        open={rescheduleOpen}
+        onOpenChange={(o) => {
+          setRescheduleOpen(o);
+          if (!o) { setRescheduleEvent(null); }
+        }}
+        onRescheduled={() => {
+          setSelected(null);
+          void fetchEvents();
+        }}
       />
     </section>
   );
@@ -417,9 +437,11 @@ interface EventDetailProps {
   event: UnifiedCalendarEvent;
   onClose: () => void;
   onBack?: () => void;
+  onAfterAction?: () => void;
+  onRequestReschedule?: (event: UnifiedCalendarEvent) => void;
 }
 
-function EventDetail({ event, onClose, onBack }: EventDetailProps) {
+function EventDetail({ event, onClose, onBack, onAfterAction, onRequestReschedule }: EventDetailProps) {
   const start = new Date(event.start);
   const end = new Date(event.end);
   const sameInstant = start.getTime() === end.getTime();
@@ -432,6 +454,40 @@ function EventDetail({ event, onClose, onBack }: EventDetailProps) {
   const timeLabel = sameInstant
     ? start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
     : `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+
+  const isManageable = event.source === 'meeting' || event.source === 'booking';
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Auto-disarm cancel confirm after 5s — matches the destructive-actions
+  // two-step pattern used elsewhere in the platform.
+  useEffect(() => {
+    if (!confirmCancel) {return;}
+    const t = setTimeout(() => { setConfirmCancel(false); }, 5000);
+    return () => { clearTimeout(t); };
+  }, [confirmCancel]);
+
+  const handleCancelClick = async () => {
+    if (!confirmCancel) {
+      setConfirmCancel(true);
+      return;
+    }
+    setPending(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/meetings/${event.sourceId}/cancel`, { method: 'POST' });
+      const data = (await res.json()) as { success: boolean; error?: string };
+      if (!data.success) {throw new Error(data.error ?? 'Cancel failed');}
+      setConfirmCancel(false);
+      if (onAfterAction) {onAfterAction();}
+      onClose();
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : 'Cancel failed');
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -498,7 +554,196 @@ function EventDetail({ event, onClose, onBack }: EventDetailProps) {
           Open in source
         </a>
       ) : null}
+
+      {isManageable ? (
+        <div className="pt-3 border-t border-border-light space-y-2">
+          {actionError ? (
+            <div className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded px-2 py-1">
+              {actionError}
+            </div>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { onRequestReschedule?.(event); }}
+              disabled={pending}
+            >
+              <Clock className="w-3.5 h-3.5 mr-1.5" />
+              Reschedule
+            </Button>
+            {confirmCancel ? (
+              <>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => { void handleCancelClick(); }}
+                  disabled={pending}
+                >
+                  {pending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <XIcon className="w-3.5 h-3.5 mr-1.5" />}
+                  {pending ? 'Cancelling…' : 'Click again to confirm'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setConfirmCancel(false); }}
+                  disabled={pending}
+                >
+                  Keep it
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { void handleCancelClick(); }}
+                disabled={pending}
+              >
+                <XIcon className="w-3.5 h-3.5 mr-1.5" />
+                Cancel meeting
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+// ============================================================================
+// RescheduleDialog — date + time picker for moving an existing meeting.
+// Hits PATCH /api/meetings/[id] with the new startTime; the API recreates
+// the Zoom meeting at the new time and updates Firestore.
+// ============================================================================
+
+interface RescheduleDialogProps {
+  event: UnifiedCalendarEvent | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRescheduled: () => void;
+}
+
+function toLocalInputValue(d: Date): string {
+  // datetime-local needs YYYY-MM-DDTHH:mm in local time, no timezone suffix
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function RescheduleDialog({ event, open, onOpenChange, onRescheduled }: RescheduleDialogProps) {
+  const [startValue, setStartValue] = useState('');
+  const [duration, setDuration] = useState<number>(30);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!event) {return;}
+    setStartValue(toLocalInputValue(new Date(event.start)));
+    const ms = new Date(event.end).getTime() - new Date(event.start).getTime();
+    const mins = Math.max(15, Math.round(ms / 60000));
+    setDuration(mins > 0 ? mins : 30);
+    setError(null);
+  }, [event]);
+
+  const handleSubmit = async () => {
+    if (!event) {return;}
+    if (!startValue) {
+      setError('Pick a new date and time');
+      return;
+    }
+    const newStart = new Date(startValue);
+    if (Number.isNaN(newStart.getTime())) {
+      setError('Invalid date/time');
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/meetings/${event.sourceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startTime: newStart.toISOString(), duration }),
+      });
+      const data = (await res.json()) as { success: boolean; error?: string; zoomWarning?: string | null };
+      if (!data.success) {throw new Error(data.error ?? 'Reschedule failed');}
+      if (data.zoomWarning) {
+        setError(`Saved, but Zoom update failed: ${data.zoomWarning}`);
+      } else {
+        onRescheduled();
+        onOpenChange(false);
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Reschedule failed');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reschedule meeting</DialogTitle>
+          <DialogDescription>
+            Pick a new date and time. The Zoom meeting will be cancelled and a fresh
+            link will be issued for the new slot.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {event ? (
+            <div className="text-sm text-muted-foreground bg-surface-elevated/40 rounded p-3 border border-border-light">
+              <div className="font-medium text-foreground">{event.title}</div>
+              <div className="text-xs">
+                Currently {new Date(event.start).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+              </div>
+            </div>
+          ) : null}
+
+          <div>
+            <label className="block text-xs uppercase tracking-wide text-muted-foreground mb-1">
+              New date &amp; time
+            </label>
+            <input
+              type="datetime-local"
+              value={startValue}
+              onChange={(e) => { setStartValue(e.target.value); }}
+              className="w-full bg-card border border-border-light rounded-md px-3 py-2 text-sm focus:border-border-strong focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wide text-muted-foreground mb-1">
+              Duration (minutes)
+            </label>
+            <input
+              type="number"
+              min={15}
+              max={480}
+              step={15}
+              value={duration}
+              onChange={(e) => { setDuration(parseInt(e.target.value, 10) || 30); }}
+              className="w-full bg-card border border-border-light rounded-md px-3 py-2 text-sm focus:border-border-strong focus:outline-none"
+            />
+          </div>
+
+          {error ? (
+            <div className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded px-2 py-1">
+              {error}
+            </div>
+          ) : null}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => { onOpenChange(false); }} disabled={pending}>
+              Cancel
+            </Button>
+            <Button onClick={() => { void handleSubmit(); }} disabled={pending}>
+              {pending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {pending ? 'Saving…' : 'Save new time'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
