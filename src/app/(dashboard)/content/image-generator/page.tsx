@@ -6,10 +6,8 @@ import { StudioModePanel } from '../video/components/StudioModePanel';
 
 export default function ImageGeneratorPage() {
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <div className="px-6 pt-6">
-        <SubpageNav items={CONTENT_GENERATOR_TABS} />
-      </div>
+    <div className="p-8 space-y-6">
+      <SubpageNav items={CONTENT_GENERATOR_TABS} />
       <StudioModePanel />
     </div>
   );

@@ -130,37 +130,37 @@ export function VideoPlayer({ src, poster, className, onEnded }: VideoPlayerProp
           max={duration || 0}
           value={currentTime}
           onChange={handleSeek}
-          className="w-full h-1 mb-3 appearance-none bg-zinc-600 rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500"
+          className="w-full h-1 mb-3 appearance-none bg-border-strong rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
         />
 
         <div className="flex items-center gap-3">
           {/* Play/Pause */}
-          <button onClick={togglePlay} className="text-white hover:text-amber-400 transition-colors">
+          <button onClick={togglePlay} className="text-white hover:text-primary-light transition-colors">
             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
           </button>
 
           {/* Skip */}
-          <button onClick={() => skip(-10)} className="text-zinc-400 hover:text-white transition-colors">
+          <button onClick={() => skip(-10)} className="text-muted-foreground hover:text-white transition-colors">
             <SkipBack className="w-4 h-4" />
           </button>
-          <button onClick={() => skip(10)} className="text-zinc-400 hover:text-white transition-colors">
+          <button onClick={() => skip(10)} className="text-muted-foreground hover:text-white transition-colors">
             <SkipForward className="w-4 h-4" />
           </button>
 
           {/* Time */}
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-muted-foreground">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
 
           <div className="flex-1" />
 
           {/* Volume */}
-          <button onClick={toggleMute} className="text-zinc-400 hover:text-white transition-colors">
+          <button onClick={toggleMute} className="text-muted-foreground hover:text-white transition-colors">
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
 
           {/* Fullscreen */}
-          <button onClick={handleFullscreen} className="text-zinc-400 hover:text-white transition-colors">
+          <button onClick={handleFullscreen} className="text-muted-foreground hover:text-white transition-colors">
             <Maximize className="w-4 h-4" />
           </button>
         </div>
@@ -169,7 +169,7 @@ export function VideoPlayer({ src, poster, className, onEnded }: VideoPlayerProp
       {/* Play overlay when paused */}
       {!isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center cursor-pointer" onClick={togglePlay}>
-          <div className="w-16 h-16 rounded-full bg-amber-500/80 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-primary/80 flex items-center justify-center">
             <Play className="w-8 h-8 text-white ml-1" />
           </div>
         </div>

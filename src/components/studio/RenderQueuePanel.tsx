@@ -40,8 +40,8 @@ function getStatusConfig(status: GenerationStatus): StatusConfig {
     case 'queued':
       return {
         icon: <Clock className="h-4 w-4" />,
-        color: 'text-zinc-400',
-        bgColor: 'bg-zinc-500/10',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted/30',
         label: 'Queued',
       };
     case 'processing':
@@ -61,15 +61,15 @@ function getStatusConfig(status: GenerationStatus): StatusConfig {
     case 'failed':
       return {
         icon: <XCircle className="h-4 w-4" />,
-        color: 'text-red-400',
-        bgColor: 'bg-red-500/10',
+        color: 'text-destructive',
+        bgColor: 'bg-destructive/10',
         label: 'Failed',
       };
     case 'cancelled':
       return {
         icon: <Ban className="h-4 w-4" />,
-        color: 'text-zinc-500',
-        bgColor: 'bg-zinc-500/10',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted/30',
         label: 'Cancelled',
       };
   }
@@ -118,8 +118,8 @@ function QueueItemRow({ item, onCancel, onRetry, onSelect }: QueueItemRowProps) 
       transition={{ duration: 0.2 }}
       onClick={() => isClickable && onSelect(item.id)}
       className={cn(
-        'flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-900 p-3 transition-colors',
-        isClickable && 'cursor-pointer hover:border-zinc-500 hover:bg-zinc-800/80',
+        'flex items-center gap-3 rounded-lg border border-border-strong bg-card p-3 transition-colors',
+        isClickable && 'cursor-pointer hover:border-border hover:bg-surface-elevated/80',
       )}
     >
       {/* Status icon */}
@@ -135,24 +135,24 @@ function QueueItemRow({ item, onCancel, onRetry, onSelect }: QueueItemRowProps) 
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-zinc-300 truncate">{truncatedPrompt}</p>
+        <p className="text-sm text-foreground truncate">{truncatedPrompt}</p>
         <div className="mt-1 flex items-center gap-2">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-zinc-600 text-zinc-500">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-border text-muted-foreground">
             {item.provider}
           </Badge>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-zinc-600 text-zinc-500">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-border text-muted-foreground">
             {item.model}
           </Badge>
-          <span className="text-[10px] text-zinc-600">
+          <span className="text-[10px] text-muted-foreground">
             {formatCost(item.estimatedCost)}
           </span>
-          <span className="text-[10px] text-zinc-600">
+          <span className="text-[10px] text-muted-foreground">
             {formatTimestamp(item.createdAt)}
           </span>
         </div>
         {/* Progress bar for processing items */}
         {item.status === 'processing' && item.progress !== undefined && (
-          <div className="mt-1.5 h-1 w-full rounded-full bg-zinc-800 overflow-hidden">
+          <div className="mt-1.5 h-1 w-full rounded-full bg-surface-elevated overflow-hidden">
             <motion.div
               className="h-full rounded-full bg-blue-500"
               initial={{ width: 0 }}
@@ -163,7 +163,7 @@ function QueueItemRow({ item, onCancel, onRetry, onSelect }: QueueItemRowProps) 
         )}
         {/* Error message */}
         {item.status === 'failed' && item.error && (
-          <p className="mt-1 text-[10px] text-red-400/80 truncate">
+          <p className="mt-1 text-[10px] text-destructive/80 truncate">
             {item.error}
           </p>
         )}
@@ -180,7 +180,7 @@ function QueueItemRow({ item, onCancel, onRetry, onSelect }: QueueItemRowProps) 
               e.stopPropagation();
               onCancel(item.id);
             }}
-            className="h-7 w-7 text-zinc-500 hover:text-red-400"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
             title="Cancel"
           >
             <XCircle className="h-3.5 w-3.5" />
@@ -195,7 +195,7 @@ function QueueItemRow({ item, onCancel, onRetry, onSelect }: QueueItemRowProps) 
               e.stopPropagation();
               onRetry(item.id);
             }}
-            className="h-7 w-7 text-zinc-500 hover:text-blue-400"
+            className="h-7 w-7 text-muted-foreground hover:text-blue-400"
             title="Retry"
           >
             <RefreshCw className="h-3.5 w-3.5" />
@@ -219,13 +219,13 @@ export function RenderQueuePanel({
     return (
       <div
         className={cn(
-          'flex flex-col items-center justify-center py-12 text-zinc-500',
+          'flex flex-col items-center justify-center py-12 text-muted-foreground',
           className,
         )}
       >
         <Inbox className="h-10 w-10 mb-3 opacity-40" />
         <p className="text-sm font-medium">No generations in queue</p>
-        <p className="text-xs text-zinc-600 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Generated content will appear here
         </p>
       </div>

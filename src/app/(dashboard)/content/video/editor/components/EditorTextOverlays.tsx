@@ -128,7 +128,7 @@ export function EditorTextOverlays({
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
+    <Card className="border-border-strong bg-card">
       <CardHeader className="p-4 pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-white">
@@ -155,9 +155,9 @@ export function EditorTextOverlays({
       <CardContent className="p-4 pt-0">
         {textOverlays.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
-            <Type className="h-8 w-8 text-zinc-600" />
-            <p className="text-sm text-zinc-500">No text overlays yet</p>
-            <p className="text-xs text-zinc-600">
+            <Type className="h-8 w-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">No text overlays yet</p>
+            <p className="text-xs text-muted-foreground">
               Add text that appears at specific times in your video
             </p>
           </div>
@@ -182,7 +182,7 @@ export function EditorTextOverlays({
                   className={`group cursor-pointer rounded-lg border p-3 transition-colors ${
                     isSelected
                       ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-zinc-800 bg-zinc-800/50 hover:border-zinc-700'
+                      : 'border-border-strong bg-surface-elevated/50 hover:border-border-strong'
                   }`}
                 >
                   {/* Row 1: Text + Delete */}
@@ -194,7 +194,7 @@ export function EditorTextOverlays({
                         handleUpdateOverlay(overlay.id, { text: e.target.value })
                       }
                       onClick={(e) => e.stopPropagation()}
-                      className="min-w-0 flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500"
+                      className="min-w-0 flex-1 rounded border border-border-strong bg-surface-elevated px-2 py-1 text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500"
                       placeholder="Enter text..."
                     />
                     <Button
@@ -204,7 +204,7 @@ export function EditorTextOverlays({
                         e.stopPropagation();
                         handleRemoveOverlay(overlay.id);
                       }}
-                      className="h-7 w-7 shrink-0 text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -213,7 +213,7 @@ export function EditorTextOverlays({
                   {/* Row 2: Timing */}
                   <div className="mt-2 flex items-center gap-2">
                     <div className="flex items-center gap-1">
-                      <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         Start
                       </label>
                       <input
@@ -228,11 +228,11 @@ export function EditorTextOverlays({
                           })
                         }
                         onClick={(e) => e.stopPropagation()}
-                        className="w-16 rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-xs text-white outline-none focus:border-blue-500"
+                        className="w-16 rounded border border-border-strong bg-surface-elevated px-1.5 py-0.5 text-xs text-white outline-none focus:border-blue-500"
                       />
                     </div>
                     <div className="flex items-center gap-1">
-                      <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         End
                       </label>
                       <input
@@ -250,10 +250,10 @@ export function EditorTextOverlays({
                           })
                         }
                         onClick={(e) => e.stopPropagation()}
-                        className="w-16 rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-xs text-white outline-none focus:border-blue-500"
+                        className="w-16 rounded border border-border-strong bg-surface-elevated px-1.5 py-0.5 text-xs text-white outline-none focus:border-blue-500"
                       />
                     </div>
-                    <span className="ml-auto text-[10px] text-zinc-600">
+                    <span className="ml-auto text-[10px] text-muted-foreground">
                       {formatTime(overlay.startTime)} - {formatTime(overlay.endTime)}
                     </span>
                   </div>
@@ -273,7 +273,7 @@ export function EditorTextOverlays({
                           className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
                             overlay.position === opt.value
                               ? 'bg-blue-500/20 text-blue-400'
-                              : 'text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300'
+                              : 'text-muted-foreground hover:bg-border-strong hover:text-foreground'
                           }`}
                         >
                           <PositionIcon position={opt.value} />
@@ -282,7 +282,7 @@ export function EditorTextOverlays({
                     </div>
 
                     <div className="ml-2 flex items-center gap-1">
-                      <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         Size
                       </label>
                       <input
@@ -297,7 +297,7 @@ export function EditorTextOverlays({
                           })
                         }
                         onClick={(e) => e.stopPropagation()}
-                        className="w-14 rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-xs text-white outline-none focus:border-blue-500"
+                        className="w-14 rounded border border-border-strong bg-surface-elevated px-1.5 py-0.5 text-xs text-white outline-none focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -305,7 +305,7 @@ export function EditorTextOverlays({
                   {/* Row 4: Colors */}
                   <div className="mt-2 flex items-center gap-3">
                     <div className="flex items-center gap-1.5">
-                      <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         Font
                       </label>
                       <input
@@ -315,12 +315,12 @@ export function EditorTextOverlays({
                           handleUpdateOverlay(overlay.id, { fontColor: e.target.value })
                         }
                         onClick={(e) => e.stopPropagation()}
-                        className="h-6 w-6 cursor-pointer rounded border border-zinc-700 bg-transparent p-0"
+                        className="h-6 w-6 cursor-pointer rounded border border-border-strong bg-transparent p-0"
                       />
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         BG
                       </label>
                       <input
@@ -332,12 +332,12 @@ export function EditorTextOverlays({
                           });
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="h-6 w-6 cursor-pointer rounded border border-zinc-700 bg-transparent p-0"
+                        className="h-6 w-6 cursor-pointer rounded border border-border-strong bg-transparent p-0"
                       />
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         Opacity
                       </label>
                       <input
@@ -357,7 +357,7 @@ export function EditorTextOverlays({
                         onClick={(e) => e.stopPropagation()}
                         className="h-1.5 w-16 cursor-pointer accent-blue-400"
                       />
-                      <span className="w-7 text-right text-[10px] text-zinc-500">
+                      <span className="w-7 text-right text-[10px] text-muted-foreground">
                         {Math.round(bgParsed.opacity * 100)}%
                       </span>
                     </div>
@@ -365,7 +365,7 @@ export function EditorTextOverlays({
 
                   {/* Preview swatch */}
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                       Preview
                     </span>
                     <div

@@ -35,8 +35,8 @@ export function TikTokComposer({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-500" />
+      <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3">
+        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-warning" />
         <div className="text-xs text-foreground">
           <span className="font-semibold">TikTok requires a video.</span>{' '}
           Upload your clip below — without one, posting stays disabled.

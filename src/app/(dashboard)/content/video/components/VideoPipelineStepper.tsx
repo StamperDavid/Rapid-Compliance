@@ -63,10 +63,10 @@ export function VideoPipelineStepper({
                   className={cn(
                     'flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors',
                     isCurrent
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-500'
+                      ? 'border-primary bg-primary/10 text-primary'
                       : isCompleted || isPast
                         ? 'border-green-500 bg-green-500/10 text-green-500'
-                        : 'border-zinc-600 bg-zinc-800/50 text-zinc-500',
+                        : 'border-border bg-surface-elevated/50 text-muted-foreground',
                   )}
                   whileHover={isClickable ? { scale: 1.1 } : undefined}
                   whileTap={isClickable ? { scale: 0.95 } : undefined}
@@ -81,10 +81,10 @@ export function VideoPipelineStepper({
                   className={cn(
                     'text-xs font-medium whitespace-nowrap',
                     isCurrent
-                      ? 'text-amber-400'
+                      ? 'text-primary-light'
                       : isCompleted || isPast
                         ? 'text-green-400'
-                        : 'text-zinc-500',
+                        : 'text-muted-foreground',
                   )}
                 >
                   {PIPELINE_STEP_LABELS[step]}
@@ -100,8 +100,8 @@ export function VideoPipelineStepper({
                       index < currentIndex
                         ? 'bg-green-500'
                         : index === currentIndex
-                          ? 'bg-amber-500/50'
-                          : 'bg-zinc-700',
+                          ? 'bg-primary/50'
+                          : 'bg-border-strong',
                     )}
                   />
                 </div>

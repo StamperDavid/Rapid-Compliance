@@ -345,7 +345,7 @@ export function VoiceLibrary() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 gap-2 text-zinc-400">
+      <div className="flex items-center justify-center py-20 gap-2 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin" />
         <span className="text-sm">Loading voice library...</span>
       </div>
@@ -355,8 +355,8 @@ export function VoiceLibrary() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <AlertCircle className="w-8 h-8 text-red-400" />
-        <p className="text-sm text-red-400">{error}</p>
+        <AlertCircle className="w-8 h-8 text-destructive" />
+        <p className="text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" onClick={() => { void fetchVoices(); }} className="gap-2">
           <RefreshCw className="w-3 h-3" /> Retry
         </Button>
@@ -370,7 +370,7 @@ export function VoiceLibrary() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-white">Voice Library</h2>
-          <p className="text-xs text-zinc-500">{voices.length} voices available across all providers</p>
+          <p className="text-xs text-muted-foreground">{voices.length} voices available across all providers</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -384,8 +384,8 @@ export function VoiceLibrary() {
               }
             }}
             className={cn(
-              'gap-1.5 border-zinc-700 text-xs',
-              compareMode ? 'text-amber-400 border-amber-500/30' : 'text-zinc-400',
+              'gap-1.5 border-border-strong text-xs',
+              compareMode ? 'text-primary-light border-primary/30' : 'text-muted-foreground',
             )}
           >
             <GitCompareArrows className="w-3.5 h-3.5" />
@@ -396,8 +396,8 @@ export function VoiceLibrary() {
             size="sm"
             onClick={() => setShowTtsPanel(!showTtsPanel)}
             className={cn(
-              'gap-1.5 border-zinc-700 text-xs',
-              showTtsPanel ? 'text-purple-400 border-purple-500/30' : 'text-zinc-400',
+              'gap-1.5 border-border-strong text-xs',
+              showTtsPanel ? 'text-primary-light border-primary/30' : 'text-muted-foreground',
             )}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -407,7 +407,7 @@ export function VoiceLibrary() {
             variant="outline"
             size="sm"
             onClick={() => { void fetchVoices(); }}
-            className="gap-1.5 border-zinc-700 text-zinc-400"
+            className="gap-1.5 border-border-strong text-muted-foreground"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh
@@ -417,16 +417,16 @@ export function VoiceLibrary() {
 
       {/* Compare Selection Bar */}
       {compareMode && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-amber-400">
+            <div className="text-xs text-primary-light">
               Select 2-3 voices to compare ({compareSelection.length}/3 selected)
             </div>
             {compareSelection.length >= 2 && (
               <Button
                 size="sm"
                 onClick={() => setShowComparePanel(true)}
-                className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs h-7"
+                className="gap-1.5 bg-primary hover:bg-primary-dark text-white text-xs h-7"
               >
                 <GitCompareArrows className="w-3 h-3" />
                 Compare Now
@@ -438,9 +438,9 @@ export function VoiceLibrary() {
 
       {/* TTS Preview Panel */}
       {showTtsPanel && (
-        <div className="rounded-xl border border-purple-500/30 bg-zinc-900/80 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-            <MessageSquare className="w-4 h-4 text-purple-400" />
+        <div className="rounded-xl border border-primary/30 bg-card/80 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <MessageSquare className="w-4 h-4 text-primary-light" />
             Text-to-Speech Preview
           </div>
 
@@ -449,14 +449,14 @@ export function VoiceLibrary() {
             onChange={(e) => setTtsText(e.target.value)}
             placeholder="Enter text to speak..."
             rows={3}
-            className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+            className="w-full px-3 py-2.5 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
           />
 
           <div className="flex items-center gap-3">
             <select
               value={ttsVoiceId ?? ''}
               onChange={(e) => setTtsVoiceId(e.target.value || null)}
-              className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              className="flex-1 px-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="">Select a voice...</option>
               {voices.filter((v) => v.provider === 'elevenlabs' || v.provider === 'custom' || v.provider === 'unrealspeech').map((v) => (
@@ -470,7 +470,7 @@ export function VoiceLibrary() {
               size="sm"
               onClick={() => { void handleGenerateTts(); }}
               disabled={ttsGenerating || !ttsVoiceId || !ttsText.trim()}
-              className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs"
+              className="gap-1.5 bg-primary-dark hover:bg-primary-dark text-white text-xs"
             >
               {ttsGenerating ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -482,7 +482,7 @@ export function VoiceLibrary() {
           </div>
 
           {ttsAudioUrl && (
-            <div className="flex items-center gap-2 pt-2 border-t border-zinc-800">
+            <div className="flex items-center gap-2 pt-2 border-t border-border-strong">
               <Button
                 variant="ghost"
                 size="sm"
@@ -501,7 +501,7 @@ export function VoiceLibrary() {
                 <Download className="w-3 h-3" />
                 Download
               </Button>
-              <span className="text-[10px] text-zinc-500 ml-auto">Audio ready</span>
+              <span className="text-[10px] text-muted-foreground ml-auto">Audio ready</span>
             </div>
           )}
         </div>
@@ -518,58 +518,58 @@ export function VoiceLibrary() {
       )}
 
       {/* Collections Section */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50">
+      <div className="rounded-xl border border-border-strong bg-card/50">
         <button
           onClick={() => setShowCollections(!showCollections)}
-          className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/30 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-elevated/30 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <FolderOpen className="w-4 h-4 text-amber-400" />
-            <span className="text-sm font-medium text-zinc-300">Collections</span>
-            <span className="text-[10px] text-zinc-600">({collections.length})</span>
+            <FolderOpen className="w-4 h-4 text-primary-light" />
+            <span className="text-sm font-medium text-foreground">Collections</span>
+            <span className="text-[10px] text-muted-foreground">({collections.length})</span>
           </div>
           {showCollections ? (
-            <ChevronUp className="w-4 h-4 text-zinc-500" />
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-zinc-500" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           )}
         </button>
 
         {showCollections && (
-          <div className="px-4 pb-4 space-y-3 border-t border-zinc-800/50">
+          <div className="px-4 pb-4 space-y-3 border-t border-border-strong/50">
             {/* Create Collection */}
             {!showCreateCollection ? (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowCreateCollection(true)}
-                className="gap-1.5 border-zinc-700 text-zinc-400 text-xs mt-3"
+                className="gap-1.5 border-border-strong text-muted-foreground text-xs mt-3"
               >
                 <Plus className="w-3 h-3" />
                 New Collection
               </Button>
             ) : (
-              <div className="mt-3 space-y-2 rounded-lg bg-zinc-800/30 p-3">
+              <div className="mt-3 space-y-2 rounded-lg bg-surface-elevated/30 p-3">
                 <input
                   type="text"
                   value={newCollectionName}
                   onChange={(e) => setNewCollectionName(e.target.value)}
                   placeholder="Collection name (e.g. Brand Voices)"
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  className="w-full px-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
                 <input
                   type="text"
                   value={newCollectionDesc}
                   onChange={(e) => setNewCollectionDesc(e.target.value)}
                   placeholder="Description (optional)"
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  className="w-full px-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     onClick={() => { void handleCreateCollection(); }}
                     disabled={creatingCollection || !newCollectionName.trim()}
-                    className="gap-1 bg-amber-600 hover:bg-amber-700 text-white text-xs"
+                    className="gap-1 bg-primary hover:bg-primary-dark text-white text-xs"
                   >
                     {creatingCollection ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                     Create
@@ -578,7 +578,7 @@ export function VoiceLibrary() {
                     variant="ghost"
                     size="sm"
                     onClick={() => { setShowCreateCollection(false); setNewCollectionName(''); setNewCollectionDesc(''); }}
-                    className="text-xs text-zinc-400"
+                    className="text-xs text-muted-foreground"
                   >
                     Cancel
                   </Button>
@@ -588,7 +588,7 @@ export function VoiceLibrary() {
 
             {/* Collection List */}
             {collections.length === 0 ? (
-              <p className="text-xs text-zinc-600 py-2">No collections yet. Create one to organize your voices.</p>
+              <p className="text-xs text-muted-foreground py-2">No collections yet. Create one to organize your voices.</p>
             ) : (
               <div className="space-y-2 mt-2">
                 {collections.map((collection) => {
@@ -601,13 +601,13 @@ export function VoiceLibrary() {
                   return (
                     <div
                       key={collection.id}
-                      className="rounded-lg border border-zinc-700/50 bg-zinc-800/30 p-3"
+                      className="rounded-lg border border-border-strong/50 bg-surface-elevated/30 p-3"
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div>
                           <p className="text-sm font-medium text-white">{collection.name}</p>
                           {collection.description && (
-                            <p className="text-[10px] text-zinc-500">{collection.description}</p>
+                            <p className="text-[10px] text-muted-foreground">{collection.description}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-1">
@@ -616,7 +616,7 @@ export function VoiceLibrary() {
                               variant="ghost"
                               size="sm"
                               onClick={() => { void handlePlayAllPreviews(collection); }}
-                              className="h-6 px-2 text-[10px] gap-1 text-zinc-400"
+                              className="h-6 px-2 text-[10px] gap-1 text-muted-foreground"
                               title="Play all voice previews in this collection"
                             >
                               <Play className="w-2.5 h-2.5" />
@@ -627,20 +627,20 @@ export function VoiceLibrary() {
                             variant="ghost"
                             size="sm"
                             onClick={() => { void handleDeleteCollection(collection.id); }}
-                            className="h-6 w-6 p-0 text-zinc-600 hover:text-red-400"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[10px] text-zinc-500">
+                        <span className="text-[10px] text-muted-foreground">
                           {voiceCount} voice{voiceCount !== 1 ? 's' : ''}
                         </span>
                         {collectionVoiceNames.length > 0 && (
                           <>
-                            <span className="text-zinc-700">|</span>
-                            <span className="text-[10px] text-zinc-600 truncate">
+                            <span className="text-muted-foreground">|</span>
+                            <span className="text-[10px] text-muted-foreground truncate">
                               {collectionVoiceNames.join(', ')}{voiceCount > 3 ? '...' : ''}
                             </span>
                           </>
@@ -673,8 +673,8 @@ export function VoiceLibrary() {
               className={cn(
                 'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
                 filter === f
-                  ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-                  : 'bg-zinc-800/50 text-zinc-400 border-zinc-700/50 hover:border-zinc-600',
+                  ? 'bg-primary/20 text-primary-light border-primary/30'
+                  : 'bg-surface-elevated/50 text-muted-foreground border-border-strong/50 hover:border-border',
               )}
             >
               {`${label} (${count})`}
@@ -698,20 +698,20 @@ export function VoiceLibrary() {
                 'relative rounded-xl border p-4 transition-all',
                 compareMode && 'cursor-pointer',
                 isSelected && compareMode
-                  ? 'border-amber-500/50 bg-amber-500/5 ring-1 ring-amber-500/20'
+                  ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
                   : isDefault
-                  ? 'border-purple-500/50 bg-purple-500/5'
-                  : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700',
+                  ? 'border-primary/50 bg-primary/5'
+                  : 'border-border-strong bg-card/50 hover:border-border-strong',
               )}
             >
               {isDefault && (
-                <span className="absolute top-2 right-2 px-1.5 py-0.5 text-[9px] font-bold bg-purple-500/20 text-purple-400 rounded">
+                <span className="absolute top-2 right-2 px-1.5 py-0.5 text-[9px] font-bold bg-primary/20 text-primary-light rounded">
                   DEFAULT
                 </span>
               )}
 
               {compareMode && isSelected && (
-                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
+                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                   <Check className="w-3 h-3 text-white" />
                 </span>
               )}
@@ -719,30 +719,30 @@ export function VoiceLibrary() {
               <div className="flex items-start gap-3">
                 <div className={cn(
                   'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
-                  isPlaying ? 'bg-purple-500/20' : 'bg-zinc-800',
+                  isPlaying ? 'bg-primary/20' : 'bg-surface-elevated',
                 )}>
                   {isPlaying ? (
-                    <Volume2 className="w-5 h-5 text-purple-400 animate-pulse" />
+                    <Volume2 className="w-5 h-5 text-primary-light animate-pulse" />
                   ) : (
-                    <Mic className="w-5 h-5 text-zinc-500" />
+                    <Mic className="w-5 h-5 text-muted-foreground" />
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{voice.name}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {voice.language && <span className="text-[10px] text-zinc-500">{voice.language}</span>}
+                    {voice.language && <span className="text-[10px] text-muted-foreground">{voice.language}</span>}
                     {voice.gender && (
                       <>
-                        <span className="text-zinc-700">·</span>
-                        <span className="text-[10px] text-zinc-500 capitalize">{voice.gender}</span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="text-[10px] text-muted-foreground capitalize">{voice.gender}</span>
                       </>
                     )}
                     <span className={cn(
                       'px-1 py-0.5 text-[8px] font-bold rounded',
                       voice.provider === 'custom' ? 'bg-green-500/20 text-green-400'
-                        : voice.provider === 'elevenlabs' ? 'bg-purple-500/20 text-purple-400'
-                        : 'bg-orange-500/20 text-orange-400',
+                        : voice.provider === 'elevenlabs' ? 'bg-primary/20 text-primary-light'
+                        : 'bg-primary/20 text-primary-light',
                     )}>
                       {voice.provider === 'custom' ? 'CLONE'
                         : voice.provider === 'elevenlabs' ? 'XI'
@@ -809,7 +809,7 @@ export function VoiceLibrary() {
                         <FolderOpen className="w-3 h-3" />
                       </Button>
                       {showAssignMenu === voice.id && (
-                        <div className="absolute right-0 top-8 z-20 w-48 rounded-lg border border-zinc-700 bg-zinc-800 shadow-xl py-1">
+                        <div className="absolute right-0 top-8 z-20 w-48 rounded-lg border border-border-strong bg-surface-elevated shadow-xl py-1">
                           {collections.map((col) => {
                             const isInCollection = col.voiceIds.includes(voice.id);
                             return (
@@ -817,12 +817,12 @@ export function VoiceLibrary() {
                                 key={col.id}
                                 onClick={() => { void handleAssignVoice(voice.id, col.id); }}
                                 disabled={assigningVoiceId === voice.id}
-                                className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700/50 flex items-center gap-2"
+                                className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-border-strong/50 flex items-center gap-2"
                               >
                                 {isInCollection ? (
                                   <Check className="w-3 h-3 text-green-400" />
                                 ) : (
-                                  <Plus className="w-3 h-3 text-zinc-500" />
+                                  <Plus className="w-3 h-3 text-muted-foreground" />
                                 )}
                                 {col.name}
                               </button>
@@ -840,15 +840,15 @@ export function VoiceLibrary() {
       </div>
 
       {filteredVoices.length > 50 && (
-        <p className="text-xs text-zinc-500 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           Showing 50 of {filteredVoices.length} voices. Use filters to narrow results.
         </p>
       )}
 
       {filteredVoices.length === 0 && (
         <div className="flex flex-col items-center py-16 gap-3">
-          <AudioWaveform className="w-10 h-10 text-zinc-700" />
-          <p className="text-sm text-zinc-500">No voices match this filter.</p>
+          <AudioWaveform className="w-10 h-10 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No voices match this filter.</p>
         </div>
       )}
     </div>
@@ -913,9 +913,9 @@ function ComparePanel({ voices, authFetch, onSelectWinner, onClose }: ComparePan
   };
 
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-zinc-900/80 p-4 space-y-4">
+    <div className="rounded-xl border border-primary/30 bg-card/80 p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium text-amber-400">
+        <div className="flex items-center gap-2 text-sm font-medium text-primary-light">
           <GitCompareArrows className="w-4 h-4" />
           Voice Comparison
         </div>
@@ -923,13 +923,13 @@ function ComparePanel({ voices, authFetch, onSelectWinner, onClose }: ComparePan
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="h-6 w-6 p-0 text-zinc-400 hover:text-white"
+          className="h-6 w-6 p-0 text-muted-foreground hover:text-white"
         >
           <X className="w-4 h-4" />
         </Button>
       </div>
 
-      <p className="text-[10px] text-zinc-500 bg-zinc-800/50 rounded px-2 py-1.5">
+      <p className="text-[10px] text-muted-foreground bg-surface-elevated/50 rounded px-2 py-1.5">
         Sample: &ldquo;{sampleText}&rdquo;
       </p>
 
@@ -941,7 +941,7 @@ function ComparePanel({ voices, authFetch, onSelectWinner, onClose }: ComparePan
           return (
             <div
               key={voice.id}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-zinc-700/50 bg-zinc-800/30"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border-strong/50 bg-surface-elevated/30"
             >
               <button
                 onClick={() => { void handleComparePlay(voice); }}
@@ -949,8 +949,8 @@ function ComparePanel({ voices, authFetch, onSelectWinner, onClose }: ComparePan
                 className={cn(
                   'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors',
                   isPlaying
-                    ? 'bg-amber-500/20 text-amber-400'
-                    : 'bg-zinc-700 text-zinc-400 hover:text-white',
+                    ? 'bg-primary/20 text-primary-light'
+                    : 'bg-border-strong text-muted-foreground hover:text-white',
                 )}
               >
                 {isLoading ? (
@@ -964,14 +964,14 @@ function ComparePanel({ voices, authFetch, onSelectWinner, onClose }: ComparePan
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{voice.name}</p>
-                <span className="text-[10px] text-zinc-500">{voice.provider}</span>
+                <span className="text-[10px] text-muted-foreground">{voice.provider}</span>
               </div>
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onSelectWinner(voice.id)}
-                className="gap-1 text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10 h-7"
+                className="gap-1 text-xs border-primary/30 text-primary-light hover:bg-primary/10 h-7"
               >
                 <Check className="w-3 h-3" />
                 Select Winner

@@ -14,22 +14,17 @@
  *   - chat_announcement:                   500
  *   - clip_caption (working cap):          140
  *   - schedule_segment (working cap):      200
- *
- * NOTE: PLATFORM_META.twitch does not yet exist in platform-config.ts —
- * the operator will add it after the central Twitch developer app is
- * registered. Until then we use a hard-coded Twitch purple as the accent.
  */
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 import type { PlatformComposerFormProps } from './PlatformComposer';
 import { useCharCountdownColor } from './_utils';
 
-// ─── Local constants (replace with PLATFORM_META.twitch once added) ───────────
-
-const TWITCH_PURPLE = '#9146FF';
+const TWITCH_ACCENT = PLATFORM_META.twitch.color;
 
 type TwitchContentType =
   | 'stream_announcement'
@@ -227,7 +222,7 @@ export function TwitchComposer({
             maxLength={meta.hardMax}
             disabled={disabled}
             className="resize-none pr-16"
-            style={{ borderColor: TWITCH_PURPLE }}
+            style={{ borderColor: TWITCH_ACCENT }}
           />
           <div className={`absolute bottom-2 right-3 text-xs font-medium ${countdownColor}`}>
             {meta.hardMax - value.content.length}

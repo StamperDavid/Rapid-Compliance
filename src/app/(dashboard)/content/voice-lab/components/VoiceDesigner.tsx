@@ -190,7 +190,7 @@ function EffectSlider({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-zinc-400 w-20 flex-shrink-0">{label}</span>
+      <span className="text-xs text-muted-foreground w-20 flex-shrink-0">{label}</span>
       <input
         type="range"
         min={min}
@@ -198,9 +198,9 @@ function EffectSlider({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="flex-1 accent-purple-500 h-1.5"
+        className="flex-1 accent-primary h-1.5"
       />
-      <span className="text-xs text-zinc-500 w-16 text-right tabular-nums">
+      <span className="text-xs text-muted-foreground w-16 text-right tabular-nums">
         {value.toFixed(step < 1 ? (step < 0.1 ? 2 : 1) : 0)}{unit ?? ''}
       </span>
     </div>
@@ -219,9 +219,9 @@ function VoiceCard({
   onSelect: () => void;
 }) {
   const providerColors: Record<string, string> = {
-    elevenlabs: 'bg-violet-500/15 text-violet-400 border-violet-500/30',
-    unrealSpeech: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    custom: 'bg-pink-500/15 text-pink-400 border-pink-500/30',
+    elevenlabs: 'bg-primary/15 text-primary-light border-primary/30',
+    unrealSpeech: 'bg-primary/15 text-primary-light border-primary/30',
+    custom: 'bg-primary/15 text-primary-light border-primary/30',
   };
 
   return (
@@ -230,37 +230,37 @@ function VoiceCard({
       className={cn(
         'flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left w-full',
         isSelected
-          ? 'bg-purple-500/10 border-purple-500/50 shadow-lg shadow-purple-500/5'
-          : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/50',
+          ? 'bg-primary/10 border-primary/50 shadow-lg shadow-primary/5'
+          : 'bg-card/50 border-border-strong hover:border-border hover:bg-surface-elevated/50',
       )}
     >
       <div className={cn(
         'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
-        isSelected ? 'bg-purple-500/20' : 'bg-zinc-800',
+        isSelected ? 'bg-primary/20' : 'bg-surface-elevated',
       )}>
-        <AudioWaveform className={cn('w-4 h-4', isSelected ? 'text-purple-400' : 'text-zinc-500')} />
+        <AudioWaveform className={cn('w-4 h-4', isSelected ? 'text-primary-light' : 'text-muted-foreground')} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className={cn('text-sm font-medium truncate', isSelected ? 'text-purple-300' : 'text-zinc-200')}>
+        <p className={cn('text-sm font-medium truncate', isSelected ? 'text-primary-light' : 'text-foreground')}>
           {voice.name}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className={cn(
             'text-[10px] px-1.5 py-0.5 rounded border',
-            providerColors[voice.provider] ?? 'bg-zinc-800 text-zinc-500 border-zinc-700',
+            providerColors[voice.provider] ?? 'bg-surface-elevated text-muted-foreground border-border-strong',
           )}>
             {voice.provider}
           </span>
           {voice.gender && (
-            <span className="text-[10px] text-zinc-600">{voice.gender}</span>
+            <span className="text-[10px] text-muted-foreground">{voice.gender}</span>
           )}
           {voice.language && (
-            <span className="text-[10px] text-zinc-600">{voice.language}</span>
+            <span className="text-[10px] text-muted-foreground">{voice.language}</span>
           )}
         </div>
       </div>
       {isSelected && (
-        <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+        <CheckCircle2 className="w-4 h-4 text-primary-light flex-shrink-0" />
       )}
     </button>
   );
@@ -579,12 +579,12 @@ export function VoiceDesigner() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
           <Wand2 className="w-5 h-5 text-white" />
         </div>
         <div>
           <h2 className="text-lg font-bold text-white">Voice Designer</h2>
-          <p className="text-xs text-zinc-500">Select a voice, modify it with effects, and save as a new custom voice</p>
+          <p className="text-xs text-muted-foreground">Select a voice, modify it with effects, and save as a new custom voice</p>
         </div>
       </div>
 
@@ -599,27 +599,27 @@ export function VoiceDesigner() {
             className="space-y-4"
           >
             {/* Step indicator */}
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <div className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center text-xs font-bold">1</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">1</div>
               <span className="font-medium text-white">Choose a voice</span>
-              <div className="w-8 h-px bg-zinc-700" />
-              <div className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-600 flex items-center justify-center text-xs font-bold">2</div>
-              <span className="text-zinc-600">Design</span>
-              <div className="w-8 h-px bg-zinc-700" />
-              <div className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-600 flex items-center justify-center text-xs font-bold">3</div>
-              <span className="text-zinc-600">Save</span>
+              <div className="w-8 h-px bg-border-strong" />
+              <div className="w-6 h-6 rounded-full bg-surface-elevated text-muted-foreground flex items-center justify-center text-xs font-bold">2</div>
+              <span className="text-muted-foreground">Design</span>
+              <div className="w-8 h-px bg-border-strong" />
+              <div className="w-6 h-6 rounded-full bg-surface-elevated text-muted-foreground flex items-center justify-center text-xs font-bold">3</div>
+              <span className="text-muted-foreground">Save</span>
             </div>
 
             {/* Search & Filter */}
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search voices..."
                   value={voiceSearch}
                   onChange={(e) => setVoiceSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                  className="w-full pl-9 pr-4 py-2.5 bg-surface-elevated/80 border border-border-strong rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
               <div className="flex gap-1">
@@ -630,8 +630,8 @@ export function VoiceDesigner() {
                     className={cn(
                       'px-3 py-2 rounded-xl text-xs font-medium border transition-all capitalize',
                       providerFilter === p
-                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
-                        : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-500 hover:border-zinc-500',
+                        ? 'bg-primary/15 border-primary/40 text-primary-light'
+                        : 'bg-surface-elevated/50 border-border-strong/50 text-muted-foreground hover:border-border',
                     )}
                   >
                     {p}
@@ -641,17 +641,17 @@ export function VoiceDesigner() {
             </div>
 
             {/* Voice Grid */}
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
+            <div className="rounded-2xl border border-border-strong bg-card/80 p-4">
               {loadingVoices ? (
-                <div className="flex items-center justify-center py-12 gap-2 text-zinc-500">
+                <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <span className="text-sm">Loading voices...</span>
                 </div>
               ) : filteredVoices.length === 0 ? (
                 <div className="text-center py-12">
-                  <AudioWaveform className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-                  <p className="text-sm text-zinc-500">No voices found</p>
-                  <p className="text-xs text-zinc-600 mt-1">Try a different search or filter</p>
+                  <AudioWaveform className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No voices found</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try a different search or filter</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-1">
@@ -669,8 +669,8 @@ export function VoiceDesigner() {
 
             {/* Sample Text */}
             {selectedVoice && (
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5">
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
+              <div className="rounded-2xl border border-border-strong bg-card/80 p-5">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Sample Text
                 </label>
                 <textarea
@@ -678,7 +678,7 @@ export function VoiceDesigner() {
                   onChange={(e) => setSampleText(e.target.value)}
                   placeholder="Enter text to generate a voice sample..."
                   rows={3}
-                  className="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none mb-3"
+                  className="w-full px-4 py-3 bg-surface-elevated/80 border border-border-strong rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none mb-3"
                 />
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {SAMPLE_TEXT_OPTIONS.map((text, i) => (
@@ -688,8 +688,8 @@ export function VoiceDesigner() {
                       className={cn(
                         'px-2.5 py-1 rounded-lg text-[10px] border transition-all',
                         sampleText === text
-                          ? 'bg-purple-500/15 border-purple-500/30 text-purple-300'
-                          : 'bg-zinc-800 border-zinc-700/50 text-zinc-500 hover:text-zinc-300',
+                          ? 'bg-primary/15 border-primary/30 text-primary-light'
+                          : 'bg-surface-elevated border-border-strong/50 text-muted-foreground hover:text-foreground',
                       )}
                     >
                       Sample {i + 1}
@@ -698,16 +698,16 @@ export function VoiceDesigner() {
                 </div>
 
                 {sampleError && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl mb-3">
-                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                    <p className="text-xs text-red-400">{sampleError}</p>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-xl mb-3">
+                    <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+                    <p className="text-xs text-destructive">{sampleError}</p>
                   </div>
                 )}
 
                 <Button
                   onClick={() => { void generateSample(); }}
                   disabled={isGeneratingSample || !sampleText.trim()}
-                  className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl w-full"
+                  className="gap-2 bg-gradient-to-r from-primary to-primary-dark hover:from-primary hover:to-primary-dark text-white rounded-xl w-full"
                 >
                   {isGeneratingSample ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -731,23 +731,23 @@ export function VoiceDesigner() {
             className="space-y-4"
           >
             {/* Step indicator */}
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <div className="w-6 h-6 rounded-full bg-purple-500/30 text-purple-300 flex items-center justify-center text-xs font-bold">1</div>
-              <span className="text-purple-400">{selectedVoice?.name}</span>
-              <div className="w-8 h-px bg-purple-500/30" />
-              <div className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center text-xs font-bold">2</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="w-6 h-6 rounded-full bg-primary/30 text-primary-light flex items-center justify-center text-xs font-bold">1</div>
+              <span className="text-primary-light">{selectedVoice?.name}</span>
+              <div className="w-8 h-px bg-primary/30" />
+              <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">2</div>
               <span className="font-medium text-white">Design</span>
-              <div className="w-8 h-px bg-zinc-700" />
-              <div className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-600 flex items-center justify-center text-xs font-bold">3</div>
-              <span className="text-zinc-600">Save</span>
+              <div className="w-8 h-px bg-border-strong" />
+              <div className="w-6 h-6 rounded-full bg-surface-elevated text-muted-foreground flex items-center justify-center text-xs font-bold">3</div>
+              <span className="text-muted-foreground">Save</span>
             </div>
 
             {/* Playback Controls */}
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-2xl border border-border-strong bg-card/80 p-5">
               <div className="flex items-center gap-4">
                 <button
                   onClick={togglePlayback}
-                  className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center hover:shadow-lg hover:shadow-violet-500/30 transition-all flex-shrink-0"
+                  className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 transition-all flex-shrink-0"
                 >
                   {isPlaying ? (
                     <Pause className="w-6 h-6 text-white" />
@@ -760,13 +760,13 @@ export function VoiceDesigner() {
                     <p className="text-sm font-medium text-white truncate">
                       {selectedVoice?.name} — {activePreset || 'Custom Effects'}
                     </p>
-                    <span className="text-xs text-zinc-500 ml-2 flex-shrink-0">
+                    <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
                       {formatTime(playbackProgress * sampleBuffer.duration)} / {formatTime(sampleBuffer.duration)}
                     </span>
                   </div>
-                  <div className="w-full bg-zinc-800 rounded-full h-1.5">
+                  <div className="w-full bg-surface-elevated rounded-full h-1.5">
                     <div
-                      className="bg-gradient-to-r from-violet-500 to-indigo-500 h-1.5 rounded-full transition-all"
+                      className="bg-gradient-to-r from-primary to-primary h-1.5 rounded-full transition-all"
                       style={{ width: `${playbackProgress * 100}%` }}
                     />
                   </div>
@@ -775,12 +775,12 @@ export function VoiceDesigner() {
             </div>
 
             {/* Effect Presets */}
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-2xl border border-border-strong bg-card/80 p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-zinc-300">Voice Presets</h3>
+                <h3 className="text-sm font-semibold text-foreground">Voice Presets</h3>
                 <button
                   onClick={resetEffects}
-                  className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" />
                   Reset
@@ -794,44 +794,44 @@ export function VoiceDesigner() {
                     className={cn(
                       'px-3 py-2.5 rounded-xl border text-left transition-all',
                       activePreset === preset.name
-                        ? 'bg-purple-500/10 border-purple-500/40'
-                        : 'bg-zinc-800/50 border-zinc-700/50 hover:border-zinc-500',
+                        ? 'bg-primary/10 border-primary/40'
+                        : 'bg-surface-elevated/50 border-border-strong/50 hover:border-border',
                     )}
                   >
                     <p className={cn(
                       'text-xs font-medium',
-                      activePreset === preset.name ? 'text-purple-300' : 'text-zinc-300',
+                      activePreset === preset.name ? 'text-primary-light' : 'text-foreground',
                     )}>
                       {preset.name}
                     </p>
-                    <p className="text-[10px] text-zinc-600 mt-0.5 truncate">{preset.description}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{preset.description}</p>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Effects Controls */}
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+            <div className="rounded-2xl border border-border-strong bg-card/80 overflow-hidden">
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-zinc-800/30 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-elevated/30 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <Settings2 className="w-4 h-4 text-zinc-500" />
-                  <span className="text-sm font-semibold text-zinc-300">Fine-Tune Effects</span>
+                  <Settings2 className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold text-foreground">Fine-Tune Effects</span>
                 </div>
                 {showAdvanced ? (
-                  <ChevronUp className="w-4 h-4 text-zinc-500" />
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-zinc-500" />
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 )}
               </button>
 
               {showAdvanced && (
-                <div className="px-5 pb-5 space-y-5 border-t border-zinc-800 pt-4">
+                <div className="px-5 pb-5 space-y-5 border-t border-border-strong pt-4">
                   {/* Pitch & Speed */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Pitch & Speed</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Pitch & Speed</p>
                     <div className="space-y-2">
                       <EffectSlider
                         label="Pitch"
@@ -856,7 +856,7 @@ export function VoiceDesigner() {
 
                   {/* Equalizer */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Equalizer</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Equalizer</p>
                     <div className="space-y-2">
                       <EffectSlider
                         label="Low (100Hz)"
@@ -890,7 +890,7 @@ export function VoiceDesigner() {
 
                   {/* Compressor */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Compressor</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Compressor</p>
                     <div className="space-y-2">
                       <EffectSlider
                         label="Threshold"
@@ -915,7 +915,7 @@ export function VoiceDesigner() {
 
                   {/* Reverb */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Reverb</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Reverb</p>
                     <div className="space-y-2">
                       <EffectSlider
                         label="Mix"
@@ -939,7 +939,7 @@ export function VoiceDesigner() {
 
                   {/* Delay */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Delay</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Delay</p>
                     <div className="space-y-2">
                       <EffectSlider
                         label="Time"
@@ -971,7 +971,7 @@ export function VoiceDesigner() {
 
                   {/* Noise Gate */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Noise Gate</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Noise Gate</p>
                     <EffectSlider
                       label="Threshold"
                       value={effects.noiseGateThreshold}
@@ -985,7 +985,7 @@ export function VoiceDesigner() {
 
                   {/* Formant Shift */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Formant Shift</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Formant Shift</p>
                     <EffectSlider
                       label="Shift"
                       value={effects.formantShift ?? 0}
@@ -999,7 +999,7 @@ export function VoiceDesigner() {
 
                   {/* High-Pass Filter */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">High-Pass Filter</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">High-Pass Filter</p>
                     <EffectSlider
                       label="Cutoff"
                       value={effects.highPassFreq ?? 0}
@@ -1013,7 +1013,7 @@ export function VoiceDesigner() {
 
                   {/* De-Esser */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">De-Esser</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">De-Esser</p>
                     <div className="space-y-2">
                       <EffectSlider
                         label="Threshold"
@@ -1047,7 +1047,7 @@ export function VoiceDesigner() {
 
                   {/* Chorus */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Chorus</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Chorus</p>
                     <div className="space-y-2">
                       <EffectSlider
                         label="Rate"
@@ -1080,7 +1080,7 @@ export function VoiceDesigner() {
 
                   {/* Distortion / Saturation */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Distortion / Saturation</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Distortion / Saturation</p>
                     <div className="space-y-2">
                       <EffectSlider
                         label="Amount"
@@ -1112,14 +1112,14 @@ export function VoiceDesigner() {
 
                   {/* Output Limiter */}
                   <div>
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Output Limiter</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Output Limiter</p>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-zinc-400 w-20 flex-shrink-0">Enabled</span>
+                      <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Enabled</span>
                       <button
                         onClick={() => updateEffect('limiterEnabled', !effects.limiterEnabled)}
                         className={cn(
                           'relative w-10 h-5 rounded-full transition-colors',
-                          effects.limiterEnabled ? 'bg-purple-500' : 'bg-zinc-700',
+                          effects.limiterEnabled ? 'bg-primary' : 'bg-border-strong',
                         )}
                       >
                         <div
@@ -1129,7 +1129,7 @@ export function VoiceDesigner() {
                           )}
                         />
                       </button>
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs text-muted-foreground">
                         {effects.limiterEnabled ? 'On — prevents clipping' : 'Off'}
                       </span>
                     </div>
@@ -1139,12 +1139,12 @@ export function VoiceDesigner() {
             </div>
 
             {/* Save Section */}
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="rounded-2xl border border-border-strong bg-card/80 p-5">
               <div className="flex items-center gap-2 mb-3">
-                <Save className="w-4 h-4 text-zinc-500" />
-                <h3 className="text-sm font-semibold text-zinc-300">Save as New Voice</h3>
+                <Save className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Save as New Voice</h3>
               </div>
-              <p className="text-xs text-zinc-500 mb-4">
+              <p className="text-xs text-muted-foreground mb-4">
                 The processed audio will be submitted to ElevenLabs to create a new custom voice clone.
                 This voice will appear in your Voice Library and can be used in video generation.
               </p>
@@ -1154,12 +1154,12 @@ export function VoiceDesigner() {
                   value={newVoiceName}
                   onChange={(e) => setNewVoiceName(e.target.value)}
                   placeholder="Name your new voice..."
-                  className="flex-1 px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  className="flex-1 px-4 py-2.5 bg-surface-elevated/80 border border-border-strong rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
                 <Button
                   onClick={() => { void handleSave(); }}
                   disabled={isSaving || !newVoiceName.trim()}
-                  className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl px-6"
+                  className="gap-2 bg-gradient-to-r from-primary to-primary-dark hover:from-primary hover:to-primary-dark text-white rounded-xl px-6"
                 >
                   {isSaving ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1171,10 +1171,10 @@ export function VoiceDesigner() {
               </div>
 
               {saveError && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl mt-3">
-                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <p className="text-xs text-red-400 flex-1">{saveError}</p>
-                  <button onClick={() => setSaveError(null)} className="text-red-500 hover:text-red-400">
+                <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-xl mt-3">
+                  <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+                  <p className="text-xs text-destructive flex-1">{saveError}</p>
+                  <button onClick={() => setSaveError(null)} className="text-destructive hover:text-destructive">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1195,7 +1195,7 @@ export function VoiceDesigner() {
                 setPhase('select');
                 setSampleBuffer(null);
               }}
-              className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               &larr; Back to voice selection
             </button>

@@ -24,10 +24,14 @@ interface CalendarToolbarProps extends ToolbarProps<CalendarEvent, object> {
   statusFilter: string;
   onPlatformFilter: (value: string) => void;
   onStatusFilter: (value: string) => void;
+  /** Hide the platform-filter dropdown entirely. Used by per-platform
+   *  calendar embeds where events are already pre-filtered to a single
+   *  platform — showing the dropdown is misleading. */
+  hidePlatformFilter?: boolean;
 }
 
 export default function CalendarToolbar(props: CalendarToolbarProps) {
-  const { label, onNavigate, onView, view, platformFilter, statusFilter, onPlatformFilter, onStatusFilter } = props;
+  const { label, onNavigate, onView, view, platformFilter, statusFilter, onPlatformFilter, onStatusFilter, hidePlatformFilter } = props;
 
   const selectStyle: React.CSSProperties = {
     padding: '0.375rem 0.5rem',
@@ -92,16 +96,18 @@ export default function CalendarToolbar(props: CalendarToolbarProps) {
 
       {/* Center: Filters */}
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <select
-          value={platformFilter}
-          onChange={(e) => onPlatformFilter(e.target.value)}
-          style={selectStyle}
-        >
-          <option value="all">All Platforms</option>
-          {SOCIAL_PLATFORMS.map((p) => (
-            <option key={p} value={p}>{PLATFORM_META[p].label}</option>
-          ))}
-        </select>
+        {!hidePlatformFilter && (
+          <select
+            value={platformFilter}
+            onChange={(e) => onPlatformFilter(e.target.value)}
+            style={selectStyle}
+          >
+            <option value="all">All Platforms</option>
+            {SOCIAL_PLATFORMS.map((p) => (
+              <option key={p} value={p}>{PLATFORM_META[p].label}</option>
+            ))}
+          </select>
+        )}
         <select
           value={statusFilter}
           onChange={(e) => onStatusFilter(e.target.value)}

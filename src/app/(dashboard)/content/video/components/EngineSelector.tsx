@@ -24,10 +24,10 @@ export function EngineSelector({ durationSeconds }: EngineSelectorProps) {
   const cost = estimateSceneCost('hedra', durationSeconds);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-800/80 text-xs text-zinc-200 w-fit">
-      <Video className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border-strong bg-surface-elevated/80 text-xs text-foreground w-fit">
+      <Video className="w-3.5 h-3.5 text-primary-light flex-shrink-0" />
       <span>Hedra</span>
-      <span className="text-zinc-500">~{formatCostUSD(cost)}</span>
+      <span className="text-muted-foreground">~{formatCostUSD(cost)}</span>
     </div>
   );
 }

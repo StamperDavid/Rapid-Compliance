@@ -230,7 +230,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12 gap-2 text-zinc-400">
+      <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin" />
         <span className="text-sm">Loading voices...</span>
       </div>
@@ -240,8 +240,8 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   if (error || voices.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
-        <AlertCircle className="w-8 h-8 text-zinc-500" />
-        <p className="text-sm text-zinc-400">
+        <AlertCircle className="w-8 h-8 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
           {error ?? 'No voices available. Configure API keys in Settings.'}
         </p>
       </div>
@@ -294,18 +294,18 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   return (
     <div className="space-y-4">
       {/* Clone My Voice Section */}
-      <div className="border border-purple-500/20 bg-purple-500/5 rounded-lg overflow-hidden">
+      <div className="border border-primary/20 bg-primary/5 rounded-lg overflow-hidden">
         <button
           onClick={() => setShowCloneUI(!showCloneUI)}
-          className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-purple-500/10 transition-colors"
+          className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-primary/10 transition-colors"
         >
-          <Sparkles className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-purple-300">Clone My Voice</span>
-          <span className="text-xs text-zinc-500 ml-1">Upload audio samples to create your own voice</span>
+          <Sparkles className="w-4 h-4 text-primary-light" />
+          <span className="text-sm font-medium text-primary-light">Clone My Voice</span>
+          <span className="text-xs text-muted-foreground ml-1">Upload audio samples to create your own voice</span>
         </button>
         {showCloneUI && (
-          <div className="px-4 pb-4 space-y-3 border-t border-purple-500/10">
-            <p className="text-xs text-zinc-400 pt-3">
+          <div className="px-4 pb-4 space-y-3 border-t border-primary/10">
+            <p className="text-xs text-muted-foreground pt-3">
               Record yourself speaking clearly for 30+ seconds. MP3, WAV, or M4A accepted. More samples = better quality.
             </p>
             <input
@@ -313,7 +313,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               value={cloneName}
               onChange={(e) => setCloneName(e.target.value)}
               placeholder="Voice name (e.g. David's Voice)"
-              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              className="w-full px-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <div className="flex items-center gap-2">
               <input
@@ -332,7 +332,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                className="gap-1.5 text-xs border-zinc-700 text-zinc-300"
+                className="gap-1.5 text-xs border-border-strong text-foreground"
               >
                 <Upload className="w-3.5 h-3.5" />
                 {cloneFiles.length > 0
@@ -343,21 +343,21 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 size="sm"
                 onClick={() => { void handleCloneSubmit(); }}
                 disabled={cloneLoading || !cloneName.trim() || cloneFiles.length === 0}
-                className="gap-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                className="gap-1.5 text-xs bg-primary-dark hover:bg-primary-dark text-white"
               >
                 {cloneLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                 Clone Voice
               </Button>
             </div>
             {cloneError && (
-              <p className="text-xs text-red-400">{cloneError}</p>
+              <p className="text-xs text-destructive">{cloneError}</p>
             )}
           </div>
         )}
         {/* Full Audio Lab link */}
         <Link
           href="/content/voice-lab"
-          className="flex items-center gap-2 px-4 py-2 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/5 transition-colors border-t border-purple-500/10"
+          className="flex items-center gap-2 px-4 py-2 text-xs text-primary-light hover:text-primary-light hover:bg-primary/5 transition-colors border-t border-primary/10"
         >
           <AudioWaveform className="w-3.5 h-3.5" />
           Open Audio Lab — effects, collections, voice studio &amp; AI music
@@ -374,13 +374,13 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
       {/* Search + Favorites */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search voices by name, language, or accent..."
-            className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         </div>
         {favoriteVoiceIds.size > 0 && (
@@ -389,8 +389,8 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
             className={cn(
               'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
               showFavoritesOnly
-                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                : 'bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-amber-500/50 hover:text-amber-400',
+                ? 'bg-primary/20 border border-primary/30 text-primary-light'
+                : 'bg-surface-elevated border border-border-strong text-foreground hover:border-primary/50 hover:text-primary-light',
             )}
             title={showFavoritesOnly ? 'Show all voices' : 'Show favorites only'}
           >
@@ -412,8 +412,8 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
                   filterProvider === provider
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600',
+                    ? 'bg-primary/20 text-primary-light border border-primary/30'
+                    : 'bg-surface-elevated text-muted-foreground border border-border-strong hover:border-border',
                 )}
               >
                 {provider === 'all' ? 'All'
@@ -435,8 +435,8 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               className={cn(
                 'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
                 filterGender === gender
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600',
+                  ? 'bg-primary/20 text-primary-light border border-primary/30'
+                  : 'bg-surface-elevated text-muted-foreground border border-border-strong hover:border-border',
               )}
             >
               {gender.charAt(0).toUpperCase() + gender.slice(1)}
@@ -449,7 +449,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
           <select
             value={filterLanguage}
             onChange={(e) => setFilterLanguage(e.target.value)}
-            className="px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="px-3 py-1.5 bg-surface-elevated border border-border-strong rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             <option value="all">All Languages</option>
             {languages.map((lang) => (
@@ -461,14 +461,14 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
 
       {/* Preview error */}
       {previewError && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-          <p className="text-xs text-amber-400">{previewError}</p>
+        <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
+          <AlertTriangle className="w-3.5 h-3.5 text-primary-light flex-shrink-0" />
+          <p className="text-xs text-primary-light">{previewError}</p>
         </div>
       )}
 
       {/* Results count */}
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         {filteredVoices.length} voice{filteredVoices.length !== 1 ? 's' : ''}
         {searchQuery || filterGender !== 'all' || filterLanguage !== 'all' || filterProvider !== 'all' ? ' matching filters' : ' available'}
       </p>
@@ -486,20 +486,20 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               className={cn(
                 'flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all',
                 isSelected
-                  ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
-                  : 'border-zinc-700/50 bg-zinc-800/30 hover:border-zinc-500 hover:bg-zinc-800/60',
+                  ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                  : 'border-border-strong/50 bg-surface-elevated/30 hover:border-border hover:bg-surface-elevated/60',
               )}
               onClick={() => onSelect(voice.id, voice.name, voiceProvider)}
             >
               {/* Icon */}
               <div className={cn(
                 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
-                isSelected ? 'bg-amber-500/20' : 'bg-zinc-700/50',
+                isSelected ? 'bg-primary/20' : 'bg-border-strong/50',
               )}>
                 {isPlaying ? (
-                  <Volume2 className="w-5 h-5 text-amber-400 animate-pulse" />
+                  <Volume2 className="w-5 h-5 text-primary-light animate-pulse" />
                 ) : (
-                  <Mic className={cn('w-5 h-5', isSelected ? 'text-amber-400' : 'text-zinc-400')} />
+                  <Mic className={cn('w-5 h-5', isSelected ? 'text-primary-light' : 'text-muted-foreground')} />
                 )}
               </div>
 
@@ -507,20 +507,20 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-white truncate">{voice.name}</p>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
+                  {isSelected && <Check className="w-3.5 h-3.5 text-primary-light flex-shrink-0" />}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-zinc-500">{voice.language}</span>
+                  <span className="text-xs text-muted-foreground">{voice.language}</span>
                   {voice.accent && (
                     <>
-                      <span className="text-zinc-600">·</span>
-                      <span className="text-xs text-zinc-500">{voice.accent}</span>
+                      <span className="text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">{voice.accent}</span>
                     </>
                   )}
                   {voice.gender && (
                     <>
-                      <span className="text-zinc-600">·</span>
-                      <span className="text-xs text-zinc-500 capitalize">{voice.gender}</span>
+                      <span className="text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground capitalize">{voice.gender}</span>
                     </>
                   )}
                 </div>
@@ -535,8 +535,8 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 className={cn(
                   'h-9 w-9 p-0 rounded-full',
                   isPlaying
-                    ? 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-700',
+                    ? 'text-primary-light bg-primary/10 hover:bg-primary/20'
+                    : 'text-muted-foreground hover:text-white hover:bg-border-strong',
                 )}
                 title={isPlaying ? 'Stop preview' : 'Play voice sample'}
               >
@@ -555,8 +555,8 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 className={cn(
                   'p-1.5 rounded-full transition-colors flex-shrink-0',
                   favoriteVoiceIds.has(voice.id)
-                    ? 'text-amber-400 hover:text-amber-300'
-                    : 'text-zinc-600 hover:text-amber-400',
+                    ? 'text-primary-light hover:text-primary-light'
+                    : 'text-muted-foreground hover:text-primary-light',
                 )}
                 title={favoriteVoiceIds.has(voice.id) ? 'Remove from favorites' : 'Add to favorites'}
               >
@@ -567,9 +567,9 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               <span className={cn(
                 'px-1.5 py-0.5 text-[9px] font-bold rounded flex-shrink-0',
                 voiceProvider === 'custom' ? 'bg-green-500/20 text-green-400'
-                  : voiceProvider === 'hedra' ? 'bg-cyan-500/20 text-cyan-400'
-                  : voiceProvider === 'elevenlabs' ? 'bg-purple-500/20 text-purple-400'
-                  : 'bg-orange-500/20 text-orange-400',
+                  : voiceProvider === 'hedra' ? 'bg-primary/20 text-primary-light'
+                  : voiceProvider === 'elevenlabs' ? 'bg-primary/20 text-primary-light'
+                  : 'bg-primary/20 text-primary-light',
               )}>
                 {voiceProvider === 'custom' ? 'CLONE'
                   : voiceProvider === 'hedra' ? 'HEDRA'
@@ -583,8 +583,8 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
 
       {filteredVoices.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 gap-2">
-          <Search className="w-6 h-6 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No voices match your search.</p>
+          <Search className="w-6 h-6 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No voices match your search.</p>
         </div>
       )}
     </div>

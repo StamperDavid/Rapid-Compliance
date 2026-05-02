@@ -76,8 +76,8 @@ function EffectSlider({
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <label className="text-xs text-zinc-400">{label}</label>
-        <span className="text-xs font-mono text-zinc-500">{displayValue}</span>
+        <label className="text-xs text-muted-foreground">{label}</label>
+        <span className="text-xs font-mono text-muted-foreground">{displayValue}</span>
       </div>
       <input
         type="range"
@@ -86,10 +86,10 @@ function EffectSlider({
         step={stepVal}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-purple-500 h-1.5"
+        className="w-full accent-primary h-1.5"
       />
       {(leftLabel ?? rightLabel) && (
-        <div className="flex justify-between text-[10px] text-zinc-600 mt-0.5">
+        <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
           <span>{leftLabel ?? ''}</span>
           <span>{rightLabel ?? ''}</span>
         </div>
@@ -668,10 +668,10 @@ export function VoiceRecorderStudio() {
   return (
     <div className="space-y-6">
       {/* Main Studio Card */}
-      <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 backdrop-blur">
+      <div className="relative overflow-hidden rounded-2xl border border-border-strong bg-card/80 backdrop-blur">
         {/* Ambient glow */}
         {phase === 'recording' && (
-          <div className="absolute inset-0 bg-red-500/5 animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 bg-destructive/5 animate-pulse pointer-events-none" />
         )}
 
         <div className="p-6">
@@ -680,20 +680,20 @@ export function VoiceRecorderStudio() {
             <div className="flex items-center gap-2">
               <Mic className={cn(
                 'w-5 h-5',
-                phase === 'recording' ? 'text-red-400' : 'text-purple-400',
+                phase === 'recording' ? 'text-destructive' : 'text-primary-light',
               )} />
               <h2 className="text-lg font-semibold text-white">Recording Studio</h2>
             </div>
             {phase === 'recording' && (
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-xs font-mono text-red-400">REC</span>
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                <span className="text-xs font-mono text-destructive">REC</span>
               </div>
             )}
           </div>
 
           {/* Waveform Area */}
-          <div className="relative rounded-xl bg-zinc-950/60 border border-zinc-800/50 overflow-hidden mb-6">
+          <div className="relative rounded-xl bg-background/60 border border-border-strong/50 overflow-hidden mb-6">
             {/* Live waveform (recording) */}
             <canvas
               ref={liveCanvasRef}
@@ -717,7 +717,7 @@ export function VoiceRecorderStudio() {
             {/* Idle state */}
             {phase === 'idle' && (
               <div
-                className="flex flex-col items-center justify-center text-zinc-600"
+                className="flex flex-col items-center justify-center text-muted-foreground"
                 style={{ height: WAVEFORM_HEIGHT }}
               >
                 <AudioWaveformIcon className="w-12 h-12 mb-2 opacity-30" />
@@ -732,7 +732,7 @@ export function VoiceRecorderStudio() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm"
+                  className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm"
                 >
                   <motion.span
                     key={countdownNum}
@@ -754,22 +754,22 @@ export function VoiceRecorderStudio() {
               {/* Timer */}
               <span className={cn(
                 'text-2xl font-mono tabular-nums',
-                phase === 'recording' ? 'text-red-400' : 'text-white',
+                phase === 'recording' ? 'text-destructive' : 'text-white',
               )}>
                 {formatTime(duration)}
               </span>
-              <span className="text-sm text-zinc-600">/ {formatTime(MAX_DURATION_S)}</span>
+              <span className="text-sm text-muted-foreground">/ {formatTime(MAX_DURATION_S)}</span>
             </div>
 
             {/* Level Meter */}
             {(phase === 'recording' || phase === 'countdown') && (
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Level</span>
-                <div className="w-32 h-3 rounded-full bg-zinc-800 overflow-hidden">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Level</span>
+                <div className="w-32 h-3 rounded-full bg-surface-elevated overflow-hidden">
                   <motion.div
                     className={cn(
                       'h-full rounded-full transition-colors',
-                      level > 0.6 ? 'bg-red-500' : level > 0.3 ? 'bg-amber-500' : 'bg-green-500',
+                      level > 0.6 ? 'bg-destructive' : level > 0.3 ? 'bg-primary' : 'bg-green-500',
                     )}
                     animate={{ width: `${Math.min(level * 300, 100)}%` }}
                     transition={{ duration: 0.05 }}
@@ -785,7 +785,7 @@ export function VoiceRecorderStudio() {
               <Button
                 size="lg"
                 onClick={() => { void startCountdown(); }}
-                className="gap-2 bg-red-600 hover:bg-red-700 text-white rounded-full px-8 h-14 text-base shadow-lg shadow-red-500/20"
+                className="gap-2 bg-destructive hover:bg-destructive/90 text-white rounded-full px-8 h-14 text-base shadow-lg shadow-destructive/20"
               >
                 <Mic className="w-5 h-5" />
                 Record
@@ -796,7 +796,7 @@ export function VoiceRecorderStudio() {
               <Button
                 size="lg"
                 onClick={stopRecording}
-                className="gap-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-full px-8 h-14 text-base"
+                className="gap-2 bg-border-strong hover:bg-border-strong text-white rounded-full px-8 h-14 text-base"
               >
                 <Square className="w-4 h-4 fill-current" />
                 Stop
@@ -809,7 +809,7 @@ export function VoiceRecorderStudio() {
                   variant="outline"
                   size="lg"
                   onClick={discard}
-                  className="gap-2 border-zinc-700 text-zinc-400 hover:text-red-400 hover:border-red-500/30 rounded-full"
+                  className="gap-2 border-border-strong text-muted-foreground hover:text-destructive hover:border-destructive/30 rounded-full"
                 >
                   <Trash2 className="w-4 h-4" />
                   Discard
@@ -817,7 +817,7 @@ export function VoiceRecorderStudio() {
                 <Button
                   size="lg"
                   onClick={startPlayback}
-                  className="gap-2 bg-purple-600 hover:bg-purple-700 text-white rounded-full px-8 h-14 text-base shadow-lg shadow-purple-500/20"
+                  className="gap-2 bg-primary-dark hover:bg-primary-dark text-white rounded-full px-8 h-14 text-base shadow-lg shadow-primary/20"
                 >
                   <Play className="w-5 h-5" />
                   Play
@@ -826,7 +826,7 @@ export function VoiceRecorderStudio() {
                   variant="outline"
                   size="lg"
                   onClick={() => { void startCountdown(); }}
-                  className="gap-2 border-zinc-700 text-zinc-400 hover:text-white rounded-full"
+                  className="gap-2 border-border-strong text-muted-foreground hover:text-white rounded-full"
                 >
                   <RotateCcw className="w-4 h-4" />
                   Re-record
@@ -838,7 +838,7 @@ export function VoiceRecorderStudio() {
               <Button
                 size="lg"
                 onClick={stopPlayback}
-                className="gap-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-full px-8 h-14 text-base"
+                className="gap-2 bg-border-strong hover:bg-border-strong text-white rounded-full px-8 h-14 text-base"
               >
                 <Pause className="w-5 h-5" />
                 Stop
@@ -848,9 +848,9 @@ export function VoiceRecorderStudio() {
 
           {/* Mic Error */}
           {micError && (
-            <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <MicOff className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-sm text-red-400">{micError}</p>
+            <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <MicOff className="w-4 h-4 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive">{micError}</p>
             </div>
           )}
         </div>
@@ -860,17 +860,17 @@ export function VoiceRecorderStudio() {
       {hasRecording && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Effects Panel */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5">
+          <div className="rounded-2xl border border-border-strong bg-card/80 p-5">
             <button
               onClick={() => setShowEffects(!showEffects)}
-              className="flex items-center gap-2 text-sm font-medium text-zinc-300 mb-2 w-full text-left"
+              className="flex items-center gap-2 text-sm font-medium text-foreground mb-2 w-full text-left"
             >
-              <Settings2 className="w-4 h-4 text-purple-400" />
+              <Settings2 className="w-4 h-4 text-primary-light" />
               Voice Effects
               {showEffects ? (
-                <ChevronUp className="w-3.5 h-3.5 text-zinc-500 ml-auto" />
+                <ChevronUp className="w-3.5 h-3.5 text-muted-foreground ml-auto" />
               ) : (
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-500 ml-auto" />
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground ml-auto" />
               )}
             </button>
 
@@ -878,7 +878,7 @@ export function VoiceRecorderStudio() {
               <div className="space-y-5 mt-4">
                 {/* Presets Row */}
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-1.5 uppercase tracking-wider">Presets</label>
+                  <label className="block text-xs text-muted-foreground mb-1.5 uppercase tracking-wider">Presets</label>
                   <div className="flex flex-wrap gap-1.5">
                     {EFFECT_PRESETS.map((preset) => (
                       <button
@@ -888,8 +888,8 @@ export function VoiceRecorderStudio() {
                         className={cn(
                           'px-2.5 py-1 rounded-md text-xs font-medium transition-colors border',
                           selectedPreset === preset.name
-                            ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-                            : 'bg-zinc-800/50 text-zinc-400 border-zinc-700/50 hover:border-zinc-600',
+                            ? 'bg-primary/20 text-primary-light border-primary/30'
+                            : 'bg-surface-elevated/50 text-muted-foreground border-border-strong/50 hover:border-border',
                         )}
                       >
                         {preset.name}
@@ -900,7 +900,7 @@ export function VoiceRecorderStudio() {
 
                 {/* Equalizer */}
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Equalizer</label>
+                  <label className="block text-xs text-muted-foreground mb-2 uppercase tracking-wider">Equalizer</label>
                   <div className="grid grid-cols-3 gap-3">
                     <EffectSlider
                       label="Low (100Hz)"
@@ -925,7 +925,7 @@ export function VoiceRecorderStudio() {
 
                 {/* Compressor */}
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Compressor</label>
+                  <label className="block text-xs text-muted-foreground mb-2 uppercase tracking-wider">Compressor</label>
                   <div className="grid grid-cols-2 gap-3">
                     <EffectSlider
                       label="Threshold"
@@ -959,7 +959,7 @@ export function VoiceRecorderStudio() {
 
                 {/* Pitch & Speed */}
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Pitch & Speed</label>
+                  <label className="block text-xs text-muted-foreground mb-2 uppercase tracking-wider">Pitch & Speed</label>
                   <div className="grid grid-cols-2 gap-3">
                     <EffectSlider
                       label="Pitch Shift"
@@ -982,7 +982,7 @@ export function VoiceRecorderStudio() {
 
                 {/* Reverb */}
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Reverb</label>
+                  <label className="block text-xs text-muted-foreground mb-2 uppercase tracking-wider">Reverb</label>
                   <div className="grid grid-cols-2 gap-3">
                     <EffectSlider
                       label="Mix"
@@ -1005,7 +1005,7 @@ export function VoiceRecorderStudio() {
 
                 {/* Delay */}
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Delay</label>
+                  <label className="block text-xs text-muted-foreground mb-2 uppercase tracking-wider">Delay</label>
                   <div className="grid grid-cols-3 gap-3">
                     <EffectSlider
                       label="Time"
@@ -1033,7 +1033,7 @@ export function VoiceRecorderStudio() {
 
                 {/* Noise Gate */}
                 <div>
-                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Noise Gate</label>
+                  <label className="block text-xs text-muted-foreground mb-2 uppercase tracking-wider">Noise Gate</label>
                   <EffectSlider
                     label="Threshold"
                     value={effectSettings.noiseGateThreshold}
@@ -1044,12 +1044,12 @@ export function VoiceRecorderStudio() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 pt-2 border-t border-zinc-800/50">
+                <div className="flex gap-2 pt-2 border-t border-border-strong/50">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={resetAllEffects}
-                    className="gap-1.5 border-zinc-700 text-zinc-400 text-xs"
+                    className="gap-1.5 border-border-strong text-muted-foreground text-xs"
                   >
                     <RotateCw className="w-3 h-3" />
                     Reset All
@@ -1058,7 +1058,7 @@ export function VoiceRecorderStudio() {
                     size="sm"
                     onClick={() => { void handleExportWithEffects(); }}
                     disabled={isExporting || !decodedBuffer}
-                    className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs flex-1"
+                    className="gap-1.5 bg-primary-dark hover:bg-primary-dark text-white text-xs flex-1"
                   >
                     {isExporting ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -1073,9 +1073,9 @@ export function VoiceRecorderStudio() {
           </div>
 
           {/* Clone & Save Panel */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-              <Sparkles className="w-4 h-4 text-purple-400" />
+          <div className="rounded-2xl border border-border-strong bg-card/80 p-5 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Sparkles className="w-4 h-4 text-primary-light" />
               Use This Recording
             </div>
 
@@ -1084,14 +1084,14 @@ export function VoiceRecorderStudio() {
               value={cloneName}
               onChange={(e) => setCloneName(e.target.value)}
               placeholder="Name (e.g. David's Voice)"
-              className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              className="w-full px-3 py-2.5 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
 
             <div className="flex gap-2">
               <Button
                 onClick={() => { void handleClone(); }}
                 disabled={cloneStatus === 'loading' || !cloneName.trim()}
-                className="gap-2 bg-purple-600 hover:bg-purple-700 text-white flex-1"
+                className="gap-2 bg-primary-dark hover:bg-primary-dark text-white flex-1"
               >
                 {cloneStatus === 'loading' ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1104,7 +1104,7 @@ export function VoiceRecorderStudio() {
                 variant="outline"
                 onClick={() => { void handleSave(); }}
                 disabled={saveStatus === 'saving'}
-                className="gap-2 border-zinc-700 text-zinc-300"
+                className="gap-2 border-border-strong text-foreground"
               >
                 {saveStatus === 'saving' ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1125,13 +1125,13 @@ export function VoiceRecorderStudio() {
               </div>
             )}
             {cloneStatus === 'error' && (
-              <div className="flex items-start gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-red-400">{cloneMessage}</p>
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-destructive">{cloneMessage}</p>
               </div>
             )}
 
-            <p className="text-[10px] text-zinc-600">
+            <p className="text-[10px] text-muted-foreground">
               Clone creates an ElevenLabs voice from your recording. Use it in video avatars, voice agents, and AI music.
             </p>
           </div>
@@ -1205,10 +1205,10 @@ function GuidedRecordingScript({ isRecording, isIdle }: { isRecording: boolean; 
     <div className="space-y-4">
       {/* Tips (shown when idle) */}
       {isIdle && showTips && (
-        <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-5">
+        <div className="rounded-xl border border-border-strong/50 bg-card/30 p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-zinc-400">Before You Record</h3>
-            <button onClick={() => setShowTips(false)} className="text-xs text-zinc-600 hover:text-zinc-400">
+            <h3 className="text-sm font-medium text-muted-foreground">Before You Record</h3>
+            <button onClick={() => setShowTips(false)} className="text-xs text-muted-foreground hover:text-muted-foreground">
               Hide
             </button>
           </div>
@@ -1218,9 +1218,9 @@ function GuidedRecordingScript({ isRecording, isIdle }: { isRecording: boolean; 
               { title: 'Microphone', tip: '6-12 inches from mic. A headset or USB mic gives the best results.' },
               { title: 'The Script', tip: 'Read the guided script below while recording. It covers all inflections needed for a lifelike voice clone.' },
             ].map((item) => (
-              <div key={item.title} className="px-3 py-2.5 bg-zinc-800/30 rounded-lg">
-                <p className="text-xs font-medium text-zinc-300 mb-1">{item.title}</p>
-                <p className="text-[11px] text-zinc-500 leading-relaxed">{item.tip}</p>
+              <div key={item.title} className="px-3 py-2.5 bg-surface-elevated/30 rounded-lg">
+                <p className="text-xs font-medium text-foreground mb-1">{item.title}</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{item.tip}</p>
               </div>
             ))}
           </div>
@@ -1228,33 +1228,33 @@ function GuidedRecordingScript({ isRecording, isIdle }: { isRecording: boolean; 
       )}
 
       {/* Guided Script Teleprompter */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+      <div className="rounded-2xl border border-border-strong bg-card/60 overflow-hidden">
         <button
           onClick={() => setShowScript(!showScript)}
-          className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-zinc-800/30 transition-colors"
+          className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-surface-elevated/30 transition-colors"
         >
           <div className="flex items-center gap-2">
             <BookOpen className={cn(
               'w-4 h-4',
-              isRecording ? 'text-red-400' : 'text-amber-400',
+              isRecording ? 'text-destructive' : 'text-primary-light',
             )} />
-            <span className="text-sm font-medium text-zinc-300">
+            <span className="text-sm font-medium text-foreground">
               {isRecording ? 'Read This Script While Recording' : 'Voice Clone Script'}
             </span>
-            <span className="text-[10px] text-zinc-600 ml-1">
+            <span className="text-[10px] text-muted-foreground ml-1">
               Designed to capture all inflections for a lifelike clone
             </span>
           </div>
           {showScript ? (
-            <ChevronUp className="w-4 h-4 text-zinc-500" />
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-zinc-500" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           )}
         </button>
 
         {showScript && (
-          <div className="px-5 pb-5 space-y-5 border-t border-zinc-800/50">
-            <p className="text-[11px] text-zinc-500 pt-3">
+          <div className="px-5 pb-5 space-y-5 border-t border-border-strong/50">
+            <p className="text-[11px] text-muted-foreground pt-3">
               Read each section naturally. Vary your pace and energy to match the mood described.
               Replace the &ldquo;...&rdquo; with your own name/company. Aim for 60-90 seconds total.
             </p>
@@ -1263,7 +1263,7 @@ function GuidedRecordingScript({ isRecording, isIdle }: { isRecording: boolean; 
               <div key={section.section}>
                 <h4 className={cn(
                   'text-xs font-semibold uppercase tracking-wider mb-2',
-                  isRecording ? 'text-red-400/70' : 'text-amber-500/70',
+                  isRecording ? 'text-destructive/70' : 'text-primary/70',
                 )}>
                   {section.section}
                 </h4>
@@ -1274,8 +1274,8 @@ function GuidedRecordingScript({ isRecording, isIdle }: { isRecording: boolean; 
                       className={cn(
                         'text-sm leading-relaxed pl-3 border-l-2',
                         isRecording
-                          ? 'text-zinc-200 border-red-500/30'
-                          : 'text-zinc-400 border-zinc-700/50',
+                          ? 'text-foreground border-destructive/30'
+                          : 'text-muted-foreground border-border-strong/50',
                       )}
                     >
                       {line}
@@ -1285,8 +1285,8 @@ function GuidedRecordingScript({ isRecording, isIdle }: { isRecording: boolean; 
               </div>
             ))}
 
-            <div className="pt-2 border-t border-zinc-800/50">
-              <p className="text-[10px] text-zinc-600">
+            <div className="pt-2 border-t border-border-strong/50">
+              <p className="text-[10px] text-muted-foreground">
                 This script covers: natural conversation, excitement, authority, empathy, questioning pauses,
                 numbers, URLs, and abbreviations. All of these inflection patterns are needed to create a
                 voice that sounds natural across different contexts — marketing videos, phone calls, presentations.

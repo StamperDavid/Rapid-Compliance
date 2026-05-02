@@ -255,9 +255,9 @@ export default function EmailSequencesPage() {
                     {/* Status Badge */}
                     <div className={`absolute top-4 right-4 px-3 py-1 rounded text-xs font-bold uppercase ${
                       seq.status === 'active'
-                        ? 'bg-[var(--color-success-dark)] text-[var(--color-success-light)]'
+                        ? 'bg-success/15 text-success border border-success/30'
                         : seq.status === 'paused'
-                          ? 'bg-[var(--color-warning-dark)] text-[var(--color-warning-light)]'
+                          ? 'bg-warning/15 text-warning border border-warning/30'
                           : 'bg-border-strong text-muted-foreground'
                     }`}>
                       {seq.status}
@@ -302,7 +302,7 @@ export default function EmailSequencesPage() {
                       {seq.status === 'active' && (
                         <button
                           onClick={() => void handlePauseSequence(seq.id)}
-                          className="flex-1 py-3 bg-[var(--color-warning-dark)] text-[var(--color-warning-light)] border border-[var(--color-warning-light)] rounded-lg cursor-pointer text-sm font-semibold"
+                          className="flex-1 py-3 bg-surface-elevated text-foreground border border-border-strong rounded-lg cursor-pointer text-sm font-semibold hover:bg-card transition-colors"
                         >
                           Pause
                         </button>
@@ -366,7 +366,7 @@ export default function EmailSequencesPage() {
                           <td className="p-4">
                             <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
                               enrollment.status === 'active'
-                                ? 'bg-[var(--color-success-dark)] text-[var(--color-success-light)]'
+                                ? 'bg-success/15 text-success border border-success/30'
                                 : 'bg-border-strong text-muted-foreground'
                             }`}>
                               {enrollment.status}

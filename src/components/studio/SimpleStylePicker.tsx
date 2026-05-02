@@ -48,29 +48,18 @@ export function SimpleStylePicker({
     [onChange, config.aspectRatio],
   );
 
-  // Deterministic gradient from bundle ID
-  function bundleGradient(id: string): string {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-      hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const h1 = Math.abs(hash) % 360;
-    const h2 = (h1 + 40) % 360;
-    return `linear-gradient(135deg, hsl(${h1}, 45%, 25%) 0%, hsl(${h2}, 55%, 15%) 100%)`;
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-zinc-200">Visual Style</h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <h3 className="text-sm font-medium text-foreground">Visual Style</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Pick a style — all cinematic settings are applied automatically
           </p>
         </div>
         <button
           onClick={onSwitchToAdvanced}
-          className="text-xs text-amber-400 hover:text-amber-300 hover:underline transition-colors"
+          className="text-xs text-primary-light hover:text-primary-light hover:underline transition-colors"
         >
           Advanced Controls
         </button>
@@ -86,28 +75,25 @@ export function SimpleStylePicker({
               className={cn(
                 'relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-left',
                 isSelected
-                  ? 'border-amber-500 ring-1 ring-amber-500/30 bg-amber-500/10'
-                  : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800',
+                  ? 'border-primary ring-1 ring-primary/30 bg-primary/10'
+                  : 'border-border-strong bg-surface-elevated/50 hover:border-border hover:bg-surface-elevated',
               )}
             >
-              {/* Thumbnail swatch */}
-              <div
-                className="w-full h-16 rounded-lg flex items-center justify-center text-2xl"
-                style={{ background: bundleGradient(bundle.id) }}
-              >
+              {/* Thumbnail swatch — emoji on solid surface, no off-system gradient */}
+              <div className="w-full h-16 rounded-lg flex items-center justify-center text-2xl bg-surface-elevated border border-border-strong">
                 {bundle.emoji}
               </div>
 
-              <span className="text-xs font-medium text-zinc-200 text-center w-full truncate">
+              <span className="text-xs font-medium text-foreground text-center w-full truncate">
                 {bundle.name}
               </span>
-              <span className="text-[10px] text-zinc-500 text-center w-full line-clamp-1">
+              <span className="text-[10px] text-muted-foreground text-center w-full line-clamp-1">
                 {bundle.description}
               </span>
 
               {/* Selected checkmark */}
               {isSelected && (
-                <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
+                <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                   <Check className="w-3 h-3 text-black" />
                 </div>
               )}

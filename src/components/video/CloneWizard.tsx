@@ -103,15 +103,15 @@ function StepIndicator({ currentStep }: { currentStep: WizardStep }) {
               i < currentIndex
                 ? 'bg-green-500'
                 : i === currentIndex
-                  ? 'bg-amber-500'
-                  : 'bg-zinc-600',
+                  ? 'bg-primary'
+                  : 'bg-border-strong',
             )}
           />
           {i < steps.length - 1 && (
             <div
               className={cn(
                 'w-6 h-px transition-colors',
-                i < currentIndex ? 'bg-green-500' : 'bg-zinc-700',
+                i < currentIndex ? 'bg-green-500' : 'bg-border-strong',
               )}
             />
           )}
@@ -619,48 +619,48 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
   function renderWelcome() {
     return (
       <div className="flex flex-col items-center gap-6 py-4">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 flex items-center justify-center">
-          <Sparkles className="w-10 h-10 text-amber-400" />
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30 flex items-center justify-center">
+          <Sparkles className="w-10 h-10 text-primary-light" />
         </div>
 
         <div className="text-center space-y-2">
           <h3 className="text-xl font-semibold text-white">Create Your AI Clone</h3>
-          <p className="text-sm text-zinc-400 max-w-sm">
+          <p className="text-sm text-muted-foreground max-w-sm">
             In about 2 minutes, you&apos;ll have a digital version of yourself that can star in
             all your videos. Just a headshot photo and a short voice recording.
           </p>
         </div>
 
         <div className="w-full space-y-3">
-          <label className="block text-xs text-zinc-400 font-medium">What should we call your clone?</label>
+          <label className="block text-xs text-muted-foreground font-medium">What should we call your clone?</label>
           <input
             type="text"
             value={cloneName}
             onChange={(e) => setCloneName(e.target.value)}
             placeholder="e.g., David, My Avatar, Sales Dave..."
-            className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-sm"
+            className="w-full px-4 py-3 bg-surface-elevated border border-border-strong rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
             autoFocus
           />
         </div>
 
-        <div className="flex flex-col gap-2 w-full text-xs text-zinc-500">
+        <div className="flex flex-col gap-2 w-full text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Camera className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <Camera className="w-3.5 h-3.5 text-primary-light flex-shrink-0" />
             <span>Step 1: Capture your face (webcam or upload)</span>
           </div>
           <div className="flex items-center gap-2">
-            <Mic className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <Mic className="w-3.5 h-3.5 text-primary-light flex-shrink-0" />
             <span>Step 2: Record your voice (or upload a sample)</span>
           </div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <Sparkles className="w-3.5 h-3.5 text-primary-light flex-shrink-0" />
             <span>Step 3: Your AI clone is ready to use</span>
           </div>
         </div>
 
         <button
           onClick={goToFace}
-          className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded-lg transition-colors w-full justify-center"
+          className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors w-full justify-center"
         >
           Get Started
           <ArrowRight className="w-4 h-4" />
@@ -674,7 +674,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
       <div className="space-y-4">
         <div className="text-center space-y-1">
           <h3 className="text-lg font-semibold text-white">Capture Your Face</h3>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             A clear, front-facing headshot works best. Good lighting, neutral background.
           </p>
         </div>
@@ -689,8 +689,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
               faceCaptureMode === 'upload'
-                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                : 'bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-zinc-300',
+                ? 'bg-primary/20 border border-primary/30 text-primary-light'
+                : 'bg-surface-elevated border border-border-strong text-muted-foreground hover:text-foreground',
             )}
           >
             <Upload className="w-3.5 h-3.5" />
@@ -705,8 +705,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
               faceCaptureMode === 'webcam'
-                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                : 'bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-zinc-300',
+                ? 'bg-primary/20 border border-primary/30 text-primary-light'
+                : 'bg-surface-elevated border border-border-strong text-muted-foreground hover:text-foreground',
             )}
           >
             <Camera className="w-3.5 h-3.5" />
@@ -728,7 +728,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             </div>
             <button
               onClick={clearFacePhoto}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-zinc-400 hover:text-red-400 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
             >
               <X className="w-3 h-3" />
               Retake / Choose Different Photo
@@ -738,21 +738,21 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
           <div className="flex flex-col items-center gap-3">
             {webcam.error ? (
               <div className="flex flex-col items-center gap-2 py-8">
-                <AlertCircle className="w-8 h-8 text-red-400" />
-                <p className="text-xs text-red-400 text-center max-w-xs">{webcam.error}</p>
+                <AlertCircle className="w-8 h-8 text-destructive" />
+                <p className="text-xs text-destructive text-center max-w-xs">{webcam.error}</p>
                 <button
                   onClick={() => {
                     setFaceCaptureMode('upload');
                     webcam.stop();
                   }}
-                  className="text-xs text-amber-400 hover:underline"
+                  className="text-xs text-primary-light hover:underline"
                 >
                   Switch to file upload
                 </button>
               </div>
             ) : (
               <>
-                <div className="relative w-56 h-56 rounded-full overflow-hidden bg-zinc-900 ring-2 ring-zinc-600">
+                <div className="relative w-56 h-56 rounded-full overflow-hidden bg-card ring-2 ring-border">
                   <video
                     ref={webcam.videoRef}
                     autoPlay
@@ -762,14 +762,14 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
                   />
                   {!webcam.isActive && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                     </div>
                   )}
                 </div>
                 {webcam.isActive && (
                   <button
                     onClick={handleWebcamCapture}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm font-medium rounded-full hover:bg-zinc-200 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm font-medium rounded-full hover:bg-surface-elevated transition-colors"
                   >
                     <Camera className="w-4 h-4" />
                     Take Photo
@@ -787,11 +787,11 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
               if (file) { handleFaceFileSelect(file); }
             }}
             onDragOver={(e) => e.preventDefault()}
-            className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-zinc-700 rounded-xl cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/5 transition-colors"
+            className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-border-strong rounded-xl cursor-pointer hover:border-primary/30 hover:bg-primary/5 transition-colors"
           >
-            <User className="w-12 h-12 text-zinc-600 mb-3" />
-            <p className="text-sm text-zinc-400">Drop your headshot here or click to browse</p>
-            <p className="text-xs text-zinc-600 mt-1">JPG, PNG, or WebP — max 2MB</p>
+            <User className="w-12 h-12 text-muted-foreground mb-3" />
+            <p className="text-sm text-muted-foreground">Drop your headshot here or click to browse</p>
+            <p className="text-xs text-muted-foreground mt-1">JPG, PNG, or WebP — max 2MB</p>
           </div>
         )}
 
@@ -813,7 +813,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
               webcam.stop();
               setStep('welcome');
             }}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm font-medium rounded-lg hover:bg-zinc-700 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-surface-elevated border border-border-strong text-foreground text-sm font-medium rounded-lg hover:bg-border-strong transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back
@@ -824,8 +824,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             className={cn(
               'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors',
               canProceedFromFace
-                ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                : 'bg-zinc-800 text-zinc-600 cursor-not-allowed',
+                ? 'bg-primary hover:bg-primary text-white'
+                : 'bg-surface-elevated text-muted-foreground cursor-not-allowed',
             )}
           >
             Next: Voice
@@ -844,7 +844,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
       <div className="space-y-4">
         <div className="text-center space-y-1">
           <h3 className="text-lg font-semibold text-white">Record Your Voice</h3>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Read the script below for at least {MIN_RECORDING_SECONDS} seconds. This creates your AI voice clone.
           </p>
         </div>
@@ -859,8 +859,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
               voiceCaptureMode === 'record'
-                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                : 'bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-zinc-300',
+                ? 'bg-primary/20 border border-primary/30 text-primary-light'
+                : 'bg-surface-elevated border border-border-strong text-muted-foreground hover:text-foreground',
             )}
           >
             <Mic className="w-3.5 h-3.5" />
@@ -874,8 +874,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
               voiceCaptureMode === 'upload'
-                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                : 'bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-zinc-300',
+                ? 'bg-primary/20 border border-primary/30 text-primary-light'
+                : 'bg-surface-elevated border border-border-strong text-muted-foreground hover:text-foreground',
             )}
           >
             <Upload className="w-3.5 h-3.5" />
@@ -886,24 +886,24 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
         {voiceCaptureMode === 'record' ? (
           <div className="space-y-3">
             {/* Sample script */}
-            <div className="p-3 bg-zinc-800/50 border border-zinc-700/50 rounded-lg">
-              <p className="text-[10px] text-amber-400 font-medium mb-1.5 uppercase tracking-wider">
+            <div className="p-3 bg-surface-elevated/50 border border-border-strong/50 rounded-lg">
+              <p className="text-[10px] text-primary-light font-medium mb-1.5 uppercase tracking-wider">
                 Read this aloud:
               </p>
-              <p className="text-xs text-zinc-300 leading-relaxed">{VOICE_SAMPLE_SCRIPT}</p>
+              <p className="text-xs text-foreground leading-relaxed">{VOICE_SAMPLE_SCRIPT}</p>
             </div>
 
             {/* Recording controls */}
             {audioRecorder.error ? (
               <div className="flex flex-col items-center gap-2 py-4">
-                <AlertCircle className="w-6 h-6 text-red-400" />
-                <p className="text-xs text-red-400 text-center">{audioRecorder.error}</p>
+                <AlertCircle className="w-6 h-6 text-destructive" />
+                <p className="text-xs text-destructive text-center">{audioRecorder.error}</p>
                 <button
                   onClick={() => {
                     setVoiceCaptureMode('upload');
                     audioRecorder.reset();
                   }}
-                  className="text-xs text-amber-400 hover:underline"
+                  className="text-xs text-primary-light hover:underline"
                 >
                   Switch to file upload
                 </button>
@@ -923,7 +923,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
                   </button>
                   <div>
                     <p className="text-sm text-green-400 font-medium">Recording complete</p>
-                    <p className="text-xs text-zinc-500">{recordingDuration}s recorded</p>
+                    <p className="text-xs text-muted-foreground">{recordingDuration}s recorded</p>
                   </div>
                 </div>
                 <audio
@@ -936,7 +936,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
                     audioRecorder.reset();
                     setIsPlayingPreview(false);
                   }}
-                  className="text-xs text-zinc-400 hover:text-red-400 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-destructive transition-colors"
                 >
                   Re-record
                 </button>
@@ -946,15 +946,15 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
                 {audioRecorder.isRecording ? (
                   <>
                     <div className="relative">
-                      <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center animate-pulse">
-                        <Mic className="w-6 h-6 text-red-400" />
+                      <div className="w-16 h-16 rounded-full bg-destructive/20 border-2 border-destructive flex items-center justify-center animate-pulse">
+                        <Mic className="w-6 h-6 text-destructive" />
                       </div>
                     </div>
-                    <p className="text-sm text-red-400 font-medium tabular-nums">
+                    <p className="text-sm text-destructive font-medium tabular-nums">
                       Recording: {recordingDuration}s / {MAX_RECORDING_SECONDS}s
                     </p>
                     {!isLongEnough && (
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         Keep going — need at least {MIN_RECORDING_SECONDS - recordingDuration}s more
                       </p>
                     )}
@@ -964,8 +964,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
                       className={cn(
                         'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
                         isLongEnough
-                          ? 'bg-red-600 hover:bg-red-500 text-white'
-                          : 'bg-zinc-800 text-zinc-600 cursor-not-allowed',
+                          ? 'bg-destructive hover:bg-destructive text-white'
+                          : 'bg-surface-elevated text-muted-foreground cursor-not-allowed',
                       )}
                     >
                       <Square className="w-3.5 h-3.5" />
@@ -975,7 +975,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
                 ) : (
                   <button
                     onClick={() => void audioRecorder.startRecording()}
-                    className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-medium rounded-full transition-colors"
+                    className="flex items-center gap-2 px-6 py-3 bg-destructive hover:bg-destructive text-white font-medium rounded-full transition-colors"
                   >
                     <Mic className="w-4 h-4" />
                     Start Recording
@@ -986,7 +986,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               Upload 1 or more audio files of you speaking clearly. MP3, WAV, M4A, WebM, or OGG. Max 10MB each.
               Best results with 30+ seconds of clear speech.
             </p>
@@ -994,17 +994,17 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             {voiceFiles.length > 0 ? (
               <div className="space-y-2">
                 {voiceFiles.map((f, i) => (
-                  <div key={`${f.name}-${i}`} className="flex items-center gap-2 p-2 bg-zinc-800/50 rounded-lg">
+                  <div key={`${f.name}-${i}`} className="flex items-center gap-2 p-2 bg-surface-elevated/50 rounded-lg">
                     <Volume2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-                    <span className="text-xs text-zinc-300 truncate flex-1">{f.name}</span>
-                    <span className="text-[10px] text-zinc-500">
+                    <span className="text-xs text-foreground truncate flex-1">{f.name}</span>
+                    <span className="text-[10px] text-muted-foreground">
                       {(f.size / 1024 / 1024).toFixed(1)}MB
                     </span>
                   </div>
                 ))}
                 <button
                   onClick={() => setVoiceFiles([])}
-                  className="text-xs text-zinc-400 hover:text-red-400 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-destructive transition-colors"
                 >
                   Remove all
                 </button>
@@ -1012,10 +1012,10 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             ) : (
               <div
                 onClick={() => voiceFileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-zinc-700 rounded-xl cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/5 transition-colors"
+                className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-border-strong rounded-xl cursor-pointer hover:border-primary/30 hover:bg-primary/5 transition-colors"
               >
-                <Volume2 className="w-8 h-8 text-zinc-600 mb-2" />
-                <p className="text-sm text-zinc-400">Drop audio files here or click to browse</p>
+                <Volume2 className="w-8 h-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Drop audio files here or click to browse</p>
               </div>
             )}
 
@@ -1036,7 +1036,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
         <div className="flex gap-3 pt-2">
           <button
             onClick={() => setStep('face')}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm font-medium rounded-lg hover:bg-zinc-700 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-surface-elevated border border-border-strong text-foreground text-sm font-medium rounded-lg hover:bg-border-strong transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back
@@ -1047,8 +1047,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
             className={cn(
               'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors',
               canProceedFromVoice && !audioRecorder.isRecording
-                ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                : 'bg-zinc-800 text-zinc-600 cursor-not-allowed',
+                ? 'bg-primary hover:bg-primary text-white'
+                : 'bg-surface-elevated text-muted-foreground cursor-not-allowed',
             )}
           >
             {hasVoiceRecording || hasVoiceFiles ? 'Create My Clone' : 'Skip Voice (Add Later)'}
@@ -1075,15 +1075,15 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
     if (processingPhase === 'error') {
       return (
         <div className="flex flex-col items-center gap-4 py-8">
-          <AlertCircle className="w-12 h-12 text-red-400" />
+          <AlertCircle className="w-12 h-12 text-destructive" />
           <div className="text-center space-y-1">
-            <h3 className="text-lg font-semibold text-red-400">Something went wrong</h3>
-            <p className="text-sm text-zinc-400 max-w-xs">{processingError}</p>
+            <h3 className="text-lg font-semibold text-destructive">Something went wrong</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">{processingError}</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => setStep('face')}
-              className="px-4 py-2 bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm font-medium rounded-lg hover:bg-zinc-700 transition-colors"
+              className="px-4 py-2 bg-surface-elevated border border-border-strong text-foreground text-sm font-medium rounded-lg hover:bg-border-strong transition-colors"
             >
               Go Back
             </button>
@@ -1093,7 +1093,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
                 setProcessingError(null);
                 void runCloneProcess();
               }}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-primary hover:bg-primary text-white text-sm font-medium rounded-lg transition-colors"
             >
               Retry
             </button>
@@ -1104,10 +1104,10 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
 
     return (
       <div className="flex flex-col items-center gap-6 py-8">
-        <Loader2 className="w-12 h-12 animate-spin text-amber-400" />
+        <Loader2 className="w-12 h-12 animate-spin text-primary-light" />
         <div className="text-center space-y-1">
           <h3 className="text-lg font-semibold text-white">Creating Your Clone</h3>
-          <p className="text-sm text-zinc-400">Please don&apos;t close this window.</p>
+          <p className="text-sm text-muted-foreground">Please don&apos;t close this window.</p>
         </div>
 
         <div className="w-full space-y-2">
@@ -1119,8 +1119,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
                 i < currentIndex
                   ? 'bg-green-500/10 text-green-400'
                   : i === currentIndex
-                    ? 'bg-amber-500/10 text-amber-300'
-                    : 'bg-zinc-800/30 text-zinc-600',
+                    ? 'bg-primary/10 text-primary-light'
+                    : 'bg-surface-elevated/30 text-muted-foreground',
               )}
             >
               {i < currentIndex ? (
@@ -1128,7 +1128,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
               ) : i === currentIndex ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
               ) : (
-                <div className="w-3.5 h-3.5 rounded-full border border-zinc-600 flex-shrink-0" />
+                <div className="w-3.5 h-3.5 rounded-full border border-border flex-shrink-0" />
               )}
               {phase.label}
             </div>
@@ -1153,8 +1153,8 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
               />
             </div>
           ) : (
-            <div className="w-32 h-32 rounded-full bg-zinc-700 flex items-center justify-center ring-4 ring-green-500/60">
-              <User className="w-12 h-12 text-zinc-400" />
+            <div className="w-32 h-32 rounded-full bg-border-strong flex items-center justify-center ring-4 ring-green-500/60">
+              <User className="w-12 h-12 text-muted-foreground" />
             </div>
           )}
           <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -1166,7 +1166,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
           <h3 className="text-xl font-semibold text-white">
             Meet {createdAvatar?.name ?? 'Your Clone'}!
           </h3>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             Your AI clone is ready. It&apos;s been set as your default avatar for all future videos.
           </p>
         </div>
@@ -1183,7 +1183,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
               Voice &ldquo;{voiceCloneResult.voiceName}&rdquo; cloned via {voiceCloneResult.provider}
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-2 bg-zinc-800/50 rounded-lg text-xs text-zinc-500">
+            <div className="flex items-center gap-2 px-3 py-2 bg-surface-elevated/50 rounded-lg text-xs text-muted-foreground">
               <Mic className="w-3.5 h-3.5 flex-shrink-0" />
               No voice cloned — you can add one later from the Voice tab
             </div>
@@ -1207,7 +1207,7 @@ export function CloneWizard({ isOpen, onClose, onComplete }: CloneWizardProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { handleClose(); } }}>
-      <DialogContent className="max-w-md bg-zinc-900 border-zinc-700">
+      <DialogContent className="max-w-md bg-card border-border-strong">
         <DialogHeader>
           <DialogTitle className="sr-only">Clone Wizard</DialogTitle>
           <DialogDescription className="sr-only">

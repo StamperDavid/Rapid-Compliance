@@ -407,9 +407,9 @@ export function StudioModePanel() {
   return (
     <>
       {/* ── Top Toolbar ──────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border-strong">
         <div>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             Using provider: {activeProviderLabel}
           </p>
         </div>
@@ -418,7 +418,7 @@ export function StudioModePanel() {
             variant="outline"
             size="sm"
             onClick={handleClearAll}
-            className="border-zinc-700 text-zinc-400 hover:text-white"
+            className="border-border-strong text-muted-foreground hover:text-white"
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
             Clear All
@@ -427,7 +427,7 @@ export function StudioModePanel() {
             variant="outline"
             size="sm"
             onClick={() => setShowPresetLibrary(true)}
-            className="border-zinc-700 text-zinc-400 hover:text-white"
+            className="border-border-strong text-muted-foreground hover:text-white"
           >
             <Sparkles className="h-3.5 w-3.5 mr-1.5" />
             Presets
@@ -445,7 +445,7 @@ export function StudioModePanel() {
       {/* ── Main Two-Column Layout ───────────────────────────────── */}
       <div className="flex">
         {/* ── Left Panel — Controls ─────────────────────────────── */}
-        <div className="w-[460px] flex-shrink-0 border-r border-zinc-800 h-[calc(100vh-200px)] overflow-y-auto">
+        <div className="w-[460px] flex-shrink-0 border-r border-border-strong h-[calc(100vh-200px)] overflow-y-auto">
           <div className="p-5 space-y-2">
             <CinematicControlsPanel
               config={cinematicConfig}
@@ -465,7 +465,7 @@ export function StudioModePanel() {
                     onAdditionalReferencesChange={setAdditionalReferences}
                     onLibraryClick={() => setShowCharacterLibrary(true)}
                   />
-                  <div className="border-t border-zinc-800 pt-4">
+                  <div className="border-t border-border-strong pt-4">
                     <GenerateEditToggle
                       mode={studioMode}
                       onModeChange={setStudioMode}
@@ -498,16 +498,16 @@ export function StudioModePanel() {
             <div className="flex items-end gap-3 flex-wrap">
               {/* Provider */}
               <div className="space-y-1">
-                <Label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Model
                 </Label>
                 <Select value={selectedProvider} onValueChange={handleProviderChange}>
-                  <SelectTrigger className="w-40 bg-zinc-900 border-zinc-700 text-white text-xs h-9">
+                  <SelectTrigger className="w-40 bg-card border-border-strong text-white text-xs h-9">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
+                  <SelectContent className="bg-card border-border-strong">
                     {PROVIDER_OPTIONS.map((p) => (
-                      <SelectItem key={p.id} value={p.id} className="text-zinc-300 text-xs">
+                      <SelectItem key={p.id} value={p.id} className="text-foreground text-xs">
                         {p.name}
                       </SelectItem>
                     ))}
@@ -518,16 +518,16 @@ export function StudioModePanel() {
               {/* Model (when not auto) */}
               {selectedProvider !== 'auto' && (
                 <div className="space-y-1">
-                  <Label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                     Variant
                   </Label>
                   <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="w-44 bg-zinc-900 border-zinc-700 text-white text-xs h-9">
+                    <SelectTrigger className="w-44 bg-card border-border-strong text-white text-xs h-9">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                    <SelectContent className="bg-card border-border-strong">
                       {availableModels.map((m) => (
-                        <SelectItem key={m.id} value={m.id} className="text-zinc-300 text-xs">
+                        <SelectItem key={m.id} value={m.id} className="text-foreground text-xs">
                           {m.name} — ${m.cost.toFixed(3)}
                         </SelectItem>
                       ))}
@@ -538,7 +538,7 @@ export function StudioModePanel() {
 
               {/* Resolution */}
               <div className="space-y-1">
-                <Label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Resolution
                 </Label>
                 <div className="flex gap-1">
@@ -549,8 +549,8 @@ export function StudioModePanel() {
                       onClick={() => setResolution(r.id)}
                       className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                         resolution === r.id
-                          ? 'bg-amber-600/20 text-amber-400 border border-amber-500/40'
-                          : 'bg-zinc-900 text-zinc-500 border border-zinc-700 hover:border-zinc-500'
+                          ? 'bg-primary/20 text-primary-light border border-primary/40'
+                          : 'bg-card text-muted-foreground border border-border-strong hover:border-border'
                       }`}
                     >
                       {r.label}
@@ -564,7 +564,7 @@ export function StudioModePanel() {
                 variant="ghost"
                 size="sm"
                 onClick={handleCopySceneJson}
-                className="text-zinc-500 hover:text-white h-9"
+                className="text-muted-foreground hover:text-white h-9"
                 title="Copy scene configuration as JSON"
               >
                 <Copy className="h-3.5 w-3.5 mr-1" />
@@ -573,13 +573,13 @@ export function StudioModePanel() {
 
               {/* Cost + Queue Image */}
               <div className="ml-auto flex items-center gap-3">
-                <span className="text-xs text-zinc-500">
-                  est. <span className="text-amber-400 font-mono">${estimatedCost.toFixed(2)}</span>
+                <span className="text-xs text-muted-foreground">
+                  est. <span className="text-primary-light font-mono">${estimatedCost.toFixed(2)}</span>
                 </span>
                 <Button
                   onClick={() => void handleQueueImage()}
                   disabled={!subject.trim() || isGenerating}
-                  className="bg-amber-600 hover:bg-amber-500 text-black font-bold px-6 h-9"
+                  className="bg-primary hover:bg-primary-dark text-primary-foreground font-bold px-6 h-9"
                 >
                   {isGenerating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   <ImageIcon className="h-4 w-4 mr-1.5" />
@@ -593,17 +593,17 @@ export function StudioModePanel() {
               type="button"
               onClick={() => void handleQueueScene()}
               disabled={!subject.trim() || isGenerating}
-              className="w-full rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-sm font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary-light hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Layers className="h-4 w-4" />
               QUEUE SCENE (4 RANDOM ANGLES, CONSISTENT CHARACTER)
-              <span className="text-amber-500/60 text-xs ml-2">
+              <span className="text-primary/60 text-xs ml-2">
                 ${(estimatedCost * 4).toFixed(2)}
               </span>
             </button>
 
             {/* ── Primary Render ──────────────────────────────────── */}
-            <div className="relative rounded-lg border border-zinc-800 bg-zinc-900/50 min-h-[400px] flex items-center justify-center overflow-hidden">
+            <div className="relative rounded-lg border border-border-strong bg-card/50 min-h-[400px] flex items-center justify-center overflow-hidden">
               {primaryRender ? (
                 <>
                   {primaryRender.metadata?.format?.startsWith('video') ? (
@@ -647,26 +647,26 @@ export function StudioModePanel() {
                     </a>
                   </div>
                   {/* Metadata bar */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm px-4 py-2 flex items-center gap-3 text-[10px] text-zinc-400">
-                    <Badge variant="outline" className="text-[10px] border-zinc-600 text-zinc-400">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm px-4 py-2 flex items-center gap-3 text-[10px] text-muted-foreground">
+                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
                       {primaryRender.provider}
                     </Badge>
-                    <Badge variant="outline" className="text-[10px] border-zinc-600 text-zinc-400">
+                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
                       {primaryRender.model}
                     </Badge>
                     <span>
                       {primaryRender.metadata?.width}x{primaryRender.metadata?.height}
                     </span>
-                    <span className="text-amber-400">
+                    <span className="text-primary-light">
                       ${primaryRender.cost.toFixed(3)}
                     </span>
                   </div>
                 </>
               ) : (
                 <div className="text-center">
-                  <ImageIcon className="h-12 w-12 mx-auto text-zinc-700 mb-3" />
-                  <p className="text-sm text-zinc-600">No image generated</p>
-                  <p className="text-xs text-zinc-700 mt-1">
+                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">No image generated</p>
+                  <p className="text-xs text-muted-foreground mt-1">
                     Configure your scene and click Queue Image to generate
                   </p>
                 </div>
@@ -676,7 +676,7 @@ export function StudioModePanel() {
             {/* ── Scene Variations ────────────────────────────────── */}
             {sceneVariations.length > 0 && (
               <div>
-                <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Scene Variations ({sceneVariations.length}/4)
                 </h3>
                 <div className="grid grid-cols-4 gap-2">
@@ -685,10 +685,10 @@ export function StudioModePanel() {
                       key={variation.id}
                       type="button"
                       onClick={() => setPrimaryRender(variation)}
-                      className={`relative aspect-video rounded-lg border overflow-hidden transition-all hover:ring-2 hover:ring-amber-500/50 ${
+                      className={`relative aspect-video rounded-lg border overflow-hidden transition-all hover:ring-2 hover:ring-primary/50 ${
                         primaryRender?.id === variation.id
-                          ? 'border-amber-500 ring-2 ring-amber-500/50'
-                          : 'border-zinc-700'
+                          ? 'border-primary ring-2 ring-primary/50'
+                          : 'border-border-strong'
                       }`}
                     >
                       <Image
@@ -705,9 +705,9 @@ export function StudioModePanel() {
             )}
 
             {/* ── 06. Video Section ──────────────────────────────── */}
-            <div className="border-t border-zinc-800 pt-5">
+            <div className="border-t border-border-strong pt-5">
               <div className="flex items-center gap-3 mb-4">
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-500/20 text-xs font-bold text-amber-400">
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/20 text-xs font-bold text-primary-light">
                   06
                 </span>
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -719,17 +719,17 @@ export function StudioModePanel() {
               {/* Video API Provider */}
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                     Video API Provider
                   </Label>
                   <Select value={videoProvider} onValueChange={setVideoProvider}>
-                    <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 text-white text-xs h-9">
+                    <SelectTrigger className="w-full bg-card border-border-strong text-white text-xs h-9">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-700">
-                      <SelectItem value="kling" className="text-zinc-300 text-xs">Kling 3.0</SelectItem>
-                      <SelectItem value="google" className="text-zinc-300 text-xs">Google AI Studio</SelectItem>
-                      <SelectItem value="fal" className="text-zinc-300 text-xs">Fal.ai</SelectItem>
+                    <SelectContent className="bg-card border-border-strong">
+                      <SelectItem value="kling" className="text-foreground text-xs">Kling 3.0</SelectItem>
+                      <SelectItem value="google" className="text-foreground text-xs">Google AI Studio</SelectItem>
+                      <SelectItem value="fal" className="text-foreground text-xs">Fal.ai</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -744,10 +744,10 @@ export function StudioModePanel() {
                       disabled={!tab.enabled}
                       className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                         videoType === tab.id && tab.enabled
-                          ? 'bg-amber-600/20 text-amber-400 border border-amber-500/40'
+                          ? 'bg-primary/20 text-primary-light border border-primary/40'
                           : tab.enabled
-                            ? 'bg-zinc-900 text-zinc-400 border border-zinc-700 hover:border-zinc-500'
-                            : 'bg-zinc-900/50 text-zinc-600 border border-zinc-800 cursor-not-allowed'
+                            ? 'bg-card text-muted-foreground border border-border-strong hover:border-border'
+                            : 'bg-card/50 text-muted-foreground border border-border-strong cursor-not-allowed'
                       }`}
                     >
                       {tab.label}
@@ -760,28 +760,28 @@ export function StudioModePanel() {
                   <Button
                     onClick={() => void handleQueueVideo()}
                     disabled={!subject.trim() || isGenerating}
-                    className="w-full bg-amber-600 hover:bg-amber-500 text-black font-bold h-9"
+                    className="w-full bg-primary hover:bg-primary-dark text-primary-foreground font-bold h-9"
                   >
                     {isGenerating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                     <Video className="h-4 w-4 mr-1.5" />
                     QUEUE VIDEO
                   </Button>
                 ) : (
-                  <p className="text-xs text-zinc-600 text-center py-3">
+                  <p className="text-xs text-muted-foreground text-center py-3">
                     Select a video type to configure model and prompt settings.
                   </p>
                 )}
 
-                <p className="text-[10px] text-zinc-600 text-center">
+                <p className="text-[10px] text-muted-foreground text-center">
                   Using provider: {videoProvider === 'kling' ? 'Kling 3.0' : videoProvider === 'google' ? 'Google AI Studio' : 'Fal.ai'}
                 </p>
               </div>
             </div>
 
             {/* ── Render Queue ────────────────────────────────────── */}
-            <div className="border-t border-zinc-800 pt-5">
+            <div className="border-t border-border-strong pt-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Render Queue
                 </h3>
                 {renderQueue.length > 0 && (
@@ -789,7 +789,7 @@ export function StudioModePanel() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setRenderQueue([])}
-                    className="text-zinc-600 hover:text-zinc-400 h-6 text-[10px]"
+                    className="text-muted-foreground hover:text-muted-foreground h-6 text-[10px]"
                   >
                     <Trash2 className="h-3 w-3 mr-1" />
                     Clear

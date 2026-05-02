@@ -14,6 +14,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
+import type { SocialPlatform } from '@/types/social';
 
 // ============================================================================
 // TYPES
@@ -145,6 +146,16 @@ export interface Mission {
     senderId?: string;
     senderHandle?: string;
   };
+  /**
+   * Freeform metadata bag stamped at mission-creation time.
+   * Social-post-generation missions use this to record the target platform,
+   * format, specialist, and origin uid so the pending-mission query can filter
+   * by platform + kind without needing a separate index on user-generated fields.
+   *
+   * Convention: keep values as primitives (string | boolean | number | null) so
+   * Firestore equality filters work without deserialization.
+   */
+  metadata?: Record<string, string | boolean | number | null>;
 }
 
 export interface ListMissionsOptions {
@@ -1438,5 +1449,77 @@ export async function bulkDeleteTerminalMissions(): Promise<number> {
       error: errorMsg,
     });
     return 0;
+  }
+}
+
+// ============================================================================
+// PLATFORM PENDING MISSION QUERY
+// ============================================================================
+
+/**
+ * Returns the most-recent AWAITING_APPROVAL mission tagged with the given
+ * platform in its `metadata.platform` field, along with its first FAILED
+ * step (the step that halted the mission).
+ *
+ * Used by the InlineReviewCard to surface pending operator decisions
+ * directly inside the platform dashboard without requiring the operator to
+ * open Mission Control first.
+ *
+ * Returns null when no matching mission is found or Firestore is unavailable.
+ *
+ * Defensive query pattern: single-field `where` + in-JS filter/sort.
+ * The original 3-condition where + orderBy combo required a composite
+ * Firestore index that isn't deployed (same constraint as
+ * `metrics-service.ts` and `audience-baseline-service.ts`). Pending-
+ * mission counts per tenant are bounded (typically <20 active at once),
+ * so the in-process filter is trivial.
+ */
+export async function findPendingMissionForPlatform(
+  platform: SocialPlatform,
+): Promise<{ mission: Mission; step: MissionStep } | null> {
+  if (!adminDb) {
+    logger.warn('[MissionPersistence] Firestore not available — findPendingMissionForPlatform skipped');
+    return null;
+  }
+
+  try {
+    const snap = await adminDb
+      .collection(missionsCollectionPath())
+      .where('status', '==', 'AWAITING_APPROVAL')
+      .get();
+
+    const candidates = snap.docs
+      .map((d) => d.data() as Mission)
+      .filter((m) => {
+        const md = (m as Mission & { metadata?: Record<string, unknown> }).metadata;
+        return md?.platform === platform;
+      })
+      .sort((a, b) => {
+        const aCreated = a.createdAt ?? '';
+        const bCreated = b.createdAt ?? '';
+        return bCreated.localeCompare(aCreated);
+      });
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    const mission = candidates[0];
+    const failedStep = mission.steps.find((s) => s.status === 'FAILED') ?? null;
+
+    if (!failedStep) {
+      // Mission is AWAITING_APPROVAL but no failed step found — data anomaly,
+      // skip rather than returning a mission with no actionable step.
+      return null;
+    }
+
+    return { mission, step: failedStep };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] findPendingMissionForPlatform failed', err instanceof Error ? err : undefined, {
+      platform,
+      error: errorMsg,
+    });
+    return null;
   }
 }

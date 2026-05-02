@@ -77,8 +77,8 @@ function StarRating({
           <Star
             className={`${starSize} transition-colors ${
               star <= (hovered || value)
-                ? 'fill-amber-400 text-amber-400'
-                : 'fill-transparent text-zinc-600'
+                ? 'fill-primary text-primary-light'
+                : 'fill-transparent text-muted-foreground'
             }`}
           />
         </button>
@@ -161,13 +161,13 @@ export function ScreenwriterRating({
   // Already submitted
   if (submitted) {
     return (
-      <Card className="bg-zinc-900/50 border-zinc-800">
+      <Card className="bg-card/50 border-border-strong">
         <CardContent className="py-6">
           <div className="flex items-center gap-3 text-center justify-center">
             {flagged ? (
               <>
-                <AlertTriangle className="w-5 h-5 text-amber-400" />
-                <span className="text-amber-300 text-sm">
+                <AlertTriangle className="w-5 h-5 text-primary-light" />
+                <span className="text-primary-light text-sm">
                   Feedback recorded. Screenwriter flagged for training review.
                 </span>
               </>
@@ -186,10 +186,10 @@ export function ScreenwriterRating({
   }
 
   return (
-    <Card className="bg-zinc-900/50 border-zinc-800">
+    <Card className="bg-card/50 border-border-strong">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-white text-base">
-          <Star className="w-5 h-5 text-amber-500" />
+          <Star className="w-5 h-5 text-primary" />
           Rate the Screenwriter
         </CardTitle>
         <CardDescription>
@@ -199,10 +199,10 @@ export function ScreenwriterRating({
       <CardContent className="space-y-4">
         {/* Overall Rating */}
         <div className="flex items-center gap-4">
-          <span className="text-sm text-zinc-400 w-24 shrink-0">Overall:</span>
+          <span className="text-sm text-muted-foreground w-24 shrink-0">Overall:</span>
           <StarRating value={overallRating} onChange={setOverallRating} />
           {overallRating > 0 && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted-foreground">
               {overallRating === 1 && 'Terrible'}
               {overallRating === 2 && 'Poor'}
               {overallRating === 3 && 'Okay'}
@@ -216,19 +216,19 @@ export function ScreenwriterRating({
         <button
           type="button"
           onClick={() => setShowCriteria(!showCriteria)}
-          className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors"
+          className="text-xs text-primary-light/70 hover:text-primary-light transition-colors"
         >
           {showCriteria ? 'Hide detailed scores' : 'Score specific criteria (optional)'}
         </button>
 
         {showCriteria && (
-          <div className="space-y-2 pl-2 border-l-2 border-zinc-700/50">
+          <div className="space-y-2 pl-2 border-l-2 border-border-strong/50">
             {(Object.entries(CRITERIA_LABELS) as Array<[keyof CriteriaScores, { label: string; hint: string }]>).map(
               ([key, { label, hint }]) => (
                 <div key={key} className="flex items-center gap-3">
                   <div className="w-40 shrink-0">
-                    <div className="text-xs text-zinc-300">{label}</div>
-                    <div className="text-[10px] text-zinc-500">{hint}</div>
+                    <div className="text-xs text-foreground">{label}</div>
+                    <div className="text-[10px] text-muted-foreground">{hint}</div>
                   </div>
                   <StarRating
                     value={criteriaScores[key]}
@@ -246,7 +246,7 @@ export function ScreenwriterRating({
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
           placeholder="What went wrong or right? e.g., 'Wrong character — I asked for a man but got a woman' or 'Great pacing but scene 3 had no character reference'"
-          className="w-full h-20 px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-lg text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50 resize-none"
+          className="w-full h-20 px-3 py-2 bg-surface-elevated/50 border border-border-strong rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 resize-none"
           maxLength={2000}
         />
 
@@ -255,7 +255,7 @@ export function ScreenwriterRating({
           <Button
             onClick={() => { void handleSubmit(); }}
             disabled={overallRating === 0 || !feedback.trim() || submitting}
-            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-40"
+            className="gap-2 bg-primary hover:bg-primary-dark text-white disabled:opacity-40"
             size="sm"
           >
             {submitting ? (

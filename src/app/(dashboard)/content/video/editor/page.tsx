@@ -193,10 +193,10 @@ export default function VideoEditorPage() {
       <header className="flex items-center justify-between">
         <div>
           <PageTitle className="text-2xl flex items-center gap-2">
-            <Scissors className="w-6 h-6 text-amber-500" />
+            <Scissors className="w-6 h-6 text-primary" />
             Video Editor
           </PageTitle>
-          <SectionDescription className="mt-1 text-zinc-400">
+          <SectionDescription className="mt-1 text-muted-foreground">
             Trim, stitch, light, and caption — drop clips, drag the playhead, click Export.
           </SectionDescription>
         </div>
@@ -258,12 +258,12 @@ export default function VideoEditorPage() {
       </div>
 
       {/* Footer keyboard hint */}
-      <div className="text-[10px] text-zinc-600 flex flex-wrap gap-3 px-1">
-        <span><kbd className="px-1 py-0.5 bg-zinc-800 rounded text-zinc-400">Space</kbd> Play/Pause</span>
-        <span><kbd className="px-1 py-0.5 bg-zinc-800 rounded text-zinc-400">S</kbd> Split at playhead</span>
-        <span><kbd className="px-1 py-0.5 bg-zinc-800 rounded text-zinc-400">Ctrl+Z</kbd> Undo</span>
-        <span><kbd className="px-1 py-0.5 bg-zinc-800 rounded text-zinc-400">Ctrl+Shift+Z</kbd> Redo</span>
-        <span><kbd className="px-1 py-0.5 bg-zinc-800 rounded text-zinc-400">Esc</kbd> Deselect</span>
+      <div className="text-[10px] text-muted-foreground flex flex-wrap gap-3 px-1">
+        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Space</kbd> Play/Pause</span>
+        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">S</kbd> Split at playhead</span>
+        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Ctrl+Z</kbd> Undo</span>
+        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Ctrl+Shift+Z</kbd> Redo</span>
+        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Esc</kbd> Deselect</span>
       </div>
     </div>
   );
@@ -284,7 +284,7 @@ function ExportStatusPill({ state }: { state: ExportState }) {
 
   if (state.phase === 'rendering') {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs text-amber-300">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">
         <Sparkles className="w-3.5 h-3.5 animate-pulse" />
         Rendering on the server…
       </div>
@@ -296,7 +296,7 @@ function ExportStatusPill({ state }: { state: ExportState }) {
         href={state.item.url}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-md text-xs text-emerald-300 hover:bg-emerald-500/20"
+        className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary hover:bg-primary/20"
       >
         <CheckCircle className="w-3.5 h-3.5" />
         Saved to Library — open
@@ -304,7 +304,7 @@ function ExportStatusPill({ state }: { state: ExportState }) {
     );
   }
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/30 rounded-md text-xs text-red-300">
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-destructive/10 border border-destructive/30 rounded-md text-xs text-destructive">
       <AlertCircle className="w-3.5 h-3.5" />
       {state.error ?? 'Render failed'}
     </div>

@@ -59,14 +59,14 @@ const GENRES = [
 ] as const;
 
 const MOODS: { value: MoodValue; label: string; color: string }[] = [
-  { value: 'happy', label: 'Happy', color: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300' },
-  { value: 'energetic', label: 'Energetic', color: 'bg-orange-500/15 border-orange-500/40 text-orange-300' },
+  { value: 'happy', label: 'Happy', color: 'bg-primary/15 border-primary/40 text-primary' },
+  { value: 'energetic', label: 'Energetic', color: 'bg-primary/15 border-primary/40 text-primary' },
   { value: 'calm', label: 'Calm', color: 'bg-blue-500/15 border-blue-500/40 text-blue-300' },
-  { value: 'dramatic', label: 'Dramatic', color: 'bg-red-500/15 border-red-500/40 text-red-300' },
-  { value: 'mysterious', label: 'Mysterious', color: 'bg-purple-500/15 border-purple-500/40 text-purple-300' },
-  { value: 'romantic', label: 'Romantic', color: 'bg-pink-500/15 border-pink-500/40 text-pink-300' },
-  { value: 'dark', label: 'Dark', color: 'bg-zinc-500/15 border-zinc-500/40 text-zinc-300' },
-  { value: 'inspiring', label: 'Inspiring', color: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' },
+  { value: 'dramatic', label: 'Dramatic', color: 'bg-destructive/15 border-destructive/40 text-destructive' },
+  { value: 'mysterious', label: 'Mysterious', color: 'bg-primary/15 border-primary/40 text-primary-light' },
+  { value: 'romantic', label: 'Romantic', color: 'bg-primary/15 border-primary/40 text-primary-light' },
+  { value: 'dark', label: 'Dark', color: 'bg-surface-elevated/30 border-border/40 text-foreground' },
+  { value: 'inspiring', label: 'Inspiring', color: 'bg-primary/15 border-primary/40 text-primary' },
 ];
 
 const TEMPOS: { value: TempoValue; label: string; bpm: string }[] = [
@@ -231,7 +231,7 @@ function MusicLoadingAnimation() {
       {[0, 1, 2, 3, 4].map((i) => (
         <div
           key={i}
-          className="w-1 bg-gradient-to-t from-pink-500 to-purple-500 rounded-full"
+          className="w-1 bg-gradient-to-t from-primary to-primary rounded-full"
           style={{
             animation: `musicBar 0.8s ease-in-out infinite alternate`,
             animationDelay: `${i * 0.15}s`,
@@ -288,7 +288,7 @@ function StepIndicator({ current }: { current: CreationStep }) {
               <div
                 className={cn(
                   'w-8 h-px',
-                  isComplete ? 'bg-pink-500' : 'bg-zinc-700',
+                  isComplete ? 'bg-primary' : 'bg-border-strong',
                 )}
               />
             )}
@@ -297,10 +297,10 @@ function StepIndicator({ current }: { current: CreationStep }) {
                 className={cn(
                   'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all',
                   isActive
-                    ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30'
+                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
                     : isComplete
-                      ? 'bg-pink-500/30 text-pink-300'
-                      : 'bg-zinc-800 text-zinc-500',
+                      ? 'bg-primary/30 text-primary-light'
+                      : 'bg-surface-elevated text-muted-foreground',
                 )}
               >
                 {step.num}
@@ -308,7 +308,7 @@ function StepIndicator({ current }: { current: CreationStep }) {
               <span
                 className={cn(
                   'text-xs font-medium hidden sm:inline',
-                  isActive ? 'text-white' : isComplete ? 'text-pink-400' : 'text-zinc-600',
+                  isActive ? 'text-white' : isComplete ? 'text-primary-light' : 'text-muted-foreground',
                 )}
               >
                 {step.label}
@@ -338,7 +338,7 @@ function GenreBrowser({
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-zinc-300 mb-3">Choose a Style</h3>
+      <h3 className="text-sm font-semibold text-foreground mb-3">Choose a Style</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {GENRES.map((genre) => {
           const isSelected = selectedGenre === genre.id;
@@ -353,8 +353,8 @@ function GenreBrowser({
               className={cn(
                 'flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left group',
                 isSelected
-                  ? 'bg-pink-500/10 border-pink-500/50 shadow-lg shadow-pink-500/5'
-                  : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/50',
+                  ? 'bg-primary/10 border-primary/50 shadow-lg shadow-primary/5'
+                  : 'bg-card/50 border-border-strong hover:border-border hover:bg-surface-elevated/50',
               )}
             >
               <span className="text-2xl flex-shrink-0">{genre.icon}</span>
@@ -362,12 +362,12 @@ function GenreBrowser({
                 <p
                   className={cn(
                     'text-sm font-medium truncate',
-                    isSelected ? 'text-pink-300' : 'text-zinc-200 group-hover:text-white',
+                    isSelected ? 'text-primary-light' : 'text-foreground group-hover:text-white',
                   )}
                 >
                   {genre.label}
                 </p>
-                <p className="text-xs text-zinc-500 truncate">{genre.desc}</p>
+                <p className="text-xs text-muted-foreground truncate">{genre.desc}</p>
               </div>
             </button>
           );
@@ -382,8 +382,8 @@ function GenreBrowser({
           className={cn(
             'flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left group',
             showCustom || selectedGenre === 'custom'
-              ? 'bg-purple-500/10 border-purple-500/50 shadow-lg shadow-purple-500/5'
-              : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/50',
+              ? 'bg-primary/10 border-primary/50 shadow-lg shadow-primary/5'
+              : 'bg-card/50 border-border-strong hover:border-border hover:bg-surface-elevated/50',
           )}
         >
           <span className="text-2xl flex-shrink-0">🎨</span>
@@ -391,12 +391,12 @@ function GenreBrowser({
             <p
               className={cn(
                 'text-sm font-medium',
-                showCustom || selectedGenre === 'custom' ? 'text-purple-300' : 'text-zinc-200 group-hover:text-white',
+                showCustom || selectedGenre === 'custom' ? 'text-primary-light' : 'text-foreground group-hover:text-white',
               )}
             >
               Custom Style
             </p>
-            <p className="text-xs text-zinc-500">Type your own style tags</p>
+            <p className="text-xs text-muted-foreground">Type your own style tags</p>
           </div>
         </button>
       </div>
@@ -409,7 +409,7 @@ function GenreBrowser({
             value={customStyle}
             onChange={(e) => onCustomStyleChange(e.target.value)}
             placeholder="e.g., tropical house, synthwave, dreampop, future bass"
-            className="w-full px-4 py-2.5 bg-zinc-800/80 border border-purple-500/30 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            className="w-full px-4 py-2.5 bg-surface-elevated/80 border border-primary/30 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
             autoFocus
           />
         </div>
@@ -451,7 +451,7 @@ function SongDescriptionPanel({
     <div className="space-y-5">
       {/* Purpose / Description */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+        <label className="block text-sm font-medium text-foreground mb-1.5">
           Message / Purpose
         </label>
         <textarea
@@ -459,14 +459,14 @@ function SongDescriptionPanel({
           onChange={(e) => onPromptChange(e.target.value)}
           placeholder="Describe the message or purpose of this track... e.g., 'Energetic opener for a SaaS product launch video with confident, modern feel'"
           rows={3}
-          className="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 resize-none"
+          className="w-full px-4 py-3 bg-surface-elevated/80 border border-border-strong rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
         />
       </div>
 
       {/* Mood Selector */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1.5">
-          Mood <span className="text-zinc-500 font-normal">(select up to 3)</span>
+        <label className="block text-sm font-medium text-foreground mb-1.5">
+          Mood <span className="text-muted-foreground font-normal">(select up to 3)</span>
         </label>
         <div className="flex flex-wrap gap-1.5">
           {MOODS.map((mood) => {
@@ -482,8 +482,8 @@ function SongDescriptionPanel({
                   isSelected
                     ? mood.color
                     : isDisabled
-                      ? 'bg-zinc-900 border-zinc-800 text-zinc-700 cursor-not-allowed'
-                      : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:border-zinc-500',
+                      ? 'bg-card border-border-strong text-muted-foreground cursor-not-allowed'
+                      : 'bg-surface-elevated/50 border-border-strong/50 text-muted-foreground hover:border-border',
                 )}
               >
                 {mood.label}
@@ -495,7 +495,7 @@ function SongDescriptionPanel({
 
       {/* Tempo Selector */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1.5">Tempo</label>
+        <label className="block text-sm font-medium text-foreground mb-1.5">Tempo</label>
         <div className="flex gap-1.5">
           {TEMPOS.map((t) => (
             <button
@@ -504,8 +504,8 @@ function SongDescriptionPanel({
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all text-center',
                 tempo === t.value
-                  ? 'bg-pink-500/15 border-pink-500/40 text-pink-300'
-                  : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:border-zinc-500',
+                  ? 'bg-primary/15 border-primary/40 text-primary-light'
+                  : 'bg-surface-elevated/50 border-border-strong/50 text-muted-foreground hover:border-border',
               )}
             >
               <div>{t.label}</div>
@@ -517,15 +517,15 @@ function SongDescriptionPanel({
 
       {/* Vocals Toggle */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1.5">Vocals</label>
+        <label className="block text-sm font-medium text-foreground mb-1.5">Vocals</label>
         <div className="flex gap-2">
           <button
             onClick={() => onInstrumentalChange(true)}
             className={cn(
               'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all flex-1',
               instrumental
-                ? 'bg-pink-500/15 border-pink-500/40 text-pink-300'
-                : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:border-zinc-500',
+                ? 'bg-primary/15 border-primary/40 text-primary-light'
+                : 'bg-surface-elevated/50 border-border-strong/50 text-muted-foreground hover:border-border',
             )}
           >
             <Music className="w-4 h-4" />
@@ -536,8 +536,8 @@ function SongDescriptionPanel({
             className={cn(
               'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all flex-1',
               !instrumental
-                ? 'bg-pink-500/15 border-pink-500/40 text-pink-300'
-                : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:border-zinc-500',
+                ? 'bg-primary/15 border-primary/40 text-primary-light'
+                : 'bg-surface-elevated/50 border-border-strong/50 text-muted-foreground hover:border-border',
             )}
           >
             <Mic className="w-4 h-4" />
@@ -548,10 +548,10 @@ function SongDescriptionPanel({
 
       {/* Vocal Options (shown when vocals enabled) */}
       {!instrumental && (
-        <div className="space-y-4 pl-4 border-l-2 border-pink-500/20">
+        <div className="space-y-4 pl-4 border-l-2 border-primary/20">
           {/* Voice Style */}
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Voice Style</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Voice Style</label>
             <div className="flex gap-1.5">
               {VOICE_STYLES.map((vs) => (
                 <button
@@ -560,8 +560,8 @@ function SongDescriptionPanel({
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
                     voiceStyle === vs.value
-                      ? 'bg-pink-500/15 border-pink-500/40 text-pink-300'
-                      : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:border-zinc-500',
+                      ? 'bg-primary/15 border-primary/40 text-primary-light'
+                      : 'bg-surface-elevated/50 border-border-strong/50 text-muted-foreground hover:border-border',
                   )}
                 >
                   {vs.label}
@@ -572,15 +572,15 @@ function SongDescriptionPanel({
 
           {/* Lyrics */}
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-              Lyrics <span className="text-zinc-600">(optional — AI generates if empty)</span>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Lyrics <span className="text-muted-foreground">(optional — AI generates if empty)</span>
             </label>
             <textarea
               value={lyrics}
               onChange={(e) => onLyricsChange(e.target.value)}
               placeholder="Write your lyrics here, or leave empty for AI-generated lyrics..."
               rows={4}
-              className="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 resize-none font-mono"
+              className="w-full px-4 py-3 bg-surface-elevated/80 border border-border-strong rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none font-mono"
             />
           </div>
         </div>
@@ -625,25 +625,25 @@ function TrackDetailView({
   const [loopEnabled, setLoopEnabled] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-zinc-700 bg-zinc-900/95 overflow-hidden">
+    <div className="rounded-2xl border border-border-strong bg-card/95 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border-strong">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
             <Music className="w-5 h-5 text-white" />
           </div>
           <div>
             <h3 className="text-base font-semibold text-white">{track.title}</h3>
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">{track.style}</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="px-1.5 py-0.5 rounded bg-surface-elevated text-muted-foreground">{track.style}</span>
               {track.mood.length > 0 && track.mood.map((m) => (
-                <span key={m} className="px-1.5 py-0.5 rounded bg-zinc-800/50 text-zinc-500">{m}</span>
+                <span key={m} className="px-1.5 py-0.5 rounded bg-surface-elevated/50 text-muted-foreground">{m}</span>
               ))}
               <span>{formatDuration(track.duration)}</span>
             </div>
           </div>
         </div>
-        <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white transition-colors rounded-lg hover:bg-zinc-800">
+        <button onClick={onClose} className="p-2 text-muted-foreground hover:text-white transition-colors rounded-lg hover:bg-surface-elevated">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -655,7 +655,7 @@ function TrackDetailView({
         </div>
 
         {/* Time display */}
-        <div className="flex items-center justify-between mt-2 text-xs text-zinc-500">
+        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
           <span>{formatDuration(progress * track.duration)}</span>
           <span>{formatDuration(track.duration)}</span>
         </div>
@@ -663,12 +663,12 @@ function TrackDetailView({
 
       {/* Playback Controls */}
       <div className="flex items-center justify-center gap-4 pb-4">
-        <button className="p-2 text-zinc-500 hover:text-white transition-colors" onClick={() => onSeek(0)}>
+        <button className="p-2 text-muted-foreground hover:text-white transition-colors" onClick={() => onSeek(0)}>
           <SkipBack className="w-5 h-5" />
         </button>
         <button
           onClick={isPlaying ? onPause : onPlay}
-          className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center hover:shadow-lg hover:shadow-pink-500/30 transition-all"
+          className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 transition-all"
         >
           {isPlaying ? (
             <Pause className="w-6 h-6 text-white" />
@@ -676,14 +676,14 @@ function TrackDetailView({
             <Play className="w-6 h-6 text-white ml-0.5" />
           )}
         </button>
-        <button className="p-2 text-zinc-500 hover:text-white transition-colors" onClick={() => onSeek(1)}>
+        <button className="p-2 text-muted-foreground hover:text-white transition-colors" onClick={() => onSeek(1)}>
           <SkipForward className="w-5 h-5" />
         </button>
       </div>
 
       {/* Volume Control */}
       <div className="flex items-center justify-center gap-2 pb-4">
-        <Volume2 className="w-4 h-4 text-zinc-500" />
+        <Volume2 className="w-4 h-4 text-muted-foreground" />
         <input
           type="range"
           min={0}
@@ -691,28 +691,28 @@ function TrackDetailView({
           step={0.05}
           value={volume}
           onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-          className="w-32 accent-pink-500"
+          className="w-32 accent-primary"
         />
       </div>
 
       {/* Metadata */}
       <div className="px-6 pb-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="px-3 py-2 bg-zinc-800/50 rounded-lg">
-            <p className="text-[10px] uppercase text-zinc-600 tracking-wider">Genre</p>
-            <p className="text-sm text-zinc-200 mt-0.5">{track.style}</p>
+          <div className="px-3 py-2 bg-surface-elevated/50 rounded-lg">
+            <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Genre</p>
+            <p className="text-sm text-foreground mt-0.5">{track.style}</p>
           </div>
-          <div className="px-3 py-2 bg-zinc-800/50 rounded-lg">
-            <p className="text-[10px] uppercase text-zinc-600 tracking-wider">Tempo</p>
-            <p className="text-sm text-zinc-200 mt-0.5 capitalize">{track.tempo}</p>
+          <div className="px-3 py-2 bg-surface-elevated/50 rounded-lg">
+            <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Tempo</p>
+            <p className="text-sm text-foreground mt-0.5 capitalize">{track.tempo}</p>
           </div>
-          <div className="px-3 py-2 bg-zinc-800/50 rounded-lg">
-            <p className="text-[10px] uppercase text-zinc-600 tracking-wider">Duration</p>
-            <p className="text-sm text-zinc-200 mt-0.5">{formatDuration(track.duration)}</p>
+          <div className="px-3 py-2 bg-surface-elevated/50 rounded-lg">
+            <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Duration</p>
+            <p className="text-sm text-foreground mt-0.5">{formatDuration(track.duration)}</p>
           </div>
-          <div className="px-3 py-2 bg-zinc-800/50 rounded-lg">
-            <p className="text-[10px] uppercase text-zinc-600 tracking-wider">Created</p>
-            <p className="text-sm text-zinc-200 mt-0.5">{formatDate(track.createdAt)}</p>
+          <div className="px-3 py-2 bg-surface-elevated/50 rounded-lg">
+            <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Created</p>
+            <p className="text-sm text-foreground mt-0.5">{formatDate(track.createdAt)}</p>
           </div>
         </div>
       </div>
@@ -720,13 +720,13 @@ function TrackDetailView({
       {/* Edit & Remix Section */}
       <div className="px-6 pb-4">
         <div className="flex items-center gap-2 mb-3">
-          <Scissors className="w-4 h-4 text-zinc-500" />
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Edit & Remix</p>
+          <Scissors className="w-4 h-4 text-muted-foreground" />
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Edit & Remix</p>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {/* Trim Start */}
           <div>
-            <label className="block text-[10px] text-zinc-600 mb-1">Trim Start</label>
+            <label className="block text-[10px] text-muted-foreground mb-1">Trim Start</label>
             <input
               type="number"
               min={0}
@@ -734,12 +734,12 @@ function TrackDetailView({
               step={0.5}
               value={trimStart}
               onChange={(e) => setTrimStart(parseFloat(e.target.value) || 0)}
-              className="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500/50"
+              className="w-full px-2.5 py-1.5 bg-surface-elevated border border-border-strong rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
           </div>
           {/* Trim End */}
           <div>
-            <label className="block text-[10px] text-zinc-600 mb-1">Trim End</label>
+            <label className="block text-[10px] text-muted-foreground mb-1">Trim End</label>
             <input
               type="number"
               min={trimStart + 1}
@@ -747,7 +747,7 @@ function TrackDetailView({
               step={0.5}
               value={trimEnd}
               onChange={(e) => setTrimEnd(parseFloat(e.target.value) || track.duration)}
-              className="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500/50"
+              className="w-full px-2.5 py-1.5 bg-surface-elevated border border-border-strong rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
           </div>
           {/* Fade In/Out */}
@@ -757,8 +757,8 @@ function TrackDetailView({
               className={cn(
                 'flex-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all',
                 fadeIn
-                  ? 'bg-pink-500/15 border-pink-500/40 text-pink-300'
-                  : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:border-zinc-500',
+                  ? 'bg-primary/15 border-primary/40 text-primary-light'
+                  : 'bg-surface-elevated border-border-strong text-muted-foreground hover:border-border',
               )}
             >
               Fade In
@@ -768,8 +768,8 @@ function TrackDetailView({
               className={cn(
                 'flex-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all',
                 fadeOut
-                  ? 'bg-pink-500/15 border-pink-500/40 text-pink-300'
-                  : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:border-zinc-500',
+                  ? 'bg-primary/15 border-primary/40 text-primary-light'
+                  : 'bg-surface-elevated border-border-strong text-muted-foreground hover:border-border',
               )}
             >
               Fade Out
@@ -782,8 +782,8 @@ function TrackDetailView({
               className={cn(
                 'w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all',
                 loopEnabled
-                  ? 'bg-pink-500/15 border-pink-500/40 text-pink-300'
-                  : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:border-zinc-500',
+                  ? 'bg-primary/15 border-primary/40 text-primary-light'
+                  : 'bg-surface-elevated border-border-strong text-muted-foreground hover:border-border',
               )}
             >
               <Repeat className="w-3 h-3" />
@@ -798,7 +798,7 @@ function TrackDetailView({
         <Button
           size="sm"
           onClick={onRegenerateSimilar}
-          className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs"
+          className="gap-1.5 bg-primary-dark hover:bg-primary-dark text-white rounded-xl text-xs"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Regenerate Similar
@@ -809,16 +809,16 @@ function TrackDetailView({
           onClick={onFavorite}
           className={cn(
             'gap-1.5 rounded-xl text-xs',
-            track.isFavorite ? 'text-yellow-400' : 'text-zinc-500 hover:text-yellow-400',
+            track.isFavorite ? 'text-primary-light' : 'text-muted-foreground hover:text-primary-light',
           )}
         >
-          <Star className={cn('w-3.5 h-3.5', track.isFavorite && 'fill-yellow-400')} />
+          <Star className={cn('w-3.5 h-3.5', track.isFavorite && 'fill-primary')} />
           {track.isFavorite ? 'Favorited' : 'Favorite'}
         </Button>
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1.5 text-zinc-500 hover:text-white rounded-xl text-xs"
+          className="gap-1.5 text-muted-foreground hover:text-white rounded-xl text-xs"
           onClick={() => {
             const a = document.createElement('a');
             a.href = track.audioUrl;
@@ -834,7 +834,7 @@ function TrackDetailView({
           variant="ghost"
           size="sm"
           onClick={onDelete}
-          className="gap-1.5 text-red-500/60 hover:text-red-400 rounded-xl text-xs"
+          className="gap-1.5 text-destructive/60 hover:text-destructive rounded-xl text-xs"
         >
           <Trash2 className="w-3.5 h-3.5" />
           Delete
@@ -1279,12 +1279,12 @@ export function AIMusicStudio() {
     <div className="space-y-6">
       {/* ── API Key Warning ── */}
       {hasApiKey === false && (
-        <div className="flex items-start gap-3 px-5 py-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-          <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 px-5 py-4 bg-primary/10 border border-primary/20 rounded-2xl">
+          <AlertCircle className="w-5 h-5 text-primary-light flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-amber-300">AI Music API not configured</p>
-            <p className="text-xs text-zinc-400 mt-1">
-              Add a MiniMax API key in <span className="text-amber-400 font-medium">Settings &rarr; API Keys</span> to enable
+            <p className="text-sm font-medium text-primary-light">AI Music API not configured</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Add a MiniMax API key in <span className="text-primary-light font-medium">Settings &rarr; API Keys</span> to enable
               AI music generation. MiniMax creates professional-quality songs, jingles, and background music with lyrics support.
             </p>
           </div>
@@ -1292,16 +1292,16 @@ export function AIMusicStudio() {
       )}
 
       {/* ── Creation Panel ── */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+      <div className="rounded-2xl border border-border-strong bg-card/80 overflow-hidden">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">Create Music</h2>
-              <p className="text-xs text-zinc-500">Jingles, backing tracks, and production music with AI</p>
+              <p className="text-xs text-muted-foreground">Jingles, backing tracks, and production music with AI</p>
             </div>
           </div>
 
@@ -1322,7 +1322,7 @@ export function AIMusicStudio() {
                 <Button
                   onClick={() => setStep('describe')}
                   disabled={!canGoToDescribe || hasApiKey === false}
-                  className="gap-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white rounded-xl"
+                  className="gap-2 bg-gradient-to-r from-primary-dark to-primary-dark hover:from-primary-dark hover:to-primary-dark text-white rounded-xl"
                 >
                   Continue
                   <ChevronRight className="w-4 h-4" />
@@ -1336,13 +1336,13 @@ export function AIMusicStudio() {
             <div>
               {/* Selected genre pill */}
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs text-zinc-500">Style:</span>
-                <span className="px-2.5 py-1 rounded-full bg-pink-500/15 border border-pink-500/30 text-xs text-pink-300 font-medium">
+                <span className="text-xs text-muted-foreground">Style:</span>
+                <span className="px-2.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-xs text-primary-light font-medium">
                   {resolvedStyle}
                 </span>
                 <button
                   onClick={() => setStep('genre')}
-                  className="text-xs text-zinc-600 hover:text-zinc-400 underline"
+                  className="text-xs text-muted-foreground hover:text-muted-foreground underline"
                 >
                   change
                 </button>
@@ -1367,7 +1367,7 @@ export function AIMusicStudio() {
               <div className="mt-6 flex items-center gap-3">
                 <button
                   onClick={() => setStep('genre')}
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Back
                 </button>
@@ -1376,7 +1376,7 @@ export function AIMusicStudio() {
                   size="lg"
                   onClick={() => { void handleGeneratePreview(); }}
                   disabled={isGeneratingPreview || !prompt.trim() || hasApiKey === false}
-                  className="gap-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white h-12 px-8 text-sm rounded-xl shadow-lg shadow-pink-500/20"
+                  className="gap-2 bg-gradient-to-r from-primary-dark to-primary-dark hover:from-primary-dark hover:to-primary-dark text-white h-12 px-8 text-sm rounded-xl shadow-lg shadow-primary/20"
                 >
                   {isGeneratingPreview ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1397,15 +1397,15 @@ export function AIMusicStudio() {
             <div>
               <div className="text-center mb-6">
                 <h3 className="text-base font-semibold text-white mb-1">Preview Ready</h3>
-                <p className="text-xs text-zinc-500">Listen to your {resolvedStyle} preview</p>
+                <p className="text-xs text-muted-foreground">Listen to your {resolvedStyle} preview</p>
               </div>
 
               {/* Preview playback card */}
-              <div className="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-6 mb-6">
+              <div className="bg-surface-elevated/50 border border-border-strong rounded-2xl p-6 mb-6">
                 <div className="flex items-center justify-center gap-4 mb-4">
                   <button
                     onClick={() => handlePlayToggle(previewTrack)}
-                    className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center hover:shadow-lg hover:shadow-pink-500/30 transition-all"
+                    className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 transition-all"
                   >
                     {playingId === previewTrack.id ? (
                       <Pause className="w-6 h-6 text-white" />
@@ -1422,18 +1422,18 @@ export function AIMusicStudio() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between mt-2 text-xs text-zinc-500">
+                <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                   <span>{formatDuration((playbackProgress[previewTrack.id] ?? 0) * previewTrack.duration)}</span>
                   <span>{formatDuration(previewTrack.duration)}</span>
                 </div>
 
-                <p className="text-center text-sm text-zinc-300 mt-3 font-medium">{previewTrack.title}</p>
+                <p className="text-center text-sm text-foreground mt-3 font-medium">{previewTrack.title}</p>
               </div>
 
               {/* Choose length and generate full */}
-              <div className="bg-zinc-800/30 border border-zinc-700/50 rounded-xl p-5">
-                <p className="text-sm text-zinc-300 font-medium mb-3">
-                  <Heart className="w-4 h-4 inline-block mr-1.5 text-pink-400" />
+              <div className="bg-surface-elevated/30 border border-border-strong/50 rounded-xl p-5">
+                <p className="text-sm text-foreground font-medium mb-3">
+                  <Heart className="w-4 h-4 inline-block mr-1.5 text-primary-light" />
                   Like it? Choose length and generate the full track
                 </p>
 
@@ -1445,8 +1445,8 @@ export function AIMusicStudio() {
                       className={cn(
                         'flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all text-center',
                         selectedDuration === d.value
-                          ? 'bg-pink-500/15 border-pink-500/40 text-pink-300'
-                          : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400 hover:border-zinc-500',
+                          ? 'bg-primary/15 border-primary/40 text-primary-light'
+                          : 'bg-surface-elevated/50 border-border-strong/50 text-muted-foreground hover:border-border',
                       )}
                     >
                       {d.label}
@@ -1458,7 +1458,7 @@ export function AIMusicStudio() {
                   size="lg"
                   onClick={() => { void handleGenerateFullTrack(); }}
                   disabled={isGeneratingFull || hasApiKey === false}
-                  className="gap-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white w-full h-12 text-sm rounded-xl shadow-lg shadow-pink-500/20"
+                  className="gap-2 bg-gradient-to-r from-primary-dark to-primary-dark hover:from-primary-dark hover:to-primary-dark text-white w-full h-12 text-sm rounded-xl shadow-lg shadow-primary/20"
                 >
                   {isGeneratingFull ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1475,7 +1475,7 @@ export function AIMusicStudio() {
               <div className="mt-4 flex items-center gap-3">
                 <button
                   onClick={() => setStep('describe')}
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Back to editing
                 </button>
@@ -1486,7 +1486,7 @@ export function AIMusicStudio() {
                     setPreviewTrack(null);
                     cleanupAudio();
                   }}
-                  className="text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
+                  className="text-sm text-muted-foreground hover:text-muted-foreground transition-colors"
                 >
                   Start Over
                 </button>
@@ -1498,16 +1498,16 @@ export function AIMusicStudio() {
           {step === 'generate' && (
             <div className="text-center py-8">
               <MusicLoadingAnimation />
-              <p className="text-sm text-zinc-400 mt-4">Generating your track...</p>
+              <p className="text-sm text-muted-foreground mt-4">Generating your track...</p>
             </div>
           )}
 
           {/* ─── Error Display ─── */}
           {error && (
-            <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-xs text-red-400 flex-1">{error}</p>
-              <button onClick={() => setError(null)} className="text-red-500 hover:text-red-400">
+            <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl">
+              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+              <p className="text-xs text-destructive flex-1">{error}</p>
+              <button onClick={() => setError(null)} className="text-destructive hover:text-destructive">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -1534,20 +1534,20 @@ export function AIMusicStudio() {
       )}
 
       {/* ── Music Library ── */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+      <div className="rounded-2xl border border-border-strong bg-card/80 overflow-hidden">
         <div className="p-6">
           {/* Library Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Music className="w-5 h-5 text-pink-400" />
+              <Music className="w-5 h-5 text-primary-light" />
               <h2 className="text-lg font-semibold text-white">Music Library</h2>
-              <span className="text-xs text-zinc-600 ml-1">({filteredTracks.length} tracks)</span>
+              <span className="text-xs text-muted-foreground ml-1">({filteredTracks.length} tracks)</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => { void loadTracks(); }}
-              className="h-7 px-2 text-xs gap-1 text-zinc-500"
+              className="h-7 px-2 text-xs gap-1 text-muted-foreground"
             >
               <RefreshCw className="w-3 h-3" />
               Refresh
@@ -1567,8 +1567,8 @@ export function AIMusicStudio() {
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
                   libraryTab === tab.key
-                    ? 'bg-pink-500/15 text-pink-300'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50',
+                    ? 'bg-primary/15 text-primary-light'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated/50',
                 )}
               >
                 {tab.label}
@@ -1579,18 +1579,18 @@ export function AIMusicStudio() {
           {/* Search & Filter */}
           <div className="flex gap-2 mb-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search tracks..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-pink-500/30"
+                className="w-full pl-9 pr-4 py-2 bg-surface-elevated/80 border border-border-strong rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -1601,7 +1601,7 @@ export function AIMusicStudio() {
             <div className="relative">
               <button
                 onClick={() => setShowSortMenu(!showSortMenu)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800/80 border border-zinc-700 rounded-xl text-xs text-zinc-400 hover:text-zinc-300 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 bg-surface-elevated/80 border border-border-strong rounded-xl text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Clock className="w-3.5 h-3.5" />
                 {sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : 'Duration'}
@@ -1610,7 +1610,7 @@ export function AIMusicStudio() {
               {showSortMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl z-20 py-1 min-w-[120px]">
+                  <div className="absolute right-0 top-full mt-1 bg-surface-elevated border border-border-strong rounded-xl shadow-xl z-20 py-1 min-w-[120px]">
                     {([
                       { value: 'newest' as const, label: 'Newest First' },
                       { value: 'oldest' as const, label: 'Oldest First' },
@@ -1625,8 +1625,8 @@ export function AIMusicStudio() {
                         className={cn(
                           'w-full px-3 py-1.5 text-xs text-left transition-colors',
                           sortBy === opt.value
-                            ? 'text-pink-300 bg-pink-500/10'
-                            : 'text-zinc-400 hover:text-white hover:bg-zinc-700/50',
+                            ? 'text-primary-light bg-primary/10'
+                            : 'text-muted-foreground hover:text-white hover:bg-border-strong/50',
                         )}
                       >
                         {opt.label}
@@ -1652,8 +1652,8 @@ export function AIMusicStudio() {
                     className={cn(
                       'group flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer',
                       isPlaying
-                        ? 'border-pink-500/30 bg-pink-500/5'
-                        : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-800/30',
+                        ? 'border-primary/30 bg-primary/5'
+                        : 'border-border-strong bg-card/50 hover:border-border-strong hover:bg-surface-elevated/30',
                     )}
                     onClick={() => setDetailTrack(track)}
                   >
@@ -1666,8 +1666,8 @@ export function AIMusicStudio() {
                       className={cn(
                         'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all',
                         isPlaying
-                          ? 'bg-pink-500/20 text-pink-400'
-                          : 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700',
+                          ? 'bg-primary/20 text-primary-light'
+                          : 'bg-surface-elevated text-muted-foreground hover:text-white hover:bg-border-strong',
                       )}
                     >
                       {isPlaying ? (
@@ -1681,10 +1681,10 @@ export function AIMusicStudio() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{track.title}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500">{track.style}</span>
-                        <span className="text-[10px] text-zinc-600">{formatDuration(track.duration)}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-elevated text-muted-foreground">{track.style}</span>
+                        <span className="text-[10px] text-muted-foreground">{formatDuration(track.duration)}</span>
                         {track.mood.length > 0 && (
-                          <span className="text-[10px] text-zinc-600 hidden sm:inline">
+                          <span className="text-[10px] text-muted-foreground hidden sm:inline">
                             {track.mood.join(', ')}
                           </span>
                         )}
@@ -1698,7 +1698,7 @@ export function AIMusicStudio() {
 
                     {/* Playing indicator */}
                     {isPlaying && (
-                      <Volume2 className="w-4 h-4 text-pink-400 animate-pulse flex-shrink-0" />
+                      <Volume2 className="w-4 h-4 text-primary-light animate-pulse flex-shrink-0" />
                     )}
 
                     {/* Action buttons */}
@@ -1709,17 +1709,17 @@ export function AIMusicStudio() {
                         className={cn(
                           'p-2 rounded-lg transition-colors',
                           track.isFavorite
-                            ? 'text-yellow-400 hover:text-yellow-300'
-                            : 'text-zinc-600 hover:text-yellow-400 opacity-0 group-hover:opacity-100',
+                            ? 'text-primary-light hover:text-primary'
+                            : 'text-muted-foreground hover:text-primary-light opacity-0 group-hover:opacity-100',
                         )}
                         title="Favorite"
                       >
-                        <Star className={cn('w-3.5 h-3.5', track.isFavorite && 'fill-yellow-400')} />
+                        <Star className={cn('w-3.5 h-3.5', track.isFavorite && 'fill-primary')} />
                       </button>
 
                       {/* Download */}
                       <button
-                        className="p-2 rounded-lg text-zinc-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 rounded-lg text-muted-foreground hover:text-white transition-colors opacity-0 group-hover:opacity-100"
                         onClick={() => {
                           const a = document.createElement('a');
                           a.href = track.audioUrl;
@@ -1733,7 +1733,7 @@ export function AIMusicStudio() {
 
                       {/* Use in Video */}
                       <button
-                        className="p-2 rounded-lg text-zinc-600 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 rounded-lg text-muted-foreground hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
                         onClick={() => {
                           void navigator.clipboard.writeText(track.audioUrl);
                         }}
@@ -1747,13 +1747,13 @@ export function AIMusicStudio() {
                         <div className="flex items-center gap-1 ml-1">
                           <button
                             onClick={() => { void handleDeleteTrack(track.id); }}
-                            className="px-2 py-1 text-[10px] bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30 font-medium"
+                            className="px-2 py-1 text-[10px] bg-destructive/20 text-destructive rounded-md hover:bg-destructive/30 font-medium"
                           >
                             Confirm
                           </button>
                           <button
                             onClick={() => setDeleteConfirmId(null)}
-                            className="px-2 py-1 text-[10px] bg-zinc-800 text-zinc-400 rounded-md hover:bg-zinc-700"
+                            className="px-2 py-1 text-[10px] bg-surface-elevated text-muted-foreground rounded-md hover:bg-border-strong"
                           >
                             Cancel
                           </button>
@@ -1761,7 +1761,7 @@ export function AIMusicStudio() {
                       ) : (
                         <button
                           onClick={() => setDeleteConfirmId(track.id)}
-                          className="p-2 rounded-lg text-zinc-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-2 rounded-lg text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
                           title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1775,10 +1775,10 @@ export function AIMusicStudio() {
           ) : (
             // Empty State
             <div className="flex flex-col items-center py-12 gap-3">
-              <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center">
-                <Music className="w-8 h-8 text-zinc-700" />
+              <div className="w-16 h-16 rounded-2xl bg-surface-elevated/50 flex items-center justify-center">
+                <Music className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-sm text-zinc-500 font-medium">
+              <p className="text-sm text-muted-foreground font-medium">
                 {libraryTab === 'favorites'
                   ? 'No favorite tracks yet'
                   : searchQuery
@@ -1786,7 +1786,7 @@ export function AIMusicStudio() {
                     : 'No tracks generated yet'
                 }
               </p>
-              <p className="text-xs text-zinc-600 max-w-sm text-center">
+              <p className="text-xs text-muted-foreground max-w-sm text-center">
                 {libraryTab === 'favorites'
                   ? 'Star your best tracks to find them quickly here.'
                   : 'Create your first track using the music generator above. Choose a style, describe the vibe, and let AI compose something unique.'

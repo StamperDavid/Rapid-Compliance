@@ -80,29 +80,29 @@ function MediaItemCard({
     audio: Music,
   };
   const colorMap: Record<string, string> = {
-    video: 'text-amber-400',
+    video: 'text-primary-light',
     image: 'text-blue-400',
-    audio: 'text-purple-400',
+    audio: 'text-primary-light',
   };
   const Icon = iconMap[item.type] ?? Film;
-  const color = colorMap[item.type] ?? 'text-zinc-400';
+  const color = colorMap[item.type] ?? 'text-muted-foreground';
 
   return (
-    <div className="flex items-center gap-2 p-1.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-800/20 group">
+    <div className="flex items-center gap-2 p-1.5 rounded border border-border-strong hover:border-border-strong bg-surface-elevated/20 group">
       <div
         className={`w-7 h-7 rounded flex items-center justify-center flex-shrink-0 ${
           item.type === 'video'
-            ? 'bg-amber-500/10'
+            ? 'bg-primary/10'
             : item.type === 'image'
               ? 'bg-blue-500/10'
-              : 'bg-purple-500/10'
+              : 'bg-primary/10'
         }`}
       >
         <Icon className={`w-3.5 h-3.5 ${color}`} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[11px] text-white truncate">{item.name}</p>
-        <p className="text-[9px] text-zinc-600">{item.category}</p>
+        <p className="text-[9px] text-muted-foreground">{item.category}</p>
       </div>
       {onAddToTimeline && actionLabel && (
         <button
@@ -110,7 +110,7 @@ function MediaItemCard({
             e.stopPropagation();
             onAddToTimeline();
           }}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all flex-shrink-0"
+          className="opacity-0 group-hover:opacity-100 p-1 rounded bg-primary/10 text-primary-light hover:bg-primary/20 transition-all flex-shrink-0"
           title={actionLabel}
         >
           <Plus className="w-3 h-3" />
@@ -433,7 +433,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
   // ========================================================================
 
   return (
-    <Card className="bg-zinc-900/50 border-zinc-800">
+    <Card className="bg-card/50 border-border-strong">
       <CardHeader className="pb-2 pt-3 px-3">
         <div className="flex gap-1">
           {(
@@ -449,8 +449,8 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
               onClick={() => handlePanelTabChange(tab.key)}
               className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
                 panelTab === tab.key
-                  ? 'bg-amber-500/20 text-amber-400'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                  ? 'bg-primary/20 text-primary-light'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated'
               }`}
             >
               <tab.icon className="w-3 h-3" />
@@ -481,8 +481,8 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                       onClick={() => handleMediaTypeChange(t)}
                       className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                         mediaType === t
-                          ? 'bg-zinc-700 text-white'
-                          : 'text-zinc-500 hover:text-zinc-300'
+                          ? 'bg-border-strong text-white'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
@@ -499,8 +499,8 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                         onClick={() => handleAudioFilterChange(f)}
                         className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
                           audioFilter === f
-                            ? 'bg-purple-500/20 text-purple-400'
-                            : 'text-zinc-500 hover:text-zinc-300'
+                            ? 'bg-primary/20 text-primary-light'
+                            : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         {f === 'all' ? 'All' : `${f.charAt(0).toUpperCase()}${f.slice(1)}s`}
@@ -511,13 +511,13 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
 
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                   <input
                     type="text"
                     value={mediaSearch}
                     onChange={(e) => setMediaSearch(e.target.value)}
                     placeholder="Search media..."
-                    className="w-full pl-7 pr-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
+                    className="w-full pl-7 pr-3 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                 </div>
 
@@ -525,13 +525,13 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                 <div className="max-h-[400px] overflow-y-auto space-y-1.5">
                   {loadingMedia ? (
                     <div className="flex justify-center py-8">
-                      <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     </div>
                   ) : filteredMedia.length === 0 ? (
                     <div className="text-center py-8">
-                      <FolderOpen className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-                      <p className="text-xs text-zinc-500">No media found</p>
-                      <p className="text-[10px] text-zinc-600 mt-1">Upload files or add from projects</p>
+                      <FolderOpen className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">No media found</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Upload files or add from projects</p>
                     </div>
                   ) : (
                     filteredMedia.map((item) => (
@@ -579,12 +579,12 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
               <div className="max-h-[450px] overflow-y-auto space-y-1.5">
                 {loadingProjects ? (
                   <div className="flex justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
                   </div>
                 ) : projects.length === 0 ? (
                   <div className="text-center py-8">
-                    <Film className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-                    <p className="text-xs text-zinc-500">No projects found</p>
+                    <Film className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">No projects found</p>
                   </div>
                 ) : (
                   projects.map((project) => (
@@ -595,12 +595,12 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                         }}
                         className={`w-full text-left p-2 rounded border transition-colors ${
                           expandedProjectId === project.id
-                            ? 'border-amber-500/30 bg-amber-500/5'
-                            : 'border-zinc-800 hover:border-zinc-700 bg-zinc-800/30'
+                            ? 'border-primary/30 bg-primary/5'
+                            : 'border-border-strong hover:border-border-strong bg-surface-elevated/30'
                         }`}
                       >
                         <p className="text-xs font-medium text-white truncate">{project.name}</p>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
                           {project.sceneCount} scenes · {project.status}
                         </p>
                       </button>
@@ -610,7 +610,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                         <div className="pl-2 space-y-1">
                           {loadingProjectDetail ? (
                             <div className="flex justify-center py-3">
-                              <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
                             </div>
                           ) : expandedProject?.generatedScenes?.filter((s) => s.videoUrl).length ? (
                             <>
@@ -633,7 +633,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                                     });
                                   }
                                 }}
-                                className="w-full text-left px-2 py-1.5 rounded bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 hover:bg-amber-500/20 transition-colors"
+                                className="w-full text-left px-2 py-1.5 rounded bg-primary/10 border border-primary/20 text-xs text-primary-light hover:bg-primary/20 transition-colors"
                               >
                                 <Plus className="w-3 h-3 inline mr-1" />
                                 Add all{' '}
@@ -654,11 +654,11 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                                         source: 'project',
                                       });
                                     }}
-                                    className="w-full text-left px-2 py-1.5 rounded border border-zinc-800 hover:border-amber-500/30 text-xs text-zinc-300 hover:text-white transition-colors flex items-center gap-2"
+                                    className="w-full text-left px-2 py-1.5 rounded border border-border-strong hover:border-primary/30 text-xs text-foreground hover:text-white transition-colors flex items-center gap-2"
                                   >
-                                    <Play className="w-3 h-3 text-zinc-500 flex-shrink-0" />
+                                    <Play className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                                     <span className="truncate">Scene {idx + 1}</span>
-                                    <Plus className="w-3 h-3 text-zinc-600 ml-auto flex-shrink-0" />
+                                    <Plus className="w-3 h-3 text-muted-foreground ml-auto flex-shrink-0" />
                                   </button>
                                 ))}
 
@@ -682,7 +682,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                               )}
                             </>
                           ) : (
-                            <p className="text-[10px] text-zinc-600 px-2 py-2">
+                            <p className="text-[10px] text-muted-foreground px-2 py-2">
                               No video clips available
                             </p>
                           )}
@@ -699,19 +699,19 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
               <div className="max-h-[450px] overflow-y-auto space-y-1.5">
                 {loadingAvatars ? (
                   <div className="flex justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
                   </div>
                 ) : avatars.length === 0 ? (
                   <div className="text-center py-8">
-                    <Users className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-                    <p className="text-xs text-zinc-500">No characters found</p>
-                    <p className="text-[10px] text-zinc-600 mt-1">Create characters in the Studio</p>
+                    <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">No characters found</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Create characters in the Studio</p>
                   </div>
                 ) : (
                   avatars.map((avatar) => (
                     <div
                       key={avatar.id}
-                      className="flex items-center gap-2 p-2 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-800/30"
+                      className="flex items-center gap-2 p-2 rounded border border-border-strong hover:border-border-strong bg-surface-elevated/30"
                     >
                       {avatar.imageUrl ? (
                         <Image
@@ -723,8 +723,8 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                           className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center flex-shrink-0">
-                          <Users className="w-4 h-4 text-zinc-500" />
+                        <div className="w-8 h-8 rounded-full bg-border-strong flex items-center justify-center flex-shrink-0">
+                          <Users className="w-4 h-4 text-muted-foreground" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -736,7 +736,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                           {avatar.role && (
                             <Badge
                               variant="outline"
-                              className="text-[9px] py-0 px-1 text-amber-400 border-amber-500/30"
+                              className="text-[9px] py-0 px-1 text-primary-light border-primary/30"
                             >
                               {avatar.role}
                             </Badge>
@@ -754,13 +754,13 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
               <div className="space-y-3">
                 {/* Category Selector */}
                 <div>
-                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                     Category
                   </label>
                   <select
                     value={uploadCategory}
                     onChange={(e) => setUploadCategory(e.target.value)}
-                    className="w-full mt-1 px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full mt-1 px-2 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-white focus:outline-none focus:border-primary/50"
                   >
                     <optgroup label="Video">
                       <option value="clip">Video Clip</option>
@@ -811,14 +811,14 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
 
                 {/* Divider */}
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-px bg-zinc-800" />
-                  <span className="text-[10px] text-zinc-600">or</span>
-                  <div className="flex-1 h-px bg-zinc-800" />
+                  <div className="flex-1 h-px bg-surface-elevated" />
+                  <span className="text-[10px] text-muted-foreground">or</span>
+                  <div className="flex-1 h-px bg-surface-elevated" />
                 </div>
 
                 {/* URL Import */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                     Import from URL
                   </label>
                   <input
@@ -826,7 +826,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                     value={urlName}
                     onChange={(e) => setUrlName(e.target.value)}
                     placeholder="Clip name (optional)"
-                    className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
+                    className="w-full px-2 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                   <div className="flex gap-1">
                     <input
@@ -834,7 +834,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                       value={urlInput}
                       onChange={(e) => setUrlInput(e.target.value)}
                       placeholder="https://... video URL"
-                      className="flex-1 px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
+                      className="flex-1 px-2 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           handleUrlImport();

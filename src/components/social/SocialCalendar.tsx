@@ -33,6 +33,19 @@ interface SocialCalendarProps {
   statusFilter: string;
   onPlatformFilter: (value: string) => void;
   onStatusFilter: (value: string) => void;
+  /**
+   * Height for the calendar container. Defaults to a full-page height
+   * (`calc(100vh - 220px)`); embeds should pass an explicit pixel value
+   * so the calendar fits within a card.
+   */
+  height?: string | number;
+  /** Floor for the calendar container; default 500px. */
+  minHeight?: number;
+  /** Initial calendar view; defaults to 'month'. Use 'agenda' for narrow embeds. */
+  defaultView?: View;
+  /** Hide the platform-filter dropdown in the toolbar. Use when the
+   *  embed is already pre-filtered to a single platform. */
+  hidePlatformFilter?: boolean;
 }
 
 export default function SocialCalendar({
@@ -44,8 +57,12 @@ export default function SocialCalendar({
   statusFilter,
   onPlatformFilter,
   onStatusFilter,
+  height,
+  minHeight,
+  defaultView,
+  hidePlatformFilter,
 }: SocialCalendarProps) {
-  const [currentView, setCurrentView] = React.useState<View>('month');
+  const [currentView, setCurrentView] = React.useState<View>(defaultView ?? 'month');
   const [currentDate, setCurrentDate] = React.useState(new Date());
 
   // Filter events client-side
@@ -81,12 +98,13 @@ export default function SocialCalendar({
           statusFilter={statusFilter}
           onPlatformFilter={onPlatformFilter}
           onStatusFilter={onStatusFilter}
+          hidePlatformFilter={hidePlatformFilter}
         />
       );
     }
     ToolbarWrapper.displayName = 'CalendarToolbarWrapper';
     return ToolbarWrapper;
-  }, [platformFilter, statusFilter, onPlatformFilter, onStatusFilter]);
+  }, [platformFilter, statusFilter, onPlatformFilter, onStatusFilter, hidePlatformFilter]);
 
   // Custom event component
   const EventComponent = useCallback(
@@ -98,8 +116,11 @@ export default function SocialCalendar({
   // but is not wired directly to Calendar since it requires withDragAndDrop HOC.
   void onEventDrop;
 
+  const containerHeight = height ?? 'calc(100vh - 220px)';
+  const containerMinHeight = minHeight ?? 500;
+
   return (
-    <div style={{ height: 'calc(100vh - 220px)', minHeight: 500 }}>
+    <div style={{ height: containerHeight, minHeight: containerMinHeight }}>
       <Calendar<CalendarEvent>
         localizer={localizer}
         events={filteredEvents}

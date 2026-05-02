@@ -63,7 +63,7 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   migrate_website: { route: '/website', label: 'Website' },
   // Campaign tools
   create_campaign: { route: '/mission-control', label: 'Mission Control' },
-  batch_produce_videos: { route: '/content/video/calendar', label: 'Content Calendar' },
+  batch_produce_videos: { route: '/social/calendar', label: 'Content Calendar' },
   // Campaign deliverable steps (fallbacks — toolResult.reviewLink takes priority)
   campaign_video: { route: '/content/video', label: 'Video Studio' },
   campaign_social: { route: '/social', label: 'Social Hub' },

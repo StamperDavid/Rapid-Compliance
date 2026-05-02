@@ -128,7 +128,7 @@ async function main() {
       model: 'claude-sonnet-4.6',
       temperature: 0.7,
       maxTokens: 8192,
-      supportedActions: ['generate_content'],
+      supportedActions: ['generate_content', 'compose_dm_reply'],
     },
     systemPromptSnapshot: resolvedSystemPrompt,
     brandDNASnapshot: brandDNA,

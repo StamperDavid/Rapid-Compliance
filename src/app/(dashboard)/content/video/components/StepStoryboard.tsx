@@ -83,14 +83,14 @@ const SceneCard = forwardRef<HTMLDivElement, SceneCardProps>(function SceneCard(
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={onSelect}
-      className={`bg-zinc-900/80 border rounded-lg overflow-hidden cursor-pointer transition-all ${
+      className={`bg-card/80 border rounded-lg overflow-hidden cursor-pointer transition-all ${
         isSelected
-          ? 'border-amber-500 ring-2 ring-amber-500/30'
-          : 'border-zinc-800 hover:border-zinc-600'
+          ? 'border-primary ring-2 ring-primary/30'
+          : 'border-border-strong hover:border-border'
       }`}
     >
       {/* Preview Image */}
-      <div className="relative aspect-video bg-zinc-800/50 group">
+      <div className="relative aspect-video bg-surface-elevated/50 group">
         {scene.screenshotUrl && !imgBroken ? (
           <Image
             src={scene.screenshotUrl}
@@ -101,7 +101,7 @@ const SceneCard = forwardRef<HTMLDivElement, SceneCardProps>(function SceneCard(
             onError={handleImageError}
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-600">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
             <ImageIcon className="w-8 h-8 mb-1" />
             <span className="text-[10px]">{imgBroken ? 'Preview expired' : 'No preview'}</span>
           </div>
@@ -118,7 +118,7 @@ const SceneCard = forwardRef<HTMLDivElement, SceneCardProps>(function SceneCard(
             type="button"
             onClick={(e) => { e.stopPropagation(); onGeneratePreview(); }}
             disabled={isGeneratingPreview}
-            className="bg-black/70 hover:bg-amber-600 text-white p-1.5 rounded transition-colors"
+            className="bg-black/70 hover:bg-primary text-white p-1.5 rounded transition-colors"
             title="Generate preview image"
           >
             {isGeneratingPreview ? (
@@ -130,7 +130,7 @@ const SceneCard = forwardRef<HTMLDivElement, SceneCardProps>(function SceneCard(
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
-            className="bg-black/70 hover:bg-zinc-600 text-white p-1.5 rounded transition-colors"
+            className="bg-black/70 hover:bg-border-strong text-white p-1.5 rounded transition-colors"
             title="Duplicate scene"
           >
             <Copy className="w-3.5 h-3.5" />
@@ -138,7 +138,7 @@ const SceneCard = forwardRef<HTMLDivElement, SceneCardProps>(function SceneCard(
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="bg-black/70 hover:bg-red-600 text-white p-1.5 rounded transition-colors"
+            className="bg-black/70 hover:bg-destructive text-white p-1.5 rounded transition-colors"
             title="Delete scene"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -151,7 +151,7 @@ const SceneCard = forwardRef<HTMLDivElement, SceneCardProps>(function SceneCard(
         </div>
 
         {/* Duration badge */}
-        <div className="absolute bottom-2 right-2 bg-black/70 text-zinc-300 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
+        <div className="absolute bottom-2 right-2 bg-black/70 text-foreground text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
           <Clock className="w-2.5 h-2.5" />
           {scene.duration}s
         </div>
@@ -162,13 +162,13 @@ const SceneCard = forwardRef<HTMLDivElement, SceneCardProps>(function SceneCard(
         <p className="text-xs font-semibold text-white truncate">
           {scene.title ?? `Scene ${index + 1}`}
         </p>
-        <p className="text-[10px] text-zinc-500 line-clamp-2">
+        <p className="text-[10px] text-muted-foreground line-clamp-2">
           {scene.scriptText || 'No script yet'}
         </p>
         {scene.cinematicConfig && Object.keys(scene.cinematicConfig).length > 0 && (
           <div className="flex items-center gap-1 mt-1">
-            <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-            <span className="text-[9px] text-amber-500/70">Cinematic configured</span>
+            <Sparkles className="w-2.5 h-2.5 text-primary" />
+            <span className="text-[9px] text-primary/70">Cinematic configured</span>
           </div>
         )}
       </div>
@@ -202,19 +202,19 @@ function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEdito
       transition={{ duration: 0.2 }}
       className="overflow-hidden"
     >
-      <Card className="bg-zinc-900/80 border-amber-500/30 border">
+      <Card className="bg-card/80 border-primary/30 border">
         <CardContent className="p-0">
           {/* Editor Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border-strong">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500" />
+              <Sparkles className="w-4 h-4 text-primary" />
               Editing Scene {index + 1}: {scene.title ?? 'Untitled'}
             </h3>
             <Button
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="h-7 w-7 text-zinc-500 hover:text-white"
+              className="h-7 w-7 text-muted-foreground hover:text-white"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -223,10 +223,10 @@ function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEdito
           {/* Two-column layout: Script + Details on left, Cinematic Controls on right */}
           <div className="flex">
             {/* Left: Script + Scene Details */}
-            <div className="w-1/2 border-r border-zinc-800 p-4 space-y-4">
+            <div className="w-1/2 border-r border-border-strong p-4 space-y-4">
               {/* Title */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                <Label className="text-xs text-primary/80 uppercase tracking-wider font-semibold">
                   Scene Title
                 </Label>
                 <input
@@ -234,13 +234,13 @@ function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEdito
                   value={scene.title ?? ''}
                   onChange={(e) => onUpdate({ title: e.target.value || undefined })}
                   placeholder={`Scene ${String(index + 1)} title...`}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none"
+                  className="w-full bg-surface-elevated border border-border-strong rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:border-primary focus:outline-none"
                 />
               </div>
 
               {/* Script */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                <Label className="text-xs text-primary/80 uppercase tracking-wider font-semibold">
                   Script / Dialogue
                 </Label>
                 <Textarea
@@ -248,16 +248,16 @@ function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEdito
                   onChange={(e) => onUpdate({ scriptText: e.target.value })}
                   rows={6}
                   placeholder="NARRATOR: Welcome to SalesVelocity...&#10;SARAH (to camera): I used to spend hours on spreadsheets.&#10;(Sarah turns to laptop, dashboard glows)"
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 text-sm resize-y font-mono"
+                  className="bg-surface-elevated border-border-strong text-white placeholder:text-muted-foreground text-sm resize-y font-mono"
                 />
-                <p className="text-[10px] text-zinc-600">
+                <p className="text-[10px] text-muted-foreground">
                   Use screenplay format — CHARACTER: dialogue. Parentheses for stage directions.
                 </p>
               </div>
 
               {/* Visual Description */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                <Label className="text-xs text-primary/80 uppercase tracking-wider font-semibold">
                   Visual Description
                 </Label>
                 <Textarea
@@ -265,13 +265,13 @@ function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEdito
                   onChange={(e) => onUpdate({ visualDescription: e.target.value || undefined })}
                   rows={2}
                   placeholder="Modern office with sales dashboards on monitors, warm afternoon light..."
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 text-sm resize-y"
+                  className="bg-surface-elevated border-border-strong text-white placeholder:text-muted-foreground text-sm resize-y"
                 />
               </div>
 
               {/* Background Prompt */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                <Label className="text-xs text-primary/80 uppercase tracking-wider font-semibold">
                   Background / Environment
                 </Label>
                 <input
@@ -279,13 +279,13 @@ function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEdito
                   value={scene.backgroundPrompt ?? ''}
                   onChange={(e) => onUpdate({ backgroundPrompt: e.target.value || null })}
                   placeholder="Clean corporate office, glass walls, city skyline..."
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none"
+                  className="w-full bg-surface-elevated border border-border-strong rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:border-primary focus:outline-none"
                 />
               </div>
 
               {/* Duration */}
               <div className="flex items-center gap-3">
-                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                <Label className="text-xs text-primary/80 uppercase tracking-wider font-semibold">
                   Duration
                 </Label>
                 <input
@@ -294,9 +294,9 @@ function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEdito
                   onChange={(e) => onUpdate({ duration: Math.max(1, Number(e.target.value)) })}
                   min={1}
                   max={120}
-                  className="w-20 bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm text-white text-center focus:border-amber-500 focus:outline-none"
+                  className="w-20 bg-surface-elevated border border-border-strong rounded px-3 py-1.5 text-sm text-white text-center focus:border-primary focus:outline-none"
                 />
-                <span className="text-xs text-zinc-500">seconds</span>
+                <span className="text-xs text-muted-foreground">seconds</span>
               </div>
             </div>
 
@@ -706,16 +706,16 @@ export function StepStoryboard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Layers className="w-5 h-5 text-amber-500" />
+            <Layers className="w-5 h-5 text-primary" />
             Storyboard
           </h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Review scenes, edit scripts &amp; cinematic settings — previews generate automatically
           </p>
         </div>
         <div className="flex items-center gap-2">
           {generatingPreviews.size > 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-amber-400">
+            <div className="flex items-center gap-1.5 text-xs text-primary-light">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Generating previews ({generatingPreviews.size} remaining)
             </div>
@@ -734,14 +734,14 @@ export function StepStoryboard() {
 
       {/* Preview Error Banner */}
       {previewError && (
-        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
-          <div className="flex items-center gap-2 text-xs text-red-400">
+        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
+          <div className="flex items-center gap-2 text-xs text-destructive">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
             {previewError}
           </div>
           <button
             type="button"
-            className="text-red-400/60 hover:text-red-400 text-xs"
+            className="text-destructive/60 hover:text-destructive text-xs"
             onClick={() => setPreviewError(null)}
           >
             <X className="w-3.5 h-3.5" />
@@ -750,10 +750,10 @@ export function StepStoryboard() {
       )}
 
       {/* Summary Bar */}
-      <Card className="bg-zinc-900/50 border-zinc-800">
+      <Card className="bg-card/50 border-border-strong">
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6 text-xs text-zinc-400">
+            <div className="flex items-center gap-6 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5" />
                 {scenes.length} scenes
@@ -764,14 +764,14 @@ export function StepStoryboard() {
               </span>
               <span className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5" />
-                {avatarName ?? <span className="text-zinc-600">No character</span>}
+                {avatarName ?? <span className="text-muted-foreground">No character</span>}
               </span>
               <span className="flex items-center gap-1.5">
                 <Mic className="w-3.5 h-3.5" />
-                {voiceName ?? <span className="text-zinc-600">No voice</span>}
+                {voiceName ?? <span className="text-muted-foreground">No voice</span>}
               </span>
             </div>
-            <p className="text-[10px] text-zinc-600">
+            <p className="text-[10px] text-muted-foreground">
               Click a scene to edit its cinematic settings
             </p>
           </div>
@@ -780,26 +780,26 @@ export function StepStoryboard() {
 
       {/* Decomposition Loading */}
       {isDecomposing && (
-        <Card className="bg-zinc-900/50 border-zinc-800">
+        <Card className="bg-card/50 border-border-strong">
           <CardContent className="p-8 flex flex-col items-center">
-            <Loader2 className="w-8 h-8 animate-spin text-amber-500 mb-3" />
-            <p className="text-sm text-zinc-300">AI is breaking down your concept into scenes...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
+            <p className="text-sm text-foreground">AI is breaking down your concept into scenes...</p>
           </CardContent>
         </Card>
       )}
 
       {decompositionError && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-          <p className="text-sm text-red-400">{decompositionError}</p>
-          <Button size="sm" variant="ghost" onClick={() => { void handleDecompose(); }} className="ml-auto text-red-400">
+        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+          <p className="text-sm text-destructive">{decompositionError}</p>
+          <Button size="sm" variant="ghost" onClick={() => { void handleDecompose(); }} className="ml-auto text-destructive">
             Retry
           </Button>
         </div>
       )}
 
       {/* Tabs: Scenes / Avatar / Voice */}
-      <div className="flex gap-1 border-b border-zinc-800 pb-0">
+      <div className="flex gap-1 border-b border-border-strong pb-0">
         {[
           { id: 'scenes' as const, label: 'Scenes', icon: Layers, count: scenes.length },
           { id: 'avatar' as const, label: 'Character', icon: Users, badge: avatarName },
@@ -811,8 +811,8 @@ export function StepStoryboard() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-colors ${
               activeTab === tab.id
-                ? 'border-amber-500 text-amber-400'
-                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                ? 'border-primary text-primary-light'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <tab.icon className="w-3.5 h-3.5" />
@@ -831,11 +831,11 @@ export function StepStoryboard() {
       {activeTab === 'scenes' && (
         <>
           {scenes.length === 0 && !isDecomposing ? (
-            <Card className="bg-zinc-900/50 border-zinc-800 border-dashed">
+            <Card className="bg-card/50 border-border-strong border-dashed">
               <CardContent className="p-12 flex flex-col items-center text-center">
-                <Layers className="w-12 h-12 text-zinc-700 mb-3" />
-                <p className="text-zinc-400 text-sm mb-1">No scenes yet</p>
-                <p className="text-zinc-600 text-xs mb-4">
+                <Layers className="w-12 h-12 text-muted-foreground mb-3" />
+                <p className="text-muted-foreground text-sm mb-1">No scenes yet</p>
+                <p className="text-muted-foreground text-xs mb-4">
                   Add scenes manually or go back to Studio to describe your concept for AI decomposition
                 </p>
                 <div className="flex gap-2">
@@ -888,7 +888,7 @@ export function StepStoryboard() {
                 <button
                   type="button"
                   onClick={handleAddScene}
-                  className="aspect-video bg-zinc-900/30 border-2 border-dashed border-zinc-700 rounded-lg flex flex-col items-center justify-center text-zinc-600 hover:text-amber-500 hover:border-amber-500/50 transition-colors"
+                  className="aspect-video bg-card/30 border-2 border-dashed border-border-strong rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
                 >
                   <Plus className="w-8 h-8 mb-1" />
                   <span className="text-xs font-medium">Add Scene</span>
@@ -913,7 +913,7 @@ export function StepStoryboard() {
       )}
 
       {activeTab === 'avatar' && (
-        <Card className="bg-zinc-900/50 border-zinc-800">
+        <Card className="bg-card/50 border-border-strong">
           <CardContent className="p-4">
             <AvatarPicker
               selectedAvatarId={avatarId}
@@ -924,7 +924,7 @@ export function StepStoryboard() {
       )}
 
       {activeTab === 'voice' && (
-        <Card className="bg-zinc-900/50 border-zinc-800">
+        <Card className="bg-card/50 border-border-strong">
           <CardContent className="p-4">
             <VoicePicker
               selectedVoiceId={voiceId}
@@ -936,9 +936,9 @@ export function StepStoryboard() {
 
       {/* Readiness / Validation */}
       {missingRequirements.length > 0 && scenes.length > 0 && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-          <p className="text-xs font-medium text-amber-400 mb-1">Before generating:</p>
-          <ul className="text-xs text-amber-400/70 space-y-0.5">
+        <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+          <p className="text-xs font-medium text-primary-light mb-1">Before generating:</p>
+          <ul className="text-xs text-primary-light/70 space-y-0.5">
             {missingRequirements.map((req) => (
               <li key={req} className="flex items-center gap-1.5">
                 <AlertCircle className="w-3 h-3" />
@@ -962,7 +962,7 @@ export function StepStoryboard() {
         </Button>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <Layers className="w-3 h-3" />
               {scenes.length} scenes
@@ -975,7 +975,7 @@ export function StepStoryboard() {
 
           <Button
             size="sm"
-            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            className="gap-2 bg-primary hover:bg-primary-dark text-white"
             disabled={!isReady || isSaving}
             onClick={() => { void handleApproveAndGenerate(); }}
           >

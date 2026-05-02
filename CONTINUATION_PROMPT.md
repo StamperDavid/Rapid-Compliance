@@ -21,10 +21,10 @@
 | 3 | Dashboard hub + sidebar nav | ⏸ Pending |
 | 4 | Settings (29 pages) | ⏸ Pending |
 | 5 | Integrations (~30 platforms) | ⏸ Pending |
-| 6 | CRM stack (leads/contacts/deals/companies/activities/tasks/calls/conversations/lead-scoring/nurture) | ⏸ Pending |
-| 7 | Content + Magic Studio + media | ⏸ Pending |
-| 8 | Outbound (email/SMS/sequences/campaigns) | ⏸ Pending |
-| 9 | Social + approvals + calendar | ⏸ Pending |
+| 6 | CRM stack (leads/contacts/deals/companies/activities/tasks/calls/conversations/lead-scoring/nurture) | ✅ DONE — May 1, 2026 (3 Admin SDK fixes shipped; calls bugs #14/#15 logged post-YC) |
+| 7 | Content + Magic Studio + media | ✅ DONE — May 1-2, 2026 (~2,100 raw colors swapped to design tokens across ~50 files; duplicate content calendar removed) |
+| 8 | Outbound (email/SMS/sequences/campaigns) | ✅ DONE — May 2, 2026 (sequences redirect added; pause/active button hierarchy tokenized; /sms-messages 404 logged as #17) |
+| 9 | Social + approvals + calendar | 🔄 IN PROGRESS |
 | 10 | Forms / Website builder / Workflows / Storefront / Voice | ⏸ Pending |
 | 11 | **Mission Control + Standing Rule #2 proof — CORE YC STORY** | ⏸ Pending (recommend tackle FIRST in next window) |
 | 12 | System / Cron / Health | ⏸ Pending |
@@ -550,6 +550,12 @@ The user's preference is to finish ONE thing completely before moving to the nex
     - `src/lib/services/feature-service.ts` (May 1, 2026 — this session)
     - `src/lib/services/entity-config-service.ts` (May 1, 2026 — this session)
     - `src/lib/social/agent-config-service.ts` (May 1, 2026 — this session)
+    - `src/lib/crm/company-service.ts` (May 1, 2026 — this session, monitor caught on `/companies` empty state)
+    - `src/lib/crm/activity-service.ts` (May 1, 2026 — this session, monitor caught on `/activities`)
+    - `src/lib/team/collaboration.ts` (May 1, 2026 — this session, monitor caught on `/tasks`)
+    - `src/lib/social/social-post-service.ts` (May 2, 2026 — this session, monitor caught on `/social`)
+    - `src/lib/social/listening-service.ts` (May 2, 2026 — this session, monitor caught on `/social/listening`)
+    - `src/lib/social/engagement-metrics-collector.ts` (May 2, 2026 — this session, preemptive based on social-posts collection access)
     - `src/lib/agent/instance-manager.ts` — `storeActiveInstance`, `archiveInstance`, `notifyHumanAgents` (Apr 30)
     - `src/app/api/cron/workflow-entity-poll/route.ts` (Apr 30)
     - `src/app/api/crm/duplicates/merge/route.ts` (Apr 30)
@@ -605,6 +611,37 @@ The user's preference is to finish ONE thing completely before moving to the nex
 12. ~~Meeting cancel / reschedule UI on the dashboard~~ — **DONE May 1, 2026 in this session.** EventDetail panel in `UnifiedCalendarSection.tsx` now shows Cancel (two-step confirm) and Reschedule buttons for `meeting`/`booking` events. New `PATCH /api/meetings/[meetingId]` handler cancels the old Zoom meeting + creates a new one at the new time. New `RescheduleDialog` with datetime-local + duration inputs.
 
 13. ~~Dashboard calendar month navigation~~ — **DONE May 1, 2026 in this session.** Custom toolbar built into `UnifiedCalendar.tsx` with prominent Prev / Today / Next buttons + view switcher (month / week / day / agenda). Replaces the small inline default react-big-calendar toolbar that operators were missing.
+
+---
+
+# 📋 POST-YC CORRECTIONS LIST — Bugs surfaced during May 1 walkthrough (fix-list for after submission)
+
+Append-only list. Every bug surfaced during the YC walkthrough but NOT fixed in-session goes here so we have a clean punch list for May 2+ work.
+
+## CRM hub display bugs
+
+14. **`/calls` Call Log — Date column shows "Invalid Date" on every row** (May 1, 2026)
+    - All 5 demo entries (John Smith / Rachel Lee / Peter Jones / Tina Wilson / David Kim) render `Invalid Date` in the Date column.
+    - Likely cause: demo seed didn't write `createdAt` / `startedAt` in a parseable format, OR the UI is parsing an unexpected field shape (Firestore Timestamp vs ISO string vs `{ _seconds, _nanoseconds }`).
+    - Fix path: Read `src/app/(dashboard)/calls/page.tsx`, identify which date field it's reading, normalize via a `toDate()` helper (same pattern as `src/app/api/analytics/workflows/route.ts:12-23`).
+    - Then verify the demo seed writes the field correctly.
+
+15. **`/calls` Call Log — Number column empty (`-`) on every row** (May 1, 2026)
+    - Demo entries show `-` for the phone Number column.
+    - Likely cause: demo seed doesn't populate `phoneNumber` / `to` / `from`, or UI is reading the wrong field.
+    - Fix path: same as above — read the page component, identify the field shape, fix in seed or parser.
+
+## Social publish bugs
+
+17. **`/sms-messages` route is 404** (May 2, 2026)
+    - Top-level URL `/sms-messages` returns 404. Settings sub-page exists at `/settings/sms-messages` (per `Glob` of `(dashboard)/settings/sms-messages/page.tsx`).
+    - Fix path: either add a redirect from `/sms-messages` → `/settings/sms-messages`, or remove any nav references that point to the bare `/sms-messages` URL. Mirror the same pattern as `/sequences` → `/outbound/sequences` redirect that landed in this session.
+
+16. **Bluesky publish — image > 2MB rejected as "blob too big"** (May 1, 2026)
+    - Live error: `Invalid app.bsky.feed.post record: blob too big (maximum 2000000, got 2176583) at $.record.embed.images[0].image`
+    - Root cause: `src/lib/integrations/bluesky-service.ts` uploads images without checking/compressing against Bluesky's 2 MB blob ceiling.
+    - Fix path: Add image-size guard before upload. If > 1.95 MB, resize/recompress (sharp or browser-image-compression) until under the cap. Same fix should be applied at the unified-publish layer so all platforms get per-platform-cap enforcement.
+    - Other platform limits to handle in same pass: Twitter/X (5 MB), Mastodon (10 MB default per instance), Instagram (8 MB), Threads (8 MB), LinkedIn (5 MB), Facebook (10 MB).
 
 ---
 

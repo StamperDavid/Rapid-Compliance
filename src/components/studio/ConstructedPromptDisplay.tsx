@@ -75,15 +75,15 @@ export function ConstructedPromptDisplay({
   const isEmpty = !displayText.trim();
 
   return (
-    <Card className={cn('border-zinc-700 bg-zinc-900', className)}>
+    <Card className={cn('border-border-strong bg-card', className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-semibold text-zinc-200">
+          <CardTitle className="text-sm font-semibold text-foreground">
             Constructed Prompt
           </CardTitle>
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span>{charCount} chars</span>
-            <span className="text-zinc-700">/</span>
+            <span className="text-muted-foreground">/</span>
             <span>~{tokenEstimate} tokens</span>
           </div>
         </div>
@@ -103,7 +103,7 @@ export function ConstructedPromptDisplay({
                 value={editedText}
                 onChange={(e) => setEditedText(e.target.value)}
                 rows={6}
-                className="bg-zinc-800 border-zinc-600 text-zinc-200 text-sm font-mono resize-y"
+                className="bg-surface-elevated border-border text-foreground text-sm font-mono resize-y"
                 placeholder="Edit your assembled prompt..."
               />
             </motion.div>
@@ -115,9 +115,9 @@ export function ConstructedPromptDisplay({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
               className={cn(
-                'min-h-[120px] rounded-md border border-zinc-700 bg-zinc-800/50 p-3',
+                'min-h-[120px] rounded-md border border-border-strong bg-surface-elevated/50 p-3',
                 'text-sm leading-relaxed',
-                isEmpty ? 'text-zinc-600 italic' : 'text-zinc-300',
+                isEmpty ? 'text-muted-foreground italic' : 'text-foreground',
               )}
             >
               {isEmpty
@@ -136,7 +136,7 @@ export function ConstructedPromptDisplay({
               size="sm"
               onClick={onSavePreset}
               disabled={isEmpty}
-              className="text-zinc-400 hover:text-white"
+              className="text-muted-foreground hover:text-white"
             >
               <Save className="mr-1.5 h-3.5 w-3.5" />
               Save Preset
@@ -150,8 +150,8 @@ export function ConstructedPromptDisplay({
               size="sm"
               onClick={handleEditToggle}
               className={cn(
-                'text-zinc-400 hover:text-white',
-                isEditing && 'text-indigo-400 hover:text-indigo-300',
+                'text-muted-foreground hover:text-white',
+                isEditing && 'text-primary-light hover:text-primary',
               )}
             >
               {isEditing ? (
@@ -174,7 +174,7 @@ export function ConstructedPromptDisplay({
             size="sm"
             onClick={handleCopy}
             disabled={isEmpty}
-            className="text-zinc-400 hover:text-white"
+            className="text-muted-foreground hover:text-white"
           >
             {copied ? (
               <>
@@ -196,7 +196,7 @@ export function ConstructedPromptDisplay({
               size="sm"
               onClick={onReset}
               disabled={isEmpty}
-              className="text-zinc-400 hover:text-white ml-auto"
+              className="text-muted-foreground hover:text-white ml-auto"
             >
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
               Reset

@@ -227,9 +227,9 @@ export default function VideoStudioPage() {
   const isStudioStep = currentStep === 'request';
 
   return (
-    <div className="bg-zinc-950">
+    <div className="bg-background">
       {/* ── Top Navigation ──────────────────────────────────────── */}
-      <div className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-40 border-b border-border-strong bg-background/95 backdrop-blur-sm">
         <div className="px-6 pt-4 pb-0">
           <SubpageNav items={CONTENT_GENERATOR_TABS} />
         </div>
@@ -238,9 +238,9 @@ export default function VideoStudioPage() {
         <div className="flex items-center justify-between px-6 py-3">
           <div>
             <h1 className="text-xl font-bold text-white">
-              AI Video <span className="text-amber-500">Studio</span>
+              AI Video <span className="text-primary">Studio</span>
             </h1>
-            <p className="text-xs text-zinc-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {projectId
                 ? `Project: ${projectName || 'Untitled'}`
                 : 'Cinematic video production powered by AI'}
@@ -252,7 +252,7 @@ export default function VideoStudioPage() {
               variant="outline"
               size="sm"
               onClick={handleNewProject}
-              className="gap-2 border-zinc-700"
+              className="gap-2 border-border-strong"
             >
               <Plus className="w-4 h-4" />
               New Project
@@ -261,7 +261,7 @@ export default function VideoStudioPage() {
               variant="outline"
               size="sm"
               onClick={() => setShowTemplates(true)}
-              className="gap-2 border-zinc-700"
+              className="gap-2 border-border-strong"
             >
               <LayoutTemplate className="w-4 h-4" />
               Templates
@@ -269,7 +269,7 @@ export default function VideoStudioPage() {
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 border-zinc-700"
+              className="gap-2 border-border-strong"
               onClick={() => { void handleOpenLoadModal(); }}
             >
               <FolderOpen className="w-4 h-4" />
@@ -292,8 +292,8 @@ export default function VideoStudioPage() {
       {/* ── Main Content ────────────────────────────────────────── */}
       {autoLoading ? (
         <div className="flex items-center justify-center py-24">
-          <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-          <span className="ml-3 text-zinc-400">Loading project...</span>
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="ml-3 text-muted-foreground">Loading project...</span>
         </div>
       ) : (
         <AnimatePresence mode="wait">
@@ -325,17 +325,17 @@ export default function VideoStudioPage() {
       {/* ── Load Project Modal ────────────────────────────────── */}
       {showLoadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-lg mx-4 shadow-2xl">
-            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+          <div className="bg-card border border-border-strong rounded-xl w-full max-w-lg mx-4 shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-border-strong">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <FolderOpen className="w-5 h-5 text-amber-500" />
+                <FolderOpen className="w-5 h-5 text-primary" />
                 Load Project
               </h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowLoadModal(false)}
-                className="h-8 w-8 p-0 text-zinc-400 hover:text-white"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-white"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -344,14 +344,14 @@ export default function VideoStudioPage() {
             <div className="p-4 max-h-[60vh] overflow-y-auto">
               {loadingProjects ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-                  <span className="ml-2 text-zinc-400">Loading projects...</span>
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">Loading projects...</span>
                 </div>
               ) : projects.length === 0 ? (
                 <div className="text-center py-12">
-                  <Video className="w-10 h-10 mx-auto text-zinc-600 mb-3" />
-                  <p className="text-zinc-400">No saved projects yet.</p>
-                  <p className="text-sm text-zinc-600 mt-1">
+                  <Video className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">No saved projects yet.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
                     Create a video and save it to see it here.
                   </p>
                 </div>
@@ -362,22 +362,22 @@ export default function VideoStudioPage() {
                       key={project.id}
                       onClick={() => { void handleLoadProject(project.id); }}
                       disabled={loadingProjectId === project.id}
-                      className="w-full text-left p-3 rounded-lg border border-zinc-800 hover:border-amber-500/50 hover:bg-zinc-800/50 transition-colors group disabled:opacity-50"
+                      className="w-full text-left p-3 rounded-lg border border-border-strong hover:border-primary/50 hover:bg-surface-elevated/50 transition-colors group disabled:opacity-50"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-medium text-white truncate group-hover:text-amber-400 transition-colors">
+                          <h3 className="text-sm font-medium text-white truncate group-hover:text-primary-light transition-colors">
                             {project.name}
                           </h3>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500">
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Film className="w-3 h-3" />
                               {project.sceneCount} scene{project.sceneCount !== 1 ? 's' : ''}
                             </span>
                             <span className={
                               project.status === 'completed' ? 'text-green-400' :
-                              project.status === 'generating' ? 'text-amber-400' :
-                              'text-zinc-500'
+                              project.status === 'generating' ? 'text-primary-light' :
+                              'text-muted-foreground'
                             }>
                               {project.status}
                             </span>
@@ -388,7 +388,7 @@ export default function VideoStudioPage() {
                           </div>
                         </div>
                         {loadingProjectId === project.id && (
-                          <Loader2 className="w-4 h-4 animate-spin text-amber-500 flex-shrink-0 ml-2" />
+                          <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0 ml-2" />
                         )}
                       </div>
                     </button>
