@@ -75,8 +75,8 @@ function AvatarCard({
       className={cn(
         'relative flex flex-col items-center gap-2 p-3 rounded-xl border transition-all',
         isSelected
-          ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
-          : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800',
+          ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+          : 'border-border-strong bg-surface-elevated/50 hover:border-border hover:bg-surface-elevated',
       )}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.97 }}
@@ -95,20 +95,20 @@ function AvatarCard({
           />
         </div>
       ) : (
-        <div className="w-20 h-20 rounded-full bg-zinc-700 flex items-center justify-center ring-2 ring-zinc-700/50">
-          <User className="w-8 h-8 text-zinc-400" />
+        <div className="w-20 h-20 rounded-full bg-border-strong flex items-center justify-center ring-2 ring-border-strong/50">
+          <User className="w-8 h-8 text-muted-foreground" />
         </div>
       )}
 
       {/* Name */}
-      <span className="text-xs font-medium text-zinc-200 truncate w-full text-center">
+      <span className="text-xs font-medium text-foreground truncate w-full text-center">
         {profile.name}
       </span>
 
       {/* Role + style + metadata row */}
       <div className="flex items-center gap-1 flex-wrap justify-center">
         {profile.role && profile.role !== 'presenter' && (
-          <span className="px-1.5 py-0.5 bg-amber-500/10 rounded text-[10px] text-amber-300 capitalize">
+          <span className="px-1.5 py-0.5 bg-primary/10 rounded text-[10px] text-primary-light capitalize">
             {profile.role}
           </span>
         )}
@@ -118,18 +118,18 @@ function AvatarCard({
           </span>
         )}
         {profile.greenScreenClips?.length > 0 && (
-          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-500/10 rounded text-[10px] text-purple-300">
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-primary/10 rounded text-[10px] text-primary-light">
             <Video className="w-2.5 h-2.5" />
             {profile.greenScreenClips.length} clips
           </span>
         )}
         {referenceCount > 0 && (
-          <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400">
+          <span className="px-1.5 py-0.5 bg-border-strong/50 rounded text-[10px] text-muted-foreground">
             {referenceCount + 1} refs
           </span>
         )}
         {profile.description && (
-          <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400 truncate max-w-[80px]">
+          <span className="px-1.5 py-0.5 bg-border-strong/50 rounded text-[10px] text-muted-foreground truncate max-w-[80px]">
             {profile.description}
           </span>
         )}
@@ -137,7 +137,7 @@ function AvatarCard({
 
       {/* Voice assignment indicator */}
       {profile.voiceProvider && (
-        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-[10px] text-purple-300 w-full justify-center">
+        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 border border-primary/20 rounded text-[10px] text-primary-light w-full justify-center">
           <Mic className="w-2.5 h-2.5 flex-shrink-0" />
           <span className="truncate">{profile.voiceProvider}</span>
         </div>
@@ -146,12 +146,12 @@ function AvatarCard({
       {/* Source + tier + action badges */}
       <span className="absolute top-1.5 right-1.5 flex items-center gap-1">
         {profile.source === 'hedra' ? (
-          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-[9px] font-bold rounded">
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-primary/20 border border-primary/30 text-primary-light text-[9px] font-bold rounded">
             <Theater className="w-2.5 h-2.5" />
             HEDRA
           </span>
         ) : profile.tier === 'premium' ? (
-          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[9px] font-bold rounded">
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-primary/20 border border-primary/30 text-primary-light text-[9px] font-bold rounded">
             <Crown className="w-2.5 h-2.5" />
             PREMIUM
           </span>
@@ -170,8 +170,8 @@ function AvatarCard({
             className={cn(
               'p-1 rounded transition-colors',
               profile.isFavorite
-                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                : 'bg-zinc-700/50 border border-zinc-600/30 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10',
+                ? 'bg-primary/20 border border-primary/30 text-primary-light'
+                : 'bg-border-strong/50 border border-border/30 text-muted-foreground hover:text-primary-light hover:bg-primary/10',
             )}
             title={profile.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
@@ -184,7 +184,7 @@ function AvatarCard({
               e.stopPropagation();
               onDelete();
             }}
-            className="p-1 bg-red-500/20 border border-red-500/30 text-red-400 rounded hover:bg-red-500/40 transition-colors"
+            className="p-1 bg-destructive/20 border border-destructive/30 text-destructive rounded hover:bg-destructive/40 transition-colors"
             title="Delete profile"
           >
             <Trash2 className="w-2.5 h-2.5" />
@@ -198,14 +198,14 @@ function AvatarCard({
           className="absolute inset-0 bg-black/70 rounded-xl flex flex-col items-center justify-center gap-2 z-10"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="text-[10px] text-zinc-300 font-medium">Delete?</p>
+          <p className="text-[10px] text-foreground font-medium">Delete?</p>
           <div className="flex gap-1.5">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onConfirmDelete?.();
               }}
-              className="px-2.5 py-1 bg-red-600 text-white text-[10px] font-medium rounded hover:bg-red-500 transition-colors"
+              className="px-2.5 py-1 bg-destructive text-white text-[10px] font-medium rounded hover:bg-destructive transition-colors"
             >
               Yes
             </button>
@@ -214,7 +214,7 @@ function AvatarCard({
                 e.stopPropagation();
                 onCancelDelete?.();
               }}
-              className="px-2.5 py-1 bg-zinc-700 text-zinc-300 text-[10px] font-medium rounded hover:bg-zinc-600 transition-colors"
+              className="px-2.5 py-1 bg-border-strong text-foreground text-[10px] font-medium rounded hover:bg-border-strong transition-colors"
             >
               No
             </button>
@@ -224,7 +224,7 @@ function AvatarCard({
 
       {/* Selected checkmark */}
       {isSelected && (
-        <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
+        <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
           <Check className="w-3 h-3 text-black" />
         </div>
       )}
@@ -383,7 +383,7 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
 
   if (isLoading || (syncingHedra && profiles.length === 0)) {
     return (
-      <div className="flex items-center justify-center py-12 gap-2 text-zinc-400">
+      <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin" />
         <span className="text-sm">
           {syncingHedra ? 'Syncing Hedra characters...' : 'Loading avatar profiles...'}
@@ -396,21 +396,21 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
     return (
       <>
         <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <AlertCircle className="w-8 h-8 text-zinc-500" />
-          <p className="text-sm text-zinc-400">
+          <AlertCircle className="w-8 h-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
             {error ?? 'No avatar profiles yet. Create your AI clone or browse Hedra characters.'}
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => setIsCloneWizardOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary text-white text-sm font-medium rounded-lg transition-colors"
             >
               <Wand2 className="w-4 h-4" />
               Create Your AI Clone
             </button>
             <button
               onClick={() => setIsHedraBrowserOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-zinc-300 text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-surface-elevated border border-border-strong hover:border-border text-foreground text-sm font-medium rounded-lg transition-colors"
             >
               <Library className="w-4 h-4" />
               Browse Hedra
@@ -437,13 +437,13 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
       <div className="flex items-center gap-2">
         {profiles.length > 3 && (
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search profiles..."
-              className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
         )}
@@ -453,8 +453,8 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
             className={cn(
               'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
               showFavoritesOnly
-                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                : 'bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-amber-500/50 hover:text-amber-400',
+                ? 'bg-primary/20 border border-primary/30 text-primary-light'
+                : 'bg-surface-elevated border border-border-strong text-foreground hover:border-primary/50 hover:text-primary-light',
             )}
             title={showFavoritesOnly ? 'Show all profiles' : 'Show favorites only'}
           >
@@ -464,7 +464,7 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
         )}
         <button
           onClick={() => setIsCloneWizardOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+          className="flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
           title="Create your AI clone with face and voice capture"
         >
           <Wand2 className="w-3.5 h-3.5" />
@@ -472,7 +472,7 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
         </button>
         <button
           onClick={() => setIsHedraBrowserOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 border border-zinc-700 hover:border-amber-500/50 hover:bg-zinc-700 text-zinc-300 hover:text-amber-400 text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+          className="flex items-center gap-1.5 px-3 py-2 bg-surface-elevated border border-border-strong hover:border-primary/50 hover:bg-border-strong text-foreground hover:text-primary-light text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
           title="Browse and import characters from Hedra"
         >
           <Library className="w-3.5 h-3.5" />
@@ -481,11 +481,11 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
       </div>
 
       {/* Results count */}
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         {filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''}
         {searchQuery ? ' matching search' : ' available'}
         {syncingHedra && (
-          <span className="inline-flex items-center gap-1 ml-2 text-amber-400">
+          <span className="inline-flex items-center gap-1 ml-2 text-primary-light">
             <Loader2 className="w-3 h-3 animate-spin" />
             Syncing Hedra characters...
           </span>
@@ -515,8 +515,8 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
 
       {filteredProfiles.length === 0 && searchQuery && (
         <div className="flex flex-col items-center justify-center py-8 gap-2">
-          <Search className="w-6 h-6 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No profiles match your search.</p>
+          <Search className="w-6 h-6 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No profiles match your search.</p>
         </div>
       )}
 

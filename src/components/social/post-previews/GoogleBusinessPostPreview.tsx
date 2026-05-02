@@ -128,7 +128,7 @@ export function GoogleBusinessPostPreview({
             <div className="truncate text-sm font-bold text-foreground">{businessName}</div>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
               <span
-                className="inline-block h-2 w-2 rounded-full bg-green-500"
+                className="inline-block h-2 w-2 rounded-full bg-success"
                 aria-hidden="true"
               />
               <span>Verified</span>

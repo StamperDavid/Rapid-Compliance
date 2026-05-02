@@ -5,9 +5,10 @@
  */
 
 import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot} from 'firebase/firestore';
+import { where, orderBy, Timestamp, type QueryConstraint } from 'firebase/firestore';
+
+type QueryDocumentSnapshot = FirebaseFirestore.QueryDocumentSnapshot;
 import { logger } from '@/lib/logger/logger';
 import type {
   Activity,
@@ -159,7 +160,7 @@ export async function getActivities(
     // Order by occurrence time (most recent first)
     constraints.push(orderBy('occurredAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Activity>(
+    const result = await AdminFirestoreService.getAllPaginated<Activity>(
       getSubCollection('activities'),
       constraints,
       options?.pageSize ?? 50,
@@ -599,7 +600,7 @@ export async function deleteActivity(
   activityId: string
 ): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('activities'),
       activityId
     );

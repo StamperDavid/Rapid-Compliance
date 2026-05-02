@@ -29,6 +29,7 @@ import {
   Send,
   ChevronRight,
 } from 'lucide-react';
+import EmbeddedSocialCalendar from '@/components/social/EmbeddedSocialCalendar';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
@@ -37,6 +38,16 @@ import {
   getPlatformConfig,
   type PlatformState,
 } from '@/components/social/_platform-state';
+
+// Platforms intentionally hidden from the operator-facing grid.
+// Reason: they're either Tier-3 (parked, no commercial path) or deferred
+// to future scope. Hiding them here keeps the cockpit focused on platforms
+// the operator can actually act on right now.
+const HIDDEN_FROM_GRID: ReadonlySet<SocialPlatform> = new Set([
+  'telegram',
+  'whatsapp_business',
+  'threads',
+]);
 import { PageTitle, SectionDescription, SectionTitle } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -98,18 +109,6 @@ interface SwarmControlResponse {
   };
 }
 
-interface CalendarEventApi {
-  id: string;
-  start: string;
-  platform: string;
-  status: string;
-}
-
-interface CalendarResponse {
-  success: boolean;
-  events?: CalendarEventApi[];
-}
-
 interface ActivityEventApi {
   id: string;
   type: 'published' | 'scheduled' | 'queued' | 'approval_triggered' | 'failed' | 'cancelled';
@@ -145,26 +144,6 @@ interface PlatformRow {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function startOfTodayISO(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-
-function dayPlusOffsetISO(offsetDays: number): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString();
-}
-
-function isoDayKey(d: Date): string {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
 
 function formatRelative(iso: string): string {
   const ms = new Date(iso).getTime();
@@ -400,102 +379,6 @@ function MetricsRow({ loading, error, totals, pendingApprovalCount }: MetricsRow
   );
 }
 
-// ─── Section: 7-day calendar mini widget ─────────────────────────────────────
-
-interface CalendarMiniProps {
-  loading: boolean;
-  error: boolean;
-  events: CalendarEventApi[];
-}
-
-function CalendarMini({ loading, error, events }: CalendarMiniProps) {
-  // Build 7 day buckets
-  const days = useMemo(() => {
-    const out: Array<{ date: Date; key: string; count: number }> = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() + i);
-      out.push({ date: d, key: isoDayKey(d), count: 0 });
-    }
-    for (const ev of events) {
-      const ts = new Date(ev.start);
-      const k = isoDayKey(ts);
-      const slot = out.find((x) => x.key === k);
-      if (slot) { slot.count++; }
-    }
-    return out;
-  }, [events]);
-
-  const totalCount = days.reduce((sum, d) => sum + d.count, 0);
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <CalendarIcon size={14} className="text-muted-foreground" />
-            Next 7 Days
-          </CardTitle>
-          <Link href="/social/calendar" className="text-xs font-medium text-primary hover:underline">
-            Full calendar
-          </Link>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {loading ? (
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="h-20 rounded-lg bg-surface-elevated animate-pulse" />
-            ))}
-          </div>
-        ) : error ? (
-          <p className="text-sm text-muted-foreground">Couldn&apos;t load calendar.</p>
-        ) : (
-          <>
-            <div className="grid grid-cols-7 gap-2">
-              {days.map((d) => {
-                const dayName = d.date.toLocaleDateString('en-US', { weekday: 'short' });
-                const dayNum = d.date.getDate();
-                const hasPosts = d.count > 0;
-                return (
-                  <Link
-                    key={d.key}
-                    href="/social/calendar"
-                    className="block p-2 rounded-lg border border-border-light bg-card hover:bg-surface-elevated transition-colors text-center"
-                  >
-                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-                      {dayName}
-                    </div>
-                    <div className="text-lg font-bold text-foreground mt-0.5">{dayNum}</div>
-                    <div
-                      className={`text-[10px] font-semibold mt-1 ${
-                        hasPosts ? 'text-primary' : 'text-muted-foreground'
-                      }`}
-                    >
-                      {d.count} {d.count === 1 ? 'post' : 'posts'}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-            {totalCount === 0 && (
-              <div className="mt-4 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Nothing scheduled in the next 7 days.{' '}
-                  <Link href="/social/calendar" className="text-primary hover:underline font-medium">
-                    Schedule a post
-                  </Link>
-                </p>
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // ─── Section: Platforms List ─────────────────────────────────────────────────
 
 interface PlatformListProps {
@@ -520,27 +403,27 @@ function PlatformList({ loading, rows }: PlatformListProps) {
   }, [rows]);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">Platforms</CardTitle>
           <Link
             href="/settings/integrations?category=social"
             className="text-xs font-medium text-primary hover:underline"
           >
-            Manage accounts
+            Manage
           </Link>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 flex-1 overflow-y-auto">
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-20 rounded-lg bg-surface-elevated animate-pulse" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="h-24 rounded-lg bg-surface-elevated animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {sortedRows.map((r) => (
               <PlatformCard key={r.platform} row={r} />
             ))}
@@ -625,7 +508,7 @@ interface QuickActionsProps {
 function QuickActions({ pendingApprovalCount }: QuickActionsProps) {
   const router = useRouter();
   const showApprovals = pendingApprovalCount > 0;
-  const cols = showApprovals ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3';
+  const cols = showApprovals ? 'sm:grid-cols-3' : 'sm:grid-cols-2';
 
   return (
     <div className={`grid grid-cols-1 ${cols} gap-3`}>
@@ -635,14 +518,6 @@ function QuickActions({ pendingApprovalCount }: QuickActionsProps) {
       >
         <Sparkles size={16} />
         <span className="text-sm font-semibold">Create with AI</span>
-      </Button>
-      <Button
-        variant="outline"
-        className="h-auto py-3 flex items-center justify-center gap-2"
-        onClick={() => router.push('/social/calendar')}
-      >
-        <CalendarIcon size={16} />
-        <span className="text-sm font-semibold">View Calendar</span>
       </Button>
       {showApprovals && (
         <Button
@@ -788,24 +663,18 @@ export default function SocialHubPage() {
   const [recentPublishedByPlatform, setRecentPublishedByPlatform] = useState<Record<string, number>>({});
 
   const [swarmPaused, setSwarmPaused] = useState(false);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEventApi[]>([]);
-  const [calendarError, setCalendarError] = useState(false);
   const [activityEvents, setActivityEvents] = useState<ActivityEventApi[]>([]);
   const [marketingActiveMissions, setMarketingActiveMissions] = useState(0);
 
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
-    const calendarStart = startOfTodayISO();
-    const calendarEnd = dayPlusOffsetISO(7);
-
     try {
       const [
         accountsRes,
         metricsRes,
         agentRes,
         swarmRes,
-        calendarRes,
         activityRes,
         missionsRes,
       ] = await Promise.all([
@@ -813,7 +682,6 @@ export default function SocialHubPage() {
         authFetch('/api/social/metrics/overview'),
         authFetch('/api/social/agent-status'),
         authFetch('/api/orchestrator/swarm-control'),
-        authFetch(`/api/social/calendar?start=${encodeURIComponent(calendarStart)}&end=${encodeURIComponent(calendarEnd)}`),
         authFetch('/api/social/activity?limit=5'),
         authFetch('/api/orchestrator/missions?status=IN_PROGRESS&limit=50'),
       ]);
@@ -866,18 +734,6 @@ export default function SocialHubPage() {
         }
       }
 
-      // Calendar
-      if (calendarRes.ok) {
-        const data = (await calendarRes.json()) as CalendarResponse;
-        if (data.success && data.events) {
-          setCalendarEvents(data.events);
-        } else {
-          setCalendarError(true);
-        }
-      } else {
-        setCalendarError(true);
-      }
-
       // Activity
       if (activityRes.ok) {
         const data = (await activityRes.json()) as ActivityResponse;
@@ -912,18 +768,20 @@ export default function SocialHubPage() {
 
   // Build platform rows
   const platformRows: PlatformRow[] = useMemo(() => {
-    return SOCIAL_PLATFORMS.map((p) => {
-      const cfg = getPlatformConfig(p);
-      const account = accounts.find((a) => a.platform === p && a.status === 'active');
-      return {
-        platform: p,
-        state: cfg.state,
-        connected: Boolean(account),
-        handle: account?.handle,
-        accountName: account?.accountName,
-        todayPublished: recentPublishedByPlatform[p] ?? 0,
-      };
-    });
+    return SOCIAL_PLATFORMS
+      .filter((p) => !HIDDEN_FROM_GRID.has(p))
+      .map((p) => {
+        const cfg = getPlatformConfig(p);
+        const account = accounts.find((a) => a.platform === p && a.status === 'active');
+        return {
+          platform: p,
+          state: cfg.state,
+          connected: Boolean(account),
+          handle: account?.handle,
+          accountName: account?.accountName,
+          todayPublished: recentPublishedByPlatform[p] ?? 0,
+        };
+      });
   }, [accounts, recentPublishedByPlatform]);
 
   const connectedCount = platformRows.filter((r) => r.connected).length;
@@ -962,16 +820,34 @@ export default function SocialHubPage() {
         />
       </div>
 
-      {/* Section 4: 7-day calendar mini widget */}
-      <CalendarMini loading={loading} error={calendarError} events={calendarEvents} />
-
-      {/* Section 5: Platforms list */}
-      <PlatformList loading={loading} rows={platformRows} />
-
-      {/* Section 6: Quick actions */}
+      {/* Section 4: Quick actions — ABOVE the platforms + calendar row */}
       <div className="space-y-3">
         <SectionTitle as="h2" className="text-lg">Quick Actions</SectionTitle>
         <QuickActions pendingApprovalCount={pendingApprovalCount} />
+      </div>
+
+      {/* Section 5: Platforms (1/2) + Social Calendar (1/2), side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <PlatformList loading={loading} rows={platformRows} />
+        <Card className="h-full flex flex-col">
+          <CardHeader className="pb-3 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <CalendarIcon size={14} className="text-muted-foreground" />
+                Social Calendar
+              </CardTitle>
+              <Link
+                href="/social/calendar"
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Open full calendar
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 flex-1 overflow-hidden">
+            <EmbeddedSocialCalendar height={640} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity (optional — only renders if events exist) */}

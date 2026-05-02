@@ -330,10 +330,10 @@ export function StepAssembly() {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-zinc-900/50 border-zinc-800">
+      <Card className="bg-card/50 border-border-strong">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
-            <Puzzle className="w-5 h-5 text-amber-500" />
+            <Puzzle className="w-5 h-5 text-primary" />
             Video Assembly
           </CardTitle>
           <CardDescription>
@@ -341,7 +341,7 @@ export function StepAssembly() {
               ? (
                 <span className="flex items-center gap-2">
                   Your video is assembled! Preview below.
-                  {isSaving && <span className="text-amber-400 text-xs flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Saving...</span>}
+                  {isSaving && <span className="text-primary-light text-xs flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Saving...</span>}
                   {saved && !isSaving && <span className="text-green-400 text-xs flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Saved to library</span>}
                 </span>
               )
@@ -361,8 +361,8 @@ export function StepAssembly() {
               }}
             />
           ) : (
-            <div className="aspect-video bg-zinc-800/50 rounded-lg flex items-center justify-center">
-              <p className="text-zinc-500">No video to preview</p>
+            <div className="aspect-video bg-surface-elevated/50 rounded-lg flex items-center justify-center">
+              <p className="text-muted-foreground">No video to preview</p>
             </div>
           )}
 
@@ -370,17 +370,17 @@ export function StepAssembly() {
           {isAssembling && assemblyProgress && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-amber-400 font-medium flex items-center gap-1.5">
+                <span className="text-primary-light font-medium flex items-center gap-1.5">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   {assemblyProgress.phaseLabel}
                 </span>
-                <span className="text-zinc-500">
+                <span className="text-muted-foreground">
                   Step {assemblyProgress.phaseIndex + 1} of {assemblyProgress.totalPhases}
                 </span>
               </div>
-              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-surface-elevated rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                  className="h-full bg-primary rounded-full transition-all duration-500"
                   style={{ width: `${((assemblyProgress.phaseIndex + 1) / assemblyProgress.totalPhases) * 100}%` }}
                 />
               </div>
@@ -396,8 +396,8 @@ export function StepAssembly() {
                   onClick={() => setActiveSceneIndex(index)}
                   className={`flex-shrink-0 w-20 h-12 rounded border-2 flex items-center justify-center text-xs font-medium transition-colors ${
                     activeSceneIndex === index
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-400'
-                      : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600'
+                      ? 'border-primary bg-primary/10 text-primary-light'
+                      : 'border-border-strong bg-surface-elevated text-muted-foreground hover:border-border'
                   }`}
                 >
                   <Play className="w-3 h-3 mr-1" />
@@ -410,7 +410,7 @@ export function StepAssembly() {
           {/* Transition Selector */}
           {!finalVideoUrl && (
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">Transition Style</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Transition Style</label>
               <div className="flex gap-2">
                 {TRANSITIONS.map((t) => (
                   <button
@@ -418,8 +418,8 @@ export function StepAssembly() {
                     onClick={() => setTransitionType(t.value)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       transitionType === t.value
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                        : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600'
+                        ? 'bg-primary/20 text-primary-light border border-primary/30'
+                        : 'bg-surface-elevated text-muted-foreground border border-border-strong hover:border-border'
                     }`}
                   >
                     {t.label}
@@ -433,14 +433,14 @@ export function StepAssembly() {
           {!finalVideoUrl && completedScenes.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                  <Captions className="w-4 h-4 text-amber-500" />
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Captions className="w-4 h-4 text-primary" />
                   Auto-Captions
                 </label>
                 <button
                   onClick={() => setCaptionsEnabled(!captionsEnabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    captionsEnabled ? 'bg-amber-500' : 'bg-zinc-700'
+                    captionsEnabled ? 'bg-primary' : 'bg-border-strong'
                   }`}
                 >
                   <span
@@ -452,7 +452,7 @@ export function StepAssembly() {
               </div>
               {captionsEnabled && (
                 <div className="pl-6">
-                  <p className="text-xs text-zinc-500 mb-2">
+                  <p className="text-xs text-muted-foreground mb-2">
                     Captions are generated from Deepgram transcription data — no extra API cost.
                   </p>
                   <div className="flex gap-2">
@@ -462,8 +462,8 @@ export function StepAssembly() {
                         onClick={() => setCaptionStyle(style)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                           captionStyle === style
-                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                            : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600'
+                            ? 'bg-primary/20 text-primary-light border border-primary/30'
+                            : 'bg-surface-elevated text-muted-foreground border border-border-strong hover:border-border'
                         }`}
                       >
                         {CAPTION_STYLE_LABELS[style]}
@@ -479,14 +479,14 @@ export function StepAssembly() {
           {!finalVideoUrl && completedScenes.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                  <Music className="w-4 h-4 text-amber-500" />
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Music className="w-4 h-4 text-primary" />
                   Background Music
                 </label>
                 <button
                   onClick={() => setMusicEnabled(!musicEnabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    musicEnabled ? 'bg-amber-500' : 'bg-zinc-700'
+                    musicEnabled ? 'bg-primary' : 'bg-border-strong'
                   }`}
                 >
                   <span
@@ -504,8 +504,8 @@ export function StepAssembly() {
                       onClick={() => setMusicCategoryFilter('all')}
                       className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
                         musicCategoryFilter === 'all'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                          ? 'bg-primary/20 text-primary-light border border-primary/30'
+                          : 'bg-surface-elevated text-muted-foreground border border-border-strong'
                       }`}
                     >
                       All
@@ -516,8 +516,8 @@ export function StepAssembly() {
                         onClick={() => setMusicCategoryFilter(cat)}
                         className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
                           musicCategoryFilter === cat
-                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                            : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                            ? 'bg-primary/20 text-primary-light border border-primary/30'
+                            : 'bg-surface-elevated text-muted-foreground border border-border-strong'
                         }`}
                       >
                         {MUSIC_CATEGORY_LABELS[cat]}
@@ -533,16 +533,16 @@ export function StepAssembly() {
                         onClick={() => setSelectedTrackId(track.id)}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
                           selectedTrackId === track.id
-                            ? 'bg-amber-500/10 border border-amber-500/30'
-                            : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
+                            ? 'bg-primary/10 border border-primary/30'
+                            : 'bg-surface-elevated/50 border border-transparent hover:bg-surface-elevated'
                         }`}
                       >
-                        <Music className="w-3 h-3 text-zinc-500 flex-shrink-0" />
+                        <Music className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-zinc-300 truncate">{track.name}</p>
-                          <p className="text-[10px] text-zinc-500 truncate">{track.description}</p>
+                          <p className="text-xs font-medium text-foreground truncate">{track.name}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{track.description}</p>
                         </div>
-                        <span className="text-[10px] text-zinc-600 flex-shrink-0">{track.bpm} BPM</span>
+                        <span className="text-[10px] text-muted-foreground flex-shrink-0">{track.bpm} BPM</span>
                       </button>
                     ))}
                   </div>
@@ -551,7 +551,7 @@ export function StepAssembly() {
                   {selectedTrack && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <Volume2 className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
+                        <Volume2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                         <input
                           type="range"
                           min={0}
@@ -559,18 +559,18 @@ export function StepAssembly() {
                           step={0.01}
                           value={musicVolume}
                           onChange={(e) => setMusicVolume(Number(e.target.value))}
-                          className="flex-1 h-1.5 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-amber-500"
+                          className="flex-1 h-1.5 bg-border-strong rounded-full appearance-none cursor-pointer accent-primary"
                         />
-                        <span className="text-[10px] text-zinc-500 w-8 text-right tabular-nums">
+                        <span className="text-[10px] text-muted-foreground w-8 text-right tabular-nums">
                           {Math.round(musicVolume * 100)}%
                         </span>
                       </div>
-                      <label className="flex items-center gap-2 text-xs text-zinc-400">
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
                         <input
                           type="checkbox"
                           checked={autoDuck}
                           onChange={(e) => setAutoDuck(e.target.checked)}
-                          className="rounded border-zinc-600 bg-zinc-800 text-amber-500 focus:ring-amber-500/50"
+                          className="rounded border-border bg-surface-elevated text-primary focus:ring-primary/50"
                         />
                         Auto-duck (lower music during speech)
                       </label>
@@ -583,10 +583,10 @@ export function StepAssembly() {
 
           {/* Scene status summary when no completed scenes */}
           {completedScenes.length === 0 && generatedScenes.length > 0 && !finalVideoUrl && (
-            <div className="p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg space-y-1">
-              <p className="text-sm font-medium text-zinc-300">Scene Status</p>
+            <div className="p-3 bg-surface-elevated/50 border border-border-strong rounded-lg space-y-1">
+              <p className="text-sm font-medium text-foreground">Scene Status</p>
               {generatedScenes.map((s, i) => (
-                <p key={s.sceneId} className="text-xs text-zinc-400">
+                <p key={s.sceneId} className="text-xs text-muted-foreground">
                   Scene {i + 1}: {s.status}
                   {s.status === 'generating' && ' (waiting for provider...)'}
                   {s.status === 'completed' && !s.videoUrl && ' (no video URL returned)'}
@@ -595,7 +595,7 @@ export function StepAssembly() {
                 </p>
               ))}
               {generatingScenes.length > 0 && (
-                <p className="text-xs text-amber-400 flex items-center gap-1 mt-2">
+                <p className="text-xs text-primary-light flex items-center gap-1 mt-2">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   Polling for {generatingScenes.length} scene(s) still generating...
                 </p>
@@ -604,8 +604,8 @@ export function StepAssembly() {
           )}
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
         </CardContent>
@@ -622,7 +622,7 @@ export function StepAssembly() {
             <Button
               onClick={() => { void handleAssemble(); }}
               disabled={isAssembling || completedScenes.length === 0}
-              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+              className="gap-2 bg-primary hover:bg-primary-dark text-white"
             >
               {isAssembling ? (
                 <>

@@ -154,6 +154,42 @@ const MARKETING_SPECIALIST_DIRECTORY: Record<string, AgentDefinition> = {
     parentId: 'MARKETING_MANAGER',
     capabilities: ['generate_content'],
   },
+  // Specialists whose platforms are currently hidden from the operator
+  // grid (Threads / Telegram / WhatsApp / Reddit). Their files + GMs are
+  // seeded; registering them here keeps the introspection lookups working
+  // for any future toggle that re-enables those platforms in the UI.
+  THREADS_EXPERT: {
+    id: 'THREADS_EXPERT',
+    name: 'Threads Expert',
+    role: 'specialist',
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['generate_content'],
+  },
+  TELEGRAM_EXPERT: {
+    id: 'TELEGRAM_EXPERT',
+    name: 'Telegram Expert',
+    role: 'specialist',
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['generate_content'],
+  },
+  WHATSAPP_BUSINESS_EXPERT: {
+    id: 'WHATSAPP_BUSINESS_EXPERT',
+    name: 'WhatsApp Business Expert',
+    role: 'specialist',
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['generate_content'],
+  },
+  REDDIT_EXPERT: {
+    id: 'REDDIT_EXPERT',
+    name: 'Reddit Expert',
+    role: 'specialist',
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['generate_content'],
+  },
 };
 
 // ============================================================================

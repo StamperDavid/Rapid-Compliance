@@ -12,14 +12,14 @@ interface AutoGradeMetricsProps {
 
 function scoreColor(score: number): string {
   if (score >= 90) { return 'text-green-400'; }
-  if (score >= 70) { return 'text-amber-400'; }
-  return 'text-red-400';
+  if (score >= 70) { return 'text-primary-light'; }
+  return 'text-destructive';
 }
 
 function scoreBg(score: number): string {
   if (score >= 90) { return 'bg-green-500/10'; }
-  if (score >= 70) { return 'bg-amber-500/10'; }
-  return 'bg-red-500/10';
+  if (score >= 70) { return 'bg-primary/10'; }
+  return 'bg-destructive/10';
 }
 
 export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
@@ -28,8 +28,8 @@ export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
   // Loading state
   if (status === 'grading' || status === 'pending') {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/50 rounded text-xs text-zinc-500">
-        <div className="w-3 h-3 border-2 border-zinc-600 border-t-amber-400 rounded-full animate-spin" />
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-elevated/50 rounded text-xs text-muted-foreground">
+        <div className="w-3 h-3 border-2 border-border border-t-primary-light rounded-full animate-spin" />
         <span>Grading scene...</span>
       </div>
     );
@@ -45,7 +45,7 @@ export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
   return (
     <div className="space-y-1">
       {/* Label */}
-      <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
         <span>AI Scene Grade</span>
         <span>—</span>
         <span>How well the generated video matches the original script</span>
@@ -60,27 +60,27 @@ export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
         >
           <Gauge className="w-3 h-3" />
           <span className={cn('font-medium', scoreColor(overallScore))}>{overallScore}%</span>
-          <span className="text-zinc-600">overall</span>
+          <span className="text-muted-foreground">overall</span>
         </div>
 
         {/* Script accuracy */}
         <div
-          className="flex items-center gap-1 text-zinc-400"
+          className="flex items-center gap-1 text-muted-foreground"
           title="How much of the original script the actor actually spoke (word-for-word match)"
         >
           <FileText className="w-3 h-3" />
           <span className={scoreColor(scriptAccuracy)}>{scriptAccuracy}%</span>
-          <span className="text-zinc-600">script match</span>
+          <span className="text-muted-foreground">script match</span>
         </div>
 
         {/* WPM */}
         <div
-          className="flex items-center gap-1 text-zinc-400"
+          className="flex items-center gap-1 text-muted-foreground"
           title={`Speaking speed: ${actualWpm} words/min actual vs ${targetWpm} words/min expected`}
         >
           <Timer className="w-3 h-3" />
           <span>{actualWpm}</span>
-          <span className="text-zinc-600">/ {targetWpm} wpm</span>
+          <span className="text-muted-foreground">/ {targetWpm} wpm</span>
         </div>
 
         {/* Pacing indicator */}
@@ -88,8 +88,8 @@ export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
           className={cn(
             'px-1.5 py-0.5 rounded text-[10px] font-medium',
             pacingScore === 'good' ? 'bg-green-500/10 text-green-400' :
-            pacingScore === 'too_fast' ? 'bg-red-500/10 text-red-400' :
-            'bg-amber-500/10 text-amber-400',
+            pacingScore === 'too_fast' ? 'bg-destructive/10 text-destructive' :
+            'bg-primary/10 text-primary-light',
           )}
           title={
             pacingScore === 'good' ? 'Speaking speed is within 30% of target' :
@@ -106,7 +106,7 @@ export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
-            className="ml-auto flex items-center gap-1 text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="ml-auto flex items-center gap-1 text-muted-foreground hover:text-muted-foreground transition-colors"
             title="Show which words were dropped or added"
           >
             <span className="text-[10px]">Details</span>
@@ -117,22 +117,22 @@ export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
 
       {/* Expanded detail */}
       {expanded && (
-        <div className="px-3 py-2 bg-zinc-800/30 rounded text-xs space-y-1">
+        <div className="px-3 py-2 bg-surface-elevated/30 rounded text-xs space-y-1">
           {autoGrade.wordsDropped.length > 0 && (
             <div>
-              <span className="text-red-400 font-medium">Words dropped:</span>{' '}
-              <span className="text-zinc-400">{autoGrade.wordsDropped.slice(0, 20).join(', ')}</span>
+              <span className="text-destructive font-medium">Words dropped:</span>{' '}
+              <span className="text-muted-foreground">{autoGrade.wordsDropped.slice(0, 20).join(', ')}</span>
               {autoGrade.wordsDropped.length > 20 && (
-                <span className="text-zinc-600"> +{autoGrade.wordsDropped.length - 20} more</span>
+                <span className="text-muted-foreground"> +{autoGrade.wordsDropped.length - 20} more</span>
               )}
             </div>
           )}
           {autoGrade.wordsAdded.length > 0 && (
             <div>
-              <span className="text-amber-400 font-medium">Words added:</span>{' '}
-              <span className="text-zinc-400">{autoGrade.wordsAdded.slice(0, 20).join(', ')}</span>
+              <span className="text-primary-light font-medium">Words added:</span>{' '}
+              <span className="text-muted-foreground">{autoGrade.wordsAdded.slice(0, 20).join(', ')}</span>
               {autoGrade.wordsAdded.length > 20 && (
-                <span className="text-zinc-600"> +{autoGrade.wordsAdded.length - 20} more</span>
+                <span className="text-muted-foreground"> +{autoGrade.wordsAdded.length - 20} more</span>
               )}
             </div>
           )}

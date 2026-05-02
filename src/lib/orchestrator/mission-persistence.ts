@@ -1467,10 +1467,12 @@ export async function bulkDeleteTerminalMissions(): Promise<number> {
  *
  * Returns null when no matching mission is found or Firestore is unavailable.
  *
- * NOTE: This query requires a composite Firestore index on
- *   (metadata.platform ASC, status ASC, createdAt DESC).
- * If the index is missing, Firestore returns an error with a link to create
- * it — add that index to firestore.indexes.json and deploy once.
+ * Defensive query pattern: single-field `where` + in-JS filter/sort.
+ * The original 3-condition where + orderBy combo required a composite
+ * Firestore index that isn't deployed (same constraint as
+ * `metrics-service.ts` and `audience-baseline-service.ts`). Pending-
+ * mission counts per tenant are bounded (typically <20 active at once),
+ * so the in-process filter is trivial.
  */
 export async function findPendingMissionForPlatform(
   platform: SocialPlatform,
@@ -1483,17 +1485,26 @@ export async function findPendingMissionForPlatform(
   try {
     const snap = await adminDb
       .collection(missionsCollectionPath())
-      .where('metadata.platform', '==', platform)
       .where('status', '==', 'AWAITING_APPROVAL')
-      .orderBy('createdAt', 'desc')
-      .limit(1)
       .get();
 
-    if (snap.empty) {
+    const candidates = snap.docs
+      .map((d) => d.data() as Mission)
+      .filter((m) => {
+        const md = (m as Mission & { metadata?: Record<string, unknown> }).metadata;
+        return md?.platform === platform;
+      })
+      .sort((a, b) => {
+        const aCreated = a.createdAt ?? '';
+        const bCreated = b.createdAt ?? '';
+        return bCreated.localeCompare(aCreated);
+      });
+
+    if (candidates.length === 0) {
       return null;
     }
 
-    const mission = snap.docs[0].data() as Mission;
+    const mission = candidates[0];
     const failedStep = mission.steps.find((s) => s.status === 'FAILED') ?? null;
 
     if (!failedStep) {

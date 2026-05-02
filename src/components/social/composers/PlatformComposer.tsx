@@ -17,9 +17,9 @@
  * for the form fields. They receive `value/onChange/disabled` only.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Sparkles, Calendar as CalendarIcon, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { CardTitle } from '@/components/ui/typography';
@@ -28,7 +28,9 @@ import { useToast } from '@/hooks/useToast';
 import { PLATFORM_META } from '@/lib/social/platform-config';
 import { MediaUploader } from '@/components/social/MediaUploader';
 import type { SocialPlatform } from '@/types/social';
+import { normalizeFormat } from '@/lib/social/format-normalizer';
 
+import { TagsAndSeoSection, type TagsAndSeoValue } from './TagsAndSeoSection';
 import { TwitterComposer } from './TwitterComposer';
 import { LinkedInComposer } from './LinkedInComposer';
 import { FacebookComposer } from './FacebookComposer';
@@ -71,6 +73,12 @@ interface PlatformComposerProps {
 interface PostResult {
   success: boolean;
   postId?: string;
+  error?: string;
+}
+
+interface GeneratePostResponse {
+  success: boolean;
+  missionId?: string;
   error?: string;
 }
 
@@ -141,9 +149,24 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
     contentType: DEFAULT_CONTENT_TYPE[platform],
     metadata: {},
   });
+
+  // Discovery & SEO state — managed separately so TagsAndSeoSection has its
+  // own clean state slice; merged into metadata at post time via handlePost.
+  const [tagsValue, setTagsValue] = useState<TagsAndSeoValue>({
+    hashtags: [],
+    keywords: [],
+    platformSpecific: {},
+  });
+
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
   const [connected, setConnected] = useState<boolean | null>(null);
+
+  // AI Generate popover state
+  const [showGeneratePopover, setShowGeneratePopover] = useState(false);
+  const [generateBrief, setGenerateBrief] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const briefTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const checkConnection = useCallback(async () => {
     try {
@@ -221,6 +244,19 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
           content: formState.content,
           metadata: {
             ...formState.metadata,
+            // SEO / discovery fields stored as comma-separated strings in
+            // metadata so the existing Record<string, string> contract is
+            // preserved. The posting route passes metadata through verbatim
+            // to the platform handler — see TODO in /api/social/post/route.ts.
+            // TODO: thread hashtags/keywords into the platform posting body
+            // (each platform handler needs to be updated to read these keys).
+            ...(tagsValue.hashtags.length > 0
+              ? { hashtags: tagsValue.hashtags.join(', ') }
+              : {}),
+            ...(tagsValue.keywords.length > 0
+              ? { keywords: tagsValue.keywords.join(', ') }
+              : {}),
+            ...tagsValue.platformSpecific,
             ...(mediaUrls.length > 0 ? { mediaUrl: mediaUrls[0] } : {}),
           },
         }),
@@ -233,6 +269,7 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
           contentType: DEFAULT_CONTENT_TYPE[platform],
           metadata: {},
         });
+        setTagsValue({ hashtags: [], keywords: [], platformSpecific: {} });
         setMediaUrls([]);
       } else {
         toast.error(result.error ?? 'Post failed');
@@ -253,13 +290,66 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
     platform,
     postDisabled,
     requiresMedia,
+    tagsValue.hashtags,
+    tagsValue.keywords,
+    tagsValue.platformSpecific,
     toast,
   ]);
 
-  const handleAIGenerate = useCallback(() => {
-    const prompt = `Draft a ${meta.label} ${meta.verb.toLowerCase()} about [your topic here]`;
-    router.push(`/dashboard?prefill=${encodeURIComponent(prompt)}`);
-  }, [meta.label, meta.verb, router]);
+  const openGeneratePopover = useCallback(() => {
+    setShowGeneratePopover(true);
+    setGenerateBrief('');
+    // Focus the textarea on next paint
+    requestAnimationFrame(() => {
+      briefTextareaRef.current?.focus();
+    });
+  }, []);
+
+  const closeGeneratePopover = useCallback(() => {
+    setShowGeneratePopover(false);
+    setGenerateBrief('');
+  }, []);
+
+  const handleAIGenerate = useCallback(async () => {
+    if (!generateBrief.trim()) {
+      toast.error('Please describe what to write about.');
+      return;
+    }
+    setGenerating(true);
+    try {
+      const res = await authFetch(
+        `/api/social/platforms/${platform}/generate-post`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            brief: generateBrief.trim(),
+            format: normalizeFormat(undefined, formState.contentType),
+          }),
+        },
+      );
+      const data = (await res.json()) as GeneratePostResponse;
+      if (!res.ok || !data.success) {
+        toast.error(data.error ?? `HTTP ${res.status} — could not start mission`);
+        return;
+      }
+      closeGeneratePopover();
+      toast.success('Mission started — review at the top of this page');
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to start mission');
+    } finally {
+      setGenerating(false);
+    }
+  }, [
+    authFetch,
+    closeGeneratePopover,
+    formState.contentType,
+    generateBrief,
+    platform,
+    router,
+    toast,
+  ]);
 
   const handleSchedule = useCallback(() => {
     router.push('/social/calendar');
@@ -268,7 +358,7 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
   const inputsDisabled = posting || isParked || connected === null || connected === false;
 
   return (
-    <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-5">
+    <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-5 w-full h-full flex flex-col overflow-y-auto">
       {/* ── Composer header ─────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -305,6 +395,16 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
         disabled={inputsDisabled}
       />
 
+      {/* ── Discovery & SEO (hidden for Truth Social) ──────────────────── */}
+      {!isParked && (
+        <TagsAndSeoSection
+          value={tagsValue}
+          onChange={setTagsValue}
+          platform={platform}
+          disabled={inputsDisabled}
+        />
+      )}
+
       {/* ── Media uploader (hidden for Truth Social) ────────────────────── */}
       {!isParked && (
         <div>
@@ -339,11 +439,89 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
           <CalendarIcon className="mr-1.5 h-4 w-4" />
           Schedule for later
         </Button>
-        <Button variant="outline" onClick={handleAIGenerate} disabled={posting || isParked}>
+        <Button
+          variant="outline"
+          onClick={openGeneratePopover}
+          disabled={posting || isParked}
+        >
           <Sparkles className="mr-1.5 h-4 w-4" />
           AI Generate with {meta.label} Specialist
         </Button>
       </div>
+
+      {/* ── AI Generate popover ─────────────────────────────────────────── */}
+      {showGeneratePopover && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="AI content brief"
+          className="mt-3 rounded-2xl border border-border-strong bg-card p-4 space-y-3 shadow-lg"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+              <span className="text-sm font-semibold text-foreground">
+                What should I write about?
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={closeGeneratePopover}
+              aria-label="Close"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <textarea
+            ref={briefTextareaRef}
+            value={generateBrief}
+            onChange={(e) => setGenerateBrief(e.target.value)}
+            disabled={generating}
+            placeholder={`e.g. "Our new compliance automation feature — highlight the time savings"`}
+            rows={3}
+            className="w-full rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                void handleAIGenerate();
+              }
+              if (e.key === 'Escape') {
+                closeGeneratePopover();
+              }
+            }}
+          />
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={closeGeneratePopover}
+              disabled={generating}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => void handleAIGenerate()}
+              disabled={generating || !generateBrief.trim()}
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                  Starting...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                  Generate
+                </>
+              )}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Tip: Press Cmd/Ctrl + Enter to generate.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

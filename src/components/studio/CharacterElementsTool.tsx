@@ -122,9 +122,9 @@ function DropZone({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-xs text-zinc-400">{label}</Label>
+        <Label className="text-xs text-muted-foreground">{label}</Label>
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-zinc-600">
+          <span className="text-[10px] text-muted-foreground">
             {mode === 'single' ? 'Single' : 'Stitch'}
           </span>
           <Switch
@@ -160,9 +160,9 @@ function DropZone({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center rounded-md border border-dashed border-zinc-600 aspect-square hover:border-zinc-400 transition-colors"
+              className="flex items-center justify-center rounded-md border border-dashed border-border aspect-square hover:border-border-strong transition-colors"
             >
-              <Plus className="h-4 w-4 text-zinc-500" />
+              <Plus className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
         </div>
@@ -172,13 +172,13 @@ function DropZone({
           onClick={() => fileInputRef.current?.click()}
           className={cn(
             'flex w-full flex-col items-center justify-center gap-2 rounded-lg',
-            'border-2 border-dashed border-zinc-700 bg-zinc-900/50 p-4',
-            'hover:border-zinc-500 hover:bg-zinc-800/30 transition-all',
+            'border-2 border-dashed border-border-strong bg-card/50 p-4',
+            'hover:border-border hover:bg-surface-elevated/30 transition-all',
             'cursor-pointer',
           )}
         >
-          <div className="text-zinc-600">{icon}</div>
-          <span className="text-[10px] text-zinc-600">Click to upload</span>
+          <div className="text-muted-foreground">{icon}</div>
+          <span className="text-[10px] text-muted-foreground">Click to upload</span>
         </button>
       )}
 
@@ -248,12 +248,12 @@ function ImageUploadSlot({ imageUrl, label, onUpload, onRemove }: ImageUploadSlo
           onClick={() => fileInputRef.current?.click()}
           className={cn(
             'flex w-full flex-col items-center justify-center gap-1 rounded-md',
-            'border border-dashed border-zinc-700 bg-zinc-900/50 aspect-square',
-            'hover:border-zinc-500 transition-colors cursor-pointer',
+            'border border-dashed border-border-strong bg-card/50 aspect-square',
+            'hover:border-border transition-colors cursor-pointer',
           )}
         >
-          <Upload className="h-3.5 w-3.5 text-zinc-600" />
-          <span className="text-[9px] text-zinc-600 truncate max-w-full px-1">
+          <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[9px] text-muted-foreground truncate max-w-full px-1">
             {label}
           </span>
         </button>
@@ -403,8 +403,8 @@ export function CharacterElementsTool({
               className={cn(
                 'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                 idx === activeTab
-                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-500',
+                  ? 'bg-primary/20 text-primary-light border border-primary/40'
+                  : 'bg-surface-elevated text-muted-foreground border border-border-strong hover:border-border',
               )}
             >
               {char.name || `Character ${idx + 1}`}
@@ -416,7 +416,7 @@ export function CharacterElementsTool({
               variant="ghost"
               size="icon"
               onClick={addCharacter}
-              className="h-8 w-8 text-zinc-500 hover:text-white"
+              className="h-8 w-8 text-muted-foreground hover:text-white"
               title="Add character"
             >
               <Plus className="h-4 w-4" />
@@ -441,7 +441,7 @@ export function CharacterElementsTool({
                   value={activeCharacter.name}
                   onChange={(e) => updateCharacter(activeTab, { name: e.target.value })}
                   placeholder="Character name..."
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 flex-1"
+                  className="bg-surface-elevated border-border-strong text-white placeholder:text-muted-foreground flex-1"
                 />
                 {characters.length > 1 && (
                   <Button
@@ -449,7 +449,7 @@ export function CharacterElementsTool({
                     variant="ghost"
                     size="icon"
                     onClick={() => removeCharacter(activeTab)}
-                    className="h-9 w-9 text-zinc-500 hover:text-red-400"
+                    className="h-9 w-9 text-muted-foreground hover:text-destructive"
                     title="Remove character"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -478,7 +478,7 @@ export function CharacterElementsTool({
 
               {/* Physical Description */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Physical Description</Label>
+                <Label className="text-xs text-muted-foreground">Physical Description</Label>
                 <Textarea
                   value={activeCharacter.physicalDescription ?? ''}
                   onChange={(e) =>
@@ -488,7 +488,7 @@ export function CharacterElementsTool({
                   }
                   placeholder="Describe physical features, clothing, distinguishing traits..."
                   rows={3}
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 text-sm resize-y"
+                  className="bg-surface-elevated border-border-strong text-white placeholder:text-muted-foreground text-sm resize-y"
                 />
               </div>
 
@@ -497,14 +497,14 @@ export function CharacterElementsTool({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="w-full border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-400"
+                className="w-full border-border-strong bg-surface-elevated hover:bg-surface-elevated text-muted-foreground"
                 disabled={!onLibraryClick}
                 onClick={onLibraryClick}
               >
                 <Library className="mr-2 h-4 w-4" />
                 Character Library
                 {!onLibraryClick && (
-                  <span className="ml-auto text-[10px] text-zinc-600">Coming soon</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground">Coming soon</span>
                 )}
               </Button>
             </motion.div>
@@ -512,7 +512,7 @@ export function CharacterElementsTool({
         </AnimatePresence>
 
         {characters.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-8 text-zinc-500">
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <User className="h-8 w-8 mb-2 opacity-40" />
             <p className="text-sm">No characters added</p>
             <Button
@@ -520,7 +520,7 @@ export function CharacterElementsTool({
               variant="ghost"
               size="sm"
               onClick={addCharacter}
-              className="mt-2 text-indigo-400 hover:text-indigo-300"
+              className="mt-2 text-primary-light hover:text-primary-light"
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
               Add Character
@@ -532,8 +532,8 @@ export function CharacterElementsTool({
       {/* ─── Global Reference ──────────────────────────────────── */}
       {onGlobalReferenceChange && (
         <div className="space-y-2">
-          <Label className="text-xs font-semibold text-zinc-300">Global Reference</Label>
-          <p className="text-[10px] text-zinc-600">
+          <Label className="text-xs font-semibold text-foreground">Global Reference</Label>
+          <p className="text-[10px] text-muted-foreground">
             A reference image or video applied to the entire generation
           </p>
           <div className="w-24">
@@ -550,10 +550,10 @@ export function CharacterElementsTool({
       {/* ─── Additional Reference Images ───────────────────────── */}
       {onAdditionalReferencesChange && (
         <div className="space-y-2">
-          <Label className="text-xs font-semibold text-zinc-300">
+          <Label className="text-xs font-semibold text-foreground">
             Additional Reference Images
           </Label>
-          <p className="text-[10px] text-zinc-600">
+          <p className="text-[10px] text-muted-foreground">
             Up to {MAX_ADDITIONAL_REFS} images referenced as @Image1 through @Image{MAX_ADDITIONAL_REFS}
           </p>
           <div className="grid grid-cols-7 gap-1.5">
@@ -572,8 +572,8 @@ export function CharacterElementsTool({
 
       {/* ─── Narrative Angle Prompting ─────────────────────────── */}
       {onNarrativeAnglePromptingChange && (
-        <div className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3">
-          <Label className="text-xs text-zinc-300">Narrative Angle Prompting</Label>
+        <div className="flex items-center justify-between rounded-lg border border-border-strong bg-card px-4 py-3">
+          <Label className="text-xs text-foreground">Narrative Angle Prompting</Label>
           <Switch
             checked={narrativeAnglePrompting ?? false}
             onCheckedChange={onNarrativeAnglePromptingChange}

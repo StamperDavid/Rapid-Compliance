@@ -161,10 +161,10 @@ export function StepPostProduction() {
     <div className="space-y-6">
       {/* Final Video Preview */}
       {finalVideoUrl && (
-        <Card className="bg-zinc-900/50 border-zinc-800">
+        <Card className="bg-card/50 border-border-strong">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
-              <Wand2 className="w-5 h-5 text-amber-500" />
+              <Wand2 className="w-5 h-5 text-primary" />
               Final Video
             </CardTitle>
           </CardHeader>
@@ -175,7 +175,7 @@ export function StepPostProduction() {
       )}
 
       {/* Scene Timeline Editor */}
-      <Card className="bg-zinc-900/50 border-zinc-800">
+      <Card className="bg-card/50 border-border-strong">
         <CardHeader>
           <CardTitle className="text-white text-lg">Scene Timeline</CardTitle>
           <CardDescription>
@@ -190,10 +190,10 @@ export function StepPostProduction() {
             return (
               <div
                 key={scene.id}
-                className="flex items-start gap-4 p-4 bg-zinc-800/30 rounded-lg border border-zinc-700/50"
+                className="flex items-start gap-4 p-4 bg-surface-elevated/30 rounded-lg border border-border-strong/50"
               >
                 {/* Scene Number */}
-                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-amber-500/20 text-amber-400 text-sm font-bold">
+                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary/20 text-primary-light text-sm font-bold">
                   {index + 1}
                 </div>
 
@@ -204,7 +204,7 @@ export function StepPostProduction() {
                       <textarea
                         value={scene.scriptText}
                         onChange={(e) => updateScene(scene.id, { scriptText: e.target.value })}
-                        className="w-full h-20 px-3 py-2 bg-zinc-900 border border-amber-500/50 rounded-lg text-sm text-white focus:outline-none resize-none"
+                        className="w-full h-20 px-3 py-2 bg-card border border-primary/50 rounded-lg text-sm text-white focus:outline-none resize-none"
                       />
                       <div className="flex gap-2">
                         <Button
@@ -219,7 +219,7 @@ export function StepPostProduction() {
                           size="sm"
                           onClick={() => { setEditingSceneId(null); void handleRegenerateScene(scene.id); }}
                           disabled={isRegenerating}
-                          className="text-xs bg-amber-600 hover:bg-amber-700 gap-1"
+                          className="text-xs bg-primary hover:bg-primary-dark gap-1"
                         >
                           <RefreshCw className="w-3 h-3" />
                           Save & Re-generate
@@ -228,7 +228,7 @@ export function StepPostProduction() {
                     </div>
                   ) : (
                     <p
-                      className="text-sm text-zinc-200 cursor-pointer hover:text-white group"
+                      className="text-sm text-foreground cursor-pointer hover:text-white group"
                       onClick={() => setEditingSceneId(scene.id)}
                     >
                       {scene.scriptText}
@@ -236,10 +236,10 @@ export function StepPostProduction() {
                     </p>
                   )}
 
-                  <div className="flex items-center gap-3 text-xs text-zinc-500">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{scene.duration}s</span>
                     {genResult && (
-                      <span className={genResult.status === 'completed' ? 'text-green-400' : genResult.status === 'failed' ? 'text-red-400' : 'text-amber-400'}>
+                      <span className={genResult.status === 'completed' ? 'text-green-400' : genResult.status === 'failed' ? 'text-destructive' : 'text-primary-light'}>
                         {genResult.status}
                       </span>
                     )}
@@ -250,7 +250,7 @@ export function StepPostProduction() {
                 <div className="flex-shrink-0 flex items-center gap-1">
                   {genResult?.videoUrl && (
                     <a href={genResult.videoUrl} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-zinc-400 hover:text-white">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
                         <Play className="w-4 h-4" />
                       </Button>
                     </a>
@@ -260,7 +260,7 @@ export function StepPostProduction() {
                     size="sm"
                     onClick={() => { void handleRegenerateScene(scene.id); }}
                     disabled={isRegenerating}
-                    className="h-8 w-8 p-0 text-zinc-400 hover:text-amber-400"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-primary-light"
                   >
                     {isRegenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   </Button>
@@ -287,7 +287,7 @@ export function StepPostProduction() {
         <div className="flex gap-2">
           <Button
             onClick={() => router.push(`/content/video/editor?project=${projectId ?? ''}`)}
-            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            className="gap-2 bg-primary hover:bg-primary-dark text-white"
           >
             <Film className="w-4 h-4" />
             Open in Video Editor

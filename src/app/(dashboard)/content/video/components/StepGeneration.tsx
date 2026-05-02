@@ -609,10 +609,10 @@ export function StepGeneration() {
   return (
     <div className="space-y-6">
       {/* Overall Progress */}
-      <Card className="bg-zinc-900/50 border-zinc-800">
+      <Card className="bg-card/50 border-border-strong">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
-            <Zap className="w-5 h-5 text-amber-500" />
+            <Zap className="w-5 h-5 text-primary" />
             Scene Generation
           </CardTitle>
           <CardDescription>{phaseDescription}</CardDescription>
@@ -621,10 +621,10 @@ export function StepGeneration() {
           {/* Overall Progress Bar */}
           <div>
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-zinc-400">Overall Progress</span>
+              <span className="text-muted-foreground">Overall Progress</span>
               <div className="flex items-center gap-3">
                 {!allComplete && (
-                  <span className="text-xs text-zinc-500 flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {formatElapsed(elapsed)}
                   </span>
@@ -632,9 +632,9 @@ export function StepGeneration() {
                 <span className="text-white font-medium">{overallProgress}%</span>
               </div>
             </div>
-            <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-border-strong rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-amber-500 to-green-500 rounded-full"
+                className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${overallProgress}%` }}
                 transition={{ duration: 0.5 }}
@@ -644,17 +644,17 @@ export function StepGeneration() {
 
           {/* Phase Indicator */}
           {!allComplete && (
-            <div className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 rounded-lg text-xs">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400 flex-shrink-0" />
+            <div className="flex items-center gap-3 px-3 py-2 bg-surface-elevated/50 rounded-lg text-xs">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary-light flex-shrink-0" />
               {phase === 'submitting' ? (
-                <span className="text-zinc-400">
+                <span className="text-muted-foreground">
                   Submitting scenes to video providers... This usually takes 10-30 seconds.
                 </span>
               ) : (
-                <span className="text-zinc-400">
+                <span className="text-muted-foreground">
                   Waiting for Hedra to render videos. Generation typically takes 2-5 minutes per scene.
                   {pollCount > 0 && (
-                    <span className="text-zinc-600"> (poll #{pollCount})</span>
+                    <span className="text-muted-foreground"> (poll #{pollCount})</span>
                   )}
                 </span>
               )}
@@ -678,18 +678,18 @@ export function StepGeneration() {
 
           {/* Error */}
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
           {/* Poll Error Warning */}
           {pollError && !error && (
-            <div className="flex items-start gap-2 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-primary-light flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs text-amber-400 font-medium">Polling issue</p>
-                <p className="text-xs text-zinc-400 mt-0.5">{pollError}. Will retry automatically.</p>
+                <p className="text-xs text-primary-light font-medium">Polling issue</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{pollError}. Will retry automatically.</p>
               </div>
             </div>
           )}
@@ -715,15 +715,15 @@ export function StepGeneration() {
               {(() => {
                 const costEstimate = estimateGenerationCost(scenes, avatarId);
                 return (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-xs text-zinc-300">
-                    <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-elevated/60 border border-border-strong/50 rounded-lg text-xs text-foreground">
+                    <DollarSign className="w-3.5 h-3.5 text-primary-light" />
                     <span>Est. {formatCostSummary(costEstimate)}</span>
                   </div>
                 );
               })()}
               <Button
                 onClick={() => { void startGeneration(); }}
-                className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                className="gap-2 bg-primary hover:bg-primary-dark text-white"
               >
                 <Play className="w-4 h-4" />
                 Start Generation ({scenes.length} scene{scenes.length !== 1 ? 's' : ''})
@@ -734,7 +734,7 @@ export function StepGeneration() {
           {allComplete && completedCount > 0 && (
             <Button
               onClick={handleContinue}
-              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+              className="gap-2 bg-primary hover:bg-primary-dark text-white"
             >
               <CheckCircle2 className="w-4 h-4" />
               Continue to Assembly
@@ -742,13 +742,13 @@ export function StepGeneration() {
             </Button>
           )}
           {!allComplete && phase === 'submitting' && (
-            <div className="flex items-center gap-2 text-zinc-400">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="text-sm">Submitting to providers...</span>
             </div>
           )}
           {!allComplete && phase === 'rendering' && (
-            <div className="flex items-center gap-2 text-zinc-400">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="text-sm">Rendering {generatingCount} scene{generatingCount !== 1 ? 's' : ''}...</span>
             </div>

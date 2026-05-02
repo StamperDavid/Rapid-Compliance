@@ -8,7 +8,7 @@
  *   organizations/{PLATFORM_ID}/settings/social_listening_config
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { createTwitterService } from '@/lib/integrations/twitter-service';
@@ -48,7 +48,7 @@ export class ListeningService {
    */
   static async getConfig(): Promise<ListeningConfig> {
     try {
-      const saved = await FirestoreService.get<ListeningConfig>(
+      const saved = await AdminFirestoreService.get<ListeningConfig>(
         settingsPath(),
         LISTENING_CONFIG_DOC
       );
@@ -70,7 +70,7 @@ export class ListeningService {
       updatedAt: new Date().toISOString(),
     };
 
-    await FirestoreService.set(settingsPath(), LISTENING_CONFIG_DOC, updated);
+    await AdminFirestoreService.set(settingsPath(), LISTENING_CONFIG_DOC, updated);
     return updated;
   }
 
@@ -152,7 +152,7 @@ export class ListeningService {
     let stored = 0;
     for (const tweet of tweets) {
       // Check if we already have this mention
-      const existing = await FirestoreService.get(mentionsPath(), `twitter-${tweet.id}`);
+      const existing = await AdminFirestoreService.get(mentionsPath(), `twitter-${tweet.id}`);
       if (existing) {continue;}
 
       const sentimentResult = sentimentResults.get(tweet.id);
@@ -199,7 +199,7 @@ export class ListeningService {
         } : undefined,
       };
 
-      await FirestoreService.set(mentionsPath(), mention.id, mention, false);
+      await AdminFirestoreService.set(mentionsPath(), mention.id, mention, false);
       stored++;
     }
 
@@ -236,7 +236,7 @@ export class ListeningService {
         constraints.push(limit(filters.limit));
       }
 
-      return await FirestoreService.getAll<SocialMention>(mentionsPath(), constraints);
+      return await AdminFirestoreService.getAll<SocialMention>(mentionsPath(), constraints);
     } catch (error) {
       logger.error('ListeningService: Failed to list mentions', error instanceof Error ? error : new Error(String(error)));
       return [];
@@ -251,7 +251,7 @@ export class ListeningService {
     status: MentionStatus
   ): Promise<boolean> {
     try {
-      await FirestoreService.update(mentionsPath(), mentionId, { status });
+      await AdminFirestoreService.update(mentionsPath(), mentionId, { status });
       return true;
     } catch (error) {
       logger.error('ListeningService: Failed to update mention', error instanceof Error ? error : new Error(String(error)));
@@ -270,7 +270,7 @@ export class ListeningService {
     total: number;
   }> {
     try {
-      const mentions = await FirestoreService.getAll<SocialMention>(mentionsPath());
+      const mentions = await AdminFirestoreService.getAll<SocialMention>(mentionsPath());
       const breakdown = { positive: 0, neutral: 0, negative: 0, unknown: 0, total: mentions.length };
 
       for (const m of mentions) {

@@ -163,13 +163,13 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="relative w-full max-w-4xl max-h-[85vh] bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl flex flex-col"
+        className="relative w-full max-w-4xl max-h-[85vh] bg-card border border-border-strong rounded-2xl shadow-2xl flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-700">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-strong">
           <div>
             <h2 className="text-lg font-semibold text-white">Hedra Character Library</h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {characters.length} characters available
               {availableCount < characters.length && ` · ${characters.length - availableCount} already imported`}
               {' · '}Stock extras with built-in voices
@@ -177,34 +177,34 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-2 text-muted-foreground hover:text-white hover:bg-surface-elevated rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-3 px-6 py-3 border-b border-zinc-800">
+        <div className="flex items-center gap-3 px-6 py-3 border-b border-border-strong">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search characters..."
-              className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <button
             onClick={selectAllUnimported}
-            className="px-3 py-2 text-xs font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg hover:bg-zinc-700 hover:text-white transition-colors whitespace-nowrap"
+            className="px-3 py-2 text-xs font-medium text-foreground bg-surface-elevated border border-border-strong rounded-lg hover:bg-border-strong hover:text-white transition-colors whitespace-nowrap"
           >
             Select All New
           </button>
           {selectedIds.size > 0 && (
             <button
               onClick={clearSelection}
-              className="px-3 py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors whitespace-nowrap"
+              className="px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
               Clear ({selectedIds.size})
             </button>
@@ -214,7 +214,7 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {isLoading && (
-            <div className="flex items-center justify-center py-16 gap-2 text-zinc-400">
+            <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin" />
               <span className="text-sm">Loading Hedra characters...</span>
             </div>
@@ -222,8 +222,8 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
 
           {error && (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <AlertCircle className="w-8 h-8 text-red-400" />
-              <p className="text-sm text-red-400">{error}</p>
+              <AlertCircle className="w-8 h-8 text-destructive" />
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
@@ -243,10 +243,10 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
                     className={cn(
                       'relative flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all',
                       isDisabled
-                        ? 'border-zinc-800 bg-zinc-900/50 opacity-50 cursor-not-allowed'
+                        ? 'border-border-strong bg-card/50 opacity-50 cursor-not-allowed'
                         : isSelected
-                          ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
-                          : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800 cursor-pointer',
+                          ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                          : 'border-border-strong bg-surface-elevated/50 hover:border-border hover:bg-surface-elevated cursor-pointer',
                     )}
                   >
                     {/* Image */}
@@ -262,19 +262,19 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
                         />
                       </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-lg bg-zinc-700 flex items-center justify-center">
-                        <AlertCircle className="w-5 h-5 text-zinc-500" />
+                      <div className="w-16 h-16 rounded-lg bg-border-strong flex items-center justify-center">
+                        <AlertCircle className="w-5 h-5 text-muted-foreground" />
                       </div>
                     )}
 
                     {/* Name */}
-                    <span className="text-[10px] font-medium text-zinc-300 truncate w-full text-center leading-tight">
+                    <span className="text-[10px] font-medium text-foreground truncate w-full text-center leading-tight">
                       {character.name}
                     </span>
 
                     {/* Voice indicator */}
                     {character.hasVoice && (
-                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-cyan-500/10 rounded text-[9px] text-cyan-300" title={character.voiceName ?? 'Built-in voice'}>
+                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-primary/10 rounded text-[9px] text-primary" title={character.voiceName ?? 'Built-in voice'}>
                         <Mic className="w-2 h-2" />
                         Voice
                       </span>
@@ -289,7 +289,7 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
 
                     {/* Selection checkmark */}
                     {isSelected && (
-                      <div className="absolute top-1 left-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
+                      <div className="absolute top-1 left-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                         <Check className="w-3 h-3 text-black" />
                       </div>
                     )}
@@ -301,17 +301,17 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
 
           {!isLoading && !error && filteredCharacters.length === 0 && searchQuery && (
             <div className="flex flex-col items-center justify-center py-12 gap-2">
-              <Search className="w-6 h-6 text-zinc-600" />
-              <p className="text-sm text-zinc-500">No characters match &ldquo;{searchQuery}&rdquo;</p>
+              <Search className="w-6 h-6 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">No characters match &ldquo;{searchQuery}&rdquo;</p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-700">
-          <div className="text-xs text-zinc-400">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border-strong">
+          <div className="text-xs text-muted-foreground">
             {importResult && (
-              <span className={importResult.includes('failed') ? 'text-red-400' : 'text-green-400'}>
+              <span className={importResult.includes('failed') ? 'text-destructive' : 'text-green-400'}>
                 {importResult}
               </span>
             )}
@@ -319,14 +319,14 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm text-muted-foreground hover:text-white transition-colors"
             >
               {importResult ? 'Done' : 'Cancel'}
             </button>
             <button
               onClick={() => void importSelected()}
               disabled={selectedIds.size === 0 || isImporting}
-              className="flex items-center gap-2 px-5 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
             >
               {isImporting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -29,15 +29,6 @@ interface VisualPresetPickerProps {
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
-/** Hash a string to an HSL hue for deterministic gradient backgrounds. */
-function hashToHue(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash % 360);
-}
-
 function PresetCard({
   preset,
   isSelected,
@@ -49,7 +40,6 @@ function PresetCard({
   onClick: () => void;
   multiSelect?: boolean;
 }) {
-  const hue = hashToHue(preset.id);
   const initials = preset.name
     .split(/[\s/]+/)
     .slice(0, 2)
@@ -67,45 +57,40 @@ function PresetCard({
       transition={{ duration: 0.15 }}
       className={cn(
         'group relative flex flex-col items-center gap-2 rounded-lg border p-3 transition-all',
-        'hover:border-zinc-500 hover:bg-zinc-800/50',
+        'hover:border-border hover:bg-surface-elevated/50',
         isSelected
-          ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/50'
-          : 'border-zinc-700 bg-zinc-900',
+          ? 'border-primary bg-primary/10 ring-1 ring-primary/50'
+          : 'border-border-strong bg-card',
       )}
       title={preset.promptFragment}
     >
-      {/* Thumbnail placeholder */}
-      <div
-        className="flex h-20 w-full items-center justify-center rounded-md"
-        style={{
-          background: `linear-gradient(135deg, hsl(${hue}, 50%, 25%), hsl(${(hue + 60) % 360}, 40%, 15%))`,
-        }}
-      >
-        <span className="text-xl font-bold text-white/70">{initials}</span>
+      {/* Thumbnail placeholder — initials on solid surface */}
+      <div className="flex h-20 w-full items-center justify-center rounded-md bg-surface-elevated border border-border-strong">
+        <span className="text-xl font-bold text-muted-foreground">{initials}</span>
       </div>
 
       {/* Name */}
-      <span className="text-center text-xs font-medium text-zinc-300 line-clamp-2">
+      <span className="text-center text-xs font-medium text-foreground line-clamp-2">
         {preset.name}
       </span>
 
       {/* Selection indicator */}
       {isSelected && (
-        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500">
+        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary">
           <Check className="h-3 w-3 text-white" />
         </div>
       )}
 
       {/* Multi-select checkbox area */}
       {multiSelect && !isSelected && (
-        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-zinc-600 bg-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-elevated opacity-0 group-hover:opacity-100 transition-opacity">
           <span className="sr-only">Select</span>
         </div>
       )}
 
       {/* Prompt fragment tooltip on hover */}
       <div className="pointer-events-none absolute inset-x-0 -bottom-1 translate-y-full opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        <div className="mx-1 rounded bg-zinc-800 border border-zinc-600 px-2 py-1 text-[10px] text-zinc-400 shadow-lg">
+        <div className="mx-1 rounded bg-surface-elevated border border-border px-2 py-1 text-[10px] text-muted-foreground shadow-lg">
           {preset.promptFragment}
         </div>
       </div>
@@ -194,7 +179,7 @@ export function VisualPresetPicker({
       <DialogContent
         className={cn(
           'max-w-4xl max-h-[85vh] flex flex-col',
-          'bg-zinc-900 border-zinc-700 text-white',
+          'bg-card border-border-strong text-white',
         )}
       >
         <DialogHeader className="flex-shrink-0">
@@ -205,18 +190,18 @@ export function VisualPresetPicker({
           </div>
           {/* Search bar */}
           <div className="relative mt-3">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={`Search ${categoryLabel.toLowerCase()}...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+              className="pl-9 bg-surface-elevated border-border-strong text-white placeholder:text-muted-foreground"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -227,7 +212,7 @@ export function VisualPresetPicker({
         {/* Preset grid */}
         <div className="flex-1 overflow-y-auto mt-4 pr-1">
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Search className="h-8 w-8 mb-2 opacity-50" />
               <p className="text-sm">No presets match your search</p>
             </div>
@@ -250,8 +235,8 @@ export function VisualPresetPicker({
 
         {/* Multi-select footer */}
         {multiSelect && (
-          <div className="flex items-center justify-between border-t border-zinc-700 pt-4 mt-4 flex-shrink-0">
-            <span className="text-sm text-zinc-400">
+          <div className="flex items-center justify-between border-t border-border-strong pt-4 mt-4 flex-shrink-0">
+            <span className="text-sm text-muted-foreground">
               {localSelection.length} selected
             </span>
             <div className="flex gap-2">
@@ -259,7 +244,7 @@ export function VisualPresetPicker({
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocalSelection([])}
-                className="text-zinc-400 hover:text-white"
+                className="text-muted-foreground hover:text-white"
               >
                 Clear
               </Button>

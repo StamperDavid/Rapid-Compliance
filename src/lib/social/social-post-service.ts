@@ -10,7 +10,8 @@
  * Collection: platform/social_posts (platform-level scheduled posts)
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -108,7 +109,7 @@ export class SocialPostService {
     };
 
     try {
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         SocialPostService.getCollectionPath(),
         postId,
         post,
@@ -141,7 +142,7 @@ export class SocialPostService {
    */
   static async getPost(postId: string): Promise<ScheduledSocialPost | null> {
     try {
-      const post = await FirestoreService.get<ScheduledSocialPost>(
+      const post = await AdminFirestoreService.get<ScheduledSocialPost>(
         SocialPostService.getCollectionPath(),
         postId
       );
@@ -174,7 +175,7 @@ export class SocialPostService {
         constraints.unshift(where('platform', '==', platform));
       }
 
-      const posts = await FirestoreService.getAll<ScheduledSocialPost>(
+      const posts = await AdminFirestoreService.getAll<ScheduledSocialPost>(
         SocialPostService.getCollectionPath(),
         constraints
       );
@@ -198,7 +199,7 @@ export class SocialPostService {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const posts = await FirestoreService.getAll<ScheduledSocialPost>(
+      const posts = await AdminFirestoreService.getAll<ScheduledSocialPost>(
         SocialPostService.getCollectionPath(),
         [
           where('status', '==', 'published'),
@@ -238,7 +239,7 @@ export class SocialPostService {
         updateData.publishedAt = new Date();
       }
 
-      await FirestoreService.update(
+      await AdminFirestoreService.update(
         SocialPostService.getCollectionPath(),
         postId,
         updateData
@@ -346,7 +347,7 @@ export class SocialPostService {
       const { where, orderBy } = await import('firebase/firestore');
       const now = new Date();
 
-      const posts = await FirestoreService.getAll<ScheduledSocialPost>(
+      const posts = await AdminFirestoreService.getAll<ScheduledSocialPost>(
         SocialPostService.getCollectionPath(),
         [
           where('status', '==', 'scheduled'),

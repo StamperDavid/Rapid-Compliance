@@ -134,10 +134,10 @@ export function StepPublish() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Send className="w-5 h-5 text-amber-500" />
+            <Send className="w-5 h-5 text-primary" />
             Publish & Schedule
           </h2>
-          <p className="text-sm text-zinc-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Share your video across social platforms — publish now or schedule for later.
           </p>
         </div>
@@ -145,7 +145,7 @@ export function StepPublish() {
           variant="outline"
           size="sm"
           onClick={() => setStep('post-production')}
-          className="gap-2 border-zinc-700"
+          className="gap-2 border-border-strong"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Post-Production
@@ -154,19 +154,19 @@ export function StepPublish() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column — Video Preview */}
-        <Card className="bg-zinc-900 border-zinc-800 lg:col-span-1">
+        <Card className="bg-card border-border-strong lg:col-span-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-zinc-300">Video Preview</CardTitle>
+            <CardTitle className="text-sm text-foreground">Video Preview</CardTitle>
           </CardHeader>
           <CardContent>
             {videoUrl ? (
               <VideoPlayer src={videoUrl} />
             ) : (
-              <div className="aspect-video bg-zinc-800 rounded-lg flex items-center justify-center">
-                <Play className="w-10 h-10 text-zinc-600" />
+              <div className="aspect-video bg-surface-elevated rounded-lg flex items-center justify-center">
+                <Play className="w-10 h-10 text-muted-foreground" />
               </div>
             )}
-            <p className="text-xs text-zinc-500 mt-2 truncate">
+            <p className="text-xs text-muted-foreground mt-2 truncate">
               {projectName ?? 'Untitled Project'}
             </p>
           </CardContent>
@@ -175,9 +175,9 @@ export function StepPublish() {
         {/* Right column — Publish Form */}
         <div className="lg:col-span-2 space-y-4">
           {/* Platform Picker */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border-strong">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-zinc-300">Platforms</CardTitle>
+              <CardTitle className="text-sm text-foreground">Platforms</CardTitle>
               <CardDescription className="text-xs">
                 Select where to publish your video
               </CardDescription>
@@ -206,35 +206,35 @@ export function StepPublish() {
           </Card>
 
           {/* Title & Description */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border-strong">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-zinc-300">Post Details</CardTitle>
+              <CardTitle className="text-sm text-foreground">Post Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Title</label>
+                <label className="block text-xs text-muted-foreground mb-1">Title</label>
                 <input
                   type="text"
                   value={publishConfig.title}
                   onChange={(e) => setPublishConfig({ title: e.target.value })}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+                  className="w-full bg-surface-elevated border border-border-strong rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-primary focus:outline-none"
                   placeholder="Video title..."
                   maxLength={200}
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Description</label>
+                <label className="block text-xs text-muted-foreground mb-1">Description</label>
                 <textarea
                   value={publishConfig.description}
                   onChange={(e) => setPublishConfig({ description: e.target.value })}
                   rows={3}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-none resize-none"
+                  className="w-full bg-surface-elevated border border-border-strong rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-primary focus:outline-none resize-none"
                   placeholder="Describe your video..."
                   maxLength={2000}
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">
+                <label className="block text-xs text-muted-foreground mb-1">
                   <Tag className="w-3 h-3 inline mr-1" />
                   Tags
                 </label>
@@ -242,10 +242,10 @@ export function StepPublish() {
                   {publishConfig.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded-full text-xs text-amber-400"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 border border-primary/30 rounded-full text-xs text-primary-light"
                     >
                       #{tag}
-                      <button onClick={() => removeTag(tag)} className="hover:text-amber-200">
+                      <button onClick={() => removeTag(tag)} className="hover:text-primary-light">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -257,7 +257,7 @@ export function StepPublish() {
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+                    className="flex-1 bg-surface-elevated border border-border-strong rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 focus:border-primary focus:outline-none"
                     placeholder="Add tag..."
                     maxLength={50}
                   />
@@ -265,7 +265,7 @@ export function StepPublish() {
                     variant="outline"
                     size="sm"
                     onClick={addTag}
-                    className="border-zinc-700"
+                    className="border-border-strong"
                   >
                     Add
                   </Button>
@@ -275,9 +275,9 @@ export function StepPublish() {
           </Card>
 
           {/* Schedule */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border-strong">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-zinc-300">Schedule</CardTitle>
+              <CardTitle className="text-sm text-foreground">Schedule</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-3 mb-3">
@@ -285,8 +285,8 @@ export function StepPublish() {
                   onClick={() => setPublishConfig({ scheduleMode: 'now' as PublishScheduleMode, scheduledAt: null })}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-all ${
                     publishConfig.scheduleMode === 'now'
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-400'
-                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
+                      ? 'border-primary bg-primary/10 text-primary-light'
+                      : 'border-border-strong text-muted-foreground hover:border-border'
                   }`}
                 >
                   <Play className="w-4 h-4" />
@@ -296,8 +296,8 @@ export function StepPublish() {
                   onClick={() => setPublishConfig({ scheduleMode: 'scheduled' as PublishScheduleMode })}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-all ${
                     publishConfig.scheduleMode === 'scheduled'
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-400'
-                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
+                      ? 'border-primary bg-primary/10 text-primary-light'
+                      : 'border-border-strong text-muted-foreground hover:border-border'
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
@@ -307,7 +307,7 @@ export function StepPublish() {
 
               {publishConfig.scheduleMode === 'scheduled' && (
                 <div className="flex items-center gap-3">
-                  <Clock className="w-4 h-4 text-zinc-500" />
+                  <Clock className="w-4 h-4 text-muted-foreground" />
                   <input
                     type="datetime-local"
                     value={publishConfig.scheduledAt?.slice(0, 16) ?? ''}
@@ -317,7 +317,7 @@ export function StepPublish() {
                       })
                     }
                     min={new Date().toISOString().slice(0, 16)}
-                    className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                    className="bg-surface-elevated border border-border-strong rounded-lg px-3 py-2 text-sm text-white focus:border-primary focus:outline-none"
                   />
                 </div>
               )}
@@ -326,7 +326,7 @@ export function StepPublish() {
 
           {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-950/50 border border-red-800 text-red-400 text-sm">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/50 border border-destructive text-destructive text-sm">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
@@ -334,13 +334,13 @@ export function StepPublish() {
 
           {/* Publish Results */}
           {hasPublished && (
-            <Card className="bg-zinc-900 border-zinc-800">
+            <Card className="bg-card border-border-strong">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm text-zinc-300 flex items-center gap-2">
+                <CardTitle className="text-sm text-foreground flex items-center gap-2">
                   {allSucceeded ? (
                     <CheckCircle className="w-4 h-4 text-green-500" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    <AlertCircle className="w-4 h-4 text-primary" />
                   )}
                   {allSucceeded ? 'Published Successfully' : 'Publish Results'}
                 </CardTitle>
@@ -350,11 +350,11 @@ export function StepPublish() {
                   {publishResults.map((result) => (
                     <div
                       key={result.platform}
-                      className="flex items-center justify-between p-2 rounded-lg bg-zinc-800/50"
+                      className="flex items-center justify-between p-2 rounded-lg bg-surface-elevated/50"
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold">{PLATFORM_META[result.platform].icon}</span>
-                        <span className="text-sm text-zinc-300">
+                        <span className="text-sm text-foreground">
                           {PUBLISH_PLATFORM_LABELS[result.platform]}
                         </span>
                       </div>
@@ -366,13 +366,13 @@ export function StepPublish() {
                           </span>
                         )}
                         {result.status === 'scheduled' && (
-                          <span className="text-xs text-amber-400 flex items-center gap-1">
+                          <span className="text-xs text-primary-light flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Scheduled
                           </span>
                         )}
                         {result.status === 'failed' && (
-                          <span className="text-xs text-red-400 flex items-center gap-1">
+                          <span className="text-xs text-destructive flex items-center gap-1">
                             <AlertCircle className="w-3 h-3" />
                             {result.error ?? 'Failed'}
                           </span>
@@ -382,7 +382,7 @@ export function StepPublish() {
                             href={result.postUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-amber-400 hover:text-amber-300 underline"
+                            className="text-xs text-primary-light hover:text-primary-light underline"
                           >
                             View Post
                           </a>
@@ -399,7 +399,7 @@ export function StepPublish() {
           <Button
             onClick={() => { void handlePublish(); }}
             disabled={isPublishing || publishConfig.platforms.length === 0 || !videoUrl}
-            className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 gap-2"
+            className="w-full bg-primary hover:bg-primary text-white font-semibold py-3 gap-2"
             size="lg"
           >
             {isPublishing ? (

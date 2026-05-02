@@ -2928,14 +2928,18 @@ export class MarketingManager extends BaseManager {
         };
 
       case 'FACEBOOK':
+        // The Facebook specialist exposes `generate_content` (not
+        // `generate_ad_creative`). Earlier wiring sent the wrong action name
+        // and every campaign step on Facebook silently failed; map onto the
+        // canonical content-generation contract instead.
         return {
           ...basePayload,
-          action: 'generate_ad_creative',
-          objective: this.mapObjectiveToFacebookObjective(goal.objective),
-          persona: goal.targetAudience?.demographics ?? brandContext.targetAudience,
-          productService: brandContext.companyDescription,
-          usp: brandContext.uniqueValue,
-          offer: goal.message,
+          action: 'generate_content',
+          topic: goal.message,
+          contentType: 'post',
+          targetAudience: goal.targetAudience?.demographics ?? brandContext.targetAudience,
+          tone: brandContext.toneOfVoice,
+          campaignGoal: this.mapObjectiveToFacebookObjective(goal.objective),
         };
 
       case 'LINKEDIN':

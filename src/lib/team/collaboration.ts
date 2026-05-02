@@ -7,7 +7,7 @@
  * - Performance tracking
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -122,7 +122,7 @@ export async function createComment(
       createdAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('comments'),
       commentId,
       comment,
@@ -184,7 +184,7 @@ async function notifyMentionedUsers(
 
     for (const userId of mentionedUserIds) {
       // Get user email
-      const user = await FirestoreService.get<OrganizationMember>(
+      const user = await AdminFirestoreService.get<OrganizationMember>(
         getSubCollection('members'),
         userId
       );
@@ -220,7 +220,7 @@ export async function createTask(
       createdAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('tasks'),
       taskId,
       newTask,
@@ -252,7 +252,7 @@ async function notifyTaskAssignment(
   try {
     const { sendEmail } = await import('@/lib/email/email-service');
 
-    const user = await FirestoreService.get<OrganizationMember>(
+    const user = await AdminFirestoreService.get<OrganizationMember>(
       getSubCollection('members'),
       task.assignedTo
     );
@@ -279,7 +279,7 @@ export async function calculateLeaderboard(
 ): Promise<LeaderboardEntry[]> {
   try {
     // Get all team members
-    const membersResult = await FirestoreService.getAll<OrganizationMember>(
+    const membersResult = await AdminFirestoreService.getAll<OrganizationMember>(
       getSubCollection('members')
     );
 
@@ -387,7 +387,7 @@ async function calculateUserMetrics(
     });
 
     // Tasks completed
-    const tasksResult = await FirestoreService.getAll<TeamTask>(
+    const tasksResult = await AdminFirestoreService.getAll<TeamTask>(
       getSubCollection('tasks')
     );
     const tasksCompleted = tasksResult.filter(t =>
@@ -428,7 +428,7 @@ export async function getUserTasks(
   status?: TeamTask['status']
 ): Promise<TeamTask[]> {
   try {
-    const result = await FirestoreService.getAll<TeamTask>(
+    const result = await AdminFirestoreService.getAll<TeamTask>(
       getSubCollection('tasks')
     );
 
@@ -468,7 +468,7 @@ export async function completeTask(
   taskId: string
 ): Promise<void> {
   try {
-    await FirestoreService.update(
+    await AdminFirestoreService.update(
       getSubCollection('tasks'),
       taskId,
       {

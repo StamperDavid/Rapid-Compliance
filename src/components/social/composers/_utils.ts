@@ -25,7 +25,7 @@ export function useCharCountdownColor(current: number, max: number): string {
     if (!max || max <= 0) {return 'text-muted-foreground';}
     const ratio = current / max;
     if (ratio >= 0.95) {return 'text-destructive';}
-    if (ratio >= 0.85) {return 'text-amber-500';}
+    if (ratio >= 0.85) {return 'text-warning';}
     return 'text-muted-foreground';
   }, [current, max]);
 }

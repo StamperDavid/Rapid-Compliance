@@ -60,17 +60,17 @@ interface EditorTimelineProps {
 // ============================================================================
 
 const CLIP_SOURCE_COLORS: Record<EditorClip['source'], string> = {
-  project: 'bg-amber-700/60 border-amber-500/50',
+  project: 'bg-primary-dark/60 border-primary/50',
   library: 'bg-blue-700/60 border-blue-500/50',
   upload: 'bg-green-700/60 border-green-500/50',
-  url: 'bg-zinc-700/60 border-zinc-500/50',
+  url: 'bg-border-strong/60 border-border/50',
 };
 
 const CLIP_SOURCE_SELECTED_COLORS: Record<EditorClip['source'], string> = {
-  project: 'bg-amber-600/80 border-amber-400',
+  project: 'bg-primary/80 border-primary-light',
   library: 'bg-blue-600/80 border-blue-400',
   upload: 'bg-green-600/80 border-green-400',
-  url: 'bg-zinc-600/80 border-zinc-400',
+  url: 'bg-border-strong/80 border-border',
 };
 
 function getEffectiveDuration(clip: EditorClip): number {
@@ -194,7 +194,7 @@ function SortableClipItem({
           cursor-pointer select-none
           transition-colors duration-100
           ${colorClasses}
-          ${isSelected ? 'ring-2 ring-amber-500 ring-offset-1 ring-offset-zinc-900' : ''}
+          ${isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-zinc-900' : ''}
           ${isDragging ? 'z-50' : 'z-0'}
         `}
         onClick={() => { onSelect(clip.id); }}
@@ -222,7 +222,7 @@ function SortableClipItem({
                 if (e.key === 'Enter') { onEditNameCommit(); }
                 if (e.key === 'Escape') { onEditNameCancel(); }
               }}
-              className="w-full bg-zinc-800 text-white text-[10px] px-1 py-0 rounded border border-zinc-600 outline-none focus:border-amber-400"
+              className="w-full bg-surface-elevated text-white text-[10px] px-1 py-0 rounded border border-border outline-none focus:border-primary-light"
               autoFocus
               onClick={(e) => { e.stopPropagation(); }}
               onDoubleClick={(e) => { e.stopPropagation(); }}
@@ -258,10 +258,10 @@ function SortableClipItem({
             e.stopPropagation();
             onTransitionClick(clip.id);
           }}
-          className="flex items-center justify-center w-5 flex-shrink-0 group hover:bg-zinc-700/50 transition-colors rounded"
+          className="flex items-center justify-center w-5 flex-shrink-0 group hover:bg-border-strong/50 transition-colors rounded"
           title={`Transition: ${clip.transitionType} (click to change)`}
         >
-          <span className="text-[10px] text-zinc-500 group-hover:text-amber-400 transition-colors">
+          <span className="text-[10px] text-muted-foreground group-hover:text-primary-light transition-colors">
             {TRANSITIONS.find((t) => t.value === clip.transitionType)?.icon ?? '|'}
           </span>
         </button>
@@ -308,7 +308,7 @@ function TimeRuler({ totalDuration, zoomLevel, leftPadding }: TimeRulerProps) {
 
   return (
     <div
-      className="relative h-5 bg-zinc-800/80 border-b border-zinc-700 flex-shrink-0"
+      className="relative h-5 bg-surface-elevated/80 border-b border-border-strong flex-shrink-0"
       style={{ width: totalWidth + leftPadding + 100 }}
     >
       {ticks.map((tick, i) => (
@@ -318,11 +318,11 @@ function TimeRuler({ totalDuration, zoomLevel, leftPadding }: TimeRulerProps) {
           style={{ left: tick.position }}
         >
           <div
-            className={`${tick.isMajor ? 'h-3 bg-zinc-500' : 'h-2 bg-zinc-600'}`}
+            className={`${tick.isMajor ? 'h-3 bg-border-strong' : 'h-2 bg-border-strong'}`}
             style={{ width: 1 }}
           />
           {tick.isMajor && tick.label && (
-            <span className="absolute top-[2px] left-1 text-[9px] text-zinc-400 whitespace-nowrap select-none">
+            <span className="absolute top-[2px] left-1 text-[9px] text-muted-foreground whitespace-nowrap select-none">
               {tick.label}
             </span>
           )}
@@ -417,7 +417,7 @@ function Playhead({
       </div>
       {/* Vertical line */}
       <div
-        className="mx-auto bg-amber-500"
+        className="mx-auto bg-primary"
         style={{ width: 1.5, height: containerHeight - 8, marginTop: -1 }}
       />
     </div>
@@ -447,9 +447,9 @@ function AudioTrackLane({
   const width = displayDuration * zoomLevel;
 
   const categoryColors: Record<string, string> = {
-    music: 'bg-purple-700/50 border-purple-400/40',
-    sound: 'bg-pink-700/50 border-pink-400/40',
-    voice: 'bg-indigo-700/50 border-indigo-400/40',
+    music: 'bg-primary/50 border-primary/40',
+    sound: 'bg-primary/50 border-primary/40',
+    voice: 'bg-primary-dark/50 border-primary-light/40',
   };
 
   return (
@@ -457,19 +457,19 @@ function AudioTrackLane({
       <div
         className={`
           relative h-8 rounded border flex items-center px-2 gap-1
-          ${categoryColors[track.category] || 'bg-purple-700/50 border-purple-400/40'}
+          ${categoryColors[track.category] || 'bg-primary/50 border-primary/40'}
         `}
         style={{ width: Math.max(80, width) }}
       >
-        <Music size={10} className="text-purple-300 flex-shrink-0" />
-        <span className="text-[10px] text-purple-200 truncate">{track.name}</span>
-        <span className="text-[8px] text-purple-300/60 flex-shrink-0 ml-auto">
+        <Music size={10} className="text-primary-light flex-shrink-0" />
+        <span className="text-[10px] text-primary truncate">{track.name}</span>
+        <span className="text-[8px] text-primary-light/60 flex-shrink-0 ml-auto">
           {Math.round(track.volume * 100)}%
         </span>
         <button
           type="button"
           onClick={() => { dispatch({ type: 'REMOVE_AUDIO_TRACK', trackId: track.id }); }}
-          className="text-purple-300/40 hover:text-red-400 transition-colors flex-shrink-0 ml-1"
+          className="text-primary-light/40 hover:text-destructive transition-colors flex-shrink-0 ml-1"
           title="Remove audio track"
         >
           <Trash2 size={10} />
@@ -535,7 +535,7 @@ function TextOverlayLane({
                 e.stopPropagation();
                 dispatch({ type: 'REMOVE_TEXT_OVERLAY', overlayId: overlay.id });
               }}
-              className="text-blue-300/40 hover:text-red-400 transition-colors flex-shrink-0 ml-auto"
+              className="text-blue-300/40 hover:text-destructive transition-colors flex-shrink-0 ml-auto"
               title="Remove text overlay"
             >
               <Trash2 size={10} />
@@ -759,43 +759,43 @@ export function EditorTimeline({
   const isEmpty = clips.length === 0 && audioTracks.length === 0 && textOverlays.length === 0;
 
   return (
-    <div className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+    <div className="flex flex-col bg-card border border-border-strong rounded-lg overflow-hidden">
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-800/60 border-b border-zinc-700">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-surface-elevated/60 border-b border-border-strong">
         {/* Lane labels */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-[10px] text-zinc-400">
-            <Film size={12} className="text-amber-400" />
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Film size={12} className="text-primary-light" />
             <span>Video</span>
-            <span className="text-zinc-600">({clips.length})</span>
+            <span className="text-muted-foreground">({clips.length})</span>
           </div>
           {audioTracks.length > 0 && (
-            <div className="flex items-center gap-1 text-[10px] text-zinc-400">
-              <Music size={12} className="text-purple-400" />
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Music size={12} className="text-primary-light" />
               <span>Audio</span>
-              <span className="text-zinc-600">({audioTracks.length})</span>
+              <span className="text-muted-foreground">({audioTracks.length})</span>
             </div>
           )}
           {textOverlays.length > 0 && (
-            <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Type size={12} className="text-blue-400" />
               <span>Text</span>
-              <span className="text-zinc-600">({textOverlays.length})</span>
+              <span className="text-muted-foreground">({textOverlays.length})</span>
             </div>
           )}
         </div>
 
         {/* Zoom controls */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-zinc-500">{formatTime(playheadTime)}</span>
-          <span className="text-[10px] text-zinc-600">/</span>
-          <span className="text-[10px] text-zinc-500">{formatTime(totalDuration)}</span>
-          <div className="w-px h-3 bg-zinc-700 mx-1" />
+          <span className="text-[10px] text-muted-foreground">{formatTime(playheadTime)}</span>
+          <span className="text-[10px] text-muted-foreground">/</span>
+          <span className="text-[10px] text-muted-foreground">{formatTime(totalDuration)}</span>
+          <div className="w-px h-3 bg-border-strong mx-1" />
           <button
             type="button"
             onClick={handleZoomOut}
             disabled={zoomLevel <= MIN_ZOOM}
-            className="p-0.5 text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors"
+            className="p-0.5 text-muted-foreground hover:text-white disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
             title="Zoom out"
           >
             <ZoomOut size={14} />
@@ -807,28 +807,28 @@ export function EditorTimeline({
             step={1}
             value={zoomLevel}
             onChange={handleZoomSlider}
-            className="w-20 h-1 accent-amber-500 cursor-pointer"
+            className="w-20 h-1 accent-primary cursor-pointer"
             title={`Zoom: ${zoomLevel}px/s`}
           />
           <button
             type="button"
             onClick={handleZoomIn}
             disabled={zoomLevel >= MAX_ZOOM}
-            className="p-0.5 text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors"
+            className="p-0.5 text-muted-foreground hover:text-white disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
             title="Zoom in"
           >
             <ZoomIn size={14} />
           </button>
-          <span className="text-[9px] text-zinc-500 w-10 text-right">{zoomLevel}px/s</span>
+          <span className="text-[9px] text-muted-foreground w-10 text-right">{zoomLevel}px/s</span>
         </div>
       </div>
 
       {/* ── Timeline Body ────────────────────────────────────────────────── */}
       {isEmpty ? (
-        <div className="flex items-center justify-center min-h-[120px] border-2 border-dashed border-zinc-700 rounded m-2">
+        <div className="flex items-center justify-center min-h-[120px] border-2 border-dashed border-border-strong rounded m-2">
           <div className="text-center">
-            <Film size={24} className="mx-auto mb-1 text-zinc-600" />
-            <p className="text-xs text-zinc-500">Drag clips here to build your timeline</p>
+            <Film size={24} className="mx-auto mb-1 text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">Drag clips here to build your timeline</p>
           </div>
         </div>
       ) : (
@@ -894,10 +894,10 @@ export function EditorTimeline({
 
             {/* ── Audio Lane(s) ───────────────────────────────────────── */}
             {audioTracks.length > 0 && (
-              <div className="border-t border-zinc-800">
+              <div className="border-t border-border-strong">
                 <div className="flex items-center gap-1 px-2 py-0.5">
-                  <Music size={10} className="text-purple-400" />
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Audio</span>
+                  <Music size={10} className="text-primary-light" />
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Audio</span>
                 </div>
                 <div className="flex flex-col gap-1 px-1 pb-1">
                   {audioTracks.map((track) => (
@@ -916,10 +916,10 @@ export function EditorTimeline({
 
             {/* ── Text Overlay Lane ───────────────────────────────────── */}
             {textOverlays.length > 0 && (
-              <div className="border-t border-zinc-800">
+              <div className="border-t border-border-strong">
                 <div className="flex items-center gap-1 px-2 py-0.5">
                   <Type size={10} className="text-blue-400" />
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Text</span>
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Text</span>
                 </div>
                 <div className="px-1 pb-1">
                   <TextOverlayLane
@@ -950,39 +950,39 @@ export function EditorTimeline({
       {/* ── Context Menu ─────────────────────────────────────────────────── */}
       {contextMenu && (
         <div
-          className="fixed z-50 bg-zinc-800 border border-zinc-700 rounded-md shadow-xl py-1 min-w-[160px]"
+          className="fixed z-50 bg-surface-elevated border border-border-strong rounded-md shadow-xl py-1 min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => { e.stopPropagation(); }}
         >
           <button
             type="button"
             onClick={handleDuplicate}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 transition-colors text-left"
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-border-strong transition-colors text-left"
           >
-            <Copy size={12} className="text-zinc-400" />
+            <Copy size={12} className="text-muted-foreground" />
             Duplicate
           </button>
           <button
             type="button"
             onClick={handleSplitAtPlayhead}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 transition-colors text-left"
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-border-strong transition-colors text-left"
           >
-            <Scissors size={12} className="text-zinc-400" />
+            <Scissors size={12} className="text-muted-foreground" />
             Split at Playhead
           </button>
           <button
             type="button"
             onClick={handleRenameFromMenu}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 transition-colors text-left"
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-border-strong transition-colors text-left"
           >
-            <Pencil size={12} className="text-zinc-400" />
+            <Pencil size={12} className="text-muted-foreground" />
             Rename
           </button>
-          <div className="h-px bg-zinc-700 my-0.5" />
+          <div className="h-px bg-border-strong my-0.5" />
           <button
             type="button"
             onClick={handleRemove}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-zinc-700 transition-colors text-left"
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-border-strong transition-colors text-left"
           >
             <Trash2 size={12} />
             Remove

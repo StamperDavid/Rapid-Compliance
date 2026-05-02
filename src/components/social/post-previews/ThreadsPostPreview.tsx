@@ -20,19 +20,7 @@ import { PLATFORM_META } from '@/lib/social/platform-config';
 import { cn } from '@/lib/utils';
 
 import { formatCount, formatRelativeTime, getInitial } from './_utils';
-
-export interface PostPreviewAccount {
-  handle?: string;
-  accountName?: string;
-  avatarUrl?: string;
-}
-
-export interface PostPreviewProps {
-  post: SocialMediaPost;
-  account?: PostPreviewAccount;
-  onClick?: () => void;
-  compact?: boolean;
-}
+import type { PostPreviewProps } from './TwitterPostPreview';
 
 interface EngagementSlot {
   key: string;

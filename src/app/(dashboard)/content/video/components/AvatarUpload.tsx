@@ -113,25 +113,25 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
   const isProcessing = phase === 'uploading' || phase === 'creating';
 
   return (
-    <div className="p-5 bg-zinc-800/30 rounded-xl border border-zinc-700/50 space-y-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-        <Upload className="w-4 h-4 text-amber-500" />
+    <div className="p-5 bg-surface-elevated/30 rounded-xl border border-border-strong/50 space-y-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <Upload className="w-4 h-4 text-primary" />
         Create Character
       </div>
 
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Upload a reference photo for your character. Set their role and style, then assign a voice in the Voice tab.
       </p>
 
       {/* Character Name */}
       <div>
-        <label className="block text-xs text-zinc-400 mb-1">Character Name</label>
+        <label className="block text-xs text-muted-foreground mb-1">Character Name</label>
         <input
           type="text"
           value={avatarName}
           onChange={(e) => setAvatarName(e.target.value)}
           placeholder="e.g., SalesVelocity Hero"
-          className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+          className="w-full px-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
           disabled={isProcessing}
         />
       </div>
@@ -139,11 +139,11 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
       {/* Role + Style Tag */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-zinc-400 mb-1">Role</label>
+          <label className="block text-xs text-muted-foreground mb-1">Role</label>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as CharacterRole)}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="w-full px-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             disabled={isProcessing}
           >
             <option value="presenter">Presenter</option>
@@ -155,11 +155,11 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
           </select>
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1">Style</label>
+          <label className="block text-xs text-muted-foreground mb-1">Style</label>
           <select
             value={styleTag}
             onChange={(e) => setStyleTag(e.target.value as CharacterStyleTag)}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="w-full px-3 py-2 bg-surface-elevated border border-border-strong rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             disabled={isProcessing}
           >
             <option value="real">Real / Photorealistic</option>
@@ -171,7 +171,7 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
 
       {/* Photo Drop Zone or Preview */}
       {previewUrl ? (
-        <div className="relative flex items-center gap-3 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700">
+        <div className="relative flex items-center gap-3 p-3 bg-card/50 rounded-lg border border-border-strong">
           <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
             <Image
               src={previewUrl}
@@ -183,14 +183,14 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
           <div className="flex-1 min-w-0">
             {phase === 'uploading' && (
               <div className="flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                <p className="text-xs text-amber-300">Uploading photo...</p>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-primary-light" />
+                <p className="text-xs text-primary-light">Uploading photo...</p>
               </div>
             )}
             {phase === 'creating' && (
               <div className="flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                <p className="text-xs text-amber-300">Creating avatar... This may take a moment.</p>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-primary-light" />
+                <p className="text-xs text-primary-light">Creating avatar... This may take a moment.</p>
               </div>
             )}
             {phase === 'done' && (
@@ -200,13 +200,13 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
               </div>
             )}
             {phase === 'error' && (
-              <p className="text-xs text-red-400">{error}</p>
+              <p className="text-xs text-destructive">{error}</p>
             )}
           </div>
           {!isProcessing && (
             <button
               onClick={reset}
-              className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -217,11 +217,11 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
           onClick={() => fileInputRef.current?.click()}
-          className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/5 transition-colors"
+          className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-border-strong rounded-lg cursor-pointer hover:border-primary/30 hover:bg-primary/5 transition-colors"
         >
-          <ImageIcon className="w-8 h-8 text-zinc-600 mb-2" />
-          <p className="text-sm text-zinc-400">Drop your headshot here or click to browse</p>
-          <p className="text-xs text-zinc-600 mt-1">JPG, PNG, or WebP — max 2MB. Avatar is created automatically.</p>
+          <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
+          <p className="text-sm text-muted-foreground">Drop your headshot here or click to browse</p>
+          <p className="text-xs text-muted-foreground mt-1">JPG, PNG, or WebP — max 2MB. Avatar is created automatically.</p>
         </div>
       )}
 
@@ -240,7 +240,7 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
 
       {/* Error display (for non-preview states) */}
       {error && !previewUrl && (
-        <div className="flex items-center gap-2 text-xs text-red-400 p-2 bg-red-500/5 rounded-lg">
+        <div className="flex items-center gap-2 text-xs text-destructive p-2 bg-destructive/5 rounded-lg">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
           {error}
         </div>

@@ -189,18 +189,18 @@ export function GreenScreenClipManager({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Crown className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-zinc-200">
+          <Crown className="w-4 h-4 text-primary-light" />
+          <span className="text-sm font-medium text-foreground">
             Green Screen Clips — {profileName}
           </span>
-          <span className="px-1.5 py-0.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] font-bold rounded">
+          <span className="px-1.5 py-0.5 bg-primary/20 border border-primary/30 text-primary-light text-[10px] font-bold rounded">
             {clips.length} clip{clips.length !== 1 ? 's' : ''}
           </span>
         </div>
         {!showUploadForm && (
           <button
             onClick={() => setShowUploadForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-lg hover:bg-purple-600/30 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-dark/20 border border-primary/30 text-primary-light text-xs font-medium rounded-lg hover:bg-primary-dark/30 transition-colors"
           >
             <Plus className="w-3 h-3" />
             Add Clip
@@ -208,7 +208,7 @@ export function GreenScreenClipManager({
         )}
       </div>
 
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Upload short videos of yourself speaking on a green screen. Each clip should use a
         different script so the AI learns your speech patterns, expressions, and intonation.
         More clips = better digital avatar quality.
@@ -216,16 +216,16 @@ export function GreenScreenClipManager({
 
       {/* Upload Form */}
       {showUploadForm && (
-        <div className="p-4 bg-zinc-800/50 rounded-xl border border-purple-500/20 space-y-3">
+        <div className="p-4 bg-surface-elevated/50 rounded-xl border border-primary/20 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-purple-300 flex items-center gap-1.5">
+            <span className="text-xs font-medium text-primary-light flex items-center gap-1.5">
               <Upload className="w-3.5 h-3.5" />
               New Training Clip
             </span>
             {!isProcessing && (
               <button
                 onClick={() => { setShowUploadForm(false); setSelectedFile(null); setError(null); }}
-                className="text-xs text-zinc-500 hover:text-zinc-300"
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </button>
@@ -244,20 +244,20 @@ export function GreenScreenClipManager({
             className={cn(
               'flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-lg transition-colors',
               selectedFile
-                ? 'border-purple-500/40 bg-purple-500/5'
-                : 'border-zinc-700 cursor-pointer hover:border-purple-500/30 hover:bg-purple-500/5',
+                ? 'border-primary/40 bg-primary/5'
+                : 'border-border-strong cursor-pointer hover:border-primary/30 hover:bg-primary/5',
               isProcessing && 'pointer-events-none opacity-50',
             )}
           >
             {selectedFile ? (
-              <div className="flex items-center gap-2 text-sm text-purple-300">
+              <div className="flex items-center gap-2 text-sm text-primary-light">
                 <Video className="w-4 h-4" />
                 <span className="truncate max-w-[200px]">{selectedFile.name}</span>
-                <span className="text-zinc-500">
+                <span className="text-muted-foreground">
                   ({(selectedFile.size / (1024 * 1024)).toFixed(1)}MB)
                 </span>
                 {duration > 0 && (
-                  <span className="flex items-center gap-0.5 text-zinc-500">
+                  <span className="flex items-center gap-0.5 text-muted-foreground">
                     <Clock className="w-3 h-3" />
                     {duration}s
                   </span>
@@ -265,9 +265,9 @@ export function GreenScreenClipManager({
               </div>
             ) : (
               <>
-                <Video className="w-6 h-6 text-zinc-600 mb-1.5" />
-                <p className="text-xs text-zinc-400">Drop your green screen video or click to browse</p>
-                <p className="text-[10px] text-zinc-600 mt-0.5">MP4, WebM, MOV, AVI — max 50MB</p>
+                <Video className="w-6 h-6 text-muted-foreground mb-1.5" />
+                <p className="text-xs text-muted-foreground">Drop your green screen video or click to browse</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">MP4, WebM, MOV, AVI — max 50MB</p>
               </>
             )}
           </div>
@@ -285,7 +285,7 @@ export function GreenScreenClipManager({
 
           {/* Script input */}
           <div>
-            <label className="block text-xs text-zinc-400 mb-1">
+            <label className="block text-xs text-muted-foreground mb-1">
               <FileText className="w-3 h-3 inline mr-1" />
               Script spoken in this clip
             </label>
@@ -293,7 +293,7 @@ export function GreenScreenClipManager({
               value={script}
               onChange={(e) => setScript(e.target.value)}
               placeholder="Type the exact words you speak in this video clip..."
-              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-purple-500/50 resize-none"
+              className="w-full px-3 py-2 bg-card border border-border-strong rounded-lg text-white text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
               rows={3}
               disabled={isProcessing}
             />
@@ -306,8 +306,8 @@ export function GreenScreenClipManager({
             className={cn(
               'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
               !selectedFile || !script.trim() || isProcessing
-                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                : 'bg-purple-600 text-white hover:bg-purple-500',
+                ? 'bg-surface-elevated text-muted-foreground cursor-not-allowed'
+                : 'bg-primary-dark text-white hover:bg-primary',
             )}
           >
             {uploadState === 'uploading' && (
@@ -340,7 +340,7 @@ export function GreenScreenClipManager({
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 text-xs text-red-400 p-2 bg-red-500/5 rounded-lg">
+        <div className="flex items-center gap-2 text-xs text-destructive p-2 bg-destructive/5 rounded-lg">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
           {error}
         </div>
@@ -352,17 +352,17 @@ export function GreenScreenClipManager({
           {clips.map((clip, idx) => (
             <div
               key={clip.id}
-              className="flex items-start gap-3 p-3 bg-zinc-800/30 rounded-lg border border-zinc-700/50 group"
+              className="flex items-start gap-3 p-3 bg-surface-elevated/30 rounded-lg border border-border-strong/50 group"
             >
               {/* Clip number */}
-              <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-bold text-purple-300">{idx + 1}</span>
+              <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-primary-light">{idx + 1}</span>
               </div>
 
               {/* Clip info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-zinc-200 line-clamp-2">{clip.script}</p>
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-zinc-500">
+                <p className="text-sm text-foreground line-clamp-2">{clip.script}</p>
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
                   <span className="flex items-center gap-0.5">
                     <Clock className="w-2.5 h-2.5" />
                     {clip.duration}s
@@ -375,7 +375,7 @@ export function GreenScreenClipManager({
               <button
                 onClick={() => void handleDeleteClip(clip.id)}
                 disabled={deletingClipId === clip.id}
-                className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                className="p-1.5 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
                 title="Remove clip"
               >
                 {deletingClipId === clip.id ? (
@@ -388,8 +388,8 @@ export function GreenScreenClipManager({
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center py-6 text-zinc-500">
-          <Video className="w-8 h-8 text-zinc-700 mb-2" />
+        <div className="flex flex-col items-center py-6 text-muted-foreground">
+          <Video className="w-8 h-8 text-muted-foreground mb-2" />
           <p className="text-xs">No training clips yet. Add your first green screen recording.</p>
         </div>
       )}

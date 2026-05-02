@@ -26,19 +26,7 @@ import { PLATFORM_META } from '@/lib/social/platform-config';
 import { cn } from '@/lib/utils';
 
 import { formatCount, formatRelativeTime, getInitial } from './_utils';
-
-export interface PostPreviewAccount {
-  handle?: string;
-  accountName?: string;
-  avatarUrl?: string;
-}
-
-export interface PostPreviewProps {
-  post: SocialMediaPost;
-  account?: PostPreviewAccount;
-  onClick?: () => void;
-  compact?: boolean;
-}
+import type { PostPreviewProps } from './TwitterPostPreview';
 
 interface EngagementSlot {
   key: string;
@@ -164,7 +152,7 @@ export function TruthSocialPostPreview({
       >
         <div className="mx-4 max-w-xs rounded-lg border border-border-light bg-card p-4 text-center shadow-lg">
           <div className="flex justify-center">
-            <AlertTriangle className="h-6 w-6 text-red-500" aria-hidden="true" />
+            <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />
           </div>
           <div className="mt-2 text-sm font-bold text-foreground">Posting Parked</div>
           <p className="mt-1 text-xs text-foreground">

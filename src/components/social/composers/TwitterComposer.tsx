@@ -25,7 +25,10 @@ export function TwitterComposer({
   disabled,
 }: PlatformComposerFormProps): React.ReactElement {
   const isThread = value.contentType === 'thread';
-  const charCount = isThread ? value.content.length : value.content.length;
+  // Single-tweet mode counts the full body; thread mode caps the per-tweet
+  // segment that the toolkit splits on `---`. The countdown color in thread
+  // mode is informational only — the textarea has no maxLength when threading.
+  const charCount = value.content.length;
   const countdownColor = useCharCountdownColor(charCount, MAX_TWEET);
 
   const setContentType = (next: 'post' | 'thread') => {

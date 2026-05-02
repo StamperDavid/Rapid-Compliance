@@ -690,7 +690,7 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   // Single-artifact tools → their specific pages
   create_video: '/content/video',
   generate_video: '/content/video',
-  batch_produce_videos: '/content/video/calendar',
+  batch_produce_videos: '/social/calendar',
   save_blog_draft: '/website',
   research_trending_topics: '/seo',
   get_seo_config: '/seo',
@@ -7091,7 +7091,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             createdBy: context?.userId ?? 'jasper',
           });
 
-          const reviewLink = '/content/video/calendar';
+          const reviewLink = '/social/calendar';
 
           content = JSON.stringify({
             status: 'created',

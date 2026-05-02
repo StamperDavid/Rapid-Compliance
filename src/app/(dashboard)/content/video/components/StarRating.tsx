@@ -31,8 +31,8 @@ export function StarRating({ value, onChange, disabled = false, size = 'sm' }: S
             className={cn(
               starSize,
               star <= value
-                ? 'fill-amber-400 text-amber-400'
-                : 'fill-none text-zinc-600',
+                ? 'fill-primary text-primary-light'
+                : 'fill-none text-muted-foreground',
             )}
           />
         </button>

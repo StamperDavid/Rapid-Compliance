@@ -70,8 +70,8 @@ export function TikTokPostPreview({
           unoptimized
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center">
-          <Play className="w-16 h-16 text-white" fill="currentColor" />
+        <div className="absolute inset-0 bg-gradient-to-br from-surface-elevated to-background flex items-center justify-center">
+          <Play className="w-16 h-16 text-foreground" fill="currentColor" />
         </div>
       )}
 

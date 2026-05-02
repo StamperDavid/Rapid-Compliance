@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Play } from 'lucide-react';
 
 import type { SocialMediaPost } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 import { cn } from '@/lib/utils';
 
 import { formatCount, formatRelativeTime, getInitial } from './_utils';
@@ -43,6 +44,14 @@ export function YouTubePostPreview({
   const relativeTime = formatRelativeTime(post.publishedAt ?? post.createdAt);
   const interactive = typeof onClick === 'function';
 
+  const youtubeMeta = PLATFORM_META.youtube;
+  const durationSeconds = (post as { metadata?: { durationSeconds?: number } }).metadata
+    ?.durationSeconds;
+  const durationLabel =
+    typeof durationSeconds === 'number'
+      ? `${String(Math.floor(durationSeconds / 60)).padStart(2, '0')}:${String(durationSeconds % 60).padStart(2, '0')}`
+      : null;
+
   return (
     <div
       className={cn(
@@ -50,6 +59,7 @@ export function YouTubePostPreview({
         interactive && 'cursor-pointer transition-shadow hover:shadow-md',
         compact && 'max-w-sm'
       )}
+      style={{ borderLeft: `4px solid ${youtubeMeta.color}` }}
       onClick={onClick}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
@@ -80,10 +90,12 @@ export function YouTubePostPreview({
             <Play className="w-12 h-12 text-muted-foreground" fill="currentColor" />
           </div>
         )}
-        {/* Duration badge — placeholder since SocialMediaPost has no duration field */}
-        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-          —
-        </div>
+        {/* Duration badge — only rendered when metadata.durationSeconds is present */}
+        {durationLabel !== null && (
+          <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
+            {durationLabel}
+          </div>
+        )}
       </div>
 
       {/* Body row */}

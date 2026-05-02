@@ -92,7 +92,7 @@ function SectionHeader({ number, title, icon, isOpen, compact, onToggle }: Secti
   if (!compact) {
     return (
       <div className="flex items-center gap-3 mb-4">
-        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-500/20 text-xs font-bold text-indigo-400">
+        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/20 text-xs font-bold text-primary-light">
           {number}
         </span>
         <div className="flex items-center gap-2 text-white">
@@ -107,21 +107,21 @@ function SectionHeader({ number, title, icon, isOpen, compact, onToggle }: Secti
     <button
       type="button"
       onClick={onToggle}
-      className="flex w-full items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 hover:bg-zinc-800 transition-colors"
+      className="flex w-full items-center justify-between rounded-lg border border-border-strong bg-card px-4 py-3 hover:bg-surface-elevated transition-colors"
     >
       <div className="flex items-center gap-3">
-        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-500/20 text-xs font-bold text-indigo-400">
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/20 text-xs font-bold text-primary-light">
           {number}
         </span>
-        <div className="flex items-center gap-2 text-zinc-300">
+        <div className="flex items-center gap-2 text-foreground">
           {icon}
           <span className="text-sm font-semibold">{title}</span>
         </div>
       </div>
       {isOpen ? (
-        <ChevronUp className="h-4 w-4 text-zinc-500" />
+        <ChevronUp className="h-4 w-4 text-muted-foreground" />
       ) : (
-        <ChevronDown className="h-4 w-4 text-zinc-500" />
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
       )}
     </button>
   );
@@ -144,7 +144,7 @@ function PresetSelector({ label, presetId, onOpen }: PresetSelectorProps) {
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-zinc-400">{label}</Label>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
       <Button
         type="button"
         variant="outline"
@@ -152,8 +152,8 @@ function PresetSelector({ label, presetId, onOpen }: PresetSelectorProps) {
         onClick={onOpen}
         className={cn(
           'w-full justify-start text-left font-normal',
-          'border-zinc-700 bg-zinc-800 hover:bg-zinc-700',
-          displayName ? 'text-white' : 'text-zinc-500',
+          'border-border-strong bg-surface-elevated hover:bg-surface-elevated',
+          displayName ? 'text-white' : 'text-muted-foreground',
         )}
       >
         {displayName ?? 'Select...'}
@@ -318,7 +318,7 @@ export function CinematicControlsPanel({
         <button
           type="button"
           onClick={() => handleModeChange('simple')}
-          className="text-xs text-amber-400 hover:text-amber-300 hover:underline transition-colors"
+          className="text-xs text-primary-light hover:text-primary-light hover:underline transition-colors"
         >
           Switch to Simple Mode
         </button>
@@ -347,7 +347,7 @@ export function CinematicControlsPanel({
                 {/* Subject & Action (when in full studio mode) */}
                 {onSubjectChange !== undefined && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                    <Label className="text-xs text-primary/80 uppercase tracking-wider font-semibold">
                       Subject & Action
                     </Label>
                     <Textarea
@@ -355,7 +355,7 @@ export function CinematicControlsPanel({
                       value={subject ?? ''}
                       onChange={(e) => onSubjectChange(e.target.value)}
                       rows={3}
-                      className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 text-sm resize-y"
+                      className="bg-surface-elevated border-border-strong text-white placeholder:text-muted-foreground text-sm resize-y"
                     />
                   </div>
                 )}
@@ -370,7 +370,7 @@ export function CinematicControlsPanel({
 
                 {/* Viewing Direction */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-zinc-400">Viewing Direction</Label>
+                  <Label className="text-xs text-muted-foreground">Viewing Direction</Label>
                   <div className="grid grid-cols-4 gap-2">
                     {VIEWING_DIRECTIONS.map((dir) => (
                       <button
@@ -385,8 +385,8 @@ export function CinematicControlsPanel({
                         className={cn(
                           'flex flex-col items-center gap-1 rounded-lg border p-2 transition-all text-xs',
                           config.viewingDirection === dir
-                            ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                            : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-500',
+                            ? 'border-primary bg-primary/10 text-primary-light'
+                            : 'border-border-strong bg-surface-elevated text-muted-foreground hover:border-border',
                         )}
                       >
                         {VIEWING_DIRECTION_ICONS[dir]}
@@ -407,7 +407,7 @@ export function CinematicControlsPanel({
                       )
                     }
                   />
-                  <Label className="text-xs text-zinc-400 cursor-pointer">
+                  <Label className="text-xs text-muted-foreground cursor-pointer">
                     Subject unaware of camera
                   </Label>
                 </div>
@@ -415,14 +415,14 @@ export function CinematicControlsPanel({
                 {/* Environment (when in full studio mode) */}
                 {onEnvironmentChange !== undefined && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                    <Label className="text-xs text-primary/80 uppercase tracking-wider font-semibold">
                       Environment
                     </Label>
                     <Input
                       placeholder="E.g. at a rainy London bus stop at night..."
                       value={environment ?? ''}
                       onChange={(e) => onEnvironmentChange(e.target.value)}
-                      className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+                      className="bg-surface-elevated border-border-strong text-white placeholder:text-muted-foreground"
                     />
                   </div>
                 )}
@@ -459,12 +459,12 @@ export function CinematicControlsPanel({
                   onOpen={() => openPicker('lighting')}
                 />
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-zinc-400">Atmosphere</Label>
+                  <Label className="text-xs text-muted-foreground">Atmosphere</Label>
                   <Input
                     placeholder="moody, cinematic, gritty..."
                     value={config.atmosphere ?? ''}
                     onChange={(e) => updateConfig('atmosphere', e.target.value || undefined)}
-                    className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+                    className="bg-surface-elevated border-border-strong text-white placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
@@ -523,19 +523,19 @@ export function CinematicControlsPanel({
                 </div>
                 {/* Aspect Ratio */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-zinc-400">Aspect Ratio</Label>
+                  <Label className="text-xs text-muted-foreground">Aspect Ratio</Label>
                   <Select
                     value={config.aspectRatio ?? ''}
                     onValueChange={(val) =>
                       updateConfig('aspectRatio', (val || undefined) as AspectRatio | undefined)
                     }
                   >
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectTrigger className="bg-surface-elevated border-border-strong text-white">
                       <SelectValue placeholder="Select ratio..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectContent className="bg-surface-elevated border-border-strong">
                       {ASPECT_RATIOS.map((ratio) => (
-                        <SelectItem key={ratio} value={ratio} className="text-zinc-300">
+                        <SelectItem key={ratio} value={ratio} className="text-foreground">
                           {ratio}
                         </SelectItem>
                       ))}
@@ -571,10 +571,10 @@ export function CinematicControlsPanel({
                 {/* Temperature slider */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs text-zinc-400">
+                    <Label className="text-xs text-muted-foreground">
                       Temperature (Creativity)
                     </Label>
-                    <span className="text-xs font-mono text-indigo-400">{tempDisplay}</span>
+                    <span className="text-xs font-mono text-primary-light">{tempDisplay}</span>
                   </div>
                   <input
                     type="range"
@@ -583,9 +583,9 @@ export function CinematicControlsPanel({
                     step="0.1"
                     value={config.temperature ?? 1.0}
                     onChange={(e) => updateConfig('temperature', parseFloat(e.target.value))}
-                    className="w-full accent-indigo-500"
+                    className="w-full accent-primary"
                   />
-                  <div className="flex justify-between text-[10px] text-zinc-600">
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
                     <span>Focused</span>
                     <span>Creative</span>
                   </div>
@@ -615,9 +615,9 @@ export function CinematicControlsPanel({
 
                 {/* Filters (multi-select) */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-zinc-400">
+                  <Label className="text-xs text-muted-foreground">
                     Filters{' '}
-                    <span className="text-zinc-600">(stackable, multi-select)</span>
+                    <span className="text-muted-foreground">(stackable, multi-select)</span>
                   </Label>
                   <Button
                     type="button"
@@ -626,10 +626,10 @@ export function CinematicControlsPanel({
                     onClick={() => openPicker('filter', true)}
                     className={cn(
                       'w-full justify-start text-left font-normal',
-                      'border-zinc-700 bg-zinc-800 hover:bg-zinc-700',
+                      'border-border-strong bg-surface-elevated hover:bg-surface-elevated',
                       config.filters && config.filters.length > 0
                         ? 'text-white'
-                        : 'text-zinc-500',
+                        : 'text-muted-foreground',
                     )}
                   >
                     {config.filters && config.filters.length > 0
@@ -644,7 +644,7 @@ export function CinematicControlsPanel({
                         return (
                           <span
                             key={filterId}
-                            className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] text-indigo-300"
+                            className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-primary-light"
                           >
                             {preset?.name ?? filterId}
                             <button
@@ -709,10 +709,10 @@ export function CinematicControlsPanel({
           </>
         ) : (
           <div className="flex items-center gap-3 opacity-50">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-800 text-xs font-bold text-zinc-500">
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-surface-elevated text-xs font-bold text-muted-foreground">
               05
             </span>
-            <div className="flex items-center gap-2 text-zinc-500">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Aperture className="h-4 w-4" />
               <h3 className="text-sm font-semibold">
                 Elements{' '}

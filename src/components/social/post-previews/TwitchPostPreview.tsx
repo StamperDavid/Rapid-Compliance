@@ -7,12 +7,18 @@ import { Heart, MessageSquare, Pin, Radio } from 'lucide-react';
 import type { SocialMediaPost } from '@/types/social';
 import { cn } from '@/lib/utils';
 
+import { PLATFORM_META } from '@/lib/social/platform-config';
 import { formatCount, formatRelativeTime, getInitial } from './_utils';
 
-// PLATFORM_META.twitch is added by the operator after the central Twitch
-// developer app is registered. Until then we use a hard-coded Twitch
-// purple as the accent so this component compiles standalone.
-const TWITCH_PURPLE = '#9146FF';
+// Twitch's secondary brand colors used for chat-context UI (announcement
+// color tags, "LIVE NOW" badge). These are platform brand colors — analogous
+// to PLATFORM_META.twitch.color but for sub-contexts the operator can't pick
+// from a theme. Kept as named constants instead of inlined hex.
+const TWITCH_PURPLE = PLATFORM_META.twitch.color;
+const TWITCH_LIVE_RED = '#EB0400';
+const TWITCH_ANNOUNCE_BLUE = '#1F69FF';
+const TWITCH_ANNOUNCE_GREEN = '#00C851';
+const TWITCH_ANNOUNCE_ORANGE = '#FF8800';
 
 interface TwitchPostPreviewProps {
   post: SocialMediaPost;
@@ -120,7 +126,7 @@ export function TwitchPostPreview({
             {contentType === 'stream_announcement' && isPublished && (
               <span
                 className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-white px-2 py-0.5 rounded"
-                style={{ backgroundColor: '#EB0400' }}
+                style={{ backgroundColor: TWITCH_LIVE_RED }}
               >
                 <Radio className="w-3 h-3" />
                 LIVE NOW
@@ -184,10 +190,10 @@ function ChatAnnouncementBody({ post }: { post: SocialMediaPost }): React.ReactE
   const colorKey = typeof meta?.color === 'string' ? meta.color : 'primary';
   const colorMap: Record<string, string> = {
     primary: TWITCH_PURPLE,
-    blue: '#1F69FF',
-    green: '#00C851',
-    orange: '#FF8800',
-    purple: '#9146FF',
+    blue: TWITCH_ANNOUNCE_BLUE,
+    green: TWITCH_ANNOUNCE_GREEN,
+    orange: TWITCH_ANNOUNCE_ORANGE,
+    purple: TWITCH_PURPLE,
   };
   const stripeColor = colorMap[colorKey] ?? TWITCH_PURPLE;
   return (

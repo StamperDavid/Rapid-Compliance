@@ -28,12 +28,12 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
   const [humanGrade, setHumanGrade] = useState(0);
 
   const statusConfig = {
-    draft: { icon: Loader2, color: 'text-zinc-400', bg: 'bg-zinc-800/50', label: 'Pending' },
-    approved: { icon: Loader2, color: 'text-zinc-400', bg: 'bg-zinc-800/50', label: 'Queued' },
-    generating: { icon: Loader2, color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Generating' },
-    persisting: { icon: Loader2, color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Saving' },
+    draft: { icon: Loader2, color: 'text-muted-foreground', bg: 'bg-surface-elevated/50', label: 'Pending' },
+    approved: { icon: Loader2, color: 'text-muted-foreground', bg: 'bg-surface-elevated/50', label: 'Queued' },
+    generating: { icon: Loader2, color: 'text-primary-light', bg: 'bg-primary/10', label: 'Generating' },
+    persisting: { icon: Loader2, color: 'text-primary-light', bg: 'bg-primary/10', label: 'Saving' },
     completed: { icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10', label: 'Complete' },
-    failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Failed' },
+    failed: { icon: XCircle, color: 'text-destructive', bg: 'bg-destructive/10', label: 'Failed' },
   };
 
   const config = statusConfig[result.status];
@@ -66,15 +66,15 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
 
   return (
     <div className={cn(
-      'rounded-lg border border-zinc-700/50 overflow-hidden',
+      'rounded-lg border border-border-strong/50 overflow-hidden',
       config.bg,
       reviewStatus === 'approved' && isComplete && 'border-green-500/30',
-      reviewStatus === 'rejected' && isComplete && 'border-red-500/30',
+      reviewStatus === 'rejected' && isComplete && 'border-destructive/30',
     )}>
       {/* Main Row */}
       <div className="flex items-center gap-4 p-4">
         {/* Scene Number */}
-        <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-700/50 text-zinc-300 text-sm font-bold">
+        <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-border-strong/50 text-foreground text-sm font-bold">
           {sceneNumber}
         </div>
 
@@ -85,12 +85,12 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className={cn('text-sm font-medium', config.color)}>{config.label}</span>
-            <span className="text-xs text-zinc-600">Hedra</span>
+            <span className="text-xs text-muted-foreground">Hedra</span>
             {reviewStatus === 'approved' && isComplete && (
               <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[9px] font-bold rounded">APPROVED</span>
             )}
             {reviewStatus === 'rejected' && isComplete && (
-              <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[9px] font-bold rounded">NEEDS REVISION</span>
+              <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive text-[9px] font-bold rounded">NEEDS REVISION</span>
             )}
             {shotGroupLabel && (
               <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[9px] font-bold rounded">
@@ -101,9 +101,9 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
 
           {/* Progress Bar */}
           {result.status === 'generating' && (
-            <div className="mt-2 w-full h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+            <div className="mt-2 w-full h-1.5 bg-border-strong rounded-full overflow-hidden">
               <div
-                className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                className="h-full bg-primary rounded-full transition-all duration-500"
                 style={{ width: `${result.progress}%` }}
               />
             </div>
@@ -111,7 +111,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
 
           {/* Error Message */}
           {result.status === 'failed' && result.error && (
-            <p className="text-xs text-red-400 mt-1 truncate">{result.error}</p>
+            <p className="text-xs text-destructive mt-1 truncate">{result.error}</p>
           )}
         </div>
 
@@ -125,7 +125,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
               onClick={() => setShowPreview(!showPreview)}
               className={cn(
                 'h-8 gap-1',
-                showPreview ? 'text-amber-400 hover:text-amber-300' : 'text-green-400 hover:text-green-300'
+                showPreview ? 'text-primary-light hover:text-primary-light' : 'text-green-400 hover:text-green-300'
               )}
             >
               <Play className="w-3.5 h-3.5" />
@@ -149,7 +149,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
                 variant="ghost"
                 size="sm"
                 onClick={handleReject}
-                className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                 title="Request revision"
               >
                 <ThumbsDown className="w-3.5 h-3.5" />
@@ -163,7 +163,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
               variant="ghost"
               size="sm"
               onClick={() => setReviewStatus('pending')}
-              className="h-8 gap-1 text-zinc-500 hover:text-zinc-300 text-[10px]"
+              className="h-8 gap-1 text-muted-foreground hover:text-foreground text-[10px]"
             >
               Undo
             </Button>
@@ -175,7 +175,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
               variant="ghost"
               size="sm"
               onClick={() => onRetry(result.sceneId)}
-              className="h-8 gap-1 text-amber-400 hover:text-amber-300"
+              className="h-8 gap-1 text-primary-light hover:text-primary-light"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Retry
@@ -210,7 +210,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
       {isComplete && reviewStatus === 'pending' && (
         <div className="px-4 pb-2 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500">Rate this scene:</span>
+            <span className="text-xs text-muted-foreground">Rate this scene:</span>
             <StarRating
               value={humanGrade}
               onChange={(grade) => {
@@ -225,7 +225,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
               }}
             />
             {humanGrade > 0 && (
-              <span className="text-xs text-zinc-500">{humanGrade}/5</span>
+              <span className="text-xs text-muted-foreground">{humanGrade}/5</span>
             )}
           </div>
 
@@ -237,7 +237,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="What's wrong with this scene? (e.g., 'actor speaks too fast', 'wrong background', 'words are cut off at the end')..."
                 rows={2}
-                className="w-full px-3 py-2 bg-zinc-900/80 border border-amber-500/20 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 resize-none"
+                className="w-full px-3 py-2 bg-card/80 border border-primary/20 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 autoFocus
               />
               <div className="flex items-center justify-end gap-2">
@@ -249,7 +249,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
                     setHumanGrade(0);
                     setFeedback('');
                   }}
-                  className="h-7 text-xs text-zinc-400 hover:text-zinc-300"
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
                 >
                   Cancel
                 </Button>
@@ -265,7 +265,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
                     setShowFeedback(false);
                     setFeedback('');
                   }}
-                  className="h-7 gap-1 text-xs text-amber-400 hover:text-amber-300"
+                  className="h-7 gap-1 text-xs text-primary-light hover:text-primary-light"
                 >
                   <Send className="w-3 h-3" />
                   {feedback.trim() ? 'Submit & Regenerate' : 'Submit Rating'}
@@ -280,14 +280,14 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
       {showFeedback && reviewStatus === 'rejected' && (
         <div className="px-4 pb-3 space-y-2">
           <div className="flex items-start gap-2">
-            <MessageSquare className="w-4 h-4 text-red-400 flex-shrink-0 mt-1.5" />
+            <MessageSquare className="w-4 h-4 text-destructive flex-shrink-0 mt-1.5" />
             <div className="flex-1">
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Describe what needs to change (e.g., 'lighting too dark, character should face camera, more energetic expression')..."
                 rows={2}
-                className="w-full px-3 py-2 bg-zinc-900/80 border border-red-500/20 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 resize-none"
+                className="w-full px-3 py-2 bg-card/80 border border-destructive/20 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-destructive/30 resize-none"
                 autoFocus
               />
             </div>
@@ -301,7 +301,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
                 setReviewStatus('pending');
                 setFeedback('');
               }}
-              className="h-7 text-xs text-zinc-400 hover:text-zinc-300"
+              className="h-7 text-xs text-muted-foreground hover:text-foreground"
             >
               Cancel
             </Button>
@@ -310,7 +310,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
               size="sm"
               onClick={handleSubmitFeedback}
               disabled={!feedback.trim()}
-              className="h-7 gap-1 text-xs text-amber-400 hover:text-amber-300 disabled:opacity-40"
+              className="h-7 gap-1 text-xs text-primary-light hover:text-primary-light disabled:opacity-40"
             >
               <Send className="w-3 h-3" />
               Regenerate with Feedback
@@ -328,7 +328,7 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
                   }
                 }}
                 disabled={!onRetry}
-                className="h-7 gap-1 text-xs text-amber-400 hover:text-amber-300 disabled:opacity-40"
+                className="h-7 gap-1 text-xs text-primary-light hover:text-primary-light disabled:opacity-40"
               >
                 <RefreshCw className="w-3 h-3" />
                 Retry Scene

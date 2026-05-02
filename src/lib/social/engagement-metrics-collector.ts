@@ -15,7 +15,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { createTwitterService } from '@/lib/integrations/twitter-service';
 import { getMemoryVault } from '@/lib/agents/shared/memory-vault';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -267,7 +267,7 @@ async function collectTwitterMetrics(
 async function getPublishedPostsWithPlatformIds(): Promise<SocialMediaPost[]> {
   try {
     const { where } = await import('firebase/firestore');
-    const posts = await FirestoreService.getAll<SocialMediaPost>(
+    const posts = await AdminFirestoreService.getAll<SocialMediaPost>(
       getSubCollection(SOCIAL_POSTS_COLLECTION),
       [where('status', '==', 'published')]
     );
@@ -283,7 +283,7 @@ async function getPublishedPostsWithPlatformIds(): Promise<SocialMediaPost[]> {
 
 /** Update a post's metrics in Firestore */
 async function updatePostMetrics(postId: string, metrics: PostMetrics): Promise<void> {
-  await FirestoreService.update(
+  await AdminFirestoreService.update(
     getSubCollection(SOCIAL_POSTS_COLLECTION),
     postId,
     {
@@ -296,7 +296,7 @@ async function updatePostMetrics(postId: string, metrics: PostMetrics): Promise<
 /** Store a historical metrics snapshot */
 async function storeMetricsSnapshot(snapshot: MetricsSnapshot): Promise<void> {
   const snapshotId = `snapshot_${snapshot.postId}_${Date.now()}`;
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     getSubCollection(METRICS_SNAPSHOTS_COLLECTION),
     snapshotId,
     {

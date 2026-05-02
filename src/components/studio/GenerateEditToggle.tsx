@@ -35,23 +35,23 @@ function ModeCard({ icon, label, description, isSelected, onClick }: ModeCardPro
       onClick={onClick}
       className={cn(
         'relative flex flex-1 flex-col items-center gap-3 rounded-lg border p-5 transition-all',
-        'hover:border-zinc-500 hover:bg-zinc-800/50',
+        'hover:border-border hover:bg-surface-elevated/50',
         isSelected
-          ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/50'
-          : 'border-zinc-700 bg-zinc-900',
+          ? 'border-primary bg-primary/10 ring-1 ring-primary/50'
+          : 'border-border-strong bg-card',
       )}
     >
       {isSelected && (
         <motion.div
           layoutId="generate-edit-indicator"
-          className="absolute inset-0 rounded-lg border-2 border-indigo-500"
+          className="absolute inset-0 rounded-lg border-2 border-primary"
           transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
         />
       )}
       <div
         className={cn(
           'flex h-12 w-12 items-center justify-center rounded-full',
-          isSelected ? 'bg-indigo-500/20 text-indigo-400' : 'bg-zinc-800 text-zinc-400',
+          isSelected ? 'bg-primary/20 text-primary-light' : 'bg-surface-elevated text-muted-foreground',
         )}
       >
         {icon}
@@ -60,12 +60,12 @@ function ModeCard({ icon, label, description, isSelected, onClick }: ModeCardPro
         <p
           className={cn(
             'text-sm font-semibold',
-            isSelected ? 'text-white' : 'text-zinc-300',
+            isSelected ? 'text-white' : 'text-foreground',
           )}
         >
           {label}
         </p>
-        <p className="mt-1 text-xs text-zinc-500">{description}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </div>
     </button>
   );
@@ -102,9 +102,9 @@ export function GenerateEditToggle({
 
       {/* Narrative Angle Prompting toggle */}
       {onNarrativeAnglePromptingChange && (
-        <div className="flex items-center justify-between rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3">
+        <div className="flex items-center justify-between rounded-lg border border-border-strong bg-card px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-zinc-300">
+            <span className="text-sm font-medium text-foreground">
               Narrative Angle Prompting
             </span>
             <Tooltip content="When enabled, the AI interprets your prompt as a story beat and automatically selects the best camera angles, lighting, and composition to convey the narrative emotion." />

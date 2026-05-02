@@ -27,11 +27,17 @@ export interface PostPreviewProps {
 }
 
 /**
- * WhatsApp's outgoing chat bubble background. Documented exception to the
- * "no inline hex" rule — there is no Tailwind token that matches this color
- * and using the wrong green breaks the visual recognition.
+ * WhatsApp brand colors — documented exceptions to the "no inline hex" rule.
+ * There are no design tokens that match these values, and using wrong colors
+ * breaks the visual recognition that makes this preview meaningful.
+ *
+ * WHATSAPP_OUTGOING_BUBBLE: the signature green chat bubble.
+ * WHATSAPP_BUBBLE_TEXT_PRIMARY / TIMESTAMP: must be dark for contrast on the
+ * green bubble regardless of the app's light/dark theme.
  */
 const WHATSAPP_OUTGOING_BUBBLE = '#DCF8C6';
+const WHATSAPP_BUBBLE_TEXT_PRIMARY = '#1A1A1A';
+const WHATSAPP_BUBBLE_TEXT_TIMESTAMP = '#5E6471';
 
 function timestampLabel(post: SocialMediaPost): string {
   const rel = formatRelativeTime(post.publishedAt ?? post.createdAt);
@@ -97,29 +103,37 @@ export function WhatsAppBusinessPostPreview({
           </div>
         )}
 
-        {/* Business header — always render in a near-black for legibility on the green bubble */}
-        <div className="flex items-center gap-1 text-xs font-bold text-zinc-900">
+        {/* Business header — documented exception: must be dark for contrast on the green bubble regardless of theme */}
+        <div
+          className="flex items-center gap-1 text-xs font-bold"
+          style={{ color: WHATSAPP_BUBBLE_TEXT_PRIMARY }}
+        >
           <span className="truncate">{businessName}</span>
           <BadgeCheck
-            className="h-3.5 w-3.5 flex-shrink-0 text-green-600"
+            className="h-3.5 w-3.5 flex-shrink-0 text-success"
             aria-label="Verified business"
           />
         </div>
 
-        {/* Body — same dark text on green */}
+        {/* Body — documented exception: must be dark for contrast on the green bubble regardless of theme */}
         <p
           className={cn(
-            'mt-1 whitespace-pre-wrap text-sm leading-relaxed text-zinc-900',
+            'mt-1 whitespace-pre-wrap text-sm leading-relaxed',
             compact && 'line-clamp-4',
           )}
+          style={{ color: WHATSAPP_BUBBLE_TEXT_PRIMARY }}
         >
           {post.content}
         </p>
 
         {/* Footer — time + read receipt */}
-        <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-zinc-600">
+        <div
+          className="mt-1 flex items-center justify-end gap-1 text-[10px]"
+          style={{ color: WHATSAPP_BUBBLE_TEXT_TIMESTAMP }}
+        >
           <span>{timestampLabel(post)}</span>
-          <CheckCheck className="h-3 w-3 text-blue-500" aria-label="Read" />
+          {/* documented exception: must be dark for contrast on the green bubble regardless of theme */}
+          <CheckCheck className="h-3 w-3 text-primary" aria-label="Read" />
         </div>
       </div>
     </div>
