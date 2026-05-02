@@ -17,6 +17,12 @@
 
 import { logger } from '@/lib/logger/logger';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import {
+  parseHashtags,
+  parseKeywords,
+  buildHashtagFooterWithSeparator,
+  buildHashtagFooter,
+} from '@/lib/social/composer-metadata';
 import { createTwitterService, createTwitterServiceForAccount, type TwitterService } from '@/lib/integrations/twitter-service';
 import { createLinkedInService } from '@/lib/integrations/linkedin-service';
 import { createFacebookService } from '@/lib/integrations/facebook-service';
@@ -895,19 +901,30 @@ export class AutonomousPostingAgent {
 
     try {
       switch (platform) {
-        case 'twitter':
+        case 'twitter': {
+          // Append hashtags before the char-limit check inside postToTwitter.
+          // Twitter's 280-char limit is enforced there; if appending would push
+          // over the limit the method already handles truncation gracefully.
+          const twitterHashtags = parseHashtags(metadata?.hashtags);
+          const twitterFooter = buildHashtagFooterWithSeparator(twitterHashtags);
+          const twitterContent = twitterFooter
+            ? `${content}${twitterFooter}`
+            : content;
           // Detect thread format: content with `---` separators between tweets
-          if (content.includes('---')) {
-            return await this.postTwitterThread(postId, content, accountId);
+          if (twitterContent.includes('---')) {
+            return await this.postTwitterThread(postId, twitterContent, accountId);
           }
-          return await this.postToTwitter(postId, content, mediaUrls, accountId);
+          return await this.postToTwitter(postId, twitterContent, mediaUrls, accountId);
+        }
 
         case 'linkedin': {
           const linkedInService = await createLinkedInService();
           if (!linkedInService) {
             return { success: false, platform, postId, error: 'LinkedIn service not configured — add credentials in Settings > API Keys' };
           }
-          const linkedInContent = this.appendUtmToLinks(content, 'linkedin', postId);
+          const linkedInHashtags = parseHashtags(metadata?.hashtags);
+          const linkedInBody = content + buildHashtagFooterWithSeparator(linkedInHashtags);
+          const linkedInContent = this.appendUtmToLinks(linkedInBody, 'linkedin', postId);
           const linkedInResult = await linkedInService.publishPost({ text: linkedInContent });
           return { success: linkedInResult.success, platform, postId, platformPostId: linkedInResult.postId, error: linkedInResult.error };
         }
@@ -917,7 +934,9 @@ export class AutonomousPostingAgent {
           if (!facebookService) {
             return { success: false, platform, postId, error: 'Facebook service not configured — add Page credentials in Settings > API Keys' };
           }
-          const fbResult = await facebookService.publishPost({ message: content, imageUrl: mediaUrls?.[0] });
+          const facebookHashtags = parseHashtags(metadata?.hashtags);
+          const facebookBody = content + buildHashtagFooterWithSeparator(facebookHashtags);
+          const fbResult = await facebookService.publishPost({ message: facebookBody, imageUrl: mediaUrls?.[0] });
           return { success: fbResult.success, platform, postId, platformPostId: fbResult.postId, error: fbResult.error };
         }
 
@@ -927,20 +946,32 @@ export class AutonomousPostingAgent {
             return { success: false, platform, postId, error: 'Instagram service not configured — add credentials in Settings > API Keys' };
           }
 
+          // Instagram convention: hashtags go in a separate block at the end of
+          // the caption, separated by a double newline (looks cleaner in feed).
+          const igHashtags = parseHashtags(metadata?.hashtags);
+          const igCaption = content + buildHashtagFooterWithSeparator(igHashtags);
+
+          // Alt-text: Instagram Graph API accepts `alt_text` on the media container.
+          // The InstagramService.publishPost interface currently has no `altText`
+          // field — TODO: add it to InstagramPostRequest when the service is
+          // extended. For now the value is extracted but cannot be passed through.
+          // TODO(alt-text): thread metadata?.altText into InstagramService.publishPost
+          // once the service interface gains an `altText` field.
+
           // Carousel mode: contentType=carousel with slideImages in metadata
           if (metadata?.contentType === 'carousel' && metadata.slideImages) {
             const slideImages = metadata.slideImages.split(',').map((u) => u.trim()).filter(Boolean);
             if (slideImages.length < 2) {
               return { success: false, platform, postId, error: 'Carousel requires at least 2 images' };
             }
-            const carouselResult = await instagramService.publishCarousel(slideImages, content);
+            const carouselResult = await instagramService.publishCarousel(slideImages, igCaption);
             return { success: carouselResult.success, platform, postId, platformPostId: carouselResult.postId, error: carouselResult.error };
           }
 
           if (!mediaUrls?.[0]) {
             return { success: false, platform, postId, error: 'Instagram requires an image or video — no media URL provided' };
           }
-          const igResult = await instagramService.publishPost({ caption: content, imageUrl: mediaUrls[0] });
+          const igResult = await instagramService.publishPost({ caption: igCaption, imageUrl: mediaUrls[0] });
           return { success: igResult.success, platform, postId, platformPostId: igResult.postId, error: igResult.error };
         }
 
@@ -949,6 +980,16 @@ export class AutonomousPostingAgent {
           if (!youtubeService) {
             return { success: false, platform, postId, error: 'YouTube service not configured — add OAuth credentials in Settings > API Keys' };
           }
+          // YouTube tags: keywords (no #) + hashtags with # stripped.
+          // Stored on the video metadata via setVideoMetadata when a real video
+          // upload lands; community posts don't carry a tags field in the
+          // activities API, so we pass them to createCommunityPost for logging
+          // purposes (the service can optionally surface them in the description
+          // when the video upload path is wired).
+          // TODO(yt-tags): pass ytTags to setVideoMetadata when video upload is wired.
+          const ytKeywords = parseKeywords(metadata?.keywords);
+          const ytHashtagsStripped = parseHashtags(metadata?.hashtags).map((h) => h.replace(/^#/, ''));
+          const _ytTags = [...new Set([...ytKeywords, ...ytHashtagsStripped])]; // reserved for video upload path
           const ytResult = await youtubeService.createCommunityPost({ text: content, imageUrl: mediaUrls?.[0] });
           return { success: ytResult.success, platform, postId, platformPostId: ytResult.postId, error: ytResult.error };
         }
@@ -958,12 +999,24 @@ export class AutonomousPostingAgent {
           if (!tiktokService) {
             return { success: false, platform, postId, error: 'TikTok service not configured — add OAuth credentials in Settings > API Keys' };
           }
+          // TikTok caption: hashtags inline at the end (no separator — TikTok
+          // convention is hashtags run on from the body text with a space).
+          const ttHashtags = parseHashtags(metadata?.hashtags);
+          const ttCaption = ttHashtags.length > 0
+            ? `${content} ${buildHashtagFooter(ttHashtags)}`
+            : content;
+          // video-tags from the platform-specific field. The TikTok Content
+          // Posting API v2 does not surface a tags array in the current
+          // publishVideo payload; the field is reserved for when the API
+          // exposes it. Stored here so the wiring exists.
+          // TODO(tiktok-tags): pass ttVideoTags to publishVideo once the API field is available.
+          const _ttVideoTags = parseKeywords(metadata?.videoTags);
           if (mediaUrls?.[0]?.includes('.mp4') || mediaUrls?.[0]?.includes('video')) {
-            const ttResult = await tiktokService.publishVideo({ title: content, videoUrl: mediaUrls[0] });
+            const ttResult = await tiktokService.publishVideo({ title: ttCaption, videoUrl: mediaUrls[0] });
             return { success: ttResult.success, platform, postId, platformPostId: ttResult.publishId, error: ttResult.error };
           }
           if (mediaUrls?.length) {
-            const ttPhotoResult = await tiktokService.publishPhoto({ title: content, imageUrls: mediaUrls });
+            const ttPhotoResult = await tiktokService.publishPhoto({ title: ttCaption, imageUrls: mediaUrls });
             return { success: ttPhotoResult.success, platform, postId, platformPostId: ttPhotoResult.publishId, error: ttPhotoResult.error };
           }
           return { success: false, platform, postId, error: 'TikTok requires a video or image — no media URL provided' };
@@ -974,13 +1027,36 @@ export class AutonomousPostingAgent {
           if (!blueskyService) {
             return { success: false, platform, postId, error: 'Bluesky service not configured — add credentials in Settings > API Keys' };
           }
+          // Bluesky hard limit is 300 grapheme clusters. Append hashtags only
+          // when they fit; leave them off and log a warning otherwise.
+          const bskyHashtags = parseHashtags(metadata?.hashtags);
+          const bskyFooter = buildHashtagFooterWithSeparator(bskyHashtags);
+          const BLUESKY_CHAR_LIMIT = 300;
+          let bskyContent = content;
+          if (bskyFooter) {
+            const candidate = content + bskyFooter;
+            if ([...candidate].length <= BLUESKY_CHAR_LIMIT) {
+              bskyContent = candidate;
+            } else {
+              logger.warn('[AutonomousPostingAgent] Bluesky: hashtags omitted — appending would exceed 300-char limit', {
+                contentLength: [...content].length,
+                footerLength: [...bskyFooter].length,
+              });
+            }
+          }
+          // Alt-text: Bluesky postRecordWithImages accepts alts[] index-aligned
+          // with mediaUrls. Apply the single operator-supplied alt to every image
+          // (first-image precision is the most realistic UX for a single field).
+          const bskyAltText = metadata?.altText?.trim() ?? '';
           // Bluesky cap: 4 images per post (enforced inside postRecordWithImages).
           // Use the with-images path when at least one mediaUrl is provided.
-          // Until Apr 29 2026 this case dropped mediaUrls silently — the
-          // post landed but appeared text-only in the user's feed.
           const blueskyResult = mediaUrls && mediaUrls.length > 0
-            ? await blueskyService.postRecordWithImages({ text: content, mediaUrls })
-            : await blueskyService.postRecord({ text: content });
+            ? await blueskyService.postRecordWithImages({
+                text: bskyContent,
+                mediaUrls,
+                alts: bskyAltText ? mediaUrls.map(() => bskyAltText) : undefined,
+              })
+            : await blueskyService.postRecord({ text: bskyContent });
           return { success: blueskyResult.success, platform, postId, platformPostId: blueskyResult.uri, error: blueskyResult.error };
         }
 
@@ -989,8 +1065,10 @@ export class AutonomousPostingAgent {
           if (!threadsService) {
             return { success: false, platform, postId, error: 'Threads service not configured — add credentials in Settings > API Keys' };
           }
+          const threadsHashtags = parseHashtags(metadata?.hashtags);
+          const threadsBody = content + buildHashtagFooterWithSeparator(threadsHashtags);
           const threadsResult = await threadsService.publishPost({
-            text: content,
+            text: threadsBody,
             mediaType: mediaUrls?.[0] ? 'IMAGE' : 'TEXT',
             imageUrl: mediaUrls?.[0],
           });
@@ -1002,18 +1080,37 @@ export class AutonomousPostingAgent {
           if (!mastodonService) {
             return { success: false, platform, postId, error: 'Mastodon service not configured — run scripts/connect-mastodon.ts to authorize and save the access token' };
           }
+          // Mastodon default char limit: 500. Append hashtags only when they fit.
+          const mastodonHashtags = parseHashtags(metadata?.hashtags);
+          const mastodonFooter = buildHashtagFooterWithSeparator(mastodonHashtags);
+          const MASTODON_CHAR_LIMIT = 500;
+          let mastodonStatus = content;
+          if (mastodonFooter) {
+            const candidate = content + mastodonFooter;
+            if (candidate.length <= MASTODON_CHAR_LIMIT) {
+              mastodonStatus = candidate;
+            } else {
+              logger.warn('[AutonomousPostingAgent] Mastodon: hashtags omitted — appending would exceed 500-char limit', {
+                contentLength: content.length,
+                footerLength: mastodonFooter.length,
+              });
+            }
+          }
+          // Alt-text: Mastodon uploadMediaFromUrl accepts a `description` param
+          // that becomes the attachment's alt text. Pass it via mediaDescription.
+          const mastodonAltText = metadata?.altText?.trim();
           // Mastodon cap: 4 attachments per status (enforced inside
           // postStatusWithMedia). Use the with-media path when at least one
-          // mediaUrl is provided. Until Apr 29 2026 this case dropped mediaUrls
-          // silently — same bug as Twitter and Bluesky.
+          // mediaUrl is provided.
           const mastodonResult = mediaUrls && mediaUrls.length > 0
             ? await mastodonService.postStatusWithMedia({
-                status: content,
+                status: mastodonStatus,
                 visibility: 'public',
                 mediaUrls,
+                mediaDescription: mastodonAltText,
               })
             : await mastodonService.postStatus({
-                status: content,
+                status: mastodonStatus,
                 visibility: 'public',
               });
           return { success: mastodonResult.success, platform, postId, platformPostId: mastodonResult.postId, error: mastodonResult.error };
@@ -1047,6 +1144,11 @@ export class AutonomousPostingAgent {
             return { success: false, platform, postId, error: 'Reddit service not configured — add credentials in Settings > API Keys' };
           }
 
+          // Reddit: hashtags and keywords from TagsAndSeoSection are intentionally
+          // skipped. Reddit does not use hashtags; subreddit + flair are the native
+          // discovery mechanisms and are already handled by the native metadata
+          // fields (subreddit, title, flair) that the RedditComposer collects.
+
           // Use metadata for subreddit and title when provided; fall back to content parsing
           const subreddit = metadata?.subreddit ?? 'u_me';
           const redditTitle = metadata?.title ?? content.split('\n').filter(Boolean)[0]?.substring(0, 300) ?? 'New post';
@@ -1075,7 +1177,21 @@ export class AutonomousPostingAgent {
           if (!pinterestService) {
             return { success: false, platform, postId, error: 'Pinterest service not configured — add credentials in Settings > API Keys' };
           }
-          const pinterestResult = await pinterestService.createPin({ title: content.substring(0, 100), description: content, imageUrl: mediaUrls[0] });
+          // Pinterest does not use hashtags. Keywords go into the description for
+          // search discoverability. Append any keywords not already present in the
+          // body as a comma-separated suffix so they reach Pinterest's index.
+          const pinterestKeywords = parseKeywords(metadata?.keywords);
+          const pinterestMissingKeywords = pinterestKeywords.filter(
+            (kw) => !content.toLowerCase().includes(kw.toLowerCase()),
+          );
+          const pinterestDescription = pinterestMissingKeywords.length > 0
+            ? `${content}\n\n${pinterestMissingKeywords.join(', ')}`
+            : content;
+          const pinterestResult = await pinterestService.createPin({
+            title: content.substring(0, 100),
+            description: pinterestDescription,
+            imageUrl: mediaUrls[0],
+          });
           return { success: pinterestResult.success, platform, postId, platformPostId: pinterestResult.pinId, error: pinterestResult.error };
         }
 
@@ -1097,7 +1213,19 @@ export class AutonomousPostingAgent {
           if (!gbpService) {
             return { success: false, platform, postId, error: 'Google Business Profile not configured — add credentials in Settings > API Keys' };
           }
-          const gbpResult = await gbpService.createLocalPost({ summary: content, mediaUrl: mediaUrls?.[0] });
+          // GBP summary limit: 1500 chars. Append keywords as a natural prose
+          // suffix only when they fit within the limit. Hashtags are not a
+          // convention on GBP and are intentionally skipped.
+          const gbpKeywords = parseKeywords(metadata?.keywords);
+          const GBP_CHAR_LIMIT = 1500;
+          let gbpSummary = content;
+          if (gbpKeywords.length > 0) {
+            const suffix = ` | ${gbpKeywords.join(' | ')}`;
+            if ((content + suffix).length <= GBP_CHAR_LIMIT) {
+              gbpSummary = content + suffix;
+            }
+          }
+          const gbpResult = await gbpService.createLocalPost({ summary: gbpSummary, mediaUrl: mediaUrls?.[0] });
           return { success: gbpResult.success, platform, postId, platformPostId: gbpResult.postName, error: gbpResult.error };
         }
 

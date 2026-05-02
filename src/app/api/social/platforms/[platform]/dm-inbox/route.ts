@@ -117,10 +117,12 @@ function extractDmPayload(
 
 /**
  * Check the inboundSocialEvents doc to see if the DM has already been
- * replied to. Returns true when a reply.sentAt timestamp is present —
- * the mission should be excluded from the inbox.
+ * handled — either sent (reply.sentAt present) or dismissed by the operator
+ * (reply.dismissedAt present via POST .../dismiss-dm). Returns true when
+ * either field is set so the mission is excluded from the inbox and does
+ * not reappear on subsequent polls.
  */
-async function isAlreadyReplied(eventId: string): Promise<boolean> {
+async function isAlreadyHandled(eventId: string): Promise<boolean> {
   if (!adminDb) { return false; }
   try {
     const snap = await adminDb
@@ -133,9 +135,11 @@ async function isAlreadyReplied(eventId: string): Promise<boolean> {
     if (!replyRaw || typeof replyRaw !== 'object') { return false; }
     const reply = replyRaw as Record<string, unknown>;
     const sentAt = reply.sentAt;
-    return typeof sentAt === 'string' && sentAt.length > 0;
+    const dismissedAt = reply.dismissedAt;
+    return (typeof sentAt === 'string' && sentAt.length > 0)
+      || (typeof dismissedAt === 'string' && dismissedAt.length > 0);
   } catch (err) {
-    logger.warn('[dm-inbox] isAlreadyReplied check failed', {
+    logger.warn('[dm-inbox] isAlreadyHandled check failed', {
       eventId,
       error: err instanceof Error ? err.message : String(err),
     });
@@ -169,7 +173,7 @@ async function missionToPendingItem(
 
   // Check the inboundSocialEvents doc for a prior send.
   const eventId = sourceEvent.eventId;
-  const replied = await isAlreadyReplied(eventId);
+  const replied = await isAlreadyHandled(eventId);
   if (replied) { return null; }
 
   return {
@@ -283,14 +287,14 @@ export async function GET(
         };
         if (inboundPlatform !== platformMatchMap[platform]) { continue; }
         // Construct a synthetic sourceEvent for the fallback path so
-        // missionToPendingItem can check isAlreadyReplied. We only reach
+        // missionToPendingItem can check isAlreadyHandled. We only reach
         // this branch when mission.sourceEvent is missing or mismatched,
         // so we synthesize the minimum required fields.
         const syntheticEventId = typeof stepData.inboundEventId === 'string'
           ? stepData.inboundEventId
           : '';
         if (!syntheticEventId) { continue; }
-        const replied = await isAlreadyReplied(syntheticEventId);
+        const replied = await isAlreadyHandled(syntheticEventId);
         if (replied) { continue; }
         const payload = extractDmPayload(step.toolResult);
         if (!payload) { continue; }

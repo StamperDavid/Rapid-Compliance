@@ -1,7 +1,9 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** May 2, 2026 (Mission Control component extraction + InlineReviewCard + platform pending-step API). **Component extraction:** `DetailOutputRenderer`, `UpstreamChangedBanner`, `ManualEditOutputBox` moved from `mission-control/page.tsx` into `src/components/mission-control/` (reusable across hubs). **InlineReviewCard** (`src/components/mission-control/InlineReviewCard.tsx`) — embeddable mission-step review card; renders AWAITING_APPROVAL/FAILED step inline inside any platform dashboard. **New API route:** `GET /api/social/platforms/[platform]/pending-mission-step` — returns the most-recent AWAITING_APPROVAL mission tagged with the platform plus its first FAILED step; auth + rate-limit guarded. **`findPendingMissionForPlatform()`** added to `src/lib/orchestrator/mission-persistence.ts` (requires composite Firestore index: `metadata.platform ASC, status ASC, createdAt DESC`). **PlatformDashboard** wired to fetch pending step on mount and on `visibilitychange` re-focus; `InlineReviewCard` renders between `AudienceTrajectoryPanel` and HERO 3-COL grid. tsc + eslint clean, zero new `any` types, zero `eslint-disable` comments.
+**Last Updated:** May 2, 2026 (per-platform AI workshop — insights persistence, mission-driven generation, audience tracking, DM inbox, SEO/tags). **New API routes under `/api/social/platforms/[platform]/`:** `GET audience` (baseline + current + improvement deltas + history), `GET/PUT composer-tags` (saved hashtags/keywords/platform-specific extras), `GET dm-inbox` (pending inbound DMs), `POST dm-inbox/[missionId]/regenerate` (re-runs compose_dm_reply), `POST dm-inbox/[missionId]/dismiss` (marks DM dismissed), `POST generate-post` (spawns 3-step mission: specialist brief → Studio materialize → AWAITING_APPROVAL), `POST approve-generated-post` (completes mission, posts now or schedules), `GET/POST insights` (GET returns saved insight; POST regenerates and persists), `GET pending-mission-step` (returns latest AWAITING_APPROVAL step for the platform), `GET/PUT preferred-times` (AI-auto-scheduling slots adopted from insights). **New cron:** `GET /api/cron/audience-snapshot` — daily 04:00 UTC, captures followers/following/posts per connected account. **New components:** `AudienceTrajectoryPanel` (delta tiles + recharts sparkline), `EmbeddedSocialCalendar` (`lockedPlatform` + `defaultView` + `hidePlatformFilter` props), `PinnedDMInbox` (top-of-page inbound DM inbox), `PlatformInsightsPanel` (AI Insights panel, Firestore-backed), `TagsAndSeoSection` (shared composer hashtags/keywords/platform-specific), `InlineReviewCard` (embeds Mission Control grade-and-approve inline), `DetailOutputRenderer` / `ManualEditOutputBox` / `UpstreamChangedBanner` (extracted from mission-control/page.tsx for reuse). **New services:** `src/lib/social/audience-baseline-service.ts` (captureBaseline/getTrajectory/recordSnapshot), `src/lib/social/audience-counts-fetcher.ts` (Twitter/Bluesky/Mastodon follower fetcher), `src/lib/social/format-normalizer.ts` (maps free-form AI format strings to canonical enum), `src/lib/social/parse-suggestion-slot.ts` (converts AI dayOfWeek/timeWindow strings to TimeSlot[]), `src/lib/social/platform-insights-storage.ts` (Firestore CRUD for saved insights), `src/lib/orchestrator/social-post-orchestrator.ts` (3-step social-post mission runner), `src/lib/agents/marketing/platform-insights-service.ts` (generates insights via specialist GM — Standing Rule #1 compliant). **Updated service:** `src/lib/orchestrator/mission-persistence.ts` — added `findPendingMissionForPlatform(platform)` query helper; refactored to single-field where + JS filter (no composite-index requirement). **New Firestore collections** (under `organizations/{PLATFORM_ID}/`): `audience_baselines/{platform}_{accountId}` (write-once at OAuth), `audience_snapshots/{platform}_{accountId}_{yyyy-mm-dd}` (daily history), `platform_insights/{platform}_{accountId}` (saved AI insights), `settings/composer_tags_{platform}` (adopted hashtags/keywords/platform-specifics), `settings/social_preferred_times_{platform}` (adopted AI scheduling slots). **Mission schema additions:** `metadata: Record<string, string|boolean|number|null>` optional field; AI social posts tagged with `metadata.platform` + `metadata.kind = 'social_post_generation'` for query filtering. **Standing rules preserved:** Rule #1 (platform insights service loads specialist GM via `gm.systemPrompt`, no runtime Brand DNA merge); Rule #2 (InlineReviewCard reuses existing StepGradeWidget feeding the existing Prompt Engineer pipeline — nothing else mutates GMs). tsc + eslint clean, zero new `any` types, zero `eslint-disable` comments.
+
+**Prior Last Updated:** May 2, 2026 (Mission Control component extraction + InlineReviewCard + platform pending-step API). **Component extraction:** `DetailOutputRenderer`, `UpstreamChangedBanner`, `ManualEditOutputBox` moved from `mission-control/page.tsx` into `src/components/mission-control/` (reusable across hubs). **InlineReviewCard** (`src/components/mission-control/InlineReviewCard.tsx`) — embeddable mission-step review card; renders AWAITING_APPROVAL/FAILED step inline inside any platform dashboard. **New API route:** `GET /api/social/platforms/[platform]/pending-mission-step` — returns the most-recent AWAITING_APPROVAL mission tagged with the platform plus its first FAILED step; auth + rate-limit guarded. **`findPendingMissionForPlatform()`** added to `src/lib/orchestrator/mission-persistence.ts` (requires composite Firestore index: `metadata.platform ASC, status ASC, createdAt DESC`). **PlatformDashboard** wired to fetch pending step on mount and on `visibilitychange` re-focus; `InlineReviewCard` renders between `AudienceTrajectoryPanel` and HERO 3-COL grid. tsc + eslint clean, zero new `any` types, zero `eslint-disable` comments.
 
 **Prior Last Updated:** April 30, 2026 (Scheduling rebuild Stages 1–6 + Zoom User-OAuth + content engine refresh: media library, Magic Studio, video editor, music gen, Hedra verify). **New L2 manager (OPERATIONS_MANAGER) + new L3 specialist (SCHEDULING_SPECIALIST)** raise the swarm to 10 L2 managers / 57 specialists / 72 agents total (1 L1 + 10 L2 + 57 L3 + 4 standalone). Three GMs seeded in dev Firestore: `gm_orchestrator_v1` (Jasper, re-seeded with `delegate_to_operations`), `mgm_operations_manager_saas_sales_ops_v1`, `sgm_scheduling_specialist_saas_sales_ops_v1`. **Scheduling system (Stages 1–6) shipped end-to-end:** new `meetingProvider` discriminator (`'zoom' | 'google_meet' | 'teams' | 'none'`) on every meeting record, per-day availability config + `/settings/meeting-scheduler` UI, demo-scheduling checkbox on `/early-access` (lead capture and booking are independent), unified calendar dashboard at `/calendar` reading from 5 sources (meetings, bookings, Google Calendar sync, scheduled posts, CRM activities) with filter chips, editable scheduling messages template at `/settings/scheduling-messages` (8 fields with `{firstName}`/`{meetingDate}`/`{zoomLink}`/etc. variables, defaults preserved when doc absent), full Zoom User-OAuth (`/api/integrations/zoom/{auth,callback,disconnect}`), `/settings/integrations` Zoom card with two-step disconnect, dual-write compat shim to legacy `integrations/all` map doc so the integrations UI shows ✓ Connected without refactor. New Jasper tool `delegate_to_operations` with intent rules (operator picks the time, attendees must already exist in CRM). **Content engine refresh:** Hedra verified live via new `scripts/verify-hedra-live.ts`; AI music generation via Replicate MusicGen (`src/lib/music/music-generation-service.ts` + `/api/content/music/generate` + AI Music tab in `/content/voice-lab`); unified media library (`src/types/media-library.ts` introduces canonical `UnifiedMediaAsset` with `MEDIA_CATEGORIES` enum — legacy `MediaItem` retained for back-compat with the existing video library page; service at `src/lib/media/media-library-service.ts`; browser at `/media`; backfill at `scripts/backfill-media-library.ts`); Magic Studio at `/studio` (single-canvas + command bar + Image/Video/Music/Text tools wired to their generate endpoints + recent-generations sidebar); standalone Video Editor at `/content/video/editor` (timeline trim/split/merge, drag-positioned text overlays, brightness/contrast/saturation/hue per clip, transitions, FFmpeg render via `/api/video/editor/render`). **Architectural / standing-rule fixes:** `useAdminSdk` opt-in flag added to `getIntegrationCredentials`, `saveIntegrationCredentials`, `disconnectIntegration` (and `createLead`) so public/server-context routes work without `request.auth`; `oauth-state.ts` migrated to Admin SDK throughout; `AdminFirestoreService.set` and `.get` are now generic (`<T extends object>`) so typed callers don't need `Record<string, unknown>` casts; sidebar nav additions (Calendar in Dashboard section; Studio + Video Editor + Media Library in Marketing section). **New standing rules logged to memory this session:** finish each thing to production-ready before moving on; never read credentials from screenshots — use Copy buttons; destructive UI actions need two-step confirmation; estimate in parallel-agent-hours, not solo dev-weeks.
 
@@ -93,13 +95,13 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 207 | Verified April 30, 2026 (incl. /calendar, /studio, /content/video/editor, /media, /settings/{meeting-scheduler,scheduling-messages}, etc.) |
-| API Endpoints (route.ts) | 507 | Verified April 30, 2026 (incl. /api/integrations/zoom/{auth,callback,disconnect}, /api/calendar/events, /api/content/{music,video,asset-generator}/generate, /api/video/editor/render, /api/booking POST, /api/media) |
+| API Endpoints (route.ts) | 521 | +14 routes May 2, 2026 (10 under /api/social/platforms/[platform]/* + 1 cron audience-snapshot + 3 dm-inbox sub-routes); base 507 verified April 30, 2026 |
 | AI Agents | 72 | **72 FUNCTIONAL (1 Jasper L1 + 10 L2 managers + 57 L3 specialists + 4 standalone)** — adds OPERATIONS_MANAGER + SCHEDULING_SPECIALIST (Apr 30) |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | ~1,746 | Verified March 28, 2026 |
 | Type Definition Files (src/types/) | 56 | 831+ interfaces/types across all files |
-| UI Components (src/components/) | 250 | Production-grade React components |
-| Firestore Collections | 243 | Active (53 root-level + 190 org-scoped) |
+| UI Components (src/components/) | 257 | +7 May 2, 2026 (AudienceTrajectoryPanel, EmbeddedSocialCalendar, PinnedDMInbox, PlatformInsightsPanel, TagsAndSeoSection, InlineReviewCard, DetailOutputRenderer/ManualEditOutputBox/UpstreamChangedBanner counted as 3 extracted files); base 250 verified April 30 |
+| Firestore Collections | 248 | +5 May 2, 2026 (audience_baselines, audience_snapshots, platform_insights, settings/composer_tags_{platform}, settings/social_preferred_times_{platform}); base 243 verified April 30 |
 
 **Architecture:** Single-tenant Penthouse Model (development strategy). SalesVelocity.ai is a multi-tenant SaaS product — clients will purchase their own deployment. Penthouse simplifies development; multi-tenancy will be re-enabled.
 
@@ -1541,7 +1543,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (507 Total — Verified April 30, 2026)
+### API Routes (521 Total — Updated May 2, 2026)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
@@ -1553,7 +1555,7 @@ This script:
 | Campaigns | 4 | `/api/campaigns/*` | Functional (NEW March 15 — Campaign Orchestration Pipeline) |
 | Coaching | 2 | `/api/coaching/*` | Functional |
 | CRM | 9 | `/api/crm/*` | Functional |
-| Cron | 4 | `/api/cron/*` | Functional (+3 Growth crons March 2) |
+| Cron | 5 | `/api/cron/*` | Functional (+1 May 2 — audience-snapshot daily 04:00 UTC; +3 Growth crons March 2) |
 | Growth | 11 | `/api/growth/*` | Functional (NEW March 2) |
 | Discovery | 1 | `/api/discovery/*` | Functional |
 | E-commerce | 5 | `/api/ecommerce/*` | Functional (orders path fixed Feb 12) |
@@ -1577,7 +1579,7 @@ This script:
 | Schemas | 6 | `/api/schema*/*` | Functional |
 | SEO | 4 | `/api/seo/*` | Functional (domain-analysis, strategy, research GET/POST) |
 | Settings | 1 | `/api/settings/webhooks` | Functional (NEW Feb 12) |
-| Social | 15 | `/api/social/*` | Functional (EXPANDED Feb 13 — added agent-status, activity, OAuth auth/callback, accounts verify) |
+| Social | 27 | `/api/social/*` + `/api/social/platforms/[platform]/*` | Functional (+12 May 2 — 10 per-platform routes + 2 dm-inbox sub-routes; base 15 EXPANDED Feb 13) |
 | Team | 1 | `/api/team/tasks/[taskId]` | Functional (NEW Feb 12) |
 | Other | ~120 | Various | Mixed |
 
@@ -1695,6 +1697,43 @@ This script:
 | `/api/social/oauth/auth/[provider]` | GET | Initiate OAuth flow (Twitter PKCE, LinkedIn OAuth 2.0) | FUNCTIONAL (NEW Session 6) |
 | `/api/social/oauth/callback/[provider]` | GET | OAuth callback handler with token exchange + encryption | FUNCTIONAL (NEW Session 6) |
 | `/api/social/accounts/verify` | POST | Verify social account connection status | FUNCTIONAL (NEW Session 6) |
+
+#### Per-Platform Social AI Workshop (NEW May 2, 2026)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/social/platforms/[platform]/audience` | GET | Audience trajectory — baseline + current followers/following/posts + improvement deltas + snapshot history | FUNCTIONAL |
+| `/api/social/platforms/[platform]/composer-tags` | GET/PUT | Per-platform saved hashtags, keywords, and platform-specific extras (adopted from AI insights) | FUNCTIONAL |
+| `/api/social/platforms/[platform]/dm-inbox` | GET | Pending inbound DMs for the platform (sourced from `inboundSocialEvents`) | FUNCTIONAL |
+| `/api/social/platforms/[platform]/dm-inbox/[missionId]/regenerate` | POST | Re-runs `compose_dm_reply` for an existing DM mission to produce a fresh draft | FUNCTIONAL |
+| `/api/social/platforms/[platform]/dm-inbox/[missionId]/dismiss` | POST | Marks an inbound DM dismissed without sending a reply | FUNCTIONAL |
+| `/api/social/platforms/[platform]/generate-post` | POST | Spawns a 3-step social-post mission (specialist brief → Studio materialize → AWAITING_APPROVAL) via `social-post-orchestrator.ts` | FUNCTIONAL |
+| `/api/social/platforms/[platform]/approve-generated-post` | POST | Completes the pending mission step and either posts immediately or schedules the post | FUNCTIONAL |
+| `/api/social/platforms/[platform]/insights` | GET | Returns saved AI insight for the platform from `platform_insights/{platform}_{accountId}` | FUNCTIONAL |
+| `/api/social/platforms/[platform]/insights` | POST | Regenerates insights via `platform-insights-service.ts` (loads specialist GM verbatim — Standing Rule #1) and persists to Firestore | FUNCTIONAL |
+| `/api/social/platforms/[platform]/pending-mission-step` | GET | Returns latest AWAITING_APPROVAL mission tagged `metadata.platform = <platform>` plus its pending step; drives `InlineReviewCard` | FUNCTIONAL |
+| `/api/social/platforms/[platform]/preferred-times` | GET/PUT | Per-platform AI-auto-scheduling slots; GET returns adopted slots, PUT replaces with newly adopted suggestions from insights | FUNCTIONAL |
+| `/api/cron/audience-snapshot` | GET | Daily 04:00 UTC — captures followers/following/posts for every connected account via `audience-counts-fetcher.ts` and appends to `audience_snapshots` | FUNCTIONAL |
+
+**Key services backing these routes:**
+- `src/lib/social/audience-baseline-service.ts` — `captureBaseline(platform, accountId)` (write-once at OAuth connect), `recordSnapshot(...)` (called by cron), `getTrajectory(...)` (returns baseline + latest snapshot + improvement deltas + history array)
+- `src/lib/social/audience-counts-fetcher.ts` — platform-dispatch layer; fetches real follower/following/post counts from Twitter v2 / Bluesky `app.bsky.actor.getProfile` / Mastodon `GET /api/v1/accounts/verify_credentials`
+- `src/lib/social/format-normalizer.ts` — maps free-form AI format strings (e.g. `"Carousel"`, `"carousel post"`) to canonical `PostFormat` enum values
+- `src/lib/social/parse-suggestion-slot.ts` — converts AI `dayOfWeek`/`timeWindow` strings from insights into typed `TimeSlot[]` for the preferred-times store
+- `src/lib/social/platform-insights-storage.ts` — Firestore CRUD for `platform_insights/{platform}_{accountId}`; `saveInsights` / `getInsights` / `updateInsights`
+- `src/lib/orchestrator/social-post-orchestrator.ts` — orchestrates the 3-step social-post mission (writes mission doc → runs specialist brief step → runs Studio materialize step → leaves AWAITING_APPROVAL for operator to approve-generated-post)
+- `src/lib/agents/marketing/platform-insights-service.ts` — calls the platform specialist's GM via `callGMLLM`, parses the structured insights response (best times, recommended formats, hashtag suggestions, growth tactics); Standing Rule #1: reads `gm.systemPrompt` verbatim with no runtime Brand DNA merge
+
+**Key components:**
+- `src/components/social/AudienceTrajectoryPanel.tsx` — delta tiles (followers gained/lost since baseline) + recharts `<LineChart>` sparkline of historical snapshots
+- `src/components/social/EmbeddedSocialCalendar.tsx` — shared calendar embed; accepts `lockedPlatform`, `defaultView` (`'month'|'week'|'day'`), and `hidePlatformFilter` props so platform dashboards embed the calendar scoped to their platform
+- `src/components/social/PinnedDMInbox.tsx` — top-of-page inbound DM inbox; polls `dm-inbox` on mount, renders each DM with sender/preview/timestamp, and routes to Mission Control or fires regenerate/dismiss actions
+- `src/components/social/PlatformInsightsPanel.tsx` — AI Insights panel; fetches saved insight on mount, displays best-time slots, recommended formats, hashtag suggestions, growth tactics, and provides "Regenerate" + "Adopt" actions wired to the insights and preferred-times routes
+- `src/components/social/composers/TagsAndSeoSection.tsx` — shared composer extension for hashtags / keywords / platform-specific extras; reads from and writes to `composer-tags` route
+- `src/components/mission-control/InlineReviewCard.tsx` — embeds Mission Control's grade-and-approve UI inline in any platform hub; polls `pending-mission-step`, renders AWAITING_APPROVAL/FAILED step, surfaces `StepGradeWidget` (Standing Rule #2: feeds existing Prompt Engineer pipeline)
+- `src/components/mission-control/DetailOutputRenderer.tsx` — extracted from mission-control/page.tsx; renders step output with mode detection (INBOUND_DM_REPLY, social post, etc.)
+- `src/components/mission-control/ManualEditOutputBox.tsx` — extracted from mission-control/page.tsx; M6 manual edit path for any COMPLETED/FAILED step
+- `src/components/mission-control/UpstreamChangedBanner.tsx` — extracted from mission-control/page.tsx; M5 downstream-changed flag banner with "Still good" / "Rerun" actions
 
 #### Growth Command Center (NEW March 2)
 
@@ -1826,6 +1865,10 @@ Backfill of pre-existing media assets is handled by `scripts/backfill-media-libr
 `earlyAccessSuccessTitle`, `earlyAccessSuccessBody`, `demoConfirmationEmailSubject`, `demoConfirmationEmailBody`, `zoomMeetingTopic`, `zoomMeetingAgenda`, `reminder24hSubject`, `reminder24hBody`, `reminder1hSubject`, `reminder1hBody`.
 
 Template variables supported in any field via `{name}` syntax: `{firstName}`, `{fullName}`, `{meetingDate}` (e.g. "Tuesday, Nov 4"), `{meetingTime}` (e.g. "2:00 PM"), `{duration}` (minutes), `{zoomLink}`, `{orgName}`, `{operatorName}`. When the doc doesn't exist (fresh deployment, never edited), helpers in `src/lib/meetings/scheduling-messages-service.ts` return the hardcoded `DEFAULT_MESSAGES` so existing flows continue identically.
+
+**Per-platform pending mission query — no composite index required (May 2, 2026):**
+
+`findPendingMissionForPlatform(platform)` in `src/lib/orchestrator/mission-persistence.ts` uses a single-field `where('status', 'in', ['IN_PROGRESS', 'AWAITING_APPROVAL'])` Firestore query followed by in-process JavaScript filtering on `doc.metadata?.platform === platform`. This avoids the composite index (`metadata.platform ASC, status ASC, createdAt DESC`) that was noted as a requirement in the prior "Last Updated" entry. The trade-off is that the query reads all active missions before filtering; at current single-tenant scale this is acceptable. If mission volume grows significantly, the composite index can be added to `firestore.indexes.json` and the query can be tightened.
 
 **Integrations dual-write compat shim (April 30, 2026):**
 
@@ -2272,10 +2315,18 @@ organizations/{PLATFORM_ID}/
 │   └── deliverables/         # Campaign deliverables with status tracking
 ├── customTools/              # Custom API tool definitions
 ├── socialPosts/              # Social media posts
+├── audience_baselines/       # Write-once follower/following/posts snapshot captured at OAuth connect time; doc ID = {platform}_{accountId} (NEW May 2, 2026)
+├── audience_snapshots/       # Daily follower/following/posts snapshots written by /api/cron/audience-snapshot; doc ID = {platform}_{accountId}_{yyyy-mm-dd} (NEW May 2, 2026)
+├── platform_insights/        # Saved per-platform AI insights (best times, formats, hashtags, growth tactics); doc ID = {platform}_{accountId} (NEW May 2, 2026)
+├── settings/
+│   ├── composer_tags_{platform}  # Adopted hashtags + keywords + platform-specific extras per platform (NEW May 2, 2026)
+│   └── social_preferred_times_{platform}  # Adopted AI-auto-scheduling TimeSlot[] per platform (NEW May 2, 2026)
 └── provisionerLogs/          # Provisioning logs
 ```
 
-### Total: 243 Unique Collection Paths (53 root-level constants + 190 org-scoped via getSubCollection)
+**Mission document schema addition (May 2, 2026):** `metadata?: Record<string, string | boolean | number | null>` is now an optional field on every mission doc. AI-generated social posts are tagged with `metadata.platform = '<platform>'` and `metadata.kind = 'social_post_generation'` to enable `findPendingMissionForPlatform()` filtering. Inbound DM missions continue to be identified via `sourceEvent.kind` on the linked `inboundSocialEvents` doc.
+
+### Total: 248 Unique Collection Paths (53 root-level constants + 195 org-scoped via getSubCollection) — +5 from May 2, 2026 per-platform AI workshop
 
 ---
 
