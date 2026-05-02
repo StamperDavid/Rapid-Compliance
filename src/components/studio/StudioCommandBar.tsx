@@ -83,6 +83,7 @@ const MUSIC_STYLES = [
 ] as const;
 const TEXT_KINDS = [
   { value: 'caption', label: 'Social caption' },
+  { value: 'thread', label: 'Thread' },
   { value: 'script', label: 'Video script' },
   { value: 'headline', label: 'Headline' },
   { value: 'paragraph', label: 'Long-form paragraph' },

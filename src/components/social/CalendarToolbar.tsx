@@ -16,7 +16,6 @@ const VIEW_OPTIONS: { key: View; label: string }[] = [
   { key: 'month', label: 'Month' },
   { key: 'week', label: 'Week' },
   { key: 'day', label: 'Day' },
-  { key: 'agenda', label: 'Agenda' },
 ];
 
 interface CalendarToolbarProps extends ToolbarProps<CalendarEvent, object> {

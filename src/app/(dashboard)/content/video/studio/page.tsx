@@ -26,9 +26,18 @@
  *   AND a per-tool `result`. Switching tools restores the slot for that tool.
  *   Generated images can be dragged from Recent onto the canvas while the
  *   Video tool is active — they become the avatar portrait.
+ *
+ * Deep-link entry:
+ *   Platform dashboards may link here with query params:
+ *     ?platform=bluesky&format=thread&brief=<encoded>&hook=<encoded>&body=<encoded>&returnTo=%2Fsocial%2Fplatforms%2Fbluesky
+ *   parseDeepLinkBrief() converts these into initial tool + command state.
+ *   A "← Back to {platform} dashboard" breadcrumb renders when returnTo is present.
  */
 
-import { useCallback, useState } from 'react';
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
@@ -42,6 +51,8 @@ import {
 import { StudioCanvas, type StudioResult } from '@/components/studio/StudioCanvas';
 import { StudioRecentSidebar } from '@/components/studio/StudioRecentSidebar';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import { PLATFORM_META } from '@/lib/social/platform-config';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
 import type {
   MediaItem,
   MediaType,
@@ -70,6 +81,61 @@ function buildInitialSlots(): Record<StudioTool, ToolSlot> {
     };
   }
   return slots as Record<StudioTool, ToolSlot>;
+}
+
+// ============================================================================
+// Deep-link param parser
+// ============================================================================
+
+interface DeepLinkBrief {
+  platform: SocialPlatform | null;
+  tool: StudioTool;
+  command: Partial<StudioCommandState>;
+  returnTo: string | null;
+}
+
+const FORMAT_TO_TOOL: Record<string, StudioTool> = {
+  'single-post': 'text',
+  'thread': 'text',
+  'short-form-video': 'video',
+  'long-form-video': 'video',
+  'carousel': 'image',
+  'image-post': 'image',
+  'audio-clip': 'music',
+};
+
+const FORMAT_SUB_DEFAULTS: Record<string, Partial<StudioCommandState>> = {
+  'single-post':      { textKind: 'caption' },
+  'thread':           { textKind: 'thread' },
+  'short-form-video': { videoAspect: '9:16', videoDurationMs: 10000, videoMode: 'prompt' },
+  'long-form-video':  { videoAspect: '16:9', videoDurationMs: 15000, videoMode: 'prompt' },
+  'carousel':         { imageAspect: '1:1' },
+  'image-post':       { imageAspect: '1:1' },
+  'audio-clip':       { musicStyle: 'cinematic' },
+};
+
+function parseDeepLinkBrief(searchParams: URLSearchParams): DeepLinkBrief {
+  const rawPlatform = searchParams.get('platform');
+  const platform = SOCIAL_PLATFORMS.includes(rawPlatform as SocialPlatform)
+    ? (rawPlatform as SocialPlatform)
+    : null;
+
+  const rawFormat = searchParams.get('format') ?? 'single-post';
+  const tool: StudioTool = FORMAT_TO_TOOL[rawFormat] ?? 'text';
+
+  const hook  = searchParams.get('hook')  ?? '';
+  const body  = searchParams.get('body')  ?? '';
+  const brief = searchParams.get('brief') ?? '';
+  const prompt = brief.trim() || [hook, body].filter(Boolean).join('\n\n');
+
+  const command: Partial<StudioCommandState> = {
+    ...FORMAT_SUB_DEFAULTS[rawFormat],
+    ...(prompt ? { prompt } : {}),
+  };
+
+  const returnTo = searchParams.get('returnTo');
+
+  return { platform, tool, command, returnTo };
 }
 
 // ============================================================================
@@ -108,20 +174,60 @@ interface MediaCreateResponse {
 }
 
 // ============================================================================
-// Page
+// Skeleton — shown while Suspense hydrates useSearchParams
 // ============================================================================
 
-export default function StudioPage() {
+function StudioPageSkeleton() {
+  return (
+    <div className="h-full flex flex-col items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-label="Loading studio" />
+    </div>
+  );
+}
+
+// ============================================================================
+// Inner page (client — reads search params and owns all state)
+// ============================================================================
+
+function StudioPageInner() {
   const { user } = useUnifiedAuth();
   const authFetch = useAuthFetch();
+  const searchParams = useSearchParams();
 
-  const [activeTool, setActiveTool] = useState<StudioTool>('image');
-  const [slots, setSlots] = useState<Record<StudioTool, ToolSlot>>(buildInitialSlots);
+  // Parse deep-link brief once on mount; memo is stable for the lifetime of
+  // the page (searchParams doesn't change during a session).
+  const deepLink = useMemo(
+    () => parseDeepLinkBrief(searchParams),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // intentionally empty — parse only on initial mount
+  );
+
+  // Track whether the deep-link brief has been applied to slot state.
+  // useRef avoids re-renders while still persisting across renders.
+  const briefApplied = useRef<boolean>(false);
+
+  const [activeTool, setActiveTool] = useState<StudioTool>(() => deepLink.tool);
+  const [slots, setSlots] = useState<Record<StudioTool, ToolSlot>>(() => {
+    const base = buildInitialSlots();
+    // Apply the brief into the correct tool slot on first render.
+    if (Object.keys(deepLink.command).length > 0) {
+      briefApplied.current = true;
+      const targetTool = deepLink.tool;
+      base[targetTool] = {
+        ...base[targetTool],
+        command: { ...base[targetTool].command, ...deepLink.command },
+      };
+    }
+    return base;
+  });
   const [generatingTool, setGeneratingTool] = useState<StudioTool | null>(null);
   const [recentRefreshKey, setRecentRefreshKey] = useState(0);
 
   const slot = slots[activeTool];
   const isGenerating = generatingTool === activeTool;
+
+  const { platform, returnTo } = deepLink;
+  const platformLabel = platform ? PLATFORM_META[platform].label : 'dashboard';
 
   // ────────────────────────────────────────────────────────────────────────
   // Slot mutators
@@ -268,6 +374,15 @@ export default function StudioPage() {
 
       {/* Header strip — page title sits above the workspace bands */}
       <header className="border-b border-border-light bg-card/30 px-6 py-4">
+        {returnTo ? (
+          <Link
+            href={returnTo}
+            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-2"
+          >
+            <ChevronLeft className="h-3 w-3" aria-hidden="true" />
+            Back to {platformLabel} dashboard
+          </Link>
+        ) : null}
         <PageTitle>Studio</PageTitle>
         <SectionDescription>
           Generate images, video, music, and text in a single canvas.
@@ -309,6 +424,18 @@ export default function StudioPage() {
         />
       </div>
     </div>
+  );
+}
+
+// ============================================================================
+// Page — Suspense wrapper required by Next 14 for useSearchParams
+// ============================================================================
+
+export default function StudioPage() {
+  return (
+    <Suspense fallback={<StudioPageSkeleton />}>
+      <StudioPageInner />
+    </Suspense>
   );
 }
 
