@@ -20,6 +20,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
@@ -33,6 +34,7 @@ import {
 
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { PostMetrics, SocialMediaPost, SocialPlatform } from '@/types/social';
+import type { MissionStep } from '@/lib/orchestrator/mission-persistence';
 import { PLATFORM_META } from '@/lib/social/platform-config';
 
 import {
@@ -46,9 +48,14 @@ import { Caption, SectionTitle } from '@/components/ui/typography';
 import PlatformHeaderBand, {
   type PlatformHeaderStatus,
 } from '@/components/social/PlatformHeaderBand';
+import { PinnedDMInbox } from '@/components/social/PinnedDMInbox';
 import SpecialistIdentityCard from '@/components/social/SpecialistIdentityCard';
 import SpecialistRecentWork from '@/components/social/SpecialistRecentWork';
 import { PlatformComposer } from '@/components/social/composers';
+import EmbeddedSocialCalendar from '@/components/social/EmbeddedSocialCalendar';
+import PlatformInsightsPanel from '@/components/social/PlatformInsightsPanel';
+import AudienceTrajectoryPanel from '@/components/social/AudienceTrajectoryPanel';
+import { InlineReviewCard } from '@/components/mission-control/InlineReviewCard';
 
 import {
   BlueskyPostPreview,
@@ -142,6 +149,18 @@ interface PostsResponse {
   success?: boolean;
   posts?: RawSocialPostDoc[];
   error?: string;
+}
+
+interface PendingStepResponse {
+  success: boolean;
+  mission: null;
+  error?: string;
+}
+
+interface PendingStepFoundResponse {
+  success: true;
+  missionId: string;
+  step: MissionStep;
 }
 
 type PreviewComponent = React.ComponentType<{
@@ -459,14 +478,14 @@ interface MissingSpecialistCardProps {
 function MissingSpecialistCard({ platform }: MissingSpecialistCardProps): React.ReactElement {
   const meta = PLATFORM_META[platform];
   return (
-    <Card className="border-border-light">
-      <CardHeader>
+    <Card className="border-border-light w-full h-full flex flex-col">
+      <CardHeader className="flex-shrink-0">
         <div className="flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-muted-foreground" aria-hidden />
           <CardTitle>AI specialist coming soon</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         <p className="text-sm text-muted-foreground">
           We don&apos;t have an AI specialist for {meta.label} yet. You can
           post manually below.
@@ -713,6 +732,8 @@ export function PlatformDashboard({
 }: PlatformDashboardProps): React.ReactElement {
   const config = useMemo(() => getPlatformConfig(platform), [platform]);
   const { account, connected } = useAccount(platform);
+  const authFetch = useAuthFetch();
+  const router = useRouter();
 
   const headerStatus = deriveHeaderStatus(config, connected);
   const headerAccount = account
@@ -721,6 +742,46 @@ export function PlatformDashboard({
         accountName: account.accountName,
       }
     : undefined;
+
+  // ─── PENDING MISSION STEP ─────────────────────────────────────────────────
+  // Fetch the most-recent AWAITING_APPROVAL mission for this platform and
+  // surface it as an InlineReviewCard so the operator can act without
+  // navigating to Mission Control.
+  const [pendingMissionId, setPendingMissionId] = useState<string | null>(null);
+  const [pendingStep, setPendingStep] = useState<MissionStep | null>(null);
+
+  const fetchPendingStep = useCallback(async () => {
+    try {
+      const res = await authFetch(`/api/social/platforms/${platform}/pending-mission-step`);
+      if (!res.ok) { return; }
+      const body = (await res.json()) as PendingStepResponse | PendingStepFoundResponse;
+      if (!body.success) { return; }
+      if ('missionId' in body) {
+        setPendingMissionId(body.missionId);
+        setPendingStep(body.step);
+      } else {
+        setPendingMissionId(null);
+        setPendingStep(null);
+      }
+    } catch {
+      // Silent fail — pending step is non-critical
+    }
+  }, [authFetch, platform]);
+
+  useEffect(() => {
+    void fetchPendingStep();
+  }, [fetchPendingStep]);
+
+  // Re-fetch when the tab regains focus (operator may have acted in another tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchPendingStep();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchPendingStep]);
 
   // ─── PARKED ───────────────────────────────────────────────────────────────
   if (config.state === 'parked') {
@@ -732,6 +793,7 @@ export function PlatformDashboard({
           status={headerStatus}
           blockReason={config.blockReason}
         />
+        <PinnedDMInbox platform={platform} />
         <ParkedNotice platform={platform} config={config} />
         <PlatformComposer platform={platform} />
       </div>
@@ -752,6 +814,9 @@ export function PlatformDashboard({
         status={headerStatus}
         blockReason={config.blockReason}
       />
+
+      {/* DM inbox — always visible; collapses to a thin bar when empty */}
+      <PinnedDMInbox platform={platform} />
 
       {/* Connect-first nudge — only when the operator hasn't linked an account */}
       {connected === false && (
@@ -778,31 +843,75 @@ export function PlatformDashboard({
         <Caption>Checking connection…</Caption>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ─── LEFT COLUMN ─────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-6">
-          <MetricsRow platform={platform} connected={connected} />
+      <MetricsRow platform={platform} connected={connected} />
 
-          {/* Specialist or coming-soon notice */}
-          {showSpecialistCard && config.specialistId && (
-            <SpecialistIdentityCard
-              specialistId={config.specialistId}
-              platform={platform}
-            />
+      {/* Audience growth — baseline at connect time + sparkline of recent days */}
+      <AudienceTrajectoryPanel platform={platform} />
+
+      {/* ─── INLINE REVIEW ────────────────────────────────────────────────
+          When Jasper has a halted mission for this platform, show an
+          InlineReviewCard so the operator can review without leaving
+          the hub. Renders nothing when there is no pending mission.
+       */}
+      {pendingStep !== null && pendingMissionId !== null && (
+        <InlineReviewCard
+          step={pendingStep}
+          missionId={pendingMissionId}
+          platform={platform}
+          onOpenFullMode={() => {
+            router.push(
+              `/mission-control?mission=${pendingMissionId}&step=${pendingStep.stepId}`,
+            );
+          }}
+          onGradeSubmitted={() => { void fetchPendingStep(); }}
+        />
+      )}
+
+      {/* ─── HERO 3-COL: Insights | Calendar | Composer ───────────────────
+          Row is locked to a fixed 680px height so verbose AI Insights
+          output doesn't blow the layout up. Each column scrolls
+          internally when its content exceeds the row.
+       */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[680px]">
+        {/* Col 1 — AI Insights (or specialist gap explainer) */}
+        <div className="h-full min-h-0 flex">
+          {config.specialistId && (
+            <PlatformInsightsPanel platform={platform} />
           )}
           {config.state === 'no_specialist' && (
             <MissingSpecialistCard platform={platform} />
           )}
-          {config.state === 'coming_soon' && (
-            <ComingSoonCard platform={platform} config={config} />
-          )}
+        </div>
 
-          {/* Composer — suppressed for coming_soon platforms (specialist not yet
-              built; credentials alone are not enough to post safely). The
-              unified composer handles every other state including parked. */}
+        {/* Col 2 — Platform-scoped calendar (agenda view by default) */}
+        <Card className="border-border-light h-full min-h-0 flex flex-col">
+          <CardHeader className="flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle>{PLATFORM_META[platform].label} schedule</CardTitle>
+              <Link
+                href="/social/calendar"
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Full calendar
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 overflow-y-auto">
+            <EmbeddedSocialCalendar
+              lockedPlatform={platform}
+              height={520}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Col 3 — Composer (or coming-soon pacifier) */}
+        <div className="h-full min-h-0 flex">
           {config.state === 'coming_soon' ? (
-            <Card className="border-border-light">
-              <CardContent className="py-5">
+            <Card className="border-border-light w-full h-full flex flex-col">
+              <CardHeader className="flex-shrink-0">
+                <CardTitle>Composer</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 py-5 overflow-y-auto">
                 <p className="text-sm text-muted-foreground">
                   Composer will activate when{' '}
                   <span className="font-medium text-foreground">
@@ -815,40 +924,60 @@ export function PlatformDashboard({
           ) : (
             <PlatformComposer platform={platform} />
           )}
-
-          {/* Recent posts */}
-          <RecentPostsList platform={platform} account={headerAccount} />
         </div>
+      </div>
 
-        {/* ─── RIGHT COLUMN ────────────────────────────────────────────── */}
-        <div className="space-y-6">
-          {config.specialistId && (
-            <SpecialistRecentWork
-              specialistId={config.specialistId}
-              limit={5}
-            />
-          )}
+      {/* ─── Coming-soon block (full width, only in coming_soon state) ───── */}
+      {config.state === 'coming_soon' && (
+        <ComingSoonCard platform={platform} config={config} />
+      )}
 
+      {/* ─── CONTEXT STRIP: Identity | DM | Recent Work | Quick Actions ──── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {showSpecialistCard && config.specialistId ? (
+          <SpecialistIdentityCard
+            specialistId={config.specialistId}
+            platform={platform}
+          />
+        ) : (
           <DmStatusCard
             capability={config.dmCapability}
             blockReason={config.blockReason}
             unblockAction={config.unblockAction}
           />
+        )}
 
-          <QuickActionsCard showApprovals={Boolean(config.specialistId)} />
+        {showSpecialistCard && (
+          <DmStatusCard
+            capability={config.dmCapability}
+            blockReason={config.blockReason}
+            unblockAction={config.unblockAction}
+          />
+        )}
 
-          {connected === true && (
-            <Card className="border-border-light">
-              <CardContent className="flex items-center gap-2 py-3">
-                <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
-                <span className="text-sm text-foreground">
-                  Account connected
-                </span>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {config.specialistId && (
+          <SpecialistRecentWork
+            specialistId={config.specialistId}
+            limit={5}
+          />
+        )}
+
+        <QuickActionsCard showApprovals={Boolean(config.specialistId)} />
       </div>
+
+      {/* ─── Recent posts (full width) ─────────────────────────────────── */}
+      <RecentPostsList platform={platform} account={headerAccount} />
+
+      {connected === true && (
+        <Card className="border-border-light">
+          <CardContent className="flex items-center gap-2 py-3">
+            <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
+            <span className="text-sm text-foreground">
+              Account connected
+            </span>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
