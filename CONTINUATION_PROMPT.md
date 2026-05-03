@@ -1,7 +1,58 @@
 # SalesVelocity.ai — Full-Orchestration Continuation Prompt
 
-> **Updated:** April 30, 2026 (afternoon — YC pre-submission walkthrough in flight, see top section below).
+> **Updated:** May 3, 2026 — social posting bug fix + Social Hub duplicate-tab fix shipped (see top section).
+> **Earlier session updated:** April 30, 2026 (afternoon — YC pre-submission walkthrough, preserved below).
 > **Earlier session updated:** April 29, 2026 (evening, fake-AI sweep — preserved below for context).
+
+---
+
+# 🛠️ SESSION — Social posting fix + duplicate header (May 3, 2026)
+
+## What this session was
+The user tried to record a demo on the live site and Jasper's social posting was broken — Mission Control reported "complete" in 2.2 seconds with nothing actually posted to any platform. Investigation surfaced an architectural gap: the Marketing Manager's `executeSinglePlatformPost` was generating drafts + image but never calling the platform API. Two-step plan resolution code existed (`step_1_output_primaryPost`) but `propose_mission_plan`'s description forbade `social_post` as a step, so Jasper couldn't ever produce the working 2-step shape.
+
+## What got fixed (committed `4c620a67` and `07f8b329`)
+
+**1. Marketing Manager actually publishes now** (`src/lib/agents/marketing/manager.ts`)
+- `executeSinglePlatformPost` now calls `autonomous-posting-agent.executeAction({ type: 'POST' })` after the draft+image step. Returns `published: true` + `publishedActionId` + `publishedPlatformActionId` on success; returns `FAILED` with `publishError` on failure (kills silent-success-with-nothing-posted).
+- New `executeMultiPlatformPost` method loops the single-platform path per platform and aggregates results. Triggered when `delegate_to_marketing` receives `platforms: [...]` array OR `platform: "all"`. `"all"` expands to active connected accounts via `SocialAccountService.listAccounts()`.
+
+**2. `delegate_to_marketing` accepts a `platforms` array** (`src/lib/orchestrator/jasper-tools.ts:1630`)
+- New `platforms: string[]` parameter alongside the existing `platform: string`. Marketing payload passes through.
+
+**3. Bluesky image auto-compression** (`src/lib/integrations/bluesky-service.ts:uploadBlobFromUrl`)
+- Bluesky's PDS rejects blobs > 2 MB. Fix auto-resizes JPEG/PNG/WebP via Sharp (1600px max width, JPEG quality 85→40 stepdown with mozjpeg) when bytes exceed 1.9 MB safe margin. Operator no longer has to know per-platform image limits.
+
+**4. Social Hub duplicate tab row** (`src/app/(dashboard)/social/page.tsx`)
+- Both the layout AND the page were rendering `<SubpageNav items={SOCIAL_TABS} />`. Removed the page-level one (layout already renders for every social subroute).
+
+## Verified live
+End-to-end on local: a single "Create a social media post for Summer 2026 kickoff" prompt produced a multi-platform mission running ~92 seconds (real work, vs. the prior 2.2 s silent fake-complete). Real tweet on @SalesVelocityAi X account, real toot on Mastodon. Bluesky failed in this run on the 2 MB blob limit — that's what triggered the compression patch.
+
+## Shortcuts taken (named per standing rule)
+- The Bluesky compression patch was committed without retesting after Sharp resize was added — only the architectural fix was end-to-end verified.
+- The `platform: "all"` expansion path was code-added but not specifically exercised in the test (Jasper picked an explicit `platforms: [twitter, bluesky, mastodon]` array on his own).
+
+## Known bugs surfaced but NOT fixed (next session)
+- **`scan_leads` Apollo filters silently dropped.** Every query returns the same 25 companies regardless of `industry`/`keywords`/`location`. `{industry:"Lawncare"}`, `{industry:"Landscaping"}`, `{industry:"Environmental Services"}` all return identical results with `totalResults=17,546,296`. Param mapping in `scan_leads → Apollo` API call is broken.
+- **Two missing composite Firestore indexes** (one-click create-index URLs in error logs):
+  - `audience_snapshots(accountId, platform, dayKey, __name__)` — blocks `/api/social/platforms/[platform]/audience` GET
+  - `missions(metadata.platform, status, createdAt)` — blocks `findPendingMissionForPlatform`
+- **`/social/linkedin` route doesn't exist** — should 404 but throws a React `useContext` 500 instead. Layout chain has a hooks issue when matched against a missing route.
+
+## Demo video for YC
+- Three options surfaced; user did not pick before time ran out: (1) skip demo (it's optional in the YC form), (2) Mission Control walkthrough (safest, shows unique IP), (3) social posting demo (now possible after this session's fix). Open question for next session: did the user submit YC without a demo, or did they record one? Update memory accordingly.
+
+## Files committed
+- `src/lib/agents/marketing/manager.ts` (+233 lines: publish path + multi-platform method)
+- `src/lib/integrations/bluesky-service.ts` (+46 lines: compression)
+- `src/lib/orchestrator/jasper-tools.ts` (+12 lines: platforms array)
+- `src/app/(dashboard)/social/page.tsx` (-4 lines: duplicate SubpageNav removed)
+
+## Test commands for next session
+- `npx tsc --noEmit` — should be clean
+- `npx eslint <files>` — should be clean
+- Live test: type "post about [X] to my connected platforms" in Jasper chat, expect `executeMultiPlatformPost` log + per-platform `published=true` results
 
 ---
 
