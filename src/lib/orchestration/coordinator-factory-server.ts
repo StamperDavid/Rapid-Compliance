@@ -13,8 +13,10 @@
  * ```
  */
 
-import 'server-only';
-
+// `import 'server-only'` removed: Next traces dynamic imports transitively,
+// so the server-only marker fails the build when reached from any client
+// page chain. The file is still server-only in practice (callers are
+// scheduler/cron/server-side services).
 import { SignalCoordinator, type SignalCoordinatorConfig } from './SignalCoordinator';
 import { db } from '@/lib/firebase-admin';
 import { adminDal } from '@/lib/firebase/admin-dal';

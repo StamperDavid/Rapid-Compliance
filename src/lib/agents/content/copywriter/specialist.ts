@@ -605,6 +605,28 @@ async function executeEmailSequence(
     if (req.trigger) { obj.trigger = req.trigger; }
     if (req.cadence) { obj.cadence = req.cadence; }
     obj.generatedAt = new Date(now).toISOString();
+
+    // Graceful truncation of length-bounded fields. The LLM occasionally
+    // overshoots the prompt's stated limits (e.g., previewText > 120
+    // chars) which previously crashed the entire mission step. Truncate
+    // here before validation so the mission completes; the resulting
+    // copy is still on-brand because we trim mid-sentence with an
+    // ellipsis at the limit boundary.
+    if (Array.isArray(obj.emails)) {
+      for (const raw of obj.emails) {
+        if (!raw || typeof raw !== 'object') { continue; }
+        const email = raw as Record<string, unknown>;
+        if (typeof email.previewText === 'string' && email.previewText.length > 120) {
+          email.previewText = `${email.previewText.slice(0, 117).trimEnd()  }…`;
+        }
+        if (typeof email.subjectLine === 'string' && email.subjectLine.length > 80) {
+          email.subjectLine = `${email.subjectLine.slice(0, 77).trimEnd()  }…`;
+        }
+        if (typeof email.cta === 'string' && email.cta.length > 60) {
+          email.cta = `${email.cta.slice(0, 57).trimEnd()  }…`;
+        }
+      }
+    }
   }
 
   const result = EmailSequenceResultSchema.safeParse(parsed);
