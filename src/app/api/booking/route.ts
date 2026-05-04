@@ -304,6 +304,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Try to create Google Calendar event (non-blocking). The Zoom join URL
     // is included in the description so the operator (and Google's calendar
     // notifications) surface it alongside the standard booking metadata.
+    //
+    // CRITICAL — capture the returned eventId and persist it on the booking
+    // doc so the cancel route can later delete the calendar event. Previously
+    // the eventId was thrown away, which is why cancel left ghost calendar
+    // events on the operator's Google Calendar.
     void (async () => {
       try {
         const calendarTokenDoc = await AdminFirestoreService.get(getSubCollection('integrations'), 'google-calendar');
@@ -320,7 +325,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             notes ? `Notes: ${notes}` : null,
             zoomJoinUrl ? `\nZoom: ${zoomJoinUrl}` : null,
           ].filter(Boolean).join('\n');
-          await createEvent(
+          const eventResult = await createEvent(
             { access_token: calendarTokens.access_token, refresh_token: calendarTokens.refresh_token },
             'primary',
             {
@@ -330,6 +335,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               end: { dateTime: endTime.toISOString() },
               attendees: [{ email }],
             }
+          );
+          // Persist the calendar event id + calendar id on the booking
+          // doc so the cancel route can find and delete it. Without this
+          // step, cancel cannot remove the ghost calendar entry.
+          await AdminFirestoreService.set(
+            bookingsPath,
+            bookingId,
+            {
+              googleCalendarEventId: eventResult.id,
+              googleCalendarId: 'primary',
+              googleCalendarHtmlLink: eventResult.htmlLink,
+            },
+            true,
           );
         }
       } catch (calError) {
