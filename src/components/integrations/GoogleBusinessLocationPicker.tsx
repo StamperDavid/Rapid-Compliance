@@ -244,16 +244,53 @@ export default function GoogleBusinessLocationPicker({
           </div>
         );
       case 'scope_missing':
+        // The upstream route returns `scope_missing` for any 403 from
+        // Google's GBP APIs. In practice this lumps together four
+        // different setup gaps, so we surface a checklist instead of
+        // the (usually wrong) "missing scope" guess.
         return (
           <div className="space-y-3 py-4">
             <p className="text-sm text-foreground">
-              Google rejected the request because the connected account is missing the
-              <code className="mx-1 px-1 py-0.5 bg-surface-elevated rounded">business.manage</code>
-              scope.
+              Couldn&apos;t load Google Business Profile locations.
             </p>
-            <p className="text-sm text-muted-foreground">
-              Reconnect Google to grant the full scope bundle including Google Business Profile access.
-            </p>
+            <p className="text-sm text-muted-foreground">Common causes:</p>
+            <ol className="text-sm text-muted-foreground space-y-2 list-decimal pl-5">
+              <li>
+                The connected Google account hasn&apos;t created a Business Profile yet — set
+                one up at{' '}
+                <a
+                  href="https://business.google.com/create"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  business.google.com/create
+                </a>
+                .
+              </li>
+              <li>
+                The Business Profile is still pending verification by Google — verify via
+                video or postcard from{' '}
+                <a
+                  href="https://business.google.com/locations"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  business.google.com/locations
+                </a>
+                .
+              </li>
+              <li>
+                The Google Cloud project doesn&apos;t have the Business Profile APIs enabled
+                — see Settings &amp; Sharing in the Google Cloud Console.
+              </li>
+              <li>
+                The connected account doesn&apos;t have permission to manage the listing —
+                ask the listing owner to grant access, or reconnect the correct Google
+                account.
+              </li>
+            </ol>
           </div>
         );
       case 'empty':

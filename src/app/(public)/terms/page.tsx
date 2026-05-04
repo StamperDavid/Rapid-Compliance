@@ -44,12 +44,13 @@ function FallbackContent() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">3. Billing & Payments</h2>
             <p className="text-gray-300 leading-relaxed mb-3">
-              Paid plans are billed monthly based on CRM record usage. All fees are non-refundable except as required
-              by law. We reserve the right to change pricing with 30 days&apos; notice.
+              SalesVelocity.ai is billed at $299 USD per month, flat. All fees are non-refundable except as required
+              by law. We reserve the right to change pricing with 30 days&apos; notice. Fair-use limits apply on
+              storage and outbound volume; see the pricing page for details.
             </p>
             <p className="text-gray-300 leading-relaxed">
               Free trials provide full access for 14 days. If you do not cancel before the trial ends, your payment
-              method will be charged for the applicable plan.
+              method will be charged the standard $299/month rate.
             </p>
           </section>
 

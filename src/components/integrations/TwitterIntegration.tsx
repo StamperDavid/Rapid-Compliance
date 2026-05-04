@@ -1,7 +1,19 @@
 'use client';
 
+/**
+ * TwitterIntegration
+ *
+ * X (Twitter) connect card. The platform uses OAuth 1.0a User Context
+ * for posting and DMs because X's free tier rejects OAuth 2.0 App-Only
+ * on write endpoints — and there is no consumer DM API at any tier we
+ * have access to. The previous OAuth 2.0 PKCE button wrote tokens that
+ * were never consumed by any service, so it was misleading dead weight
+ * and was removed. This card is now manual-credentials-only (Client ID +
+ * Client Secret + Access Token + Access Token Secret from the X Developer
+ * Portal).
+ */
+
 import React, { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
@@ -26,13 +38,14 @@ export default function TwitterIntegration({
   onDisconnect,
   onUpdate: _onUpdate,
 }: TwitterIntegrationProps) {
-  const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
-  const [showManual, setShowManual] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ valid: boolean; message?: string } | null>(null);
 
+  // OAuth 1.0a User Context credentials. Bearer token is optional (used
+  // for App-Only public reads only). The free-tier write endpoints
+  // require the consumer key/secret + access token/secret pair.
   const [manualCreds, setManualCreds] = useState({
     clientId: '',
     clientSecret: '',
@@ -54,12 +67,6 @@ export default function TwitterIntegration({
   const primaryColor = typeof window !== 'undefined'
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
     : 'var(--color-primary)';
-
-  const handleOAuthConnect = () => {
-    setIsConnecting(true);
-    const userId = user?.id ?? 'anonymous';
-    window.location.href = `/api/social/oauth/auth/twitter?userId=${userId}`;
-  };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +93,6 @@ export default function TwitterIntegration({
       const data = await response.json() as { success: boolean; account?: TwitterAccount };
       if (data.success && data.account) {
         _onConnect({ ...data.account, status: 'active' });
-        setShowManual(false);
       }
     } catch (error) {
       logger.error('Failed to connect Twitter manually', error instanceof Error ? error : new Error(String(error)));
@@ -160,73 +166,36 @@ export default function TwitterIntegration({
           </div>
         </div>
 
-        <button
-          onClick={handleOAuthConnect}
-          disabled={isConnecting}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: isConnecting ? 'var(--color-border-strong)' : '#000',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: isConnecting ? 'not-allowed' : 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            marginBottom: '0.75rem',
-          }}
-        >
-          {isConnecting ? 'Connecting...' : 'Connect with X'}
-        </button>
-
-        <button
-          onClick={() => setShowManual(!showManual)}
-          style={{
-            width: '100%',
-            padding: '0.5rem',
-            backgroundColor: 'transparent',
-            color: 'var(--color-text-disabled)',
-            border: `1px solid ${borderColor}`,
-            borderRadius: '0.375rem',
-            cursor: 'pointer',
-            fontSize: '0.75rem',
-          }}
-        >
-          {showManual ? 'Hide Manual Setup' : 'Manual Setup (API Keys)'}
-        </button>
-
-        {showManual && (
-          <form onSubmit={(e) => void handleManualSubmit(e)} style={{ marginTop: '1rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <input placeholder="Account Name" required value={manualCreds.accountName} onChange={(e) => setManualCreds({ ...manualCreds, accountName: e.target.value })} style={inputStyle} />
-              <input placeholder="@handle" required value={manualCreds.handle} onChange={(e) => setManualCreds({ ...manualCreds, handle: e.target.value })} style={inputStyle} />
-              <input placeholder="Client ID" required value={manualCreds.clientId} onChange={(e) => setManualCreds({ ...manualCreds, clientId: e.target.value })} style={inputStyle} />
-              <input placeholder="Client Secret" required type="password" value={manualCreds.clientSecret} onChange={(e) => setManualCreds({ ...manualCreds, clientSecret: e.target.value })} style={inputStyle} />
-              <input placeholder="Access Token" required type="password" value={manualCreds.accessToken} onChange={(e) => setManualCreds({ ...manualCreds, accessToken: e.target.value })} style={inputStyle} />
-              <input placeholder="Refresh Token (optional)" type="password" value={manualCreds.refreshToken} onChange={(e) => setManualCreds({ ...manualCreds, refreshToken: e.target.value })} style={inputStyle} />
-              <input placeholder="Bearer Token (optional)" type="password" value={manualCreds.bearerToken} onChange={(e) => setManualCreds({ ...manualCreds, bearerToken: e.target.value })} style={inputStyle} />
-              <button
-                type="submit"
-                disabled={isConnecting}
-                style={{
-                  padding: '0.625rem',
-                  backgroundColor: primaryColor,
-                  color: 'var(--color-text-primary)',
-                  border: 'none',
-                  borderRadius: '0.375rem',
-                  cursor: isConnecting ? 'not-allowed' : 'pointer',
-                  fontSize: '0.8125rem',
-                  fontWeight: '600',
-                }}
-              >
-                {isConnecting ? 'Saving...' : 'Save Credentials'}
-              </button>
-            </div>
-          </form>
-        )}
+        <form onSubmit={(e) => void handleManualSubmit(e)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <input placeholder="Account Name" required value={manualCreds.accountName} onChange={(e) => setManualCreds({ ...manualCreds, accountName: e.target.value })} style={inputStyle} />
+            <input placeholder="@handle" required value={manualCreds.handle} onChange={(e) => setManualCreds({ ...manualCreds, handle: e.target.value })} style={inputStyle} />
+            <input placeholder="Client ID (Consumer Key)" required value={manualCreds.clientId} onChange={(e) => setManualCreds({ ...manualCreds, clientId: e.target.value })} style={inputStyle} />
+            <input placeholder="Client Secret (Consumer Secret)" required type="password" value={manualCreds.clientSecret} onChange={(e) => setManualCreds({ ...manualCreds, clientSecret: e.target.value })} style={inputStyle} />
+            <input placeholder="Access Token" required type="password" value={manualCreds.accessToken} onChange={(e) => setManualCreds({ ...manualCreds, accessToken: e.target.value })} style={inputStyle} />
+            <input placeholder="Access Token Secret (optional)" type="password" value={manualCreds.refreshToken} onChange={(e) => setManualCreds({ ...manualCreds, refreshToken: e.target.value })} style={inputStyle} />
+            <input placeholder="Bearer Token (optional, App-Only reads)" type="password" value={manualCreds.bearerToken} onChange={(e) => setManualCreds({ ...manualCreds, bearerToken: e.target.value })} style={inputStyle} />
+            <button
+              type="submit"
+              disabled={isConnecting}
+              style={{
+                padding: '0.625rem',
+                backgroundColor: primaryColor,
+                color: 'var(--color-text-primary)',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: isConnecting ? 'not-allowed' : 'pointer',
+                fontSize: '0.8125rem',
+                fontWeight: '600',
+              }}
+            >
+              {isConnecting ? 'Saving...' : 'Save Credentials'}
+            </button>
+          </div>
+        </form>
 
         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem', textAlign: 'center' }}>
-          OAuth connects securely via X. Manual setup requires API keys from the X Developer Portal.
+          X requires manual API keys from the X Developer Portal — OAuth 2.0 PKCE doesn&apos;t cover write endpoints on the free tier.
         </p>
 
         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem', textAlign: 'center' }}>

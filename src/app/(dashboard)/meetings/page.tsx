@@ -145,8 +145,17 @@ export default function MeetingsPage() {
     }
   }, [confirmDelete, load]);
 
+  // Hide cancelled meetings from the list entirely. The Firestore record
+  // is preserved for audit (the cancelledAt timestamp lets us reconstruct
+  // the cancel history if needed), but the UI surfaces only meetings
+  // that are still operationally relevant: upcoming/scheduled and past
+  // completed/no-shows. Cancelled = no longer relevant for the operator
+  // to act on.
   const upcoming = meetings.filter(m => (m.status ?? 'scheduled').toLowerCase() === 'scheduled');
-  const other = meetings.filter(m => (m.status ?? 'scheduled').toLowerCase() !== 'scheduled');
+  const other = meetings.filter(m => {
+    const s = (m.status ?? 'scheduled').toLowerCase();
+    return s !== 'scheduled' && s !== 'cancelled';
+  });
 
   return (
     <div className="p-8 space-y-6">
@@ -253,14 +262,16 @@ function MeetingRow({ m, pendingId, confirmCancel, confirmDelete, onCancel, onDe
   const isDeleteArmed = confirmDelete === m.id;
 
   return (
-    <div className="p-4 flex items-center justify-between gap-4">
+    <div className={`p-4 flex items-center justify-between gap-4 ${isCancelled ? 'opacity-60' : ''}`}>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-1">
-          <span className="font-semibold text-foreground truncate">{m.name ?? 'Unknown attendee'}</span>
+          <span className={`font-semibold text-foreground truncate ${isCancelled ? 'line-through' : ''}`}>
+            {m.name ?? 'Unknown attendee'}
+          </span>
           <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full border ${pill.className}`}>
             {pill.label}
           </span>
-          {m.zoomJoinUrl && (
+          {m.zoomJoinUrl && !isCancelled && (
             <a
               href={m.zoomJoinUrl}
               target="_blank"

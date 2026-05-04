@@ -364,7 +364,7 @@ export async function findAvailableSlots(
 const SALESVELOCITY_CALENDAR_NAME = 'SalesVelocity.ai';
 const CALENDAR_ID_CACHE_COLLECTION = 'connectedAccounts';
 const CALENDAR_ID_CACHE_DOC = 'google';
-const CALENDAR_EVENT_MAPPINGS_COLLECTION = 'calendarEventMappings';
+export const CALENDAR_EVENT_MAPPINGS_COLLECTION = 'calendarEventMappings';
 
 /**
  * Get or create the dedicated "SalesVelocity.ai" calendar on the
@@ -540,10 +540,19 @@ export async function upsertSalesVelocityCalendarEvent(
     return null;
   }
 
-  const calendarId = await getOrCreateSalesVelocityCalendar();
-  if (!calendarId) {
-    return null;
-  }
+  // Per the architectural rule (operator's connected Gmail is a work-only
+  // account, no personal events to drown), every platform-scheduled
+  // action writes directly to the operator's PRIMARY Google Calendar.
+  // Color-coding by category is preserved via Google's `colorId` so the
+  // operator can still visually segment social vs email vs missions in
+  // the Day/Week view.
+  //
+  // Older events that were created when this helper used a dedicated
+  // "SalesVelocity.ai" sub-calendar are still patchable / deletable —
+  // the per-event mapping doc records `calendarId` at insert time, so
+  // patch + delete code paths target whichever calendar each event
+  // originally landed on. New events all go to 'primary'.
+  const calendarId = 'primary';
 
   const startIso = input.startIso;
   const endIso = input.endIso ?? new Date(new Date(startIso).getTime() + 30 * 60 * 1000).toISOString();

@@ -1,14 +1,14 @@
 {
   "$schema": "SWARM_REGISTRY_V2",
-  "lastAudit": "2026-02-27",
-  "totalAgents": 57,
+  "lastAudit": "2026-05-04",
+  "totalAgents": 58,
   "orchestrators": 1,
   "managers": 10,
-  "specialists": 46,
-  "_note": "Authoritative source is src/lib/agents/ directory — 1 Jasper + 10 manager.ts files + 46 specialist.ts files = 57 total. Code-verified April 15, 2026.",
-  "functionalAgents": 57,
+  "specialists": 47,
+  "_note": "Authoritative source is src/lib/agents/ directory — 1 Jasper + 10 manager.ts files + 47 specialist.ts files = 58 total. INSIGHTS_ANALYST added May 4, 2026.",
+  "functionalAgents": 58,
   "ghostAgents": 0,
-  "assessment": "FULL INVENTORY COMPLETE - 57 agents (1 Jasper orchestrator + 10 managers + 46 specialists) all FUNCTIONAL with real LLM backends and Firestore Golden Masters. Code-verified from find src/lib/agents -name specialist.ts and manager.ts.",
+  "assessment": "FULL INVENTORY COMPLETE - 58 agents (1 Jasper orchestrator + 10 managers + 47 specialists) all FUNCTIONAL with real LLM backends and Firestore Golden Masters.",
 
   "hierarchy": {
     "MASTER_ORCHESTRATOR": {
@@ -27,8 +27,8 @@
       "level": "L2",
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/intelligence/manager.ts",
-      "specialists": ["SCRAPER_SPECIALIST", "COMPETITOR_RESEARCHER", "TECHNOGRAPHIC_SCOUT", "SENTIMENT_ANALYST", "TREND_SCOUT"],
-      "note": "Dynamic orchestration engine with parallel execution, graceful degradation. All 5 specialists functional."
+      "specialists": ["SCRAPER_SPECIALIST", "COMPETITOR_RESEARCHER", "TECHNOGRAPHIC_SCOUT", "SENTIMENT_ANALYST", "TREND_SCOUT", "INSIGHTS_ANALYST"],
+      "note": "Dynamic orchestration engine with parallel execution, graceful degradation. All 6 specialists functional."
     },
     "MARKETING_MANAGER": {
       "level": "L2",
@@ -134,6 +134,14 @@
       "reportsTo": "INTELLIGENCE_MANAGER",
       "capabilities": ["market_trends", "emerging_patterns", "signal_detection", "opportunity_identification"],
       "verdict": "HIRED"
+    },
+    "INSIGHTS_ANALYST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/intelligence/insights-analyst/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["platform_activity_review", "setup_gap_detection", "proactive_recommendation_generation", "mission_prompt_drafting"],
+      "verdict": "HIRED",
+      "note": "LLM-backed proactive analyst. Reviews 7-day platform-activity snapshot, returns setupItems[] (with stable keys) + insights[] (each with suggestedMissionPrompt for Jasper). Recommends only — never executes."
     },
     "TIKTOK_EXPERT": {
       "status": "FUNCTIONAL",

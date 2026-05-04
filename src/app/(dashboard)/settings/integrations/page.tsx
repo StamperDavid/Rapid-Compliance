@@ -10,18 +10,15 @@ import QuickBooksIntegration from '@/components/integrations/QuickBooksIntegrati
 import XeroIntegration from '@/components/integrations/XeroIntegration';
 import StripeIntegration from '@/components/integrations/StripeIntegration';
 import PayPalIntegration from '@/components/integrations/PayPalIntegration';
-import GmailIntegration from '@/components/integrations/GmailIntegration';
-import OutlookIntegration from '@/components/integrations/OutlookIntegration';
-import GoogleCalendarIntegration from '@/components/integrations/GoogleCalendarIntegration';
 import ZoomIntegration from '@/components/integrations/ZoomIntegration';
-import OutlookCalendarIntegration from '@/components/integrations/OutlookCalendarIntegration';
 import SlackIntegration from '@/components/integrations/SlackIntegration';
-import TeamsIntegration from '@/components/integrations/TeamsIntegration';
 import ZapierIntegration from '@/components/integrations/ZapierIntegration';
 import TwitterIntegration from '@/components/integrations/TwitterIntegration';
 import LinkedInIntegration from '@/components/integrations/LinkedInIntegration';
 import SocialPlatformIntegration, { SOCIAL_PLATFORM_CONFIGS } from '@/components/integrations/SocialPlatformIntegration';
-import GoogleSearchConsoleIntegration from '@/components/integrations/GoogleSearchConsoleIntegration';
+import GoogleServicesIntegration from '@/components/integrations/GoogleServicesIntegration';
+import MicrosoftServicesIntegration from '@/components/integrations/MicrosoftServicesIntegration';
+import MetaServicesIntegration from '@/components/integrations/MetaServicesIntegration';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
 import toast from 'react-hot-toast';
@@ -51,6 +48,24 @@ export default function IntegrationsPage() {
   );
   const [integrations, setIntegrations] = useState<Record<string, ConnectedIntegration | null>>({});
   const [socialAccounts, setSocialAccounts] = useState<SocialAccountSummary[]>([]);
+  // Central connected-Google account state. Populated from
+  // /api/integrations/google/status — drives the Connected state for
+  // Gmail, Google Calendar, and Google Search Console cards. The legacy
+  // `integrations/all` map doc isn't written by the central OAuth
+  // callback, so without this read those cards would always show
+  // "Connect" even when the operator has completed OAuth.
+  const [googleConnected, setGoogleConnected] = useState<{
+    connected: boolean;
+    accountEmail?: string;
+  } | null>(null);
+  // Central connected-Microsoft account state. Populated from
+  // /api/integrations/microsoft/status — drives the Connected state for
+  // the unified Microsoft Services card (Outlook Mail + Outlook Calendar
+  // + OneDrive + Teams via one Azure AD OAuth).
+  const [microsoftConnected, setMicrosoftConnected] = useState<{
+    connected: boolean;
+    accountEmail?: string;
+  } | null>(null);
 
   // Handle success/error URL params from OAuth callbacks
   React.useEffect(() => {
@@ -86,6 +101,57 @@ export default function IntegrationsPage() {
     }
   }, [user, authFetch]);
 
+  // Load central-Google connection state. The OAuth callback writes to
+  // organizations/{tenant}/connectedAccounts/google (Admin SDK), which
+  // the client SDK can't read directly under Firestore rules — so we go
+  // through this status endpoint that reads via Admin SDK on the server.
+  const loadGoogleStatus = React.useCallback(async () => {
+    if (!user) { return; }
+    try {
+      const res = await authFetch('/api/integrations/google/status');
+      if (!res.ok) { return; }
+      const body = (await res.json()) as {
+        success: boolean;
+        connected?: boolean;
+        accountEmail?: string;
+      };
+      if (body.success) {
+        setGoogleConnected({
+          connected: body.connected === true,
+          accountEmail: body.accountEmail,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to load google status:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+    }
+  }, [user, authFetch]);
+
+  // Load central-Microsoft connection state. Mirrors loadGoogleStatus —
+  // the OAuth callback writes to organizations/{tenant}/connectedAccounts/microsoft
+  // (Admin SDK), which the client SDK can't read directly under Firestore
+  // rules, so we go through this status endpoint that reads via Admin SDK
+  // on the server.
+  const loadMicrosoftStatus = React.useCallback(async () => {
+    if (!user) { return; }
+    try {
+      const res = await authFetch('/api/integrations/microsoft/status');
+      if (!res.ok) { return; }
+      const body = (await res.json()) as {
+        success: boolean;
+        connected?: boolean;
+        accountEmail?: string;
+      };
+      if (body.success) {
+        setMicrosoftConnected({
+          connected: body.connected === true,
+          accountEmail: body.accountEmail,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to load microsoft status:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+    }
+  }, [user, authFetch]);
+
   React.useEffect(() => {
 
     // Load saved integrations from Firestore
@@ -113,7 +179,14 @@ export default function IntegrationsPage() {
     // integrations map alone doesn't reflect real connection state for the
     // 14 social platforms.
     void loadSocialAccounts();
-  }, [user, searchParams, loadSocialAccounts]);
+    // Load central Google connection state — drives the Connected
+    // indicator on the Gmail / Google Calendar / GSC cards.
+    void loadGoogleStatus();
+    // Load central Microsoft connection state — drives the Connected
+    // indicator on the unified Microsoft Services card (covers Outlook
+    // Mail, Outlook Calendar, OneDrive, and Teams via one Azure AD OAuth).
+    void loadMicrosoftStatus();
+  }, [user, searchParams, loadSocialAccounts, loadGoogleStatus, loadMicrosoftStatus]);
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
   const textColor = theme?.colors?.text?.primary || 'var(--color-text-primary)';
@@ -226,21 +299,30 @@ export default function IntegrationsPage() {
       ],
     },
     {
-      id: 'email',
-      name: 'Email',
-      icon: '📧',
+      // Workspace accounts — Google + Microsoft side-by-side. Each is a
+      // unified card that, with one OAuth, grants access to that
+      // provider's full suite (Gmail/Calendar/Drive/YouTube/GBP/Analytics/
+      // Search Console/Ads on Google; Outlook Mail/Outlook Calendar/
+      // OneDrive/Teams on Microsoft). Grouped together so the 2-col grid
+      // fills cleanly instead of each leaving a ghost empty cell.
+      id: 'workspace',
+      name: 'Workspace Accounts',
+      icon: '🔐',
       integrations: [
-        { id: 'gmail', component: GmailIntegration },
-        { id: 'outlook', component: OutlookIntegration },
+        { id: 'google-services', component: null },
+        { id: 'microsoft-services', component: null },
       ],
     },
     {
-      id: 'calendar',
-      name: 'Calendar',
-      icon: '📅',
+      // Meta — single unified card that covers Facebook, Instagram,
+      // Threads, and WhatsApp Business through one OAuth. Sits between
+      // Workspace Accounts and Communication so the consolidation
+      // pattern (Google + Microsoft + Meta) is visually adjacent.
+      id: 'meta',
+      name: 'Meta',
+      icon: '📘',
       integrations: [
-        { id: 'google-calendar', component: GoogleCalendarIntegration },
-        { id: 'outlook-calendar', component: OutlookCalendarIntegration },
+        { id: 'meta-services', component: null },
       ],
     },
     {
@@ -250,7 +332,6 @@ export default function IntegrationsPage() {
       integrations: [
         { id: 'zoom', component: ZoomIntegration },
         { id: 'slack', component: SlackIntegration },
-        { id: 'teams', component: TeamsIntegration },
       ],
     },
     {
@@ -279,14 +360,6 @@ export default function IntegrationsPage() {
             );
           },
         })),
-      ],
-    },
-    {
-      id: 'seo',
-      name: 'SEO Tools',
-      icon: '🔍',
-      integrations: [
-        { id: 'google-search-console', component: GoogleSearchConsoleIntegration },
       ],
     },
     {
@@ -330,14 +403,36 @@ export default function IntegrationsPage() {
       // No active social account → card stays "Connect"
       return null;
     }
+
     return integrations[integrationId] ?? null;
   };
 
-  const connectedSocialPlatformCount = socialAccountsByPlatform.size;
+  // Meta sub-platform IDs roll up under one unified card and one OAuth.
+  // Keep them out of the per-platform social count so a user with all
+  // four sub-platforms connected counts as +1 (Meta), not +4.
+  const META_SUB_PLATFORMS = new Set(['facebook', 'instagram', 'threads', 'whatsapp_business']);
+  const connectedSocialPlatformCount = Array.from(socialAccountsByPlatform.keys()).filter(
+    (p) => !META_SUB_PLATFORMS.has(p),
+  ).length;
+  const metaSubConnected = Array.from(socialAccountsByPlatform.keys()).some((p) =>
+    META_SUB_PLATFORMS.has(p),
+  );
+  const connectedMetaCount = metaSubConnected ? 1 : 0;
   const connectedOtherCount = Object.entries(integrations).filter(
     ([id, i]) => !SOCIAL_PLATFORM_IDS.has(id) && i?.status === 'active'
   ).length;
-  const connectedCount = connectedSocialPlatformCount + connectedOtherCount;
+  // Central Google connection is one unified card now (covers Gmail,
+  // Calendar, Drive, YouTube, GBP, Analytics, Search Console, Ads).
+  const connectedGoogleCount = googleConnected?.connected === true ? 1 : 0;
+  // Central Microsoft connection is one unified card too (covers Outlook
+  // Mail, Outlook Calendar, OneDrive, Teams).
+  const connectedMicrosoftCount = microsoftConnected?.connected === true ? 1 : 0;
+  const connectedCount =
+    connectedSocialPlatformCount +
+    connectedOtherCount +
+    connectedGoogleCount +
+    connectedMicrosoftCount +
+    connectedMetaCount;
 
   return (
     <div className="p-8 space-y-6">
@@ -411,6 +506,52 @@ export default function IntegrationsPage() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {category.integrations.map(({ id, component: Component }) => {
+                // Unified Google Services card — one OAuth covers Gmail,
+                // Calendar, Drive, YouTube, GBP, Analytics, Search
+                // Console, and Ads. Reads connection state from the
+                // /api/integrations/google/status hook above.
+                if (id === 'google-services') {
+                  return (
+                    <GoogleServicesIntegration
+                      key={id}
+                      connected={googleConnected?.connected === true}
+                      accountEmail={googleConnected?.accountEmail}
+                      onRefresh={() => { void loadGoogleStatus(); }}
+                    />
+                  );
+                }
+                // Unified Microsoft Services card — one Azure AD OAuth
+                // covers Outlook Mail, Outlook Calendar, OneDrive, and
+                // Teams. Reads connection state from
+                // /api/integrations/microsoft/status above.
+                if (id === 'microsoft-services') {
+                  return (
+                    <MicrosoftServicesIntegration
+                      key={id}
+                      connected={microsoftConnected?.connected === true}
+                      accountEmail={microsoftConnected?.accountEmail}
+                      onRefresh={() => { void loadMicrosoftStatus(); }}
+                    />
+                  );
+                }
+                // Unified Meta Services card — one Facebook OAuth covers
+                // Facebook Page, Instagram Business, Threads, and
+                // WhatsApp Business. Connection state is derived from
+                // the social_accounts loaded above (no separate status
+                // endpoint — the OAuth callback writes one row per
+                // sub-platform that the user has provisioned).
+                if (id === 'meta-services') {
+                  return (
+                    <MetaServicesIntegration
+                      key={id}
+                      subAccountsByPlatform={socialAccountsByPlatform}
+                      onRefresh={() => { void loadSocialAccounts(); }}
+                    />
+                  );
+                }
+                if (!Component) {
+                  return null;
+                }
                 const IntegrationComponent = Component as React.ComponentType<{
                   integration: ConnectedIntegration | null;
                   onConnect: (integration: Partial<ConnectedIntegration>) => void;

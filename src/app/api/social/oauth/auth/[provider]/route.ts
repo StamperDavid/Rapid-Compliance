@@ -10,9 +10,8 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { socialProviderSchema } from '@/lib/social/social-oauth-schemas';
+import { oauthRedirectProviderSchema } from '@/lib/social/social-oauth-schemas';
 import {
-  generateTwitterAuthUrl,
   generateLinkedInAuthUrl,
   generateMetaAuthUrl,
   generateGoogleSocialAuthUrl,
@@ -44,10 +43,15 @@ export async function GET(
       return authResult;
     }
 
-    // Validate provider
-    const providerValidation = socialProviderSchema.safeParse(provider);
+    // Validate provider against the OAuth-redirect whitelist. Excludes
+    // X (Twitter) — manual OAuth 1.0a entry only — and the credential-
+    // only platforms (Bluesky, Mastodon, Truth Social, Telegram).
+    const providerValidation = oauthRedirectProviderSchema.safeParse(provider);
     if (!providerValidation.success) {
-      return errors.badRequest(`Unsupported provider: ${provider}. Must be 'twitter', 'linkedin', 'facebook', 'instagram', 'threads', or 'whatsapp_business'.`);
+      if (provider === 'twitter') {
+        return errors.badRequest('X (Twitter) requires manual API key setup, not OAuth. Open Settings > Integrations > X to enter credentials.');
+      }
+      return errors.badRequest(`OAuth not supported for provider: ${provider}. Use Settings > Integrations to enter credentials manually.`);
     }
 
     const validProvider = providerValidation.data;
@@ -62,9 +66,6 @@ export async function GET(
     let authUrl: string;
 
     switch (validProvider) {
-      case 'twitter':
-        authUrl = await generateTwitterAuthUrl(userId);
-        break;
       case 'linkedin':
         authUrl = await generateLinkedInAuthUrl(userId);
         break;

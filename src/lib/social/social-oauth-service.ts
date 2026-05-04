@@ -1,8 +1,15 @@
 /**
  * Social OAuth Service
- * Handles OAuth flows for Twitter (PKCE), LinkedIn, Meta (Facebook/Instagram/Threads/WhatsApp),
- * Google (YouTube + Google Business Profile), TikTok, Reddit, and Pinterest.
- * Generates auth URLs, exchanges codes for tokens, fetches profiles.
+ * Handles OAuth flows for LinkedIn, Meta (Facebook/Instagram/Threads/WhatsApp),
+ * Google (YouTube + Google Business Profile), TikTok, Reddit, Pinterest,
+ * Discord, and Twitch. Generates auth URLs, exchanges codes for tokens,
+ * fetches profiles.
+ *
+ * X (Twitter) is intentionally NOT covered here — the platform uses
+ * OAuth 1.0a manual credential entry because OAuth 2.0 PKCE doesn't cover
+ * free-tier write endpoints. See twitter-service.ts and twitter-dm-service.ts
+ * for the live X path; the previous PKCE helpers in this file wrote tokens
+ * that were never consumed and have been removed.
  */
 
 import crypto from 'crypto';
@@ -14,16 +21,6 @@ import type { SocialOAuthState, SocialOAuthTokenResult, SocialPlatform } from '@
 
 const OAUTH_STATES_PATH = getSubCollection('socialOAuthStates');
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-// ─── PKCE Helpers ─────────────────────────────────────────────────────────────
-
-function generateCodeVerifier(): string {
-  return crypto.randomBytes(32).toString('base64url');
-}
-
-function generateCodeChallenge(verifier: string): string {
-  return crypto.createHash('sha256').update(verifier).digest('base64url');
-}
 
 // ─── State Management ─────────────────────────────────────────────────────────
 
@@ -84,130 +81,6 @@ async function retrieveAndDeleteOAuthState(
     );
     return null;
   }
-}
-
-// ─── Twitter OAuth 2.0 (PKCE) ────────────────────────────────────────────────
-
-export async function generateTwitterAuthUrl(userId: string): Promise<string> {
-  const clientId = process.env.TWITTER_CLIENT_ID;
-  if (!clientId) {
-    throw new Error('TWITTER_CLIENT_ID environment variable is not configured');
-  }
-
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/twitter`;
-  const codeVerifier = generateCodeVerifier();
-  const codeChallenge = generateCodeChallenge(codeVerifier);
-  const state = await storeOAuthState(userId, 'twitter', codeVerifier);
-
-  const scopes = [
-    'tweet.read',
-    'tweet.write',
-    'users.read',
-    'offline.access',
-  ].join('%20');
-
-  return (
-    `https://twitter.com/i/oauth2/authorize` +
-    `?response_type=code` +
-    `&client_id=${clientId}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${scopes}` +
-    `&state=${state}` +
-    `&code_challenge=${codeChallenge}` +
-    `&code_challenge_method=S256`
-  );
-}
-
-export async function exchangeTwitterCode(
-  code: string,
-  stateToken: string
-): Promise<{ tokens: SocialOAuthTokenResult; stateData: SocialOAuthState }> {
-  const stateData = await retrieveAndDeleteOAuthState(stateToken, 'twitter');
-  if (!stateData) {
-    throw new Error('Invalid or expired OAuth state');
-  }
-
-  const clientId = process.env.TWITTER_CLIENT_ID;
-  const clientSecret = process.env.TWITTER_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error('Twitter OAuth credentials not configured');
-  }
-
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/twitter`;
-
-  const response = await fetch('https://api.twitter.com/2/oauth2/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-    },
-    body: new URLSearchParams({
-      code,
-      grant_type: 'authorization_code',
-      redirect_uri: redirectUri,
-      code_verifier: stateData.codeVerifier ?? '',
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('Twitter token exchange failed', new Error(errorText));
-    throw new Error('Failed to exchange Twitter authorization code');
-  }
-
-  const data = await response.json() as {
-    access_token: string;
-    refresh_token?: string;
-    expires_in?: number;
-    scope?: string;
-  };
-
-  const tokens: SocialOAuthTokenResult = {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    tokenExpiresAt: data.expires_in
-      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
-      : undefined,
-    scope: data.scope,
-  };
-
-  return { tokens, stateData };
-}
-
-export async function fetchTwitterProfile(accessToken: string): Promise<{
-  id: string;
-  name: string;
-  username: string;
-  profileImageUrl?: string;
-}> {
-  const response = await fetch(
-    'https://api.twitter.com/2/users/me?user.fields=profile_image_url,name,username',
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('Twitter profile fetch failed', new Error(errorText));
-    throw new Error('Failed to fetch Twitter profile');
-  }
-
-  const data = await response.json() as {
-    data: {
-      id: string;
-      name: string;
-      username: string;
-      profile_image_url?: string;
-    };
-  };
-
-  return {
-    id: data.data.id,
-    name: data.data.name,
-    username: data.data.username,
-    profileImageUrl: data.data.profile_image_url,
-  };
 }
 
 // ─── LinkedIn OAuth 2.0 ──────────────────────────────────────────────────────

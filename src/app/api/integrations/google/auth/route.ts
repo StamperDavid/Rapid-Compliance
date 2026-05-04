@@ -86,7 +86,15 @@ export async function GET(request: NextRequest) {
       state: `${state}${service === 'gsc' ? ':gsc' : ''}`,
     });
 
-    return NextResponse.redirect(authUrl);
+    // Return the auth URL as JSON instead of issuing a 302 redirect.
+    // Browser-level navigations (window.location.href) do NOT send the
+    // Authorization header that requireAuth above checks — only cookies.
+    // So the integration components fetch this route with authFetch
+    // (which sends the bearer token), get { authUrl } back, and THEN
+    // do window.location.href = authUrl on the client side. This keeps
+    // the requireAuth gate in place while still letting the OAuth
+    // handshake complete.
+    return NextResponse.json({ success: true, authUrl });
   } catch (error: unknown) {
     logger.error('Google OAuth error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/google/auth' });
     return errors.externalService('Google OAuth', error instanceof Error ? error : undefined);

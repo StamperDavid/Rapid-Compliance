@@ -75,19 +75,32 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
+    // When a className is passed, use it verbatim (caller is overriding
+    // the backdrop entirely, e.g. transparent+blur instead of opaque).
+    // Otherwise apply the default opaque-paper backdrop.
     className={cn(
-      "fixed inset-0 bg-surface-paper backdrop-blur-sm",
-      className
+      "fixed inset-0",
+      className ?? "bg-surface-paper backdrop-blur-sm"
     )}
     {...props}
   />
 ))
 DialogOverlay.displayName = "DialogOverlay"
 
+interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  /**
+   * Override the default overlay class. Used to customize backdrop
+   * appearance per-dialog (e.g. transparent + blurred for popups
+   * meant to feel layered over the page rather than replace it).
+   * Defaults to the standard `bg-surface-paper backdrop-blur-sm` overlay.
+   */
+  overlayClassName?: string;
+}
+
 const DialogContent = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, children, ...props }, ref) => {
+  DialogContentProps
+>(({ className, children, overlayClassName, ...props }, ref) => {
   const { setOpen } = useDialog()
   const contentRef = React.useRef<HTMLDivElement | null>(null)
   const previousFocusRef = React.useRef<HTMLElement | null>(null)
@@ -119,7 +132,10 @@ const DialogContent = React.forwardRef<
 
   return (
     <DialogPortal>
-      <DialogOverlay onClick={() => setOpen(false)} />
+      <DialogOverlay
+        onClick={() => setOpen(false)}
+        className={overlayClassName}
+      />
       <div
         ref={(node) => {
           contentRef.current = node;

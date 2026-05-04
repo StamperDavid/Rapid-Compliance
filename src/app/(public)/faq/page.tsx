@@ -92,7 +92,7 @@ const faqItems: FAQItem[] = [
   {
     category: 'Features',
     question: 'Can I integrate with my existing tools?',
-    answer: 'Yes! We integrate with popular tools including Stripe, QuickBooks, Xero, Slack, Zapier, Gmail, Outlook, and more. Enterprise plans also include full API access for custom integrations.'
+    answer: 'Yes! We integrate with popular tools including Stripe, QuickBooks, Xero, Slack, Zapier, Gmail, Outlook, and more. Full API access for custom integrations is included for every customer.'
   },
   {
     category: 'Features',
@@ -102,7 +102,7 @@ const faqItems: FAQItem[] = [
   {
     category: 'Features',
     question: 'Can I white-label the platform?',
-    answer: 'Professional and Enterprise plans include white-labeling. You can customize colors, logos, and branding throughout the platform and customer-facing widgets.'
+    answer: 'Yes — white-labeling is included on the $299/month flat plan. You can customize colors, logos, and branding throughout the platform and customer-facing widgets.'
   },
   
   // Technical
@@ -126,12 +126,12 @@ const faqItems: FAQItem[] = [
   {
     category: 'Support',
     question: 'What support options are available?',
-    answer: 'All plans include email support. Professional plans add priority support with faster response times. Enterprise plans include dedicated account management and phone support.'
+    answer: 'Every customer gets email and chat support included. There’s only one plan — $299/month flat — so support is the same for everyone.'
   },
   {
     category: 'Support',
     question: 'Do you offer onboarding help?',
-    answer: 'Yes! Our guided onboarding wizard walks you through setup. Professional and Enterprise plans include personalized onboarding sessions with our team to ensure you get the most out of the platform.'
+    answer: 'Yes! Our guided onboarding wizard walks you through setup, and the $299/month flat plan includes access to our team for personalized onboarding sessions when you need extra hands.'
   },
 ];
 
