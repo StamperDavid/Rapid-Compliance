@@ -709,6 +709,100 @@ export class TwitterService {
   }
 
   /**
+   * List the brand's followers via GET /2/users/{id}/followers.
+   *
+   * Requires OAuth user-context (1.0a or 2.0). The Free tier returns 403
+   * with `client-not-enrolled-error`; Basic tier (~$100/mo) and above
+   * have access. We surface that explicitly via `tierRestricted: true`
+   * so the UI can render an "upgrade required" notice instead of a
+   * generic "failed to load."
+   *
+   * Pagination: opaque `next_token` from `meta.next_token` returned as
+   * `nextCursor` for the caller to round-trip.
+   */
+  async listFollowers(options: { cursor?: string; maxResults?: number } = {}): Promise<{
+    followers: Array<{
+      handle: string;
+      displayName: string;
+      avatarUrl?: string;
+      bio?: string;
+      profileUrl: string;
+    }>;
+    nextCursor?: string;
+    tierRestricted?: boolean;
+    error?: string;
+  }> {
+    const me = await this.getMe();
+    if (!me.user) {
+      return {
+        followers: [],
+        error: me.error ?? 'Could not load Twitter profile',
+      };
+    }
+
+    const userId = me.user.id;
+    const limit = Math.min(Math.max(options.maxResults ?? 25, 1), 100);
+
+    const params = new URLSearchParams();
+    params.set('max_results', String(limit));
+    params.set('user.fields', 'profile_image_url,description,username,name');
+    if (options.cursor) {
+      params.set('pagination_token', options.cursor);
+    }
+
+    const result = await this.makeRequest<{
+      data?: Array<{
+        id: string;
+        username: string;
+        name: string;
+        profile_image_url?: string;
+        description?: string;
+      }>;
+      meta?: { next_token?: string };
+    }>(
+      `/users/${userId}/followers?${params.toString()}`,
+      { method: 'GET' },
+      true,
+    );
+
+    // Tier-restriction surface — Free tier gets a 403 with one of these
+    // markers. Match generously so the UI shows the right message.
+    if (result.error) {
+      const lower = result.error.toLowerCase();
+      const tierBlocked =
+        lower.includes('client-not-enrolled') ||
+        lower.includes('client not enrolled') ||
+        lower.includes('access') && lower.includes('basic') ||
+        lower.includes('product') && lower.includes('subscription');
+      if (tierBlocked) {
+        return {
+          followers: [],
+          tierRestricted: true,
+          error: 'X v2 followers endpoint requires Basic tier — Free tier returns 403.',
+        };
+      }
+      return { followers: [], error: result.error };
+    }
+
+    if (!result.data) {
+      return { followers: [], error: 'Twitter returned no data for followers' };
+    }
+
+    const followers = (result.data.data ?? []).map((u) => ({
+      handle: u.username,
+      displayName: u.name,
+      avatarUrl: u.profile_image_url,
+      bio: u.description,
+      profileUrl: `https://x.com/${u.username}`,
+    }));
+
+    return {
+      followers,
+      nextCursor: result.data.meta?.next_token,
+    };
+  }
+
+  /**
    * Upload media to Twitter (v1.1 media upload endpoint).
    * Requires OAuth 1.0a User Context — the v1.1 upload endpoint rejects Bearer tokens.
    * Returns media_id_string for use in tweet creation.

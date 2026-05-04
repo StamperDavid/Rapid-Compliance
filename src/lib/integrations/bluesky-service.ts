@@ -67,6 +67,23 @@ export interface BlueskyPostWithImagesRequest {
   langs?: string[];
 }
 
+/**
+ * Normalized Bluesky mention/reply/quote item returned by `pollMentions`.
+ * `uri` + `cid` together form the strong-ref needed to reply to the post.
+ */
+export interface BlueskyMentionItem {
+  uri: string;
+  cid: string;
+  authorDid: string;
+  authorHandle: string;
+  authorDisplayName?: string;
+  reason: 'mention' | 'reply' | 'quote';
+  text: string;
+  indexedAt: string;
+  /** URI of the post that was mentioned/replied-to/quoted (when applicable). */
+  reasonSubject?: string;
+}
+
 // ─── Service ─────────────────────────────────────────────────────────────────
 
 export class BlueskyService {
@@ -441,6 +458,460 @@ export class BlueskyService {
       return (await response.json()) as BlueskyProfile;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * List the brand's notifications via the AT Protocol.
+   *
+   * GET /xrpc/app.bsky.notification.listNotifications
+   *
+   * Filters server-response down to mention/reply/quote items only — likes
+   * and reposts are dropped because the operator-facing inbox is for
+   * conversational engagement, not approval notifications.
+   *
+   * Live-fetched on every call. The mention-inbox UI is operator-driven
+   * (live read on dashboard load + 30s poll) so persistence isn't needed.
+   */
+  async pollMentions(options: { limit?: number } = {}): Promise<{
+    success: boolean;
+    items: BlueskyMentionItem[];
+    error?: string;
+  }> {
+    try {
+      const session = await this.ensureSession();
+      const limit = Math.min(Math.max(options.limit ?? 25, 1), 100);
+
+      const response = await fetch(
+        `${this.pdsUrl}/xrpc/app.bsky.notification.listNotifications?limit=${limit}`,
+        { cache: 'no-store', headers: { Authorization: `Bearer ${session.accessJwt}` } },
+      );
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          success: false,
+          items: [],
+          error: `listNotifications failed: HTTP ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+
+      const data = (await response.json()) as {
+        notifications?: Array<{
+          uri?: string;
+          cid?: string;
+          author?: { did?: string; handle?: string; displayName?: string };
+          reason?: string;
+          reasonSubject?: string;
+          record?: { text?: string };
+          isRead?: boolean;
+          indexedAt?: string;
+        }>;
+      };
+
+      const ALLOWED = new Set(['mention', 'reply', 'quote']);
+      const items: BlueskyMentionItem[] = [];
+
+      for (const n of data.notifications ?? []) {
+        const reason = n.reason ?? '';
+        if (!ALLOWED.has(reason)) { continue; }
+        const text = n.record?.text;
+        if (typeof text !== 'string' || text.length === 0) { continue; }
+        if (!n.uri || !n.author?.did || !n.author.handle) { continue; }
+
+        items.push({
+          uri: n.uri,
+          cid: n.cid ?? '',
+          authorDid: n.author.did,
+          authorHandle: n.author.handle,
+          reason: reason as 'mention' | 'reply' | 'quote',
+          text,
+          indexedAt: n.indexedAt ?? new Date().toISOString(),
+          ...(n.author.displayName ? { authorDisplayName: n.author.displayName } : {}),
+          ...(n.reasonSubject ? { reasonSubject: n.reasonSubject } : {}),
+        });
+      }
+
+      return { success: true, items };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[BlueskyService] pollMentions failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { success: false, items: [], error: msg };
+    }
+  }
+
+  /**
+   * Reply to a Bluesky post. Requires the parent post's `uri` and `cid`
+   * (both returned from `pollMentions`). The AT Protocol reply embed needs
+   * BOTH a `root` and `parent` strong-ref — when replying to a top-level
+   * mention/reply, root === parent. Threading deeper than one level would
+   * require fetching the parent's own reply ref to find the true root,
+   * which is out of scope for the manual mention-inbox use case.
+   */
+  async replyToPost(input: {
+    parentUri: string;
+    parentCid: string;
+    text: string;
+    langs?: string[];
+  }): Promise<BlueskyPostResponse> {
+    const text = input.text.trim();
+    if (!text) { return { success: false, error: 'text is required' }; }
+    if (text.length > 300) {
+      return { success: false, error: `text is ${text.length} chars; Bluesky post limit is 300` };
+    }
+    if (!input.parentUri || !input.parentCid) {
+      return { success: false, error: 'parentUri and parentCid are required' };
+    }
+
+    try {
+      const session = await this.ensureSession();
+      const parentRef = { uri: input.parentUri, cid: input.parentCid };
+      const record = {
+        $type: 'app.bsky.feed.post',
+        text,
+        langs: input.langs ?? ['en'],
+        createdAt: new Date().toISOString(),
+        // For top-level mentions/replies, root === parent.
+        reply: { root: parentRef, parent: parentRef },
+      };
+
+      const response = await fetch(`${this.pdsUrl}/xrpc/com.atproto.repo.createRecord`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessJwt}`,
+        },
+        body: JSON.stringify({
+          repo: session.did || this.config.identifier,
+          collection: 'app.bsky.feed.post',
+          record,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = (await response.json().catch(() => ({}))) as { message?: string };
+        return {
+          success: false,
+          error: errData.message ?? `Bluesky reply failed: ${response.status}`,
+        };
+      }
+
+      const data = (await response.json()) as { uri?: string; cid?: string };
+      return { success: true, uri: data.uri, cid: data.cid };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[BlueskyService] replyToPost failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * List the brand's followers via app.bsky.graph.getFollowers.
+   * Cursor-paginated. Open at the consumer tier — no paid tier needed.
+   */
+  async listFollowers(options: { cursor?: string; limit?: number } = {}): Promise<{
+    followers: Array<{
+      handle: string;
+      displayName: string;
+      avatarUrl?: string;
+      bio?: string;
+      profileUrl: string;
+    }>;
+    nextCursor?: string;
+    error?: string;
+  }> {
+    try {
+      const session = await this.ensureSession();
+      const limit = Math.min(Math.max(options.limit ?? 25, 1), 100);
+      const actor = session.did ?? this.config.identifier;
+      if (!actor) {
+        return { followers: [], error: 'Bluesky session has no actor (did/identifier)' };
+      }
+      const params = new URLSearchParams({ actor, limit: String(limit) });
+      if (options.cursor) {
+        params.set('cursor', options.cursor);
+      }
+
+      const response = await fetch(
+        `${this.pdsUrl}/xrpc/app.bsky.graph.getFollowers?${params.toString()}`,
+        {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${session.accessJwt}` },
+        },
+      );
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          followers: [],
+          error: `getFollowers failed: HTTP ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+
+      const data = (await response.json()) as {
+        followers?: Array<{
+          did?: string;
+          handle?: string;
+          displayName?: string;
+          avatar?: string;
+          description?: string;
+        }>;
+        cursor?: string;
+      };
+
+      const followers = (data.followers ?? [])
+        .filter((f): f is { did: string; handle: string; displayName?: string; avatar?: string; description?: string } =>
+          typeof f.did === 'string' && typeof f.handle === 'string',
+        )
+        .map((f) => ({
+          handle: f.handle,
+          displayName: f.displayName ?? f.handle,
+          avatarUrl: f.avatar,
+          bio: f.description,
+          profileUrl: `https://bsky.app/profile/${f.handle}`,
+        }));
+
+      return {
+        followers,
+        nextCursor: data.cursor,
+      };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[BlueskyService] listFollowers failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { followers: [], error: msg };
+    }
+  }
+
+  /**
+   * Delete a Bluesky post via com.atproto.repo.deleteRecord. The `uri`
+   * input is the AT URI (`at://did:.../app.bsky.feed.post/{rkey}`); we
+   * extract the rkey for the deleteRecord call. Idempotent on the
+   * platform — deleting an already-deleted record returns success.
+   */
+  async deletePost(uri: string): Promise<{ success: boolean; error?: string }> {
+    if (!uri.startsWith('at://')) {
+      return { success: false, error: `deletePost expects an AT URI, got: ${uri.slice(0, 80)}` };
+    }
+    const rkey = uri.split('/').pop();
+    if (!rkey) {
+      return { success: false, error: `Could not extract rkey from URI: ${uri}` };
+    }
+
+    try {
+      const session = await this.ensureSession();
+      const response = await fetch(`${this.pdsUrl}/xrpc/com.atproto.repo.deleteRecord`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessJwt}`,
+        },
+        body: JSON.stringify({
+          repo: session.did || this.config.identifier,
+          collection: 'app.bsky.feed.post',
+          rkey,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          success: false,
+          error: `deletePost failed: HTTP ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+      return { success: true };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[BlueskyService] deletePost failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Resolve the CID for a Bluesky post URI. AT Protocol replies + reposts
+   * + quote-posts all need both the uri AND cid of the subject post; many
+   * stored social-post docs only carry the uri (we didn't always capture
+   * the cid at publish time). This helper hits com.atproto.repo.getRecord
+   * to fetch the current cid on demand.
+   */
+  async getRecordCid(uri: string): Promise<{ cid?: string; error?: string }> {
+    if (!uri.startsWith('at://')) {
+      return { error: `getRecordCid expects an AT URI, got: ${uri.slice(0, 80)}` };
+    }
+    // at://did:plc:.../app.bsky.feed.post/{rkey}
+    const parts = uri.replace('at://', '').split('/');
+    if (parts.length < 3) {
+      return { error: `Could not parse AT URI: ${uri}` };
+    }
+    const [repo, collection, rkey] = parts as [string, string, string];
+
+    try {
+      const session = await this.ensureSession();
+      const params = new URLSearchParams({ repo, collection, rkey });
+      const response = await fetch(
+        `${this.pdsUrl}/xrpc/com.atproto.repo.getRecord?${params.toString()}`,
+        {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${session.accessJwt}` },
+        },
+      );
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          error: `getRecord failed: HTTP ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+
+      const data = (await response.json()) as { cid?: string };
+      if (!data.cid) {
+        return { error: 'getRecord returned no cid' };
+      }
+      return { cid: data.cid };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[BlueskyService] getRecordCid failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { error: msg };
+    }
+  }
+
+  /**
+   * Quote-post: create a new post that embeds the subject post via
+   * app.bsky.embed.record. The operator's commentary is the new post's
+   * text; the embedded subject is the strong-ref { uri, cid }.
+   */
+  async quotePost(input: {
+    text: string;
+    subjectUri: string;
+    subjectCid: string;
+  }): Promise<{ success: boolean; uri?: string; cid?: string; error?: string }> {
+    const text = input.text.trim();
+    if (!text) {
+      return { success: false, error: 'text is required for quote-post' };
+    }
+    if (text.length > 300) {
+      return { success: false, error: `text is ${text.length} chars; Bluesky post limit is 300` };
+    }
+    if (!input.subjectUri || !input.subjectCid) {
+      return { success: false, error: 'subjectUri and subjectCid are required' };
+    }
+
+    try {
+      const session = await this.ensureSession();
+      const record = {
+        $type: 'app.bsky.feed.post',
+        text,
+        langs: ['en'],
+        createdAt: new Date().toISOString(),
+        embed: {
+          $type: 'app.bsky.embed.record',
+          record: { uri: input.subjectUri, cid: input.subjectCid },
+        },
+      };
+
+      const response = await fetch(`${this.pdsUrl}/xrpc/com.atproto.repo.createRecord`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessJwt}`,
+        },
+        body: JSON.stringify({
+          repo: session.did || this.config.identifier,
+          collection: 'app.bsky.feed.post',
+          record,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = (await response.json().catch(() => ({}))) as { message?: string };
+        return {
+          success: false,
+          error: errData.message ?? `Bluesky quote-post failed: ${response.status}`,
+        };
+      }
+
+      const data = (await response.json()) as { uri?: string; cid?: string };
+      return { success: true, uri: data.uri, cid: data.cid };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[BlueskyService] quotePost failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Repost (no-commentary share): writes a record of type
+   * app.bsky.feed.repost referencing the subject post. The subject
+   * appears in the brand's feed as a "reposted by" entry.
+   */
+  async repost(input: {
+    subjectUri: string;
+    subjectCid: string;
+  }): Promise<{ success: boolean; uri?: string; cid?: string; error?: string }> {
+    if (!input.subjectUri || !input.subjectCid) {
+      return { success: false, error: 'subjectUri and subjectCid are required' };
+    }
+
+    try {
+      const session = await this.ensureSession();
+      const record = {
+        $type: 'app.bsky.feed.repost',
+        subject: { uri: input.subjectUri, cid: input.subjectCid },
+        createdAt: new Date().toISOString(),
+      };
+
+      const response = await fetch(`${this.pdsUrl}/xrpc/com.atproto.repo.createRecord`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessJwt}`,
+        },
+        body: JSON.stringify({
+          repo: session.did || this.config.identifier,
+          collection: 'app.bsky.feed.repost',
+          record,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = (await response.json().catch(() => ({}))) as { message?: string };
+        return {
+          success: false,
+          error: errData.message ?? `Bluesky repost failed: ${response.status}`,
+        };
+      }
+
+      const data = (await response.json()) as { uri?: string; cid?: string };
+      return { success: true, uri: data.uri, cid: data.cid };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[BlueskyService] repost failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { success: false, error: msg };
     }
   }
 }

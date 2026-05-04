@@ -39,6 +39,19 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PLATFORM_META } from '@/lib/social/platform-config';
 import type { SocialPlatform } from '@/types/social';
+import { FollowerListModal } from '@/components/social/FollowerListModal';
+
+/**
+ * Platforms where the operator can drill into the follower list manually.
+ * Mirrors the `/api/social/platforms/[platform]/followers` allow-list — any
+ * platform NOT in this set renders the Followers tile as a non-clickable
+ * stat (no surface lying about an action that would 501).
+ */
+const FOLLOWER_BROWSING_SUPPORTED: ReadonlySet<SocialPlatform> = new Set([
+  'twitter',
+  'bluesky',
+  'mastodon',
+]);
 
 interface DeltaPair {
   absolute: number;
@@ -110,14 +123,20 @@ function DeltaTile({
   current,
   delta,
   icon,
+  onClick,
+  ariaLabel,
 }: {
   label: string;
   current: number;
   delta: DeltaPair;
   icon: React.ReactNode;
+  /** When provided, renders the tile as a clickable button. */
+  onClick?: () => void;
+  /** Required when onClick is set so screen readers announce the action. */
+  ariaLabel?: string;
 }): React.ReactElement {
-  return (
-    <div className="rounded-lg border border-border-light bg-card p-3">
+  const inner = (
+    <>
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs text-muted-foreground flex items-center gap-1.5">
           {icon}
@@ -130,6 +149,30 @@ function DeltaTile({
         {formatDelta(delta.absolute)}{' '}
         <span className="text-muted-foreground">({formatPct(delta.percentage)})</span>
       </div>
+      {onClick && (
+        <div className="mt-1 text-[10px] uppercase tracking-wide text-primary">
+          Click to browse →
+        </div>
+      )}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel ?? label}
+        className="text-left rounded-lg border border-border-light bg-card p-3 transition hover:border-border-stronger hover:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border-light bg-card p-3">
+      {inner}
     </div>
   );
 }
@@ -210,6 +253,12 @@ export default function AudienceTrajectoryPanel({ platform }: AudienceTrajectory
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<TrajectoryResponse | null>(null);
+  // Tracks whether the operator has popped the FollowerListModal open by
+  // clicking the Followers tile. Only meaningful for platforms in
+  // FOLLOWER_BROWSING_SUPPORTED; non-supported platforms render the tile
+  // as a non-clickable stat.
+  const [followerModalOpen, setFollowerModalOpen] = useState(false);
+  const followerBrowsingEnabled = FOLLOWER_BROWSING_SUPPORTED.has(platform);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -288,6 +337,12 @@ export default function AudienceTrajectoryPanel({ platform }: AudienceTrajectory
                     current={data.current.followersCount}
                     delta={data.improvement.followers}
                     icon={<Users size={12} />}
+                    {...(followerBrowsingEnabled
+                      ? {
+                          onClick: () => setFollowerModalOpen(true),
+                          ariaLabel: `Browse ${data.current.followersCount.toLocaleString()} followers on ${meta.label}`,
+                        }
+                      : {})}
                   />
                   <DeltaTile
                     label="Following"
@@ -312,6 +367,15 @@ export default function AudienceTrajectoryPanel({ platform }: AudienceTrajectory
           </>
         )}
       </CardContent>
+
+      {followerBrowsingEnabled && data?.current && (
+        <FollowerListModal
+          platform={platform}
+          open={followerModalOpen}
+          onOpenChange={setFollowerModalOpen}
+          totalCount={data.current.followersCount}
+        />
+      )}
     </Card>
   );
 }
