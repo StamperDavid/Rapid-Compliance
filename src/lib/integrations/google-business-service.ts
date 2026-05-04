@@ -13,6 +13,8 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getConnectedGoogleTokens } from '@/lib/integrations/google-tokens';
 import { logger } from '@/lib/logger/logger';
 
+const FILE = 'integrations/google-business-service.ts';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface GoogleBusinessConfig {
@@ -148,19 +150,25 @@ export class GoogleBusinessService {
  * YouTube, GBP, GA4, GSC, Ads) read from the same store so the operator
  * doesn't have to re-OAuth per service.
  *
- * Backward-compat fallback: if no central tokens are present (e.g., the
- * operator connected GBP via the legacy per-service flow before the
- * unified consent screen shipped), fall back to
- * `apiKeyService.getServiceKey(PLATFORM_ID, 'google_business')`.
+ * Location selection (preferred): the central connected-Google doc now
+ * also stores the operator's chosen `gbpAccountId` / `gbpLocationId` /
+ * `gbpLocationName`. The location-picker UI at /settings/integrations
+ * writes those fields via POST /api/integrations/google/gbp/select
+ * after listing options via GET /api/integrations/google/gbp/locations.
  *
- * In either path, GBP also requires `accountId` and `locationId` (the
- * specific Business Profile + location to post to). Those are NOT
- * stored in the central token doc — they're per-feature config kept in
- * the legacy `apiKeys.social.google_business` record. The central path
- * therefore reads tokens from the central store and merges in
- * `accountId`/`locationId` from the legacy record. Once a UI exists to
- * pick a GBP location after central OAuth, this merge can be replaced
- * by a dedicated GBP location config doc.
+ * Backward-compat fallback: if no central tokens are present (or the
+ * central tokens are present but no GBP location has been selected yet),
+ * fall back to the legacy `apiKeys.social.google_business` per-service
+ * record. That record may carry its own access token AND/OR an
+ * `accountId`/`locationId` pair from before the unified flow shipped.
+ *
+ * Resolution order in this factory:
+ *   1. Central tokens + central GBP selection → fully central path.
+ *   2. Central tokens + legacy accountId/locationId → mixed path
+ *      (preserved for operators who connected Google centrally but
+ *      never re-picked the GBP location).
+ *   3. Legacy record only (tokens + ids) → pure legacy path.
+ *   4. None → return null.
  */
 export async function createGoogleBusinessService(): Promise<GoogleBusinessService | null> {
   const legacyKeys = (await apiKeyService.getServiceKey(
@@ -170,23 +178,33 @@ export async function createGoogleBusinessService(): Promise<GoogleBusinessServi
 
   const centralTokens = await getConnectedGoogleTokens();
   if (centralTokens) {
-    // Central path — tokens come from the unified Google connection;
-    // accountId/locationId come from the legacy record (still the
-    // canonical home for GBP location selection until a dedicated UI
-    // ships).
+    // Prefer the central GBP selection. Fall through to legacy ids only
+    // if the operator hasn't picked a location via the new UI yet.
+    const accountId = centralTokens.gbpAccountId ?? legacyKeys?.accountId;
+    const locationId = centralTokens.gbpLocationId ?? legacyKeys?.locationId;
+
     const config: GoogleBusinessConfig = {
       accessToken: centralTokens.accessToken,
       refreshToken: centralTokens.refreshToken ?? undefined,
-      accountId: legacyKeys?.accountId,
-      locationId: legacyKeys?.locationId,
+      accountId,
+      locationId,
     };
     const service = new GoogleBusinessService(config);
     if (service.isConfigured()) {
+      logger.debug('[GoogleBusinessService] using central tokens', {
+        file: FILE,
+        usingCentralSelection: Boolean(centralTokens.gbpAccountId && centralTokens.gbpLocationId),
+        usingLegacyIds: !centralTokens.gbpAccountId || !centralTokens.gbpLocationId,
+      });
       return service;
     }
     // Tokens present but no GBP account/location selected yet — fall
     // through and let the legacy path try (it has its own access token
     // we can use if the operator filled out the legacy save flow).
+    logger.info(
+      '[GoogleBusinessService] central tokens present but no GBP location selected — operator must pick a location at /settings/integrations',
+      { file: FILE },
+    );
   }
 
   // Legacy fallback — preserved during migration.
