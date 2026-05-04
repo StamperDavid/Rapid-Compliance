@@ -55,6 +55,26 @@ export interface ConnectedGoogleTokens {
    * resolved (older OAuth flows didn't capture it).
    */
   accountEmail: string;
+  /**
+   * Selected Google Business Profile account name (e.g., "accounts/12345").
+   * Picked by the operator after central OAuth via the GBP location
+   * picker UI. Optional — undefined until the operator has selected a
+   * location. Stored on the same connected-Google doc so the GBP service
+   * factory can read tokens + selection in one round-trip.
+   */
+  gbpAccountId?: string;
+  /**
+   * Selected Google Business Profile location name (e.g., "locations/67890").
+   * Pairs with `gbpAccountId`. Optional — undefined until the operator
+   * has selected a location.
+   */
+  gbpLocationId?: string;
+  /**
+   * Display name of the selected GBP location (e.g., "SalesVelocity HQ").
+   * Used only for UI/logging — the API uses gbpAccountId/gbpLocationId
+   * to resolve the location path. Optional.
+   */
+  gbpLocationName?: string;
 }
 
 /**
@@ -71,6 +91,10 @@ interface StoredGoogleTokens {
   updatedAt: string;
   accountEmail: string;
   encrypted: true;
+  /** GBP location selection — see ConnectedGoogleTokens for semantics. */
+  gbpAccountId?: string;
+  gbpLocationId?: string;
+  gbpLocationName?: string;
 }
 
 export interface SaveConnectedGoogleTokensInput {
@@ -132,6 +156,20 @@ export async function saveConnectedGoogleTokens(
       ) {
         doc.accountEmail = existingData.accountEmail;
       }
+      // Preserve the operator's GBP location selection across token
+      // refreshes. The refresh path calls back into this save with only
+      // token fields, so without this carry-forward the selection would
+      // be wiped out and the operator would have to re-pick after every
+      // refresh.
+      if (typeof existingData?.gbpAccountId === 'string' && existingData.gbpAccountId.length > 0) {
+        doc.gbpAccountId = existingData.gbpAccountId;
+      }
+      if (typeof existingData?.gbpLocationId === 'string' && existingData.gbpLocationId.length > 0) {
+        doc.gbpLocationId = existingData.gbpLocationId;
+      }
+      if (typeof existingData?.gbpLocationName === 'string' && existingData.gbpLocationName.length > 0) {
+        doc.gbpLocationName = existingData.gbpLocationName;
+      }
     }
     await ref.set(doc);
     logger.info('[google-tokens] saved connected Google account tokens', {
@@ -182,6 +220,9 @@ export async function getConnectedGoogleTokens(): Promise<ConnectedGoogleTokens 
       connectedAt: data.connectedAt ?? '',
       updatedAt: data.updatedAt ?? '',
       accountEmail: data.accountEmail ?? '',
+      gbpAccountId: data.gbpAccountId,
+      gbpLocationId: data.gbpLocationId,
+      gbpLocationName: data.gbpLocationName,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -189,6 +230,124 @@ export async function getConnectedGoogleTokens(): Promise<ConnectedGoogleTokens 
       file: FILE,
     });
     return null;
+  }
+}
+
+/**
+ * The operator's chosen Google Business Profile location. Stored on the
+ * same connected-Google doc as the OAuth tokens so the GBP service
+ * factory can read tokens + selection in one round-trip.
+ */
+export interface ConnectedGoogleGbpSelection {
+  gbpAccountId?: string;
+  gbpLocationId?: string;
+  gbpLocationName?: string;
+}
+
+/**
+ * Read the operator's GBP location selection from the central
+ * connected-Google doc. Returns an object with all three fields
+ * undefined if no selection has been made yet (or no Google account is
+ * connected).
+ *
+ * Callers that need the OAuth tokens AND the selection in the same
+ * read should call `getConnectedGoogleTokens()` once and pluck the
+ * `gbpAccountId` / `gbpLocationId` / `gbpLocationName` fields directly
+ * — that's a single Firestore read instead of two.
+ */
+export async function getConnectedGoogleGbpSelection(): Promise<ConnectedGoogleGbpSelection> {
+  if (!adminDb) {
+    return {};
+  }
+  try {
+    const path = getSubCollection(COLLECTION);
+    const snap = await adminDb.collection(path).doc(DOC_ID).get();
+    if (!snap.exists) {
+      return {};
+    }
+    const data = snap.data() as Partial<StoredGoogleTokens> | undefined;
+    if (!data) {
+      return {};
+    }
+    return {
+      gbpAccountId: data.gbpAccountId,
+      gbpLocationId: data.gbpLocationId,
+      gbpLocationName: data.gbpLocationName,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(
+      '[google-tokens] gbp selection read failed',
+      err instanceof Error ? err : new Error(msg),
+      { file: FILE },
+    );
+    return {};
+  }
+}
+
+export interface SetConnectedGoogleGbpSelectionInput {
+  gbpAccountId: string;
+  gbpLocationId: string;
+  gbpLocationName?: string;
+}
+
+/**
+ * Persist the operator's chosen GBP location to the connected-Google
+ * doc. Merge-set — touches ONLY the three GBP selection fields,
+ * leaves the encrypted access/refresh tokens and other metadata intact.
+ *
+ * Returns `{ success: false }` if no Google account is connected yet
+ * (the doc doesn't exist) — the operator must complete OAuth first.
+ */
+export async function setConnectedGoogleGbpSelection(
+  input: SetConnectedGoogleGbpSelectionInput,
+): Promise<{ success: boolean; error?: string }> {
+  if (!adminDb) {
+    return { success: false, error: 'Firebase admin not initialized' };
+  }
+  if (!input.gbpAccountId || input.gbpAccountId.trim().length === 0) {
+    return { success: false, error: 'gbpAccountId is required' };
+  }
+  if (!input.gbpLocationId || input.gbpLocationId.trim().length === 0) {
+    return { success: false, error: 'gbpLocationId is required' };
+  }
+
+  try {
+    const path = getSubCollection(COLLECTION);
+    const ref = adminDb.collection(path).doc(DOC_ID);
+    const existing = await ref.get();
+    if (!existing.exists) {
+      return {
+        success: false,
+        error: 'No connected Google account — connect Google before selecting a GBP location',
+      };
+    }
+
+    const update: Partial<StoredGoogleTokens> = {
+      gbpAccountId: input.gbpAccountId,
+      gbpLocationId: input.gbpLocationId,
+      updatedAt: new Date().toISOString(),
+    };
+    if (typeof input.gbpLocationName === 'string' && input.gbpLocationName.length > 0) {
+      update.gbpLocationName = input.gbpLocationName;
+    }
+
+    await ref.set(update, { merge: true });
+    logger.info('[google-tokens] GBP selection saved', {
+      file: FILE,
+      gbpAccountId: input.gbpAccountId,
+      gbpLocationId: input.gbpLocationId,
+      gbpLocationName: input.gbpLocationName ?? '',
+    });
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(
+      '[google-tokens] GBP selection save failed',
+      err instanceof Error ? err : new Error(msg),
+      { file: FILE },
+    );
+    return { success: false, error: msg };
   }
 }
 
@@ -304,6 +463,9 @@ export async function refreshConnectedGoogleTokens(): Promise<ConnectedGoogleTok
       connectedAt: existing.connectedAt,
       updatedAt: new Date().toISOString(),
       accountEmail: existing.accountEmail,
+      gbpAccountId: existing.gbpAccountId,
+      gbpLocationId: existing.gbpLocationId,
+      gbpLocationName: existing.gbpLocationName,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import GoogleBusinessLocationPicker from './GoogleBusinessLocationPicker';
 
 type ConnectMethod = 'oauth' | 'credentials';
 
@@ -84,8 +85,49 @@ export default function SocialPlatformIntegration({
   const [error, setError] = useState<string | null>(null);
 
   const isConnected = integration?.status === 'active';
+  const isGoogleBusiness = config.id === 'google_business';
+
+  // Google Business Profile uses the central Google OAuth flow + a
+  // location-picker step. We track the operator's currently-selected
+  // location so the card can surface either "Select location" (no pick
+  // yet) or "Change location" (already picked).
+  const [gbpPickerOpen, setGbpPickerOpen] = useState(false);
+  const [gbpSelection, setGbpSelection] = useState<{
+    gbpAccountId?: string;
+    gbpLocationId?: string;
+    gbpLocationName?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isGoogleBusiness) { return; }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch('/api/integrations/google/gbp/select', { method: 'GET' });
+        if (!res.ok) { return; }
+        const body = (await res.json()) as {
+          success: boolean;
+          selection?: { gbpAccountId?: string; gbpLocationId?: string; gbpLocationName?: string };
+        };
+        if (!cancelled && body.success && body.selection) {
+          setGbpSelection(body.selection);
+        }
+      } catch {
+        // Non-fatal — picker can still be opened to retry.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isGoogleBusiness, authFetch]);
 
   const handleOAuthConnect = () => {
+    // For Google Business, route through the central Google OAuth flow
+    // that grants the full scope bundle (including business.manage).
+    // Once tokens land, the operator picks a location via the GBP
+    // picker — that selection is what the GBP service factory reads.
+    if (isGoogleBusiness) {
+      window.location.href = '/api/integrations/google/auth';
+      return;
+    }
     window.location.href = `/api/social/oauth/auth/${config.id}`;
   };
 
@@ -190,6 +232,46 @@ export default function SocialPlatformIntegration({
           </a>
         </div>
       )}
+
+      {isGoogleBusiness ? (
+        <div className="border-t border-border-light pt-3 mt-1">
+          <div className="text-xs font-medium text-foreground mb-1">Selected location</div>
+          {gbpSelection?.gbpLocationId ? (
+            <>
+              <div className="text-xs text-muted-foreground">
+                {gbpSelection.gbpLocationName ?? gbpSelection.gbpLocationId}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => setGbpPickerOpen(true)}
+              >
+                Change selected location
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="text-xs text-muted-foreground">
+                Pick which Business Profile location the platform should manage.
+                Posts won&apos;t publish until a location is selected.
+              </div>
+              <Button
+                size="sm"
+                className="mt-2"
+                onClick={() => setGbpPickerOpen(true)}
+              >
+                Select GBP location
+              </Button>
+            </>
+          )}
+          <GoogleBusinessLocationPicker
+            open={gbpPickerOpen}
+            onOpenChange={setGbpPickerOpen}
+            onSaved={(sel) => setGbpSelection(sel)}
+          />
+        </div>
+      ) : null}
 
       {error && (
         <div className="text-xs text-destructive">{error}</div>
