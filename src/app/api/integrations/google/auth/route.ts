@@ -57,19 +57,27 @@ export async function GET(request: NextRequest) {
       redirectUri
     );
 
-    // Determine scopes based on requested service
+    // Determine scopes based on requested service.
+    //
+    // Default flow (no `?service=` query param) requests the FULL scope
+    // bundle — Gmail, Calendar, Drive, YouTube, Google Business, GA4,
+    // GSC, Google Ads, and userinfo — in ONE consent screen, per the
+    // architectural rule that single-Google-OAuth-at-onboarding should
+    // auto-connect every Google tool. Per
+    // `feedback_one_google_account_per_tenant_runs_calendars_and_email`.
+    //
+    // The `?service=gsc` branch is preserved as a narrow re-auth path
+    // for operators who only want to grant GSC without the full bundle
+    // (rare). Other narrow paths can be added later if needed.
+    const { GOOGLE_FULL_SCOPE_BUNDLE, GOOGLE_GSC_ONLY_SCOPES } = await import(
+      '@/lib/integrations/google-tokens'
+    );
     const { searchParams } = new URL(request.url);
     const service = searchParams.get('service');
 
     const scopes = service === 'gsc'
-      ? ['https://www.googleapis.com/auth/webmasters.readonly']
-      : [
-          'https://www.googleapis.com/auth/gmail.readonly',
-          'https://www.googleapis.com/auth/gmail.send',
-          'https://www.googleapis.com/auth/gmail.modify',
-          'https://www.googleapis.com/auth/calendar',
-          'https://www.googleapis.com/auth/calendar.events',
-        ];
+      ? [...GOOGLE_GSC_ONLY_SCOPES]
+      : [...GOOGLE_FULL_SCOPE_BUNDLE];
 
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',

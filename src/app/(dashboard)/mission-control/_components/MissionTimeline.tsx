@@ -25,6 +25,8 @@ import AgentAvatar from './AgentAvatar';
 import { getDashboardLink, getStepReviewLink, formatToolName } from './dashboard-links';
 import type { Mission, MissionStep, MissionStepStatus } from '@/lib/orchestrator/mission-persistence';
 import { SendDmReplyButton } from './SendDmReplyButton';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { logger } from '@/lib/logger/logger';
 
 interface MissionTimelineProps {
   mission: Mission;
@@ -427,6 +429,14 @@ function StepCard({
   sourceEvent?: Mission['sourceEvent'];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
+  const [rerunError, setRerunError] = useState<string | null>(null);
+  // Two-step confirm per `feedback_destructive_actions_two_step_confirmation`:
+  // first click arms ("Click again to confirm"), second click within 5s fires,
+  // and the disarm timer prevents stale-armed state from lingering.
+  const [rerunArmed, setRerunArmed] = useState(false);
+  const rerunDisarmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const authFetch = useAuthFetch();
   const dashboardLink = getDashboardLink(step.toolName, step.toolResult, step.toolArgs);
   const reviewLink = getStepReviewLink(missionId, step.stepId);
   const parsedOutput = parseStepOutput(step.toolResult);
@@ -440,9 +450,85 @@ function StepCard({
     e.stopPropagation();
   }, []);
 
+  /**
+   * Re-run this step via POST /steps/[stepId]/rerun. Works for both:
+   *   - COMPLETED step on a finished mission (operator unhappy with output)
+   *   - FAILED step on a halted mission (mission AWAITING_APPROVAL)
+   * The endpoint resets the step to PROPOSED and resumes the runner from
+   * here, so any downstream steps re-execute with the new upstream output.
+   * The Mission Control SSE stream will reflect the new state automatically.
+   */
+  const handleRerun = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (rerunning) { return; }
+
+    // First click — arm the button. Second click within 5s fires.
+    if (!rerunArmed) {
+      setRerunArmed(true);
+      setRerunError(null);
+      if (rerunDisarmTimer.current) {
+        clearTimeout(rerunDisarmTimer.current);
+      }
+      rerunDisarmTimer.current = setTimeout(() => {
+        setRerunArmed(false);
+        rerunDisarmTimer.current = null;
+      }, 5000);
+      return;
+    }
+
+    // Second click within 5s — fire the rerun.
+    if (rerunDisarmTimer.current) {
+      clearTimeout(rerunDisarmTimer.current);
+      rerunDisarmTimer.current = null;
+    }
+    setRerunArmed(false);
+    setRerunning(true);
+    setRerunError(null);
+    try {
+      const res = await authFetch(
+        `/api/orchestrator/missions/${missionId}/steps/${step.stepId}/rerun`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `Rerun failed (HTTP ${res.status})`);
+      }
+      // Success — SSE stream will pick up the new state. Briefly hold the
+      // busy flag so the operator sees the click registered before the
+      // step transitions back to RUNNING in the UI.
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setRerunError(msg);
+      logger.error('MissionTimeline rerun failed', err instanceof Error ? err : new Error(msg), {
+        missionId,
+        stepId: step.stepId,
+      });
+    } finally {
+      setRerunning(false);
+    }
+  }, [authFetch, missionId, rerunArmed, rerunning, step.stepId]);
+
+  // Cleanup the disarm timer on unmount so it doesn't leak across re-renders
+  // when the operator switches between missions before the 5s window expires.
+  useEffect(() => {
+    return () => {
+      if (rerunDisarmTimer.current) {
+        clearTimeout(rerunDisarmTimer.current);
+      }
+    };
+  }, []);
+
   const statusColor = getStepProgressColor(step.status);
   const isActive = step.status === 'RUNNING';
   const isFailed = step.status === 'FAILED';
+  // Rerun is meaningful for COMPLETED (operator unhappy with output) and
+  // FAILED (mission halted; operator wants to retry). Skip RUNNING / PENDING
+  // since there's nothing to rerun yet.
+  const canRerun = step.status === 'COMPLETED' || step.status === 'FAILED';
 
   return (
     <div
@@ -636,7 +722,44 @@ function StepCard({
               Review Details &rarr;
             </a>
           )}
-          {step.status !== 'COMPLETED' && <span />}
+          {canRerun && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+              <button
+                type="button"
+                onClick={(e) => void handleRerun(e)}
+                disabled={rerunning}
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  color: rerunArmed ? '#fff' : 'var(--color-warning)',
+                  background: rerunArmed ? 'var(--color-warning)' : 'transparent',
+                  border: '1px solid var(--color-warning)',
+                  borderRadius: '0.25rem',
+                  padding: '0.125rem 0.5rem',
+                  cursor: rerunning ? 'wait' : 'pointer',
+                  opacity: rerunning ? 0.6 : 1,
+                  transition: 'all 0.15s ease',
+                }}
+                title={
+                  step.status === 'FAILED'
+                    ? 'Retry this failed step'
+                    : 'Re-execute this step with the existing args'
+                }
+              >
+                {rerunning
+                  ? 'Rerunning…'
+                  : rerunArmed
+                    ? 'Click again to confirm rerun'
+                    : 'Rerun this step'}
+              </button>
+              {rerunError !== null && (
+                <span style={{ fontSize: '0.625rem', color: 'var(--color-error)' }}>
+                  {rerunError}
+                </span>
+              )}
+            </div>
+          )}
+          {step.status !== 'COMPLETED' && step.status !== 'FAILED' && <span />}
         </div>
 
         {/* Expand/collapse toggle */}
