@@ -31,7 +31,10 @@ export default function GoogleSearchConsoleIntegration({
   onDisconnect,
   onUpdate
 }: GSCIntegrationProps) {
-  const { user } = useAuth();
+  // useAuth hook still mounted for session-state side effects, but the
+  // user object itself is no longer read here — authFetch carries the
+  // bearer token directly. Underscore prefix marks it intentionally unused.
+  const { user: _user } = useAuth();
   const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -86,11 +89,22 @@ export default function GoogleSearchConsoleIntegration({
     }
   }, [integration?.status, showSettings, fetchProperties]);
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      const userId = user?.id ?? 'anonymous';
-      window.location.href = `/api/integrations/google/auth?userId=${userId}&service=gsc`;
+      // authFetch sends the bearer token that requireAuth on the route
+      // checks; window.location.href would not. The route returns
+      // { authUrl } — we navigate to it client-side. See
+      // GmailIntegration.tsx for the full rationale.
+      const res = await authFetch('/api/integrations/google/auth?service=gsc');
+      if (!res.ok) {
+        throw new Error(`Auth route returned ${res.status}`);
+      }
+      const body = (await res.json()) as { success: boolean; authUrl?: string; error?: string };
+      if (!body.success || !body.authUrl) {
+        throw new Error(body.error ?? 'Auth route did not return an authUrl');
+      }
+      window.location.href = body.authUrl;
     } catch (error) {
       logger.error('Failed to start GSC OAuth', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
@@ -117,7 +131,7 @@ export default function GoogleSearchConsoleIntegration({
           </div>
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => { void handleConnect(); }}
           disabled={isConnecting}
           style={{
             width: '100%',

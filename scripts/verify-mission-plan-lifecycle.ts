@@ -200,10 +200,14 @@ async function main(): Promise<void> {
     assert(mission!.status === 'IN_PROGRESS', 'status is now IN_PROGRESS');
 
     console.log('\n[7b/7] Try to edit a step after approval (should refuse)');
-    const editAfterApproveOk = await updatePlannedStep(happyMissionId, mission!.steps[0].stepId, {
+    const editAfterApproveResult = await updatePlannedStep(happyMissionId, mission!.steps[0].stepId, {
       summary: 'should not stick',
     });
-    assert(!editAfterApproveOk, 'updatePlannedStep refused after approval');
+    // updatePlannedStep returns { success, before?, after? } — the
+    // post-approval guard sets success=false. The previous assertion
+    // tested `!editAfterApproveResult` (always falsy because object is
+    // truthy), which masked the real check. Test the field directly.
+    assert(!editAfterApproveResult.success, 'updatePlannedStep refused after approval');
     mission = await readMission(db, happyMissionId);
     assert(mission!.steps[0].summary !== 'should not stick', 'summary did not change after approval');
 

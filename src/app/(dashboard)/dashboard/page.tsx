@@ -8,7 +8,9 @@ import { db, auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
-import { JasperTaskReminder } from '@/components/dashboard/JasperTaskReminder';
+// JasperTaskReminder banner removed — replaced by <JasperOnLoginPopup> wired
+// into the dashboard layout. The component still exists for any other
+// surface that wants to mount it inline.
 import UnifiedCalendarSection from '@/components/calendar/UnifiedCalendarSection';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import {
@@ -365,7 +367,6 @@ export default function WorkspaceDashboardPage() {
         </SectionDescription>
       </div>
 
-      <JasperTaskReminder />
       <SubpageNav items={DASHBOARD_TABS} />
 
       {/* Row 1: KPI Cards */}

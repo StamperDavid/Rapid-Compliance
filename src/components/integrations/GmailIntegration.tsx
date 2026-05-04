@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 interface GmailSettings {
@@ -24,7 +25,11 @@ export default function GmailIntegration({
   onDisconnect,
   onUpdate
 }: GmailIntegrationProps) {
-  const { user } = useAuth();
+  // useAuth hook still mounted for session-state side effects, but the
+  // user object itself is no longer read here — authFetch carries the
+  // bearer token directly.
+  const { user: _user } = useAuth();
+  const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -63,13 +68,23 @@ export default function GmailIntegration({
     return {};
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      const userId = user?.id ?? 'anonymous';
-
-      // Redirect to real Google OAuth flow
-      window.location.href = `/api/integrations/google/auth?userId=${userId}`;
+      // We can't use a plain `window.location.href` to start OAuth
+      // because the /api/integrations/google/auth route requires the
+      // Authorization header (Bearer token), which browser navigations
+      // do not send. So: fetch the route with authFetch (which adds
+      // the token), receive { authUrl }, then do the navigation.
+      const res = await authFetch('/api/integrations/google/auth');
+      if (!res.ok) {
+        throw new Error(`Auth route returned ${res.status}`);
+      }
+      const body = (await res.json()) as { success: boolean; authUrl?: string; error?: string };
+      if (!body.success || !body.authUrl) {
+        throw new Error(body.error ?? 'Auth route did not return an authUrl');
+      }
+      window.location.href = body.authUrl;
     } catch (error) {
       logger.error('Failed to start Gmail OAuth', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
@@ -97,7 +112,7 @@ export default function GmailIntegration({
           </div>
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => { void handleConnect(); }}
           disabled={isConnecting}
           style={{
             width: '100%',

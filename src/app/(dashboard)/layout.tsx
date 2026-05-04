@@ -7,6 +7,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { MerchantOrchestrator } from '@/components/orchestrator';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
+import { JasperOnLoginPopupHost } from '@/components/jasper/JasperOnLoginPopupHost';
 import { ToastProvider } from '@/hooks/useToast';
 
 /**
@@ -89,6 +90,11 @@ export default function PenthouseDashboardLayout({
 
         {/* Merchant AI Orchestrator - Floating Assistant */}
         <MerchantOrchestrator />
+
+        {/* Jasper's on-login popup — auto-opens once per session when there
+            are setup items or insights to surface. Replaces the old
+            JasperTaskReminder banner that used to live on the dashboard page. */}
+        <JasperOnLoginPopupHost />
       </div>
     </ToastProvider>
   );

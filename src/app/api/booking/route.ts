@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
+import { upsertSalesVelocityCalendarEvent } from '@/lib/integrations/google-calendar-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -309,46 +310,50 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // doc so the cancel route can later delete the calendar event. Previously
     // the eventId was thrown away, which is why cancel left ghost calendar
     // events on the operator's Google Calendar.
+    // Mirror the booking to the connected Google Calendar via the central
+    // helper. Reads tokens from `connectedAccounts/google` (the central
+    // store the unified-OAuth callback writes to) — the legacy
+    // `integrations/google-calendar` doc was empty after the central OAuth
+    // migration, so the previous code path silently skipped calendar
+    // creation and Zoom meetings never appeared on the operator's Google
+    // Calendar. The `meeting-{id}` refId lets the cancel route find and
+    // delete the event when the operator cancels the booking.
     void (async () => {
       try {
-        const calendarTokenDoc = await AdminFirestoreService.get(getSubCollection('integrations'), 'google-calendar');
-        const calendarTokens = calendarTokenDoc as { access_token?: string; refresh_token?: string } | null;
+        const description = [
+          'Booked via SalesVelocity.ai',
+          '',
+          `Name: ${name}`,
+          `Email: ${email}`,
+          phone ? `Phone: ${phone}` : null,
+          notes ? `Notes: ${notes}` : null,
+          zoomJoinUrl ? `\nZoom: ${zoomJoinUrl}` : null,
+        ].filter(Boolean).join('\n');
 
-        if (calendarTokens?.access_token) {
-          const { createEvent } = await import('@/lib/integrations/google-calendar-service');
-          const description = [
-            'Booked via SalesVelocity.ai',
-            '',
-            `Name: ${name}`,
-            `Email: ${email}`,
-            phone ? `Phone: ${phone}` : null,
-            notes ? `Notes: ${notes}` : null,
-            zoomJoinUrl ? `\nZoom: ${zoomJoinUrl}` : null,
-          ].filter(Boolean).join('\n');
-          const eventResult = await createEvent(
-            { access_token: calendarTokens.access_token, refresh_token: calendarTokens.refresh_token },
-            'primary',
-            {
-              summary: `Meeting with ${name}`,
-              description,
-              start: { dateTime: startTime.toISOString() },
-              end: { dateTime: endTime.toISOString() },
-              attendees: [{ email }],
-            }
-          );
-          // Persist the calendar event id + calendar id on the booking
-          // doc so the cancel route can find and delete it. Without this
-          // step, cancel cannot remove the ghost calendar entry.
+        const result = await upsertSalesVelocityCalendarEvent({
+          refId: `meeting-${bookingId}`,
+          summary: `Meeting with ${name}`,
+          description,
+          startIso: startTime.toISOString(),
+          endIso: endTime.toISOString(),
+          category: 'meeting',
+        });
+
+        if (result?.googleEventId) {
           await AdminFirestoreService.set(
             bookingsPath,
             bookingId,
             {
-              googleCalendarEventId: eventResult.id,
-              googleCalendarId: 'primary',
-              googleCalendarHtmlLink: eventResult.htmlLink,
+              googleCalendarEventId: result.googleEventId,
+              googleCalendarHtmlLink: result.htmlLink,
             },
             true,
           );
+        } else {
+          logger.warn('[booking] calendar mirror returned null (no Google connection or insert failed)', {
+            bookingId,
+            file: FILE,
+          });
         }
       } catch (calError) {
         logger.warn('Could not create Google Calendar event for booking', {

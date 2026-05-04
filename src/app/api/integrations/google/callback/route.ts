@@ -13,6 +13,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { encryptToken } from '@/lib/security/token-encryption';
 import { validateOAuthState } from '@/lib/security/oauth-state';
 import { saveConnectedGoogleTokens } from '@/lib/integrations/google-tokens';
+import { subscribeToConnectedGoogleCalendar } from '@/lib/integrations/calendar-watch-service';
 
 function getRedirectUrl(request: NextRequest, path: string): string {
   const protocolHeader = request.headers.get('x-forwarded-proto');
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
 
   if (!code || !state) {
-    return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=oauth_failed'));
+    return NextResponse.redirect(getRedirectUrl(request, '/settings/integrations?error=oauth_failed'));
   }
 
   try {
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     const userId = await validateOAuthState(cleanState, 'google');
     if (!userId) {
       logger.warn('Invalid or expired OAuth state', { route: '/api/integrations/google/callback' });
-      return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=invalid_state'));
+      return NextResponse.redirect(getRedirectUrl(request, '/settings/integrations?error=invalid_state'));
     }
 
     // Exchange code for tokens
@@ -113,6 +114,37 @@ export async function GET(request: NextRequest) {
           new Error(saveResult.error ?? 'unknown'),
           { route: '/api/integrations/google/callback' },
         );
+      } else {
+        // Two-way sync plumbing: subscribe to push notifications on
+        // the operator's primary calendar so cancels/reschedules from
+        // Google land back in the platform. Non-blocking — a watch
+        // failure (e.g., localhost dev, Google API blip) must NOT
+        // fail the OAuth flow.
+        try {
+          const sub = await subscribeToConnectedGoogleCalendar();
+          if (sub.success && !sub.skipped) {
+            logger.info('[google-callback] calendar watch subscribed', {
+              route: '/api/integrations/google/callback',
+              channelId: sub.id,
+              expiration: sub.expiration,
+            });
+          } else if (sub.skipped) {
+            logger.warn('[google-callback] calendar watch skipped', {
+              route: '/api/integrations/google/callback',
+              reason: sub.reason,
+            });
+          } else {
+            logger.warn('[google-callback] calendar watch subscribe failed (non-fatal)', {
+              route: '/api/integrations/google/callback',
+              reason: sub.reason,
+            });
+          }
+        } catch (watchErr) {
+          logger.warn('[google-callback] calendar watch subscribe threw (non-fatal)', {
+            route: '/api/integrations/google/callback',
+            error: watchErr instanceof Error ? watchErr.message : String(watchErr),
+          });
+        }
       }
     }
 
@@ -149,9 +181,9 @@ export async function GET(request: NextRequest) {
       centralStoreUpdated: !isGSC,
     });
 
-    return NextResponse.redirect(getRedirectUrl(request, `/admin/settings/integrations?success=${successParam}`));
+    return NextResponse.redirect(getRedirectUrl(request, `/settings/integrations?success=${successParam}`));
   } catch (error: unknown) {
     logger.error('Google OAuth callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/google/callback' });
-    return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=oauth_failed'));
+    return NextResponse.redirect(getRedirectUrl(request, '/settings/integrations?error=oauth_failed'));
   }
 }
