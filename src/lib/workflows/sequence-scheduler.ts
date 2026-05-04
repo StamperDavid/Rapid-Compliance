@@ -695,6 +695,77 @@ export async function cancelSequenceJobsForRecipient(params: {
 }
 
 /**
+ * Cancel every still-pending sequenceJob owned by a workflow and tear
+ * down the corresponding Google Calendar events.
+ *
+ * Used when an operator pauses or deletes a workflow — its sequenceJobs
+ * rows are independent of the workflow's `workflowWaits` rows, so they
+ * have to be cancelled explicitly or the drip emails keep firing.
+ *
+ * Returns the number of jobs cancelled. Workflow with no pending jobs =
+ * 0 cancellations + no error. Calendar deletion failures are logged
+ * and swallowed individually so a single calendar hiccup never blocks
+ * the Firestore cancellation of the remaining jobs.
+ */
+export async function cancelSequenceJobsForWorkflow(
+  workflowId: string,
+): Promise<{ cancelled: number }> {
+  if (!adminDb) {
+    throw new Error('Firestore admin not initialized — cannot cancel sequence jobs');
+  }
+
+  try {
+    const collectionPath = getSubCollection(COLLECTION);
+    const snap = await adminDb
+      .collection(collectionPath)
+      .where('workflowId', '==', workflowId)
+      .where('status', '==', 'pending')
+      .get();
+
+    if (snap.empty) {
+      return { cancelled: 0 };
+    }
+
+    const nowIso = new Date().toISOString();
+    const batch = adminDb.batch();
+    for (const docSnap of snap.docs) {
+      batch.update(docSnap.ref, {
+        status: 'cancelled',
+        updatedAt: nowIso,
+      });
+    }
+    await batch.commit();
+
+    // Delete each calendar event independently — calendar-side failures
+    // must not block or partially-undo the Firestore cancellation.
+    for (const docSnap of snap.docs) {
+      try {
+        await deleteSalesVelocityCalendarEvent(`email-send-${docSnap.id}`);
+      } catch (err) {
+        logger.warn('[SequenceScheduler] Calendar delete failed during workflow cancel (non-fatal)', {
+          jobId: docSnap.id,
+          workflowId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    logger.info('[SequenceScheduler] Cancelled sequence jobs for workflow', {
+      workflowId,
+      cancelled: snap.size,
+    });
+
+    return { cancelled: snap.size };
+  } catch (err) {
+    logger.warn('[SequenceScheduler] cancelSequenceJobsForWorkflow failed (non-fatal)', {
+      workflowId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { cancelled: 0 };
+  }
+}
+
+/**
  * Estimate a day-level countdown string for display. Used by the
  * create_workflow tool response so the operator sees "fires in ~3 days"
  * without having to compute it.
