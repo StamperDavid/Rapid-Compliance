@@ -202,6 +202,118 @@ export async function getConnectedGoogleAccountEmail(): Promise<string> {
   return tokens?.accountEmail ?? '';
 }
 
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+
+/**
+ * Refresh the connected Google access token using the stored refresh
+ * token, then persist the new access token (and any new refresh token
+ * Google rotates in) back to the central store.
+ *
+ * Returns the freshly-refreshed tokens on success, or null if:
+ *   - No Google account is connected
+ *   - The stored refresh token is missing
+ *   - GOOGLE_CLIENT_ID/SECRET env vars are missing
+ *   - Google's token endpoint rejects the refresh
+ *
+ * Callers (e.g., per-service integrations like YouTube) should treat
+ * a null return as "operator must reconnect Google" — a refresh
+ * failure typically means the operator revoked access or the refresh
+ * token was rotated by Google's 6-month inactivity policy.
+ */
+export async function refreshConnectedGoogleTokens(): Promise<ConnectedGoogleTokens | null> {
+  const existing = await getConnectedGoogleTokens();
+  if (!existing) {
+    logger.warn('[google-tokens] refresh requested but no connected Google account', { file: FILE });
+    return null;
+  }
+  if (!existing.refreshToken) {
+    logger.warn('[google-tokens] refresh requested but no refresh token stored', { file: FILE });
+    return null;
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    logger.error(
+      '[google-tokens] cannot refresh — GOOGLE_CLIENT_ID/SECRET not set',
+      new Error('missing google oauth env'),
+      { file: FILE },
+    );
+    return null;
+  }
+
+  try {
+    const res = await fetch(GOOGLE_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: existing.refreshToken,
+        grant_type: 'refresh_token',
+      }).toString(),
+    });
+
+    const data = (await res.json()) as {
+      access_token?: string;
+      expires_in?: number;
+      refresh_token?: string;
+      scope?: string;
+      error?: string;
+      error_description?: string;
+    };
+
+    if (!res.ok || !data.access_token) {
+      const errMsg = data.error_description ?? data.error ?? `status ${res.status}`;
+      logger.error(
+        '[google-tokens] refresh failed at Google token endpoint',
+        new Error(errMsg),
+        { file: FILE },
+      );
+      return null;
+    }
+
+    const newExpiryDate = typeof data.expires_in === 'number'
+      ? Date.now() + data.expires_in * 1000
+      : null;
+
+    const saved = await saveConnectedGoogleTokens({
+      accessToken: data.access_token,
+      // Google sometimes rotates refresh tokens; keep the existing one
+      // if no new value is returned in the response.
+      refreshToken: data.refresh_token ?? existing.refreshToken,
+      expiryDate: newExpiryDate,
+      scope: data.scope ?? existing.scope,
+      accountEmail: existing.accountEmail,
+    });
+
+    if (!saved.success) {
+      logger.error(
+        '[google-tokens] refresh succeeded but persist failed',
+        new Error(saved.error ?? 'unknown'),
+        { file: FILE },
+      );
+      return null;
+    }
+
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token ?? existing.refreshToken,
+      expiryDate: newExpiryDate,
+      scope: data.scope ?? existing.scope,
+      connectedAt: existing.connectedAt,
+      updatedAt: new Date().toISOString(),
+      accountEmail: existing.accountEmail,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error('[google-tokens] refresh threw', err instanceof Error ? err : new Error(msg), {
+      file: FILE,
+    });
+    return null;
+  }
+}
+
 /**
  * The full scope bundle requested when the operator connects Google
  * during onboarding. One consent screen covers every Google service

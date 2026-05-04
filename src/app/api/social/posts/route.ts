@@ -14,6 +14,10 @@ import { logger } from '@/lib/logger/logger';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSocialPostsCollection } from '@/lib/firebase/collections';
 import { SOCIAL_PLATFORMS } from '@/types/social';
+import {
+  upsertSalesVelocityCalendarEvent,
+  deleteSalesVelocityCalendarEvent,
+} from '@/lib/integrations/google-calendar-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,6 +129,32 @@ export async function POST(request: NextRequest) {
 
     logger.info('Social post created', { postId, platform: validation.data.platform });
 
+    // If this post is actually scheduled (status='scheduled' AND a future
+    // scheduledFor), surface it on the operator's SalesVelocity.ai
+    // Google Calendar. Drafts are intentionally skipped — the calendar
+    // only mirrors committed schedules, not work-in-progress.
+    // Non-fatal — Firestore is the source of truth.
+    if (validation.data.status === 'scheduled' && validation.data.scheduledFor) {
+      try {
+        const scheduledMs = new Date(validation.data.scheduledFor).getTime();
+        if (!Number.isNaN(scheduledMs) && scheduledMs > Date.now()) {
+          await upsertSalesVelocityCalendarEvent({
+            refId: `social-post-${postId}`,
+            summary: `Social post: ${validation.data.platform}`,
+            description: `Scheduled post text:\n${validation.data.content}\n\nPlatform: ${validation.data.platform}`,
+            startIso: new Date(validation.data.scheduledFor).toISOString(),
+            timeZone: 'America/New_York',
+            category: 'social',
+          });
+        }
+      } catch (calendarErr) {
+        logger.warn('Social posts API: calendar sync failed (non-fatal)', {
+          postId,
+          error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+        });
+      }
+    }
+
     return NextResponse.json({ success: true, post });
   } catch (error: unknown) {
     logger.error('Failed to create social post', error instanceof Error ? error : new Error(String(error)));
@@ -161,6 +191,45 @@ export async function PUT(request: NextRequest) {
 
     logger.info('Social post updated', { postId });
 
+    // Sync the operator's SalesVelocity.ai Google Calendar to the new
+    // post state. We fetch the current doc to compose the calendar
+    // event with full context (content, platform, scheduledFor) since
+    // any of those may not be in this PATCH body. Non-fatal.
+    try {
+      const current = await AdminFirestoreService.get<{
+        id: string;
+        platform: string;
+        content: string;
+        status: string;
+        scheduledFor?: string;
+      }>(postsPath, postId);
+      if (current) {
+        if (current.status === 'scheduled' && current.scheduledFor) {
+          const scheduledMs = new Date(current.scheduledFor).getTime();
+          if (!Number.isNaN(scheduledMs) && scheduledMs > Date.now()) {
+            await upsertSalesVelocityCalendarEvent({
+              refId: `social-post-${postId}`,
+              summary: `Social post: ${current.platform}`,
+              description: `Scheduled post text:\n${current.content}\n\nPlatform: ${current.platform}`,
+              startIso: new Date(current.scheduledFor).toISOString(),
+              timeZone: 'America/New_York',
+              category: 'social',
+            });
+          }
+        } else {
+          // Post is no longer in a future-scheduled state — remove the
+          // calendar event. deleteSalesVelocityCalendarEvent is a no-op
+          // if no mapping exists, so this is safe to always call.
+          await deleteSalesVelocityCalendarEvent(`social-post-${postId}`);
+        }
+      }
+    } catch (calendarErr) {
+      logger.warn('Social posts API: calendar update failed (non-fatal)', {
+        postId,
+        error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     logger.error('Failed to update social post', error instanceof Error ? error : new Error(String(error)));
@@ -188,6 +257,18 @@ export async function DELETE(request: NextRequest) {
     await AdminFirestoreService.delete(postsPath, postId);
 
     logger.info('Social post deleted', { postId });
+
+    // Mirror the deletion to the operator's SalesVelocity.ai Google
+    // Calendar. No-op if there was no calendar event for this post.
+    // Non-fatal — Firestore is the source of truth.
+    try {
+      await deleteSalesVelocityCalendarEvent(`social-post-${postId}`);
+    } catch (calendarErr) {
+      logger.warn('Social posts API: calendar delete failed (non-fatal)', {
+        postId,
+        error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

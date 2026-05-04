@@ -13,6 +13,10 @@
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import {
+  upsertSalesVelocityCalendarEvent,
+  deleteSalesVelocityCalendarEvent,
+} from '@/lib/integrations/google-calendar-service';
 import { v4 as uuidv4 } from 'uuid';
 
 // =============================================================================
@@ -122,6 +126,27 @@ export class SocialPostService {
         scheduledAt: request.scheduledAt.toISOString(),
         file: 'social-post-service.ts',
       });
+
+      // Side-effect: write a corresponding event to the operator's
+      // SalesVelocity.ai Google Calendar so every scheduled post is
+      // visible alongside meetings, email sends, missions, etc.
+      // Non-fatal: a calendar sync failure must not block the schedule.
+      try {
+        await upsertSalesVelocityCalendarEvent({
+          refId: `social-post-${postId}`,
+          summary: `Social post: ${request.platform}`,
+          description: `Scheduled post text:\n${request.content}\n\nPlatform: ${request.platform}\nSource: admin-dashboard`,
+          startIso: request.scheduledAt.toISOString(),
+          timeZone: 'America/New_York',
+          category: 'social',
+        });
+      } catch (calendarErr) {
+        logger.warn('SocialPostService: calendar sync failed (non-fatal)', {
+          postId,
+          error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+          file: 'social-post-service.ts',
+        });
+      }
 
       return post;
     } catch (error) {
@@ -285,6 +310,20 @@ export class SocialPostService {
         postId,
         file: 'social-post-service.ts',
       });
+
+      // Mirror the cancellation to the operator's SalesVelocity.ai
+      // Google Calendar so the event disappears with the schedule.
+      // Non-fatal: a calendar sync failure must not break the cancel
+      // (the platform's Firestore status is the source of truth).
+      try {
+        await deleteSalesVelocityCalendarEvent(`social-post-${postId}`);
+      } catch (calendarErr) {
+        logger.warn('SocialPostService: calendar delete failed (non-fatal)', {
+          postId,
+          error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+          file: 'social-post-service.ts',
+        });
+      }
 
       return { success: true };
     } catch (error) {

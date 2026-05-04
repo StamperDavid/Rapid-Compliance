@@ -57,6 +57,10 @@ import type {
 import { getSubCollection } from '@/lib/firebase/collections';
 import { AgentConfigService, DEFAULT_AGENT_SETTINGS } from '@/lib/social/agent-config-service';
 import { ApprovalService } from '@/lib/social/approval-service';
+import {
+  upsertSalesVelocityCalendarEvent,
+  deleteSalesVelocityCalendarEvent,
+} from '@/lib/integrations/google-calendar-service';
 
 // =============================================================================
 // Social Media Growth Engine Phase 4: New Action Types
@@ -1490,6 +1494,27 @@ export class AutonomousPostingAgent {
           scheduledPost.id,
           scheduledPost
         );
+
+        // Side-effect: write a corresponding event to the operator's
+        // SalesVelocity.ai Google Calendar so every scheduled post
+        // shows up alongside meetings, email sends, missions, etc.
+        // Non-fatal — calendar sync failure must not block scheduling.
+        try {
+          await upsertSalesVelocityCalendarEvent({
+            refId: `social-post-${scheduledPost.id}`,
+            summary: `Social post: ${platform}`,
+            description: `Scheduled post text:\n${finalContent}\n\nPlatform: ${platform}\nSource: autonomous-agent`,
+            startIso: scheduledAt.toISOString(),
+            timeZone: 'America/New_York',
+            category: 'social',
+          });
+        } catch (calendarErr) {
+          logger.warn('AutonomousPostingAgent: calendar sync failed (non-fatal)', {
+            postId: scheduledPost.id,
+            platform,
+            error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+          });
+        }
       }
 
       logger.info('AutonomousPostingAgent: Post scheduled', {
@@ -1882,6 +1907,18 @@ export class AutonomousPostingAgent {
           postId,
           { status: 'cancelled', updatedAt: new Date() }
         );
+
+        // Mirror the cancellation to the operator's SalesVelocity.ai
+        // Google Calendar. Non-fatal — Firestore is the source of truth.
+        try {
+          await deleteSalesVelocityCalendarEvent(`social-post-${postId}`);
+        } catch (calendarErr) {
+          logger.warn('AutonomousPostingAgent: calendar delete failed (non-fatal)', {
+            postId,
+            error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+          });
+        }
+
         return { success: true };
       }
 

@@ -13,8 +13,33 @@
 
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { deleteSalesVelocityCalendarEvent } from '@/lib/integrations/google-calendar-service';
 import { logger } from '@/lib/logger/logger';
 import type { SocialPlatform } from '@/types/social';
+
+// ============================================================================
+// CALENDAR HELPERS (mission-keyed events)
+// ============================================================================
+//
+// When a mission is cancelled or deleted, clear any Google Calendar event
+// that was mirrored under `mission-{missionId}`. The schedule-driven
+// upsert in `mission-schedule-service.ts` keys events by `mission-{scheduleId}`,
+// so this delete is mostly a no-op for schedule-only flows. It exists
+// here as a safety net for any future code path that mirrors a mission
+// directly (single-shot scheduled missions, scheduled-for fields, etc.)
+// without going through MissionSchedule. Idempotent — the helper itself
+// no-ops when no mapping exists. Failures never block the primary action.
+
+async function clearMissionCalendarEvent(missionId: string): Promise<void> {
+  try {
+    await deleteSalesVelocityCalendarEvent(`mission-${missionId}`);
+  } catch (err) {
+    logger.warn('[MissionPersistence] Calendar delete failed — continuing', {
+      missionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
 
 // ============================================================================
 // TYPES
@@ -870,6 +895,11 @@ export async function rejectPlan(missionId: string, reason?: string): Promise<bo
       success = true;
     });
 
+    if (success) {
+      // Best-effort: clear any mirrored calendar event keyed by missionId.
+      await clearMissionCalendarEvent(missionId);
+    }
+
     return success;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -1360,6 +1390,10 @@ export async function cancelMission(missionId: string): Promise<boolean> {
     });
 
     logger.info('[MissionPersistence] Mission cancelled', { missionId });
+
+    // Best-effort: clear any mirrored calendar event keyed by missionId.
+    await clearMissionCalendarEvent(missionId);
+
     return true;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -1393,6 +1427,10 @@ export async function deleteMission(missionId: string): Promise<boolean> {
     await docRef.delete();
 
     logger.info('[MissionPersistence] Mission deleted', { missionId });
+
+    // Best-effort: clear any mirrored calendar event keyed by missionId.
+    await clearMissionCalendarEvent(missionId);
+
     return true;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);

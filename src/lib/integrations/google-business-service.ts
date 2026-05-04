@@ -10,6 +10,7 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getConnectedGoogleTokens } from '@/lib/integrations/google-tokens';
 import { logger } from '@/lib/logger/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -136,11 +137,62 @@ export class GoogleBusinessService {
 
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
+/**
+ * Build a GoogleBusinessService from the operator's connected Google
+ * account.
+ *
+ * Token source (preferred): the central Google token store
+ * (`getConnectedGoogleTokens()`), which is populated by the unified
+ * onboarding OAuth flow that requests the full scope bundle including
+ * `business.manage`. All Google integrations (Gmail, Calendar, Drive,
+ * YouTube, GBP, GA4, GSC, Ads) read from the same store so the operator
+ * doesn't have to re-OAuth per service.
+ *
+ * Backward-compat fallback: if no central tokens are present (e.g., the
+ * operator connected GBP via the legacy per-service flow before the
+ * unified consent screen shipped), fall back to
+ * `apiKeyService.getServiceKey(PLATFORM_ID, 'google_business')`.
+ *
+ * In either path, GBP also requires `accountId` and `locationId` (the
+ * specific Business Profile + location to post to). Those are NOT
+ * stored in the central token doc — they're per-feature config kept in
+ * the legacy `apiKeys.social.google_business` record. The central path
+ * therefore reads tokens from the central store and merges in
+ * `accountId`/`locationId` from the legacy record. Once a UI exists to
+ * pick a GBP location after central OAuth, this merge can be replaced
+ * by a dedicated GBP location config doc.
+ */
 export async function createGoogleBusinessService(): Promise<GoogleBusinessService | null> {
-  const keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'google_business') as GoogleBusinessConfig | null;
-  if (!keys) {
+  const legacyKeys = (await apiKeyService.getServiceKey(
+    PLATFORM_ID,
+    'google_business',
+  )) as GoogleBusinessConfig | null;
+
+  const centralTokens = await getConnectedGoogleTokens();
+  if (centralTokens) {
+    // Central path — tokens come from the unified Google connection;
+    // accountId/locationId come from the legacy record (still the
+    // canonical home for GBP location selection until a dedicated UI
+    // ships).
+    const config: GoogleBusinessConfig = {
+      accessToken: centralTokens.accessToken,
+      refreshToken: centralTokens.refreshToken ?? undefined,
+      accountId: legacyKeys?.accountId,
+      locationId: legacyKeys?.locationId,
+    };
+    const service = new GoogleBusinessService(config);
+    if (service.isConfigured()) {
+      return service;
+    }
+    // Tokens present but no GBP account/location selected yet — fall
+    // through and let the legacy path try (it has its own access token
+    // we can use if the operator filled out the legacy save flow).
+  }
+
+  // Legacy fallback — preserved during migration.
+  if (!legacyKeys) {
     return null;
   }
-  const service = new GoogleBusinessService(keys);
+  const service = new GoogleBusinessService(legacyKeys);
   return service.isConfigured() ? service : null;
 }

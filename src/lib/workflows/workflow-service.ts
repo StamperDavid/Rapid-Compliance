@@ -202,11 +202,38 @@ export async function updateWorkflow(
 
 /**
  * Delete workflow
+ *
+ * Also clears every pending action calendar event for this workflow:
+ *   - the schedule-trigger calendar event (via unregisterWorkflowTrigger)
+ *   - any pending workflowWaits calendar events (via the workflow-engine helper)
+ * Calendar cleanup is best-effort — Firestore delete is the source of
+ * truth and proceeds even if calendar cleanup fails.
  */
 export async function deleteWorkflow(
   workflowId: string
 ): Promise<void> {
   try {
+    // Best-effort cleanup of all pending action calendar events for
+    // this workflow before we drop the Firestore record.
+    try {
+      const { unregisterWorkflowTrigger } = await import('./workflow-engine');
+      await unregisterWorkflowTrigger(workflowId);
+    } catch (cleanupErr) {
+      logger.warn('Failed to unregister workflow trigger during delete (non-fatal)', {
+        workflowId,
+        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+      });
+    }
+    try {
+      const { deleteCalendarEventsForWorkflowWaits } = await import('@/lib/workflow/workflow-engine');
+      await deleteCalendarEventsForWorkflowWaits(workflowId);
+    } catch (cleanupErr) {
+      logger.warn('Failed to clear workflow wait calendar events during delete (non-fatal)', {
+        workflowId,
+        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+      });
+    }
+
     await FirestoreService.delete(
       getSubCollection('workflows'),
       workflowId
@@ -221,6 +248,12 @@ export async function deleteWorkflow(
 
 /**
  * Activate/pause workflow
+ *
+ * When pausing a workflow we also clear every pending action calendar
+ * event for it (schedule-trigger + workflowWaits) so the operator's
+ * calendar reflects the current paused state. Re-activating
+ * re-registers the schedule via the standard trigger registration path
+ * (callers handle that separately).
  */
 export async function setWorkflowStatus(
   workflowId: string,
@@ -233,6 +266,27 @@ export async function setWorkflowStatus(
       workflowId,
       newStatus: status,
     });
+
+    if (status === 'paused') {
+      try {
+        const { unregisterWorkflowTrigger } = await import('./workflow-engine');
+        await unregisterWorkflowTrigger(workflowId);
+      } catch (cleanupErr) {
+        logger.warn('Failed to unregister workflow trigger on pause (non-fatal)', {
+          workflowId,
+          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+        });
+      }
+      try {
+        const { deleteCalendarEventsForWorkflowWaits } = await import('@/lib/workflow/workflow-engine');
+        await deleteCalendarEventsForWorkflowWaits(workflowId);
+      } catch (cleanupErr) {
+        logger.warn('Failed to clear workflow wait calendar events on pause (non-fatal)', {
+          workflowId,
+          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+        });
+      }
+    }
 
     return workflow;
   } catch (error: unknown) {
