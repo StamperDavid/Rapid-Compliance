@@ -159,35 +159,61 @@ export class YouTubeService {
   }
 
   /**
+   * Run a YouTube API call with one-shot 401-retry. The callback receives
+   * a fresh access token; on 401 we force a refresh and retry exactly
+   * once. This covers the case where a cached central-store access token
+   * has expired between the last write and the current call.
+   *
+   * Strict cap: at most one retry per outer call. If the second response
+   * also 401s, it's returned to the caller for normal error handling.
+   */
+  private async withRefreshRetry(
+    call: (token: string) => Promise<Response>,
+  ): Promise<Response> {
+    let token = await this.ensureToken();
+    let res = await call(token);
+
+    if (res.status === 401) {
+      const fresh = await this.refreshToken();
+      if (fresh) {
+        token = fresh;
+        res = await call(token);
+      }
+    }
+
+    return res;
+  }
+
+  /**
    * Create a community post (text-based update on the channel's Community tab).
    * Falls back to creating a playlist note if community posts aren't available.
    */
   async createCommunityPost(request: YouTubeCommunityPostRequest): Promise<YouTubePostResponse> {
     try {
-      const token = await this.ensureToken();
-
       // YouTube Data API doesn't have an official community post endpoint.
       // Use the activities.insert or fall back to a channel bulletin.
-      const response = await fetch(`${API_BASE}/activities?part=snippet,contentDetails`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          snippet: {
-            description: request.text,
+      const response = await this.withRefreshRetry((token) =>
+        fetch(`${API_BASE}/activities?part=snippet,contentDetails`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
           },
-          contentDetails: {
-            bulletin: {
-              resourceId: {
-                kind: 'youtube#channel',
-                channelId: this.config.channelId ?? 'mine',
+          body: JSON.stringify({
+            snippet: {
+              description: request.text,
+            },
+            contentDetails: {
+              bulletin: {
+                resourceId: {
+                  kind: 'youtube#channel',
+                  channelId: this.config.channelId ?? 'mine',
+                },
               },
             },
-          },
+          }),
         }),
-      });
+      );
 
       const data = (await response.json()) as { id?: string; error?: { message?: string; errors?: Array<{ reason?: string }> } };
       if (!response.ok || !data.id) {
@@ -209,27 +235,27 @@ export class YouTubeService {
    */
   async setVideoMetadata(request: YouTubeUploadRequest): Promise<YouTubePostResponse> {
     try {
-      const token = await this.ensureToken();
-
-      const response = await fetch(`${API_BASE}/videos?part=snippet,status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          snippet: {
-            title: request.title,
-            description: request.description,
-            tags: request.tags ?? [],
-            categoryId: request.categoryId ?? '22', // "People & Blogs" default
+      const response = await this.withRefreshRetry((token) =>
+        fetch(`${API_BASE}/videos?part=snippet,status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
           },
-          status: {
-            privacyStatus: request.privacyStatus ?? 'public',
-            selfDeclaredMadeForKids: false,
-          },
+          body: JSON.stringify({
+            snippet: {
+              title: request.title,
+              description: request.description,
+              tags: request.tags ?? [],
+              categoryId: request.categoryId ?? '22', // "People & Blogs" default
+            },
+            status: {
+              privacyStatus: request.privacyStatus ?? 'public',
+              selfDeclaredMadeForKids: false,
+            },
+          }),
         }),
-      });
+      );
 
       const data = (await response.json()) as { id?: string; error?: { message?: string } };
       if (!response.ok || !data.id) {
@@ -246,26 +272,12 @@ export class YouTubeService {
 
   async getChannel(): Promise<YouTubeChannel | null> {
     try {
-      let token = await this.ensureToken();
-
-      let res = await fetch(
-        `${API_BASE}/channels?part=snippet,statistics&mine=true`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const res = await this.withRefreshRetry((token) =>
+        fetch(
+          `${API_BASE}/channels?part=snippet,statistics&mine=true`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
       );
-
-      // If unauthorized, try one refresh-and-retry — covers the case
-      // where the cached central-store access token expired between
-      // the last write and this call.
-      if (res.status === 401) {
-        const fresh = await this.refreshToken();
-        if (fresh) {
-          token = fresh;
-          res = await fetch(
-            `${API_BASE}/channels?part=snippet,statistics&mine=true`,
-            { headers: { Authorization: `Bearer ${token}` } },
-          );
-        }
-      }
 
       if (!res.ok) {
         return null;

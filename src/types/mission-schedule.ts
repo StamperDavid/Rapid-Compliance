@@ -16,8 +16,12 @@ export type ScheduleFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'c
  * - active: eligible to run when nextRunAt is reached
  * - paused: user has temporarily suspended it
  * - expired: expiresAt has passed and the schedule will not run again
+ * - cancelled: the source mission was deleted/cancelled, so the schedule
+ *   is permanently halted (cannot be resumed). Distinct from expired —
+ *   expired schedules ran out of time, cancelled schedules lost their
+ *   source mission. Set only by `cancelSchedulesForMission` cascade.
  */
-export type ScheduleStatus = 'active' | 'paused' | 'expired';
+export type ScheduleStatus = 'active' | 'paused' | 'expired' | 'cancelled';
 
 /**
  * A saved, reusable mission template that auto-runs on a configurable schedule.

@@ -10,6 +10,7 @@ import {
   handleEmailOpen,
   handleEmailClick,
 } from '@/lib/outbound/sequence-scheduler';
+import { cancelSequenceJobsForRecipient } from '@/lib/workflows/sequence-scheduler';
 import { parseSendGridWebhook } from '@/lib/email/sendgrid-service';
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
@@ -239,6 +240,32 @@ async function processEvent(event: EmailWebhookEvent): Promise<void> {
     await updateEmailCampaignStats(event.emailCampaignId, event.event);
   }
 
+  // Cancel any pending workflow sequence jobs for this recipient if the event
+  // indicates we should stop sending to them. Runs independent of enrollment
+  // metadata — the recipient may have pending jobs across multiple workflows.
+  // Failures here are logged but never fail the webhook (SendGrid retries 5xx).
+  if (shouldStopSendingForEvent(event)) {
+    try {
+      const result = await cancelSequenceJobsForRecipient({ recipient: event.email });
+      if (result.cancelled > 0) {
+        logger.info('Cancelled pending sequence jobs for recipient', {
+          route: '/api/webhooks/email',
+          email: event.email,
+          eventType: event.event,
+          bounceType: event.type,
+          cancelled: result.cancelled,
+        });
+      }
+    } catch (error) {
+      logger.warn('Failed to cancel pending sequence jobs for recipient', {
+        route: '/api/webhooks/email',
+        email: event.email,
+        eventType: event.event,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   // Process sequence enrollment events (requires enrollmentId + stepId)
   const enrollmentId = event.enrollmentId;
   const stepId = event.stepId;
@@ -320,6 +347,32 @@ async function updateEmailCampaignStats(
       eventType,
       error: error instanceof Error ? error.message : String(error),
     });
+  }
+}
+
+/**
+ * Decide whether a SendGrid event means we should stop sending to this recipient.
+ *
+ * Triggers cancellation of pending drip jobs for:
+ * - bounce + type === 'bounce' (hard bounce — address is bad/permanent)
+ * - dropped (SendGrid suppressed the send — bounce list, spam list, invalid)
+ * - spamreport (recipient hit "report spam")
+ * - unsubscribe (recipient opted out)
+ *
+ * Soft bounces (type === 'blocked' or unset) are NOT cancelled — those are
+ * transient and the recipient may still be reachable.
+ */
+function shouldStopSendingForEvent(event: EmailWebhookEvent): boolean {
+  switch (event.event) {
+    case 'bounce':
+      // SendGrid sends type: 'bounce' for hard, type: 'blocked' for soft.
+      return event.type === 'bounce';
+    case 'dropped':
+    case 'spamreport':
+    case 'unsubscribe':
+      return true;
+    default:
+      return false;
   }
 }
 

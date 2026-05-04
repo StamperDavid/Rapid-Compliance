@@ -469,6 +469,84 @@ export async function getSchedulesDue(): Promise<MissionSchedule[]> {
 }
 
 /**
+ * Cascade-cancel every active schedule that was built from a given source
+ * mission. Called from `mission-persistence.ts`'s cancel/delete/reject
+ * paths so a deleted source mission doesn't leave orphan schedules
+ * silently re-firing on cron and re-upserting calendar events.
+ *
+ * Each affected schedule is flipped to `cancelled` status and its
+ * mirrored calendar event (keyed by `mission-{scheduleId}`) is removed.
+ * `cancelled` is distinct from `expired`/`paused` so the audit trail
+ * makes the cause clear: the source mission went away, not the clock.
+ *
+ * Failures on individual schedules are logged but never thrown — a
+ * missing calendar mapping or a Firestore hiccup on one schedule must
+ * not block the others or the upstream cancel/delete operation.
+ *
+ * @returns The number of schedules successfully cancelled.
+ */
+export async function cancelSchedulesForMission(
+  sourceMissionId: string,
+): Promise<number> {
+  if (!adminDb) {
+    logger.warn('[MissionSchedule] Firestore not available — cancelSchedulesForMission skipped', {
+      sourceMissionId,
+    });
+    return 0;
+  }
+
+  try {
+    const snap = await adminDb
+      .collection(schedulesCollectionPath())
+      .where('sourceMissionId', '==', sourceMissionId)
+      .where('status', '==', 'active')
+      .get();
+
+    if (snap.empty) {
+      return 0;
+    }
+
+    let cancelled = 0;
+    const now = new Date().toISOString();
+
+    for (const doc of snap.docs) {
+      const schedule = doc.data() as MissionSchedule;
+      try {
+        await doc.ref.update({
+          status: 'cancelled' as ScheduleStatus,
+          updatedAt: now,
+        });
+        await removeScheduleCalendarEvent(schedule.id);
+        cancelled += 1;
+      } catch (innerErr) {
+        logger.warn('[MissionSchedule] Failed to cancel one schedule — continuing', {
+          scheduleId: schedule.id,
+          sourceMissionId,
+          error: innerErr instanceof Error ? innerErr.message : String(innerErr),
+        });
+      }
+    }
+
+    if (cancelled > 0) {
+      logger.info('[MissionSchedule] Cascade-cancelled schedules for source mission', {
+        sourceMissionId,
+        cancelled,
+        totalMatching: snap.docs.length,
+      });
+    }
+
+    return cancelled;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.warn('[MissionSchedule] cancelSchedulesForMission query failed — continuing', {
+      sourceMissionId,
+      error: errorMsg,
+    });
+    return 0;
+  }
+}
+
+/**
  * Permanently delete a schedule document.
  *
  * @returns true on success, false if not found or on error.

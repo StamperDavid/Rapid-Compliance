@@ -41,6 +41,39 @@ async function clearMissionCalendarEvent(missionId: string): Promise<void> {
   }
 }
 
+/**
+ * Cascade-cancel any MissionSchedule docs that reference this mission as
+ * their source, so a deleted/cancelled/rejected source mission doesn't
+ * leave orphan schedules silently re-firing on cron and re-upserting
+ * calendar events. Each affected schedule flips to `cancelled` and its
+ * calendar event is removed.
+ *
+ * Dynamic import breaks the circular: `mission-schedule-service` imports
+ * `getMission` from this module at the top level. Static-importing the
+ * cascade helper would close the cycle and risk partially-initialised
+ * exports at module load time. The dynamic import resolves after both
+ * modules are fully evaluated.
+ *
+ * Failures are non-fatal — never block the upstream cancel/delete.
+ */
+async function cascadeCancelSchedulesForMission(missionId: string): Promise<void> {
+  try {
+    const { cancelSchedulesForMission } = await import('@/lib/orchestrator/mission-schedule-service');
+    const cancelled = await cancelSchedulesForMission(missionId);
+    if (cancelled > 0) {
+      logger.info('[MissionPersistence] Cascade-cancelled schedules tied to mission', {
+        missionId,
+        cancelled,
+      });
+    }
+  } catch (err) {
+    logger.warn('[MissionPersistence] Schedule cascade-cancel failed — continuing', {
+      missionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -896,6 +929,15 @@ export async function rejectPlan(missionId: string, reason?: string): Promise<bo
     });
 
     if (success) {
+      // Cascade: tear down any MissionSchedule docs that pointed at this
+      // mission as their source. Done BEFORE the mission-keyed calendar
+      // delete so each schedule's own calendar event (keyed by
+      // `mission-{scheduleId}`) is removed first. Plan-rejection is rare
+      // for a source-of-schedules mission (the schedule is normally
+      // built from an already-approved+executed mission), but we cover
+      // it for symmetry with cancelMission/deleteMission.
+      await cascadeCancelSchedulesForMission(missionId);
+
       // Best-effort: clear any mirrored calendar event keyed by missionId.
       await clearMissionCalendarEvent(missionId);
     }
@@ -1391,6 +1433,12 @@ export async function cancelMission(missionId: string): Promise<boolean> {
 
     logger.info('[MissionPersistence] Mission cancelled', { missionId });
 
+    // Cascade: tear down any MissionSchedule docs that pointed at this
+    // mission as their source. Done BEFORE the mission-keyed calendar
+    // delete so each schedule's own calendar event (keyed by
+    // `mission-{scheduleId}`) is removed first.
+    await cascadeCancelSchedulesForMission(missionId);
+
     // Best-effort: clear any mirrored calendar event keyed by missionId.
     await clearMissionCalendarEvent(missionId);
 
@@ -1427,6 +1475,12 @@ export async function deleteMission(missionId: string): Promise<boolean> {
     await docRef.delete();
 
     logger.info('[MissionPersistence] Mission deleted', { missionId });
+
+    // Cascade: tear down any MissionSchedule docs that pointed at this
+    // mission as their source. Done BEFORE the mission-keyed calendar
+    // delete so each schedule's own calendar event (keyed by
+    // `mission-{scheduleId}`) is removed first.
+    await cascadeCancelSchedulesForMission(missionId);
 
     // Best-effort: clear any mirrored calendar event keyed by missionId.
     await clearMissionCalendarEvent(missionId);

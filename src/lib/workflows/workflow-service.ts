@@ -233,6 +233,15 @@ export async function deleteWorkflow(
         error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
       });
     }
+    try {
+      const { cancelSequenceJobsForWorkflow } = await import('./sequence-scheduler');
+      await cancelSequenceJobsForWorkflow(workflowId);
+    } catch (cleanupErr) {
+      logger.warn('Failed to cancel workflow sequence jobs during delete (non-fatal)', {
+        workflowId,
+        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+      });
+    }
 
     await FirestoreService.delete(
       getSubCollection('workflows'),
@@ -282,6 +291,15 @@ export async function setWorkflowStatus(
         await deleteCalendarEventsForWorkflowWaits(workflowId);
       } catch (cleanupErr) {
         logger.warn('Failed to clear workflow wait calendar events on pause (non-fatal)', {
+          workflowId,
+          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+        });
+      }
+      try {
+        const { cancelSequenceJobsForWorkflow } = await import('./sequence-scheduler');
+        await cancelSequenceJobsForWorkflow(workflowId);
+      } catch (cleanupErr) {
+        logger.warn('Failed to cancel workflow sequence jobs on pause (non-fatal)', {
           workflowId,
           error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
         });
