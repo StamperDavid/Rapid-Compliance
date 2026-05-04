@@ -144,8 +144,24 @@ export async function cancelZoomMeeting(
       },
     });
 
-    if (!response.ok && response.status !== 204) {
-      throw new Error('Failed to cancel Zoom meeting');
+    // Zoom returns 204 No Content on successful delete. 200 is acceptable too.
+    // Anything else (especially 4xx) is a real failure and we surface Zoom's
+    // actual error message so the caller can decide whether to retry, force-
+    // cancel locally, or escalate. The previous generic "Failed to cancel
+    // Zoom meeting" was a fake-success enabler — when the cancel route then
+    // swallowed the throw, the UI showed cancelled while the Zoom meeting
+    // was still scheduled and the recipient still got reminders.
+    if (!response.ok) {
+      let zoomMessage = response.statusText;
+      try {
+        const errorBody = (await response.json()) as ZoomApiErrorResponse;
+        if (errorBody.message) {
+          zoomMessage = errorBody.message;
+        }
+      } catch {
+        // Non-JSON body — fall back to statusText.
+      }
+      throw new Error(`Zoom API error (${response.status}): ${zoomMessage}`);
     }
 
     logger.info('Zoom meeting cancelled', { meetingId });
