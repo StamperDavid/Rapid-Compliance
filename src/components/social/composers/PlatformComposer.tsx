@@ -168,22 +168,63 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
   const [generating, setGenerating] = useState(false);
   const briefTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const checkConnection = useCallback(async () => {
+  const checkConnection = useCallback(async (): Promise<'connected' | 'not_connected' | 'auth_not_ready'> => {
     try {
       const res = await authFetch(`/api/social/accounts?platform=${platform}`);
       if (res.ok) {
         const data = (await res.json()) as AccountListResponse;
-        setConnected(data.accounts?.some((a) => a.status === 'active') ?? false);
-      } else {
-        setConnected(false);
+        const isActive = data.accounts?.some((a) => a.status === 'active') ?? false;
+        return isActive ? 'connected' : 'not_connected';
       }
+      // 401/403 means the auth token isn't ready yet — distinguish from a
+      // real "no active account" answer so we can retry instead of locking
+      // the composer out.
+      if (res.status === 401 || res.status === 403) {
+        return 'auth_not_ready';
+      }
+      return 'not_connected';
     } catch {
-      setConnected(false);
+      // Network error → treat as auth-not-ready so we retry, not lock out.
+      return 'auth_not_ready';
     }
   }, [authFetch, platform]);
 
+  // Retry the connection check on transient auth-not-ready failures so the
+  // composer doesn't permanently disable itself when authFetch hadn't
+  // finished hydrating its token at first-paint. Backs off (250 ms, 500 ms,
+  // 1 s, 2 s, 4 s) and gives up after ~8 s — by that point the token is
+  // either ready or genuinely missing.
   useEffect(() => {
-    void checkConnection();
+    let cancelled = false;
+    const delays = [0, 250, 500, 1000, 2000, 4000];
+    void (async () => {
+      for (const delay of delays) {
+        if (cancelled) { return; }
+        if (delay > 0) {
+          await new Promise<void>((r) => { setTimeout(r, delay); });
+          if (cancelled) { return; }
+        }
+        const result = await checkConnection();
+        if (cancelled) { return; }
+        if (result === 'connected') {
+          setConnected(true);
+          return;
+        }
+        if (result === 'not_connected') {
+          setConnected(false);
+          return;
+        }
+        // 'auth_not_ready' — keep retrying.
+      }
+      // Exhausted retries without a definitive answer — treat as not
+      // connected so the composer at least gives the operator the
+      // "Connect your account" nudge instead of staying stuck on
+      // "Checking…".
+      if (!cancelled) {
+        setConnected(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [checkConnection]);
 
   const requiresMedia = REQUIRES_MEDIA[platform] ?? false;
@@ -426,11 +467,16 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
         <Button
           onClick={() => void handlePost()}
           disabled={postDisabled}
-          style={
-            postDisabled
-              ? undefined
-              : { backgroundColor: meta.color, color: '#fff' }
-          }
+          // Always paint the brand color so the button reads as a real
+          // primary action, not a "broken" black/grey placeholder. Disabled
+          // state drops opacity so the operator can see at a glance whether
+          // they need to type content / wait for the connection check
+          // without confusing it for a permanent error.
+          style={{
+            backgroundColor: meta.color,
+            color: '#fff',
+            opacity: postDisabled ? 0.55 : 1,
+          }}
           className="text-white"
         >
           {posting ? 'Posting…' : `Post to ${meta.label}`}

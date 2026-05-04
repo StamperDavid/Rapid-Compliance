@@ -210,8 +210,19 @@ export async function generateAndStoreSocialPostImage(
     return null;
   }
 
+  // Return ABSOLUTE URL so server-side fetchers (Twitter/Bluesky/Mastodon
+  // uploadMediaFromUrl) can resolve it. A relative path works in browser
+  // contexts but breaks Node's fetch (no implied origin), which silently
+  // killed multi-platform image attachment until May 4 2026.
+  // Use || not ?? so an empty-string env var also falls back to localhost
+  // (?? only short-circuits on null/undefined; '' would yield a relative
+  // URL again and the platform fetchers would 500 like they did pre-fix).
+  const rawBaseUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const baseUrl = rawBaseUrl && rawBaseUrl.length > 0
+    ? rawBaseUrl.replace(/\/$/, '')
+    : 'http://localhost:3000';
   return {
-    url: `/api/content/social-post-image/${input.imageId}`,
+    url: `${baseUrl}/api/content/social-post-image/${input.imageId}`,
     revisedPrompt,
     operatorProvided: false,
   };
