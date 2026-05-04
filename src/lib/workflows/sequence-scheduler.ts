@@ -21,6 +21,10 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { sendEmail } from '@/lib/email/email-service';
 import { logger } from '@/lib/logger/logger';
+import {
+  upsertSalesVelocityCalendarEvent,
+  deleteSalesVelocityCalendarEvent,
+} from '@/lib/integrations/google-calendar-service';
 import type { WorkflowSequenceJob } from '@/types/workflow';
 
 const COLLECTION = 'workflowSequenceJobs';
@@ -241,12 +245,78 @@ export async function scheduleEmailSequence(
     lastFireAt: fireAts[fireAts.length - 1],
   });
 
+  // Mirror each scheduled email onto the operator's connected Google
+  // Calendar (via the dedicated SalesVelocity.ai calendar). Only mirror
+  // jobs whose recipient is a real address — template rows ({{entity.email}})
+  // would create useless events. Failure is non-fatal.
+  if (recipientResolved) {
+    for (let i = 0; i < sortedEmails.length; i++) {
+      const email = sortedEmails[i];
+      const jobId = jobIds[i];
+      const fireAt = fireAts[i];
+      await syncSequenceJobToCalendar({
+        jobId,
+        recipient: params.recipient,
+        subjectLine: email.subjectLine,
+        previewText: email.previewText,
+        bodyPlain: email.body,
+        sequenceName: params.sequenceType,
+        campaignId: params.workflowId,
+        runAtIso: fireAt,
+      });
+    }
+  }
+
   return {
     jobIds,
     fireAts,
     firstFireAt: fireAts[0],
     lastFireAt: fireAts[fireAts.length - 1],
   };
+}
+
+/**
+ * Mirror a single sequenceJob onto the operator's connected Google Calendar.
+ * Idempotent (refId-based upsert). Failure is logged + swallowed so the
+ * primary scheduling write is never blocked by calendar issues.
+ */
+async function syncSequenceJobToCalendar(params: {
+  jobId: string;
+  recipient: string;
+  subjectLine: string;
+  previewText?: string;
+  bodyPlain: string;
+  sequenceName?: string;
+  campaignId?: string;
+  runAtIso: string;
+}): Promise<void> {
+  try {
+    const subjectForTitle = params.subjectLine !== '' ? params.subjectLine : 'Drip email';
+    const previewSlice = (params.previewText !== undefined && params.previewText !== ''
+      ? params.previewText
+      : params.bodyPlain
+    ).slice(0, 500);
+    await upsertSalesVelocityCalendarEvent({
+      refId: `email-send-${params.jobId}`,
+      summary: `Email: ${subjectForTitle}`,
+      description: [
+        `Recipient: ${params.recipient}`,
+        `Sequence: ${params.sequenceName ?? 'unnamed'}`,
+        `Campaign: ${params.campaignId ?? 'n/a'}`,
+        '',
+        'Preview:',
+        previewSlice,
+      ].join('\n'),
+      startIso: params.runAtIso,
+      timeZone: 'America/New_York',
+      category: 'email',
+    });
+  } catch (err) {
+    logger.warn('[SequenceScheduler] Calendar mirror failed (non-fatal)', {
+      jobId: params.jobId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 /**
@@ -322,6 +392,8 @@ export async function fireReadySequenceJobs(maxBatch: number = 50): Promise<Fire
         error: 'Recipient template was never resolved to a real email address',
         updatedAt: updateIso,
       });
+      // Remove the (probably non-existent) calendar event for tidiness.
+      await removeSequenceJobCalendarEvent(job.id);
       skipped++;
       continue;
     }
@@ -348,6 +420,9 @@ export async function fireReadySequenceJobs(maxBatch: number = 50): Promise<Fire
           messageId: result.messageId,
           updatedAt: updateIso,
         });
+        // Job has now fired — remove the "scheduled" calendar event so the
+        // operator's calendar reflects only outstanding work.
+        await removeSequenceJobCalendarEvent(job.id);
         fired++;
       } else {
         await docSnap.ref.update({
@@ -355,6 +430,7 @@ export async function fireReadySequenceJobs(maxBatch: number = 50): Promise<Fire
           error: result.error ?? 'sendEmail returned success=false without error',
           updatedAt: updateIso,
         });
+        await removeSequenceJobCalendarEvent(job.id);
         failed++;
       }
     } catch (error) {
@@ -364,6 +440,7 @@ export async function fireReadySequenceJobs(maxBatch: number = 50): Promise<Fire
         error: errMsg,
         updatedAt: updateIso,
       });
+      await removeSequenceJobCalendarEvent(job.id);
       logger.error('[SequenceScheduler] Failed to fire job', error instanceof Error ? error : new Error(errMsg), {
         jobId: job.id,
         workflowId: job.workflowId,
@@ -505,6 +582,22 @@ export async function instantiateSequenceForRecipient(params: {
     lastFireAt: fireAts[fireAts.length - 1],
   });
 
+  // Mirror each instantiated job onto the operator's Google Calendar.
+  // These are real-recipient jobs, so always sync. Non-fatal on failure.
+  for (let i = 0; i < templates.length; i++) {
+    const tmpl = templates[i];
+    await syncSequenceJobToCalendar({
+      jobId: jobIds[i],
+      recipient: params.recipient,
+      subjectLine: tmpl.emailSubject,
+      previewText: tmpl.emailPreview,
+      bodyPlain: stripHtmlEnvelope(tmpl.emailBody),
+      sequenceName: tmpl.sequenceType,
+      campaignId: tmpl.workflowId,
+      runAtIso: fireAts[i],
+    });
+  }
+
   const emailsForReturn: SequenceEmail[] = sortedEmails;
   void emailsForReturn; // Only used to keep the type tightened in reviews
   return {
@@ -522,6 +615,83 @@ export async function instantiateSequenceForRecipient(params: {
 function stripHtmlEnvelope(html: string): string {
   const match = /^<div[^>]*>([\s\S]*)<\/div>$/.exec(html.trim());
   return match ? match[1] : html;
+}
+
+/**
+ * Idempotent best-effort delete of the calendar event mirroring a
+ * sequenceJob. Used when a job is fired (no longer "scheduled"), or
+ * when the sequence is cancelled / the recipient unsubscribes. Safe to
+ * call when no calendar event exists — logs at debug and returns.
+ */
+async function removeSequenceJobCalendarEvent(jobId: string): Promise<void> {
+  try {
+    await deleteSalesVelocityCalendarEvent(`email-send-${jobId}`);
+  } catch (err) {
+    logger.warn('[SequenceScheduler] Calendar delete failed (non-fatal)', {
+      jobId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Cancel every still-pending sequenceJob for a recipient address (or for
+ * a specific workflow + recipient pair) and tear down the corresponding
+ * Google Calendar events.
+ *
+ * Used when:
+ *   - The recipient unsubscribes (`/api/public/unsubscribe`).
+ *   - An operator pauses or scraps a drip workflow.
+ *   - A contact is hard-bounced or marked as "do not contact".
+ *
+ * Returns the number of jobs cancelled. Non-existent recipient = 0
+ * cancellations + no error.
+ */
+export async function cancelSequenceJobsForRecipient(params: {
+  recipient: string;
+  workflowId?: string;
+}): Promise<{ cancelled: number }> {
+  if (!adminDb) {
+    throw new Error('Firestore admin not initialized — cannot cancel sequence jobs');
+  }
+
+  const collectionPath = getSubCollection(COLLECTION);
+  let query = adminDb
+    .collection(collectionPath)
+    .where('recipient', '==', params.recipient)
+    .where('status', '==', 'pending');
+  if (typeof params.workflowId === 'string' && params.workflowId.length > 0) {
+    query = query.where('workflowId', '==', params.workflowId);
+  }
+
+  const snap = await query.get();
+  if (snap.empty) {
+    return { cancelled: 0 };
+  }
+
+  const nowIso = new Date().toISOString();
+  const batch = adminDb.batch();
+  for (const docSnap of snap.docs) {
+    batch.update(docSnap.ref, {
+      status: 'cancelled',
+      updatedAt: nowIso,
+    });
+  }
+  await batch.commit();
+
+  // Delete each calendar event independently — calendar-side failures
+  // must not block or partially-undo the Firestore cancellation.
+  for (const docSnap of snap.docs) {
+    await removeSequenceJobCalendarEvent(docSnap.id);
+  }
+
+  logger.info('[SequenceScheduler] Cancelled sequence jobs for recipient', {
+    recipient: params.recipient,
+    workflowId: params.workflowId,
+    cancelled: snap.size,
+  });
+
+  return { cancelled: snap.size };
 }
 
 /**

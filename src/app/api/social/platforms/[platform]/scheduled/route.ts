@@ -36,6 +36,10 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSocialPostsCollection } from '@/lib/firebase/collections';
 import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
+import {
+  upsertSalesVelocityCalendarEvent,
+  deleteSalesVelocityCalendarEvent,
+} from '@/lib/integrations/google-calendar-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -245,6 +249,31 @@ export async function PATCH(
 
     logger.info('Scheduled post updated', { postId, platform, fields: Object.keys(update) });
 
+    // Re-upsert the corresponding Google Calendar event so a content
+    // edit OR a reschedule both surface in the operator's calendar.
+    // Non-fatal — Firestore is the source of truth.
+    try {
+      const effectiveContent = content ?? existing.content;
+      const effectiveScheduledIso =
+        scheduledFor ?? toIso(existing.scheduledAt) ?? existing.scheduledFor ?? null;
+      if (effectiveScheduledIso) {
+        await upsertSalesVelocityCalendarEvent({
+          refId: `social-post-${postId}`,
+          summary: `Social post: ${platform}`,
+          description: `Scheduled post text:\n${effectiveContent}\n\nPlatform: ${platform}`,
+          startIso: effectiveScheduledIso,
+          timeZone: 'America/New_York',
+          category: 'social',
+        });
+      }
+    } catch (calendarErr) {
+      logger.warn('Scheduled Posts API: calendar upsert failed (non-fatal)', {
+        postId,
+        platform,
+        error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     logger.error(
@@ -304,6 +333,19 @@ export async function DELETE(
     await docRef.update({ status: 'cancelled', updatedAt: new Date() });
 
     logger.info('Scheduled post cancelled', { postId, platform });
+
+    // Mirror the cancellation to the operator's SalesVelocity.ai
+    // Google Calendar so the event disappears with the schedule.
+    // Non-fatal — Firestore is the source of truth.
+    try {
+      await deleteSalesVelocityCalendarEvent(`social-post-${postId}`);
+    } catch (calendarErr) {
+      logger.warn('Scheduled Posts API: calendar delete failed (non-fatal)', {
+        postId,
+        platform,
+        error: calendarErr instanceof Error ? calendarErr.message : String(calendarErr),
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

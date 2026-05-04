@@ -19,6 +19,7 @@ import { logger } from '@/lib/logger/logger';
 import { getSubCollection, getContactsCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { cancelSequenceJobsForRecipient } from '@/lib/workflows/sequence-scheduler';
 
 export const dynamic = 'force-dynamic';
 
@@ -217,16 +218,23 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
       false,
     );
 
-    // Update contact preferences if the contact exists
+    // Update contact preferences if the contact exists, and capture the
+    // recipient email so we can cancel any pending drip-sequence jobs.
+    let recipientEmail: string | undefined;
     try {
       const contactPath = getContactsCollection();
       const existingContact: unknown = await AdminFirestoreService.get(contactPath, contactId);
       if (existingContact && typeof existingContact === 'object') {
+        const asRecord = existingContact as Record<string, unknown>;
+        const candidate = asRecord.email;
+        if (typeof candidate === 'string' && candidate.length > 0) {
+          recipientEmail = candidate;
+        }
         await AdminFirestoreService.set(
           contactPath,
           contactId,
           {
-            ...(existingContact as Record<string, unknown>),
+            ...asRecord,
             emailOptOut: true,
             emailOptOutDate: new Date().toISOString(),
             unsubscribed: true,
@@ -238,6 +246,26 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
     } catch {
       // Contact may not exist in CRM - suppression record is the primary source of truth
       logger.debug('Contact not found for unsubscribe, suppression recorded', { contactId });
+    }
+
+    // Cancel every pending workflowSequenceJob for this recipient and
+    // tear down the corresponding Google Calendar events. This honours
+    // the unsubscribe within the same request — drip emails won't keep
+    // firing into the next polling tick. Non-fatal on failure.
+    if (typeof recipientEmail === 'string' && recipientEmail.length > 0) {
+      try {
+        const result = await cancelSequenceJobsForRecipient({ recipient: recipientEmail });
+        logger.info('Cancelled pending drip sequence jobs on unsubscribe', {
+          contactId,
+          cancelled: result.cancelled,
+        });
+      } catch (cancelErr) {
+        logger.error(
+          'Failed to cancel pending sequence jobs on unsubscribe',
+          cancelErr instanceof Error ? cancelErr : new Error(String(cancelErr)),
+          { contactId },
+        );
+      }
     }
 
     // Unenroll from active sequences

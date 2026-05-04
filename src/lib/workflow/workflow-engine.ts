@@ -28,6 +28,10 @@ import { Timestamp } from 'firebase/firestore';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { NotificationService } from '@/lib/notifications/notification-service';
+import {
+  upsertSalesVelocityCalendarEvent,
+  deleteSalesVelocityCalendarEvent,
+} from '@/lib/integrations/google-calendar-service';
 import type {
   Workflow,
   WorkflowAction,
@@ -759,6 +763,7 @@ export class WorkflowEngine {
     const config = action.config as WaitActionConfig;
 
     const waitId = `wait_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const actionLabel = action.name && action.name.length > 0 ? action.name : action.type;
 
     if (config.type === 'delay') {
       const delayMs = (config.delayHours ?? 0) * 60 * 60 * 1000 +
@@ -783,11 +788,39 @@ export class WorkflowEngine {
 
       logger.info('Wait action scheduled', { waitId, delayMs, resumeAt });
 
+      // Mirror the scheduled resume time onto the operator's connected
+      // Google Calendar so they see the upcoming wait-resume tick.
+      // Non-fatal — the wait still resumes via the cron poller even if
+      // the calendar mirror fails.
+      try {
+        await upsertSalesVelocityCalendarEvent({
+          refId: `workflow-action-${waitId}`,
+          summary: `Workflow: ${actionLabel}: wait.delay`,
+          description:
+            `Workflow: ${actionLabel}\n` +
+            `Action: wait.delay\n` +
+            `Workflow ID: ${action.id}\n` +
+            `Will run: ${resumeAt}`,
+          startIso: resumeAt,
+          timeZone: 'America/New_York',
+          category: 'workflow',
+        });
+      } catch (err) {
+        logger.warn('[Workflow Engine] Failed to mirror wait.delay to Google Calendar (non-fatal)', {
+          waitId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
       return { waitType: 'delay', waitId, delayMs, resumeAt };
     } else {
       const conditionDescription = config.condition
         ? `${config.condition.field} ${config.condition.operator} ${String(config.condition.value)}`
         : undefined;
+
+      const expiresAtIso = config.maxWaitDays
+        ? new Date(Date.now() + config.maxWaitDays * 24 * 60 * 60 * 1000).toISOString()
+        : null;
 
       // Persist conditional wait
       await FirestoreService.set(
@@ -801,9 +834,7 @@ export class WorkflowEngine {
           condition: config.condition ?? null,
           conditionDescription: conditionDescription ?? null,
           maxWaitDays: config.maxWaitDays ?? null,
-          expiresAt: config.maxWaitDays
-            ? new Date(Date.now() + config.maxWaitDays * 24 * 60 * 60 * 1000).toISOString()
-            : null,
+          expiresAt: expiresAtIso,
           status: 'waiting',
           createdAt: new Date().toISOString(),
         }
@@ -811,9 +842,99 @@ export class WorkflowEngine {
 
       logger.info('Wait-until action registered', { waitId, condition: conditionDescription });
 
+      // For wait.until, we only have a deadline (maxWaitDays) — not a
+      // single fire-time. Still mirror it so the operator sees that a
+      // conditional wait is open and when it would expire. If
+      // maxWaitDays is missing we skip the calendar mirror because
+      // there is no concrete time to surface.
+      if (expiresAtIso) {
+        try {
+          await upsertSalesVelocityCalendarEvent({
+            refId: `workflow-action-${waitId}`,
+            summary: `Workflow: ${actionLabel}: wait.until`,
+            description:
+              `Workflow: ${actionLabel}\n` +
+              `Action: wait.until\n` +
+              `Condition: ${conditionDescription ?? '(none)'}\n` +
+              `Workflow ID: ${action.id}\n` +
+              `Expires: ${expiresAtIso}`,
+            startIso: expiresAtIso,
+            timeZone: 'America/New_York',
+            category: 'workflow',
+          });
+        } catch (err) {
+          logger.warn('[Workflow Engine] Failed to mirror wait.until to Google Calendar (non-fatal)', {
+            waitId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
       return { waitType: 'until', waitId, condition: conditionDescription, maxWaitDays: config.maxWaitDays };
     }
   }
+}
+
+/**
+ * Delete the calendar mirror for a single workflowWait. Used by cancel
+ * paths (workflow paused / disabled / deleted) to clean up pending
+ * action calendar events. Idempotent + non-fatal.
+ */
+export async function deleteCalendarEventForWait(waitId: string): Promise<void> {
+  try {
+    await deleteSalesVelocityCalendarEvent(`workflow-action-${waitId}`);
+  } catch (err) {
+    logger.warn('[Workflow Engine] Failed to delete wait calendar event (non-fatal)', {
+      waitId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Delete every pending workflowWait calendar event for a workflow. Used
+ * by cancel paths in the workflow service when a workflow is paused,
+ * disabled, or deleted. Looks up the pending waits in Firestore and
+ * fires deleteSalesVelocityCalendarEvent for each. Non-fatal on any
+ * individual failure — best-effort cleanup.
+ */
+export async function deleteCalendarEventsForWorkflowWaits(workflowId: string): Promise<{
+  deleted: number;
+  failed: number;
+}> {
+  let deleted = 0;
+  let failed = 0;
+  try {
+    const { adminDb } = await import('@/lib/firebase/admin');
+    if (!adminDb) {
+      return { deleted, failed };
+    }
+    const snap = await adminDb
+      .collection(getSubCollection('workflowWaits'))
+      .where('workflowId', '==', workflowId)
+      .where('status', '==', 'waiting')
+      .get();
+
+    for (const doc of snap.docs) {
+      const waitId = (doc.data() as { id?: string }).id ?? doc.id;
+      try {
+        await deleteSalesVelocityCalendarEvent(`workflow-action-${waitId}`);
+        deleted += 1;
+      } catch (err) {
+        failed += 1;
+        logger.warn('[Workflow Engine] Failed to delete a wait calendar event (continuing)', {
+          waitId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  } catch (err) {
+    logger.warn('[Workflow Engine] deleteCalendarEventsForWorkflowWaits lookup failed (non-fatal)', {
+      workflowId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  return { deleted, failed };
 }
 
 export default WorkflowEngine;
