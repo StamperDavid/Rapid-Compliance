@@ -6,13 +6,13 @@
  * after adding or removing an agent file. CI runs the same script with
  * `--check` and fails the build on drift.
  *
- * Total agents: 72
+ * Total agents: 73
  *   L1 (Master Orchestrator): 1
  *   L2 (Managers):            10
- *   L3 (Specialists):         57
+ *   L3 (Specialists):         58
  *   STANDALONE:               4
  *
- * Generated at: 2026-04-30T08:09:39.756Z
+ * Generated at: 2026-05-05T21:34:40.263Z
  *
  * @module lib/agents/agent-registry
  */
@@ -340,7 +340,7 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
   },
 
   // =========================================================================
-  // L3 - INTELLIGENCE SPECIALISTS (5)
+  // L3 - INTELLIGENCE SPECIALISTS (6)
   // =========================================================================
   {
     id: 'COMPETITOR_RESEARCHER',
@@ -349,6 +349,14 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
     tier: 'L3',
     parentId: 'INTELLIGENCE_MANAGER',
     capabilities: ['competitor_discovery', 'seo_analysis', 'market_positioning', 'feature_comparison', 'gap_analysis', 'llm_market_synthesis'],
+  },
+  {
+    id: 'INSIGHTS_ANALYST',
+    name: "Insights Analyst",
+    role: "Insights Analyst",
+    tier: 'L3',
+    parentId: 'INTELLIGENCE_MANAGER',
+    capabilities: ['platform_activity_review', 'setup_gap_detection', 'proactive_recommendation_generation', 'mission_prompt_drafting'],
   },
   {
     id: 'SCRAPER_SPECIALIST',
