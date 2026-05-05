@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { getWorkflowExecutions } from '@/lib/workflows/workflow-engine'
+import { getWorkflowExecutions } from '@/lib/workflows/workflow-executions-service'
 import { logger } from '@/lib/logger/logger';
 
 interface ActionResult {

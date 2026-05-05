@@ -8,7 +8,7 @@
 'use client';
 
 import React from 'react';
-import type { DealHealthScore } from '@/lib/crm/deal-health';
+import type { DealHealthScore } from '@/lib/crm/deal-health-types';
 
 interface DealHealthCardProps {
   health: DealHealthScore;

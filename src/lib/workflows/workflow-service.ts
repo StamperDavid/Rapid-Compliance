@@ -203,37 +203,15 @@ export async function updateWorkflow(
 /**
  * Delete workflow
  *
- * Also clears every pending action calendar event for this workflow:
- *   - the schedule-trigger calendar event (via unregisterWorkflowTrigger)
- *   - any pending workflowWaits calendar events (via the workflow-engine helper)
- * Calendar cleanup is best-effort — Firestore delete is the source of
- * truth and proceeds even if calendar cleanup fails.
+ * Calendar event cleanup (workflow-engine triggers, workflowWaits calendar
+ * events) is performed by the API route DELETE handler, not here. Doing
+ * it here pulled workflow-engine into the client bundle (via the
+ * workflows page chain) and broke the build with a server-only violation.
  */
 export async function deleteWorkflow(
   workflowId: string
 ): Promise<void> {
   try {
-    // Best-effort cleanup of all pending action calendar events for
-    // this workflow before we drop the Firestore record.
-    try {
-      const { unregisterWorkflowTrigger } = await import('./workflow-engine');
-      await unregisterWorkflowTrigger(workflowId);
-    } catch (cleanupErr) {
-      logger.warn('Failed to unregister workflow trigger during delete (non-fatal)', {
-        workflowId,
-        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
-      });
-    }
-    try {
-      const { deleteCalendarEventsForWorkflowWaits } = await import('@/lib/workflow/workflow-engine');
-      await deleteCalendarEventsForWorkflowWaits(workflowId);
-    } catch (cleanupErr) {
-      logger.warn('Failed to clear workflow wait calendar events during delete (non-fatal)', {
-        workflowId,
-        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
-      });
-    }
-
     await FirestoreService.delete(
       getSubCollection('workflows'),
       workflowId
@@ -249,11 +227,8 @@ export async function deleteWorkflow(
 /**
  * Activate/pause workflow
  *
- * When pausing a workflow we also clear every pending action calendar
- * event for it (schedule-trigger + workflowWaits) so the operator's
- * calendar reflects the current paused state. Re-activating
- * re-registers the schedule via the standard trigger registration path
- * (callers handle that separately).
+ * Calendar/trigger cleanup on pause moves to the API route PATCH handler
+ * (same reasoning as deleteWorkflow above).
  */
 export async function setWorkflowStatus(
   workflowId: string,
@@ -267,69 +242,10 @@ export async function setWorkflowStatus(
       newStatus: status,
     });
 
-    if (status === 'paused') {
-      try {
-        const { unregisterWorkflowTrigger } = await import('./workflow-engine');
-        await unregisterWorkflowTrigger(workflowId);
-      } catch (cleanupErr) {
-        logger.warn('Failed to unregister workflow trigger on pause (non-fatal)', {
-          workflowId,
-          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
-        });
-      }
-      try {
-        const { deleteCalendarEventsForWorkflowWaits } = await import('@/lib/workflow/workflow-engine');
-        await deleteCalendarEventsForWorkflowWaits(workflowId);
-      } catch (cleanupErr) {
-        logger.warn('Failed to clear workflow wait calendar events on pause (non-fatal)', {
-          workflowId,
-          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
-        });
-      }
-    }
-
     return workflow;
   } catch (error: unknown) {
     logger.error('Failed to change workflow status', error instanceof Error ? error : undefined, { workflowId, status });
     throw new Error(`Failed to change workflow status: ${getErrorMessage(error)}`);
-  }
-}
-
-/**
- * Execute workflow manually
- */
-export async function executeWorkflow(
-  workflowId: string,
-  context: Record<string, unknown>
-): Promise<{ success: boolean; executionId: string; error?: string }> {
-  try {
-    const workflow = await getWorkflow(workflowId);
-    if (!workflow) {
-      throw new Error('Workflow not found');
-    }
-
-    // Execute via workflow engine
-    const { executeWorkflowImpl: runEngine } = await import('./workflow-engine');
-
-    const result = await runEngine(workflow, context);
-
-    logger.info('Workflow executed', {
-      workflowId,
-      executionId: result.id,
-      status: result.status,
-    });
-
-    return {
-      success: result.status === 'completed',
-      executionId: result.id,
-    };
-  } catch (error: unknown) {
-    logger.error('Workflow execution failed', error instanceof Error ? error : undefined, { workflowId });
-    return {
-      success: false,
-      executionId: '',
-      error: getErrorMessage(error),
-    };
   }
 }
 
