@@ -31,12 +31,60 @@ const nextConfig = {
     // optimizeCss: true, // Disabled - requires critters package
     optimizePackageImports: ['lucide-react', 'recharts'], // Tree-shake large packages
     // Next.js 14 requires these under experimental (promoted to top-level in 15)
-    serverComponentsExternalPackages: ['ffmpeg-static', '@ffmpeg-installer/ffmpeg'],
+    // Packages listed here are NOT bundled into each serverless function.
+    // They're loaded from node_modules at runtime instead — drops function
+    // size dramatically. Only safe for packages that:
+    //   (a) are CommonJS-friendly,
+    //   (b) only ever run server-side, and
+    //   (c) are present at runtime in the deployed node_modules tree.
+    // Trimmed here to keep individual function bundles under Vercel's
+    // 250 MB hard limit after the May 4 calendar/OAuth feature additions.
+    serverComponentsExternalPackages: [
+      'ffmpeg-static',
+      '@ffmpeg-installer/ffmpeg',
+      // Google stack (~30+ MB transitively — biggest single offender)
+      'googleapis',
+      'googleapis-common',
+      'google-auth-library',
+      '@google-cloud/local-auth',
+      'gcp-metadata',
+      // Other heavy server SDKs
+      '@anthropic-ai/sdk',
+      'openai',
+      'firebase-admin',
+      'sharp',
+      // node-fetch + friends (pulled by googleapis chain)
+      'node-fetch',
+      'fetch-blob',
+      'formdata-polyfill',
+      'node-domexception',
+      // Microsoft stack added by bb9991a2
+      '@microsoft/microsoft-graph-client',
+      '@azure/identity',
+      '@azure/msal-node',
+    ],
     outputFileTracingIncludes: {
       '/api/video/*': [
         './node_modules/ffmpeg-static/ffmpeg',
         './node_modules/ffmpeg-static/**/*',
         './node_modules/@ffmpeg-installer/linux-x64/**/*',
+      ],
+    },
+    // Stop the file tracer from sweeping these heavy folders into every
+    // function bundle. Vercel still ships node_modules separately so the
+    // packages remain reachable via require() at runtime — they just
+    // aren't traced+bundled per function.
+    outputFileTracingExcludes: {
+      '*': [
+        'node_modules/@swc/core-linux-x64-gnu',
+        'node_modules/@swc/core-linux-x64-musl',
+        'node_modules/@esbuild/**',
+        'node_modules/webpack/**',
+        'node_modules/terser/**',
+        'node_modules/typescript/**',
+        'node_modules/.cache/**',
+        'node_modules/canvas/**',
+        'node_modules/@next/swc-*/**',
       ],
     },
   },
