@@ -22,7 +22,7 @@ import { RiskOverviewCard } from '@/components/risk/RiskOverviewCard';
 import { RiskFactorsCard } from '@/components/risk/RiskFactorsCard';
 import { InterventionsCard } from '@/components/risk/InterventionsCard';
 import type { DealRiskPrediction, Intervention } from '@/lib/risk/types';
-import type { Deal } from '@/lib/crm/deal-service';
+import type { Deal } from '@/lib/crm/deal-service-types';
 
 interface ActiveIntervention {
   interventionId: string;

@@ -8,10 +8,11 @@ import type { Workflow, ScheduleTrigger, WorkflowTriggerData } from '@/types/wor
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
 import { CronExpressionParser } from 'cron-parser';
-import {
-  upsertSalesVelocityCalendarEvent,
-  deleteSalesVelocityCalendarEvent,
-} from '@/lib/integrations/google-calendar-service';
+// google-calendar-service is loaded dynamically inside the call sites
+// below. Static-importing it pulls the entire `googleapis` chain
+// (which uses node:net / node:fs / etc.) into any client bundle that
+// transitively reaches this file (the workflows runs page imports
+// workflow-engine, which statically imports schedule-trigger).
 
 /**
  * Build a stable refId for the calendar mirror of a schedule trigger.
@@ -34,6 +35,7 @@ async function mirrorScheduleTriggerToCalendar(params: {
   try {
     const { workflow, nextRunIso } = params;
     const triggerName = (workflow.trigger as ScheduleTrigger | undefined)?.name ?? 'schedule';
+    const { upsertSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
     await upsertSalesVelocityCalendarEvent({
       refId: calendarRefIdForScheduleTrigger(workflow.id),
       summary: `Workflow: ${workflow.name}: ${triggerName}`,
@@ -282,6 +284,7 @@ export async function unregisterScheduleTrigger(
   // Remove the mirrored calendar event so paused / disabled / deleted
   // schedules disappear from the operator's calendar. Non-fatal.
   try {
+    const { deleteSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
     await deleteSalesVelocityCalendarEvent(calendarRefIdForScheduleTrigger(workflowId));
   } catch (err) {
     logger.warn('[Schedule Trigger] Failed to delete schedule calendar event (non-fatal)', {

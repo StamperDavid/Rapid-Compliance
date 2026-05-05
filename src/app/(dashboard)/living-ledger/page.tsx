@@ -27,9 +27,9 @@ import { getDealsCollection } from '@/lib/firebase/collections';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DEALS_TABS } from '@/lib/constants/subpage-nav';
-import type { Deal } from '@/lib/crm/deal-service';
-import type { DealHealthScore } from '@/lib/crm/deal-health';
-import type { ActionRecommendations } from '@/lib/crm/next-best-action-engine';
+import type { Deal } from '@/lib/crm/deal-service-types';
+import type { DealHealthScore } from '@/lib/crm/deal-health-types';
+import type { ActionRecommendations } from '@/lib/crm/next-best-action-engine-types';
 
 // API Response Types
 interface HealthScoreResponse {

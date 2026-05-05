@@ -30,42 +30,15 @@ import { getActivityStats } from './activity-service';
 // TYPES
 // ============================================================================
 
-export interface NextBestAction {
-  id: string;
-  type: ActionType;
-  priority: 'High' | 'Medium' | 'Low';
-  confidence: number; // 0-1
-  title: string;
-  description: string;
-  reasoning: string[];
-  suggestedTimeline: string; // "Today", "This Week", "Next Week", etc.
-  estimatedImpact: 'High' | 'Medium' | 'Low';
-  automatable: boolean; // Can this be automated?
-  metadata?: Record<string, unknown>;
-}
-
-export type ActionType =
-  | 'call'
-  | 'email'
-  | 'meeting'
-  | 'proposal'
-  | 'followup'
-  | 'discount'
-  | 'escalate'
-  | 'nurture'
-  | 'close'
-  | 'reassess'
-  | 'research';
-
-export interface ActionRecommendations {
-  dealId: string;
-  dealName: string;
-  actions: NextBestAction[];
-  healthScore: DealHealthScore;
-  urgency: 'critical' | 'high' | 'medium' | 'low';
-  generatedAt: Date;
-  confidence: number; // Overall confidence in recommendations
-}
+export type {
+  NextBestAction,
+  ActionType,
+  ActionRecommendations,
+} from './next-best-action-engine-types';
+import type {
+  NextBestAction,
+  ActionRecommendations,
+} from './next-best-action-engine-types';
 
 // ============================================================================
 // MAIN RECOMMENDATION ENGINE

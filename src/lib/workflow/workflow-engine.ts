@@ -28,10 +28,10 @@ import { Timestamp } from 'firebase/firestore';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { NotificationService } from '@/lib/notifications/notification-service';
-import {
-  upsertSalesVelocityCalendarEvent,
-  deleteSalesVelocityCalendarEvent,
-} from '@/lib/integrations/google-calendar-service';
+// google-calendar-service is loaded dynamically inside the call sites
+// below. Static-importing it pulls the entire `googleapis` chain
+// (which uses node:net / node:fs / etc.) into any client bundle that
+// transitively reaches this file, which breaks the Vercel build.
 import type {
   Workflow,
   WorkflowAction,
@@ -793,6 +793,7 @@ export class WorkflowEngine {
       // Non-fatal — the wait still resumes via the cron poller even if
       // the calendar mirror fails.
       try {
+        const { upsertSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
         await upsertSalesVelocityCalendarEvent({
           refId: `workflow-action-${waitId}`,
           summary: `Workflow: ${actionLabel}: wait.delay`,
@@ -849,6 +850,7 @@ export class WorkflowEngine {
       // there is no concrete time to surface.
       if (expiresAtIso) {
         try {
+          const { upsertSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
           await upsertSalesVelocityCalendarEvent({
             refId: `workflow-action-${waitId}`,
             summary: `Workflow: ${actionLabel}: wait.until`,
@@ -882,6 +884,7 @@ export class WorkflowEngine {
  */
 export async function deleteCalendarEventForWait(waitId: string): Promise<void> {
   try {
+    const { deleteSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
     await deleteSalesVelocityCalendarEvent(`workflow-action-${waitId}`);
   } catch (err) {
     logger.warn('[Workflow Engine] Failed to delete wait calendar event (non-fatal)', {
@@ -909,6 +912,7 @@ export async function deleteCalendarEventsForWorkflowWaits(workflowId: string): 
     if (!adminDb) {
       return { deleted, failed };
     }
+    const { deleteSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
     const snap = await adminDb
       .collection(getSubCollection('workflowWaits'))
       .where('workflowId', '==', workflowId)

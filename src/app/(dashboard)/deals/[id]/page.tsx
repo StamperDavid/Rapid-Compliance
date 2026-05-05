@@ -7,9 +7,10 @@ import { getDealsCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import ActivityTimeline from '@/components/ActivityTimeline';
-import type { DealHealthScore } from '@/lib/crm/deal-health';
+import type { DealHealthScore } from '@/lib/crm/deal-health-types';
 import type { Deal, FirestoreDate } from '@/types/crm-entities';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -42,6 +43,7 @@ export default function DealDetailPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const dealId = params.id as string;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,15 +58,22 @@ export default function DealDetailPage() {
   const loadDealHealth = useCallback(async () => {
     setLoadingHealth(true);
     try {
-      const { calculateDealHealth } = await import('@/lib/crm/deal-health');
-      const health = await calculateDealHealth(dealId);
-      setHealthScore(health);
+      const res = await authFetch(`/api/crm/deals/${dealId}/health`);
+      if (!res.ok) {
+        throw new Error(`Health API returned ${res.status}`);
+      }
+      const body = (await res.json()) as { success: boolean; data?: DealHealthScore; error?: string };
+      if (body.success && body.data) {
+        setHealthScore(body.data);
+      } else {
+        throw new Error(body.error ?? 'Health API returned no data');
+      }
     } catch (error: unknown) {
       logger.error('Error loading deal health:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoadingHealth(false);
     }
-  }, [dealId]);
+  }, [authFetch, dealId]);
 
   const loadDeal = useCallback(async () => {
     try {

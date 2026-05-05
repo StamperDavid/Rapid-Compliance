@@ -10,27 +10,8 @@ import { logger } from '@/lib/logger/logger';
 import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';
 import { getSubCollection } from '@/lib/firebase/collections';
 
-export interface Deal {
-  id: string;
-  name: string;
-  company?: string;
-  companyName?: string;
-  contactId?: string;
-  leadId?: string;
-  value: number;
-  currency?: string;
-  stage: 'prospecting' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
-  probability: number;
-  expectedCloseDate?: Date | { toDate: () => Date };
-  actualCloseDate?: Date | { toDate: () => Date };
-  ownerId?: string;
-  source?: string;
-  lostReason?: string;
-  notes?: string;
-  customFields?: Record<string, unknown>;
-  createdAt: Date | { toDate: () => Date };
-  updatedAt?: Date | { toDate: () => Date };
-}
+export type { Deal } from './deal-service-types';
+import type { Deal } from './deal-service-types';
 
 export interface DealFilters {
   stage?: string;

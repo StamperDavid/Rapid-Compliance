@@ -21,10 +21,11 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { sendEmail } from '@/lib/email/email-service';
 import { logger } from '@/lib/logger/logger';
-import {
-  upsertSalesVelocityCalendarEvent,
-  deleteSalesVelocityCalendarEvent,
-} from '@/lib/integrations/google-calendar-service';
+// google-calendar-service is loaded dynamically inside each call site
+// below. Static-importing it pulls the entire `googleapis` chain
+// (which uses node:net / node:fs / etc.) into any client bundle that
+// transitively reaches this file (workflow-service dynamically imports
+// this module from a `'use client'` page chain).
 import type { WorkflowSequenceJob } from '@/types/workflow';
 
 const COLLECTION = 'workflowSequenceJobs';
@@ -296,6 +297,7 @@ async function syncSequenceJobToCalendar(params: {
       ? params.previewText
       : params.bodyPlain
     ).slice(0, 500);
+    const { upsertSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
     await upsertSalesVelocityCalendarEvent({
       refId: `email-send-${params.jobId}`,
       summary: `Email: ${subjectForTitle}`,
@@ -625,6 +627,7 @@ function stripHtmlEnvelope(html: string): string {
  */
 async function removeSequenceJobCalendarEvent(jobId: string): Promise<void> {
   try {
+    const { deleteSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
     await deleteSalesVelocityCalendarEvent(`email-send-${jobId}`);
   } catch (err) {
     logger.warn('[SequenceScheduler] Calendar delete failed (non-fatal)', {
@@ -738,6 +741,7 @@ export async function cancelSequenceJobsForWorkflow(
 
     // Delete each calendar event independently — calendar-side failures
     // must not block or partially-undo the Firestore cancellation.
+    const { deleteSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
     for (const docSnap of snap.docs) {
       try {
         await deleteSalesVelocityCalendarEvent(`email-send-${docSnap.id}`);

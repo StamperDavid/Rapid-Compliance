@@ -111,20 +111,8 @@ const nextConfig = {
     NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   },
   // Webpack configuration to handle server-only modules
-  webpack: (config, { isServer, webpack }) => {
+  webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Strip the `node:` URI scheme prefix on client builds so the
-      // existing bare-name fallbacks (`net: false`, `fs: false`, …) can
-      // catch them. Without this, webpack 5 throws UnhandledSchemeError
-      // before resolve.fallback ever runs, breaking client builds that
-      // transitively reach googleapis (which uses `import 'node:net'`
-      // via google-auth-library → node-fetch).
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
-          resource.request = resource.request.replace(/^node:/, '');
-        }),
-      );
-
       // Don't resolve these modules on the client side
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -147,24 +135,6 @@ const nextConfig = {
         'node:process': false,
         'node:stream': false,
         'node:util': false,
-        // The googleapis chain (google-auth-library → node-fetch) imports
-        // node:net / node:http / node:fs / node:zlib via the prefixed form,
-        // which the bare-name entries above don't cover. Without these,
-        // client bundles that transitively reach googleapis (e.g. dashboard
-        // pages → workflow-service → sequence-scheduler → google-calendar-service)
-        // fail the production build with "Module not found: Can't resolve 'node:net'".
-        'node:net': false,
-        'node:http': false,
-        'node:https': false,
-        'node:fs': false,
-        'node:zlib': false,
-        'node:path': false,
-        'node:os': false,
-        'node:crypto': false,
-        'node:tls': false,
-        'node:dns': false,
-        'node:url': false,
-        'node:buffer': false,
       };
       
       // Stub out server-only packages on the client side
