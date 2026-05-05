@@ -42,26 +42,54 @@ const nextConfig = {
     serverComponentsExternalPackages: [
       'ffmpeg-static',
       '@ffmpeg-installer/ffmpeg',
-      // Google stack (~30+ MB transitively — biggest single offender)
+      // Google stack
       'googleapis',
       'googleapis-common',
       'google-auth-library',
       '@google-cloud/local-auth',
+      '@google-cloud/firestore',
+      '@google-cloud/secret-manager',
+      '@google-cloud/storage',
+      '@google/generative-ai',
       'gcp-metadata',
-      // Other heavy server SDKs
+      // AI provider SDKs
       '@anthropic-ai/sdk',
       'openai',
+      '@deepgram/sdk',
+      // Firebase
       'firebase-admin',
+      // Image / media
       'sharp',
-      // node-fetch + friends (pulled by googleapis chain)
+      // node-fetch + friends
       'node-fetch',
       'fetch-blob',
       'formdata-polyfill',
       'node-domexception',
-      // Microsoft stack added by bb9991a2
+      // Microsoft stack
       '@microsoft/microsoft-graph-client',
       '@azure/identity',
       '@azure/msal-node',
+      // Communication
+      'twilio',
+      '@slack/web-api',
+      '@sendgrid/mail',
+      'nodemailer',
+      // Payment SDKs
+      'stripe',
+      'square',
+      'chargebee',
+      '@adyen/api-library',
+      '@paddle/paddle-node-sdk',
+      '@juspay-tech/hyperswitch-node',
+      // Doc / parsing
+      'pdf-parse',
+      'cheerio',
+      'turndown',
+      'xlsx',
+      // Cache
+      'ioredis',
+      // Sentry (heavy dep tree)
+      '@sentry/nextjs',
     ],
     outputFileTracingIncludes: {
       '/api/video/*': [
@@ -76,6 +104,7 @@ const nextConfig = {
     // aren't traced+bundled per function.
     outputFileTracingExcludes: {
       '*': [
+        // Build tooling — not needed at runtime
         'node_modules/@swc/core-linux-x64-gnu',
         'node_modules/@swc/core-linux-x64-musl',
         'node_modules/@esbuild/**',
@@ -85,6 +114,20 @@ const nextConfig = {
         'node_modules/.cache/**',
         'node_modules/canvas/**',
         'node_modules/@next/swc-*/**',
+        // Headless browsers — Vercel can't run them; pure bloat
+        'node_modules/playwright/**',
+        'node_modules/playwright-core/**',
+        'node_modules/playwright-extra/**',
+        'node_modules/puppeteer/**',
+        'node_modules/puppeteer-core/**',
+        'node_modules/puppeteer-extra/**',
+        'node_modules/puppeteer-extra-plugin-stealth/**',
+        // Source maps and types
+        'node_modules/**/*.map',
+        'node_modules/**/*.d.ts',
+        // Test infrastructure pulled by some deps
+        'node_modules/jest*/**',
+        'node_modules/@types/**',
       ],
     },
   },
