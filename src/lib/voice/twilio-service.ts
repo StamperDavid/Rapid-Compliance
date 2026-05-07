@@ -11,6 +11,16 @@ export interface VoiceConfig {
   accountSid: string;
   authToken: string;
   phoneNumber: string;
+  /**
+   * Optional Twilio Messaging Service SID (starts with `MG`). When set,
+   * SMS sends route through the Messaging Service instead of the raw
+   * phone number, which is the path Twilio toll-free verification
+   * expects post-approval. Voice calls always continue to use
+   * `phoneNumber` directly because Messaging Services don't apply
+   * to Voice. Read from TWILIO_MESSAGING_SERVICE_SID env var first,
+   * stored config second.
+   */
+  messagingServiceSid?: string;
 }
 
 export interface VoiceCall {
@@ -143,12 +153,20 @@ export async function sendSMS(
     const twilio = await import('twilio');
     const client = twilio.default(config.accountSid, config.authToken);
     
+    // Prefer Messaging Service SID when configured — this is the path
+    // Twilio toll-free verification gates messaging on (geo permissions,
+    // opt-out handling, sender pool routing all live at the service
+    // level, not the phone-number level). Falls back to a raw `from`
+    // phone number when no Messaging Service is configured.
+    const sender = config.messagingServiceSid
+      ? { messagingServiceSid: config.messagingServiceSid }
+      : { from: config.phoneNumber };
     const msg = await client.messages.create({
-      from: config.phoneNumber,
+      ...sender,
       to,
       body: message,
     });
-    
+
     return {
       messageSid: msg.sid,
       status: msg.status,
@@ -233,10 +251,27 @@ async function getTwilioConfig(): Promise<VoiceConfig> {
     throw new Error('Twilio configuration incomplete');
   }
 
+  // Messaging Service SID is optional. Env var takes precedence over
+  // stored config so operators can flip the routing on without
+  // re-running the API-keys save flow. The empty string check guards
+  // against a blank env var (Vercel preview envs sometimes inherit a
+  // blank string from a missing prod var).
+  const envMsgSid = process.env.TWILIO_MESSAGING_SERVICE_SID?.trim();
+  const storedMsgSid = typeof config.messagingServiceSid === 'string'
+    ? config.messagingServiceSid.trim()
+    : '';
+  const messagingServiceSid =
+    envMsgSid && envMsgSid.length > 0
+      ? envMsgSid
+      : storedMsgSid.length > 0
+        ? storedMsgSid
+        : undefined;
+
   return {
     accountSid: config.accountSid,
     authToken: config.authToken,
     phoneNumber: config.phoneNumber,
+    ...(messagingServiceSid ? { messagingServiceSid } : {}),
   };
 }
 
