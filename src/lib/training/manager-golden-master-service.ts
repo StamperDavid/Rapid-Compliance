@@ -33,6 +33,20 @@ function getGMCollectionPath(): string {
   return getSubCollection(MANAGER_GM_COLLECTION);
 }
 
+/**
+ * Returns true if the input ID is a manager (ends in `_MANAGER`). Used by
+ * the grade-submission service to branch between specialist and manager
+ * GM lookup paths so a single Mission Control grade route can target both
+ * agent kinds (the StepGradeWidget picker offers both as targets).
+ */
+export function isManagerId(id: string): boolean {
+  return id.endsWith('_MANAGER');
+}
+
+function buildManagerGMDocId(managerId: string, industryKey: string, version: number): string {
+  return `mgm_${managerId.toLowerCase()}_${industryKey}_v${version}`;
+}
+
 // ============================================================================
 // IN-MEMORY CACHE (60-second TTL, matches specialist service)
 // ============================================================================
@@ -145,28 +159,168 @@ export function clearManagerGMCache(): void {
 }
 
 // ============================================================================
+// PUBLIC API — VERSION LISTING (Phase 3 grading pipeline)
+// ============================================================================
+
+/**
+ * List all Golden Master versions for a manager scoped to an industry,
+ * sorted newest-first. Includes both active and deactivated versions so
+ * the rollback UI can show the full history. Mirrors the specialist
+ * service's `listIndustryGMVersions`.
+ */
+export async function listManagerGMVersions(
+  managerId: string,
+  industryKey: string,
+): Promise<ManagerGoldenMaster[]> {
+  if (!adminDb) { return []; }
+
+  const snapshot = await adminDb
+    .collection(getGMCollectionPath())
+    .where('managerId', '==', managerId)
+    .where('industryKey', '==', industryKey)
+    .get();
+
+  const versions = snapshot.docs.map((doc) => doc.data() as ManagerGoldenMaster);
+  versions.sort((a, b) => b.version - a.version);
+  return versions;
+}
+
+// ============================================================================
+// PUBLIC API — VERSIONING (Phase 3 grade-to-edit pipeline)
+// ============================================================================
+
+/**
+ * Create a new versioned Manager GM by applying a surgical prompt edit from
+ * the Prompt Engineer. The edit replaces an exact verbatim substring
+ * (`currentText`) in the active GM's systemPrompt with `proposedText`.
+ * No other fields change.
+ *
+ * The new version is created with isActive=false. The caller calls
+ * `deployManagerGMVersion` after human approval to activate it.
+ *
+ * Returns the new GM record, or null if the active GM cannot be found.
+ * Throws if the currentText doesn't appear verbatim in the active prompt
+ * (matches specialist service behavior — the Prompt Engineer must have
+ * hallucinated the section, refusing to write).
+ *
+ * Mirrors `createIndustryGMVersionFromEdit` in the specialist service.
+ */
+export async function createManagerGMVersionFromEdit(
+  managerId: string,
+  industryKey: string,
+  edit: {
+    currentText: string;
+    proposedText: string;
+    rationale: string;
+    sourceTrainingFeedbackId: string;
+  },
+  createdBy: string,
+): Promise<ManagerGoldenMaster | null> {
+  if (!adminDb) { return null; }
+
+  const activeGM = await getActiveManagerGMByIndustry(managerId, industryKey);
+  if (!activeGM) {
+    logger.error(
+      '[ManagerGMService] No active manager GM found — cannot create new version',
+      undefined,
+      { managerId, industryKey },
+    );
+    return null;
+  }
+
+  const rawSystemPrompt = activeGM.config.systemPrompt;
+  const currentPrompt = typeof rawSystemPrompt === 'string'
+    ? rawSystemPrompt
+    : activeGM.systemPromptSnapshot ?? '';
+  if (!currentPrompt) {
+    logger.error(
+      '[ManagerGMService] Active manager GM has no systemPrompt — cannot apply edit',
+      undefined,
+      { managerId, industryKey, gmId: activeGM.id },
+    );
+    return null;
+  }
+
+  if (!currentPrompt.includes(edit.currentText)) {
+    throw new Error(
+      `createManagerGMVersionFromEdit: currentText does not appear verbatim in active GM ${activeGM.id}. ` +
+      `The Prompt Engineer must have hallucinated the section. Refusing to write.`,
+    );
+  }
+
+  const newPrompt = currentPrompt.replace(edit.currentText, edit.proposedText);
+  const newVersion = activeGM.version + 1;
+  const newDocId = buildManagerGMDocId(managerId, industryKey, newVersion);
+
+  const now = new Date().toISOString();
+  const newConfig = {
+    ...activeGM.config,
+    systemPrompt: newPrompt,
+  };
+
+  const newGM: ManagerGoldenMaster = {
+    ...activeGM,
+    id: newDocId,
+    managerId,
+    industryKey,
+    version: newVersion,
+    config: newConfig,
+    systemPromptSnapshot: newPrompt,
+    sourceImprovementRequestId: edit.sourceTrainingFeedbackId,
+    changesApplied: [
+      {
+        field: 'systemPrompt',
+        currentValue: edit.currentText,
+        proposedValue: edit.proposedText,
+        reason: edit.rationale,
+        confidence: 0.8,
+      },
+    ],
+    isActive: false,
+    createdAt: now,
+    createdBy,
+    notes: `Created from Prompt Engineer edit (feedback ${edit.sourceTrainingFeedbackId}). Not yet deployed.`,
+    previousVersion: activeGM.version,
+  };
+
+  await adminDb.collection(getGMCollectionPath()).doc(newDocId).set(newGM);
+
+  logger.info(
+    `[ManagerGMService] Created v${newVersion} for ${managerId}:${industryKey} from Prompt Engineer edit`,
+    { managerId, industryKey, version: newVersion, newDocId },
+  );
+
+  return newGM;
+}
+
+// ============================================================================
 // PUBLIC API — DEPLOY (Phase 3 grading pipeline)
 // ============================================================================
 
 /**
- * Deactivate every currently-active GM for a given manager+industry pair,
- * then activate the new doc. Used when Phase 3 grading produces a new
- * approved version. Matches the deploy semantics of the specialist service.
+ * Deploy a specific manager GM version. Deactivates any other active
+ * versions for the same (managerId, industryKey) pair and activates the
+ * target. Runs in a Firestore batch. Invalidates the cache.
  *
- * Runs in a Firestore batch so the swap is atomic.
+ * Signature mirrors `deployIndustryGMVersion` in the specialist service —
+ * takes a version number, returns `{ success, error? }`.
  */
 export async function deployManagerGMVersion(
   managerId: string,
   industryKey: string,
-  newDocId: string,
-): Promise<void> {
+  targetVersion: number,
+): Promise<{ success: boolean; error?: string }> {
   if (!adminDb) {
-    throw new Error('[ManagerGMService] adminDb not initialized');
+    return { success: false, error: 'adminDb not initialized' };
   }
 
   const collection = adminDb.collection(getGMCollectionPath());
+  const targetDocId = buildManagerGMDocId(managerId, industryKey, targetVersion);
+  const targetDoc = await collection.doc(targetDocId).get();
+  if (!targetDoc.exists) {
+    return { success: false, error: `Manager GM v${targetVersion} not found for ${managerId}:${industryKey}` };
+  }
 
-  // Find all currently-active docs for this manager+industry and deactivate them
   const activeSnap = await collection
     .where('managerId', '==', managerId)
     .where('industryKey', '==', industryKey)
@@ -177,15 +331,15 @@ export async function deployManagerGMVersion(
   const now = new Date().toISOString();
 
   for (const doc of activeSnap.docs) {
-    if (doc.id === newDocId) { continue; }
+    if (doc.id === targetDocId) { continue; }
     batch.update(doc.ref, {
       isActive: false,
       deactivatedAt: now,
-      deactivatedReason: `superseded by ${newDocId}`,
+      deactivatedReason: `superseded by ${targetDocId}`,
     });
   }
 
-  batch.update(collection.doc(newDocId), {
+  batch.update(collection.doc(targetDocId), {
     isActive: true,
     deployedAt: now,
   });
@@ -194,7 +348,8 @@ export async function deployManagerGMVersion(
   invalidateManagerGMCache(managerId, industryKey);
 
   logger.info(
-    `[ManagerGMService] Deployed ${newDocId} for ${managerId}:${industryKey} (deactivated ${activeSnap.docs.length - (activeSnap.docs.some((d) => d.id === newDocId) ? 1 : 0)} prior)`,
-    { managerId, industryKey },
+    `[ManagerGMService] Deployed v${targetVersion} for ${managerId}:${industryKey}`,
+    { managerId, industryKey, version: targetVersion },
   );
+  return { success: true };
 }
