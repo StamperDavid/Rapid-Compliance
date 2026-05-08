@@ -207,7 +207,16 @@ export default function StepGradeWidget({
           feedbackId: string;
           proposedEdit?: AdapterProposal['rawEdit'];
           targetSpecialistCurrentPrompt?: string;
-          questions?: string[];
+          // CLARIFICATION_NEEDED branch nests its detail under `clarification`
+          // (matches the SubmitGradeResult discriminated union in
+          // grade-submission-service.ts). Without this nesting the widget
+          // shows the bare "needs more detail" message with no questions —
+          // operator can't tell what to add.
+          clarification?: {
+            questions?: string[];
+            conflictsDetected?: string[];
+            rationale?: string;
+          };
         };
       };
 
@@ -224,13 +233,27 @@ export default function StepGradeWidget({
       }
 
       if (gradeJson.result?.status === 'CLARIFICATION_NEEDED') {
-        const questions = gradeJson.result.questions ?? [];
-        const qList = questions.length > 0
-          ? ` The Prompt Engineer asks: ${questions.join(' / ')}`
-          : '';
+        const clarification = gradeJson.result.clarification ?? {};
+        const questions = clarification.questions ?? [];
+        const conflicts = clarification.conflictsDetected ?? [];
+        const rationale = clarification.rationale ?? '';
+
+        const parts: string[] = [
+          'Feedback saved as pending_review — the Prompt Engineer needs more detail before it can propose an edit.',
+        ];
+        if (rationale) {
+          parts.push(`Why: ${rationale}`);
+        }
+        if (questions.length > 0) {
+          parts.push(`Questions: ${questions.map((q, i) => `(${i + 1}) ${q}`).join(' ')}`);
+        }
+        if (conflicts.length > 0) {
+          parts.push(`Conflicts found: ${conflicts.join(' | ')}`);
+        }
+
         setPipelineMessage({
           kind: 'warn',
-          text: `Feedback saved as pending_review — needs more detail before the Prompt Engineer will propose an edit.${qList}`,
+          text: parts.join(' '),
         });
         return;
       }
