@@ -1,8 +1,111 @@
 # SalesVelocity.ai — Full-Orchestration Continuation Prompt
 
-> **Updated:** May 3, 2026 — social posting bug fix + Social Hub duplicate-tab fix shipped (see top section).
+> **Updated:** May 7, 2026 — Sentry production wiring + memory-vault crash fix + StepGradeWidget rebuild + GM seeding audit (see top section).
+> **Earlier session updated:** May 3, 2026 — social posting bug fix + Social Hub duplicate-tab fix shipped.
 > **Earlier session updated:** April 30, 2026 (afternoon — YC pre-submission walkthrough, preserved below).
 > **Earlier session updated:** April 29, 2026 (evening, fake-AI sweep — preserved below for context).
+
+---
+
+# 🛠️ SESSION — Sentry monitoring + Mission Control training-loop fixes (May 7, 2026)
+
+## What this session was
+Day picked up after main was rolled back to `62a2090f` on May 4 (Vercel build cascade). Today's tasks: finish post-rollback re-landings (Twilio Messaging Service routing for toll-free SMS), wire Sentry properly, then debug a real Mission Control bug the operator caught — a graded BYOK social-post mission where the operator's correction silently went nowhere because the X_EXPERT GM lookup mismatched the runtime ID. That single observation expanded into a swarm-wide GM seeding audit and a rebuild of the step-level grading UI.
+
+## What got fixed (committed `8e40cb9f` and prior)
+
+**1. Sentry production monitoring is live** (commit `8e40cb9f`)
+- `sentry.client.config.ts` created (server + edge configs were already there — only client was missing). DSN-gated via `process.env.NEXT_PUBLIC_SENTRY_DSN`. Filters: extension-injected errors via `denyUrls`, common browser noise via `ignoreErrors`, sensitive headers/query-params stripped in `beforeSend`. Replay-on-error at 100% in prod, 0% in dev. Performance traces at 10% in prod, 100% in dev. Release tagged from `VERCEL_GIT_COMMIT_SHA`.
+- DSN env vars added to Vercel for **Production + Preview + Development**. Same DSN added to local `.env.local` so the dev server feeds into the same Sentry project.
+- `next.config.js` already wraps with `withSentryConfig` and lists `@sentry/nextjs` in `serverComponentsExternalPackages` — no changes needed there.
+- Next deploy to main will activate prod monitoring automatically.
+
+**2. memory-vault crash fix** (`src/lib/agents/shared/memory-vault.ts:777-781`)
+- `getPendingSignals` was calling `s.value.affectedAgents.includes(agentId)` without guarding undefined. Legacy SignalEntry docs lacking the field crashed every `MARKETING_MANAGER.checkIntelligenceSignals()` invocation.
+- Now: `const affected = Array.isArray(s.value.affectedAgents) ? s.value.affectedAgents : []` then `affected.includes(...)`.
+- Closes the prior open-issues table line item (was tagged "Low / surfaces on every Marketing Manager invocation").
+
+**3. StepGradeWidget rebuild** — addresses two real problems caught in the BYOK debug
+- **Wrong grade target.** Step `specialistsUsed` for the BYOK multi-platform mission was `["X_EXPERT","BLUESKY_EXPERT","MASTODON_EXPERT"]`. Operator's correction was about CROSS-PLATFORM image consistency ("same image on all platforms"), which is a `MARKETING_MANAGER` concern, not an X_EXPERT prompt issue. Widget previously offered only specialists in the picker. Now: derives manager id from the step's `delegatedTo` field (`MARKETING` → `MARKETING_MANAGER`) and prepends it to the picker as the FIRST option, with help text: "Pick the manager for cross-platform / orchestration rules; pick a specialist for platform-specific copy or formatting."
+- **Silent backend rejections.** Backend `/api/training/grade-specialist` returns 422 with `error: "No active Golden Master found for ${id}:${industry}. Seed the specialist before grading."` when `getActiveSpecialistGMByIndustry` finds nothing. Widget previously did `if (!gradeRes.ok) return;` — operator saw the star rating save successfully and had no idea the prompt-edit half silently dropped. Now: a dismissible `pipelineMessage` banner with `error|warn|info` styling surfaces every non-ok response with the backend's exact error text. CLARIFICATION_NEEDED, missing-edit-text, and exception paths all surface their own banner copy.
+- New optional `delegatedTo?: string` prop wired from `mission-control/page.tsx`. The star rating still saves to `missionGrades` regardless — the banner only addresses the prompt-edit half.
+
+**4. GM seeding audit script** — `scripts/audit-gm-seeding.ts`
+- Cross-references admin registry IDs (`SpecialistRegistry.tsx`), runtime delegation maps (`marketing/manager.ts`), seed-script `SPECIALIST_ID` constants, and live `specialistGoldenMasters` Firestore docs.
+- Operator concern was: "all of the gm's should be seeded by now, we need to run a check on them all and ensure it is done for all or else this is pointless testing." Audit ran clean: 10/10 manager GMs live, 55 specialist GMs live for `saas_sales_ops`. The 8 reported "missing" specialists are MOSTLY ALIASES — `X_EXPERT` aliases `TWITTER_X_EXPERT`, `WEB_SCRAPER` aliases `SCRAPER_SPECIALIST`, `ARCHITECT_*_STRATEGIST` aliases the matching `*_STRATEGIST`, `REVENUE_DIRECTOR` is a manager (seeded at manager level), `AUTONOMOUS_POSTING_AGENT` is deterministic automation with no LLM. Only `PRICING_STRATEGIST` is unseeded but it's a deterministic Stripe dispatcher (`src/lib/agents/commerce/pricing/specialist.ts` — `systemPrompt: ''`) so it doesn't need a GM.
+
+## The actual BYOK debug — what the audit + step-record dump revealed
+Mission `mission_req_1778182007561_qymsh9` (May 7 19:26 UTC) ran `delegate_to_marketing` with `platforms: [twitter, bluesky, mastodon]` and successfully posted to all three. Each platform got a DIFFERENT image (the operator had explicitly asked for ONE shared image — feature gap, not a bug, since the multi-platform path doesn't currently share-image). Operator graded 1/5 with the explanation "I asked for the post to have the same image on every platform, instead every platform had a different image". The grade routed to `X_EXPERT` (admin/UI naming) but the seeded GM is at `TWITTER_X_EXPERT` (factory/seed naming). Backend correctly returned 422; frontend silently swallowed it; trainingFeedback record was marked `discarded`. The operator believed they had graded; the training loop had never received the feedback.
+
+This is exactly the Standing Rule #2 violation the system was supposed to prevent. Today's UI fix surfaces the failure to the operator. Tomorrow's alias-resolver fix (in `getActiveSpecialistGMByIndustry`) closes the loop server-side.
+
+## Shortcuts taken (named per standing rule)
+- The `X_EXPERT → TWITTER_X_EXPERT` alias map is **NOT yet wired into the GM lookup**. The widget surfaces the failure cleanly now, but the underlying lookup still 404s. Tomorrow's first task.
+- The `PRICING_STRATEGIST` audit conclusion ("no GM needed because deterministic dispatcher") was based on reading `commerce/pricing/specialist.ts` — but the operator described a DIFFERENT agent they want built (budget allocator). New agent, not a rename of existing. See "Tomorrow's plan" below.
+- Sentry's `instrumentation-client.ts` deprecation warning was logged but not addressed — Next 15 will require renaming `sentry.client.config.ts`. Today the file is the right name for Next 14.2.33; next major Next upgrade triggers the rename.
+- The retry monitor used GitHub `gh` CLI which turned out to be unauthenticated locally; the build-watch silently produced no events. Operator confirmed build status manually via Vercel dashboard. Sentry build is green.
+
+## Files touched this session
+- `sentry.client.config.ts` (NEW)
+- `src/lib/agents/shared/memory-vault.ts` (5-line fix)
+- `src/app/(dashboard)/mission-control/_components/StepGradeWidget.tsx` (rebuild — picker, error-surface)
+- `src/app/(dashboard)/mission-control/page.tsx` (1-line — pass `delegatedTo` prop)
+- `scripts/audit-gm-seeding.ts` (NEW)
+- `scripts/inspect-byok-mission.ts` + `scripts/find-byok-grade.ts` (debug scripts kept for reproducibility)
+- `.env.local` (Sentry DSN added — local only, gitignored)
+- Vercel env vars (`SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` for Prod+Preview+Dev)
+- `docs/single_source_of_truth.md` (updated)
+- `CONTINUATION_PROMPT.md` (this file — updated)
+
+## Tomorrow's plan (May 8, 2026)
+1. **Wire the alias resolver** — `getActiveSpecialistGMByIndustry` (in `src/lib/training/specialist-golden-master-service.ts`) accepts a `SPECIALIST_ID_ALIASES` map and resolves admin-canonical names to seed-canonical names. Map: `X_EXPERT → TWITTER_X_EXPERT`, `WEB_SCRAPER → SCRAPER_SPECIALIST`, `ARCHITECT_COPY_STRATEGIST → COPY_STRATEGIST`, `ARCHITECT_FUNNEL_STRATEGIST → FUNNEL_STRATEGIST`, `ARCHITECT_UX_UI_STRATEGIST → UX_UI_STRATEGIST`. Verify by re-grading the BYOK mission step and confirming the grade lands.
+2. **More live testing** — operator runs more Jasper prompts, we monitor for new bugs and fix as they surface.
+3. **Full campaign orchestration walkthrough** — once point bugs are clean, walk a full multi-step campaign end-to-end (research → strategy → multi-channel content → publishing → measurement). This is the YC story re-validation.
+4. **Spec the BUDGET_STRATEGIST agent** (see below).
+5. **Multi-tenant readiness checklist review** (see "Multi-tenant readiness" section below).
+
+## Spec — `BUDGET_STRATEGIST` agent (drafted in this session)
+
+**Role:** Operator-controlled marketing budget allocation. NOT to be confused with `PRICING_STRATEGIST` (Stripe/payment dispatcher).
+
+**Reports to:** `MARKETING_MANAGER` (not `COMMERCE_MANAGER` — this is about marketing spend, not customer billing).
+
+**Inputs / data sources:**
+- **Budget number:** operator-entered in a UI. Dashboard widget that, when clicked, opens a full budgeting page with allocation across SEO, social boosts, PPC (Google Ads/Meta Ads), Google Local Service Ads, etc.
+- **Spend data:** pulled from each connected platform's API (we'll already have these connections wired by build time).
+- **Conversion truth:** primary = our CRM `source` field (UTM-captured at form submit). Fallback = GA4 (UTM-tagged links). Sanity check = each ad platform's self-reported conversion count. Operator's reasoning: "just because a client visits our site from one of our platforms doesn't mean they convert into sales — we need to track which platform actually converts, and this also keeps the platforms honest about their conversions."
+
+**Outputs:**
+- Recommendations in plain English ("shift $200 from FB Ads to Google Ads — Google's conversion rate is 4.2× higher this period").
+- "Apply" button with two-step confirmation (per the destructive-actions standing rule — moving money is destructive).
+- On approval: agent calls each platform's API to actually shift the campaign budget (Google Ads campaign budget, Meta ad-set budget, etc.).
+- For platforms without a budget-change API (SEO retainers, manual Google LSA top-ups), the recommendation flows out as a Mission Control task instead of an auto-apply.
+
+**Cadence:**
+- Live dashboard widget refreshes hourly via cron.
+- Manual refresh button on the widget.
+
+**Architecture rules:**
+- **Tenant-aware from day one** — uses `getSubCollection()` and authenticated request `tenantId`, never hardcodes `PLATFORM_ID = 'rapid-compliance-root'`. Multi-tenant flip is targeted for the week of May 4-10; bolt-on later is wasted work.
+- **Standing Rule #1** — has its own GM with Brand DNA baked in; no runtime Brand DNA loading.
+- **Standing Rule #2** — operator grades drive prompt edits via the same Phase 3 pipeline; no self-improvement.
+- Tracking infrastructure (UTM capture on every form, social-account-tagged outbound link IDs so we know WHICH brand account sent the click, CRM `source` field on every lead/contact) ships **before** the agent's recommendations are trusted — agent surfaces "insufficient data, recommendations will improve as conversions accumulate" until the CRM has enough source-attributed records to compare across platforms. Same pattern for organic-vs-paid: agent eventually learns "this platform is great for awareness but never converts to sales — recommend organic-only here, no boost spend".
+
+**Open question for tomorrow:** what does the budgeting page UI actually look like? Pure dashboard tile + drilldown page, or also reachable from the Marketing hub? Probably both.
+
+## Multi-tenant readiness checklist (preview for tomorrow's planning)
+
+Once today's stack (testing → bug fixing → full campaign orchestrations) is verified, the multi-tenant flip needs:
+
+1. **Onboarding flow** — operator signup, brand DNA capture, industry selection, OAuth into central platform apps, per-tenant Stripe customer creation
+2. **Per-tenant API key store** — each tenant's `apiKeys/social.{platform}` lives in their org doc, not under `rapid-compliance-root`
+3. **Per-tenant GM seeding** — automatic seed of all 55 specialist GMs + 10 manager GMs scoped to the new tenant's industry, with their Brand DNA baked in. Reseed script we already have, parameterized by tenantId
+4. **Per-tenant SendGrid subuser** — already targeted (Pro tier picked Apr 27 specifically for this)
+5. **Per-tenant Twilio Messaging Service** — each tenant gets their own toll-free number + verification
+6. **Tenant-scoped Firestore rules** — strict isolation, no cross-tenant reads
+7. **Audit pass for hardcoded `rapid-compliance-root`** — every reference replaced with `getSubCollection()` / authenticated request tenantId
+8. **Billing pipeline** — Stripe-driven, tied to onboarding, plan tiers
+9. **The BUDGET_STRATEGIST agent** — built tenant-aware from day one so it doesn't need retrofitting
 
 ---
 
@@ -840,7 +943,7 @@ Full filter spec + supplementary monitor scripts in `memory/project_live_test_mo
 | X webhook delivery | X-side; brand inbox receives DMs but X never POSTs to webhook URL | HIGH | Owner action: file X dev support ticket |
 | Mastodon vision DM real-image test | Code path verified by static review + commit; needs an actual image-attached DM round-trip to fully prove | Medium | Owner: send a DM with an image attached |
 | Twilio toll-free SMS | Resubmitted with CTIA opt-in URL — under review | Medium | Owner waits on Twilio; nothing to do until response |
-| Marketing Manager `checkIntelligenceSignals` error | Pre-existing: `Cannot read properties of undefined (reading 'includes')` at `base-specialist.ts:77`. Surfaces on every Marketing Manager invocation, doesn't block flow. | Low | Investigate pendingSignals shape vs classifier expectation |
+| ~~Marketing Manager `checkIntelligenceSignals` error~~ | ✅ FIXED May 7 — root cause was `s.value.affectedAgents.includes()` on legacy SignalEntry records missing the field. `memory-vault.ts:777-781` now defaults to `[]` when undefined or non-array. | — | DONE |
 | Reddit dev app gate | New-account 24h gate blocked Apr 26 attempt | Medium | Wait + retry. After app, build REDDIT_EXPERT specialist + DM polling cron. |
 | Bluesky outbound post fresh verify | Outbound code path exists; not re-tested under Jasper v13 | Low | Run `scripts/verify-bluesky-post-live.ts` or drive via Jasper prompt |
 | Latency requirement (≤10s for inbound DMs) | Bluesky + Mastodon poll every 60s; X webhook would be instant if delivery worked | Medium | Webhook-style architecture for non-X platforms (Firestore listener bridge?) |
