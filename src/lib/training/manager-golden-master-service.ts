@@ -68,11 +68,13 @@ function gmCacheKey(managerId: string, industryKey: string): string {
 
 /**
  * Get the currently active Golden Master for a manager scoped to a specific
- * industry template. Used by `BaseManager.reviewOutput()` at runtime.
+ * industry template. Used by the Phase 3 training-loop pipeline (operator
+ * grades a manager step in Mission Control → submitGrade loads this GM →
+ * Prompt Engineer proposes a surgical edit). The autonomous LLM-review path
+ * that previously called this at runtime was deleted on 2026-05-08.
  *
- * Returns `null` if no active GM exists for this manager yet — callers must
- * treat this as "pass-through review, no LLM gate active" so the system
- * continues to work before managers have been seeded.
+ * Returns `null` if no active GM exists for this manager yet — caller is
+ * responsible for surfacing the missing-seed condition.
  *
  * 60-second in-memory cache keyed by `${managerId}:${industryKey}`.
  */

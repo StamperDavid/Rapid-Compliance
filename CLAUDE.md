@@ -85,33 +85,40 @@ unless a human operator explicitly submitted a grade/correction on a specific ou
 
 ---
 
-## Manager Rebuild — Phase 1-4 complete (April 15, 2026)
+## Manager Rebuild — Phase 1-4 (April 15, 2026) + Auto-Review Removal (May 8, 2026)
 
-The 10 managers are no longer pure dispatchers. Each specialist call in 9 of the 10
-managers (Master Orchestrator skipped by design) now flows through `delegateWithReview`,
-which loads the manager's own Golden Master and asks the LLM to grade the specialist's
-output against the manager's review criteria before it leaves the department.
+The 10 managers are dispatchers that delegate to specialists, track which specialists ran
+(M2a accumulator), and write per-call performance entries. **The autonomous LLM-review path
+that briefly lived inside `delegateWithReview` was deleted on May 8, 2026** — operator
+verdict: AI grading AI output is bias-stacking, the human reviews every step in Mission
+Control instead. The training-loop pipeline (operator grade → Prompt Engineer surgical edit
+→ human approve → new GM version → deploy) remains the only mechanism by which a manager
+or specialist GM can change.
 
-- **`src/lib/agents/base-manager.ts`** — `reviewOutput()` is a real LLM call that loads
-  the manager's GM from Firestore. Per-report WeakMap cache prevents double-billing on
-  retries. Graceful pass-through when no manager GM is seeded yet (Phase 1 wire-up behavior).
-- **`src/lib/training/manager-golden-master-service.ts`** — parallel service to the
-  specialist service. Collection: `managerGoldenMasters`.
-- **`scripts/seed-{manager}-manager-gm.js`** — 9 manager seed scripts, each with department-
-  specific review criteria + Brand DNA baked in at seed time.
+- **`src/lib/agents/base-manager.ts`** — `delegateWithReview` is now a thin wrapper:
+  records the specialist via the M2a accumulator, calls `delegateToSpecialist`, writes a
+  perf-tracker entry. No LLM call, no retry loop, no escalation. (Name kept for call-site
+  stability — 9 manager subclasses use it. Future cosmetic rename to plain `delegate` is
+  safe whenever it feels worth the cascade.)
+- **`src/lib/training/manager-golden-master-service.ts`** — parallel to the specialist
+  service. Collection: `managerGoldenMasters`. The May 8 manager-grading wire fix added
+  `isManagerId()`, `createManagerGMVersionFromEdit`, `listManagerGMVersions`, and a
+  signature-aligned `deployManagerGMVersion`.
+- **`scripts/seed-{manager}-manager-gm.js`** — 9 manager seed scripts, each with
+  department-specific charter + Brand DNA baked in at seed time.
 - **`src/lib/agents/prompt-engineer/specialist.ts`** — the meta-specialist that translates
   human corrections into surgical prompt edits. Model: Claude Opus 4.6.
 - **`src/lib/training/grade-submission-service.ts`** — orchestrates the grade → edit →
-  approve → deploy pipeline. Every write is gated on a `TrainingFeedback` record.
+  approve → deploy pipeline. Branches on `_MANAGER` suffix to route to the right GM
+  collection. Every write is gated on a `TrainingFeedback` record.
 - **`src/types/training.ts`** — `TrainingFeedback` and `ManagerGoldenMaster` types.
 
-End-to-end verified via:
-- `scripts/verify-managers-review.ts` — 4 managers × 2 fixtures = 8/8 passing
-- `scripts/verify-content-manager-review.ts` — Content Manager good/bad fixtures
+Standing-rule runtime proofs still pass:
 - `scripts/verify-prompt-engineer.ts` — full grade → edit → deploy round-trip
-- `scripts/verify-no-grades-no-changes.ts` — standing rule runtime proof
+- `scripts/verify-no-grades-no-changes.ts` — Standing Rule #2 runtime proof
 - `scripts/verify-prompt-edit-changes-behavior.ts` — behavioral proof that edits actually
   change specialist output, not just GM bytes
+- `scripts/verify-specialist-id-alias-resolver.ts` — admin→seed alias resolution (May 8)
 
 **Phase 3 frontend — DONE (April 15, 2026)**
 - 4 API routes at `/api/training/grade-specialist` + `/api/training/feedback/[id]/approve|reject` (the route collision was fixed in this same session)
