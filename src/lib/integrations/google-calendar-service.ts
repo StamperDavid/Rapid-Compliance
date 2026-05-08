@@ -6,6 +6,9 @@
 import { google } from 'googleapis';
 import type { OAuth2Client } from 'google-auth-library'
 import { logger } from '@/lib/logger/logger';
+import { adminDb } from '@/lib/firebase/admin';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { getConnectedGoogleTokens } from '@/lib/integrations/google-tokens';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -341,6 +344,339 @@ export async function findAvailableSlots(
   }
 
   return slots;
+}
+
+// ─── SalesVelocity dedicated calendar helpers ────────────────────────────────
+//
+// Per `feedback_one_google_account_per_tenant_runs_calendars_and_email`,
+// every scheduled item the platform creates (social posts, email sends,
+// missions, workflow actions, content calendar entries) writes an event
+// to a DEDICATED calendar named "SalesVelocity.ai" under the connected
+// account. The dedicated calendar keeps platform-scheduled work
+// distinct from the operator's primary work calendar so they can
+// hide/show/share it independently.
+//
+// All helpers below auto-resolve tokens via `getConnectedGoogleTokens`
+// (the central token store from Rule 3) — callers don't pass tokens.
+// Returns null on failure so callers can choose to log + continue
+// rather than block the user-facing scheduling action.
+
+const SALESVELOCITY_CALENDAR_NAME = 'SalesVelocity.ai';
+const CALENDAR_ID_CACHE_COLLECTION = 'connectedAccounts';
+const CALENDAR_ID_CACHE_DOC = 'google';
+export const CALENDAR_EVENT_MAPPINGS_COLLECTION = 'calendarEventMappings';
+
+/**
+ * Get or create the dedicated "SalesVelocity.ai" calendar on the
+ * connected Google account. Caches the calendar id in Firestore
+ * (under the same `connectedAccounts/google` doc) so subsequent
+ * callers don't have to list calendars.
+ *
+ * Returns null when:
+ *   - No Google account is connected (operator hasn't OAuth'd yet)
+ *   - The Calendar API call fails (logged)
+ */
+export async function getOrCreateSalesVelocityCalendar(): Promise<string | null> {
+  if (!adminDb) {
+    return null;
+  }
+
+  // Check cache first.
+  try {
+    const cacheRef = adminDb
+      .collection(getSubCollection(CALENDAR_ID_CACHE_COLLECTION))
+      .doc(CALENDAR_ID_CACHE_DOC);
+    const cached = await cacheRef.get();
+    if (cached.exists) {
+      const data = cached.data() as { salesvelocityCalendarId?: string } | undefined;
+      if (typeof data?.salesvelocityCalendarId === 'string' && data.salesvelocityCalendarId.length > 0) {
+        return data.salesvelocityCalendarId;
+      }
+    }
+  } catch (err) {
+    // Cache read failure is non-fatal — fall through to live lookup.
+    logger.warn('[Calendar] cache read failed, falling through to API', {
+      error: err instanceof Error ? err.message : String(err),
+      file: 'google-calendar-service.ts',
+    });
+  }
+
+  const tokens = await getConnectedGoogleTokens();
+  if (!tokens) {
+    logger.warn('[Calendar] no connected Google account — cannot create dedicated calendar', {
+      file: 'google-calendar-service.ts',
+    });
+    return null;
+  }
+
+  try {
+    const auth = createOAuth2Client({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken ?? undefined,
+    });
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    // Look for an existing calendar named "SalesVelocity.ai".
+    const list = await calendar.calendarList.list();
+    const existing = list.data.items?.find((c) => c.summary === SALESVELOCITY_CALENDAR_NAME);
+    let calendarId = existing?.id ?? null;
+
+    // Create if not found.
+    if (!calendarId) {
+      const created = await calendar.calendars.insert({
+        requestBody: {
+          summary: SALESVELOCITY_CALENDAR_NAME,
+          description: 'Auto-managed by SalesVelocity.ai — every scheduled platform action (social posts, email sends, missions, workflows) appears here.',
+          timeZone: 'America/New_York',
+        },
+      });
+      calendarId = created.data.id ?? null;
+      if (!calendarId) {
+        logger.error('[Calendar] insert returned no id', new Error('no calendar id'), {
+          file: 'google-calendar-service.ts',
+        });
+        return null;
+      }
+      logger.info('[Calendar] created dedicated SalesVelocity.ai calendar', {
+        calendarId,
+        file: 'google-calendar-service.ts',
+      });
+    }
+
+    // Persist to cache for next time.
+    try {
+      await adminDb
+        .collection(getSubCollection(CALENDAR_ID_CACHE_COLLECTION))
+        .doc(CALENDAR_ID_CACHE_DOC)
+        .set({ salesvelocityCalendarId: calendarId, salesvelocityCalendarUpdatedAt: new Date().toISOString() }, { merge: true });
+    } catch (err) {
+      logger.warn('[Calendar] cache write failed (non-fatal)', {
+        error: err instanceof Error ? err.message : String(err),
+        file: 'google-calendar-service.ts',
+      });
+    }
+
+    return calendarId;
+  } catch (err) {
+    logger.error('[Calendar] getOrCreateSalesVelocityCalendar failed',
+      err instanceof Error ? err : new Error(String(err)),
+      { file: 'google-calendar-service.ts' });
+    return null;
+  }
+}
+
+export interface ScheduledItemEventInput {
+  /**
+   * Stable, unique reference id for the scheduled item. Convention:
+   *   social-post-{postId}
+   *   email-send-{sendId}
+   *   mission-{missionId}
+   *   workflow-action-{actionId}
+   *   content-calendar-{entryId}
+   * Used to look up the existing Google Calendar event id for updates
+   * and deletes (idempotent upsert pattern).
+   */
+  refId: string;
+  /** Event title shown in Google Calendar. */
+  summary: string;
+  /** Optional description / details body. */
+  description?: string;
+  /** Start time as ISO 8601 string. */
+  startIso: string;
+  /**
+   * End time as ISO 8601 string. Defaults to startIso + 30 minutes if
+   * the scheduled item is point-in-time (e.g., a social post fires
+   * instantly).
+   */
+  endIso?: string;
+  /** IANA timezone (e.g., "America/New_York"). Defaults to caller-tz. */
+  timeZone?: string;
+  /**
+   * Category for color-coding. We map these to Google Calendar's
+   * built-in colorIds so the operator's calendar visually segments
+   * social vs email vs missions vs meetings.
+   */
+  category: 'social' | 'email' | 'mission' | 'workflow' | 'content' | 'meeting' | 'voice';
+}
+
+// Google Calendar `colorId` values are integers 1-11 representing the
+// platform's built-in event colors. Picked to give visual contrast.
+const CATEGORY_COLOR_ID: Record<ScheduledItemEventInput['category'], string> = {
+  social: '9', // Blueberry
+  email: '10', // Basil (green)
+  mission: '3', // Grape (purple)
+  workflow: '7', // Peacock (cyan)
+  content: '5', // Banana (yellow)
+  meeting: '6', // Tangerine (orange)
+  voice: '11', // Tomato (red)
+};
+
+interface CalendarEventMapping {
+  refId: string;
+  googleEventId: string;
+  calendarId: string;
+  updatedAt: string;
+}
+
+/**
+ * Idempotent upsert of a Google Calendar event for a scheduled
+ * platform item. Safe to call repeatedly with the same refId — first
+ * call inserts, subsequent calls patch the existing event in place.
+ *
+ * Failure is non-fatal: returns null + logs. Callers should treat a
+ * null return as "calendar event not synced" and continue with the
+ * primary scheduling action (the platform's own DB record is the
+ * authoritative state).
+ */
+export async function upsertSalesVelocityCalendarEvent(
+  input: ScheduledItemEventInput,
+): Promise<{ googleEventId: string; htmlLink: string } | null> {
+  if (!adminDb) {
+    return null;
+  }
+
+  const tokens = await getConnectedGoogleTokens();
+  if (!tokens) {
+    return null;
+  }
+
+  // Per the architectural rule (operator's connected Gmail is a work-only
+  // account, no personal events to drown), every platform-scheduled
+  // action writes directly to the operator's PRIMARY Google Calendar.
+  // Color-coding by category is preserved via Google's `colorId` so the
+  // operator can still visually segment social vs email vs missions in
+  // the Day/Week view.
+  //
+  // Older events that were created when this helper used a dedicated
+  // "SalesVelocity.ai" sub-calendar are still patchable / deletable —
+  // the per-event mapping doc records `calendarId` at insert time, so
+  // patch + delete code paths target whichever calendar each event
+  // originally landed on. New events all go to 'primary'.
+  const calendarId = 'primary';
+
+  const startIso = input.startIso;
+  const endIso = input.endIso ?? new Date(new Date(startIso).getTime() + 30 * 60 * 1000).toISOString();
+  const timeZone = input.timeZone ?? 'America/New_York';
+  const colorId = CATEGORY_COLOR_ID[input.category];
+
+  try {
+    const mappingsRef = adminDb
+      .collection(getSubCollection(CALENDAR_EVENT_MAPPINGS_COLLECTION))
+      .doc(input.refId);
+    const existingMapping = await mappingsRef.get();
+
+    const auth = createOAuth2Client({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken ?? undefined,
+    });
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    if (existingMapping.exists) {
+      const mapping = existingMapping.data() as CalendarEventMapping;
+      // PATCH the existing event.
+      const patched = await calendar.events.patch({
+        calendarId: mapping.calendarId,
+        eventId: mapping.googleEventId,
+        requestBody: {
+          summary: input.summary,
+          description: input.description,
+          start: { dateTime: startIso, timeZone },
+          end: { dateTime: endIso, timeZone },
+          colorId,
+        },
+      });
+      const eventId = patched.data.id;
+      const htmlLink = patched.data.htmlLink;
+      if (!eventId || !htmlLink) {
+        return null;
+      }
+      await mappingsRef.set(
+        { refId: input.refId, googleEventId: eventId, calendarId: mapping.calendarId, updatedAt: new Date().toISOString() },
+        { merge: true },
+      );
+      return { googleEventId: eventId, htmlLink };
+    }
+
+    // INSERT a new event.
+    const inserted = await calendar.events.insert({
+      calendarId,
+      requestBody: {
+        summary: input.summary,
+        description: input.description,
+        start: { dateTime: startIso, timeZone },
+        end: { dateTime: endIso, timeZone },
+        colorId,
+        extendedProperties: {
+          private: {
+            salesvelocityRefId: input.refId,
+            salesvelocityCategory: input.category,
+          },
+        },
+      },
+    });
+    const eventId = inserted.data.id;
+    const htmlLink = inserted.data.htmlLink;
+    if (!eventId || !htmlLink) {
+      return null;
+    }
+    await mappingsRef.set({
+      refId: input.refId,
+      googleEventId: eventId,
+      calendarId,
+      updatedAt: new Date().toISOString(),
+    });
+    return { googleEventId: eventId, htmlLink };
+  } catch (err) {
+    logger.error('[Calendar] upsertSalesVelocityCalendarEvent failed',
+      err instanceof Error ? err : new Error(String(err)),
+      { refId: input.refId, file: 'google-calendar-service.ts' });
+    return null;
+  }
+}
+
+/**
+ * Delete the Google Calendar event corresponding to a scheduled item
+ * that was cancelled. Idempotent — no-ops if the mapping doesn't exist
+ * (e.g., the item was scheduled before this code shipped, or the
+ * calendar event was never successfully created).
+ */
+export async function deleteSalesVelocityCalendarEvent(refId: string): Promise<{ success: boolean }> {
+  if (!adminDb) {
+    return { success: false };
+  }
+  const tokens = await getConnectedGoogleTokens();
+  if (!tokens) {
+    return { success: false };
+  }
+
+  try {
+    const mappingsRef = adminDb
+      .collection(getSubCollection(CALENDAR_EVENT_MAPPINGS_COLLECTION))
+      .doc(refId);
+    const mappingSnap = await mappingsRef.get();
+    if (!mappingSnap.exists) {
+      // Nothing to delete — return success so callers can ignore.
+      return { success: true };
+    }
+    const mapping = mappingSnap.data() as CalendarEventMapping;
+
+    const auth = createOAuth2Client({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken ?? undefined,
+    });
+    const calendar = google.calendar({ version: 'v3', auth });
+    await calendar.events.delete({
+      calendarId: mapping.calendarId,
+      eventId: mapping.googleEventId,
+    });
+    await mappingsRef.delete();
+    return { success: true };
+  } catch (err) {
+    logger.error('[Calendar] deleteSalesVelocityCalendarEvent failed',
+      err instanceof Error ? err : new Error(String(err)),
+      { refId, file: 'google-calendar-service.ts' });
+    return { success: false };
+  }
 }
 
 

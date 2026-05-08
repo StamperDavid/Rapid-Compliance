@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/onboarding/record-sms-consent
  *

@@ -33,9 +33,9 @@ import { execSync } from 'node:child_process';
 import { appendFileSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 
-const HEALTH_LOG_PATH = 'D:/rapid-dev/node-health.log';
+const HEALTH_LOG_PATH = process.env.HEALTH_LOG_PATH ?? 'D:/rapid-dev/node-health.log';
 const POLL_INTERVAL_MS = 5000;
-const MEMORY_ALERT_MB = 1800;
+const MEMORY_ALERT_MB = process.env.MEMORY_ALERT_MB ? Number(process.env.MEMORY_ALERT_MB) : 1800;
 const CPU_SUSTAINED_PCT = 85;
 const CPU_SUSTAINED_WINDOW = 3; // consecutive samples
 const HTTP_TIMEOUT_MS = 10_000;

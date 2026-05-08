@@ -11,6 +11,13 @@ export interface VoiceProviderConfig {
   authToken: string;
   phoneNumber: string;
   webhookBaseUrl?: string;
+  /**
+   * Optional Twilio Messaging Service SID. When set, SMS goes through
+   * the service (sender pool, geo permissions, opt-out tracking apply
+   * at service level). Voice still uses `phoneNumber`. Other providers
+   * ignore this field.
+   */
+  messagingServiceSid?: string;
 }
 
 export interface VoiceCall {

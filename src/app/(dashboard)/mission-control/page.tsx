@@ -477,6 +477,7 @@ function StepDetailPanel({
                 missionId={missionId}
                 stepId={displayStep.stepId}
                 specialistsUsed={displayStep.specialistsUsed}
+                delegatedTo={displayStep.delegatedTo}
                 existingGrade={stepGrades[displayStep.stepId]}
               />
 

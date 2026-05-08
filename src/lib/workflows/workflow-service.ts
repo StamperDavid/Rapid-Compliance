@@ -202,6 +202,11 @@ export async function updateWorkflow(
 
 /**
  * Delete workflow
+ *
+ * Calendar event cleanup (workflow-engine triggers, workflowWaits calendar
+ * events) is performed by the API route DELETE handler, not here. Doing
+ * it here pulled workflow-engine into the client bundle (via the
+ * workflows page chain) and broke the build with a server-only violation.
  */
 export async function deleteWorkflow(
   workflowId: string
@@ -221,6 +226,9 @@ export async function deleteWorkflow(
 
 /**
  * Activate/pause workflow
+ *
+ * Calendar/trigger cleanup on pause moves to the API route PATCH handler
+ * (same reasoning as deleteWorkflow above).
  */
 export async function setWorkflowStatus(
   workflowId: string,
@@ -238,44 +246,6 @@ export async function setWorkflowStatus(
   } catch (error: unknown) {
     logger.error('Failed to change workflow status', error instanceof Error ? error : undefined, { workflowId, status });
     throw new Error(`Failed to change workflow status: ${getErrorMessage(error)}`);
-  }
-}
-
-/**
- * Execute workflow manually
- */
-export async function executeWorkflow(
-  workflowId: string,
-  context: Record<string, unknown>
-): Promise<{ success: boolean; executionId: string; error?: string }> {
-  try {
-    const workflow = await getWorkflow(workflowId);
-    if (!workflow) {
-      throw new Error('Workflow not found');
-    }
-
-    // Execute via workflow engine
-    const { executeWorkflowImpl: runEngine } = await import('./workflow-engine');
-
-    const result = await runEngine(workflow, context);
-
-    logger.info('Workflow executed', {
-      workflowId,
-      executionId: result.id,
-      status: result.status,
-    });
-
-    return {
-      success: result.status === 'completed',
-      executionId: result.id,
-    };
-  } catch (error: unknown) {
-    logger.error('Workflow execution failed', error instanceof Error ? error : undefined, { workflowId });
-    return {
-      success: false,
-      executionId: '',
-      error: getErrorMessage(error),
-    };
   }
 }
 

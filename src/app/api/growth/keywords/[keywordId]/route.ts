@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * GET/DELETE/POST /api/growth/keywords/[keywordId]
  *

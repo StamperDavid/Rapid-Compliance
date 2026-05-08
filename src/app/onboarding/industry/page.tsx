@@ -284,20 +284,11 @@ export default function IndustrySelectionPage() {
                     className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer"
                   />
                   <span className="text-sm text-gray-300 leading-relaxed">
-                    Yes, send me SMS messages from SalesVelocity.ai including account
-                    notifications, marketing updates, and customer-care messages.
-                    Message frequency varies. Message and data rates may apply.
-                    Reply STOP to opt out, HELP for help. By checking this box, I agree
-                    to the{' '}
-                    <a
-                      href="https://www.salesvelocity.ai/terms"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-indigo-400 hover:text-indigo-300 underline"
-                    >
-                      Terms of Service
-                    </a>{' '}
-                    and{' '}
+                    Yes, I agree to receive recurring text messages from SalesVelocity.ai
+                    at the phone number provided, including account notifications,
+                    marketing updates, and customer-care messages. Message frequency
+                    varies. Message and data rates may apply. Reply STOP to opt out,
+                    HELP for help. See our{' '}
                     <a
                       href="https://www.salesvelocity.ai/privacy"
                       target="_blank"
@@ -306,7 +297,9 @@ export default function IndustrySelectionPage() {
                     >
                       Privacy Policy
                     </a>
-                    .
+                    {' '}for details on how we handle your data. SMS consent is
+                    independent of our Terms of Service — you can sign up without
+                    receiving any text messages.
                   </span>
                 </label>
               </div>

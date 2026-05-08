@@ -9,9 +9,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
-import { socialProviderSchema, oauthCallbackQuerySchema } from '@/lib/social/social-oauth-schemas';
+import { oauthRedirectProviderSchema, oauthCallbackQuerySchema } from '@/lib/social/social-oauth-schemas';
 import {
-  exchangeTwitterCode,
   exchangeLinkedInCode,
   exchangeMetaCode,
   exchangeGoogleSocialCode,
@@ -20,7 +19,6 @@ import {
   exchangePinterestCode,
   exchangeDiscordCode,
   exchangeTwitchCode,
-  fetchTwitterProfile,
   fetchLinkedInProfile,
   fetchYouTubeChannel,
   fetchGoogleProfile,
@@ -62,9 +60,18 @@ export async function GET(
       return rateLimitResponse;
     }
 
-    // Validate provider
-    const providerValidation = socialProviderSchema.safeParse(provider);
+    // Validate provider against the OAuth-redirect whitelist. The
+    // twitter callback path is intentionally not allowed here because
+    // X uses manual OAuth 1.0a entry, not redirect-based OAuth — any
+    // hit here for `twitter` is a misconfigured client and gets
+    // bounced back with the standard invalid_provider error.
+    const providerValidation = oauthRedirectProviderSchema.safeParse(provider);
     if (!providerValidation.success) {
+      if (provider === 'twitter') {
+        return NextResponse.redirect(
+          `${settingsUrl}?error=oauth_not_supported&provider=twitter&category=social`,
+        );
+      }
       return NextResponse.redirect(`${settingsUrl}?error=invalid_provider`);
     }
 
@@ -95,35 +102,6 @@ export async function GET(
 
     // Exchange code for tokens and fetch profile
     switch (validProvider) {
-      case 'twitter': {
-        const { tokens } = await exchangeTwitterCode(code, state);
-        const profile = await fetchTwitterProfile(tokens.accessToken);
-        const encrypted = encryptCredentials(tokens);
-
-        await SocialAccountService.addAccount({
-          platform: 'twitter',
-          accountName: profile.name,
-          handle: profile.username,
-          profileImageUrl: profile.profileImageUrl,
-          isDefault: true,
-          status: 'active',
-          credentials: {
-            clientId: process.env.TWITTER_CLIENT_ID ?? '',
-            clientSecret: process.env.TWITTER_CLIENT_SECRET ?? '',
-            accessToken: encrypted.accessToken,
-            refreshToken: encrypted.refreshToken,
-            tokenExpiresAt: encrypted.tokenExpiresAt,
-          },
-        });
-
-        logger.info('Twitter account connected via OAuth', {
-          route: '/api/social/oauth/callback',
-          handle: profile.username,
-        });
-
-        return NextResponse.redirect(`${settingsUrl}?success=twitter&category=social`);
-      }
-
       case 'linkedin': {
         const { tokens } = await exchangeLinkedInCode(code, state);
         const profile = await fetchLinkedInProfile(tokens.accessToken);

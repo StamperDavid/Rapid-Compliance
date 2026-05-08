@@ -16,7 +16,124 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
+import {
+  upsertSalesVelocityCalendarEvent,
+  deleteSalesVelocityCalendarEvent,
+} from '@/lib/integrations/google-calendar-service';
+import { getMission } from '@/lib/orchestrator/mission-persistence';
 import type { MissionSchedule, ScheduleFrequency, ScheduleStatus } from '@/types/mission-schedule';
+
+// ============================================================================
+// CALENDAR INTEGRATION (mission scheduling → SalesVelocity calendar)
+// ============================================================================
+//
+// Architectural rule: every scheduled platform action surfaces in the
+// connected Google Calendar. When the operator "schedules a mission" via
+// Mission Control, we mirror the next-run time onto the dedicated
+// SalesVelocity.ai calendar so the operator can see it alongside their
+// other planned work.
+//
+// One calendar event per MissionSchedule, keyed by `mission-{scheduleId}`.
+// Idempotent upsert — re-keying the next-run time after each fired run
+// patches the same event in place. Status transitions (pause / expire /
+// delete) call deleteSalesVelocityCalendarEvent so a paused or scrapped
+// schedule disappears from the calendar.
+//
+// Failures are non-fatal: the helper logs + returns null. We never block
+// the user-facing scheduling action on calendar sync.
+
+function calendarRefIdForSchedule(scheduleId: string): string {
+  return `mission-${scheduleId}`;
+}
+
+/**
+ * Build the calendar event payload for a given schedule. Loads the source
+ * mission (best-effort) so we can include the mission title, prompt, and
+ * step count in the description. Source-mission lookup failures fall back
+ * to schedule-only fields — this is informational, not load-bearing.
+ */
+async function buildScheduleCalendarPayload(
+  schedule: MissionSchedule,
+  startIso: string,
+): Promise<{
+  refId: string;
+  summary: string;
+  description: string;
+  startIso: string;
+  timeZone: string;
+  category: 'mission';
+}> {
+  const mission = await getMission(schedule.sourceMissionId).catch(() => null);
+
+  const promptForTitle = ((schedule.prompt !== '' ? schedule.prompt : null) ?? mission?.userPrompt ?? '').slice(0, 80);
+  const titleCandidate =
+    (schedule.name !== '' ? schedule.name : null) ??
+    (mission?.title !== undefined && mission.title !== '' ? mission.title : null) ??
+    (promptForTitle !== '' ? promptForTitle : null) ??
+    schedule.sourceMissionId;
+  const titleBase = titleCandidate.slice(0, 120);
+  const summary = `Mission: ${titleBase}`;
+
+  const stepCount = mission?.steps.length ?? 0;
+  const firstStepName = mission?.steps[0]?.toolName ?? '';
+  const promptSnippet = ((schedule.prompt !== '' ? schedule.prompt : null) ?? mission?.userPrompt ?? '').slice(0, 500);
+
+  const description = [
+    `Mission ID: ${schedule.sourceMissionId}`,
+    `Schedule ID: ${schedule.id}`,
+    `Frequency: ${schedule.frequency}${schedule.customIntervalHours !== undefined ? ` (${schedule.customIntervalHours}h)` : ''}`,
+    `Steps: ${stepCount}`,
+    `First step: ${firstStepName}`,
+    '',
+    'Prompt:',
+    promptSnippet,
+  ].join('\n');
+
+  return {
+    refId: calendarRefIdForSchedule(schedule.id),
+    summary,
+    description,
+    startIso,
+    timeZone: 'America/New_York',
+    category: 'mission',
+  };
+}
+
+/**
+ * Best-effort upsert of the calendar event for an active schedule.
+ * Wraps the helper in try/catch so calendar failures never derail the
+ * primary schedule write.
+ */
+async function syncScheduleToCalendar(schedule: MissionSchedule): Promise<void> {
+  if (schedule.status !== 'active') {
+    return;
+  }
+  try {
+    const payload = await buildScheduleCalendarPayload(schedule, schedule.nextRunAt);
+    await upsertSalesVelocityCalendarEvent(payload);
+  } catch (err) {
+    logger.warn('[MissionSchedule] Calendar sync (upsert) failed — continuing', {
+      scheduleId: schedule.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Best-effort delete of the calendar event for a schedule that is being
+ * paused, expired, or removed. Idempotent — the helper itself no-ops if
+ * no mapping exists.
+ */
+async function removeScheduleCalendarEvent(scheduleId: string): Promise<void> {
+  try {
+    await deleteSalesVelocityCalendarEvent(calendarRefIdForSchedule(scheduleId));
+  } catch (err) {
+    logger.warn('[MissionSchedule] Calendar sync (delete) failed — continuing', {
+      scheduleId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
 
 // ============================================================================
 // HELPERS
@@ -113,6 +230,12 @@ export async function createSchedule(
       nextRunAt: schedule.nextRunAt,
     });
 
+    // Mirror to the connected Google Calendar (best-effort, non-fatal).
+    // The "Schedule this mission" UX in Mission Control lands here; one
+    // event per schedule, keyed by `mission-{scheduleId}`. Subsequent
+    // run records or pause/resume calls patch or delete the same event.
+    await syncScheduleToCalendar(schedule);
+
     return schedule;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -207,6 +330,19 @@ export async function updateScheduleStatus(
       });
 
     logger.info('[MissionSchedule] Status updated', { scheduleId, status });
+
+    // Calendar sync: paused / expired schedules disappear from the
+    // operator's calendar; resumed (active) schedules get re-upserted
+    // with their current nextRunAt.
+    if (status === 'active') {
+      const refreshed = await getSchedule(scheduleId);
+      if (refreshed) {
+        await syncScheduleToCalendar(refreshed);
+      }
+    } else {
+      await removeScheduleCalendarEvent(scheduleId);
+    }
+
     return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -271,6 +407,23 @@ export async function recordRun(
       isExpired,
     });
 
+    // Calendar sync: if this run pushed the schedule past its expiry,
+    // remove the calendar event entirely. Otherwise patch the existing
+    // event to point at the new nextRunAt so the operator sees the
+    // upcoming firing on their calendar.
+    if (isExpired) {
+      await removeScheduleCalendarEvent(scheduleId);
+    } else {
+      const refreshed: MissionSchedule = {
+        ...schedule,
+        nextRunAt,
+        lastRunAt: now,
+        runCount: schedule.runCount + 1,
+        updatedAt: now,
+      };
+      await syncScheduleToCalendar(refreshed);
+    }
+
     return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -316,6 +469,84 @@ export async function getSchedulesDue(): Promise<MissionSchedule[]> {
 }
 
 /**
+ * Cascade-cancel every active schedule that was built from a given source
+ * mission. Called from `mission-persistence.ts`'s cancel/delete/reject
+ * paths so a deleted source mission doesn't leave orphan schedules
+ * silently re-firing on cron and re-upserting calendar events.
+ *
+ * Each affected schedule is flipped to `cancelled` status and its
+ * mirrored calendar event (keyed by `mission-{scheduleId}`) is removed.
+ * `cancelled` is distinct from `expired`/`paused` so the audit trail
+ * makes the cause clear: the source mission went away, not the clock.
+ *
+ * Failures on individual schedules are logged but never thrown — a
+ * missing calendar mapping or a Firestore hiccup on one schedule must
+ * not block the others or the upstream cancel/delete operation.
+ *
+ * @returns The number of schedules successfully cancelled.
+ */
+export async function cancelSchedulesForMission(
+  sourceMissionId: string,
+): Promise<number> {
+  if (!adminDb) {
+    logger.warn('[MissionSchedule] Firestore not available — cancelSchedulesForMission skipped', {
+      sourceMissionId,
+    });
+    return 0;
+  }
+
+  try {
+    const snap = await adminDb
+      .collection(schedulesCollectionPath())
+      .where('sourceMissionId', '==', sourceMissionId)
+      .where('status', '==', 'active')
+      .get();
+
+    if (snap.empty) {
+      return 0;
+    }
+
+    let cancelled = 0;
+    const now = new Date().toISOString();
+
+    for (const doc of snap.docs) {
+      const schedule = doc.data() as MissionSchedule;
+      try {
+        await doc.ref.update({
+          status: 'cancelled' as ScheduleStatus,
+          updatedAt: now,
+        });
+        await removeScheduleCalendarEvent(schedule.id);
+        cancelled += 1;
+      } catch (innerErr) {
+        logger.warn('[MissionSchedule] Failed to cancel one schedule — continuing', {
+          scheduleId: schedule.id,
+          sourceMissionId,
+          error: innerErr instanceof Error ? innerErr.message : String(innerErr),
+        });
+      }
+    }
+
+    if (cancelled > 0) {
+      logger.info('[MissionSchedule] Cascade-cancelled schedules for source mission', {
+        sourceMissionId,
+        cancelled,
+        totalMatching: snap.docs.length,
+      });
+    }
+
+    return cancelled;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.warn('[MissionSchedule] cancelSchedulesForMission query failed — continuing', {
+      sourceMissionId,
+      error: errorMsg,
+    });
+    return 0;
+  }
+}
+
+/**
  * Permanently delete a schedule document.
  *
  * @returns true on success, false if not found or on error.
@@ -337,6 +568,12 @@ export async function deleteSchedule(scheduleId: string): Promise<boolean> {
 
     await docRef.delete();
     logger.info('[MissionSchedule] Schedule deleted', { scheduleId });
+
+    // Calendar sync: remove the mirrored event. Idempotent — no-ops
+    // when the schedule never had a calendar mapping (e.g., calendar
+    // sync was disconnected at create time).
+    await removeScheduleCalendarEvent(scheduleId);
+
     return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);

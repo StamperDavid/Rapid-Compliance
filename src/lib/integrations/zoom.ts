@@ -144,14 +144,91 @@ export async function cancelZoomMeeting(
       },
     });
 
-    if (!response.ok && response.status !== 204) {
-      throw new Error('Failed to cancel Zoom meeting');
+    // Zoom returns 204 No Content on successful delete. 200 is acceptable too.
+    // Anything else (especially 4xx) is a real failure and we surface Zoom's
+    // actual error message so the caller can decide whether to retry, force-
+    // cancel locally, or escalate. The previous generic "Failed to cancel
+    // Zoom meeting" was a fake-success enabler — when the cancel route then
+    // swallowed the throw, the UI showed cancelled while the Zoom meeting
+    // was still scheduled and the recipient still got reminders.
+    if (!response.ok) {
+      let zoomMessage = response.statusText;
+      try {
+        const errorBody = (await response.json()) as ZoomApiErrorResponse;
+        if (errorBody.message) {
+          zoomMessage = errorBody.message;
+        }
+      } catch {
+        // Non-JSON body — fall back to statusText.
+      }
+      throw new Error(`Zoom API error (${response.status}): ${zoomMessage}`);
     }
 
     logger.info('Zoom meeting cancelled', { meetingId });
 
   } catch (error) {
     logger.error('Failed to cancel Zoom meeting', error instanceof Error ? error : undefined, { meetingId });
+    throw error;
+  }
+}
+
+/**
+ * Update/reschedule an existing Zoom meeting in place via PATCH
+ * /meetings/{meetingId}. Used by the calendar two-way sync engine when
+ * the operator drags a meeting to a new time inside Google Calendar —
+ * we patch the Zoom meeting's start_time + duration so the join link
+ * stays the same and the recipient's existing invite remains valid.
+ *
+ * Surfaces Zoom's actual error body on non-2xx so the calendar sync
+ * runner can decide whether to retry, force-local, or escalate. Same
+ * stance as cancelZoomMeeting — never silent fake-success.
+ */
+export async function updateZoomMeeting(
+  meetingId: string,
+  updates: { startTime: Date; duration?: number; timezone?: string }
+): Promise<void> {
+  try {
+    const { getIntegrationCredentials } = await import('./integration-manager');
+    const credentials = await getIntegrationCredentials('zoom', { useAdminSdk: true });
+
+    if (!credentials?.accessToken) {
+      throw new Error('Zoom not connected');
+    }
+
+    const body: Record<string, unknown> = {
+      start_time: updates.startTime.toISOString(),
+      timezone: (updates.timezone !== '' && updates.timezone != null) ? updates.timezone : 'America/New_York',
+    };
+    if (typeof updates.duration === 'number' && updates.duration > 0) {
+      body.duration = updates.duration;
+    }
+
+    const response = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${credentials.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    // Zoom returns 204 No Content on a successful PATCH.
+    if (!response.ok) {
+      let zoomMessage = response.statusText;
+      try {
+        const errorBody = (await response.json()) as ZoomApiErrorResponse;
+        if (errorBody.message) {
+          zoomMessage = errorBody.message;
+        }
+      } catch {
+        // Non-JSON body — fall back to statusText.
+      }
+      throw new Error(`Zoom API error (${response.status}): ${zoomMessage}`);
+    }
+
+    logger.info('Zoom meeting updated', { meetingId, startTime: updates.startTime.toISOString() });
+  } catch (error) {
+    logger.error('Failed to update Zoom meeting', error instanceof Error ? error : undefined, { meetingId });
     throw error;
   }
 }

@@ -200,8 +200,20 @@ export class TwilioProvider implements VoiceProvider {
   async sendSMS(to: string, message: string): Promise<SMSMessage> {
     try {
       const client = await this.getClient();
+      // Prefer Messaging Service routing when configured. Env var wins
+      // over stored config so operators can flip it on without
+      // re-saving Twilio credentials. Falls back to a raw `from` phone
+      // number when no service is configured.
+      const envMsgSid = process.env.TWILIO_MESSAGING_SERVICE_SID?.trim();
+      const messagingServiceSid =
+        envMsgSid && envMsgSid.length > 0
+          ? envMsgSid
+          : this.config.messagingServiceSid;
+      const sender = messagingServiceSid
+        ? { messagingServiceSid }
+        : { from: this.config.phoneNumber };
       const msg = await client.messages.create({
-        from: this.config.phoneNumber,
+        ...sender,
         to,
         body: message,
       });

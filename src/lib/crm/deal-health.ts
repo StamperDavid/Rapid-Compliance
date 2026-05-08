@@ -42,21 +42,8 @@ function toDate(value: unknown): Date {
   return new Date();
 }
 
-export interface DealHealthScore {
-  overall: number; // 0-100 (higher is healthier)
-  status: 'healthy' | 'at-risk' | 'critical';
-  factors: DealHealthFactor[];
-  warnings: string[];
-  recommendations: string[];
-}
-
-export interface DealHealthFactor {
-  name: string;
-  score: number; // 0-100
-  weight: number; // How important this factor is
-  impact: 'positive' | 'negative' | 'neutral';
-  description: string;
-}
+export type { DealHealthScore, DealHealthFactor } from './deal-health-types';
+import type { DealHealthScore, DealHealthFactor } from './deal-health-types';
 
 /**
  * Calculate comprehensive deal health score

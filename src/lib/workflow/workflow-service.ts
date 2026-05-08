@@ -235,6 +235,10 @@ export class WorkflowService {
   
   /**
    * Update workflow status (activate/pause/archive)
+   *
+   * When pausing we also tear down every still-pending sequenceJob this
+   * workflow started so drip emails do not keep firing after a pause.
+   * Calendar mirror events are deleted alongside. Cleanup is best-effort.
    */
   async setWorkflowStatus(
     workflowId: string,
@@ -245,11 +249,29 @@ export class WorkflowService {
       status,
     });
 
-    return this.updateWorkflow(workflowId, { status });
+    const updated = await this.updateWorkflow(workflowId, { status });
+
+    if (status === 'paused') {
+      try {
+        const { cancelSequenceJobsForWorkflow } = await import('@/lib/workflows/sequence-scheduler');
+        await cancelSequenceJobsForWorkflow(workflowId);
+      } catch (cleanupErr) {
+        logger.warn('Failed to cancel workflow sequence jobs on pause (non-fatal)', {
+          workflowId,
+          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+        });
+      }
+    }
+
+    return updated;
   }
-  
+
   /**
    * Delete workflow
+   *
+   * Cancels every still-pending sequenceJob this workflow started before
+   * dropping the Firestore record so drip emails do not continue to fire
+   * after delete. Cleanup is best-effort.
    */
   async deleteWorkflow(
     workflowId: string
@@ -257,6 +279,16 @@ export class WorkflowService {
     logger.info('Deleting workflow', {
       workflowId,
     });
+
+    try {
+      const { cancelSequenceJobsForWorkflow } = await import('@/lib/workflows/sequence-scheduler');
+      await cancelSequenceJobsForWorkflow(workflowId);
+    } catch (cleanupErr) {
+      logger.warn('Failed to cancel workflow sequence jobs during delete (non-fatal)', {
+        workflowId,
+        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+      });
+    }
 
     const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
 

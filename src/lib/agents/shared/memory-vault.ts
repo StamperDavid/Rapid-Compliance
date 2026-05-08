@@ -774,10 +774,11 @@ export class MemoryVault {
       sortOrder: 'desc',
     });
 
-    return (entries as SignalEntry[]).filter(
-      s => !s.value.acknowledged &&
-           (s.value.affectedAgents.includes(agentId) || s.value.affectedAgents.includes('ALL'))
-    );
+    return (entries as SignalEntry[]).filter((s) => {
+      if (s.value.acknowledged) { return false; }
+      const affected = Array.isArray(s.value.affectedAgents) ? s.value.affectedAgents : [];
+      return affected.includes(agentId) || affected.includes('ALL');
+    });
   }
 
   /**

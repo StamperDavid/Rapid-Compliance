@@ -49,12 +49,14 @@ import PlatformHeaderBand, {
   type PlatformHeaderStatus,
 } from '@/components/social/PlatformHeaderBand';
 import { PinnedDMInbox } from '@/components/social/PinnedDMInbox';
+import { MentionInbox } from '@/components/social/MentionInbox';
 import SpecialistIdentityCard from '@/components/social/SpecialistIdentityCard';
 import SpecialistRecentWork from '@/components/social/SpecialistRecentWork';
 import { PlatformComposer } from '@/components/social/composers';
 import EmbeddedSocialCalendar from '@/components/social/EmbeddedSocialCalendar';
 import PlatformInsightsPanel from '@/components/social/PlatformInsightsPanel';
 import AudienceTrajectoryPanel from '@/components/social/AudienceTrajectoryPanel';
+import ScheduledPostsQueue from '@/components/social/ScheduledPostsQueue';
 import { InlineReviewCard } from '@/components/mission-control/InlineReviewCard';
 
 import {
@@ -133,6 +135,15 @@ interface RawSocialPostDoc {
   publishedAt?: string;
   mediaUrls?: string[];
   hashtags?: string[];
+  /**
+   * Set after successful publish. For X this is the tweet id, for Bluesky
+   * the AT URI, for Mastodon the status id. Required to call delete /
+   * reply / repost endpoints — published posts without it are
+   * unrecoverable from a server perspective (the platform forgot us).
+   */
+  platformPostId?: string;
+  /** Public URL on the platform (used by "View on platform" affordance). */
+  postUrl?: string;
   engagement?: {
     likes?: number;
     comments?: number;
@@ -245,6 +256,7 @@ function normalizePost(
     status,
     publishedAt: doc.publishedAt ? new Date(doc.publishedAt) : undefined,
     scheduledAt: doc.scheduledFor ? new Date(doc.scheduledFor) : undefined,
+    platformPostId: doc.platformPostId,
     metrics,
     createdBy: doc.createdBy ?? '',
     createdAt: doc.createdAt ? new Date(doc.createdAt) : new Date(),
@@ -818,6 +830,11 @@ export function PlatformDashboard({
       {/* DM inbox — always visible; collapses to a thin bar when empty */}
       <PinnedDMInbox platform={platform} />
 
+      {/* Mention / reply / quote inbox — only renders for platforms that
+          support it (twitter, bluesky, mastodon). Renders nothing on
+          other platforms so the dashboard layout stays tight. */}
+      <MentionInbox platform={platform} />
+
       {/* Connect-first nudge — only when the operator hasn't linked an account */}
       {connected === false && (
         <Card className="border-border-light">
@@ -926,6 +943,17 @@ export function PlatformDashboard({
           )}
         </div>
       </div>
+
+      {/* ─── Scheduled posts queue (editable, full width) ────────────────────
+          The Col-2 calendar gives an at-a-glance view; this queue gives the
+          operator full edit/cancel/post-now controls on every queued item.
+          Only meaningful when an account is connected and the platform isn't
+          a coming-soon shell — render unconditionally otherwise so the empty
+          state ("No posts scheduled for {platform}") is the source of truth.
+       */}
+      {config.state !== 'coming_soon' && connected !== false && (
+        <ScheduledPostsQueue platform={platform} />
+      )}
 
       {/* ─── Coming-soon block (full width, only in coming_soon state) ───── */}
       {config.state === 'coming_soon' && (

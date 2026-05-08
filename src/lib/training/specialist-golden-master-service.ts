@@ -26,6 +26,36 @@ import type { SpecialistGoldenMaster, SpecialistImprovementRequest } from '@/typ
 const SPECIALIST_GM_COLLECTION = 'specialistGoldenMasters';
 const SPECIALIST_CONFIGS_COLLECTION = 'specialistConfigs';
 
+/**
+ * Admin-canonical → seed-canonical specialist ID aliases.
+ *
+ * Some specialists are referenced by one ID in the admin UI / runtime
+ * delegation maps and a different ID in the seed scripts that wrote their
+ * GM doc. Without this map a grade submitted from Mission Control with the
+ * admin name silently 404s in the GM lookup, the prompt-edit half drops,
+ * and the operator believes their grade landed when it didn't (Standing
+ * Rule #2 violation surfaced May 7, 2026 on the BYOK X_EXPERT mission).
+ *
+ * Every read/write in this service resolves the input ID through this map
+ * before computing doc IDs, hitting the cache, or querying Firestore so
+ * either name converges on the same canonical doc.
+ */
+const SPECIALIST_ID_ALIASES: Record<string, string> = {
+  X_EXPERT: 'TWITTER_X_EXPERT',
+  WEB_SCRAPER: 'SCRAPER_SPECIALIST',
+  ARCHITECT_COPY_STRATEGIST: 'COPY_STRATEGIST',
+  ARCHITECT_FUNNEL_STRATEGIST: 'FUNNEL_STRATEGIST',
+  ARCHITECT_UX_UI_STRATEGIST: 'UX_UI_STRATEGIST',
+};
+
+/**
+ * Returns the seed-canonical specialist ID for an input that may be an
+ * admin-side alias. Pass-through if the ID is already canonical.
+ */
+export function resolveSpecialistIdAlias(specialistId: string): string {
+  return SPECIALIST_ID_ALIASES[specialistId] ?? specialistId;
+}
+
 function getGMCollectionPath(): string {
   return getSubCollection(SPECIALIST_GM_COLLECTION);
 }
@@ -48,12 +78,13 @@ function buildGMDocId(specialistId: string, version: number): string {
  * Idempotent — returns the existing v1 if already created.
  */
 export async function getOrCreateSpecialistGM(
-  specialistId: string,
+  rawSpecialistId: string,
   specialistName: string,
   createdBy: string
 ): Promise<SpecialistGoldenMaster | null> {
   if (!adminDb) { return null; }
 
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const collection = adminDb.collection(getGMCollectionPath());
   const v1DocId = buildGMDocId(specialistId, 1);
   const existing = await collection.doc(v1DocId).get();
@@ -104,12 +135,13 @@ export async function getOrCreateSpecialistGM(
  * Merges the proposed changes onto the active version's config snapshot.
  */
 export async function createSpecialistGMVersion(
-  specialistId: string,
+  rawSpecialistId: string,
   improvementRequest: SpecialistImprovementRequest,
   createdBy: string
 ): Promise<SpecialistGoldenMaster | null> {
   if (!adminDb) { return null; }
 
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const collection = adminDb.collection(getGMCollectionPath());
 
   // Find the current active version
@@ -161,13 +193,14 @@ export async function createSpecialistGMVersion(
  * and patches `specialistConfigs/{specialistId}` with the version's config.
  */
 export async function deploySpecialistGM(
-  specialistId: string,
+  rawSpecialistId: string,
   version: number
 ): Promise<{ success: boolean; error?: string }> {
   if (!adminDb) {
     return { success: false, error: 'Database not available' };
   }
 
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const collection = adminDb.collection(getGMCollectionPath());
   const targetDocId = buildGMDocId(specialistId, version);
   const targetDoc = await collection.doc(targetDocId).get();
@@ -232,8 +265,9 @@ export async function deploySpecialistGM(
  * Finds the current active version's `previousVersion` and deploys that.
  */
 export async function rollbackSpecialistGM(
-  specialistId: string
+  rawSpecialistId: string
 ): Promise<{ success: boolean; rolledBackToVersion?: number; error?: string }> {
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const activeGM = await getActiveSpecialistGM(specialistId);
   if (!activeGM) {
     return { success: false, error: 'No active Golden Master to rollback from' };
@@ -254,10 +288,11 @@ export async function rollbackSpecialistGM(
  * List all Golden Master versions for a specialist, descending by version.
  */
 export async function listSpecialistGMVersions(
-  specialistId: string
+  rawSpecialistId: string
 ): Promise<SpecialistGoldenMaster[]> {
   if (!adminDb) { return []; }
 
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const collection = adminDb.collection(getGMCollectionPath());
   const snapshot = await collection
     .where('specialistId', '==', specialistId)
@@ -271,10 +306,11 @@ export async function listSpecialistGMVersions(
  * Get the currently active Golden Master for a specialist.
  */
 export async function getActiveSpecialistGM(
-  specialistId: string
+  rawSpecialistId: string
 ): Promise<SpecialistGoldenMaster | null> {
   if (!adminDb) { return null; }
 
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const collection = adminDb.collection(getGMCollectionPath());
   const snapshot = await collection
     .where('specialistId', '==', specialistId)
@@ -309,9 +345,10 @@ function gmCacheKey(specialistId: string, industryKey: string): string {
  * Firestore at runtime. 60-second in-memory cache keyed by `${specialistId}:${industryKey}`.
  */
 export async function getActiveSpecialistGMByIndustry(
-  specialistId: string,
+  rawSpecialistId: string,
   industryKey: string
 ): Promise<SpecialistGoldenMaster | null> {
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const cacheKey = gmCacheKey(specialistId, industryKey);
   const cached = industryGMCache.get(cacheKey);
 
@@ -343,7 +380,8 @@ export async function getActiveSpecialistGMByIndustry(
  * Invalidate the industry-scoped GM cache for a given specialist+industry pair.
  * Called after a new GM version is deployed so the next request reloads.
  */
-export function invalidateIndustryGMCache(specialistId: string, industryKey: string): void {
+export function invalidateIndustryGMCache(rawSpecialistId: string, industryKey: string): void {
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   industryGMCache.delete(gmCacheKey(specialistId, industryKey));
 }
 
@@ -364,11 +402,12 @@ export function invalidateIndustryGMCache(specialistId: string, industryKey: str
  * so sorting client-side is trivial cost and avoids the deploy friction.
  */
 export async function listIndustryGMVersions(
-  specialistId: string,
+  rawSpecialistId: string,
   industryKey: string,
 ): Promise<SpecialistGoldenMaster[]> {
   if (!adminDb) { return []; }
 
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const snapshot = await adminDb
     .collection(getGMCollectionPath())
     .where('specialistId', '==', specialistId)
@@ -401,7 +440,7 @@ function buildIndustryGMDocId(specialistId: string, industryKey: string, version
  * currentText doesn't appear in the active systemPrompt.
  */
 export async function createIndustryGMVersionFromEdit(
-  specialistId: string,
+  rawSpecialistId: string,
   industryKey: string,
   edit: {
     currentText: string;
@@ -413,6 +452,7 @@ export async function createIndustryGMVersionFromEdit(
 ): Promise<SpecialistGoldenMaster | null> {
   if (!adminDb) { return null; }
 
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const activeGM = await getActiveSpecialistGMByIndustry(specialistId, industryKey);
   if (!activeGM) {
     logger.error(
@@ -498,7 +538,7 @@ export async function createIndustryGMVersionFromEdit(
  * next specialist call picks up the new version.
  */
 export async function deployIndustryGMVersion(
-  specialistId: string,
+  rawSpecialistId: string,
   industryKey: string,
   targetVersion: number,
 ): Promise<{ success: boolean; error?: string }> {
@@ -506,6 +546,7 @@ export async function deployIndustryGMVersion(
     return { success: false, error: 'adminDb not initialized' };
   }
 
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
   const collection = adminDb.collection(getGMCollectionPath());
   const targetDocId = buildIndustryGMDocId(specialistId, industryKey, targetVersion);
   const targetDoc = await collection.doc(targetDocId).get();

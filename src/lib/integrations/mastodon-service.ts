@@ -79,6 +79,44 @@ interface MastodonAccount {
   statuses_count: number;
 }
 
+/**
+ * Normalized Mastodon mention item returned by `pollMentions`.
+ *
+ * - `notificationId` — id of the notification (used for `dismissNotification`)
+ * - `statusId` — id of the underlying status (used as `in_reply_to_id`)
+ * - `authorAcct` — full webfinger acct of the sender (e.g. `alice@mastodon.social`)
+ *   needed to prefix the @-mention in any reply we compose
+ */
+export interface MastodonMentionItem {
+  notificationId: string;
+  statusId: string;
+  statusUrl: string;
+  authorAcct: string;
+  authorDisplayName: string;
+  authorProfileUrl: string;
+  text: string;
+  createdAt: string;
+}
+
+/**
+ * Strip Mastodon's HTML status content down to plain text.
+ * Mastodon serializes `<p>…</p><br>…<a href>…</a>` etc.; the operator-facing
+ * inbox shows plain text so we throw away tags and decode the four entity
+ * forms we actually see in the wild (&amp; &lt; &gt; &quot;).
+ */
+function stripHtmlToPlain(html: string): string {
+  return html
+    .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/p\s*>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
 // ─── Service ─────────────────────────────────────────────────────────────────
 
 export class MastodonService {
@@ -394,6 +432,412 @@ export class MastodonService {
       return { success: true };
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Pull recent mention notifications for the authenticated brand account.
+   *
+   * GET /api/v1/notifications?types[]=mention
+   *
+   * The `types[]=mention` filter restricts the response server-side so we
+   * don't pay for likes/favourites we'd throw away. We re-filter client-side
+   * as a defensive belt-and-braces — older Mastodon versions ignore the
+   * `types[]` filter.
+   */
+  async pollMentions(options: { limit?: number } = {}): Promise<{
+    success: boolean;
+    items: MastodonMentionItem[];
+    error?: string;
+  }> {
+    if (!this.config.accessToken) {
+      return { success: false, items: [], error: 'Mastodon not configured' };
+    }
+    try {
+      const limit = Math.min(Math.max(options.limit ?? 25, 1), 80);
+      const url = `${this.baseUrl}/api/v1/notifications?limit=${limit}&types[]=mention`;
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${this.config.accessToken}` },
+      });
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          success: false,
+          items: [],
+          error: `pollMentions failed: ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+
+      const raw = (await response.json()) as Array<{
+        id?: string;
+        type?: string;
+        created_at?: string;
+        account?: { id?: string; username?: string; acct?: string; display_name?: string; url?: string };
+        status?: {
+          id?: string;
+          url?: string | null;
+          content?: string;
+          visibility?: string;
+        };
+      }>;
+
+      const items: MastodonMentionItem[] = [];
+      for (const n of Array.isArray(raw) ? raw : []) {
+        if (n.type !== 'mention') { continue; }
+        if (!n.id || !n.status?.id || !n.account?.acct) { continue; }
+        const html = n.status.content ?? '';
+        const text = stripHtmlToPlain(html);
+        if (!text) { continue; }
+        items.push({
+          notificationId: n.id,
+          statusId: n.status.id,
+          statusUrl: n.status.url ?? '',
+          authorAcct: n.account.acct,
+          authorDisplayName: n.account.display_name ?? n.account.username ?? n.account.acct,
+          authorProfileUrl: n.account.url ?? '',
+          text,
+          createdAt: n.created_at ?? new Date().toISOString(),
+        });
+      }
+
+      return { success: true, items };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[MastodonService] pollMentions failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { success: false, items: [], error: msg };
+    }
+  }
+
+  /**
+   * Reply to a Mastodon status. The recipient acct is required so we can
+   * prefix the @-mention; Mastodon does NOT auto-cc the original author on
+   * a reply unless the mention is in the status text itself. Without the
+   * prefix the reply renders awkwardly in clients that hide
+   * replies-without-mention.
+   *
+   * Visibility defaults to `public` because mentions are public-by-default.
+   * Setting `direct` would convert the reply into a DM and hide it from
+   * the conversation thread.
+   */
+  async replyToStatus(input: {
+    inReplyToStatusId: string;
+    /**
+     * Recipient acct (e.g. `alice@mastodon.social`). When replying to a
+     * mention from another user, this is REQUIRED so we can prefix the
+     * @-mention. When replying to your OWN post (a self-thread), pass
+     * undefined and we skip the prefix.
+     */
+    recipientAcct?: string;
+    text: string;
+    visibility?: 'public' | 'unlisted' | 'private';
+  }): Promise<MastodonPostResponse> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'Mastodon not configured' };
+    }
+    const text = input.text.trim();
+    if (!text) { return { success: false, error: 'text is required' }; }
+    if (!input.inReplyToStatusId) {
+      return { success: false, error: 'inReplyToStatusId is required' };
+    }
+
+    const composed = input.recipientAcct
+      ? `${input.recipientAcct.startsWith('@') ? input.recipientAcct : `@${input.recipientAcct}`} ${text}`
+      : text;
+    if (composed.length > 500) {
+      return {
+        success: false,
+        error: `composed status is ${composed.length} chars; Mastodon limit is typically 500`,
+      };
+    }
+
+    try {
+      const body = {
+        status: composed,
+        visibility: input.visibility ?? 'public',
+        in_reply_to_id: input.inReplyToStatusId,
+      };
+      const response = await fetch(`${this.baseUrl}/api/v1/statuses`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          ...BROWSER_HEADERS,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.config.accessToken}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          success: false,
+          error: `Mastodon reply failed: ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await response.json()) as { id?: string; url?: string };
+      if (!data.id) {
+        return { success: false, error: 'Mastodon reply returned no status id' };
+      }
+      return { success: true, postId: data.id, url: data.url };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[MastodonService] replyToStatus failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Dismiss a single notification server-side so it doesn't appear in
+   * future polls. POST /api/v1/notifications/{id}/dismiss marks the
+   * notification as read for THIS account; the underlying status is
+   * untouched. Used by the mention-inbox "Skip" button so a dismissed
+   * mention stays gone across browser refreshes.
+   */
+  async dismissNotification(notificationId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'Mastodon not configured' };
+    }
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/notifications/${encodeURIComponent(notificationId)}/dismiss`,
+        {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${this.config.accessToken}` },
+        },
+      );
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          success: false,
+          error: `dismissNotification failed: ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+      return { success: true };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * List the brand's followers via GET /api/v1/accounts/{id}/followers.
+   *
+   * Mastodon's pagination uses Link headers with `max_id` (next page) and
+   * `min_id` (previous page) — we surface `max_id` as the opaque cursor
+   * so the caller can round-trip without knowing Mastodon's vocabulary.
+   * Open at the consumer tier — no paid tier needed.
+   */
+  async listFollowers(options: { cursor?: string; limit?: number } = {}): Promise<{
+    followers: Array<{
+      handle: string;
+      displayName: string;
+      avatarUrl?: string;
+      bio?: string;
+      profileUrl: string;
+    }>;
+    nextCursor?: string;
+    error?: string;
+  }> {
+    if (!this.config.accessToken) {
+      return { followers: [], error: 'Mastodon not configured' };
+    }
+
+    const profile = await this.getProfile();
+    if (!profile) {
+      return { followers: [], error: 'Could not load Mastodon profile' };
+    }
+    const accountId = profile.id;
+    const limit = Math.min(Math.max(options.limit ?? 25, 1), 80);
+
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (options.cursor) {
+      params.set('max_id', options.cursor);
+    }
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/accounts/${encodeURIComponent(accountId)}/followers?${params.toString()}`,
+        {
+          cache: 'no-store',
+          headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${this.config.accessToken}` },
+        },
+      );
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          followers: [],
+          error: `listFollowers failed: HTTP ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+
+      // Parse the Link header for the next-page max_id.
+      let nextCursor: string | undefined;
+      const linkHeader = response.headers.get('link') ?? response.headers.get('Link');
+      if (linkHeader) {
+        const nextMatch = /<([^>]+)>;\s*rel="next"/i.exec(linkHeader);
+        if (nextMatch?.[1]) {
+          const nextUrl = new URL(nextMatch[1]);
+          const maxId = nextUrl.searchParams.get('max_id');
+          if (maxId) {
+            nextCursor = maxId;
+          }
+        }
+      }
+
+      const accounts = (await response.json()) as Array<{
+        id?: string;
+        username?: string;
+        acct?: string;
+        display_name?: string;
+        avatar?: string;
+        avatar_static?: string;
+        note?: string;
+        url?: string;
+      }>;
+
+      const followers = accounts
+        .filter((a): a is { id: string; username: string; acct: string; display_name?: string; avatar?: string; avatar_static?: string; note?: string; url?: string } =>
+          typeof a.id === 'string' && typeof a.username === 'string' && typeof a.acct === 'string',
+        )
+        .map((a) => ({
+          handle: `@${a.acct}`,
+          displayName: a.display_name && a.display_name.length > 0 ? a.display_name : a.username,
+          avatarUrl: a.avatar ?? a.avatar_static,
+          // Strip HTML tags from bio for plain-text display.
+          bio: a.note
+            ? a.note
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/p>\s*<p>/gi, '\n\n')
+                .replace(/<[^>]+>/g, '')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&nbsp;/g, ' ')
+                .trim()
+            : undefined,
+          // Mastodon's `url` is canonical; fall back to constructing from
+          // baseUrl + acct if it's missing for any reason.
+          profileUrl: a.url ?? `${this.baseUrl}/@${a.acct}`,
+        }));
+
+      return {
+        followers,
+        ...(nextCursor ? { nextCursor } : {}),
+      };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[MastodonService] listFollowers failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { followers: [], error: msg };
+    }
+  }
+
+  /**
+   * Delete a Mastodon status (post). DELETE /api/v1/statuses/{id}
+   * Returns 200 with the deleted status body on success; 404 if the
+   * status was already deleted (we treat 404 as idempotent success).
+   */
+  async deleteStatus(statusId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'Mastodon not configured' };
+    }
+    if (!statusId) {
+      return { success: false, error: 'statusId is required' };
+    }
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/statuses/${encodeURIComponent(statusId)}`,
+        {
+          method: 'DELETE',
+          cache: 'no-store',
+          headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${this.config.accessToken}` },
+        },
+      );
+
+      // 404 = already deleted = idempotent success.
+      if (response.status === 404) {
+        return { success: true };
+      }
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          success: false,
+          error: `deleteStatus failed: HTTP ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+
+      return { success: true };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[MastodonService] deleteStatus failed',
+        error instanceof Error ? error : new Error(msg),
+      );
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Reblog (Mastodon's repost primitive) via POST
+   * /api/v1/statuses/{id}/reblog. Returns the reblog wrapper status —
+   * we surface its id as `postId` so the caller can link to it.
+   *
+   * Note: Mastodon has no quote-post primitive. Quote-reposts are
+   * rejected at the route layer with an explicit error before reaching
+   * this method.
+   */
+  async reblogStatus(statusId: string): Promise<{ success: boolean; postId?: string; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'Mastodon not configured' };
+    }
+    if (!statusId) {
+      return { success: false, error: 'statusId is required' };
+    }
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/statuses/${encodeURIComponent(statusId)}/reblog`,
+        {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { ...BROWSER_HEADERS, Authorization: `Bearer ${this.config.accessToken}` },
+        },
+      );
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          success: false,
+          error: `reblogStatus failed: HTTP ${response.status} ${errText.slice(0, 200)}`,
+        };
+      }
+
+      const data = (await response.json()) as { id?: string };
+      if (!data.id) {
+        return { success: false, error: 'reblog returned no status id' };
+      }
+      return { success: true, postId: data.id };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[MastodonService] reblogStatus failed',
+        error instanceof Error ? error : new Error(msg),
+      );
       return { success: false, error: msg };
     }
   }

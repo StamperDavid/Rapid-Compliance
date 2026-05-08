@@ -174,6 +174,7 @@ export const getThemesCollection = (): string => getSubCollection('themes');
 export const getIntegrationsCollection = (): string => getSubCollection('integrations');
 export const getSeoResearchCollection = (): string => getSubCollection('seoResearch');
 export const getCallsCollection = (): string => getSubCollection('calls');
+export const getScheduledCallsCollection = (): string => getSubCollection('scheduledCalls');
 export const getTasksCollection = (): string => getSubCollection('tasks');
 export const getConversationsCollection = (): string => getSubCollection('conversations');
 export const getSocialPostsCollection = (): string => getSubCollection('socialPosts');

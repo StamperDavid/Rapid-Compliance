@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import type { GoogleCalendarIntegration as GoogleCalendarType } from '@/types/integrations'
 import { logger } from '@/lib/logger/logger';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface GoogleCalendarIntegrationProps {
@@ -20,6 +21,7 @@ export default function GoogleCalendarIntegration({
   onUpdate
 }: GoogleCalendarIntegrationProps) {
   const { user: authUser } = useAuth();
+  const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -35,7 +37,7 @@ export default function GoogleCalendarIntegration({
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
     : 'var(--color-primary)';
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setIsConnecting(true);
     try {
       const user = { uid: authUser?.id };
@@ -47,8 +49,19 @@ export default function GoogleCalendarIntegration({
         return;
       }
 
-      // Redirect to REAL Google OAuth
-      window.location.href = `/api/integrations/google/auth?userId=${user.uid}`;
+      // Fetch with authFetch so the bearer token reaches requireAuth on
+      // the route. The route now returns { authUrl } as JSON; we then
+      // do the navigation client-side. See GmailIntegration.tsx for the
+      // full rationale on why a plain window.location.href can't work.
+      const res = await authFetch('/api/integrations/google/auth');
+      if (!res.ok) {
+        throw new Error(`Auth route returned ${res.status}`);
+      }
+      const body = (await res.json()) as { success: boolean; authUrl?: string; error?: string };
+      if (!body.success || !body.authUrl) {
+        throw new Error(body.error ?? 'Auth route did not return an authUrl');
+      }
+      window.location.href = body.authUrl;
     } catch (error) {
       logger.error('Connection failed:', error instanceof Error ? error : new Error(String(error)), { file: 'GoogleCalendarIntegration.tsx' });
       setIsConnecting(false);
@@ -75,7 +88,7 @@ export default function GoogleCalendarIntegration({
           </div>
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => { void handleConnect(); }}
           disabled={isConnecting}
           style={{
             width: '100%',

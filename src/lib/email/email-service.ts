@@ -126,11 +126,39 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
 }
 
 /**
+ * Resolve the FROM address for an email send. Hard-fails if no valid
+ * sender is configured — silently sending from `noreply@example.com`
+ * (the prior fallback) violates the connected-Google-account-is-identity
+ * rule and bricks deliverability/reputation. Per
+ * `feedback_one_google_account_per_tenant_runs_calendars_and_email`,
+ * the FROM should be the operator's connected Google account email.
+ */
+function resolveFromEmail(
+  options: EmailOptions,
+  credentials: Record<string, unknown>,
+): string | null {
+  if (typeof options.from === 'string' && options.from.trim().length > 0) {
+    return options.from.trim();
+  }
+  if (typeof credentials.fromEmail === 'string' && credentials.fromEmail.trim().length > 0) {
+    return credentials.fromEmail.trim();
+  }
+  return null;
+}
+
+/**
  * Send email via SendGrid
  */
 async function sendViaSendGrid(options: EmailOptions, credentials: Record<string, unknown>): Promise<EmailResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromEmail = options.from ?? (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : 'noreply@example.com');
+  const fromEmail = resolveFromEmail(options, credentials);
+  if (fromEmail === null) {
+    return {
+      success: false,
+      error: 'No sender address configured. Connect a Google account or set apiKeys.sendgrid.fromEmail to your verified single-sender address. Refusing to fall back to a placeholder address.',
+      provider: 'sendgrid',
+    };
+  }
   const fromName = options.fromName ?? (typeof credentials.fromName === 'string' ? credentials.fromName : 'SalesVelocity');
 
   interface SendGridPayload {
@@ -156,7 +184,16 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
     }>;
   }
 
-  const payload: SendGridPayload = {
+  // Reply-to defaults to the FROM address so replies route back to the
+  // connected Google account's inbox (per the calendar+email identity
+  // rule). Caller can override by passing options.replyTo explicitly.
+  const replyToEmail = options.replyTo ?? fromEmail;
+
+  interface SendGridPayloadWithReplyTo extends SendGridPayload {
+    reply_to?: { email: string };
+  }
+
+  const payload: SendGridPayloadWithReplyTo = {
     personalizations: recipients.map(to => ({
       to: [{ email: to }],
       ...(options.cc && { cc: Array.isArray(options.cc) ? options.cc.map(e => ({ email: e })) : [{ email: options.cc }] }),
@@ -166,6 +203,7 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
       email: fromEmail,
       name: fromName,
     },
+    reply_to: { email: replyToEmail },
     subject: options.subject,
     content: [],
   };
@@ -250,7 +288,14 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
  */
 async function sendViaResend(options: EmailOptions, credentials: Record<string, unknown>): Promise<EmailResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromEmail = options.from ?? (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : 'noreply@example.com');
+  const fromEmail = resolveFromEmail(options, credentials);
+  if (fromEmail === null) {
+    return {
+      success: false,
+      error: 'No sender address configured. Connect a Google account or set apiKeys.resend.fromEmail to your verified domain sender. Refusing to fall back to a placeholder address.',
+      provider: 'resend',
+    };
+  }
 
   interface ResendPayload {
     from: string;
@@ -378,7 +423,17 @@ async function sendViaSMTP(options: EmailOptions, credentials: Record<string, un
     },
   });
 
-  const fromEmail = options.from ?? (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : username);
+  // SMTP path: FROM defaults to the SMTP username only when no explicit
+  // sender is configured. We still require an explicit configuration —
+  // the username is a credential, not an intended sender identity.
+  const fromEmail = resolveFromEmail(options, credentials);
+  if (fromEmail === null) {
+    return {
+      success: false,
+      error: 'No sender address configured. Connect a Google account or set apiKeys.smtp.fromEmail to your verified sender address. Refusing to fall back to the SMTP username as a sender.',
+      provider: 'smtp',
+    };
+  }
   const fromName = options.fromName ?? (typeof credentials.fromName === 'string' ? credentials.fromName : 'SalesVelocity');
 
   let html = options.html;

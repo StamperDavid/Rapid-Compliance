@@ -1,5 +1,21 @@
 'use client';
 
+/**
+ * SocialPlatformIntegration
+ *
+ * Generic integration card for OAuth- and credential-based social
+ * platforms. Renders with the same card chrome as Zoom / Slack /
+ * Twitter so every entry on /settings/integrations looks uniform.
+ *
+ * `youtube` and `google_business` were removed from the config list —
+ * they are part of the central Google account and now live in the
+ * unified GoogleServicesIntegration card.
+ *
+ * `facebook`, `instagram`, `threads`, and `whatsapp_business` were
+ * removed for the same reason — they all share one Meta OAuth token
+ * and now live in the unified MetaServicesIntegration card.
+ */
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +33,8 @@ interface CredentialField {
 interface SocialPlatformConfig {
   id: string;
   name: string;
+  icon: string;
+  description: string;
   color: string;
   connectMethod: ConnectMethod;
   credentialFields?: CredentialField[];
@@ -26,17 +44,40 @@ interface SocialPlatformConfig {
 }
 
 export const SOCIAL_PLATFORM_CONFIGS: SocialPlatformConfig[] = [
-  { id: 'facebook', name: 'Facebook', color: '#1877F2', connectMethod: 'oauth', signupUrl: 'https://www.facebook.com/r.php' },
-  { id: 'instagram', name: 'Instagram', color: '#E4405F', connectMethod: 'oauth', signupUrl: 'https://www.instagram.com/accounts/emailsignup/' },
-  { id: 'threads', name: 'Threads', color: '#000000', connectMethod: 'oauth', signupUrl: 'https://www.threads.net/' },
-  { id: 'whatsapp_business', name: 'WhatsApp Business', color: '#25D366', connectMethod: 'oauth', signupUrl: 'https://business.whatsapp.com/' },
-  { id: 'youtube', name: 'YouTube', color: '#FF0000', connectMethod: 'oauth', signupUrl: 'https://accounts.google.com/signup' },
-  { id: 'google_business', name: 'Google Business', color: '#4285F4', connectMethod: 'oauth', signupUrl: 'https://business.google.com/create' },
-  { id: 'tiktok', name: 'TikTok', color: '#000000', connectMethod: 'oauth', signupUrl: 'https://www.tiktok.com/signup' },
-  { id: 'reddit', name: 'Reddit', color: '#FF4500', connectMethod: 'oauth', signupUrl: 'https://www.reddit.com/register' },
-  { id: 'pinterest', name: 'Pinterest', color: '#E60023', connectMethod: 'oauth', signupUrl: 'https://www.pinterest.com/business/create/' },
   {
-    id: 'bluesky', name: 'Bluesky', color: '#0085FF', connectMethod: 'credentials',
+    id: 'tiktok',
+    name: 'TikTok',
+    icon: '🎵',
+    description: 'Schedule and publish videos to your TikTok account',
+    color: '#000000',
+    connectMethod: 'oauth',
+    signupUrl: 'https://www.tiktok.com/signup',
+  },
+  {
+    id: 'reddit',
+    name: 'Reddit',
+    icon: '👽',
+    description: 'Post to subreddits and reply to comments',
+    color: '#FF4500',
+    connectMethod: 'oauth',
+    signupUrl: 'https://www.reddit.com/register',
+  },
+  {
+    id: 'pinterest',
+    name: 'Pinterest',
+    icon: '📌',
+    description: 'Create pins and manage boards from your account',
+    color: '#E60023',
+    connectMethod: 'oauth',
+    signupUrl: 'https://www.pinterest.com/business/create/',
+  },
+  {
+    id: 'bluesky',
+    name: 'Bluesky',
+    icon: '🦋',
+    description: 'Post to your Bluesky handle via app password',
+    color: '#0085FF',
+    connectMethod: 'credentials',
     connectEndpoint: '/api/social/connect/bluesky',
     signupUrl: 'https://bsky.app/',
     credentialFields: [
@@ -45,7 +86,12 @@ export const SOCIAL_PLATFORM_CONFIGS: SocialPlatformConfig[] = [
     ],
   },
   {
-    id: 'telegram', name: 'Telegram', color: '#26A5E4', connectMethod: 'credentials',
+    id: 'telegram',
+    name: 'Telegram',
+    icon: '✈️',
+    description: 'Broadcast messages to a Telegram channel or group',
+    color: '#26A5E4',
+    connectMethod: 'credentials',
     connectEndpoint: '/api/social/connect/telegram',
     signupUrl: 'https://telegram.org/',
     credentialFields: [
@@ -54,7 +100,12 @@ export const SOCIAL_PLATFORM_CONFIGS: SocialPlatformConfig[] = [
     ],
   },
   {
-    id: 'truth_social', name: 'Truth Social', color: '#4C75A3', connectMethod: 'credentials',
+    id: 'truth_social',
+    name: 'Truth Social',
+    icon: '🇺🇸',
+    description: 'Post to your Truth Social account via API token',
+    color: '#4C75A3',
+    connectMethod: 'credentials',
     connectEndpoint: '/api/social/connect/truth_social',
     signupUrl: 'https://truthsocial.com/',
     credentialFields: [
@@ -84,6 +135,18 @@ export default function SocialPlatformIntegration({
   const [error, setError] = useState<string | null>(null);
 
   const isConnected = integration?.status === 'active';
+  const accountHandle = typeof integration?.handle === 'string' ? integration.handle : null;
+  const accountName = typeof integration?.accountName === 'string' ? integration.accountName : null;
+
+  const textColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
+  const borderColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-main)'
+    : 'var(--color-border-main)';
+  const primaryColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
 
   const handleOAuthConnect = () => {
     window.location.href = `/api/social/oauth/auth/${config.id}`;
@@ -118,82 +181,156 @@ export default function SocialPlatformIntegration({
     }
   };
 
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-3 h-3 rounded-full flex-shrink-0"
-            style={{ backgroundColor: config.color }}
-          />
-          <span className="font-semibold text-sm text-foreground">{config.name}</span>
-          {isConnected && (
-            <span className="text-xs text-success font-medium">Connected</span>
-          )}
+  const cardOuterStyle: React.CSSProperties = {
+    backgroundColor: 'var(--color-bg-paper)',
+    border: `1px solid ${isConnected ? primaryColor : borderColor}`,
+    borderRadius: '0.75rem',
+    padding: '1.5rem',
+  };
+
+  if (!isConnected) {
+    return (
+      <div style={cardOuterStyle}>
+        <div style={{ display: 'flex', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ fontSize: '3rem' }}>{config.icon}</div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
+              {config.name}
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
+              {config.description}
+            </p>
+          </div>
         </div>
-        {isConnected && (
-          <Button variant="outline" size="sm" onClick={onDisconnect}>
-            Disconnect
-          </Button>
+
+        {config.connectMethod === 'oauth' ? (
+          <>
+            <button
+              onClick={handleOAuthConnect}
+              disabled={connecting}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: connecting ? 'var(--color-border-strong)' : config.color,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: connecting ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              }}
+            >
+              {`Connect ${config.name}`}
+            </button>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem', textAlign: 'center' }}>
+              You&apos;ll be redirected to {config.name} to authorize the connection
+            </p>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              {config.credentialFields?.map((field) => (
+                <div key={field.key}>
+                  <label
+                    htmlFor={`${config.id}-${field.key}`}
+                    style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-disabled)', marginBottom: '0.375rem' }}
+                  >
+                    {field.label}
+                  </label>
+                  <Input
+                    id={`${config.id}-${field.key}`}
+                    type={field.type ?? 'text'}
+                    placeholder={field.placeholder}
+                    value={creds[field.key] ?? ''}
+                    onChange={(e) => setCreds({ ...creds, [field.key]: e.target.value })}
+                    disabled={connecting}
+                  />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => void handleCredentialConnect()}
+              disabled={connecting}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: connecting ? 'var(--color-border-strong)' : config.color,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: connecting ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              }}
+            >
+              {connecting ? 'Connecting…' : `Connect ${config.name}`}
+            </button>
+          </>
         )}
+
+        {config.signupUrl ? (
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem', textAlign: 'center' }}>
+            Don&apos;t have an account?{' '}
+            <a
+              href={config.signupUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--color-text-disabled)', textDecoration: 'underline' }}
+            >
+              Sign up on {config.name} →
+            </a>
+          </p>
+        ) : null}
+
+        {error ? (
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-error-light)', marginTop: '0.75rem', textAlign: 'center' }}>
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div style={cardOuterStyle}>
+      <div style={{ display: 'flex', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '3rem' }}>{config.icon}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
+                {config.name}
+              </h3>
+              {accountHandle ? (
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
+                  {accountHandle}{accountName ? ` — ${accountName}` : ''}
+                </p>
+              ) : null}
+            </div>
+            <div style={{
+              padding: '0.375rem 0.75rem',
+              backgroundColor: 'var(--color-success-dark)',
+              border: '1px solid var(--color-success-light)',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
+              color: 'var(--color-success-light)',
+              fontWeight: 600,
+            }}>
+              ✓ Connected
+            </div>
+          </div>
+        </div>
       </div>
 
-      {!isConnected && config.connectMethod === 'oauth' && (
-        <Button
-          size="sm"
-          onClick={handleOAuthConnect}
-          style={{ backgroundColor: config.color, color: '#fff' }}
-        >
-          Connect {config.name}
-        </Button>
-      )}
-
-      {!isConnected && config.connectMethod === 'credentials' && config.credentialFields && (
-        <div className="space-y-2">
-          {config.credentialFields.map((field) => (
-            <div key={field.key}>
-              <label className="text-xs font-medium text-muted-foreground" htmlFor={`${config.id}-${field.key}`}>
-                {field.label}
-              </label>
-              <Input
-                id={`${config.id}-${field.key}`}
-                type={field.type ?? 'text'}
-                placeholder={field.placeholder}
-                value={creds[field.key] ?? ''}
-                onChange={(e) => setCreds({ ...creds, [field.key]: e.target.value })}
-                disabled={connecting}
-                className="mt-1"
-              />
-            </div>
-          ))}
-          <Button
-            size="sm"
-            disabled={connecting}
-            onClick={() => void handleCredentialConnect()}
-            style={{ backgroundColor: config.color, color: '#fff' }}
-          >
-            {connecting ? 'Connecting...' : `Connect ${config.name}`}
-          </Button>
-        </div>
-      )}
-
-      {!isConnected && config.signupUrl && (
-        <div className="text-xs text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <a
-            href={config.signupUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-foreground"
-          >
-            Sign up on {config.name} →
-          </a>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-xs text-destructive">{error}</div>
-      )}
+      <Button
+        variant="outline"
+        onClick={onDisconnect}
+        style={{
+          width: '100%',
+        }}
+      >
+        Disconnect
+      </Button>
     </div>
   );
 }

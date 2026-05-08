@@ -698,6 +698,7 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   migrate_website: '/website',
   voice_agent: '/voice',
   place_call: '/voice',
+  schedule_call: '/calls',
   send_sms: '/sms-messages',
   send_social_reply: '/mission-control',
   create_campaign: '/mission-control',
@@ -2534,14 +2535,14 @@ export const JASPER_TOOLS: ToolDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PLACE OUTBOUND VOICE CALL (Twilio — compliance-gated)
+  // PLACE OUTBOUND VOICE CALL — RIGHT NOW (Twilio — compliance-gated)
   // ═══════════════════════════════════════════════════════════════════════════
   {
     type: 'function',
     function: {
       name: 'place_call',
       description:
-        'Initiate an outbound voice call via Twilio. Use this when the user asks Jasper to call a lead, dial a number, or place a phone call. TCPA consent AND call-time restrictions are enforced — calls outside the recipient local 8am–9pm window are blocked. The call connects to the AI Voice Agent webhook (/api/voice/twiml). Always call voice_agent with action=configure FIRST to set the mode (prospector/closer) and conversation context, otherwise the AI will fall back to generic behavior. ENABLED: TRUE.',
+        'Initiate an outbound voice call via Twilio RIGHT NOW (immediately). Use this when the user wants the call to fire this instant — phrases like "call them now", "dial this number", "place a call". For a future-time call (e.g. "call them tomorrow at 2pm", "schedule a call for Friday"), use schedule_call instead. TCPA consent AND call-time restrictions are enforced — calls outside the recipient local 8am–9pm window are blocked. The call connects to the AI Voice Agent webhook (/api/voice/twiml). Always call voice_agent with action=configure FIRST to set the mode (prospector/closer) and conversation context, otherwise the AI will fall back to generic behavior. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -2555,6 +2556,44 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
         },
         required: ['to'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SCHEDULE OUTBOUND VOICE CALL — FUTURE TIME (Twilio — fired by cron)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'schedule_call',
+      description:
+        'Schedule an outbound voice call for a FUTURE time. Use this when the user says "call them tomorrow at 2pm", "schedule a call for Friday morning", or any other phrasing that names a future moment. The call is stored in `scheduledCalls` and a Google Calendar event is automatically created on the connected SalesVelocity.ai calendar. The cron `/api/cron/run-scheduled-calls` polls every minute and fires the call via Twilio when the scheduled time arrives — the same TCPA + time-window compliance gates as place_call apply at fire time. For an IMMEDIATE call, use place_call instead. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          to: {
+            type: 'string',
+            description: 'Recipient phone number in E.164 format (e.g. +15551234567)',
+          },
+          recipientName: {
+            type: 'string',
+            description: 'Optional friendly display name for the calendar event (e.g. "Sarah Chen"). If omitted, the phone number is used.',
+          },
+          contactId: {
+            type: 'string',
+            description: 'Optional CRM contact id to link the eventual call record to',
+          },
+          goal: {
+            type: 'string',
+            description: 'Free-text description of WHY we are calling (e.g. "follow up on the demo from last week"). Surfaces to the AI voice agent at fire time.',
+          },
+          scheduledFor: {
+            type: 'string',
+            description: 'ISO-8601 datetime when the call should fire (e.g. "2026-05-04T14:00:00-04:00"). Must be in the future.',
+          },
+        },
+        required: ['to', 'goal', 'scheduledFor'],
       },
     },
   },
@@ -6865,6 +6904,128 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             durationMs: Date.now() - callStart,
           });
           content = JSON.stringify({ success: false, error: callErrorMsg });
+        }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // SCHEDULE OUTBOUND VOICE CALL — FUTURE TIME (writes scheduledCalls + calendar)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'schedule_call': {
+        const scheduleStart = Date.now();
+        trackMissionStep(context, 'schedule_call', 'RUNNING', { toolArgs: args });
+
+        const to = typeof args.to === 'string' ? args.to : '';
+        const recipientName = typeof args.recipientName === 'string' ? args.recipientName : undefined;
+        const contactId = typeof args.contactId === 'string' ? args.contactId : undefined;
+        const goal = typeof args.goal === 'string' ? args.goal : '';
+        const scheduledFor = typeof args.scheduledFor === 'string' ? args.scheduledFor : '';
+
+        if (!to || !goal || !scheduledFor) {
+          const missing = [
+            !to ? 'to' : null,
+            !goal ? 'goal' : null,
+            !scheduledFor ? 'scheduledFor' : null,
+          ].filter(Boolean).join(', ');
+          trackMissionStep(context, 'schedule_call', 'FAILED', { error: `Missing required: ${missing}` });
+          content = JSON.stringify({
+            success: false,
+            error: `Missing required field(s): ${missing}. schedule_call needs to (E.164), goal, and scheduledFor (ISO-8601).`,
+          });
+          break;
+        }
+
+        // scheduledFor must be in the future. Parse + validate before
+        // writing to Firestore to give Jasper a clean error to recover
+        // from rather than letting the cron fire it instantly.
+        const scheduledForMs = new Date(scheduledFor).getTime();
+        if (Number.isNaN(scheduledForMs)) {
+          trackMissionStep(context, 'schedule_call', 'FAILED', { error: 'scheduledFor not a valid datetime' });
+          content = JSON.stringify({
+            success: false,
+            error: 'scheduledFor must be a valid ISO-8601 datetime (e.g. "2026-05-04T14:00:00-04:00").',
+          });
+          break;
+        }
+        if (scheduledForMs <= Date.now()) {
+          trackMissionStep(context, 'schedule_call', 'FAILED', { error: 'scheduledFor in the past' });
+          content = JSON.stringify({
+            success: false,
+            error: 'scheduledFor must be in the future. Use place_call for an immediate call.',
+          });
+          break;
+        }
+
+        try {
+          const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+          const { getScheduledCallsCollection } = await import('@/lib/firebase/collections');
+          const { upsertSalesVelocityCalendarEvent } = await import('@/lib/integrations/google-calendar-service');
+
+          const id = `sched-call-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const nowIso = new Date().toISOString();
+          const doc = {
+            id,
+            to,
+            recipientName: recipientName ?? null,
+            contactId: contactId ?? null,
+            leadId: null,
+            goal,
+            scheduledFor,
+            status: 'scheduled',
+            createdAt: nowIso,
+            createdBy: context?.userId ?? 'jasper',
+          };
+
+          await AdminFirestoreService.set(
+            getScheduledCallsCollection(),
+            id,
+            doc,
+            false,
+          );
+
+          // Calendar sync — non-fatal on failure.
+          let calendarLink: string | null = null;
+          try {
+            const calResult = await upsertSalesVelocityCalendarEvent({
+              refId: `voice-call-${id}`,
+              summary: `Call: ${recipientName && recipientName.length > 0 ? recipientName : to}`,
+              description: [
+                `Recipient: ${recipientName ?? to}`,
+                `Phone: ${to}`,
+                `Goal: ${goal}`,
+                contactId ? `Contact id: ${contactId}` : null,
+                '',
+                'Auto-managed by SalesVelocity.ai — this call will fire automatically at the scheduled time.',
+              ].filter((l): l is string => l !== null).join('\n'),
+              startIso: scheduledFor,
+              timeZone: 'America/New_York',
+              category: 'voice',
+            });
+            calendarLink = calResult?.htmlLink ?? null;
+          } catch {
+            // logged inside upsertSalesVelocityCalendarEvent on failure
+          }
+
+          trackMissionStep(context, 'schedule_call', 'COMPLETED', {
+            summary: `Call to ${recipientName ?? to} scheduled for ${scheduledFor}`,
+            durationMs: Date.now() - scheduleStart,
+            toolResult: JSON.stringify({ scheduleId: id, calendarSynced: calendarLink !== null }),
+          });
+          content = JSON.stringify({
+            success: true,
+            scheduleId: id,
+            to,
+            scheduledFor,
+            calendarLink,
+            reviewLink: getReviewLink('schedule_call', context?.missionId),
+          });
+        } catch (schedError) {
+          const errMsg = schedError instanceof Error ? schedError.message : String(schedError);
+          trackMissionStep(context, 'schedule_call', 'FAILED', {
+            error: errMsg,
+            durationMs: Date.now() - scheduleStart,
+          });
+          content = JSON.stringify({ success: false, error: errMsg });
         }
         break;
       }

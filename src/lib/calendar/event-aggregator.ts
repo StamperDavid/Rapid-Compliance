@@ -186,6 +186,13 @@ function normalizeMeeting(
   if (!id) {
     return null;
   }
+  // Skip cancelled meetings — once cancelled, they're no longer
+  // operationally relevant to the operator. The Firestore record stays
+  // for audit (cancelledAt timestamp), but the calendar UI hides them.
+  const status = getString(doc, 'status')?.toLowerCase();
+  if (status === 'cancelled') {
+    return null;
+  }
   const startIso = toIso(doc.startTime);
   if (!startIso || !withinWindow(startIso, from, to)) {
     return null;
@@ -236,6 +243,13 @@ function normalizeBooking(
 ): UnifiedCalendarEvent | null {
   const id = getString(doc, 'id');
   if (!id) {
+    return null;
+  }
+  // Skip cancelled bookings — same rule as meetings. The booking record
+  // is preserved in Firestore for audit; the calendar UI hides it so
+  // the operator's view shows only active demos/meetings.
+  const status = getString(doc, 'status')?.toLowerCase();
+  if (status === 'cancelled') {
     return null;
   }
   const startIso = toIso(doc.startTime);
@@ -358,6 +372,31 @@ function normalizeSocialPost(
   };
 }
 
+/**
+ * Activity types that belong on contact/deal activity feeds, NOT on the
+ * calendar. These are state changes, passive signals, and audit log
+ * entries — they have a timestamp but they're not "events at a specific
+ * time" the operator needs to see on a day grid. Without this filter,
+ * every CRM status flip and field update lands as a small gray pill on
+ * the calendar (e.g., `status: → new` after a lead is created).
+ */
+const NON_CALENDAR_ACTIVITY_TYPES: ReadonlySet<string> = new Set([
+  'deal_stage_changed',
+  'lead_status_changed',
+  'field_updated',
+  'email_opened',
+  'email_clicked',
+  'website_visit',
+  'document_viewed',
+  'enrichment_completed',
+  'sequence_enrolled',
+  'sequence_unenrolled',
+  'workflow_triggered',
+  'note_added',
+  'form_submitted',
+  'ai_chat',
+]);
+
 function normalizeActivity(
   doc: Record<string, unknown>,
   from: Date,
@@ -365,6 +404,17 @@ function normalizeActivity(
 ): UnifiedCalendarEvent | null {
   const id = getString(doc, 'id');
   if (!id) {
+    return null;
+  }
+  const activityType = getString(doc, 'type');
+  if (activityType && NON_CALENDAR_ACTIVITY_TYPES.has(activityType)) {
+    return null;
+  }
+  // Defensive: catch any subject that starts with "status:" or "status →"
+  // even if the type field wasn't populated. Belt-and-suspenders against
+  // legacy records or third-party syncs that didn't set `type`.
+  const subject = getString(doc, 'subject');
+  if (subject && /^status\s*[:→\->]/i.test(subject)) {
     return null;
   }
   // Prefer occurredAt; fall back to createdAt so freshly-logged activities

@@ -44,6 +44,15 @@ interface StepGradeWidgetProps {
    * means no specialists — treated the same as empty.
    */
   specialistsUsed?: string[];
+  /**
+   * The department the step was delegated to (e.g. "MARKETING", "CONTENT").
+   * Maps 1:1 to a manager Golden Master via `${delegatedTo}_MANAGER`. Used
+   * to add the manager as a grade target alongside specialists, because
+   * cross-platform / orchestration-level corrections (e.g. "use the same
+   * image across all platforms") belong on the MANAGER prompt, not on any
+   * one specialist.
+   */
+  delegatedTo?: string;
   existingGrade?: { score: number; explanation?: string };
 }
 
@@ -81,6 +90,7 @@ export default function StepGradeWidget({
   missionId,
   stepId,
   specialistsUsed,
+  delegatedTo,
   existingGrade,
 }: StepGradeWidgetProps) {
   const authFetch = useAuthFetch();
@@ -91,21 +101,31 @@ export default function StepGradeWidget({
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [proposal, setProposal] = useState<AdapterProposal | null>(null);
   const [isApplying, setIsApplying] = useState<boolean>(false);
+  const [pipelineMessage, setPipelineMessage] = useState<{ kind: 'info' | 'warn' | 'error'; text: string } | null>(null);
 
-  // Narrowed-non-null specialist list used by every downstream branch.
-  // Defaulting to an empty array keeps the optional-chain checks below
-  // from needing `!` assertions.
-  const specialists: string[] = specialistsUsed ?? [];
+  // Manager target derived from the step's delegatedTo. Cross-cutting
+  // corrections (multi-platform image consistency, tone across channels,
+  // ordering of subtasks) belong on the MANAGER prompt — not the platform
+  // specialist that just executed one of the substeps.
+  const managerId = delegatedTo && delegatedTo.length > 0
+    ? `${delegatedTo.toUpperCase()}_MANAGER`
+    : null;
 
-  // Multi-specialist picker — when the step used more than one specialist
-  // and the operator adds an explanation, they pick which specialist to
-  // target before the Prompt Engineer runs.
+  // Picker options: manager (if available) first, then every specialist.
+  // Operator picks whichever agent owns the rule that was violated.
+  const targetOptions: Array<{ id: string; label: string; isManager: boolean }> = [
+    ...(managerId ? [{ id: managerId, label: `Manager: ${managerId}`, isManager: true }] : []),
+    ...((specialistsUsed ?? []).map((s) => ({ id: s, label: s, isManager: false }))),
+  ];
+
+  const hasAnyTarget = targetOptions.length > 0;
+  const needsPicker = targetOptions.length > 1;
+
+  // Default to the manager when only one target (most representative for
+  // cross-cutting feedback), or first option otherwise.
   const [chosenSpecialist, setChosenSpecialist] = useState<string>(
-    specialists.length === 1 ? specialists[0] : '',
+    targetOptions.length === 1 ? targetOptions[0].id : '',
   );
-
-  const hasTargetSpecialist = specialists.length > 0;
-  const isMultiSpecialist = specialists.length > 1;
 
   // ──────────────────────────────────────────────────────────────────────────
   // Submit the grade to missionGrades (always fires, with or without edit flow)
@@ -178,30 +198,60 @@ export default function StepGradeWidget({
         }),
       });
 
-      if (!gradeRes.ok) {
-        return;
-      }
-
       const gradeJson = await gradeRes.json() as {
         success: boolean;
+        error?: string;
+        feedbackId?: string;
         result?: {
           status: 'EDIT_PROPOSED' | 'CLARIFICATION_NEEDED';
           feedbackId: string;
           proposedEdit?: AdapterProposal['rawEdit'];
           targetSpecialistCurrentPrompt?: string;
+          questions?: string[];
         };
       };
 
-      if (!gradeJson.success || gradeJson.result?.status !== 'EDIT_PROPOSED') {
-        // CLARIFICATION_NEEDED path: we could show the questions inline, but
-        // for M2b we just silently skip the popup. The feedback record is
-        // still created and marked clarification_needed on the backend.
+      // Surface backend rejection — most commonly a missing GM. Standing
+      // Rule #2 says the operator must know whether their grade actually
+      // landed; silent swallowing creates the illusion of training.
+      if (!gradeRes.ok || !gradeJson.success) {
+        const reason = gradeJson.error ?? `HTTP ${gradeRes.status}`;
+        setPipelineMessage({
+          kind: 'error',
+          text: `Star rating saved, but the prompt-edit pipeline rejected the correction: ${reason}`,
+        });
+        return;
+      }
+
+      if (gradeJson.result?.status === 'CLARIFICATION_NEEDED') {
+        const questions = gradeJson.result.questions ?? [];
+        const qList = questions.length > 0
+          ? ` The Prompt Engineer asks: ${questions.join(' / ')}`
+          : '';
+        setPipelineMessage({
+          kind: 'warn',
+          text: `Feedback saved as pending_review — needs more detail before the Prompt Engineer will propose an edit.${qList}`,
+        });
+        return;
+      }
+
+      if (gradeJson.result?.status !== 'EDIT_PROPOSED') {
+        setPipelineMessage({
+          kind: 'warn',
+          text: `Grade recorded but no edit was proposed (status=${gradeJson.result?.status ?? 'unknown'}).`,
+        });
         return;
       }
 
       const result = gradeJson.result;
       const edit = result.proposedEdit;
-      if (!edit) { return; }
+      if (!edit) {
+        setPipelineMessage({
+          kind: 'warn',
+          text: 'Prompt Engineer responded EDIT_PROPOSED but did not include the proposed edit text.',
+        });
+        return;
+      }
       const currentPrompt = result.targetSpecialistCurrentPrompt ?? '';
 
       // Construct fullRevisedPrompt by substituting proposedText into the
@@ -221,8 +271,12 @@ export default function StepGradeWidget({
         changeDescription: edit.rationale,
         fullRevisedPrompt,
       });
-    } catch {
-      // Non-critical — grade already succeeded
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setPipelineMessage({
+        kind: 'error',
+        text: `Star rating saved, but the prompt-edit pipeline crashed: ${msg}`,
+      });
     }
   }
 
@@ -308,16 +362,18 @@ export default function StepGradeWidget({
       const trimmed = explanation.trim();
       if (!trimmed) { return; }
 
-      const target = hasTargetSpecialist
-        ? (isMultiSpecialist ? chosenSpecialist : specialists[0])
+      const target = hasAnyTarget
+        ? (needsPicker ? chosenSpecialist : targetOptions[0].id)
         : null;
 
       if (target) {
         await runPromptEngineer(score, target);
+      } else {
+        setPipelineMessage({
+          kind: 'warn',
+          text: 'Grade recorded but no agent target — neither a specialist nor a manager is associated with this step, so no prompt edit will be proposed.',
+        });
       }
-      // If no target (legacy step, empty specialistsUsed), the grade is
-      // recorded to missionGrades but no Prompt Engineer fires. Honest
-      // behavior: not every step has a prompt-editable target.
     })();
   }
 
@@ -412,8 +468,10 @@ export default function StepGradeWidget({
               }}
             />
 
-            {/* Multi-specialist picker — only when the step used more than one */}
-            {isMultiSpecialist && (
+            {/* Target picker — shown whenever there are multiple choices.
+                Manager comes first (when delegatedTo is provided) since
+                cross-cutting corrections belong on the manager prompt. */}
+            {needsPicker && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <label
                   htmlFor={`step-grade-target-${stepId}`}
@@ -437,15 +495,23 @@ export default function StepGradeWidget({
                     borderRadius: '0.3125rem',
                   }}
                 >
-                  <option value="">— pick specialist —</option>
-                  {specialists.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                  <option value="">— pick agent —</option>
+                  {targetOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
                   ))}
                 </select>
+                <p style={{
+                  fontSize: '0.625rem',
+                  color: 'var(--color-text-secondary)',
+                  margin: 0,
+                  lineHeight: 1.3,
+                }}>
+                  Pick the manager for cross-platform / orchestration rules; pick a specialist for platform-specific copy or formatting.
+                </p>
               </div>
             )}
 
-            {!hasTargetSpecialist && (
+            {!hasAnyTarget && (
               <p
                 style={{
                   fontSize: '0.6875rem',
@@ -453,7 +519,7 @@ export default function StepGradeWidget({
                   margin: 0,
                 }}
               >
-                This step has no specialist target — the grade will be recorded
+                This step has no agent target — the grade will be recorded
                 but no prompt edit will be proposed.
               </p>
             )}
@@ -461,7 +527,7 @@ export default function StepGradeWidget({
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
-                disabled={submitState === 'submitting' || (isMultiSpecialist && !chosenSpecialist)}
+                disabled={submitState === 'submitting' || (needsPicker && !chosenSpecialist)}
                 onClick={handleSaveWithReason}
                 style={{
                   padding: '0.25rem 0.625rem',
@@ -469,13 +535,13 @@ export default function StepGradeWidget({
                   fontWeight: 600,
                   color: '#fff',
                   background:
-                    submitState === 'submitting' || (isMultiSpecialist && !chosenSpecialist)
+                    submitState === 'submitting' || (needsPicker && !chosenSpecialist)
                       ? 'var(--color-text-disabled)'
                       : 'var(--color-primary)',
                   border: 'none',
                   borderRadius: '0.3125rem',
                   cursor:
-                    submitState === 'submitting' || (isMultiSpecialist && !chosenSpecialist)
+                    submitState === 'submitting' || (needsPicker && !chosenSpecialist)
                       ? 'not-allowed'
                       : 'pointer',
                 }}
@@ -501,6 +567,53 @@ export default function StepGradeWidget({
                 Cancel
               </button>
             </div>
+          </div>
+        )}
+
+        {pipelineMessage && (
+          <div
+            role={pipelineMessage.kind === 'error' ? 'alert' : 'status'}
+            style={{
+              marginTop: '0.25rem',
+              padding: '0.5rem 0.625rem',
+              fontSize: '0.6875rem',
+              lineHeight: 1.4,
+              color:
+                pipelineMessage.kind === 'error'
+                  ? 'var(--color-error)'
+                  : pipelineMessage.kind === 'warn'
+                    ? 'var(--color-warning, #b45309)'
+                    : 'var(--color-text-secondary)',
+              background: 'var(--color-surface)',
+              border: `1px solid ${
+                pipelineMessage.kind === 'error'
+                  ? 'var(--color-error)'
+                  : 'var(--color-border-light)'
+              }`,
+              borderRadius: '0.3125rem',
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span style={{ flex: 1 }}>{pipelineMessage.text}</span>
+            <button
+              type="button"
+              onClick={() => setPipelineMessage(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                padding: 0,
+                lineHeight: 1,
+              }}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
           </div>
         )}
       </div>
