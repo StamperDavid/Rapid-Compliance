@@ -9,8 +9,9 @@
  *
  * STANDING RULE #1 (CLAUDE.md): the manager has NO `getBrandDNA()` call
  * and NO `buildResolvedSystemPrompt` helper. Brand DNA is baked into the
- * Manager Golden Master at seed time via `scripts/lib/brand-dna-helper.js`
- * and consumed by `BaseManager.reviewOutput()` verbatim from Firestore.
+ * Manager Golden Master at seed time via `scripts/lib/brand-dna-helper.js`.
+ * The GM is the operator-grading target (Mission Control StepGradeWidget
+ * routes manager corrections through the Phase 3 training-loop pipeline).
  *
  * STANDING RULE #2 (CLAUDE.md): this is a NEW manager. Initial GM seeding
  * is allowed via `scripts/seed-operations-manager-gm.js`. After seed, the
@@ -44,10 +45,10 @@ import { logger } from '@/lib/logger/logger';
 // ============================================================================
 //
 // Note: this is the L2 manager's runtime SYSTEM_PROMPT used by the legacy
-// `tools`/`outputSchema` declarative config. The REVIEW prompt that grades
-// SCHEDULING_SPECIALIST output lives in the Manager Golden Master in
-// Firestore (seeded by `scripts/seed-operations-manager-gm.js`) and is
-// consumed by BaseManager.reviewOutput() — not from this constant.
+// `tools`/`outputSchema` declarative config. The Manager Golden Master in
+// Firestore (seeded by `scripts/seed-operations-manager-gm.js`) holds the
+// operator-grading target prompt — not consumed at runtime since the
+// autonomous LLM-review path was deleted on 2026-05-08.
 
 const SYSTEM_PROMPT = `You are the Operations Manager, an L2 orchestrator for scheduling and calendar work.
 
