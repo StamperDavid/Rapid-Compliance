@@ -1,8 +1,8 @@
 /**
- * Deploy TWITTER_X_EXPERT GM v3 — strengthen the 280-char-per-tweet rule.
+ * Deploy X_EXPERT GM v3 — strengthen the 280-char-per-tweet rule.
  *
  * Operator-delegated edit per `feedback_delegation_vs_self_training` memory.
- * Trigger: Apr 29 2026 multi-platform test halted because TWITTER_X_EXPERT
+ * Trigger: Apr 29 2026 multi-platform test halted because X_EXPERT
  * generated a thread where item #4 ran > 280 chars and the Zod schema
  * rejected it. Mission `mission_req_1777471695574_c9047m`.
  *
@@ -55,7 +55,7 @@ import {
   listIndustryGMVersions,
 } from '@/lib/training/specialist-golden-master-service';
 
-const SPECIALIST_ID = 'TWITTER_X_EXPERT';
+const SPECIALIST_ID = 'X_EXPERT';
 const INDUSTRY_KEY = 'saas_sales_ops';
 const SOURCE_FEEDBACK_ID = `tfb_twitter_thread_char_limit_${Date.now()}`;
 const CREATED_BY = 'operator-delegated:claude:apr-29-2026';
@@ -76,7 +76,7 @@ async function ensureFeedbackRecord(): Promise<void> {
     targetSpecialistId: SPECIALIST_ID,
     targetSpecialistName: 'Twitter/X Expert',
     sourceReportTaskId: 'mission_req_1777471695574_c9047m',
-    sourceReportExcerpt: 'TWITTER_X_EXPERT generate_content output: thread.4.text exceeded 280 chars; Zod schema rejected the output. Step 1 eventually recovered, but the wasted round-trip is symptomatic of v2\'s passive char-counting rule.',
+    sourceReportExcerpt: 'X_EXPERT generate_content output: thread.4.text exceeded 280 chars; Zod schema rejected the output. Step 1 eventually recovered, but the wasted round-trip is symptomatic of v2\'s passive char-counting rule.',
     grade: 'request_revision',
     explanation: 'Strengthen the 280-char rule: aim for ≤270 (safety margin), require an explicit pre-output audit, name the cost of failure (schema rejection halts mission), and call out common over-length traps.',
     graderUserId: CREATED_BY,
@@ -146,7 +146,7 @@ async function main(): Promise<void> {
 
   await ensureFeedbackRecord();
 
-  console.log('\n[1/3] Creating TWITTER_X_EXPERT GM v3 from surgical edit...');
+  console.log('\n[1/3] Creating X_EXPERT GM v3 from surgical edit...');
   const newGM = await createIndustryGMVersionFromEdit(
     SPECIALIST_ID,
     INDUSTRY_KEY,
@@ -186,7 +186,7 @@ async function main(): Promise<void> {
   console.log(`  ✓ Active GM is ${after.id} and contains the new rule`);
   console.log(`  Prompt length: ${activeGM.systemPromptSnapshot?.length ?? 0} → ${after.systemPromptSnapshot?.length ?? 0} chars`);
 
-  console.log('\n=== ✓ TWITTER_X_EXPERT v3 deployed ===');
+  console.log('\n=== ✓ X_EXPERT v3 deployed ===');
   console.log(`Rollback if needed: deployIndustryGMVersion('${SPECIALIST_ID}', '${INDUSTRY_KEY}', 2)`);
   process.exit(0);
 }

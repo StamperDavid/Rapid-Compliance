@@ -46,7 +46,7 @@ export type InboundDmPlatform =
   | 'mastodon';
 
 const SPECIALIST_BY_PLATFORM: Record<InboundDmPlatform, string> = {
-  x: 'TWITTER_X_EXPERT',
+  x: 'X_EXPERT',
   bluesky: 'BLUESKY_EXPERT',
   linkedin: 'LINKEDIN_EXPERT',
   facebook: 'FACEBOOK_ADS_EXPERT',
@@ -147,7 +147,7 @@ async function composeReplyDirect(input: InboundDmInput): Promise<ComposeDmReply
     id: `inbound_dm_compose_${input.platform}_${input.inboundEventId}`,
     timestamp: new Date(),
     from: 'INBOUND_DM_DISPATCHER' as const,
-    to: input.platform === 'bluesky' ? 'BLUESKY_EXPERT' : 'TWITTER_X_EXPERT',
+    to: input.platform === 'bluesky' ? 'BLUESKY_EXPERT' : 'X_EXPERT',
     type: 'COMMAND' as const,
     priority: 'NORMAL' as const,
     payload: {

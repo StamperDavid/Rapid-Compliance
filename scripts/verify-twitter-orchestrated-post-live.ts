@@ -13,7 +13,7 @@
  *   npx tsx scripts/verify-twitter-orchestrated-post-live.ts --base-url=http://localhost:3000
  *   npx tsx scripts/verify-twitter-orchestrated-post-live.ts --text="custom test text"
  *
- * Real $ cost: 1 LLM call (TWITTER_X_EXPERT.generate_content) + 1 X tweet
+ * Real $ cost: 1 LLM call (X_EXPERT.generate_content) + 1 X tweet
  * (free under brand auto-reload, ~$0.05 if charged). Posts a real tweet to
  * @salesvelocityai — operator should expect to see it in the timeline.
  */

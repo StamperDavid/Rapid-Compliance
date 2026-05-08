@@ -736,10 +736,10 @@ const TIKTOK_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'bas
 // Twitter/X Expert cases
 // ---------------------------------------------------------------------------
 
-const TWITTER_X_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+const X_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
   {
     caseId: 'twitter_expert_saas_thread',
-    agentId: 'TWITTER_X_EXPERT',
+    agentId: 'X_EXPERT',
     name: 'SaaS thought leadership thread (AI agent swarms)',
     description:
       'The canonical generate_content case for Twitter/X Expert. Exercises hook presence/quality, tweet character limits (280), thread minimum length, standalone tweet presence, content strategy depth, cliche detection (WARN), and topic-echo fidelity (WARN).',
@@ -781,7 +781,7 @@ const TWITTER_X_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
   },
   {
     caseId: 'twitter_expert_realestate_hot_take',
-    agentId: 'TWITTER_X_EXPERT',
+    agentId: 'X_EXPERT',
     name: 'Real estate hot take (open houses are dead)',
     description:
       'Industry-switching + hot_take content-type stress case. Exercises whether the LLM adapts to real estate context with a provocative tone, while keeping all tweets under 280 chars.',
@@ -823,7 +823,7 @@ const TWITTER_X_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
   },
   {
     caseId: 'twitter_expert_educational_ecommerce',
-    agentId: 'TWITTER_X_EXPERT',
+    agentId: 'X_EXPERT',
     name: 'Educational thread for ecommerce (checkout optimization)',
     description:
       'Content-type stress case with educational format and data-driven tone targeting ecommerce founders. Tests whether the LLM produces a bookmark-worthy educational thread while respecting character limits.',
@@ -1893,7 +1893,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   SEO_EXPERT: SEO_EXPERT_CASES,
   LINKEDIN_EXPERT: LINKEDIN_EXPERT_CASES,
   TIKTOK_EXPERT: TIKTOK_EXPERT_CASES,
-  TWITTER_X_EXPERT: TWITTER_X_EXPERT_CASES,
+  X_EXPERT: X_EXPERT_CASES,
   FACEBOOK_ADS_EXPERT: FACEBOOK_ADS_EXPERT_CASES,
   GROWTH_ANALYST: GROWTH_ANALYST_CASES,
   UX_UI_ARCHITECT: UX_UI_ARCHITECT_CASES,

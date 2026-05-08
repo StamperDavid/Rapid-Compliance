@@ -6,7 +6,7 @@
  *
  * Why this lives separately from `agent-registry.ts`:
  *   The marketing specialists (`BLUESKY_EXPERT`, `MASTODON_EXPERT`,
- *   `TWITTER_X_EXPERT`, `INSTAGRAM_EXPERT`, `PINTEREST_EXPERT`,
+ *   `X_EXPERT`, `INSTAGRAM_EXPERT`, `PINTEREST_EXPERT`,
  *   `YOUTUBE_EXPERT`, `PAID_ADS_SPECIALIST`) ship with industry-scoped
  *   GMs and identity baked into their `SpecialistConfig` files but were
  *   added AFTER `agent-registry.ts` was authored. Rather than mutate
@@ -42,8 +42,8 @@ import type { Mission } from '@/lib/orchestrator/mission-persistence';
 // Capabilities pulled directly from each specialist's `CONFIG.identity.capabilities`.
 
 const MARKETING_SPECIALIST_DIRECTORY: Record<string, AgentDefinition> = {
-  TWITTER_X_EXPERT: {
-    id: 'TWITTER_X_EXPERT',
+  X_EXPERT: {
+    id: 'X_EXPERT',
     name: 'Twitter/X Expert',
     role: 'specialist',
     tier: 'L3',

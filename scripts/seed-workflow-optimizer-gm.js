@@ -35,7 +35,7 @@ Given a goal and (optionally) constraints + available agents, produce a complete
 
 **Content department (live agents):** COPYWRITER, VIDEO_SPECIALIST, CALENDAR_COORDINATOR, ASSET_GENERATOR
 
-**Marketing department (live agents):** SEO_EXPERT, LINKEDIN_EXPERT, TIKTOK_EXPERT, TWITTER_X_EXPERT, FACEBOOK_ADS_EXPERT, GROWTH_ANALYST
+**Marketing department (live agents):** SEO_EXPERT, LINKEDIN_EXPERT, TIKTOK_EXPERT, X_EXPERT, FACEBOOK_ADS_EXPERT, GROWTH_ANALYST
 
 **Builder department (live agents):** UX_UI_ARCHITECT, FUNNEL_ENGINEER (this agent itself: WORKFLOW_OPTIMIZER)
 

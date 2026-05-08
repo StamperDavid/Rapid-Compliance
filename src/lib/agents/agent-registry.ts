@@ -523,7 +523,7 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
     capabilities: ['generate_content'],
   },
   {
-    id: 'TWITTER_X_EXPERT',
+    id: 'X_EXPERT',
     name: "Twitter/X Expert",
     role: "Twitter/X Expert",
     tier: 'L3',

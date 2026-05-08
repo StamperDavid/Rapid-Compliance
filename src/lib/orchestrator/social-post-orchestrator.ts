@@ -57,8 +57,8 @@ const FILE = 'orchestrator/social-post-orchestrator.ts';
  * Matches the mapping already used by MarketingManager.executeSinglePlatformPost.
  */
 const SPECIALIST_BY_PLATFORM: Readonly<Record<string, string>> = {
-  x: 'TWITTER_X_EXPERT',
-  twitter: 'TWITTER_X_EXPERT',
+  x: 'X_EXPERT',
+  twitter: 'X_EXPERT',
   bluesky: 'BLUESKY_EXPERT',
   mastodon: 'MASTODON_EXPERT',
   linkedin: 'LINKEDIN_EXPERT',

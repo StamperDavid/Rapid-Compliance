@@ -14,7 +14,7 @@
  *
  * SPECIALISTS ORCHESTRATED:
  * - TIKTOK_EXPERT: Short-form viral video content
- * - TWITTER_X_EXPERT: Threads, engagement, thought leadership
+ * - X_EXPERT: Threads, engagement, thought leadership
  * - FACEBOOK_ADS_EXPERT: Paid ads, lead generation, retargeting
  * - LINKEDIN_EXPERT: B2B content, professional networking
  * - YOUTUBE_EXPERT: Long-form video, tutorials, SEO-driven content
@@ -92,7 +92,7 @@ All industry context, brand voice, and messaging guidelines are loaded dynamical
 
 SPECIALISTS YOU ORCHESTRATE:
 - TIKTOK_EXPERT: Short-form viral video, Gen Z/young millennials, trending content
-- TWITTER_X_EXPERT: Threads, thought leadership, B2B engagement, real-time conversations
+- X_EXPERT: Threads, thought leadership, B2B engagement, real-time conversations
 - FACEBOOK_ADS_EXPERT: Paid ads, lead generation, retargeting, older demographics
 - LINKEDIN_EXPERT: B2B content, professional networking, executive thought leadership
 - YOUTUBE_EXPERT: Long-form video, tutorials, SEO-driven content, subscriber growth
@@ -134,7 +134,7 @@ Before delegating to social specialists:
 ### TikTok (TIKTOK_EXPERT)
 Best for: Viral reach, young audiences (16-34), video-first, entertainment, trends
 
-### X/Twitter (TWITTER_X_EXPERT)
+### X/Twitter (X_EXPERT)
 Best for: Thought leadership, B2B, real-time engagement, news, professional conversations
 
 ### Facebook (FACEBOOK_ADS_EXPERT)
@@ -249,13 +249,13 @@ const INTENT_KEYWORDS: Record<CampaignIntent, string[]> = {
  * Specialist mapping by intent
  */
 const INTENT_SPECIALISTS: Record<CampaignIntent, string[]> = {
-  FULL_FUNNEL: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST', 'REDDIT_EXPERT', 'THREADS_EXPERT', 'GOOGLE_BUSINESS_EXPERT', 'TELEGRAM_EXPERT', 'WHATSAPP_BUSINESS_EXPERT'],
-  AWARENESS: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT', 'GOOGLE_BUSINESS_EXPERT'],
+  FULL_FUNNEL: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST', 'REDDIT_EXPERT', 'THREADS_EXPERT', 'GOOGLE_BUSINESS_EXPERT', 'TELEGRAM_EXPERT', 'WHATSAPP_BUSINESS_EXPERT'],
+  AWARENESS: ['TIKTOK_EXPERT', 'X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT', 'GOOGLE_BUSINESS_EXPERT'],
   LEAD_GENERATION: ['SEO_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'PINTEREST_EXPERT', 'PAID_ADS_SPECIALIST', 'GOOGLE_BUSINESS_EXPERT'],
-  THOUGHT_LEADERSHIP: ['SEO_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'REDDIT_EXPERT', 'THREADS_EXPERT'],
-  VIRAL_CONTENT: ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'INSTAGRAM_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT'],
+  THOUGHT_LEADERSHIP: ['SEO_EXPERT', 'X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'REDDIT_EXPERT', 'THREADS_EXPERT'],
+  VIRAL_CONTENT: ['TIKTOK_EXPERT', 'X_EXPERT', 'INSTAGRAM_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT'],
   PAID_ADVERTISING: ['FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT', 'INSTAGRAM_EXPERT', 'PAID_ADS_SPECIALIST'],
-  ORGANIC_GROWTH: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT', 'GOOGLE_BUSINESS_EXPERT'],
+  ORGANIC_GROWTH: ['SEO_EXPERT', 'TIKTOK_EXPERT', 'X_EXPERT', 'LINKEDIN_EXPERT', 'YOUTUBE_EXPERT', 'INSTAGRAM_EXPERT', 'PINTEREST_EXPERT', 'THREADS_EXPERT', 'REDDIT_EXPERT', 'GOOGLE_BUSINESS_EXPERT'],
   SINGLE_PLATFORM: [], // Determined dynamically
 };
 
@@ -299,7 +299,7 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
   temperature: 0.4,
   specialists: [
     'TIKTOK_EXPERT',
-    'TWITTER_X_EXPERT',
+    'X_EXPERT',
     'FACEBOOK_ADS_EXPERT',
     'LINKEDIN_EXPERT',
     'YOUTUBE_EXPERT',
@@ -329,7 +329,7 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     // Twitter/X - Thought leadership, engagement
     {
       triggerKeywords: ['twitter', 'x.com', 'thread', 'tweet', 'engagement', 'ratio', 'reply', 'thought leadership', 'hot take'],
-      delegateTo: 'TWITTER_X_EXPERT',
+      delegateTo: 'X_EXPERT',
       priority: 10,
       requiresApproval: false,
     },
@@ -662,7 +662,7 @@ export class MarketingManager extends BaseManager {
 
     const specialistFactories = [
       { name: 'TIKTOK_EXPERT', factory: getTikTokExpert },
-      { name: 'TWITTER_X_EXPERT', factory: getTwitterExpert },
+      { name: 'X_EXPERT', factory: getTwitterExpert },
       { name: 'FACEBOOK_ADS_EXPERT', factory: getFacebookAdsExpert },
       { name: 'LINKEDIN_EXPERT', factory: getLinkedInExpert },
       { name: 'YOUTUBE_EXPERT', factory: getYouTubeExpert },
@@ -1137,7 +1137,7 @@ export class MarketingManager extends BaseManager {
     }
 
     const SPECIALIST_BY_INBOUND_PLATFORM: Record<string, string> = {
-      x: 'TWITTER_X_EXPERT',
+      x: 'X_EXPERT',
       bluesky: 'BLUESKY_EXPERT',
       linkedin: 'LINKEDIN_EXPERT',
       facebook: 'FACEBOOK_ADS_EXPERT',
@@ -1263,8 +1263,8 @@ export class MarketingManager extends BaseManager {
     const operatorImageUrl = providedMediaUrls.length > 0 ? providedMediaUrls[0] : undefined;
 
     const SPECIALIST_BY_PLATFORM: Record<string, string> = {
-      x: 'TWITTER_X_EXPERT',
-      twitter: 'TWITTER_X_EXPERT',
+      x: 'X_EXPERT',
+      twitter: 'X_EXPERT',
       bluesky: 'BLUESKY_EXPERT',
       mastodon: 'MASTODON_EXPERT',
       linkedin: 'LINKEDIN_EXPERT',
@@ -1665,7 +1665,7 @@ export class MarketingManager extends BaseManager {
   private async growthLoopListen(
     taskId: string
   ): Promise<{ specialistsPolled: number; results: Array<{ specialist: string; status: string }> }> {
-    const socialSpecialists = ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT'];
+    const socialSpecialists = ['TIKTOK_EXPERT', 'X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT'];
     const results: Array<{ specialist: string; status: string }> = [];
 
     const listenPromises = socialSpecialists.map(async (specialistId) => {
@@ -1927,7 +1927,7 @@ export class MarketingManager extends BaseManager {
       // Find the specific platform mentioned
       const text = goal.message?.toLowerCase() ?? '';
       if (text.includes('tiktok')) {return ['TIKTOK_EXPERT'];}
-      if (text.includes('twitter') || text.includes('x.com')) {return ['TWITTER_X_EXPERT'];}
+      if (text.includes('twitter') || text.includes('x.com')) {return ['X_EXPERT'];}
       if (text.includes('facebook') || text.includes('fb ')) {return ['FACEBOOK_ADS_EXPERT'];}
       if (text.includes('linkedin')) {return ['LINKEDIN_EXPERT'];}
       if (text.includes('youtube')) {return ['YOUTUBE_EXPERT'];}
@@ -3138,8 +3138,8 @@ export class MarketingManager extends BaseManager {
   private getSpecialistId(platform: string): string {
     const mapping: Record<string, string> = {
       TIKTOK: 'TIKTOK_EXPERT',
-      X: 'TWITTER_X_EXPERT',
-      TWITTER: 'TWITTER_X_EXPERT',
+      X: 'X_EXPERT',
+      TWITTER: 'X_EXPERT',
       FACEBOOK: 'FACEBOOK_ADS_EXPERT',
       LINKEDIN: 'LINKEDIN_EXPERT',
       YOUTUBE: 'YOUTUBE_EXPERT',
@@ -3486,7 +3486,7 @@ Budget: ${budget}`;
     }
 
     // Platform-specific coordination
-    if (completedPlatforms.includes('TIKTOK_EXPERT') && completedPlatforms.includes('TWITTER_X_EXPERT')) {
+    if (completedPlatforms.includes('TIKTOK_EXPERT') && completedPlatforms.includes('X_EXPERT')) {
       recommendations.push(
         'Repurpose TikTok video highlights as Twitter/X clips with thread context'
       );
