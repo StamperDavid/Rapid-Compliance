@@ -139,6 +139,21 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     managerId: 'MARKETING_MANAGER',
   },
   {
+    id: 'BUDGET_STRATEGIST',
+    name: 'Budget Strategist',
+    category: 'marketing',
+    status: 'FUNCTIONAL',
+    description: 'Marketing-budget allocator. Reads per-platform spend + CRM-attributed conversions, recommends where to shift dollars next window. Operator decides whether to apply.',
+    capabilities: [
+      'Cross-platform spend analysis with CRM-attributed conversion truth',
+      'Plain-English recommendations (increase / decrease / hold / pause)',
+      'Confidence scoring with insufficient-data flagging',
+      'Manual-mission-task generation for platforms without budget APIs',
+      'Math-validated allocations (sums to total budget within $1)',
+    ],
+    managerId: 'MARKETING_MANAGER',
+  },
+  {
     id: 'FACEBOOK_ADS_EXPERT',
     name: 'Facebook Ads Expert',
     category: 'marketing',

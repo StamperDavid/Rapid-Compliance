@@ -55,6 +55,7 @@ import { getTelegramExpert } from './telegram/specialist';
 import { getWhatsAppBusinessExpert } from './whatsapp-business/specialist';
 import { getDiscordExpert } from './discord/specialist';
 import { getTwitchExpert } from './twitch/specialist';
+import { getBudgetStrategist } from './budget/specialist';
 import {
   getMemoryVault,
   shareInsight,
@@ -319,6 +320,13 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     'TWITCH_EXPERT',
   ],
   delegationRules: [
+    // Budget Strategist — marketing-budget allocation across platforms
+    {
+      triggerKeywords: ['budget', 'allocate', 'allocation', 'spend allocation', 'shift budget', 'reallocate', 'cost per acquisition', 'cpa', 'roas', 'ad spend optimization', 'where to spend'],
+      delegateTo: 'BUDGET_STRATEGIST',
+      priority: 15,
+      requiresApproval: false,
+    },
     // TikTok - Viral, short-form video
     {
       triggerKeywords: ['tiktok', 'viral', 'short video', 'hook', 'trending sound', 'gen z', 'fyp', 'for you page', 'reels'],
@@ -680,6 +688,7 @@ export class MarketingManager extends BaseManager {
       { name: 'WHATSAPP_BUSINESS_EXPERT', factory: getWhatsAppBusinessExpert },
       { name: 'DISCORD_EXPERT', factory: getDiscordExpert },
       { name: 'TWITCH_EXPERT', factory: getTwitchExpert },
+      { name: 'BUDGET_STRATEGIST', factory: getBudgetStrategist },
     ];
 
     for (const { name, factory } of specialistFactories) {

@@ -515,6 +515,14 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
     capabilities: ['generate_content'],
   },
   {
+    id: 'BUDGET_STRATEGIST',
+    name: "Budget Strategist",
+    role: "Budget Strategist",
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['analyze_budget'],
+  },
+  {
     id: 'TWITCH_EXPERT',
     name: "Twitch Expert",
     role: "Twitch Expert",
