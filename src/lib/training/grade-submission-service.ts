@@ -43,6 +43,12 @@ import {
   deployIndustryGMVersion,
 } from './specialist-golden-master-service';
 import {
+  getActiveManagerGMByIndustry,
+  createManagerGMVersionFromEdit,
+  deployManagerGMVersion,
+  isManagerId,
+} from './manager-golden-master-service';
+import {
   getPromptEngineer,
   type ProposePromptEditResult,
   type EditProposedResult,
@@ -125,10 +131,17 @@ export async function submitGrade(input: SubmitGradeInput): Promise<SubmitGradeR
     return { status: 'ERROR', feedbackId: null, error: `Failed to create feedback record: ${msg}` };
   }
 
-  // Step 2: load the target specialist's current GM
-  const activeGM = await getActiveSpecialistGMByIndustry(input.targetSpecialistId, industryKey);
+  // Step 2: load the target's current GM. Managers and specialists live in
+  // different Firestore collections (managerGoldenMasters vs
+  // specialistGoldenMasters) so we branch on the `_MANAGER` suffix. The
+  // StepGradeWidget picker offers both kinds — this is the join point.
+  const targetIsManager = isManagerId(input.targetSpecialistId);
+  const activeGM = targetIsManager
+    ? await getActiveManagerGMByIndustry(input.targetSpecialistId, industryKey)
+    : await getActiveSpecialistGMByIndustry(input.targetSpecialistId, industryKey);
   if (!activeGM) {
-    const error = `No active Golden Master found for ${input.targetSpecialistId}:${industryKey}. Seed the specialist before grading.`;
+    const kind = targetIsManager ? 'manager' : 'specialist';
+    const error = `No active Golden Master found for ${input.targetSpecialistId}:${industryKey}. Seed the ${kind} before grading.`;
     await markFeedbackDiscarded(feedback.id, error);
     return { status: 'ERROR', feedbackId: feedback.id, error };
   }
@@ -138,7 +151,8 @@ export async function submitGrade(input: SubmitGradeInput): Promise<SubmitGradeR
     ? rawSystemPrompt
     : activeGM.systemPromptSnapshot;
   if (!currentPrompt || currentPrompt.length < 100) {
-    const error = `Target specialist GM ${activeGM.id} has no usable systemPrompt (length=${currentPrompt?.length ?? 0})`;
+    const kind = targetIsManager ? 'manager' : 'specialist';
+    const error = `Target ${kind} GM ${activeGM.id} has no usable systemPrompt (length=${currentPrompt?.length ?? 0})`;
     await markFeedbackDiscarded(feedback.id, error);
     return { status: 'ERROR', feedbackId: feedback.id, error };
   }
@@ -259,20 +273,36 @@ export async function approvePromptEdit(
     return { status: 'ERROR', feedbackId: input.feedbackId, error: 'Feedback was already discarded' };
   }
 
-  // Create the new GM version with the edit applied
+  // Create the new GM version with the edit applied. Branch on the same
+  // `_MANAGER` suffix used in submitGrade — this keeps the create + deploy
+  // pair pointing at the right Firestore collection.
+  const targetIsManager = isManagerId(feedback.targetSpecialistId);
+  const createdBy = `grade-submission-service (approver=${input.approverDisplayName ?? input.approverUserId})`;
   let newGM;
   try {
-    newGM = await createIndustryGMVersionFromEdit(
-      feedback.targetSpecialistId,
-      industryKey,
-      {
-        currentText: input.approvedEdit.currentText,
-        proposedText: input.approvedEdit.proposedText,
-        rationale: input.approvedEdit.rationale,
-        sourceTrainingFeedbackId: input.feedbackId,
-      },
-      `grade-submission-service (approver=${input.approverDisplayName ?? input.approverUserId})`,
-    );
+    newGM = targetIsManager
+      ? await createManagerGMVersionFromEdit(
+          feedback.targetSpecialistId,
+          industryKey,
+          {
+            currentText: input.approvedEdit.currentText,
+            proposedText: input.approvedEdit.proposedText,
+            rationale: input.approvedEdit.rationale,
+            sourceTrainingFeedbackId: input.feedbackId,
+          },
+          createdBy,
+        )
+      : await createIndustryGMVersionFromEdit(
+          feedback.targetSpecialistId,
+          industryKey,
+          {
+            currentText: input.approvedEdit.currentText,
+            proposedText: input.approvedEdit.proposedText,
+            rationale: input.approvedEdit.rationale,
+            sourceTrainingFeedbackId: input.feedbackId,
+          },
+          createdBy,
+        );
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     logger.error('[GradeSubmission] Failed to create new GM version', error instanceof Error ? error : new Error(msg));
@@ -280,15 +310,14 @@ export async function approvePromptEdit(
   }
 
   if (!newGM) {
-    return { status: 'ERROR', feedbackId: input.feedbackId, error: 'createIndustryGMVersionFromEdit returned null' };
+    const fnName = targetIsManager ? 'createManagerGMVersionFromEdit' : 'createIndustryGMVersionFromEdit';
+    return { status: 'ERROR', feedbackId: input.feedbackId, error: `${fnName} returned null` };
   }
 
   // Deploy the new version (deactivates the old, activates the new, invalidates cache)
-  const deployResult = await deployIndustryGMVersion(
-    feedback.targetSpecialistId,
-    industryKey,
-    newGM.version,
-  );
+  const deployResult = targetIsManager
+    ? await deployManagerGMVersion(feedback.targetSpecialistId, industryKey, newGM.version)
+    : await deployIndustryGMVersion(feedback.targetSpecialistId, industryKey, newGM.version);
   if (!deployResult.success) {
     return {
       status: 'ERROR',

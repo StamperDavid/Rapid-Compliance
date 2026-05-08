@@ -32,6 +32,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { listIndustryGMVersions } from '@/lib/training/specialist-golden-master-service';
+import {
+  listManagerGMVersions,
+  isManagerId,
+} from '@/lib/training/manager-golden-master-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +60,9 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const industryKey = searchParams.get('industryKey') ?? DEFAULT_INDUSTRY_KEY;
 
-    const versions = await listIndustryGMVersions(specialistId, industryKey);
+    const versions = isManagerId(specialistId)
+      ? await listManagerGMVersions(specialistId, industryKey)
+      : await listIndustryGMVersions(specialistId, industryKey);
 
     const slim = versions.map((v) => {
       const rawPrompt = typeof v.config.systemPrompt === 'string'

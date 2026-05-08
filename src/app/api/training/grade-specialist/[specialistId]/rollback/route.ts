@@ -23,6 +23,10 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { deployIndustryGMVersion } from '@/lib/training/specialist-golden-master-service';
+import {
+  deployManagerGMVersion,
+  isManagerId,
+} from '@/lib/training/manager-golden-master-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,7 +72,9 @@ export async function POST(
       reason: reason ?? '(none)',
     });
 
-    const result = await deployIndustryGMVersion(specialistId, industryKey, targetVersion);
+    const result = isManagerId(specialistId)
+      ? await deployManagerGMVersion(specialistId, industryKey, targetVersion)
+      : await deployIndustryGMVersion(specialistId, industryKey, targetVersion);
     if (!result.success) {
       return NextResponse.json(
         { success: false, error: result.error ?? 'Rollback deploy failed' },
