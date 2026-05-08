@@ -361,14 +361,17 @@ export default function StepGradeWidget({
   };
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Star click: quick submit without explanation (no Prompt Engineer)
+  // Star click: set score and expand the form so the operator can add a reason
+  // and pick a target before submitting. NO auto-save — every write goes
+  // through the single Save button so the operator gets one POST per intended
+  // submission instead of an instant write on every click.
   // ──────────────────────────────────────────────────────────────────────────
 
   function handleStarChange(newScore: number): void {
     setScore(newScore);
-    // Auto-submit the rating only. No explanation means no Prompt Engineer
-    // fires. The operator can still click "Why?" afterward to add a reason.
-    void submitGradeToFirestore(newScore);
+    if (newScore > 0 && !submitted) {
+      setShowReason(true);
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -396,6 +399,21 @@ export default function StepGradeWidget({
           kind: 'warn',
           text: 'Grade recorded but no agent target — neither a specialist nor a manager is associated with this step, so no prompt edit will be proposed.',
         });
+      }
+
+      // Reset the per-submission inputs so the next "Why?" expansion starts
+      // clean. Without this, `chosenSpecialist` and `explanation` persist
+      // across rounds — operator picks X_EXPERT, types an X-specific
+      // correction, but the dropdown still shows MARKETING_MANAGER from a
+      // prior round and the POST silently lands on the wrong agent.
+      // Surfaced live on May 8, 2026 — the PE proposed adding X-specific
+      // copy guidance to the MARKETING_MANAGER review prompt because the
+      // request body had MARKETING_MANAGER paired with an X-focused
+      // explanation. The grade target picker MUST be a deliberate choice
+      // every time, not a stale default.
+      setExplanation('');
+      if (needsPicker) {
+        setChosenSpecialist('');
       }
     })();
   }
