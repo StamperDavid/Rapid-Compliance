@@ -1,9 +1,150 @@
 # SalesVelocity.ai — Full-Orchestration Continuation Prompt
 
-> **Updated:** May 7, 2026 — Sentry production wiring + memory-vault crash fix + StepGradeWidget rebuild + GM seeding audit (see top section).
+> **Updated:** May 8, 2026 — full training-loop fix sweep + canonicalization + BUDGET_STRATEGIST shipped (see top section).
+> **Earlier session updated:** May 7, 2026 — Sentry production wiring + memory-vault crash fix + StepGradeWidget rebuild + GM seeding audit.
 > **Earlier session updated:** May 3, 2026 — social posting bug fix + Social Hub duplicate-tab fix shipped.
 > **Earlier session updated:** April 30, 2026 (afternoon — YC pre-submission walkthrough, preserved below).
 > **Earlier session updated:** April 29, 2026 (evening, fake-AI sweep — preserved below for context).
+
+---
+
+# 🛠️ SESSION — Training-loop fix sweep + canonicalization + BUDGET_STRATEGIST (May 8, 2026)
+
+## What this session was
+Picked up the May 7 handoff with one concrete fix queued: wire the `SPECIALIST_ID_ALIASES` resolver into the GM lookup so the BYOK X_EXPERT grade would stop silently 422-ing. That single fix expanded into a full sweep of the training-loop pipeline as live testing surfaced bugs the May 7 widget rebuild had only half-shipped, then expanded again into a deliberate ID-canonicalization pass after the operator pushed for a systemic fix instead of a band-aid map. Closed the day building BUDGET_STRATEGIST as a production-ready new specialist (with explicit honest scope on what's NOT yet built — dashboard widget, cron, integration APIs).
+
+**8 commits shipped, all on `dev` and synced to `rapid-dev`.**
+
+## What got fixed (chronological, every fix verified live)
+
+**1. Alias resolver — `SPECIALIST_ID_ALIASES` map wired into specialist-golden-master-service.ts** (commit `b7a8cc72`)
+- Yesterday's bug: Mission Control grade with `X_EXPERT` (admin/runtime name) silently 422'd because the seed/Firestore name was `TWITTER_X_EXPERT`. Operator believed the grade landed; it had been marked `discarded`. Standing Rule #2 trust violation.
+- Fix: `resolveSpecialistIdAlias()` helper applied at every public read/write entry in the GM service (`getActiveSpecialistGM`, `getActiveSpecialistGMByIndustry`, `listIndustryGMVersions`, `listSpecialistGMVersions`, `createIndustryGMVersionFromEdit`, `deployIndustryGMVersion`, `deploySpecialistGM`, `rollbackSpecialistGM`, `createSpecialistGMVersion`, `getOrCreateSpecialistGM`, `invalidateIndustryGMCache`). Cache key uses canonical ID so both names share one cache entry.
+- Initial alias map (5 admin-side names → seed-side canonical): X_EXPERT→TWITTER_X_EXPERT, WEB_SCRAPER→SCRAPER_SPECIALIST, ARCHITECT_(COPY|FUNNEL|UX_UI)_STRATEGIST→(COPY|FUNNEL|UX_UI)_STRATEGIST.
+- Verify script `scripts/verify-specialist-id-alias-resolver.ts`: 5/5 pass against live Firestore. Live test at 16:20 UTC: `tfb_x_expert_1778257205106` created + Prompt Engineer initialized in 200/30s — exact scenario that 422'd yesterday.
+
+**2. Manager grading backend wire — `_MANAGER` suffix branching** (commit `dda06023`)
+- Surfaced live: yesterday's StepGradeWidget rebuild added managers as the FIRST option in the picker, but the backend `/api/training/grade-specialist` route only knew how to look up specialists in `specialistGoldenMasters` — manager grades silently 422'd with "No active Golden Master found for MARKETING_MANAGER:saas_sales_ops" even though `MARKETING_MANAGER` IS seeded (in the parallel `managerGoldenMasters` collection).
+- Pattern named: **frontend feature shipped without backend support**. Worth grepping for in future sessions.
+- Fix: `submitGrade` and `approvePromptEdit` in `grade-submission-service.ts` branch on `_MANAGER` suffix and route to manager-side functions. Added to `manager-golden-master-service.ts`: `isManagerId()`, `createManagerGMVersionFromEdit()`, `listManagerGMVersions()`, signature-aligned `deployManagerGMVersion()` (now takes version + returns `{success, error?}`). Rollback + version-history routes also branch.
+- Verified live at 14:50 UTC: MARKETING_MANAGER grade ran through Prompt Engineer end-to-end (200 in 22s).
+
+**3. Clarification-questions banner shape fix** (commit `bae907d0`)
+- Backend returned `result.clarification.questions[]` but widget read `result.questions` — always undefined, banner showed bare "needs more detail" with no actionable info. Same systemic shape: frontend and backend out of sync.
+- Fix: widget reads `result.clarification.questions/conflictsDetected/rationale` and renders rich banner with rationale + numbered questions + conflicts.
+- Verified live: PE returned 4 specific architectural questions about whether the cross-platform-image issue belonged on MARKETING_MANAGER vs upstream specialists vs Jasper. **The PE's clarification was actually correct architectural reasoning** — surfaced to operator, became the entry point for the auto-review-deletion decision below.
+
+**4. Manager auto-review path DELETED entirely** (commit `4ecbd7ee`, **-1081 / +89 lines**)
+- Operator decision (permanent, not "disabled until later"): "we cant trust the ai to review its own work, it is bias". The Apr 18 disabling was the right call but the Apr 18 framing of "restore later when shadow-mode is ready" was wrong — AI grading AI is a permanent design gap, not a calibration gap.
+- Removed: `reviewOutput()`, `performLlmReview()`, `buildReviewUserPrompt()`, `parseReviewResponse()`, `MAX_REVIEW_RETRIES`, `reviewResultCache`, the retry/escalation loop, plus `scripts/verify-managers-review.ts` and `scripts/verify-content-manager-review.ts`.
+- Kept: `delegateWithReview` name (9 manager subclasses call it — name kept for call-site stability, future cosmetic rename to plain `delegate` is safe), the M2a `specialistsUsed` accumulator, `recordPerformanceEntry` (perf tracker still gets a synthetic PASS/100 to keep its schema intact). Manager Golden Masters + operator-driven training-loop pipeline (StepGradeWidget → grade-specialist with `_MANAGER` branching → Prompt Engineer → human approve → new GM version) remain load-bearing.
+- Memory file replaced: `project_manager_auto_review_disabled.md` → `project_manager_auto_review_deleted.md` (do NOT propose re-introducing autonomous manager LLM review under any framing).
+- CLAUDE.md Phase 1-4 narrative updated to reflect: managers are dispatchers + perf trackers, not LLM reviewers.
+
+**5. Grade widget UX fixes — single Save click + state reset per round** (commit `57ef6258`)
+- Bug 1: clicking a star fired `submitGradeToFirestore` immediately, before the operator could type an explanation or pick a target. Net result: 2-3 unwanted writes per submission, plus operator confusion about which click actually counted.
+- Bug 2: `chosenSpecialist` and `explanation` state persisted across rounds — operator picked MARKETING_MANAGER in round 1, then tried to grade X_EXPERT in round 2, dropdown still showed MARKETING_MANAGER, request silently went to wrong agent. **The PE then proposed adding X-platform-specific copy guidance to the MARKETING_MANAGER review prompt** — architecturally nonsensical, would have been a real Standing-Rule-#2 trust violation if applied. (Operator caught it. Rejected the popup. Bug fixed.)
+- Fix: star click only sets state and auto-expands the form (no immediate POST). Save button is the only write path. After successful submission, `chosenSpecialist` + `explanation` reset to force a deliberate re-pick on the next round.
+
+**6. Canonicalization — one true name everywhere + back-compat aliases + CI guard** (commits `f45cfaf8`, `d5333df3`)
+- Operator pushed for a systemic fix instead of growing the alias map: "give one name to each agent ... however as a human it is just in our nature to ask for something by the wrong name at times ... how do we handle that?"
+- Three-layer answer shipped:
+  - **Storage layer:** ONE canonical ID per agent across admin UI, runtime delegation, seed scripts, and Firestore. No more dual-truth.
+  - **Back-compat alias layer:** the `SPECIALIST_ID_ALIASES` map flipped from "admin → seed" band-aid to a deliberate "legacy → canonical" compatibility layer for historical step records, old TrainingFeedback documents, external scripts, and humans who refer to agents by familiar names. Grows only when LEGACY data exists in Firestore.
+  - **CI guard:** `scripts/audit-canonical-specialist-ids.ts` fails the build if any new admin/seed/Firestore-GM misalignment ever sneaks back in. Architectural exclusions (managers, deterministic dispatchers) explicitly listed.
+- Renames executed (sed bulk replace across 26 files):
+  - `TWITTER_X_EXPERT` → `X_EXPERT` (Twitter was rebranded; drop the stale name)
+  - `WEB_SCRAPER` → `SCRAPER_SPECIALIST` (matches all-other-specialists suffix convention)
+  - `ARCHITECT_COPY_STRATEGIST` → `COPY_STRATEGIST` (department grouping belongs in UI, not in IDs)
+  - `ARCHITECT_FUNNEL_STRATEGIST` → `FUNNEL_STRATEGIST`
+  - `ARCHITECT_UX_UI_STRATEGIST` → `UX_UI_STRATEGIST`
+- Firestore migration `scripts/migrate-canonical-specialist-ids-may-8-2026.ts`: 3 X-agent GM versions copied to canonical doc IDs, active flag (v3) preserved on the new doc, legacy docs deactivated as historical records (rollback-safe). Other 4 specialists had no legacy docs to migrate (the architect/scraper trio's only mismatch was in admin SpecialistRegistry, not in seeded GMs — handoff prediction confirmed).
+- CI guard final state: 34 admin / 55 seed / 21 runtime / 56 live GM, all aligned.
+
+**7. BUDGET_STRATEGIST agent shipped production-ready** (commit `f266545f`)
+- Marketing-side specialist that reads per-platform spend + CRM-attributed conversions, emits per-platform recommendations (increase / decrease / hold / pause) with plain-English rationale, confidence scoring, and math-validated allocations. Reports to MARKETING_MANAGER. **NOT** to be confused with PRICING_STRATEGIST (Stripe dispatcher in commerce — totally different agent).
+- Standing Rule #1 satisfied: GM seeded with Brand DNA baked in (industry prompt 5,619 chars → 6,692 chars resolved; 11 Brand DNA fields preserved in `brandDNASnapshot` for audit). NO runtime Brand DNA loading.
+- Conversion-source trust order baked into the prompt: `crm > ga4 > platform_self_reported`. Self-reported numbers explicitly flagged as sanity-check only.
+- Math invariants enforced server-side AFTER the LLM responds: `recommendedSpendUsd` values must sum to within $1 of `totalBudgetUsd`; `deltaUsd` must equal `recommendedSpendUsd - currentSpendUsd`. LLM math failures throw rather than silently mis-allocate.
+- For platforms without a budget-change API (SEO retainers, manual LSA top-ups), recommendations carry `requiresManualMissionTask=true` and a plain-English `manualMissionPrompt` the operator copies into Jasper.
+- Insufficient-data flagging: when total attributed conversions < 10 over the window, `insufficientData=true` and rationales explicitly tell the operator the recommendations are exploratory until more data accumulates.
+- Live load verifier `scripts/verify-budget-strategist-load.ts`: 7/7 pass (GM with Brand DNA baked, MARKETING_MANAGER registers FUNCTIONAL, delegation rule wired, agent-registry + admin SpecialistRegistry entries, CI guard audit aligned).
+- Files: `src/types/budget-strategist.ts`, `src/lib/agents/marketing/budget/specialist.ts` (~430 lines, modeled on May 4 INSIGHTS_ANALYST pattern), `scripts/seed-budget-strategist-gm.js`, `scripts/verify-budget-strategist-load.ts`.
+
+## The actual BYOK debug — what surfaced beyond the surface bugs
+The operator's original BYOK correction was: "I asked for the post to have the same image on every platform, instead every platform had a different image". After the alias resolver landed, the PE was finally able to run on the correct GM. **Its CLARIFICATION_NEEDED response was the most architecturally insightful output of the day.** Quoted in part:
+
+> "The Marketing Manager is a quality-gate **reviewer** — it grades specialist output but does NOT produce content or generate images itself. The issue you described (different images on every platform instead of the same image) sounds like it originated from the content-producing specialist (e.g., the social media experts) or from the orchestration layer (Jasper) that dispatched the multi-platform post request. ... Should this edit go to the Marketing Manager (to catch and reject mismatched images during review), or should it go to a different specialist (like the content creators or Jasper the orchestrator) who is responsible for actually selecting/generating the images?"
+
+The PE was correct: the BYOK behavior is a **code-level bug** in `MarketingManager.executeMultiPlatformPost` — it loops `executeSinglePlatformPost` per platform, and each iteration independently calls `generateAndStoreSocialPostImage`. Three platforms = three separate DALL-E generations = three different images. No prompt edit on MARKETING_MANAGER fixes this because manager prompts don't drive image generation, the code path does.
+
+**Operator's read after seeing this:** the architecturally correct target for a prompt fix is JASPER's plan generation — Jasper should plan a `delegate_to_content` for image generation FIRST when the operator asks for one shared image, then fan out to platform specialists with `providedMediaUrls=[that image]`. The plumbing for `providedMediaUrls` already exists (May 3 commit `4c620a67`). What's missing is Jasper knowing to use it.
+
+**This is the next architecturally-correct grading test.** Logged as task #8 (re-grade BYOK targeting Jasper for shared-image intent) — pending operator action in a future session, since the original BYOK mission was deleted earlier today.
+
+## Shortcuts taken (named per standing rule)
+- **My Monitor filter doesn't catch DELETE events.** When the operator deleted the BYOK mission earlier, my monitor missed it; I later proposed another test against the deleted mission. Operator caught it. Filter needs `DELETE /api/orchestrator` + `Mission deleted|Mission scrapped|status=DELETED` patterns added next session. Don't repeat.
+- **Today's CI guard checks live Firestore, not just static files.** That means CI agents running it need access to `serviceAccountKey.json`. If the prod CI environment doesn't have that, the audit needs a static-only fallback mode (read seed scripts + admin registry + agent-registry.ts only, skip Firestore). Wire that fallback before adding the audit to the CI workflow.
+- **AGENT_REGISTRY.json was not updated** as part of the canonicalization. Looked at it and saw stale data from before today (still shows `TWITTER_EXPERT`, only 6 specialists per manager). It's documentation-only, not loaded at runtime, so the rename didn't break anything — but it's drifted and worth a separate regenerate-from-source cleanup.
+- **BUDGET_STRATEGIST's LLM call hasn't been exercised live.** The load verify proves the wiring; the actual prompt → LLM → JSON-parse → math-validate path hasn't been tested with real data. First prod call will burn ~$0.05-0.20 in OpenRouter credits depending on platform count. Watch for prompt issues on first run.
+
+## Files touched this session
+- `src/lib/training/specialist-golden-master-service.ts` (alias resolver + back-compat map rewrite)
+- `src/lib/training/manager-golden-master-service.ts` (added `isManagerId`, `createManagerGMVersionFromEdit`, `listManagerGMVersions`, signature-aligned `deployManagerGMVersion`)
+- `src/lib/training/grade-submission-service.ts` (manager-aware branching in submitGrade + approvePromptEdit)
+- `src/app/api/training/grade-specialist/[specialistId]/rollback/route.ts` (manager-aware branch)
+- `src/app/api/training/grade-specialist/[specialistId]/versions/route.ts` (manager-aware branch)
+- `src/app/(dashboard)/mission-control/_components/StepGradeWidget.tsx` (UX fixes + clarification banner shape fix)
+- `src/lib/agents/base-manager.ts` (auto-review LLM path deleted, -1081 lines)
+- `src/lib/agents/operations/manager.ts` + `src/lib/training/manager-golden-master-service.ts` (stale-comment cleanup referencing the gone `reviewOutput()`)
+- 26 source files via sed bulk rename (TWITTER_X_EXPERT → X_EXPERT etc.)
+- `src/lib/agents/marketing/manager.ts` (BUDGET_STRATEGIST factory + delegation rule)
+- `src/lib/agents/agent-registry.ts` (BUDGET_STRATEGIST manifest entry)
+- `src/components/admin/SpecialistRegistry.tsx` (BUDGET_STRATEGIST admin entry + ID canonicalization)
+- `src/types/budget-strategist.ts` (NEW — BUDGET_STRATEGIST type contracts)
+- `src/lib/agents/marketing/budget/specialist.ts` (NEW — BUDGET_STRATEGIST agent)
+- `scripts/verify-specialist-id-alias-resolver.ts` (NEW — back-compat resolver verify)
+- `scripts/migrate-canonical-specialist-ids-may-8-2026.ts` (NEW — one-time Firestore migration)
+- `scripts/audit-canonical-specialist-ids.ts` (NEW — CI guard)
+- `scripts/seed-budget-strategist-gm.js` (NEW — Brand-DNA-baking seed)
+- `scripts/verify-budget-strategist-load.ts` (NEW — 7-check load verifier)
+- `scripts/verify-managers-review.ts` (DELETED — proves the gone path)
+- `scripts/verify-content-manager-review.ts` (DELETED — same)
+- `CLAUDE.md` (Phase 1-4 section updated to reflect auto-review removal)
+- Memory: `project_manager_auto_review_disabled.md` → `project_manager_auto_review_deleted.md` (renamed + rewritten)
+
+## Tomorrow's plan / next session
+
+### High priority (close out training-loop trust)
+1. **Re-grade BYOK targeting Jasper for shared-image intent** (task #8) — once a fresh multi-platform mission is run that exhibits the "different image per platform" behavior, the architecturally-correct grade target is Jasper's plan-generation prompt, not MARKETING_MANAGER. Test confirms the canonicalization stack + new picker logic + Jasper-grading path all work together end-to-end.
+2. **Patch Monitor filter** to catch DELETE events: add `DELETE /api/orchestrator|Mission deleted|Mission scrapped|status=DELETED` to the live-test monitor pattern. Update `project_live_test_monitoring_setup.md` accordingly.
+
+### BUDGET_STRATEGIST follow-up surface (the real product work)
+3. **Dashboard widget UI + full budgeting page** — operator's spec calls for a tile that opens a full page with allocation across SEO, social boosts, PPC, Google LSA, etc. Real UX work.
+4. **Hourly cron for live refresh** — the widget needs to refresh from real spend + conversion data periodically. Cron + queue infrastructure already exists; wire BUDGET_STRATEGIST into it once data sources are connected.
+5. **Google Ads / Meta Ads / Google LSA budget-shift API integrations** — each is a separate integration story (OAuth flow + webhook + budget-change endpoints). Defer until the recommendation surface is proven valuable.
+6. **CRM source attribution wiring** — UTM capture on every public form + GA4 link branding + CRM `source` field standardization. Without this, BUDGET_STRATEGIST's recommendations are exploratory because there's no high-trust conversion ground truth.
+7. **Two-step Apply confirmation** — per the destructive-action standing rule, moving money requires two distinct clicks. Ships with the Apply button.
+
+### Architectural follow-ups
+8. **AGENT_REGISTRY.json regenerate-from-source** — file is stale (TWITTER_EXPERT, 6 specialists per manager). Regenerate from agent-registry.ts so the documentation matches reality.
+9. **Static-only mode for the canonicalization audit** — add a flag to `audit-canonical-specialist-ids.ts` so it can run without Firestore access (for CI environments lacking the service account key). Then wire into the CI workflow as a build-blocker.
+10. **Cosmetic rename** of `delegateWithReview` → `delegate` across 9 manager subclasses (auto-review path is gone; name is misleading). Pure cascade refactor when worth doing.
+
+### Multi-tenant readiness checklist (tracked from May 7 handoff, still open)
+1. Onboarding flow — operator signup, brand DNA capture, industry selection, OAuth into central platform apps, per-tenant Stripe customer creation
+2. Per-tenant API key store
+3. Per-tenant GM seeding (automatic seed of all 55 specialist GMs + 10 manager GMs scoped to new tenant's industry, parameterized by tenantId)
+4. Per-tenant SendGrid subuser
+5. Per-tenant Twilio Messaging Service
+6. Tenant-scoped Firestore rules
+7. Audit pass for hardcoded `rapid-compliance-root`
+8. Billing pipeline
+9. BUDGET_STRATEGIST already tenant-aware from day one (uses `getActiveSpecialistGMByIndustry` which goes through `getSubCollection` — multi-tenant flip will work without retrofitting)
+
+### Standing rule audit
+- Standing Rule #1 (Brand DNA baked at seed time) — held throughout. BUDGET_STRATEGIST seeded with Brand DNA, all 5 canonicalized agents kept their bake.
+- Standing Rule #2 (no autonomous prompt edits) — held. Manager auto-review deletion was a CODE removal, not a prompt edit. All GM mutations today went through the operator-driven grade → PE → approve → deploy pipeline OR through the canonicalization migration (one-time, operator-authorized).
 
 ---
 
