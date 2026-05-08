@@ -73,7 +73,7 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     managerId: 'INTELLIGENCE_MANAGER',
   },
   {
-    id: 'WEB_SCRAPER',
+    id: 'SCRAPER_SPECIALIST',
     name: 'Web Scraper',
     category: 'intelligence',
     status: 'FUNCTIONAL',
@@ -510,7 +510,7 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
 
   // Architect Category (3 specialists)
   {
-    id: 'ARCHITECT_COPY_STRATEGIST',
+    id: 'COPY_STRATEGIST',
     name: 'Architect Copy Strategist',
     category: 'intelligence',
     status: 'FUNCTIONAL',
@@ -525,7 +525,7 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     managerId: 'ARCHITECT',
   },
   {
-    id: 'ARCHITECT_FUNNEL_STRATEGIST',
+    id: 'FUNNEL_STRATEGIST',
     name: 'Architect Funnel Strategist',
     category: 'intelligence',
     status: 'FUNCTIONAL',
@@ -540,7 +540,7 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     managerId: 'ARCHITECT',
   },
   {
-    id: 'ARCHITECT_UX_UI_STRATEGIST',
+    id: 'UX_UI_STRATEGIST',
     name: 'Architect UX/UI Strategist',
     category: 'intelligence',
     status: 'FUNCTIONAL',

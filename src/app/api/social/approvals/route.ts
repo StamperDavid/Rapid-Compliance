@@ -136,7 +136,7 @@ export async function PUT(request: NextRequest) {
     // so the correction enters the real training loop (grade → Prompt Engineer → new GM version).
     if (status === 'approved' && correctedContent && originalContent && correctedContent !== originalContent) {
       const SPECIALIST_BY_PLATFORM: Partial<Record<SocialPlatform, { id: string; name: string }>> = {
-        twitter:   { id: 'TWITTER_X_EXPERT',    name: 'Twitter/X Expert' },
+        twitter:   { id: 'X_EXPERT',    name: 'Twitter/X Expert' },
         bluesky:   { id: 'BLUESKY_EXPERT',       name: 'Bluesky Expert' },
         mastodon:  { id: 'MASTODON_EXPERT',      name: 'Mastodon Expert' },
         linkedin:  { id: 'LINKEDIN_EXPERT',      name: 'LinkedIn Expert' },

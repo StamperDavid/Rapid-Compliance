@@ -32,7 +32,7 @@ import {
   type InvariantCheck,
 } from '../capture/single-shot-capture';
 
-const SPECIALIST_ID = 'TWITTER_X_EXPERT';
+const SPECIALIST_ID = 'X_EXPERT';
 const MAX_TOKENS = 8192;
 
 // ============================================================================

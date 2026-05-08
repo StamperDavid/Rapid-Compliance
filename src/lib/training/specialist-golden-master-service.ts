@@ -27,21 +27,30 @@ const SPECIALIST_GM_COLLECTION = 'specialistGoldenMasters';
 const SPECIALIST_CONFIGS_COLLECTION = 'specialistConfigs';
 
 /**
- * Admin-canonical → seed-canonical specialist ID aliases.
+ * Back-compat specialist ID aliases (legacy → canonical).
  *
- * Some specialists are referenced by one ID in the admin UI / runtime
- * delegation maps and a different ID in the seed scripts that wrote their
- * GM doc. Without this map a grade submitted from Mission Control with the
- * admin name silently 404s in the GM lookup, the prompt-edit half drops,
- * and the operator believes their grade landed when it didn't (Standing
- * Rule #2 violation surfaced May 7, 2026 on the BYOK X_EXPERT mission).
+ * As of May 8, 2026 the codebase was canonicalized so each agent has ONE
+ * true name across admin UI, runtime delegation, seed scripts, and Firestore.
+ * This map is the deliberate back-compat layer for cases that still use
+ * the old names: existing Firestore step records that recorded the old name
+ * in `specialistsUsed`, old TrainingFeedback records, external scripts not
+ * yet updated, and humans who refer to agents by familiar/historical names.
+ *
+ * Adding a new entry here is a deliberate compatibility decision, not a fix
+ * for a naming bug — the CI guard `scripts/audit-canonical-specialist-ids.ts`
+ * fails the build if a new misalignment between admin / seed / runtime ever
+ * sneaks back in. The map grows only when LEGACY data exists in Firestore
+ * that we want to keep grading-compatible.
  *
  * Every read/write in this service resolves the input ID through this map
- * before computing doc IDs, hitting the cache, or querying Firestore so
- * either name converges on the same canonical doc.
+ * before computing doc IDs, hitting the cache, or querying Firestore.
  */
 const SPECIALIST_ID_ALIASES: Record<string, string> = {
-  X_EXPERT: 'TWITTER_X_EXPERT',
+  // Pre-canonicalization (May 8, 2026) names. Right-hand side is the new
+  // canonical that the seed scripts, runtime delegation maps, admin UI,
+  // and Firestore docs all use. Old names live on only in historical
+  // mission step records and TrainingFeedback documents.
+  TWITTER_X_EXPERT: 'X_EXPERT',
   WEB_SCRAPER: 'SCRAPER_SPECIALIST',
   ARCHITECT_COPY_STRATEGIST: 'COPY_STRATEGIST',
   ARCHITECT_FUNNEL_STRATEGIST: 'FUNNEL_STRATEGIST',
@@ -49,8 +58,8 @@ const SPECIALIST_ID_ALIASES: Record<string, string> = {
 };
 
 /**
- * Returns the seed-canonical specialist ID for an input that may be an
- * admin-side alias. Pass-through if the ID is already canonical.
+ * Returns the canonical specialist ID for an input that may be a back-compat
+ * alias. Pass-through if the ID is already canonical.
  */
 export function resolveSpecialistIdAlias(specialistId: string): string {
   return SPECIALIST_ID_ALIASES[specialistId] ?? specialistId;

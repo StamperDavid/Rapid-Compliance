@@ -48,7 +48,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   SEO_EXPERT: seoExpertExecutor,
   LINKEDIN_EXPERT: linkedinExpertExecutor,
   TIKTOK_EXPERT: tiktokExpertExecutor,
-  TWITTER_X_EXPERT: twitterExpertExecutor,
+  X_EXPERT: twitterExpertExecutor,
   FACEBOOK_ADS_EXPERT: facebookAdsExpertExecutor,
   GROWTH_ANALYST: growthAnalystExecutor,
   UX_UI_ARCHITECT: uxUiArchitectExecutor,

@@ -141,7 +141,7 @@ async function main(): Promise<void> {
     id: `harness_${flags.caseName}_${Date.now()}`,
     timestamp: new Date(),
     from: 'HARNESS',
-    to: 'TWITTER_X_EXPERT',
+    to: 'X_EXPERT',
     type: 'COMMAND',
     priority: 'NORMAL',
     payload: input,

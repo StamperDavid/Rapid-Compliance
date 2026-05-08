@@ -45,7 +45,7 @@ import {
   listIndustryGMVersions,
 } from '@/lib/training/specialist-golden-master-service';
 
-const SPECIALIST_ID = 'TWITTER_X_EXPERT';
+const SPECIALIST_ID = 'X_EXPERT';
 const INDUSTRY_KEY = 'saas_sales_ops';
 const FEEDBACK_ID = 'operator_delegated_2026-04-26_inbound_dm_rebuild';
 

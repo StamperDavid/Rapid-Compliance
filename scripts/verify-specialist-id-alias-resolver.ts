@@ -1,12 +1,16 @@
 /**
- * Verifies the SPECIALIST_ID_ALIASES resolver wired into
+ * Verifies the SPECIALIST_ID_ALIASES back-compat resolver wired into
  * `src/lib/training/specialist-golden-master-service.ts`.
  *
- * For each admin-side alias, calls `getActiveSpecialistGMByIndustry` with
- * the alias and confirms that:
- *   - the lookup returns a non-null GM
- *   - the returned GM's `specialistId` is the canonical (resolved) form
- *   - the same lookup with the canonical id returns the same doc id
+ * After the May 8, 2026 canonicalization pass, the alias map became a
+ * deliberate legacy → canonical compatibility layer. This script proves the
+ * resolver works in two directions:
+ *
+ *   1. The legacy name still resolves and lands on the canonical GM
+ *      (so historical Firestore records, old scripts, and humans who refer
+ *      to "twitter" or "WEB_SCRAPER" continue to work).
+ *
+ *   2. The canonical name itself returns the same GM doc (no double-routing).
  *
  * Read-only — does NOT submit grades, create GM versions, or mutate state.
  *
@@ -31,12 +35,12 @@ admin.initializeApp({ credential: admin.credential.cert(sa) });
 
 const INDUSTRY = 'saas_sales_ops';
 
-const ALIASES: Array<{ alias: string; canonical: string }> = [
-  { alias: 'X_EXPERT', canonical: 'TWITTER_X_EXPERT' },
-  { alias: 'WEB_SCRAPER', canonical: 'SCRAPER_SPECIALIST' },
-  { alias: 'ARCHITECT_COPY_STRATEGIST', canonical: 'COPY_STRATEGIST' },
-  { alias: 'ARCHITECT_FUNNEL_STRATEGIST', canonical: 'FUNNEL_STRATEGIST' },
-  { alias: 'ARCHITECT_UX_UI_STRATEGIST', canonical: 'UX_UI_STRATEGIST' },
+const PAIRS: Array<{ legacy: string; canonical: string }> = [
+  { legacy: 'TWITTER_X_EXPERT', canonical: 'X_EXPERT' },
+  { legacy: 'WEB_SCRAPER', canonical: 'SCRAPER_SPECIALIST' },
+  { legacy: 'ARCHITECT_COPY_STRATEGIST', canonical: 'COPY_STRATEGIST' },
+  { legacy: 'ARCHITECT_FUNNEL_STRATEGIST', canonical: 'FUNNEL_STRATEGIST' },
+  { legacy: 'ARCHITECT_UX_UI_STRATEGIST', canonical: 'UX_UI_STRATEGIST' },
 ];
 
 (async () => {
@@ -45,39 +49,50 @@ const ALIASES: Array<{ alias: string; canonical: string }> = [
     resolveSpecialistIdAlias,
   } = await import('../src/lib/training/specialist-golden-master-service');
 
-  console.log('\n=== SPECIALIST_ID_ALIASES resolver verification ===\n');
+  console.log('\n=== SPECIALIST_ID_ALIASES back-compat resolver verification ===\n');
   console.log(`Industry: ${INDUSTRY}\n`);
 
   let pass = 0;
   let fail = 0;
 
-  for (const { alias, canonical } of ALIASES) {
-    const resolved = resolveSpecialistIdAlias(alias);
-    const expectedMatch = resolved === canonical;
+  for (const { legacy, canonical } of PAIRS) {
+    const resolvedLegacy = resolveSpecialistIdAlias(legacy);
+    const resolvedCanonical = resolveSpecialistIdAlias(canonical);
 
-    const aliasGM = await getActiveSpecialistGMByIndustry(alias, INDUSTRY);
+    const legacyResolvesToCanonical = resolvedLegacy === canonical;
+    const canonicalIsPassThrough = resolvedCanonical === canonical;
+
+    const legacyGM = await getActiveSpecialistGMByIndustry(legacy, INDUSTRY);
     const canonicalGM = await getActiveSpecialistGMByIndustry(canonical, INDUSTRY);
 
-    const aliasFound = aliasGM !== null;
+    const legacyFound = legacyGM !== null;
     const canonicalFound = canonicalGM !== null;
-    const sameDoc = aliasGM?.id === canonicalGM?.id;
-    const correctSpecialistId = aliasGM?.specialistId === canonical;
+    const sameDoc = legacyGM?.id === canonicalGM?.id;
+    const correctSpecialistId = legacyGM?.specialistId === canonical;
 
-    const ok = expectedMatch && aliasFound && canonicalFound && sameDoc && correctSpecialistId;
+    const ok =
+      legacyResolvesToCanonical &&
+      canonicalIsPassThrough &&
+      legacyFound &&
+      canonicalFound &&
+      sameDoc &&
+      correctSpecialistId;
 
     if (ok) {
       pass++;
-      console.log(`✓ ${alias} → ${canonical}`);
-      console.log(`    resolved id: ${resolved}`);
-      console.log(`    GM doc id:   ${aliasGM!.id} (v${aliasGM!.version}, isActive=${aliasGM!.isActive})`);
+      console.log(`✓ ${legacy} → ${canonical}`);
+      console.log(`    resolveSpecialistIdAlias(legacy)    = ${resolvedLegacy}`);
+      console.log(`    resolveSpecialistIdAlias(canonical) = ${resolvedCanonical} (pass-through)`);
+      console.log(`    GM doc id: ${legacyGM!.id} (v${legacyGM!.version}, isActive=${legacyGM!.isActive})`);
     } else {
       fail++;
-      console.log(`✗ ${alias} → ${canonical}  FAILED`);
-      console.log(`    resolveSpecialistIdAlias returned: ${resolved} (expected ${canonical})`);
-      console.log(`    alias lookup found GM: ${aliasFound} (id=${aliasGM?.id ?? 'null'})`);
-      console.log(`    canonical lookup found GM: ${canonicalFound} (id=${canonicalGM?.id ?? 'null'})`);
-      console.log(`    same doc id: ${sameDoc}`);
-      console.log(`    GM.specialistId: ${aliasGM?.specialistId ?? 'null'} (expected ${canonical})`);
+      console.log(`✗ ${legacy} → ${canonical}  FAILED`);
+      console.log(`    legacy resolves to canonical: ${legacyResolvesToCanonical} (got ${resolvedLegacy})`);
+      console.log(`    canonical is pass-through:    ${canonicalIsPassThrough} (got ${resolvedCanonical})`);
+      console.log(`    legacy lookup found GM:       ${legacyFound} (id=${legacyGM?.id ?? 'null'})`);
+      console.log(`    canonical lookup found GM:    ${canonicalFound} (id=${canonicalGM?.id ?? 'null'})`);
+      console.log(`    same doc id:                  ${sameDoc}`);
+      console.log(`    GM.specialistId is canonical: ${correctSpecialistId} (got ${legacyGM?.specialistId ?? 'null'})`);
     }
   }
 

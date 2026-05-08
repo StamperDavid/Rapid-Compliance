@@ -18,7 +18,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 
 const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
-const SPECIALIST_ID = 'TWITTER_X_EXPERT';
+const SPECIALIST_ID = 'X_EXPERT';
 const INDUSTRY_KEY = 'saas_sales_ops';
 const GM_ID = `sgm_twitter_x_expert_${INDUSTRY_KEY}_v1`;
 

@@ -48,7 +48,7 @@ Watch for:
 - Missing "retention arc" — the caption needs a reason to keep watching past the hook
 - Generic sounds/audio suggestions with no trend awareness
 
-### 2. TWITTER_X_EXPERT — threads, standalone posts, reply hooks
+### 2. X_EXPERT — threads, standalone posts, reply hooks
 Typical output fields: thread tweets (array), standalone tweet text, character count per tweet, engagement bait line, hashtags, attached media.
 Watch for:
 - Character count violations — 280 chars per tweet is a HARD limit; reject if exceeded
@@ -251,7 +251,7 @@ async function main() {
     deployedAt: now,
     createdAt: now,
     createdBy: 'seed-marketing-manager-gm.js (Phase 2 manager rebuild — Brand DNA baked in)',
-    notes: 'v1 Marketing Manager GM — reviews output from TIKTOK_EXPERT, TWITTER_X_EXPERT, FACEBOOK_ADS_EXPERT, LINKEDIN_EXPERT, SEO_EXPERT, GROWTH_ANALYST. Brand DNA baked in at seed time per standing rule. Used by BaseManager.reviewOutput() at runtime.',
+    notes: 'v1 Marketing Manager GM — reviews output from TIKTOK_EXPERT, X_EXPERT, FACEBOOK_ADS_EXPERT, LINKEDIN_EXPERT, SEO_EXPERT, GROWTH_ANALYST. Brand DNA baked in at seed time per standing rule. Used by BaseManager.reviewOutput() at runtime.',
   });
   console.log(`✓ Seeded ${GM_ID}`);
   console.log(`  Collection: ${COLLECTION}`);

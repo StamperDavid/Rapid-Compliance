@@ -52,7 +52,7 @@ const PROPOSED_TEXT = `  Delegation tool: delegate_to_content
   NOTE: For SOCIAL MEDIA POSTS, plan EXACTLY 2 STEPS — NEVER plan social_post directly without a preceding delegate_to_marketing step. Posts without media are INVALID.
     Step 1: delegate_to_marketing
       args: { platform: <"twitter"|"x"|"bluesky"|"mastodon"|"linkedin"|"facebook"|"instagram"|"pinterest">, topic: <subject>, verbatimText: <exact text if user provided it, otherwise omit>, providedMediaUrls: <JSON-encoded array of operator-supplied image/video URLs if user provided any, otherwise omit> }
-      what it does: Marketing Manager dispatches to the platform specialist (TWITTER_X_EXPERT, BLUESKY_EXPERT, MASTODON_EXPERT, LINKEDIN_EXPERT, INSTAGRAM_EXPERT, FACEBOOK_ADS_EXPERT, PINTEREST_EXPERT) and returns the post text + an accompanying image. If providedMediaUrls is supplied, the helper short-circuits and uses the operator's URL AS-IS (no DALL-E call, no API spend). If omitted, an image is auto-generated via DALL-E and cached.
+      what it does: Marketing Manager dispatches to the platform specialist (X_EXPERT, BLUESKY_EXPERT, MASTODON_EXPERT, LINKEDIN_EXPERT, INSTAGRAM_EXPERT, FACEBOOK_ADS_EXPERT, PINTEREST_EXPERT) and returns the post text + an accompanying image. If providedMediaUrls is supplied, the helper short-circuits and uses the operator's URL AS-IS (no DALL-E call, no API spend). If omitted, an image is auto-generated via DALL-E and cached.
     Step 2: social_post
       args: { platform: <same as step 1>, action: "POST", content: <step 1 primaryPost output>, mediaUrls: <step 1 mediaUrls output> }
       what it does: actually publishes to the platform with media attached.

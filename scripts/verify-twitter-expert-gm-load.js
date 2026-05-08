@@ -16,7 +16,7 @@
  *
  * For full delegation coverage, drive a Jasper prompt through
  * `verify-twitter-orchestrated-post-live.ts` or
- * `verify-prompt-matrix-e2e.ts` that should route to TWITTER_X_EXPERT.
+ * `verify-prompt-matrix-e2e.ts` that should route to X_EXPERT.
  */
 
 const admin = require('firebase-admin');

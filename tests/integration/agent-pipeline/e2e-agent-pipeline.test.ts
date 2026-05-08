@@ -171,7 +171,7 @@ describe('Agent Identity & Status', () => {
       if (!agent) {continue;}
 
       const identity = agent.getIdentity();
-      // Agent internal identity ID may differ from factory key (e.g. TWITTER_X_EXPERT vs TWITTER_EXPERT)
+      // Agent internal identity ID may differ from factory key (e.g. X_EXPERT vs TWITTER_EXPERT)
       expect(identity.id).toBeTruthy();
       expect(identity.name).toBeTruthy();
       expect(identity.role).toBeTruthy();

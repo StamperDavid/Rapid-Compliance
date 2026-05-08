@@ -36,7 +36,7 @@ import { logger } from '@/lib/logger/logger';
 // ============================================================================
 
 const FILE = 'marketing/twitter/specialist.ts';
-const SPECIALIST_ID = 'TWITTER_X_EXPERT';
+const SPECIALIST_ID = 'X_EXPERT';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['generate_content', 'compose_dm_reply'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];

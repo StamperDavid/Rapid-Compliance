@@ -56,7 +56,7 @@ export interface PlatformConfig {
 const PLATFORM_CONFIG: Record<SocialPlatform, PlatformConfig> = {
   twitter: {
     state: 'live_full',
-    specialistId: 'TWITTER_X_EXPERT',
+    specialistId: 'X_EXPERT',
     specialistName: 'Twitter/X Expert',
     dmCapability: 'live',
   },
