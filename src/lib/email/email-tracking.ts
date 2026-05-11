@@ -178,8 +178,8 @@ interface TrackingData {
 export async function getEmailTrackingStats(
   messageId: string,
 ): Promise<EmailTrackingStats | null> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  const rawData = await FirestoreService.get(
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  const rawData = await AdminFirestoreService.get(
     getSubCollection('emailTracking'),
     messageId
   );
@@ -218,7 +218,7 @@ export async function getEmailTrackingStats(
  */
 export async function getCampaignTrackingStats(campaignId: string): Promise<EmailTrackingStats | null> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { where } = await import('firebase/firestore');
 
     interface TrackingEvent {
@@ -228,7 +228,7 @@ export async function getCampaignTrackingStats(campaignId: string): Promise<Emai
       timestamp: string;
     }
 
-    const events = await FirestoreService.getAll<TrackingEvent>(
+    const events = await AdminFirestoreService.getAll<TrackingEvent>(
       getSubCollection('emailTracking'),
       [where('campaignId', '==', campaignId)]
     );
@@ -286,12 +286,12 @@ export async function recordOpenEvent(
   userAgent?: string
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const now = new Date().toISOString();
 
     // Store the open event
     const eventId = `open_${trackingId}_${Date.now()}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('emailTracking'),
       eventId,
       {
@@ -307,12 +307,12 @@ export async function recordOpenEvent(
     );
 
     // Also update the per-message tracking record
-    const existing = await FirestoreService.get<Record<string, unknown>>(
+    const existing = await AdminFirestoreService.get<Record<string, unknown>>(
       getSubCollection('emailTracking'),
       trackingId
     );
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('emailTracking'),
       trackingId,
       {
@@ -345,11 +345,11 @@ export async function recordClickEvent(
   userAgent?: string
 ): Promise<string | null> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const now = new Date().toISOString();
 
     // Look up the link mapping to get original URL and messageId
-    const linkData = await FirestoreService.get<{
+    const linkData = await AdminFirestoreService.get<{
       messageId: string;
       originalUrl: string;
       trackingId: string;
@@ -360,7 +360,7 @@ export async function recordClickEvent(
 
     // Store the click event regardless of link lookup
     const eventId = `click_${linkId}_${Date.now()}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('emailTracking'),
       eventId,
       {
@@ -379,12 +379,12 @@ export async function recordClickEvent(
     // Update per-message tracking record if we have a messageId
     if (linkData?.messageId) {
       const trackingId = linkData.trackingId ?? linkData.messageId;
-      const existing = await FirestoreService.get<Record<string, unknown>>(
+      const existing = await AdminFirestoreService.get<Record<string, unknown>>(
         getSubCollection('emailTracking'),
         trackingId
       );
 
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('emailTracking'),
         trackingId,
         {

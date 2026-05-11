@@ -294,12 +294,12 @@ export class SchemaChangeUXHandler {
     options: NotificationOptions
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const notificationPath = getSubCollection('notifications');
       const notificationId = `notif_severity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         notificationPath,
         notificationId,
         {
@@ -339,12 +339,12 @@ export class SchemaChangeUXHandler {
     assessment: SeverityAssessment
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const issuesPath = getSubCollection('schemaIssues');
       const issueId = `issue_${event.id}`;
       
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         issuesPath,
         issueId,
         {

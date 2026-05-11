@@ -941,11 +941,11 @@ function calculateSuccessMetrics(extraction: PatternExtractionResult): SuccessMe
  * Save playbook to Firestore
  */
 async function savePlaybook(playbook: Playbook): Promise<void> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
   const playbooksPath = getSubCollection('playbooks');
 
-  await FirestoreService.set(playbooksPath, playbook.id, playbook);
+  await AdminFirestoreService.setLikeClient(playbooksPath, playbook.id, playbook);
 
   logger.info('Playbook saved to Firestore', {
     playbookId: playbook.id,

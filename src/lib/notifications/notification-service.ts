@@ -17,7 +17,7 @@
 
 import { Timestamp } from 'firebase/firestore';
 import { sendMessage } from '@/lib/integrations/slack-service';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection, getIntegrationsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import type {
@@ -304,7 +304,7 @@ export class NotificationService {
     }
 
     // Get Slack integration
-    const integration = await FirestoreService.get(
+    const integration = await AdminFirestoreService.get(
       getIntegrationsCollection(),
       'slack'
     );
@@ -704,11 +704,11 @@ export class NotificationService {
    */
   private async getTemplate(templateId: string): Promise<NotificationTemplate | null> {
     try {
-      const template = await FirestoreService.get(
+      const template = await AdminFirestoreService.get(
         getSubCollection('notification_templates'),
         templateId
       );
-      return template as NotificationTemplate;
+      return template as unknown as NotificationTemplate;
     } catch (_error) {
       return null;
     }
@@ -719,13 +719,13 @@ export class NotificationService {
    */
   private async getPreferences(userId: string): Promise<NotificationPreferences> {
     try {
-      const prefs = await FirestoreService.get(
+      const prefs = await AdminFirestoreService.get(
         getSubCollection('notification_preferences'),
         userId
       );
       
       if (prefs) {
-        return prefs as NotificationPreferences;
+        return prefs as unknown as NotificationPreferences;
       }
     } catch (_error) {
       // Preferences not found, return defaults
@@ -817,7 +817,7 @@ export class NotificationService {
     // Generate a unique ID for the notification
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('notifications'),
       notificationId,
       notification
@@ -880,7 +880,7 @@ export class NotificationService {
   ): Promise<void> {
     const now = Timestamp.now();
     
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('notifications'),
       notificationId,
       {
@@ -900,7 +900,7 @@ export class NotificationService {
     channel: NotificationChannel,
     error: string
   ): Promise<void> {
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('notifications'),
       notificationId,
       {
@@ -917,14 +917,14 @@ export class NotificationService {
     notificationId: string,
     channel: NotificationChannel
   ): Promise<void> {
-    const notification = await FirestoreService.get(
+    const notification = await AdminFirestoreService.get(
       getSubCollection('notifications'),
       notificationId
     ) as Notification;
 
     const currentAttempts = notification.delivery.attempts[channel] || 0;
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('notifications'),
       notificationId,
       {
@@ -941,7 +941,7 @@ export class NotificationService {
     channel: NotificationChannel,
     response: unknown
   ): Promise<void> {
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('notifications'),
       notificationId,
       {
@@ -973,7 +973,7 @@ export class NotificationService {
       throw new Error('Notification ID is required for scheduling retry');
     }
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('notifications'),
       notification.id,
       {
@@ -994,7 +994,7 @@ export class NotificationService {
 
     try {
       // Fetch or create batch for this user
-      const existingBatch = await FirestoreService.get<{
+      const existingBatch = await AdminFirestoreService.get<{
         notificationIds: string[];
         scheduledDelivery: string;
         userId: string;
@@ -1012,7 +1012,7 @@ export class NotificationService {
         await this.deliverNotification(notification, preferences);
 
         // Clear the batch
-        await FirestoreService.set(batchPath, batchKey, {
+        await AdminFirestoreService.setLikeClient(batchPath, batchKey, {
           notificationIds: [],
           userId: notification.userId,
           scheduledDelivery: null,
@@ -1023,7 +1023,7 @@ export class NotificationService {
         const windowMinutes = preferences.batching.windowMinutes ?? 30;
         const scheduledDelivery = new Date(Date.now() + windowMinutes * 60 * 1000);
 
-        await FirestoreService.set(batchPath, batchKey, {
+        await AdminFirestoreService.setLikeClient(batchPath, batchKey, {
           notificationIds,
           userId: notification.userId,
           scheduledDelivery: Timestamp.fromDate(scheduledDelivery),
@@ -1080,7 +1080,7 @@ export class NotificationService {
         await this.deliverToChannel(notification, channel, preferences);
         return;
       }
-      await FirestoreService.update(
+      await AdminFirestoreService.updateLikeClient(
         getSubCollection('notifications'),
         notification.id,
         {

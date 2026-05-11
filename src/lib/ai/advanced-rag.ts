@@ -138,11 +138,12 @@ async function semanticSearch(
   topK: number
 ): Promise<KnowledgeChunk[]> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     
     // Get all knowledge chunks
     // In production, use vector database (Pinecone, Weaviate, etc.)
-    const chunks = await FirestoreService.getAll<ChunkData>(
+    const chunks = await AdminFirestoreService.getAll<ChunkData>(
       `${COLLECTIONS.ORGANIZATIONS}/*/knowledgeBase/${knowledgeBaseId}/chunks`
     );
     
@@ -402,10 +403,11 @@ export async function indexKnowledgeBase(
   );
   
   // Store in Firestore
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
   
   for (const chunk of embeddedChunks) {
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       `${COLLECTIONS.ORGANIZATIONS}/*/knowledgeBase/${knowledgeBaseId}/chunks`,
       chunk.id,
       chunk,

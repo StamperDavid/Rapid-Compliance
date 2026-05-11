@@ -81,11 +81,11 @@ export class FieldRenameManager {
     userId: string
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Get schema
-      const schema = await FirestoreService.get(
+      const schema = await AdminFirestoreService.get(
         getSubCollection('schemas'),
         schemaId
       ) as Schema;
@@ -146,7 +146,7 @@ export class FieldRenameManager {
       const updatedFields = [...schema.fields];
       updatedFields[fieldIndex] = updatedField;
       
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('schemas'),
         schemaId,
         {
@@ -265,12 +265,12 @@ export class FieldRenameManager {
     newKey: string
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
       const notificationId = `notif_rollback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('notifications'),
         notificationId,
         {

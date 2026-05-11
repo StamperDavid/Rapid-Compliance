@@ -36,10 +36,10 @@ export async function handleSchemaChangeForAgent(
   event: SchemaChangeEvent
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     // Get schema to check if it's relevant to agent
-    const schema = await FirestoreService.get(
+    const schema = await AdminFirestoreService.get(
       getSubCollection('schemas'),
       event.schemaId
     );
@@ -138,11 +138,11 @@ export async function recompileAgentKnowledge(): Promise<void> {
       file: 'knowledge-refresh-service.ts',
     });
 
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     // Get current Golden Master
     const goldenMastersPath = getSubCollection('goldenMasters');
-    const goldenMasters = await FirestoreService.getAll<GoldenMasterData>(goldenMastersPath, [
+    const goldenMasters = await AdminFirestoreService.getAll<GoldenMasterData>(goldenMastersPath, [
       where('status', '==', 'active'),
     ]);
 
@@ -157,7 +157,7 @@ export async function recompileAgentKnowledge(): Promise<void> {
 
     // Get all schemas
     const schemasPath = getSubCollection('schemas');
-    const schemas = await FirestoreService.getAll<SchemaRecord>(schemasPath, [
+    const schemas = await AdminFirestoreService.getAll<SchemaRecord>(schemasPath, [
       where('status', '==', 'active'),
     ]);
 
@@ -168,7 +168,7 @@ export async function recompileAgentKnowledge(): Promise<void> {
     );
 
     // Update Golden Master with new system prompt
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       goldenMastersPath,
       goldenMaster.id,
       {
@@ -265,12 +265,12 @@ async function notifySchemaChange(
   }
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     const notificationPath = getSubCollection('notifications');
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       notificationPath,
       notificationId,
       {
@@ -313,9 +313,9 @@ export async function getSchemaChangeImpactOnAgent(
   description: string;
 }> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
-    const schema = await FirestoreService.get(
+    const schema = await AdminFirestoreService.get(
       getSubCollection('schemas'),
       event.schemaId
     );

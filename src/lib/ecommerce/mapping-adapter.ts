@@ -17,11 +17,11 @@ export async function adaptEcommerceMappings(
   event: SchemaChangeEvent
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     // Get e-commerce config
     const configPath = getSubCollection('ecommerceConfig');
-    const configs = await FirestoreService.getAll(configPath);
+    const configs = await AdminFirestoreService.getAll(configPath);
 
     if (configs.length === 0) {
       logger.info('[E-Commerce Adapter] No e-commerce config found', {
@@ -30,7 +30,7 @@ export async function adaptEcommerceMappings(
       return;
     }
 
-    const config = configs[0] as EcommerceConfig;
+    const config = configs[0] as unknown as EcommerceConfig;
     
     // Check if this schema change affects the product schema
     if (config.productSchema !== event.schemaId) {
@@ -77,7 +77,7 @@ event.oldFieldKey ?? event.oldFieldName ?? '',
     
     // Save updated config if changes were made
     if (updated) {
-      await FirestoreService.set(configPath, config.id, {
+      await AdminFirestoreService.setLikeClient(configPath, config.id, {
         ...config,
         productMappings: mappings,
         updatedAt: new Date(),
@@ -164,8 +164,8 @@ async function handleFieldDeletion(
   let updated = false;
 
   // Get schema for field resolution
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  const schemaData = await FirestoreService.get(
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  const schemaData = await AdminFirestoreService.get(
     getSchemasCollection(),
     schemaId
   );
@@ -178,7 +178,7 @@ async function handleFieldDeletion(
     return false;
   }
 
-  const schema: Schema = schemaData as Schema;
+  const schema: Schema = schemaData as unknown as Schema;
   
   // Try to find replacement fields for critical mappings
   const criticalMappings = {
@@ -237,8 +237,8 @@ export async function validateEcommerceMappings(
 
   try {
     // Get product schema
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const schemaData = await FirestoreService.get(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const schemaData = await AdminFirestoreService.get(
       getSchemasCollection(),
       config.productSchema
     );
@@ -248,7 +248,7 @@ export async function validateEcommerceMappings(
       return { valid: false, errors, warnings };
     }
 
-    const schema: Schema = schemaData as Schema;
+    const schema: Schema = schemaData as unknown as Schema;
     
     // Validate required mappings
     const requiredMappings: (keyof ProductFieldMappings)[] = [
@@ -318,8 +318,8 @@ export async function autoConfigureEcommerceMappings(
 
   try {
     // Get schema
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const schemaData = await FirestoreService.get(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const schemaData = await AdminFirestoreService.get(
       getSchemasCollection(),
       schemaId
     );
@@ -328,7 +328,7 @@ export async function autoConfigureEcommerceMappings(
       throw new Error(`Schema ${schemaId} not found`);
     }
 
-    const schema: Schema = schemaData as Schema;
+    const schema: Schema = schemaData as unknown as Schema;
     
     // Try to auto-detect common fields
     const fieldMappings = {

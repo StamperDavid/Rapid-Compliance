@@ -123,7 +123,7 @@ export class FieldMappingManager {
     mapping: Omit<IntegrationFieldMapping, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<IntegrationFieldMapping> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       
       const mappingId = `mapping_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
@@ -136,7 +136,7 @@ export class FieldMappingManager {
       
       const mappingsPath = getSubCollection('integrationFieldMappings');
       
-      await FirestoreService.set(mappingsPath, mappingId, fullMapping, false);
+      await AdminFirestoreService.setLikeClient(mappingsPath, mappingId, fullMapping, false);
       
       logger.info('[Field Mapper] Created field mapping', {
         file: 'field-mapper.ts',
@@ -161,7 +161,7 @@ export class FieldMappingManager {
     schemaId?: string
   ): Promise<IntegrationFieldMapping | null> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { where } = await import('firebase/firestore');
 
       const mappingsPath = getSubCollection('integrationFieldMappings');
@@ -174,9 +174,9 @@ export class FieldMappingManager {
         filters.push(where('schemaId', '==', schemaId));
       }
 
-      const mappings = await FirestoreService.getAll(mappingsPath, filters);
+      const mappings = await AdminFirestoreService.getAll(mappingsPath, filters);
 
-      return mappings.length > 0 ? (mappings[0] as IntegrationFieldMapping) : null;
+      return mappings.length > 0 ? (mappings[0] as unknown as IntegrationFieldMapping) : null;
     } catch (error) {
       logger.error('[Field Mapper] Failed to get field mapping', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-mapper.ts',
@@ -194,17 +194,17 @@ export class FieldMappingManager {
     updates: Partial<IntegrationFieldMapping>
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const mappingsPath = getSubCollection('integrationFieldMappings');
 
-      const existing = await FirestoreService.get(mappingsPath, mappingId);
+      const existing = await AdminFirestoreService.get(mappingsPath, mappingId);
 
       if (!existing) {
         throw new Error(`Field mapping ${mappingId} not found`);
       }
 
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         mappingsPath,
         mappingId,
         {
@@ -235,12 +235,12 @@ export class FieldMappingManager {
     event: SchemaChangeEvent
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { where } = await import('firebase/firestore');
       
       // Get all field mappings for this schema
       const mappingsPath = getSubCollection('integrationFieldMappings');
-      const mappings = await FirestoreService.getAll(mappingsPath, [
+      const mappings = await AdminFirestoreService.getAll(mappingsPath, [
         where('schemaId', '==', event.schemaId),
       ] as QueryConstraint[]);
       
@@ -254,7 +254,7 @@ export class FieldMappingManager {
       
       // Update each mapping
       for (const mapping of mappings) {
-        const fieldMapping = mapping as IntegrationFieldMapping;
+        const fieldMapping = mapping as unknown as IntegrationFieldMapping;
         let updated = false;
         
         switch (event.changeType) {

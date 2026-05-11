@@ -20,12 +20,12 @@ export async function validateWorkflowsForSchema(
   event: SchemaChangeEvent
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { where } = await import('firebase/firestore');
 
     // Get all workflows
     const workflowsPath = getSubCollection('workflows');
-    const workflows = await FirestoreService.getAll(workflowsPath, [
+    const workflows = await AdminFirestoreService.getAll(workflowsPath, [
       where('status', '==', 'active'),
     ]);
 
@@ -34,7 +34,7 @@ export async function validateWorkflowsForSchema(
     }
 
     // Get schema for field resolution
-    const schemaData = await FirestoreService.get(
+    const schemaData = await AdminFirestoreService.get(
       getSubCollection('schemas'),
       event.schemaId
     );
@@ -43,11 +43,11 @@ export async function validateWorkflowsForSchema(
       return;
     }
 
-    const schema = schemaData as Schema;
+    const schema = schemaData as unknown as Schema;
 
     // Check each workflow
     for (const workflowData of workflows) {
-      const workflow = workflowData as Workflow;
+      const workflow = workflowData as unknown as Workflow;
 
       const validation = validateWorkflow(workflow, schema, event);
 
@@ -178,12 +178,12 @@ async function createWorkflowWarningNotification(
   warnings: string[]
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     const notificationPath = getSubCollection('notifications');
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       notificationPath,
       notificationId,
       {
@@ -244,18 +244,18 @@ export async function getWorkflowValidationSummary(): Promise<{
   };
 
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     const workflowsPath = getSubCollection('workflows');
-    const workflows = await FirestoreService.getAll(workflowsPath);
+    const workflows = await AdminFirestoreService.getAll(workflowsPath);
 
     const schemasPath = getSubCollection('schemas');
-    const schemas = await FirestoreService.getAll(schemasPath);
+    const schemas = await AdminFirestoreService.getAll(schemasPath);
 
     summary.total = workflows.length;
 
     for (const workflowData of workflows) {
-      const workflow = workflowData as Workflow;
+      const workflow = workflowData as unknown as Workflow;
 
       // Find relevant schema
       const relevantSchema = schemas.find((s) => {
@@ -268,7 +268,7 @@ export async function getWorkflowValidationSummary(): Promise<{
         continue;
       }
 
-      const validation = validateWorkflow(workflow, relevantSchema as Schema);
+      const validation = validateWorkflow(workflow, relevantSchema as unknown as Schema);
 
       if (validation.valid && validation.warnings.length === 0) {
         summary.valid++;

@@ -671,8 +671,8 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
 
       // Fallback to client SDK
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+      const goldenMasters = await AdminFirestoreService.getAll<GoldenMaster>(
         getSubCollection('goldenMasters'),
         []
       );
@@ -718,8 +718,8 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
 
       // Fallback to client SDK
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      return await FirestoreService.get(
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+      return await AdminFirestoreService.get(
         getSubCollection('customerMemories'),
         customerId
       );
@@ -799,8 +799,8 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
 
       // Fallback to client SDK
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set(
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('customerMemories'),
         memory.customerId,
         memory,
@@ -856,8 +856,8 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
 
       // Fallback to client SDK
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      return await FirestoreService.get<AgentInstance>(
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+      return await AdminFirestoreService.get<AgentInstance>(
         getSubCollection('activeInstances'),
         instanceId
       );
@@ -882,8 +882,8 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
 
       // Fallback to client SDK
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      await FirestoreService.delete(
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+      await AdminFirestoreService.delete(
         getSubCollection('activeInstances'),
         instanceId
       );

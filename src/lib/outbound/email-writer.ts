@@ -361,7 +361,7 @@ async function shouldUseAI(): Promise<boolean> {
   const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     interface OrganizationSettings {
       emailGeneration?: {
@@ -374,7 +374,7 @@ async function shouldUseAI(): Promise<boolean> {
     }
 
     // Get organization document
-    const orgDoc = await FirestoreService.get<OrganizationDoc>(
+    const orgDoc = await AdminFirestoreService.get<OrganizationDoc>(
       'organizations',
       PLATFORM_ID
     );

@@ -541,14 +541,14 @@ export class LocalPersistence {
 
   private async executeOperation(operation: WriteOperation): Promise<void> {
     // Import Firestore service dynamically
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     switch (operation.operation) {
       case 'set':
         if (!operation.data) {
           throw new Error('Data is required for set operation');
         }
-        await FirestoreService.set(
+        await AdminFirestoreService.setLikeClient(
           operation.collection,
           operation.documentId,
           operation.data,
@@ -560,7 +560,7 @@ export class LocalPersistence {
         if (!operation.data) {
           throw new Error('Data is required for update operation');
         }
-        await FirestoreService.update(
+        await AdminFirestoreService.updateLikeClient(
           operation.collection,
           operation.documentId,
           operation.data
@@ -568,7 +568,7 @@ export class LocalPersistence {
         break;
 
       case 'delete':
-        await FirestoreService.delete(operation.collection, operation.documentId);
+        await AdminFirestoreService.delete(operation.collection, operation.documentId);
         break;
 
       default:

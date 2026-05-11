@@ -283,8 +283,8 @@ async function sendViaVonage(options: SMSOptions, credentials: VonageCredentials
 
       // Store SMS record in Firestore
       try {
-        const { FirestoreService } = await import('@/lib/db/firestore-service');
-        await FirestoreService.set(
+        const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+        await AdminFirestoreService.setLikeClient(
           getSubCollection('smsMessages'),
           messageId,
           {
@@ -376,8 +376,8 @@ export async function sendSMSFromTemplate(
   // 3. Send SMS
 
   // Load template from Firestore
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  const templateData = await FirestoreService.get(
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  const templateData = await AdminFirestoreService.get(
     getSubCollection('smsTemplates'),
     templateId
   );
@@ -389,7 +389,7 @@ export async function sendSMSFromTemplate(
     };
   }
 
-  const template = templateData as SMSTemplate;
+  const template = templateData as unknown as SMSTemplate;
 
   // Replace variables
   let message = template.message;
@@ -420,8 +420,8 @@ export async function getSMSDeliveryStatus(
   messageId: string
 ): Promise<SMSDeliveryStatus | null> {
   // Load from Firestore
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  const smsData = await FirestoreService.get(
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  const smsData = await AdminFirestoreService.get(
     getSubCollection('smsMessages'),
     messageId
   );

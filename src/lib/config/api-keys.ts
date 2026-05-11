@@ -4,7 +4,8 @@
  * Fallback to env vars if not found in Firestore
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
@@ -30,7 +31,7 @@ export async function getAPIKey(
 ): Promise<string | null> {
   try {
     // Try Firestore first
-    const apiKeys = await FirestoreService.get<APIKeysDocument>(
+    const apiKeys = await AdminFirestoreService.get<APIKeysDocument>(
       `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
       'apiKeys'
     );

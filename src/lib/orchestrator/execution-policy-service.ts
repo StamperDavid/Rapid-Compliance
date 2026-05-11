@@ -81,8 +81,8 @@ export async function saveExecutionPolicy(
  * Get execution policy from Firestore (client-side).
  */
 export async function getExecutionPolicyClient(): Promise<ExecutionPolicy> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  const data = await FirestoreService.get<ExecutionPolicy>(SETTINGS_COLLECTION, DOC_ID);
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  const data = await AdminFirestoreService.get<ExecutionPolicy>(SETTINGS_COLLECTION, DOC_ID);
   if (!data) {
     return {
       mode: DEFAULT_EXECUTION_MODE,
@@ -103,8 +103,8 @@ export async function saveExecutionPolicyClient(
   mode: ExecutionMode,
   userId: string
 ): Promise<void> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  await FirestoreService.set(SETTINGS_COLLECTION, DOC_ID, {
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  await AdminFirestoreService.setLikeClient(SETTINGS_COLLECTION, DOC_ID, {
     mode,
     updatedBy: userId,
     updatedAt: new Date(),

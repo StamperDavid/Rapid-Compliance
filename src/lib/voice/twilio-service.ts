@@ -302,8 +302,9 @@ export class VoiceAgentHandler {
     this.conversationHistory.set(callSid, []);
 
     // Get agent greeting
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const agent: unknown = await FirestoreService.get(`${COLLECTIONS.ORGANIZATIONS}/*/agents`, agentId);
+    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const agent: unknown = await AdminFirestoreService.get(`${COLLECTIONS.ORGANIZATIONS}/*/agents`, agentId);
 
     const agentRecord = agent as Record<string, unknown> | null;
     const agentGreeting = agentRecord && typeof agentRecord.greeting === 'string' ? agentRecord.greeting : '';

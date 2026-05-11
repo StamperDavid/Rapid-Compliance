@@ -69,11 +69,11 @@ class CallContextService {
    */
   async storeContext(context: StoredCallContext): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const path = getSubCollection('callContexts');
 
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         path,
         context.callId,
         {
@@ -113,16 +113,16 @@ class CallContextService {
     }
 
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const path = getSubCollection('callContexts');
-      const context = await FirestoreService.get(path, callId);
+      const context = await AdminFirestoreService.get(path, callId);
 
       if (context) {
         // Update cache
-        this.cache.set(callId, context as StoredCallContext);
+        this.cache.set(callId, context as unknown as StoredCallContext);
         this.cacheExpiry.set(callId, Date.now() + this.CACHE_TTL);
-        return context as StoredCallContext;
+        return context as unknown as StoredCallContext;
       }
 
       return null;
@@ -141,10 +141,10 @@ class CallContextService {
     try {
       const { where, orderBy, limit } = await import('firebase/firestore');
 
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const path = getSubCollection('callContexts');
-      const results = await FirestoreService.getAll<StoredCallContext>(path, [
+      const results = await AdminFirestoreService.getAll<StoredCallContext>(path, [
         where('customerPhone', '==', phone),
         orderBy('updatedAt', 'desc'),
         limit(1),
@@ -167,11 +167,11 @@ class CallContextService {
     updates: Partial<StoredCallContext>
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const path = getSubCollection('callContexts');
 
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         path,
         callId,
         {
@@ -224,7 +224,7 @@ class CallContextService {
   async queryContexts(queryParams: CallContextQuery): Promise<StoredCallContext[]> {
     try {
       const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const path = getSubCollection('callContexts');
       const constraints: QueryConstraint[] = [];
@@ -248,7 +248,7 @@ class CallContextService {
       constraints.push(orderBy('updatedAt', 'desc'));
       constraints.push(limitFn(queryParams.limit ?? 50));
 
-      const results = await FirestoreService.getAll<StoredCallContext>(path, constraints);
+      const results = await AdminFirestoreService.getAll<StoredCallContext>(path, constraints);
 
       return results;
     } catch (error) {
@@ -278,12 +278,12 @@ class CallContextService {
   async getFollowUpCalls(limitCount: number = 50): Promise<StoredCallContext[]> {
     try {
       const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const path = getSubCollection('callContexts');
 
       // Get calls with positive sentiment but not transferred
-      const results = await FirestoreService.getAll<StoredCallContext>(
+      const results = await AdminFirestoreService.getAll<StoredCallContext>(
         path,
         [
           where('sentiment', '==', 'positive'),

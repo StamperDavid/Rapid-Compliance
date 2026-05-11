@@ -1065,9 +1065,10 @@ export class CommerceManager extends BaseManager {
       }
 
       // Fetch from database
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
-      const orgData = await FirestoreService.get(
+      const orgData = await AdminFirestoreService.get(
         COLLECTIONS.ORGANIZATIONS,
         PLATFORM_ID
       );

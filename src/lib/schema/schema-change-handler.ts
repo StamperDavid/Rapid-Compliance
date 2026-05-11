@@ -250,7 +250,7 @@ export async function getSchemaChangeImpactSummary(
   recentChanges: SchemaChangeEvent[];
 }> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { where } = await import('firebase/firestore');
     const { getSubCollection } = await import('@/lib/firebase/collections');
 
@@ -260,11 +260,11 @@ export async function getSchemaChangeImpactSummary(
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const events = await FirestoreService.getAll(eventsPath, [
+    const events = await AdminFirestoreService.getAll(eventsPath, [
       where('schemaId', '==', schemaId),
     ]);
     
-    const schemaEvents = events as SchemaChangeEvent[];
+    const schemaEvents = events as unknown as SchemaChangeEvent[];
     
     // Count by type
     const byType: Record<string, number> = {};

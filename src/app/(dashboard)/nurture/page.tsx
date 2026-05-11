@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { getNurtureCampaigns, type NurtureCampaign } from '@/lib/outbound/nurture-service';
 import { usePagination } from '@/hooks/usePagination';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export default function NurtureCampaignsPage() {
   const router = useRouter();

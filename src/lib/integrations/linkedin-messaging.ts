@@ -120,12 +120,12 @@ async function logMessageForManualSend(
   recipientIdentifier: string,
   message: string
 ): Promise<void> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
   const { getSubCollection } = await import('@/lib/firebase/collections');
 
   const taskId = `linkedin-manual-${Date.now()}`;
 
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('tasks'),
     taskId,
     {

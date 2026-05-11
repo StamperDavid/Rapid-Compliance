@@ -4,7 +4,7 @@
  * Reduces costs by 85%+ (only re-scrape when cache expires)
  */
 
-import { FirestoreService } from '../db/firestore-service';
+import { AdminFirestoreService } from '../db/admin-firestore-service';
 import type { CompanyEnrichmentData } from './types';
 import { logger } from '../logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -27,7 +27,7 @@ export async function getCachedEnrichment(
   try {
     // Query for cached data
     const { where, limit } = await import('firebase/firestore');
-    const results = await FirestoreService.getAll<CachedEnrichment>(
+    const results = await AdminFirestoreService.getAll<CachedEnrichment>(
       getSubCollection('enrichment-cache'),
       [
         where('domain', '==', domain),
@@ -82,7 +82,7 @@ export async function cacheEnrichment(
     };
 
     // Use domain as document ID for easy lookup
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('enrichment-cache'),
       domain.replace(/[^a-zA-Z0-9-]/g, '-'), // Firestore-safe ID
       cacheEntry
@@ -103,7 +103,7 @@ export async function invalidateCache(
   domain: string
 ): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('enrichment-cache'),
       domain.replace(/[^a-zA-Z0-9-]/g, '-')
     );
@@ -124,7 +124,7 @@ export async function getCacheStats(): Promise<{
   avgAge: number;
 }> {
   try {
-    const cached = await FirestoreService.getAll<CachedEnrichment>(
+    const cached = await AdminFirestoreService.getAll<CachedEnrichment>(
       getSubCollection('enrichment-cache')
     );
     
@@ -142,7 +142,7 @@ export async function getCacheStats(): Promise<{
     
     // Get total enrichment requests from logs
     const { where } = await import('firebase/firestore');
-    const logs = await FirestoreService.getAll(
+    const logs = await AdminFirestoreService.getAll(
       getSubCollection('enrichment-costs'),
       [
         where('timestamp', '>=', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
@@ -175,7 +175,7 @@ export async function getCacheStats(): Promise<{
  */
 export async function purgeExpiredCache(): Promise<number> {
   try {
-    const allCached = await FirestoreService.getAll<CachedEnrichment>(
+    const allCached = await AdminFirestoreService.getAll<CachedEnrichment>(
       getSubCollection('enrichment-cache')
     );
     
@@ -188,7 +188,7 @@ export async function purgeExpiredCache(): Promise<number> {
         : new Date(entry.expiresAt);
       
       if (now > expiresAt) {
-        await FirestoreService.delete(
+        await AdminFirestoreService.delete(
           getSubCollection('enrichment-cache'),
           entry.domain.replace(/[^a-zA-Z0-9-]/g, '-')
         );

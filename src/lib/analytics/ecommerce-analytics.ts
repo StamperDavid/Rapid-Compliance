@@ -3,7 +3,7 @@
  * Analyzes e-commerce sales data
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, Timestamp } from 'firebase/firestore';
 import { getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
 
@@ -51,7 +51,7 @@ export async function getEcommerceAnalytics(
   endDate: Date
 ): Promise<EcommerceAnalytics> {
   // Get orders in period
-  const orders = await FirestoreService.getAll(
+  const orders = await AdminFirestoreService.getAll<OrderRecord>(
     getOrdersCollection(),
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
@@ -62,16 +62,16 @@ export async function getEcommerceAnalytics(
   );
 
   // Get carts (for abandonment rate)
-  const carts = await FirestoreService.getAll(
+  const carts = await AdminFirestoreService.getAll<CartRecord>(
     getSubCollection('carts'),
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
     ]
   );
-  
+
   // Calculate sales metrics
-  const totalRevenue = orders.reduce((sum, o: OrderRecord) => sum + (parseFloat(String(o.total ?? '0')) || 0), 0);
+  const totalRevenue = orders.reduce((sum: number, o) => sum + (parseFloat(String(o.total ?? '0')) || 0), 0);
   const totalOrders = orders.length;
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   

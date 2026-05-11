@@ -4,7 +4,7 @@
  * for outbound calls and SMS messages.
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
@@ -47,7 +47,7 @@ export async function checkTCPAConsent(
 
     // Check for consent record
     const consentId = `${normalizePhone(phoneNumber)}_${messageType}`;
-    const consent = await FirestoreService.get<ConsentRecord>(CONSENT_COLLECTION, consentId);
+    const consent = await AdminFirestoreService.get<ConsentRecord>(CONSENT_COLLECTION, consentId);
 
     if (!consent) {
       return { allowed: false, reason: `No TCPA consent on file for ${messageType}` };
@@ -92,12 +92,12 @@ export async function addToSuppressionList(
     reason,
   };
 
-  await FirestoreService.set(SUPPRESSION_COLLECTION, suppressionId, record);
+  await AdminFirestoreService.setLikeClient(SUPPRESSION_COLLECTION, suppressionId, record);
 
   // Also revoke consent
   const consentId = `${normalizedPhone}_${channel}`;
   try {
-    await FirestoreService.update(CONSENT_COLLECTION, consentId, {
+    await AdminFirestoreService.updateLikeClient(CONSENT_COLLECTION, consentId, {
       consentGiven: false,
       revokedAt: new Date().toISOString(),
     });
@@ -118,7 +118,7 @@ export async function isOnSuppressionList(
   try {
     const normalizedPhone = normalizePhone(phoneNumber);
     const suppressionId = `${normalizedPhone}_${channel}`;
-    const record = await FirestoreService.get<SuppressionRecord>(SUPPRESSION_COLLECTION, suppressionId);
+    const record = await AdminFirestoreService.get<SuppressionRecord>(SUPPRESSION_COLLECTION, suppressionId);
     return record !== null;
   } catch {
     // Fail closed
@@ -184,7 +184,7 @@ export async function recordConsent(
     source,
   };
 
-  await FirestoreService.set(CONSENT_COLLECTION, consentId, record);
+  await AdminFirestoreService.setLikeClient(CONSENT_COLLECTION, consentId, record);
   logger.info('TCPA consent recorded', { phoneNumber: normalizedPhone, channel, consentType, source });
 }
 

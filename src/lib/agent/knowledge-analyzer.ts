@@ -158,7 +158,7 @@ export async function analyzeCompanyKnowledge(
   };
 
   // Store analysis result in Firestore
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -171,7 +171,7 @@ export async function analyzeCompanyKnowledge(
     analyzedAt: new Date().toISOString(),
   };
 
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('knowledgeAnalyses'),
     analysisId,
     analysisResult,
@@ -439,9 +439,9 @@ async function scanCRMForProducts(): Promise<KnowledgeAnalysisResult['crmProduct
 
   // Query Firestore for products
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getSubCollection } = await import('@/lib/firebase/collections');
-    const products = await FirestoreService.getAll<CRMProductRecord>(
+    const products = await AdminFirestoreService.getAll<CRMProductRecord>(
       `${getSubCollection('records')}/products`,
       []
     );
@@ -493,9 +493,9 @@ async function scanCRMForServices(): Promise<KnowledgeAnalysisResult['crmService
 
   // Query Firestore for services
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getSubCollection } = await import('@/lib/firebase/collections');
-    const services = await FirestoreService.getAll<CRMServiceRecord>(
+    const services = await AdminFirestoreService.getAll<CRMServiceRecord>(
       `${getSubCollection('records')}/services`,
       []
     );
@@ -614,9 +614,9 @@ export async function buildKnowledgeBase(
   
   // Store knowledge base in Firestore
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getSubCollection } = await import('@/lib/firebase/collections');
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('knowledgeBases'),
       knowledgeBaseId,
       {

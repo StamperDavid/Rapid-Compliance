@@ -3,7 +3,7 @@
  * Analyzes workflow execution data
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, Timestamp } from 'firebase/firestore';
 
 // Core data structure interfaces
@@ -102,7 +102,7 @@ export async function getWorkflowAnalytics(
   const { getSubCollection } = await import('@/lib/firebase/collections');
 
   // Get workflow
-  const workflowDoc = await FirestoreService.get(
+  const workflowDoc = await AdminFirestoreService.get(
     getSubCollection('workflows'),
     workflowId
   );
@@ -114,7 +114,7 @@ export async function getWorkflowAnalytics(
   const workflow = workflowDoc as WorkflowData;
 
   // Get executions in period
-  const executionDocs = await FirestoreService.getAll(
+  const executionDocs = await AdminFirestoreService.getAll(
     getSubCollection('workflowExecutions'),
     [
       where('workflowId', '==', workflowId),
@@ -124,7 +124,7 @@ export async function getWorkflowAnalytics(
     ]
   );
 
-  const executions = executionDocs as WorkflowExecution[];
+  const executions = executionDocs as unknown as WorkflowExecution[];
 
   // Calculate metrics
   const totalExecutions = executions.length;
@@ -261,7 +261,7 @@ export async function getAllWorkflowsAnalytics(
   const { getSubCollection } = await import('@/lib/firebase/collections');
 
   // Get all workflows
-  const workflowDocs = await FirestoreService.getAll(
+  const workflowDocs = await AdminFirestoreService.getAll(
     getSubCollection('workflows'),
     [where('status', '==', 'active')]
   );
@@ -271,7 +271,7 @@ export async function getAllWorkflowsAnalytics(
   // Get analytics for each
   const analytics = await Promise.all(
     workflows.map(async (workflow) => {
-      const executionDocs = await FirestoreService.getAll(
+      const executionDocs = await AdminFirestoreService.getAll(
         getSubCollection('workflowExecutions'),
         [
           where('workflowId', '==', workflow.id),
@@ -280,7 +280,7 @@ export async function getAllWorkflowsAnalytics(
         ]
       );
 
-      const executions = executionDocs as WorkflowExecution[];
+      const executions = executionDocs as unknown as WorkflowExecution[];
       const successful = executions.filter((e) => e.status === 'completed').length;
       const successRate = executions.length > 0 ? (successful / executions.length) * 100 : 0;
 

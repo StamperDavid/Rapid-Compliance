@@ -23,7 +23,7 @@
 import { logger } from '@/lib/logger/logger';
 import { discoverCompetitor, type CompetitorProfile } from './battlecard-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
@@ -283,7 +283,7 @@ export class CompetitiveMonitor {
 
       // Load previous profile from Firestore for comparison
       const profilePath = getSubCollection('competitor_profiles');
-      const previousProfile = await FirestoreService.get<CompetitorProfile>(
+      const previousProfile = await AdminFirestoreService.get<CompetitorProfile>(
         profilePath,
         config.competitorId
       );
@@ -315,7 +315,7 @@ export class CompetitiveMonitor {
       }
 
       // Store updated profile in Firestore for next comparison
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         profilePath,
         config.competitorId,
         { ...newProfile, lastUpdated: new Date().toISOString() },

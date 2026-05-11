@@ -144,14 +144,14 @@ export type {
  * ```
  */
 export async function seedNotificationTemplates(): Promise<number> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const { getAllTemplates } = await import('./templates');
 
   const templates = getAllTemplates();
 
   const createPromises = templates.map((template) =>
-    FirestoreService.set(
+    AdminFirestoreService.setLikeClient(
       getSubCollection('notification_templates'),
       template.id,
       template

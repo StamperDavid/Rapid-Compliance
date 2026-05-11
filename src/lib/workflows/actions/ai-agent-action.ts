@@ -47,13 +47,13 @@ export async function executeAIAgentAction(
 
   // Get AI provider
   const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
   // Get org's AI config
   let selectedModel = model;
   if (!selectedModel) {
     try {
-      const agentConfig = await FirestoreService.get(
+      const agentConfig = await AdminFirestoreService.get(
         getSubCollection('agentConfig'),
         'default'
       );

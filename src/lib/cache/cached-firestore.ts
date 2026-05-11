@@ -4,14 +4,14 @@
  */
 
 import type { QueryConstraint, DocumentData } from 'firebase/firestore';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { cacheService, CacheTTL } from './redis-service';
 import { logger } from '@/lib/logger/logger';
 
 /**
  * Get document with caching
  */
-export async function getCached<T>(
+export async function getCached<T extends object>(
   collection: string,
   docId: string,
   ttl: number = CacheTTL.HOUR
@@ -21,7 +21,7 @@ export async function getCached<T>(
   return cacheService.getOrSet(
     cacheKey,
     async () => {
-      const doc = await FirestoreService.get<T>(collection, docId);
+      const doc = await AdminFirestoreService.get<T>(collection, docId);
       return doc;
     },
     { ttl }
@@ -31,7 +31,7 @@ export async function getCached<T>(
 /**
  * Get all documents with caching
  */
-export async function getAllCached<T>(
+export async function getAllCached<T extends object>(
   collection: string,
   constraints: QueryConstraint[] = [],
   ttl: number = CacheTTL.MINUTE * 5
@@ -42,7 +42,7 @@ export async function getAllCached<T>(
   return cacheService.getOrSet(
     cacheKey,
     async () => {
-      const docs = await FirestoreService.getAll<T>(collection, constraints);
+      const docs = await AdminFirestoreService.getAll<T>(collection, constraints);
       return docs;
     },
     { ttl }
@@ -60,7 +60,7 @@ export async function setCached<T extends DocumentData>(
 ): Promise<void> {
   try {
     // Save to Firestore
-    await FirestoreService.set(collection, docId, data, merge);
+    await AdminFirestoreService.setLikeClient(collection, docId, data, merge);
 
     // Invalidate cache
     const cacheKey = `firestore:${collection}:${docId}`;
@@ -82,7 +82,7 @@ export async function deleteCached(
   docId: string
 ): Promise<void> {
   // Delete from Firestore
-  await FirestoreService.delete(collection, docId);
+  await AdminFirestoreService.delete(collection, docId);
   
   // Invalidate cache
   const cacheKey = `firestore:${collection}:${docId}`;

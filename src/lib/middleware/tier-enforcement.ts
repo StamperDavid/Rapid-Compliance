@@ -10,7 +10,7 @@
  * tiers map to the same 'pro' limits.
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { PRICING } from '@/lib/config/pricing';
 
@@ -64,7 +64,7 @@ const TIER_LIMITS: Record<string, TierLimits> = {
  */
 export async function getUserTier(userId: string): Promise<string> {
   try {
-    const subscription = await FirestoreService.get<SubscriptionRecord>(
+    const subscription = await AdminFirestoreService.get<SubscriptionRecord>(
       getSubCollection('subscriptions'),
       userId
     );

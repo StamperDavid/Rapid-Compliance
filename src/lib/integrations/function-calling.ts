@@ -248,10 +248,10 @@ async function getConnectedIntegration(
   integrationId: string
 ): Promise<ConnectedIntegration | null> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getIntegrationsCollection } = await import('@/lib/firebase/collections');
 
-    const integration = await FirestoreService.get(
+    const integration = await AdminFirestoreService.get(
       getIntegrationsCollection(),
       integrationId
     );
@@ -268,10 +268,10 @@ async function getConnectedIntegration(
  */
 async function logIntegrationAction(log: IntegrationLog): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getSubCollection } = await import('@/lib/firebase/collections');
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('integrationLogs'),
       `log_${Date.now()}`,
       {

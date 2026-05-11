@@ -65,8 +65,8 @@ async function fetchApiKey(): Promise<string> {
 
   // Fallback to platform admin keys if no org key found
   if (!apiKey) {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const adminKeys = await FirestoreService.get<PlatformApiKeys>('admin', 'platform-api-keys');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const adminKeys = await AdminFirestoreService.get<PlatformApiKeys>('admin', 'platform-api-keys');
 
     // Extract API key - prefer Gemini, fallback to Google key (Explicit Ternary for STRING)
     const geminiKey = adminKeys?.gemini?.apiKey;

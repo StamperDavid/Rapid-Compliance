@@ -10,7 +10,7 @@
  * @module feature-toggle-service
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { FeatureStatus } from './system-health-service';
 
@@ -192,7 +192,7 @@ export class FeatureToggleService {
    */
   static async getVisibilitySettings(): Promise<FeatureVisibilitySettings | null> {
     try {
-      const settings = await FirestoreService.get<FeatureVisibilitySettings>(
+      const settings = await AdminFirestoreService.get<FeatureVisibilitySettings>(
         getSubCollection('settings'),
         'featureVisibility'
       );
@@ -242,7 +242,7 @@ export class FeatureToggleService {
     settings.updatedBy = userId;
 
     // Save to Firestore
-    await FirestoreService.set(path, docId, settings, true);
+    await AdminFirestoreService.setLikeClient(path, docId, settings, true);
   }
 
   /**
@@ -276,7 +276,7 @@ export class FeatureToggleService {
     settings.updatedAt = new Date();
     settings.updatedBy = userId;
 
-    await FirestoreService.set(path, docId, settings, true);
+    await AdminFirestoreService.setLikeClient(path, docId, settings, true);
   }
 
   /**
@@ -318,7 +318,7 @@ export class FeatureToggleService {
       updatedBy: userId,
     };
 
-    await FirestoreService.set(path, docId, settings, false);
+    await AdminFirestoreService.setLikeClient(path, docId, settings, false);
   }
 
   /**

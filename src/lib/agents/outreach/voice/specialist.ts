@@ -30,7 +30,7 @@ import type { AgentMessage, AgentReport, AgentStatus, SpecialistConfig, Signal }
 import { VoiceProviderFactory } from '@/lib/voice/voice-factory';
 import type { VoiceCall, VoiceProvider, InitiateCallOptions } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============== Configuration ==============
@@ -439,7 +439,7 @@ export class VoiceAiSpecialist extends BaseSpecialist {
     }
 
     // Update call record in Firestore
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('callLogs'),
       payload.callId,
       {
@@ -470,7 +470,7 @@ export class VoiceAiSpecialist extends BaseSpecialist {
     metadata?: Record<string, unknown>
   ): Promise<void> {
     try {
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('callLogs'),
         call.callId,
         {

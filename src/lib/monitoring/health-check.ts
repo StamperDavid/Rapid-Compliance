@@ -106,10 +106,10 @@ async function checkDatabase(): Promise<HealthStatus> {
   const startTime = Date.now();
   
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     
     // Simple ping query
-    await FirestoreService.get('_health', 'check');
+    await AdminFirestoreService.get('_health', 'check');
     
     const responseTime = Date.now() - startTime;
     

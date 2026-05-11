@@ -81,10 +81,10 @@ export async function generateProposal(
   data: ProposalData
 ): Promise<GeneratedProposal> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     // Get template
-    const template = await FirestoreService.get<ProposalTemplate>(
+    const template = await AdminFirestoreService.get<ProposalTemplate>(
       getSubCollection('proposalTemplates'),
       data.templateId
     );
@@ -131,7 +131,7 @@ export async function generateProposal(
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('proposals'),
       proposalId,
       proposal,
@@ -387,8 +387,8 @@ export async function sendProposal(
   message?: string
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const proposal = await FirestoreService.get<GeneratedProposal>(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const proposal = await AdminFirestoreService.get<GeneratedProposal>(
       getSubCollection('proposals'),
       proposalId
     );
@@ -420,7 +420,7 @@ Best regards
     });
 
     // Update proposal status
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('proposals'),
       proposalId,
       {

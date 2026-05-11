@@ -319,11 +319,11 @@ export class SchemaBatchUpdater {
     });
     
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Get current schema
-      const schemaData = await FirestoreService.get(
+      const schemaData = await AdminFirestoreService.get(
         getSubCollection('schemas'),
         this.schemaId
       );
@@ -332,7 +332,7 @@ export class SchemaBatchUpdater {
         throw new Error(`Schema ${this.schemaId} not found`);
       }
 
-      let updatedSchema: Schema = { ...schemaData } as Schema;
+      let updatedSchema: Schema = { ...schemaData } as unknown as Schema;
 
       // Apply all changes
       for (const change of this.changes) {
@@ -348,7 +348,7 @@ export class SchemaBatchUpdater {
         updatedAt: updatedAt as unknown as Schema['updatedAt'],
       };
 
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('schemas'),
         this.schemaId,
         updatedSchema,
@@ -415,7 +415,7 @@ export class SchemaBatchUpdater {
 
       case 'field_add':
         if (change.field !== undefined) {
-          updatedSchema.fields.push(change.field as SchemaField);
+          updatedSchema.fields.push(change.field as unknown as SchemaField);
         }
         break;
 

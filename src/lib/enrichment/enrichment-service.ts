@@ -27,7 +27,7 @@ import { extractCompanyData } from './ai-extractor';
 import { getCachedEnrichment, cacheEnrichment } from './cache-service';
 import { validateEnrichmentData } from './validation-service';
 import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
-import { FirestoreService } from '../db/firestore-service';
+import { AdminFirestoreService } from '../db/admin-firestore-service';
 import { getSubCollection } from '../firebase/collections';
 import { logger } from '../logger/logger';
 
@@ -667,7 +667,7 @@ function countDataPoints(data: CompanyEnrichmentData): number {
 async function logEnrichmentCost(log: EnrichmentCostLog): Promise<void> {
   try {
     const logId = `cost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('enrichment-costs'),
       logId,
       log,
@@ -699,7 +699,7 @@ export async function getEnrichmentAnalytics(
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const { where } = await import('firebase/firestore');
-    const logs = await FirestoreService.getAll<EnrichmentCostLog>(
+    const logs = await AdminFirestoreService.getAll<EnrichmentCostLog>(
       getSubCollection('enrichment-costs'),
       [
         where('timestamp', '>=', cutoffDate)
@@ -768,7 +768,7 @@ export async function getStorageOptimizationAnalytics(
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const { where } = await import('firebase/firestore');
-    const logs = await FirestoreService.getAll<EnrichmentCostLog>(
+    const logs = await AdminFirestoreService.getAll<EnrichmentCostLog>(
       getSubCollection('enrichment-costs'),
       [
         where('timestamp', '>=', cutoffDate)

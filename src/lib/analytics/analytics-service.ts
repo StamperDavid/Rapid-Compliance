@@ -3,7 +3,7 @@
  * Aggregates and calculates analytics from all platform data
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, Timestamp } from 'firebase/firestore';
 import type {
   RevenueReport,
@@ -296,7 +296,7 @@ async function getDealsInPeriod(startDate: Date, endDate: Date): Promise<DealRec
   // Get deals from CRM
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const dealsPath = getSubCollection('deals');
-  const deals = await FirestoreService.getAll<DealRecord>(
+  const deals = await AdminFirestoreService.getAll<DealRecord>(
     dealsPath,
     [
       where('closedDate', '>=', Timestamp.fromDate(startDate)),
@@ -310,7 +310,7 @@ async function getDealsInPeriod(startDate: Date, endDate: Date): Promise<DealRec
 async function getOrdersInPeriod(startDate: Date, endDate: Date): Promise<OrderRecord[]> {
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const ordersPath = getSubCollection('orders');
-  const orders = await FirestoreService.getAll<OrderRecord>(
+  const orders = await AdminFirestoreService.getAll<OrderRecord>(
     ordersPath,
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
@@ -507,7 +507,7 @@ function getIntervalForPeriod(period: string): number {
 async function getOpenDeals(): Promise<DealRecord[]> {
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const dealsPath = getSubCollection('deals');
-  const deals = await FirestoreService.getAll<DealRecord>(
+  const deals = await AdminFirestoreService.getAll<DealRecord>(
     dealsPath,
     [
       where('status', 'in', ['open', 'qualified', 'proposal', 'negotiation']),
@@ -572,7 +572,7 @@ async function calculatePipelineVelocity(): Promise<PipelineVelocityResult> {
 
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const dealsPath = getSubCollection('deals');
-  const closedDeals = await FirestoreService.getAll<DealRecord>(
+  const closedDeals = await AdminFirestoreService.getAll<DealRecord>(
     dealsPath,
     [
       where('status', 'in', ['won', 'lost']),
@@ -670,7 +670,7 @@ async function calculateConversionRates(): Promise<ConversionRateItem[]> {
   // Get all deals with stage history
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const dealsPath = getSubCollection('deals');
-  const deals = await FirestoreService.getAll<DealRecord>(
+  const deals = await AdminFirestoreService.getAll<DealRecord>(
     dealsPath,
     []
   );
@@ -718,7 +718,7 @@ async function calculatePipelineTrends(_period: string): Promise<PipelineTrend[]
 
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const dealsPath = getSubCollection('deals');
-  const deals = await FirestoreService.getAll<DealRecord>(
+  const deals = await AdminFirestoreService.getAll<DealRecord>(
     dealsPath,
     [
       where('createdAt', '>=', Timestamp.fromDate(thirtyDaysAgo)),

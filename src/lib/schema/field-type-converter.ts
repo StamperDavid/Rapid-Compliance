@@ -70,11 +70,11 @@ export class FieldTypeConverter {
     estimatedFailures: number;
   }> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Get schema
-      const schema = await FirestoreService.get(
+      const schema = await AdminFirestoreService.get(
         getSubCollection('schemas'),
         schemaId
       );
@@ -88,7 +88,7 @@ export class FieldTypeConverter {
       const entityPath = `${getSubCollection('entities')}/${schemaName}/records`;
 
       // Get sample records
-      const records = await FirestoreService.getAll(entityPath);
+      const records = await AdminFirestoreService.getAll(entityPath);
       const totalRecords = records.length;
 
       // Sample records for preview
@@ -152,11 +152,11 @@ export class FieldTypeConverter {
     };
 
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Get schema
-      const schema = await FirestoreService.get(
+      const schema = await AdminFirestoreService.get(
         getSubCollection('schemas'),
         schemaId
       );
@@ -170,7 +170,7 @@ export class FieldTypeConverter {
       const entityPath = `${getSubCollection('entities')}/${schemaName}/records`;
 
       // Get all records
-      const records = await FirestoreService.getAll(entityPath);
+      const records = await AdminFirestoreService.getAll(entityPath);
 
       // Convert each record
       for (const record of records) {
@@ -183,7 +183,7 @@ export class FieldTypeConverter {
         if (conversion.success) {
           // Update record
           recordData[fieldKey] = conversion.value;
-          await FirestoreService.set(entityPath, recordId, recordData, false);
+          await AdminFirestoreService.setLikeClient(entityPath, recordId, recordData, false);
           result.successful++;
         } else {
           result.failed++;
@@ -334,7 +334,7 @@ export class FieldTypeConverter {
     }
   ): Promise<string> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
       const notificationPath = getSubCollection('notifications');
@@ -344,7 +344,7 @@ export class FieldTypeConverter {
         ? Math.round((preview.estimatedSuccess / preview.totalRecords) * 100)
         : 0;
 
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         notificationPath,
         notificationId,
         {

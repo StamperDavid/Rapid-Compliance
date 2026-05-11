@@ -107,8 +107,8 @@ export interface PaymentResult {
 export async function processPayment(request: PaymentRequest): Promise<PaymentResult> {
   // Get e-commerce config to determine payment provider
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  const ecommerceConfig = await FirestoreService.get(
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  const ecommerceConfig = await AdminFirestoreService.get(
     getSubCollection('ecommerce'),
     'config'
   );
@@ -540,11 +540,11 @@ export async function refundPayment(
 ): Promise<PaymentResult> {
   // Get provider from transaction
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
   // Find order with this transaction ID (canonical orders path)
   const { where } = await import('firebase/firestore');
-  const orders = await FirestoreService.getAll(
+  const orders = await AdminFirestoreService.getAll(
     getSubCollection('orders'),
     [where('payment.transactionId', '==', transactionId)]
   );
@@ -556,7 +556,7 @@ export async function refundPayment(
     };
   }
 
-  const order = orders[0] as OrderRecord;
+  const order = orders[0] as unknown as OrderRecord;
   const provider = order.payment.provider;
 
   // Route to appropriate provider

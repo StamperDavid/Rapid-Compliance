@@ -3,8 +3,10 @@
  * Business logic layer for lead nurture campaign management
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getNurtureSequencesCollection } from '@/lib/firebase/collections';
 
@@ -85,7 +87,7 @@ export async function getNurtureCampaigns(
 
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<NurtureCampaign>(
+    const result = await AdminFirestoreService.getAllPaginated<NurtureCampaign>(
       getNurtureSequencesCollection(),
       constraints,
       options?.pageSize ?? 50,
@@ -112,7 +114,7 @@ export async function getNurtureCampaign(
   campaignId: string
 ): Promise<NurtureCampaign | null> {
   try {
-    const campaign = await FirestoreService.get<NurtureCampaign>(
+    const campaign = await AdminFirestoreService.get<NurtureCampaign>(
       getNurtureSequencesCollection(),
       campaignId
     );
@@ -158,7 +160,7 @@ export async function createNurtureCampaign(
       createdBy,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getNurtureSequencesCollection(),
       campaignId,
       campaign,
@@ -192,7 +194,7 @@ export async function updateNurtureCampaign(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getNurtureSequencesCollection(),
       campaignId,
       updatedData
@@ -223,7 +225,7 @@ export async function deleteNurtureCampaign(
   campaignId: string
 ): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getNurtureSequencesCollection(),
       campaignId
     );
@@ -280,7 +282,7 @@ export async function enrollLead(
     const enrollmentId = `enrollment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences/${campaignId}/enrollments`,
       enrollmentId,
       {
@@ -323,7 +325,7 @@ export async function getCampaignStats(
     }
 
     // Get enrollment counts
-    const enrollments = await FirestoreService.getAll(
+    const enrollments = await AdminFirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences/${campaignId}/enrollments`,
       []
     );
@@ -332,7 +334,7 @@ export async function getCampaignStats(
       status: string;
     }
 
-    const typedEnrollments = enrollments as EnrollmentStatus[];
+    const typedEnrollments = enrollments as unknown as EnrollmentStatus[];
     const stats = {
       enrolled: typedEnrollments.length,
       active: typedEnrollments.filter((e) => e.status === 'active').length,

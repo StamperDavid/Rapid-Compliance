@@ -261,8 +261,8 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
 
   // Store tracking mapping if tracking is enabled
   if (options.tracking?.trackOpens) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
-      void FirestoreService.set(
+    void import('@/lib/db/admin-firestore-service').then(({ AdminFirestoreService }) => {
+      void AdminFirestoreService.setLikeClient(
         getSubCollection('emailTrackingMappings'),
         messageIdValue,
         {
@@ -370,8 +370,8 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
 
   // Store tracking mapping if tracking is enabled
   if (options.tracking?.trackOpens) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
-      void FirestoreService.set(
+    void import('@/lib/db/admin-firestore-service').then(({ AdminFirestoreService }) => {
+      void AdminFirestoreService.setLikeClient(
         getSubCollection('emailTrackingMappings'),
         messageId,
         {
@@ -476,8 +476,8 @@ async function sendViaSMTP(options: EmailOptions, credentials: Record<string, un
   const messageId = typeof info.messageId === 'string' ? info.messageId : `smtp_${Date.now()}`;
 
   if (options.tracking?.trackOpens) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
-      void FirestoreService.set(
+    void import('@/lib/db/admin-firestore-service').then(({ AdminFirestoreService }) => {
+      void AdminFirestoreService.setLikeClient(
         getSubCollection('emailTrackingMappings'),
         messageId,
         {
@@ -516,8 +516,8 @@ function addTrackingPixel(
 
   // Store tracking mapping in Firestore
   if (messageId) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
-      void FirestoreService.set(
+    void import('@/lib/db/admin-firestore-service').then(({ AdminFirestoreService }) => {
+      void AdminFirestoreService.setLikeClient(
         getSubCollection('emailTrackingMappings'),
         trackingId,
         {
@@ -580,9 +580,9 @@ export async function sendBulkEmails(
  * REAL: Queries Firestore for tracking data
  */
 export async function getEmailTracking(messageId: string): Promise<EmailTracking | null> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
-  const trackingData = await FirestoreService.get(
+  const trackingData = await AdminFirestoreService.get(
     getSubCollection('emailTracking'),
     messageId
   );
@@ -601,7 +601,7 @@ export async function getEmailTracking(messageId: string): Promise<EmailTracking
     clickLinks?: Array<{ url: string; clickedAt: string }>;
   }
 
-  const data = trackingData as TrackingData;
+  const data = trackingData as unknown as TrackingData;
 
   return {
     emailId: data.emailId,
@@ -625,11 +625,11 @@ export async function recordEmailOpen(
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
   // Get existing tracking or create new
 
-  const existing = await FirestoreService.get(
+  const existing = await AdminFirestoreService.get(
     getSubCollection('emailTracking'),
     messageId
   );
@@ -641,7 +641,7 @@ export async function recordEmailOpen(
 
   const existingData = (existing ?? {}) as ExistingTracking;
 
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('emailTracking'),
     messageId,
     {
@@ -667,11 +667,11 @@ export async function recordEmailClick(
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
   // Get existing tracking or create new
 
-  const existing = await FirestoreService.get(
+  const existing = await AdminFirestoreService.get(
     getSubCollection('emailTracking'),
     messageId
   );
@@ -691,7 +691,7 @@ export async function recordEmailClick(
     clickedAt: new Date().toISOString(),
   });
 
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('emailTracking'),
     messageId,
     {

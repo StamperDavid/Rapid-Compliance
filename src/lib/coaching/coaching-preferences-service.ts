@@ -74,8 +74,8 @@ export async function saveCoachingPreferences(
  * Get coaching preferences from Firestore (client-side).
  */
 export async function getCoachingPreferencesClient(): Promise<CoachingPreferences | null> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  return FirestoreService.get<CoachingPreferences>(SETTINGS_COLLECTION, DOC_ID);
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  return AdminFirestoreService.get<CoachingPreferences>(SETTINGS_COLLECTION, DOC_ID);
 }
 
 /**
@@ -85,8 +85,8 @@ export async function saveCoachingPreferencesClient(
   selectedModel: string,
   userId: string
 ): Promise<void> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  await FirestoreService.set(SETTINGS_COLLECTION, DOC_ID, {
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  await AdminFirestoreService.setLikeClient(SETTINGS_COLLECTION, DOC_ID, {
     selectedModel,
     updatedBy: userId,
     updatedAt: new Date(),

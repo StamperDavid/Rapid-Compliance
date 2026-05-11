@@ -305,9 +305,9 @@ export async function sendEmailViaGmail(options: {
   metadata?: Record<string, string>;
 }): Promise<void> {
   // Get Gmail tokens from organization's integrations
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
-  const integrations = await FirestoreService.getAll<GmailIntegration>(
+  const integrations = await AdminFirestoreService.getAll<GmailIntegration>(
     getIntegrationsCollection(),
     []
   );
@@ -364,8 +364,8 @@ export async function syncEmailsToCRM(
         const body = getEmailBody(email);
 
         // Save to CRM
-        const { FirestoreService } = await import('@/lib/db/firestore-service');
-        await FirestoreService.set(
+        const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+        await AdminFirestoreService.setLikeClient(
           getSubCollection('emails'),
           emailId,
           {

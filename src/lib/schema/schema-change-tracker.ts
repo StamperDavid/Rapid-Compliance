@@ -499,11 +499,11 @@ export class SchemaChangeEventPublisher {
     _db?: unknown
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const eventPath = getSubCollection('schemaChangeEvents');
       
-      await FirestoreService.set(eventPath, event.id, event, false);
+      await AdminFirestoreService.setLikeClient(eventPath, event.id, event, false);
       
       logger.info('[Schema Change] Event published', {
         file: 'schema-change-tracker.ts',
@@ -537,7 +537,7 @@ export class SchemaChangeEventPublisher {
     schemaId?: string
   ): Promise<SchemaChangeEvent[]> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { where } = await import('firebase/firestore');
 
       const eventPath = getSubCollection('schemaChangeEvents');
@@ -550,9 +550,9 @@ export class SchemaChangeEventPublisher {
         filters.push(where('schemaId', '==', schemaId));
       }
 
-      const events = await FirestoreService.getAll(eventPath, filters);
+      const events = await AdminFirestoreService.getAll(eventPath, filters);
 
-      return events as SchemaChangeEvent[];
+      return events as unknown as SchemaChangeEvent[];
     } catch (error) {
       logger.error('[Schema Change] Failed to get unprocessed events', error instanceof Error ? error : new Error(String(error)), {
         file: 'schema-change-tracker.ts',
@@ -568,14 +568,14 @@ export class SchemaChangeEventPublisher {
     eventId: string
   ): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       const eventPath = getSubCollection('schemaChangeEvents');
       
-      const existing = await FirestoreService.get(eventPath, eventId);
+      const existing = await AdminFirestoreService.get(eventPath, eventId);
       
       if (existing) {
-        await FirestoreService.set(
+        await AdminFirestoreService.setLikeClient(
           eventPath,
           eventId,
           {
