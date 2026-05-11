@@ -1,5 +1,21 @@
 # SalesVelocity.ai — Full-Orchestration Continuation Prompt
 
+> **PAUSED:** May 10, 2026 late evening — mid-Google-Ads-walkthrough.
+> Operator created the Google Ads account in **Expert Mode** (clicked Skip
+> → "Leave campaign creation" — account shell exists, no campaigns yet).
+> Blocked on **billing verification**: the credit card on file is the
+> operator's wife's card and her Google account holds the verification
+> PIN. She is asleep. Tomorrow's resume: get the PIN → verify billing →
+> capture customer ID via Copy button (NEVER read from screenshot per
+> the credentials rule) → apply for basic developer token at
+> https://ads.google.com/aw/apicenter → reconnect Google in SalesVelocity
+> Settings so the `adwords` scope is granted → paste customer ID + token
+> into Settings → Integrations → Marketing Ads → Google Ads card → run
+> `scripts/check-google-ads-status.ts` to confirm `configured=true`.
+>
+> Current `getGoogleAdsStatus()`: googleAccountConnected=true (dstamper@salesvelocity.ai),
+> hasAdwordsScope=false, developerToken=false, customerId=null.
+>
 > **Updated:** May 10, 2026 — BUDGET_STRATEGIST end-to-end build (UTM capture + CRM aggregation + persistence + widget + Google Ads + Meta Ads + two-step Apply + hourly cron). Operator session resumes after dinner to wire Google Ads / Meta Ads / GA4 creds.
 > **Earlier session updated:** May 8, 2026 — full training-loop fix sweep + canonicalization + BUDGET_STRATEGIST shipped (see top section).
 > **Earlier session updated:** May 7, 2026 — Sentry production wiring + memory-vault crash fix + StepGradeWidget rebuild + GM seeding audit.
