@@ -6,6 +6,7 @@ import PageRenderer from '@/components/PageRenderer';
 import { usePageContent } from '@/hooks/usePageContent';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 import { logger } from '@/lib/logger/logger';
+import { buildUtmMetadata } from '@/lib/utm-tracking';
 
 function FallbackContent() {
   const { theme } = useWebsiteTheme();
@@ -20,10 +21,14 @@ function FallbackContent() {
     setError('');
 
     try {
+      const utmMetadata = buildUtmMetadata();
       const res = await fetch('/api/public/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          ...(utmMetadata ? { metadata: utmMetadata } : {}),
+        }),
       });
 
       if (!res.ok) {

@@ -126,10 +126,14 @@ const RecommendationFromLlmSchema = z.object({
   recommendedSpendUsd: z.number().nonnegative().max(10_000_000),
   deltaUsd: z.number().min(-10_000_000).max(10_000_000),
   actionType: ActionTypeEnum,
-  rationale: z.string().min(1).max(800),
+  rationale: z.string().min(1).max(1200),
   confidence: ConfidenceEnum,
   requiresManualMissionTask: z.boolean(),
-  manualMissionPrompt: z.string().min(1).max(800).optional(),
+  // LLMs frequently send "" (empty string) instead of omitting an optional
+  // field. Treat empty as absent so the optional contract holds.
+  manualMissionPrompt: z
+    .preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      z.string().min(1).max(1200).optional()),
 });
 
 const StrategistOutputSchema = z.object({
@@ -276,6 +280,8 @@ function buildUserPrompt(req: AnalyzeBudgetRequest): string {
     '- Use the platform keys and displayNames from the input verbatim. Do NOT invent new platforms.',
     '- pause is only valid when conversions=0 over the full window AND spend was non-zero. Otherwise prefer decrease.',
     '- Plain English in every rationale — no jargon, no "leverage synergies". Cite specific numbers from the snapshot.',
+    '- Keep each rationale under 1000 characters (2-4 short paragraphs max).',
+    '- For platforms WITHOUT requiresManualBudgetChange=true, OMIT the manualMissionPrompt field entirely. Do NOT include an empty string.',
     '- Do NOT name competitors. Do NOT use phrases from the avoid list in the Brand DNA section above.',
   ].join('\n');
 }

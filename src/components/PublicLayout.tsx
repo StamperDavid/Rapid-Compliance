@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import { logger } from '@/lib/logger/logger';
 import EarlyAccessBanner from '@/components/EarlyAccessBanner';
+import { persistUtmsIfPresent } from '@/lib/utm-tracking';
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -46,6 +47,12 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   useEffect(() => {
     scrollToBottom();
   }, [chatMessages]);
+
+  // Capture UTM params from ad clicks so they survive cross-page nav and
+  // attach to whichever lead form the visitor eventually submits.
+  useEffect(() => {
+    persistUtmsIfPresent();
+  }, []);
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isTyping) {return;}

@@ -6,13 +6,13 @@
  * after adding or removing an agent file. CI runs the same script with
  * `--check` and fails the build on drift.
  *
- * Total agents: 73
+ * Total agents: 74
  *   L1 (Master Orchestrator): 1
  *   L2 (Managers):            10
- *   L3 (Specialists):         58
+ *   L3 (Specialists):         59
  *   STANDALONE:               4
  *
- * Generated at: 2026-05-05T21:34:40.263Z
+ * Generated at: 2026-05-09T17:18:06.500Z
  *
  * @module lib/agents/agent-registry
  */
@@ -392,7 +392,7 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
   },
 
   // =========================================================================
-  // L3 - MARKETING SPECIALISTS (19)
+  // L3 - MARKETING SPECIALISTS (20)
   // =========================================================================
   {
     id: 'BLUESKY_EXPERT',
@@ -401,6 +401,14 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
     tier: 'L3',
     parentId: 'MARKETING_MANAGER',
     capabilities: ['generate_content', 'compose_dm_reply'],
+  },
+  {
+    id: 'BUDGET_STRATEGIST',
+    name: "Budget Strategist",
+    role: "Budget Strategist",
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['marketing_budget_allocation', 'cross_platform_spend_analysis', 'conversion_attribution_review', 'plain_english_recommendation_generation'],
   },
   {
     id: 'DISCORD_EXPERT',
@@ -513,14 +521,6 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
     tier: 'L3',
     parentId: 'MARKETING_MANAGER',
     capabilities: ['generate_content'],
-  },
-  {
-    id: 'BUDGET_STRATEGIST',
-    name: "Budget Strategist",
-    role: "Budget Strategist",
-    tier: 'L3',
-    parentId: 'MARKETING_MANAGER',
-    capabilities: ['analyze_budget'],
   },
   {
     id: 'TWITCH_EXPERT',
