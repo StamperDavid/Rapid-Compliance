@@ -19,6 +19,7 @@ import SocialPlatformIntegration, { SOCIAL_PLATFORM_CONFIGS } from '@/components
 import GoogleServicesIntegration from '@/components/integrations/GoogleServicesIntegration';
 import MicrosoftServicesIntegration from '@/components/integrations/MicrosoftServicesIntegration';
 import MetaServicesIntegration from '@/components/integrations/MetaServicesIntegration';
+import GoogleAdsConfigCard from '@/components/integrations/GoogleAdsConfigCard';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
 import toast from 'react-hot-toast';
@@ -314,6 +315,18 @@ export default function IntegrationsPage() {
       ],
     },
     {
+      // Marketing Ads — extra config needed on top of the central Google
+      // OAuth (developer token + customer ID) to drive BUDGET_STRATEGIST's
+      // spend reads and budget-change writes. Meta Ads card lands here
+      // once that OAuth flow ships.
+      id: 'marketing-ads',
+      name: 'Marketing Ads',
+      icon: '💰',
+      integrations: [
+        { id: 'google-ads-config', component: null },
+      ],
+    },
+    {
       // Meta — single unified card that covers Facebook, Instagram,
       // Threads, and WhatsApp Business through one OAuth. Sits between
       // Workspace Accounts and Communication so the consolidation
@@ -533,6 +546,12 @@ export default function IntegrationsPage() {
                       onRefresh={() => { void loadMicrosoftStatus(); }}
                     />
                   );
+                }
+                // Google Ads — sits on top of the central Google OAuth.
+                // Needs a developer token + customer ID. Self-fetches
+                // status via /api/integrations/google-ads/status.
+                if (id === 'google-ads-config') {
+                  return <GoogleAdsConfigCard key={id} />;
                 }
                 // Unified Meta Services card — one Facebook OAuth covers
                 // Facebook Page, Instagram Business, Threads, and
