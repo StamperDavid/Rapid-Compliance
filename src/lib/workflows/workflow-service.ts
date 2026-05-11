@@ -3,8 +3,9 @@
  * Business logic layer for workflow automation management
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -67,7 +68,7 @@ export async function getWorkflows(
     // Default ordering
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Workflow>(
+    const result = await AdminFirestoreService.getAllPaginated<Workflow>(
       getSubCollection('workflows'),
       constraints,
       options?.pageSize ?? 50,
@@ -97,7 +98,7 @@ export async function getWorkflow(
   workflowId: string
 ): Promise<Workflow | null> {
   try {
-    const workflow = await FirestoreService.get<Workflow>(
+    const workflow = await AdminFirestoreService.get<Workflow>(
       getSubCollection('workflows'),
       workflowId
     );
@@ -141,7 +142,7 @@ export async function createWorkflow(
       version: 1,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('workflows'),
       workflowId,
       workflow,
@@ -177,7 +178,7 @@ export async function updateWorkflow(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('workflows'),
       workflowId,
       updatedData
@@ -212,7 +213,7 @@ export async function deleteWorkflow(
   workflowId: string
 ): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('workflows'),
       workflowId
     );
@@ -262,7 +263,7 @@ export async function getWorkflowRuns(
       orderBy('startedAt', 'desc'),
     ];
 
-    const result = await FirestoreService.getAllPaginated<WorkflowExecution>(
+    const result = await AdminFirestoreService.getAllPaginated<WorkflowExecution>(
       getSubCollection('workflowExecutions'),
       constraints,
       options?.pageSize ?? 50,

@@ -55,8 +55,8 @@ export async function getWorkflowExecutions(
   limit = 50,
 ): Promise<WorkflowEngineExecution[]> {
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  const executions = await FirestoreService.getAll(
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  const executions = await AdminFirestoreService.getAll(
     getSubCollection('workflowExecutions'),
     [
       where('workflowId', '==', workflowId),

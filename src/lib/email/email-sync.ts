@@ -6,7 +6,7 @@
 
 import { syncGmailMessages, setupGmailPushNotifications, stopGmailPushNotifications } from '@/lib/integrations/gmail-sync-service';
 import { syncOutlookMessages, setupOutlookPushNotifications, stopOutlookPushNotifications } from '@/lib/integrations/outlook-sync-service';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -134,7 +134,7 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
     const { where } = await import('firebase/firestore');
     
     // Get unsent emails from CRM
-    const unsentEmails = await FirestoreService.getAll(
+    const unsentEmails = await AdminFirestoreService.getAll(
       getSubCollection('emails'),
       [
         where('source', '==', 'crm'),
@@ -153,7 +153,7 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
     for (const email of unsentEmails as UnsentEmail[]) {
       try {
         // Mark as synced (emails are already sent via API)
-        await FirestoreService.update(
+        await AdminFirestoreService.updateLikeClient(
           getSubCollection('emails'),
           email.id,
           {
@@ -198,7 +198,7 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
 
   try {
     // Store sync configuration
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('integrationStatus'),
       `${config.provider}-sync-config`,
       {
@@ -226,7 +226,7 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
       const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/outlook`;
       const subscriptionId = await setupOutlookPushNotifications(config.accessToken, webhookUrl);
 
-      await FirestoreService.update(
+      await AdminFirestoreService.updateLikeClient(
         getSubCollection('integrationStatus'),
         'outlook-sync-config',
         { outlookSubscriptionId: subscriptionId }
@@ -258,8 +258,13 @@ export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void
   });
 
   try {
+    interface SyncConfig {
+      accessToken: string;
+      [key: string]: unknown;
+    }
+
     // Get sync configuration
-    const syncConfig = await FirestoreService.get(
+    const syncConfig = await AdminFirestoreService.get<SyncConfig>(
       getSubCollection('integrationStatus'),
       `${provider}-sync-config`
     );
@@ -269,12 +274,7 @@ export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void
       return;
     }
 
-    interface SyncConfig {
-      accessToken: string;
-      [key: string]: unknown;
-    }
-
-    const typedSyncConfig = syncConfig as SyncConfig;
+    const typedSyncConfig = syncConfig;
 
     // Stop push notifications
     if (provider === 'gmail') {
@@ -289,7 +289,7 @@ export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void
     }
 
     // Update sync configuration
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('integrationStatus'),
       `${provider}-sync-config`,
       {
@@ -323,18 +323,6 @@ export interface SyncStatus {
 
 export async function getSyncStatus(provider: 'gmail' | 'outlook'): Promise<SyncStatus> {
   try {
-    // Get sync configuration
-    const syncConfig = await FirestoreService.get(
-      getSubCollection('integrationStatus'),
-      `${provider}-sync-config`
-    );
-
-    // Get last sync result
-    const lastSyncResult = await FirestoreService.get(
-      getSubCollection('integrationStatus'),
-      `${provider}-sync`
-    );
-
     interface SyncConfigType {
       isActive?: boolean;
       [key: string]: unknown;
@@ -347,24 +335,32 @@ export async function getSyncStatus(provider: 'gmail' | 'outlook'): Promise<Sync
       [key: string]: unknown;
     }
 
-    const typedSyncConfig = syncConfig as SyncConfigType | null;
+    // Get sync configuration
+    const syncConfig = await AdminFirestoreService.get<SyncConfigType>(
+      getSubCollection('integrationStatus'),
+      `${provider}-sync-config`
+    );
+
+    // Get last sync result
+    const lastSyncResult = await AdminFirestoreService.get<SyncResultType>(
+      getSubCollection('integrationStatus'),
+      `${provider}-sync`
+    );
 
     if (!lastSyncResult) {
       return {
-        isActive: typedSyncConfig?.isActive ?? false,
+        isActive: syncConfig?.isActive ?? false,
         syncedCount: 0,
         errorCount: 0,
       };
     }
 
-    const typedLastSyncResult = lastSyncResult as SyncResultType;
-
     return {
-      isActive: typedSyncConfig?.isActive ?? false,
-      lastSyncAt: new Date(typedLastSyncResult.lastSyncAt),
+      isActive: syncConfig?.isActive ?? false,
+      lastSyncAt: new Date(lastSyncResult.lastSyncAt),
       nextSyncAt: undefined, // Push-based sync, no scheduled next sync
-      syncedCount: typedLastSyncResult.messagesSynced,
-      errorCount: typedLastSyncResult.errors,
+      syncedCount: lastSyncResult.messagesSynced,
+      errorCount: lastSyncResult.errors,
     };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

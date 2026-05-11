@@ -13,7 +13,7 @@ import { PageTitle } from '@/components/ui/typography';
 import { usePagination } from '@/hooks/usePagination'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export default function ProductManagementPage() {
   const router = useRouter();

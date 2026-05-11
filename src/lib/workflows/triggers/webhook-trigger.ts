@@ -3,7 +3,7 @@
  * Handles incoming webhooks and triggers workflows
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import type { Workflow, WebhookTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import crypto from 'crypto';
@@ -47,12 +47,12 @@ export async function handleWebhook(
   const { where } = await import('firebase/firestore');
   const { getSubCollection } = await import('@/lib/firebase/collections');
 
-  const workflows = await FirestoreService.getAll(
+  const workflows = await AdminFirestoreService.getAll<Workflow>(
     getSubCollection('workflows'),
     [where('status', '==', 'active')]
   );
 
-  const workflow = workflows.find((w: Record<string, unknown>) => {
+  const workflow = workflows.find((w) => {
     const trigger = w.trigger as WebhookTrigger;
     return trigger?.type === 'webhook' && trigger?.webhookUrl === webhookUrl;
   });
@@ -83,7 +83,7 @@ export async function handleWebhook(
     query: queryParams ?? {},
   };
 
-  await executeWorkflow(workflow as Workflow, triggerData);
+  await executeWorkflow(workflow, triggerData);
 }
 
 /**
@@ -113,7 +113,7 @@ export async function registerWebhookTrigger(
 
   // Store webhook configuration
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('webhookTriggers'),
     workflow.id,
     {

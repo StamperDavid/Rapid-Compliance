@@ -4,8 +4,9 @@
  * Wraps campaign-manager.ts with service layer pattern
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getEmailCampaignsCollection } from '@/lib/firebase/collections';
 
@@ -74,7 +75,7 @@ export async function getCampaigns(
 
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<EmailCampaign>(
+    const result = await AdminFirestoreService.getAllPaginated<EmailCampaign>(
       getEmailCampaignsCollection(),
       constraints,
       options?.pageSize ?? 50,
@@ -102,7 +103,7 @@ export async function getCampaign(
   campaignId: string
 ): Promise<EmailCampaign | null> {
   try {
-    const campaign = await FirestoreService.get<EmailCampaign>(
+    const campaign = await AdminFirestoreService.get<EmailCampaign>(
       getEmailCampaignsCollection(),
       campaignId
     );
@@ -151,7 +152,7 @@ export async function createCampaign(
       createdBy,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getEmailCampaignsCollection(),
       campaignId,
       campaign,
@@ -184,7 +185,7 @@ export async function updateCampaign(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getEmailCampaignsCollection(),
       campaignId,
       updatedData
@@ -215,7 +216,7 @@ export async function deleteCampaign(
   campaignId: string
 ): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getEmailCampaignsCollection(),
       campaignId
     );

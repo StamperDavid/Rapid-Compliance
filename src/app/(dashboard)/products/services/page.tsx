@@ -14,7 +14,7 @@ import { getProducts, deleteProduct, type Product } from '@/lib/ecommerce/produc
 import { usePagination } from '@/hooks/usePagination';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export default function ServicesCatalogPage() {
   const router = useRouter();

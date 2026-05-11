@@ -88,8 +88,8 @@ export async function executeWorkflowImpl(
 
     // Store execution in Firestore
     const { getSubCollection } = await import('@/lib/firebase/collections');
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    await FirestoreService.set(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('workflowExecutions'),
       execution.id,
       {
@@ -516,8 +516,8 @@ export async function getWorkflowExecutions(
 ): Promise<WorkflowEngineExecution[]> {
   // Load executions from Firestore
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-  const executions = await FirestoreService.getAll(
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+  const executions = await AdminFirestoreService.getAll(
     getSubCollection('workflowExecutions'),
     [
       where('workflowId', '==', workflowId),

@@ -3,7 +3,7 @@
  * Handles OAuth 2.0 authorization flows for integrations
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { COLLECTIONS, getIntegrationsCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -132,7 +132,7 @@ export async function generateAuthUrl(
 
   // Save state to Firestore
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('oauthStates'),
     state,
     {
@@ -166,7 +166,7 @@ export async function exchangeCodeForTokens(
   state: string
 ): Promise<OAuthTokenResponse> {
   // Verify state
-  const stateData = await FirestoreService.get<OAuthState>(
+  const stateData = await AdminFirestoreService.get<OAuthState>(
     `${COLLECTIONS.ORGANIZATIONS}/*/oauthStates`,
     state
   );
@@ -224,7 +224,7 @@ export async function exchangeCodeForTokens(
 
   // Delete state token
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  await FirestoreService.delete(
+  await AdminFirestoreService.delete(
     getSubCollection('oauthStates'),
     state
   );
@@ -240,7 +240,7 @@ export async function refreshAccessToken(
   provider: string
 ): Promise<string> {
   // Get integration
-  const integration = await FirestoreService.get<StoredIntegration>(
+  const integration = await AdminFirestoreService.get<StoredIntegration>(
     getIntegrationsCollection(),
     integrationId
   );
@@ -286,7 +286,7 @@ export async function refreshAccessToken(
   const tokens = await tokenResponse.json() as OAuthTokenResponse;
 
   // Update integration with new tokens
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getIntegrationsCollection(),
     integrationId,
     {
@@ -450,7 +450,7 @@ async function saveIntegrationTokens(
 ): Promise<void> {
   // Get or create integration
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  const integration = await FirestoreService.get<Record<string, unknown>>(
+  const integration = await AdminFirestoreService.get<Record<string, unknown>>(
     getSubCollection('integrations'),
     integrationId
   );
@@ -496,7 +496,7 @@ async function saveIntegrationTokens(
     integrationData.botUserId = tokens.bot_user_id;
   }
 
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('integrations'),
     integrationId,
     integration ? { ...integration, ...integrationData } : integrationData,
@@ -510,7 +510,7 @@ async function saveIntegrationTokens(
 export async function getValidAccessToken(
   integrationId: string
 ): Promise<string> {
-  const integration = await FirestoreService.get<StoredIntegration>(
+  const integration = await AdminFirestoreService.get<StoredIntegration>(
     getIntegrationsCollection(),
     integrationId
   );

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) { return authResult; }
 
-    await disconnectIntegration('zoom', { useAdminSdk: true });
+    await disconnectIntegration('zoom');
 
     // Compatibility shim: also clear the zoom key in the legacy
     // `integrations/all` map doc that the /settings/integrations page

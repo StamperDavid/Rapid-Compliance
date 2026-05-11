@@ -28,7 +28,7 @@ import { getWorkflows, setWorkflowStatus, deleteWorkflow } from '@/lib/workflows
 import { usePagination } from '@/hooks/usePagination';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 const containerVariants = {
   hidden: { opacity: 0 },

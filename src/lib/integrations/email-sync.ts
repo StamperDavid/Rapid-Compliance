@@ -4,7 +4,7 @@
  * Auto-logs activities and triggers workflows
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase/firestore';
 import type { Activity as ActivityType, RelatedEntityType as _RelatedEntityType } from '@/types/activity';
@@ -340,7 +340,7 @@ export async function processEmailReply(
       });
 
       // Store classification metadata on the activity
-      await FirestoreService.update(
+      await AdminFirestoreService.updateLikeClient(
         getSubCollection('emailActivities'),
         reply.id,
         {
@@ -486,7 +486,7 @@ import { getSubCollection } from '@/lib/firebase/collections';
  */
 async function getLastSyncTime(provider: string): Promise<Date | null> {
   try {
-    const doc = await FirestoreService.get<EmailSyncDoc>(
+    const doc = await AdminFirestoreService.get<EmailSyncDoc>(
       getSubCollection('emailSync'),
       provider
     );
@@ -512,7 +512,7 @@ async function getLastSyncTime(provider: string): Promise<Date | null> {
  * Set last sync timestamp
  */
 async function setLastSyncTime(provider: string, time: Date): Promise<void> {
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('emailSync'),
     provider,
     { lastSyncAt: time },

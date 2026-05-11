@@ -3,7 +3,7 @@
  * Listens for entity changes and triggers workflows
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import type { Workflow, EntityTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
@@ -24,7 +24,7 @@ export async function registerFirestoreTrigger(
   // Store trigger configuration in Firestore
   // In production, this would deploy a Cloud Function
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('workflowTriggers'),
     workflow.id,
     {
@@ -104,7 +104,7 @@ export async function handleEntityChange(
     const { where } = await import('firebase/firestore');
     const { getSubCollection } = await import('@/lib/firebase/collections');
 
-    const triggers = await FirestoreService.getAll(
+    const triggers = await AdminFirestoreService.getAll(
       getSubCollection('workflowTriggers'),
       [
         where('triggerType', '==', `entity.${changeType}`),
@@ -117,13 +117,13 @@ export async function handleEntityChange(
     }
 
     // Load workflows
-    const workflows = await FirestoreService.getAll(
+    const workflows = await AdminFirestoreService.getAll<Workflow>(
       getSubCollection('workflows'),
       [where('status', '==', 'active')]
     );
 
     // Filter workflows that match this trigger
-    const matchingWorkflows = workflows.filter((w: Record<string, unknown>) => {
+    const matchingWorkflows = workflows.filter((w) => {
       const trigger = w.trigger as EntityTrigger;
       return trigger?.type === `entity.${changeType}` && trigger?.schemaId === schemaId;
     });
@@ -139,7 +139,7 @@ export async function handleEntityChange(
           ...recordData, // Flatten record data for easy access
         };
 
-        await executeWorkflow(workflow as Workflow, triggerData);
+        await executeWorkflow(workflow, triggerData);
       } catch (error) {
         logger.error(`[Firestore Trigger] Error executing workflow ${workflow.id}`, error instanceof Error ? error : new Error(String(error)), { file: 'firestore-trigger.ts' });
         // Continue with other workflows
@@ -157,7 +157,7 @@ export async function unregisterFirestoreTrigger(
   workflowId: string
 ): Promise<void> {
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  await FirestoreService.delete(
+  await AdminFirestoreService.delete(
     getSubCollection('workflowTriggers'),
     workflowId
   );

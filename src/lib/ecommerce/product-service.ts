@@ -3,8 +3,9 @@
  * Business logic layer for product/catalog management
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -100,7 +101,7 @@ export async function getProducts(
     // Default ordering
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Product>(
+    const result = await AdminFirestoreService.getAllPaginated<Product>(
       getSubCollection('products'),
       constraints,
       options?.pageSize ?? 50,
@@ -147,7 +148,7 @@ export async function getProduct(
   productId: string
 ): Promise<Product | null> {
   try {
-    const product = await FirestoreService.get<Product>(
+    const product = await AdminFirestoreService.get<Product>(
       getSubCollection('products'),
       productId
     );
@@ -192,7 +193,7 @@ export async function createProduct(
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('products'),
       productId,
       product,
@@ -230,7 +231,7 @@ export async function updateProduct(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('products'),
       productId,
       updatedData
@@ -261,7 +262,7 @@ export async function deleteProduct(
   productId: string
 ): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('products'),
       productId
     );

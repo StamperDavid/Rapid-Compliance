@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger/logger';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export default function EmailCampaignsPage() {
   const router = useRouter();

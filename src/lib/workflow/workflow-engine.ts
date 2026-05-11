@@ -25,7 +25,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase/firestore';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import {
@@ -635,7 +635,7 @@ export class WorkflowEngine {
       updatedAt: new Date().toISOString(),
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('tasks'),
       taskId,
       taskRecord
@@ -673,7 +673,7 @@ export class WorkflowEngine {
       updateData[config.field] = config.value;
     } else if (operation === 'increment' && typeof config.value === 'number') {
       // Read current value and increment
-      const deal = await FirestoreService.get<Record<string, unknown>>(
+      const deal = await AdminFirestoreService.get<Record<string, unknown>>(
         getSubCollection('deals'),
         context.dealId
       );
@@ -683,7 +683,7 @@ export class WorkflowEngine {
       updateData[config.field] = config.value;
     }
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('deals'),
       context.dealId,
       updateData
@@ -771,7 +771,7 @@ export class WorkflowEngine {
       const resumeAt = new Date(Date.now() + delayMs).toISOString();
 
       // Persist scheduled wait so a cron job can resume it
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('workflowWaits'),
         waitId,
         {
@@ -823,7 +823,7 @@ export class WorkflowEngine {
         : null;
 
       // Persist conditional wait
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('workflowWaits'),
         waitId,
         {

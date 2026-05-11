@@ -4,7 +4,7 @@
  */
 
 import { Client } from '@microsoft/microsoft-graph-client';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection, getContactsCollection } from '@/lib/firebase/collections';
 
@@ -259,7 +259,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
       updatedAt: new Date(),
     };
     
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('emails'),
       message.id,
       emailData
@@ -267,7 +267,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
     
     // Update contact with last interaction
     if (contact) {
-      await FirestoreService.update(
+      await AdminFirestoreService.updateLikeClient(
         getContactsCollection(),
         contact.id,
         {
@@ -288,7 +288,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
  */
 async function deleteMessageFromCRM(messageId: string): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('emails'),
       messageId
     );
@@ -353,15 +353,12 @@ export async function sendOutlookEmail(
  */
 async function findContactByEmail(email: string): Promise<OutlookContact | null> {
   try {
-    const contacts = await FirestoreService.getAll(
+    const contacts = await AdminFirestoreService.getAll<OutlookContact>(
       getContactsCollection()
     );
-    const contactsFiltered = contacts.filter((c: unknown) => {
-      const contact = c as OutlookContact;
-      return contact.email === email;
-    });
+    const contactsFiltered = contacts.filter((contact) => contact.email === email);
 
-    return contactsFiltered.length > 0 ? (contactsFiltered[0] as OutlookContact) : null;
+    return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
   } catch (error) {
     logger.error('[Outlook Sync] Error finding contact:', error instanceof Error ? error : new Error(String(error)), { file: 'outlook-sync-service.ts' });
     return null;
@@ -373,7 +370,7 @@ async function findContactByEmail(email: string): Promise<OutlookContact | null>
  */
 async function getLastSyncStatus(): Promise<OutlookSyncStatus | null> {
   try {
-    const status = await FirestoreService.get(
+    const status = await AdminFirestoreService.get(
       getSubCollection('integrationStatus'),
       'outlook-sync'
     );
@@ -388,7 +385,7 @@ async function getLastSyncStatus(): Promise<OutlookSyncStatus | null> {
  */
 async function saveSyncStatus(status: OutlookSyncStatus): Promise<void> {
   try {
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('integrationStatus'),
       'outlook-sync',
       status

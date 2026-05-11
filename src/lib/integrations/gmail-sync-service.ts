@@ -4,7 +4,7 @@
  */
 
 import { google, type gmail_v1 } from 'googleapis';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection, getContactsCollection } from '@/lib/firebase/collections';
 
@@ -398,7 +398,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
       updatedAt: new Date(),
     };
     
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('emails'),
       message.id,
       emailData
@@ -406,7 +406,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
     
     // Update contact with last interaction
     if (contact) {
-      await FirestoreService.update(
+      await AdminFirestoreService.updateLikeClient(
         getContactsCollection(),
         contact.id,
         {
@@ -427,7 +427,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
  */
 async function deleteMessageFromCRM(messageId: string): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('emails'),
       messageId
     );
@@ -441,7 +441,7 @@ async function deleteMessageFromCRM(messageId: string): Promise<void> {
  */
 async function updateMessageLabels(messageId: string, labels: string[]): Promise<void> {
   try {
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('emails'),
       messageId,
       {
@@ -460,15 +460,12 @@ async function updateMessageLabels(messageId: string, labels: string[]): Promise
  */
 async function findContactByEmail(email: string): Promise<GmailContact | null> {
   try {
-    const contacts = await FirestoreService.getAll(
+    const contacts = await AdminFirestoreService.getAll<GmailContact>(
       getContactsCollection()
     );
-    const contactsFiltered = contacts.filter((c: unknown) => {
-      const contact = c as GmailContact;
-      return contact.email === email;
-    });
+    const contactsFiltered = contacts.filter((contact) => contact.email === email);
 
-    return contactsFiltered.length > 0 ? (contactsFiltered[0] as GmailContact) : null;
+    return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
   } catch (error) {
     logger.error('[Gmail Sync] Error finding contact:', error instanceof Error ? error : new Error(String(error)), { file: 'gmail-sync-service.ts' });
     return null;
@@ -480,7 +477,7 @@ async function findContactByEmail(email: string): Promise<GmailContact | null> {
  */
 async function getLastSyncStatus(): Promise<GmailSyncStatus | null> {
   try {
-    const status = await FirestoreService.get(
+    const status = await AdminFirestoreService.get(
       getSubCollection('integrationStatus'),
       'gmail-sync'
     );
@@ -495,7 +492,7 @@ async function getLastSyncStatus(): Promise<GmailSyncStatus | null> {
  */
 async function saveSyncStatus(status: GmailSyncStatus): Promise<void> {
   try {
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('integrationStatus'),
       'gmail-sync',
       status

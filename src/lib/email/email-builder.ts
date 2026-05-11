@@ -7,7 +7,7 @@
  * - Deliverability scoring
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -239,7 +239,7 @@ export async function createABTest(
       createdAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('abTests'),
       testId,
       abTest,
@@ -265,7 +265,7 @@ export async function getABTestVariant(
   recipientId: string
 ): Promise<'A' | 'B'> {
   try {
-    const test = await FirestoreService.get<ABTest>(
+    const test = await AdminFirestoreService.get<ABTest>(
       getSubCollection('abTests'),
       testId
     );
@@ -334,7 +334,7 @@ export async function calculateABTestResults(
     };
 
     // Determine winner based on configured metric
-    const test = await FirestoreService.get<ABTest>(
+    const test = await AdminFirestoreService.get<ABTest>(
       getSubCollection('abTests'),
       testId
     );

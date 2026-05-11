@@ -4,7 +4,7 @@
  */
 
 import { google, type calendar_v3 } from 'googleapis';
-import { FirestoreService } from '@/lib/db/firestore-service'
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service'
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection, getContactsCollection } from '@/lib/firebase/collections';
 
@@ -319,7 +319,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
       updatedAt: new Date(event.updated),
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('calendarEvents'),
       event.id,
       eventData
@@ -327,7 +327,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
 
     // Update contacts with last interaction
     for (const contactId of contactIds) {
-      await FirestoreService.update(
+      await AdminFirestoreService.updateLikeClient(
         getContactsCollection(),
         contactId,
         {
@@ -348,7 +348,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
  */
 async function deleteEventFromCRM(eventId: string): Promise<void> {
   try {
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('calendarEvents'),
       eventId
     );
@@ -476,7 +476,7 @@ export async function deleteCalendarEvent(
  */
 async function findContactByEmail(email: string): Promise<ContactWithId | null> {
   try {
-    const contacts = await FirestoreService.getAll(
+    const contacts = await AdminFirestoreService.getAll(
       getContactsCollection()
     );
     const contactsFiltered = contacts.filter((c: unknown): c is ContactWithId => {
@@ -497,7 +497,7 @@ async function findContactByEmail(email: string): Promise<ContactWithId | null> 
  */
 async function getLastSyncStatus(calendarId: string): Promise<CalendarSyncStatus | null> {
   try {
-    const status = await FirestoreService.get(
+    const status = await AdminFirestoreService.get(
       getSubCollection('integrationStatus'),
       `calendar-sync-${calendarId}`
     );
@@ -512,7 +512,7 @@ async function getLastSyncStatus(calendarId: string): Promise<CalendarSyncStatus
  */
 async function saveSyncStatus(calendarId: string, status: CalendarSyncStatus): Promise<void> {
   try {
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('integrationStatus'),
       `calendar-sync-${calendarId}`,
       status
