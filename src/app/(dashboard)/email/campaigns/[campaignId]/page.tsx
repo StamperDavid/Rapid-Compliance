@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getCampaignStats } from '@/lib/email/campaign-manager';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -28,8 +27,13 @@ export default function CampaignStatsPage() {
 
   const loadStats = useCallback(async () => {
     try {
-      const data = await getCampaignStats(campaignId);
-      setStats(data as unknown as CampaignStats);
+      const response = await fetch(`/api/email/campaigns/${campaignId}/stats`);
+      if (!response.ok) {
+        const errBody = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errBody.error ?? `Request failed with ${response.status}`);
+      }
+      const data = (await response.json()) as CampaignStats;
+      setStats(data);
     } catch (error: unknown) {
       logger.error('Error loading campaign stats:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       showError('Failed to load campaign statistics');

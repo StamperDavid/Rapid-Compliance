@@ -1,9 +1,19 @@
 /**
  * Admin Firestore Service
- * Server-side only - uses Firebase Admin SDK to bypass security rules
- * Use this for privileged operations in API routes
+ * Server-side only — uses Firebase Admin SDK to bypass security rules.
+ * Use this for privileged operations in API routes, route handlers,
+ * server actions, cron jobs, and lib services called from any of the above.
+ *
+ * The `server-only` marker below causes Next.js to throw at build time if
+ * any client component (a file with `'use client'`, directly or via
+ * transitive import) reaches into this module. That guard is intentional:
+ * firebase-admin is a Node-only package and silently bundling it into the
+ * browser produces broken chunks and leaks server-only code into the
+ * client. If you hit "you're importing a component that needs server-only"
+ * during build, the calling client page should call an API route instead.
  */
 
+import 'server-only';
 import * as admin from 'firebase-admin';
 import { adminDb } from '@/lib/firebase/admin'
 import { logger } from '@/lib/logger/logger';

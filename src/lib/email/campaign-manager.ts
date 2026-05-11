@@ -6,6 +6,7 @@
 import { sendBulkEmails } from './email-service';
 import { ensureCompliance } from '@/lib/compliance/can-spam-service';
 import { getEmailCampaignsCollection } from '@/lib/firebase/collections';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 
 export interface EmailCampaign {
   id: string;
@@ -342,15 +343,15 @@ function determineABTestWinner(
  * Get campaign statistics
  */
 export async function getCampaignStats(campaignId: string): Promise<CampaignStats | null> {
-  // Load campaign from Firestore
-  const { EmailCampaignService } = await import('@/lib/db/firestore-service');
-  const campaignData = await EmailCampaignService.get(campaignId);
-  
-  if (!campaignData) {
+  // Load campaign from Firestore (server-side, Admin SDK)
+  const campaign = await AdminFirestoreService.get<EmailCampaign>(
+    getEmailCampaignsCollection(),
+    campaignId,
+  );
+
+  if (!campaign) {
     return null;
   }
-
-  const campaign = campaignData as EmailCampaign;
 
   const sent = campaign.sentCount;
   const delivered = campaign.deliveredCount;

@@ -6,15 +6,12 @@ import { PageTitle } from '@/components/ui/typography';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { campaignFormSchema, type CampaignFormValues } from '@/lib/validation/campaign-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { createCampaign } from '@/lib/email/campaign-manager';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import { useAuth } from '@/hooks/useAuth';
 
 export default function NewCampaignPage() {
   const router = useRouter();
   const toast = useToast();
-  const { user } = useAuth();
   const form = useForm<CampaignFormValues>({
     resolver: zodResolver(campaignFormSchema),
     defaultValues: {
@@ -27,11 +24,23 @@ export default function NewCampaignPage() {
 
   const onSubmit = async (data: CampaignFormValues) => {
     try {
-      await createCampaign({
-        ...data,
-        scheduledFor: data.scheduledFor ? new Date(data.scheduledFor) : new Date(),
-        createdBy: user?.id ?? 'anonymous',
+      const response = await fetch('/api/email/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          campaign: {
+            ...data,
+            scheduledFor: data.scheduledFor ? new Date(data.scheduledFor).toISOString() : new Date().toISOString(),
+          },
+        }),
       });
+
+      if (!response.ok) {
+        const errBody = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errBody.error ?? `Request failed with ${response.status}`);
+      }
+
       router.push('/email/campaigns');
     } catch (error: unknown) {
       logger.error('Error creating campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
