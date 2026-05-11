@@ -5,7 +5,7 @@
 
 import type { TrainingExample, FineTuningJob } from '@/types/fine-tuning';
 import { validateTrainingData } from './data-formatter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
@@ -267,7 +267,7 @@ export async function createVertexAIFineTuningJob(params: {
     startedAt: new Date().toISOString(),
   };
 
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('fineTuningJobs'),
     jobId,
     job,
@@ -301,7 +301,7 @@ export { estimateVertexAICost };
 export async function getVertexAIJobStatus(
   jobId: string
 ): Promise<FineTuningJob> {
-  const job = await FirestoreService.get(
+  const job = await AdminFirestoreService.get(
     getSubCollection('fineTuningJobs'),
     jobId
   ) as FineTuningJob;
@@ -353,7 +353,7 @@ export async function getVertexAIJobStatus(
           }
 
           // Sync to Firestore
-          await FirestoreService.set(
+          await AdminFirestoreService.setLikeClient(
             getSubCollection('fineTuningJobs'),
             jobId,
             { ...job, ...updates },

@@ -7,7 +7,8 @@ import type { ContinuousLearningConfig, TrainingExample, FineTuningJob } from '@
 import { collectTrainingExample, getTrainingDataStats } from '../fine-tuning/data-collector';
 import { createOpenAIFineTuningJob } from '../fine-tuning/openai-tuner';
 import { createVertexAIFineTuningJob } from '../fine-tuning/vertex-tuner';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { where, type Timestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -142,7 +143,7 @@ async function triggerFineTuning(
   logger.info('[Continuous Learning] Triggering fine-tuning', { file: 'continuous-learning-engine.ts' });
 
   // Get approved examples
-  const examples = await FirestoreService.getAll<TrainingExample>(
+  const examples = await AdminFirestoreService.getAll<TrainingExample>(
     getSubCollection('trainingExamples'),
     [where('status', '==', 'approved')]
   );
@@ -152,7 +153,7 @@ async function triggerFineTuning(
   }
 
   // Get organization's model preferences
-  const orgConfig = await FirestoreService.get<OrganizationPreferences>(
+  const orgConfig = await AdminFirestoreService.get<OrganizationPreferences>(
     COLLECTIONS.ORGANIZATIONS,
     PLATFORM_ID
   );
@@ -185,11 +186,11 @@ async function triggerFineTuning(
  */
 async function getLearningConfig(): Promise<ContinuousLearningConfig | null> {
   try {
-    const config = await FirestoreService.get(
+    const config = await AdminFirestoreService.get<ContinuousLearningConfig>(
       getSubCollection('config'),
       'continuousLearning'
     );
-    return config as ContinuousLearningConfig;
+    return config;
   } catch (_error) {
     // Return default config if not found
     return {
@@ -214,7 +215,7 @@ async function getLearningConfig(): Promise<ContinuousLearningConfig | null> {
  * Get last fine-tuning job
  */
 async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
-  const jobs = await FirestoreService.getAll<FineTuningJob>(
+  const jobs = await AdminFirestoreService.getAll<FineTuningJob>(
     getSubCollection('fineTuningJobs'),
     []
   );
@@ -233,7 +234,7 @@ async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
  * Get monthly training spend
  */
 async function getMonthlyTrainingSpend(): Promise<number> {
-  const jobs = await FirestoreService.getAll<FineTuningJob>(
+  const jobs = await AdminFirestoreService.getAll<FineTuningJob>(
     getSubCollection('fineTuningJobs'),
     []
   );
@@ -293,7 +294,7 @@ export async function evaluateAndDeployModel(
   }
   
   // Get organization's current model
-  const orgConfig = await FirestoreService.get<OrganizationPreferences>(
+  const orgConfig = await AdminFirestoreService.get<OrganizationPreferences>(
     COLLECTIONS.ORGANIZATIONS,
     PLATFORM_ID
   );
@@ -332,7 +333,7 @@ export async function processCompletedFineTuningJob(
   testId?: string;
 }> {
   // Get the job
-  const job = await FirestoreService.get<FineTuningJob>(
+  const job = await AdminFirestoreService.get<FineTuningJob>(
     getSubCollection('fineTuningJobs'),
     jobId
   );
@@ -349,7 +350,7 @@ export async function processCompletedFineTuningJob(
   const result = await evaluateAndDeployModel(job.fineTunedModelId);
   
   // Update job with test info
-  await FirestoreService.update(
+  await AdminFirestoreService.updateLikeClient(
     getSubCollection('fineTuningJobs'),
     jobId,
     {

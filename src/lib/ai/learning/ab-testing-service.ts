@@ -3,7 +3,7 @@
  * Compares fine-tuned models against base models to measure improvement
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service'
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service'
 import { logger } from '@/lib/logger/logger';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -97,7 +97,7 @@ export async function createABTest(params: {
     updatedAt: now,
   };
   
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('abTests'),
     testId,
     test,
@@ -105,7 +105,7 @@ export async function createABTest(params: {
   );
   
   // Update organization to use this test
-  await FirestoreService.update(
+  await AdminFirestoreService.updateLikeClient(
     COLLECTIONS.ORGANIZATIONS,
     PLATFORM_ID,
     {
@@ -136,7 +136,7 @@ export async function getModelForConversation(
   testId?: string;
 }> {
   // Check if there's an active A/B test
-  const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
+  const org = await AdminFirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
 
   if (!org?.activeABTest) {
     // No active test, use default model
@@ -149,7 +149,7 @@ export async function getModelForConversation(
   }
 
   // Get the test
-  const test = await FirestoreService.get<ABTest>(
+  const test = await AdminFirestoreService.get<ABTest>(
     getSubCollection('abTests'),
     org.activeABTest
   );
@@ -188,7 +188,7 @@ export async function recordConversationResult(params: {
 }): Promise<void> {
   const { testId, isTestGroup, converted, rating, confidence, tokensUsed } = params;
   
-  const test = await FirestoreService.get(
+  const test = await AdminFirestoreService.get(
     getSubCollection('abTests'),
     testId
   ) as ABTest;
@@ -234,7 +234,7 @@ export async function recordConversationResult(params: {
     metrics.controlTotalTokens += tokensUsed;
   }
   
-  await FirestoreService.update(
+  await AdminFirestoreService.updateLikeClient(
     getSubCollection('abTests'),
     testId,
     {
@@ -258,7 +258,7 @@ export async function recordConversationResult(params: {
 export async function evaluateABTest(
   testId: string
 ): Promise<ABTest['results']> {
-  const test = await FirestoreService.get(
+  const test = await AdminFirestoreService.get(
     getSubCollection('abTests'),
     testId
   ) as ABTest;
@@ -315,7 +315,7 @@ export async function evaluateABTest(
   };
   
   // Update test with results
-  await FirestoreService.update(
+  await AdminFirestoreService.updateLikeClient(
     getSubCollection('abTests'),
     testId,
     {
@@ -341,13 +341,13 @@ export async function evaluateABTest(
  * Get active A/B test for organization
  */
 export async function getActiveABTest(): Promise<ABTest | null> {
-  const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
+  const org = await AdminFirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
 
   if (!org?.activeABTest) {
     return null;
   }
 
-  const test = await FirestoreService.get<ABTest>(
+  const test = await AdminFirestoreService.get<ABTest>(
     getSubCollection('abTests'),
     org.activeABTest
   );
@@ -365,7 +365,7 @@ export async function completeABTestAndDeploy(
   model: string;
   reason: string;
 }> {
-  const test = await FirestoreService.get(
+  const test = await AdminFirestoreService.get(
     getSubCollection('abTests'),
     testId
   ) as ABTest;
@@ -378,7 +378,7 @@ export async function completeABTestAndDeploy(
   if (!test.results) {
     await evaluateABTest(testId);
     // Re-fetch
-    const updatedTest = await FirestoreService.get(
+    const updatedTest = await AdminFirestoreService.get(
       getSubCollection('abTests'),
       testId
     ) as ABTest;
@@ -399,7 +399,7 @@ export async function completeABTestAndDeploy(
   
   if (autoDeploy && test.results.winner === 'treatment') {
     // Deploy fine-tuned model as the new default
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       COLLECTIONS.ORGANIZATIONS,
       PLATFORM_ID,
       {
@@ -421,7 +421,7 @@ export async function completeABTestAndDeploy(
   }
   
   // Clear active test without deploying
-  await FirestoreService.update(
+  await AdminFirestoreService.updateLikeClient(
     COLLECTIONS.ORGANIZATIONS,
     PLATFORM_ID,
     {

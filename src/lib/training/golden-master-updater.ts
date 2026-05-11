@@ -3,7 +3,7 @@
  * Applies training improvements to the Golden Master
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { compileSystemPrompt } from '@/lib/agent/prompt-compiler';
 import type { GoldenMaster } from '@/types/agent-memory'
 import { logger } from '@/lib/logger/logger';
@@ -57,7 +57,7 @@ export async function createUpdateRequest(
   };
 
   // Save to Firestore
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('goldenMasterUpdates'),
     updateRequest.id,
     updateRequest,
@@ -283,7 +283,7 @@ export async function applyUpdateRequest(
   });
 
   // Save new version
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('goldenMasters'),
     updatedGM.id,
     updatedGM,
@@ -291,7 +291,7 @@ export async function applyUpdateRequest(
   );
 
   // Update the update request status
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('goldenMasterUpdates'),
     updateRequest.id,
     {
@@ -331,11 +331,11 @@ async function getGoldenMaster(
   goldenMasterId: string
 ): Promise<GoldenMaster | null> {
   try {
-    const gm = await FirestoreService.get(
+    const gm = await AdminFirestoreService.get<GoldenMaster>(
       getSubCollection('goldenMasters'),
       goldenMasterId
     );
-    return gm as GoldenMaster;
+    return gm;
   } catch (error) {
     logger.error('[GM Updater] Error fetching Golden Master:', error instanceof Error ? error : new Error(String(error)), { file: 'golden-master-updater.ts' });
     return null;
@@ -357,7 +357,7 @@ export async function deployGoldenMaster(
   }
 
   // Get all Golden Masters for this org
-  const allGMs = await FirestoreService.getAll<GoldenMaster & FirestoreDocument>(
+  const allGMs = await AdminFirestoreService.getAll<GoldenMaster & FirestoreDocument>(
     getSubCollection('goldenMasters'),
     []
   );
@@ -367,7 +367,7 @@ export async function deployGoldenMaster(
   const newGMAgentType = newGM.agentType;
   for (const gm of allGMs) {
     if (gm.id !== goldenMasterId && gm.isActive && gm.agentType === newGMAgentType) {
-      await FirestoreService.set(
+      await AdminFirestoreService.setLikeClient(
         getSubCollection('goldenMasters'),
         gm.id,
         {
@@ -380,7 +380,7 @@ export async function deployGoldenMaster(
   }
 
   // Activate the new version
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('goldenMasters'),
     goldenMasterId,
     {

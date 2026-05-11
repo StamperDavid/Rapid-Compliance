@@ -5,7 +5,7 @@
 
 import type { TrainingExample, FineTuningJob } from '@/types/fine-tuning';
 import { formatForOpenAI, validateTrainingData } from './data-formatter';
-import { FirestoreService } from '@/lib/db/firestore-service'
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service'
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -97,7 +97,7 @@ export async function createOpenAIFineTuningJob(params: {
     startedAt: new Date().toISOString(),
   };
 
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('fineTuningJobs'),
     job.id,
     job,
@@ -188,7 +188,7 @@ function monitorFineTuningJob(
           updates.error = JSON.stringify(jobData.error);
         }
 
-        await FirestoreService.update(
+        await AdminFirestoreService.updateLikeClient(
           getSubCollection('fineTuningJobs'),
           jobId,
           updates
@@ -257,7 +257,7 @@ export async function cancelFineTuningJob(
   }
 
   // Get job to get provider job ID
-  const job = await FirestoreService.get(
+  const job = await AdminFirestoreService.get(
     getSubCollection('fineTuningJobs'),
     jobId
   ) as FineTuningJob;
@@ -278,7 +278,7 @@ export async function cancelFineTuningJob(
   );
 
   // Update in Firestore
-  await FirestoreService.update(
+  await AdminFirestoreService.updateLikeClient(
     getSubCollection('fineTuningJobs'),
     jobId,
     {

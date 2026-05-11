@@ -4,7 +4,7 @@
  */
 
 import type { TrainingExample } from '@/types/fine-tuning';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { where } from 'firebase/firestore';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -60,7 +60,7 @@ export async function collectTrainingExample(params: {
   };
   
   // Save to Firestore
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('trainingExamples'),
     example.id,
     example,
@@ -98,7 +98,7 @@ export async function collectFromTrainingScenario(params: {
     updatedAt: new Date().toISOString(),
   };
   
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('trainingExamples'),
     example.id,
     example,
@@ -142,7 +142,7 @@ export async function collectFromHumanCorrection(params: {
     updatedAt: new Date().toISOString(),
   };
   
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('trainingExamples'),
     example.id,
     example,
@@ -189,7 +189,7 @@ export async function getTrainingExamples(
     ? [where('status', '==', status)]
     : [];
 
-  const examples = await FirestoreService.getAll<TrainingExample>(
+  const examples = await AdminFirestoreService.getAll<TrainingExample>(
     getSubCollection('trainingExamples'),
     filters
   );
@@ -204,7 +204,7 @@ export async function approveTrainingExample(
   exampleId: string,
   approvedBy: string
 ): Promise<void> {
-  await FirestoreService.update(
+  await AdminFirestoreService.updateLikeClient(
     getSubCollection('trainingExamples'),
     exampleId,
     {
@@ -223,7 +223,7 @@ export async function approveTrainingExample(
 export async function rejectTrainingExample(
   exampleId: string
 ): Promise<void> {
-  await FirestoreService.update(
+  await AdminFirestoreService.updateLikeClient(
     getSubCollection('trainingExamples'),
     exampleId,
     {

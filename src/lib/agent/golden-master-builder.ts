@@ -14,7 +14,7 @@ import type {
 import type { AgentDomain } from '@/types/training';
 import { buildPersonaFromOnboarding, buildBusinessContextFromOnboarding, buildBehaviorConfigFromOnboarding } from './persona-builder';
 import { compileSystemPrompt } from './prompt-compiler';
-import { FirestoreService } from '@/lib/db/firestore-service'
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service'
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -54,7 +54,7 @@ export async function createGoldenMasterFromBase(
   
   // Get previous version for changelog
     const { orderBy, limit } = await import('firebase/firestore');
-  const previousGMs = await FirestoreService.getAll<GoldenMaster>(
+  const previousGMs = await AdminFirestoreService.getAll<GoldenMaster>(
     getSubCollection('goldenMasters'),
     [orderBy('createdAt', 'desc'), limit(1)]
   );
@@ -109,7 +109,7 @@ export async function createGoldenMasterFromBase(
 async function getNextGoldenMasterVersion(): Promise<string> {
     const { orderBy, limit } = await import('firebase/firestore');
 
-  const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
+  const goldenMasters = await AdminFirestoreService.getAll<GoldenMaster>(
     getSubCollection('goldenMasters'),
     [orderBy('createdAt', 'desc'), limit(1)]
   );
@@ -184,9 +184,9 @@ export async function buildGoldenMaster(
  * Save Golden Master to Firestore
  */
 export async function saveGoldenMaster(goldenMaster: GoldenMaster): Promise<void> {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
-  await FirestoreService.set(
+  await AdminFirestoreService.setLikeClient(
     getSubCollection('goldenMasters'),
     goldenMaster.id,
     {
@@ -244,10 +244,10 @@ export async function createGoldenMaster(
  * Get all Golden Masters for organization
  */
 export async function getAllGoldenMasters(): Promise<GoldenMaster[]> {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
   const { orderBy } = await import('firebase/firestore');
 
-  const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
+  const goldenMasters = await AdminFirestoreService.getAll<GoldenMaster>(
     getSubCollection('goldenMasters'),
     [orderBy('createdAt', 'desc')]
   );
@@ -308,11 +308,11 @@ export async function deployGoldenMaster(goldenMasterId: string): Promise<void> 
  * Get active Golden Master for organization
  */
 export async function getActiveGoldenMaster(): Promise<GoldenMaster | null> {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
   // Query for active Golden Master
   const { where } = await import('firebase/firestore');
-  const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
+  const goldenMasters = await AdminFirestoreService.getAll<GoldenMaster>(
     getSubCollection('goldenMasters'),
     [where('isActive', '==', true)]
   );
@@ -323,7 +323,7 @@ export async function getActiveGoldenMaster(): Promise<GoldenMaster | null> {
   
   // If no active, get the latest one
   const { orderBy, limit } = await import('firebase/firestore');
-  const latest = await FirestoreService.getAll<GoldenMaster>(
+  const latest = await AdminFirestoreService.getAll<GoldenMaster>(
     getSubCollection('goldenMasters'),
     [orderBy('createdAt', 'desc'), limit(1)]
   );

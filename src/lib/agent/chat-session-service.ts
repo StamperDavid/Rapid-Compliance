@@ -2,6 +2,12 @@
  * Chat Session Service
  * Manages real-time AI chat sessions for conversations monitoring
  * Replaces mock data in conversations page
+ *
+ * BROWSER-SIDE service — consumed exclusively by the `/conversations`
+ * dashboard page. Uses the client SDK (FirestoreService) so reads run
+ * under the operator's auth context and the subscribe methods get real-
+ * time updates. Do NOT swap to AdminFirestoreService — that would pull
+ * firebase-admin into the browser bundle.
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
