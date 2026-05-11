@@ -3,8 +3,9 @@
  * Business logic layer for contact management
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { where, orderBy, type QueryConstraint, type Timestamp } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -82,7 +83,7 @@ export async function getContacts(
     // Default ordering
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Contact>(
+    const result = await AdminFirestoreService.getAllPaginated<Contact>(
       getSubCollection('contacts'),
       constraints,
       options?.pageSize ?? 50,
@@ -109,7 +110,7 @@ export async function getContact(
   contactId: string
 ): Promise<Contact | null> {
   try {
-    const contact = await FirestoreService.get<Contact>(
+    const contact = await AdminFirestoreService.get<Contact>(
       getSubCollection('contacts'),
       contactId
     );
@@ -147,7 +148,7 @@ export async function createContact(
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('contacts'),
       contactId,
       contact,
@@ -181,7 +182,7 @@ export async function updateContact(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('contacts'),
       contactId,
       updatedData
@@ -213,7 +214,7 @@ export async function deleteContact(
 ): Promise<void> {
   try {
     // Check for linked deals before deleting (referential integrity)
-    const linkedDeals = await FirestoreService.getAll(
+    const linkedDeals = await AdminFirestoreService.getAll(
       getSubCollection('deals'),
       [where('contactId', '==', contactId)]
     );
@@ -224,7 +225,7 @@ export async function deleteContact(
     }
 
     // Check for linked activities
-    const linkedActivities = await FirestoreService.getAll(
+    const linkedActivities = await AdminFirestoreService.getAll(
       getSubCollection('activities'),
       [where('contactId', '==', contactId)]
     );
@@ -234,7 +235,7 @@ export async function deleteContact(
       );
     }
 
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('contacts'),
       contactId
     );
@@ -350,7 +351,7 @@ export async function recordInteraction(
     });
 
     // Save interaction record
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       `${getSubCollection('contacts')}/${contactId}/interactions`,
       `interaction-${Date.now()}`,
       {

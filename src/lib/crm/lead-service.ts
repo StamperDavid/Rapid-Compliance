@@ -4,9 +4,9 @@
  * Decouples UI from direct Firestore access
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Lead, LeadFilters, EnrichmentData } from '@/types/crm-entities';
@@ -56,7 +56,7 @@ export async function getLeads(
     // Default ordering
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Lead>(
+    const result = await AdminFirestoreService.getAllPaginated<Lead>(
       getSubCollection('leads'),
       constraints,
       options?.pageSize ?? 50,
@@ -84,7 +84,7 @@ export async function getLead(
   leadId: string
 ): Promise<Lead | null> {
   try {
-    const lead = await FirestoreService.get<Lead>(
+    const lead = await AdminFirestoreService.get<Lead>(
       getSubCollection('leads'),
       leadId
     );
@@ -104,22 +104,14 @@ export async function getLead(
 }
 
 /**
- * Create a new lead with auto-enrichment.
- *
- * `useAdminSdk: true` writes via Admin SDK (bypasses Firestore rules) and is
- * required for public/unauthenticated endpoints that have no `request.auth`
- * context — e.g. `/api/public/early-access`. Per
- * `feedback_server_routes_must_use_admin_sdk`: server routes called without
- * an authed user must use Admin SDK or Firestore rules return PERMISSION_DENIED.
- *
- * When `useAdminSdk` is set, downstream services that use the client SDK
- * (activity logging, event triggers, segmentation) may fail silently — they
- * are already try/catch wrapped and that is acceptable for the public-lead
- * path. Auto-enrichment also disabled by default for this case via the caller.
+ * Create a new lead with auto-enrichment. Always writes via Admin SDK so
+ * the call works regardless of whether the caller has an authenticated
+ * Firebase user context (authenticated API routes, public/unauthenticated
+ * routes, crons, webhooks all share the same path).
  */
 export async function createLead(
   data: Omit<Lead, 'id' | 'createdAt'>,
-  options: { autoEnrich?: boolean; skipDuplicateCheck?: boolean; useAdminSdk?: boolean } = {}
+  options: { autoEnrich?: boolean; skipDuplicateCheck?: boolean } = {}
 ): Promise<Lead> {
   try {
     const leadId = `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -167,20 +159,12 @@ export async function createLead(
       updatedAt: now,
     };
 
-    if (options.useAdminSdk) {
-      await AdminFirestoreService.set<Lead>(
-        getSubCollection('leads'),
-        leadId,
-        lead,
-      );
-    } else {
-      await FirestoreService.set(
-        getSubCollection('leads'),
-        leadId,
-        lead,
-        false
-      );
-    }
+    await AdminFirestoreService.setLikeClient<Lead>(
+      getSubCollection('leads'),
+      leadId,
+      lead,
+      false
+    );
 
     // Log activity
     try {
@@ -254,7 +238,7 @@ export async function updateLead(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('leads'),
       leadId,
       updatedData

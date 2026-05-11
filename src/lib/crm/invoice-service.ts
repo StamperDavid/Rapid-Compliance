@@ -4,8 +4,9 @@
  * Revenue flow: Deal -> Quote -> Invoice -> Payment
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Invoice, InvoiceFilters, CreateInvoiceInput, UpdateInvoiceInput } from '@/types/invoice';
@@ -41,7 +42,7 @@ function processLineItemInputs(items: QuoteLineItemInput[]): QuoteLineItem[] {
  */
 async function generateInvoiceNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const existing = await FirestoreService.getAll(
+  const existing = await AdminFirestoreService.getAll(
     getSubCollection('invoices'),
     [orderBy('createdAt', 'desc')]
   );
@@ -117,7 +118,7 @@ export async function getInvoices(
 
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Invoice>(
+    const result = await AdminFirestoreService.getAllPaginated<Invoice>(
       getSubCollection('invoices'),
       constraints,
       options?.pageSize ?? 50,
@@ -138,7 +139,7 @@ export async function getInvoices(
  */
 export async function getInvoice(invoiceId: string): Promise<Invoice | null> {
   try {
-    const invoice = await FirestoreService.get<Invoice>(
+    const invoice = await AdminFirestoreService.get<Invoice>(
       getSubCollection('invoices'),
       invoiceId
     );
@@ -184,7 +185,7 @@ export async function createInvoice(data: CreateInvoiceInput): Promise<Invoice> 
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('invoices'),
       invoiceId,
       invoice,
@@ -223,7 +224,7 @@ export async function updateInvoice(
       };
     }
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('invoices'),
       invoiceId,
       { ...processedUpdates, updatedAt: new Date() }
@@ -249,7 +250,7 @@ export async function updateInvoice(
 export async function deleteInvoice(invoiceId: string): Promise<void> {
   try {
     // Check for linked payments
-    const linkedPayments = await FirestoreService.getAll(
+    const linkedPayments = await AdminFirestoreService.getAll(
       getSubCollection('payments'),
       [where('invoiceId', '==', invoiceId)]
     );
@@ -259,7 +260,7 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
       );
     }
 
-    await FirestoreService.delete(getSubCollection('invoices'), invoiceId);
+    await AdminFirestoreService.delete(getSubCollection('invoices'), invoiceId);
     logger.info('Invoice deleted', { invoiceId });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

@@ -3,9 +3,10 @@
  * Business logic layer for deal/opportunity management
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -54,7 +55,7 @@ export async function getDeals(
     // Default ordering by value (high to low)
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Deal>(
+    const result = await AdminFirestoreService.getAllPaginated<Deal>(
       getSubCollection('deals'),
       constraints,
       options?.pageSize ?? 50,
@@ -81,7 +82,7 @@ export async function getDeal(
   dealId: string
 ): Promise<Deal | null> {
   try {
-    const deal = await FirestoreService.get<Deal>(
+    const deal = await AdminFirestoreService.get<Deal>(
       getSubCollection('deals'),
       dealId
     );
@@ -120,7 +121,7 @@ export async function createDeal(
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       getSubCollection('deals'),
       dealId,
       deal,
@@ -160,7 +161,7 @@ export async function updateDeal(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
+    await AdminFirestoreService.updateLikeClient(
       getSubCollection('deals'),
       dealId,
       updatedData
@@ -311,7 +312,7 @@ export async function deleteDeal(
 ): Promise<void> {
   try {
     // Check for linked activities before deleting (referential integrity)
-    const linkedActivities = await FirestoreService.getAll(
+    const linkedActivities = await AdminFirestoreService.getAll(
       getSubCollection('activities'),
       [where('dealId', '==', dealId)]
     );
@@ -321,7 +322,7 @@ export async function deleteDeal(
       );
     }
 
-    await FirestoreService.delete(
+    await AdminFirestoreService.delete(
       getSubCollection('deals'),
       dealId
     );

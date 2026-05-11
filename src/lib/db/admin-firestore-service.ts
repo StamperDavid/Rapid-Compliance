@@ -4,11 +4,14 @@
  * Use this for privileged operations in API routes
  */
 
+import * as admin from 'firebase-admin';
 import { adminDb } from '@/lib/firebase/admin'
 import { logger } from '@/lib/logger/logger';
 import type {
   QueryConstraint,
 } from 'firebase/firestore';
+
+const FieldValue = admin.firestore.FieldValue;
 
 // Type definitions for constraint data extraction
 interface ConstraintFieldPath {
@@ -255,10 +258,13 @@ export class AdminFirestoreService {
   }
 
   /**
-   * Set/create a document (creates if doesn't exist). Generic over the
-   * document shape so callers can write a typed interface without an
-   * explicit `Record<string, unknown>` cast — mirrors the client-SDK
-   * FirestoreService.set pattern.
+   * Set/create a document. Raw firebase-admin .set() semantics — default
+   * `merge=false` (overwrite), NO auto-timestamps. Existing admin callers
+   * rely on this behavior; do not change it.
+   *
+   * When migrating a client-SDK FirestoreService.set call site, use
+   * `setLikeClient()` instead, which matches the client-SDK contract
+   * (default `merge=true` + auto-stamped `createdAt`/`updatedAt`).
    */
   static async set<T extends object = Record<string, unknown>>(
     collectionPath: string,
@@ -282,6 +288,42 @@ export class AdminFirestoreService {
   }
 
   /**
+   * Set a document with client-SDK FirestoreService.set semantics:
+   *  - default `merge=true`
+   *  - always stamps `updatedAt` (overrides any caller-provided value)
+   *  - stamps `createdAt` on new documents (overrides any caller-provided value)
+   *
+   * Use this when migrating a `FirestoreService.set(...)` call to the
+   * admin SDK so behavior stays identical. Existing admin callers should
+   * NOT switch to this method unless they want client-SDK semantics —
+   * server-stamped `updatedAt` will override any caller-supplied value.
+   */
+  static async setLikeClient<T extends object = Record<string, unknown>>(
+    collectionPath: string,
+    docId: string,
+    data: T,
+    merge: boolean = true
+  ): Promise<void> {
+    try {
+      const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
+
+      const docSnap = merge ? await docRef.get() : null;
+      const isNewDoc = !docSnap?.exists;
+      const dataWithTimestamps = {
+        ...(data as Record<string, unknown>),
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(isNewDoc ? { createdAt: FieldValue.serverTimestamp() } : {}),
+      };
+
+      await docRef.set(dataWithTimestamps, { merge });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error setLikeClient ${collectionPath}/${docId}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
+    }
+  }
+
+  /**
    * Add a new document with auto-generated ID
    */
   static async add(collectionPath: string, data: Record<string, unknown>): Promise<string> {
@@ -296,7 +338,11 @@ export class AdminFirestoreService {
   }
 
   /**
-   * Update an existing document
+   * Update an existing document. Raw firebase-admin .update() semantics —
+   * NO auto-timestamps. Existing admin callers rely on this behavior.
+   *
+   * When migrating a client-SDK FirestoreService.update call site, use
+   * `updateLikeClient()` instead, which auto-stamps `updatedAt`.
    */
   static async update(
     collectionPath: string,
@@ -311,6 +357,64 @@ export class AdminFirestoreService {
       logger.error(`[Admin Firestore] Error updating document ${collectionPath}/${docId}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
       throw new Error(message);
     }
+  }
+
+  /**
+   * Update with client-SDK FirestoreService.update semantics: auto-stamps
+   * `updatedAt`. Use this when migrating a `FirestoreService.update(...)`
+   * call to the admin SDK so behavior stays identical.
+   */
+  static async updateLikeClient(
+    collectionPath: string,
+    docId: string,
+    data: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
+      await docRef.update({
+        ...data,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error updateLikeClient ${collectionPath}/${docId}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Batch write operations. Mirrors the client-SDK FirestoreService.batchWrite
+   * shape so server callers can swap with no signature change. Auto-stamps
+   * `updatedAt` on set/update entries.
+   */
+  static async batchWrite(operations: Array<{
+    type: 'set' | 'update' | 'delete';
+    collectionPath: string;
+    docId: string;
+    data?: Record<string, unknown>;
+  }>): Promise<void> {
+    const db = ensureAdminDb();
+    const batch = db.batch();
+
+    for (const op of operations) {
+      const docRef = db.collection(op.collectionPath).doc(op.docId);
+
+      if (op.type === 'set') {
+        batch.set(docRef, {
+          ...op.data,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      } else if (op.type === 'update') {
+        batch.update(docRef, {
+          ...op.data,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      } else if (op.type === 'delete') {
+        batch.delete(docRef);
+      }
+    }
+
+    await batch.commit();
   }
 
   /**

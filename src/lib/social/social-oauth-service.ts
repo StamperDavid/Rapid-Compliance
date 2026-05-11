@@ -15,7 +15,7 @@
 import crypto from 'crypto';
 import { logger } from '@/lib/logger/logger';
 import { encryptToken } from '@/lib/security/token-encryption';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialOAuthState, SocialOAuthTokenResult, SocialPlatform } from '@/types/social';
 
@@ -39,7 +39,7 @@ async function storeOAuthState(
     expiresAt: new Date(Date.now() + STATE_TTL_MS).toISOString(),
   };
 
-  await FirestoreService.set(OAUTH_STATES_PATH, stateToken, stateData, false);
+  await AdminFirestoreService.setLikeClient(OAUTH_STATES_PATH, stateToken, stateData, false);
   return stateToken;
 }
 
@@ -48,17 +48,17 @@ async function retrieveAndDeleteOAuthState(
   expectedProvider: SocialPlatform
 ): Promise<SocialOAuthState | null> {
   try {
-    const raw = await FirestoreService.get(OAUTH_STATES_PATH, stateToken);
+    const raw = await AdminFirestoreService.get<SocialOAuthState>(OAUTH_STATES_PATH, stateToken);
     if (!raw) {
       logger.warn('Social OAuth state not found', { statePrefix: stateToken.substring(0, 8) });
       return null;
     }
 
-    const stateData = raw as SocialOAuthState;
+    const stateData = raw;
 
     if (new Date(stateData.expiresAt) < new Date()) {
       logger.warn('Social OAuth state expired', { provider: stateData.provider });
-      await FirestoreService.delete(OAUTH_STATES_PATH, stateToken);
+      await AdminFirestoreService.delete(OAUTH_STATES_PATH, stateToken);
       return null;
     }
 
@@ -67,12 +67,12 @@ async function retrieveAndDeleteOAuthState(
         expected: expectedProvider,
         actual: stateData.provider,
       });
-      await FirestoreService.delete(OAUTH_STATES_PATH, stateToken);
+      await AdminFirestoreService.delete(OAUTH_STATES_PATH, stateToken);
       return null;
     }
 
     // Delete to prevent reuse
-    await FirestoreService.delete(OAUTH_STATES_PATH, stateToken);
+    await AdminFirestoreService.delete(OAUTH_STATES_PATH, stateToken);
     return stateData;
   } catch (error) {
     logger.error(

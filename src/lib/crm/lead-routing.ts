@@ -7,7 +7,7 @@
  * - Re-assignment rules
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
@@ -79,7 +79,7 @@ export async function routeLead(
 ): Promise<RoutingResult> {
   try {
     // Get all routing rules for this organization
-    const rulesResult = await FirestoreService.getAll<RoutingRule>(
+    const rulesResult = await AdminFirestoreService.getAll<RoutingRule>(
       getSubCollection('leadRoutingRules')
     );
 
@@ -188,7 +188,7 @@ async function getRoundRobinUser(
   userIds: string[]
 ): Promise<string> {
   try {
-    const state = await FirestoreService.get<{ lastIndex: number }>(
+    const state = await AdminFirestoreService.get<{ lastIndex: number }>(
       `${getSubCollection('leadRoutingRules')}/${ruleId}/state`,
       'roundRobin'
     );
@@ -197,7 +197,7 @@ async function getRoundRobinUser(
     const nextIndex = (lastIndex + 1) % userIds.length;
     const assignedUserId = userIds[nextIndex];
 
-    await FirestoreService.set(
+    await AdminFirestoreService.setLikeClient(
       `${getSubCollection('leadRoutingRules')}/${ruleId}/state`,
       'roundRobin',
       { lastIndex: nextIndex, updatedAt: new Date() },
@@ -351,7 +351,7 @@ function getSkillBasedUser(lead: Lead, rule: RoutingRule): string | null {
 async function getDefaultAssignment(): Promise<string> {
   try {
     // Get organization members
-    const membersResult = await FirestoreService.getAll<OrganizationMember>(
+    const membersResult = await AdminFirestoreService.getAll<OrganizationMember>(
       getSubCollection('members')
     );
 
@@ -365,7 +365,7 @@ async function getDefaultAssignment(): Promise<string> {
     }
 
     // Fallback to org owner
-    const org = await FirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
+    const org = await AdminFirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     const orgCreatedBy = org?.createdBy;
     return org?.ownerId ?? (orgCreatedBy ?? 'unknown');
 

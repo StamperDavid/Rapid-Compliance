@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     let leadId: string | null = null;
     try {
-      const lead = await createLead(leadInput, { autoEnrich: false, useAdminSdk: true });
+      const lead = await createLead(leadInput, { autoEnrich: false });
       leadId = lead.id;
     } catch (leadErr) {
       // Don't fail the user-facing submission if lead creation hiccups — the
