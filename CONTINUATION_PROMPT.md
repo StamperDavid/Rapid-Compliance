@@ -1,10 +1,254 @@
 # SalesVelocity.ai — Full-Orchestration Continuation Prompt
 
-> **Updated:** May 8, 2026 — full training-loop fix sweep + canonicalization + BUDGET_STRATEGIST shipped (see top section).
+> **Updated:** May 10, 2026 — BUDGET_STRATEGIST end-to-end build (UTM capture + CRM aggregation + persistence + widget + Google Ads + Meta Ads + two-step Apply + hourly cron). Operator session resumes after dinner to wire Google Ads / Meta Ads / GA4 creds.
+> **Earlier session updated:** May 8, 2026 — full training-loop fix sweep + canonicalization + BUDGET_STRATEGIST shipped (see top section).
 > **Earlier session updated:** May 7, 2026 — Sentry production wiring + memory-vault crash fix + StepGradeWidget rebuild + GM seeding audit.
 > **Earlier session updated:** May 3, 2026 — social posting bug fix + Social Hub duplicate-tab fix shipped.
 > **Earlier session updated:** April 30, 2026 (afternoon — YC pre-submission walkthrough, preserved below).
 > **Earlier session updated:** April 29, 2026 (evening, fake-AI sweep — preserved below for context).
+
+---
+
+# 🛠️ SESSION — BUDGET_STRATEGIST end-to-end build (May 10, 2026 evening)
+
+## What this session was
+PC crash recovery: started by reviewing the May 8 state, then operator
+committed to "build the full BUDGET_STRATEGIST agent — not just the UI".
+Everything from the data plumbing in through the apply path out was built
+in one push. Operator session pauses for dinner; resumes after to walk
+through Google Ads / Meta Ads / GA4 credential setup against the
+already-built scaffolding.
+
+**4 commits landed on `dev`, all behaviorally verified against live
+Firestore. Builds clean. Apply pipeline 9/9 pass. LLM smoke test 35/35
+pass. Snapshot persistence 4/4 pass. Conversion aggregator 9/9 normalizer
+checks + valid response shape against real Firestore.**
+
+## Commits this session
+
+1. `63804292` — feat(budget): first live verification + UTM capture + CRM aggregation
+2. `537eadd9` — feat(budget): persistence + dashboard widget
+3. `2c52bbda` — feat(google-ads): integration scaffolding for BUDGET_STRATEGIST
+4. `80f982a9` — feat(budget): Meta Ads + Apply pipeline + hourly cron
+
+## What got built (chronological)
+
+**1. Agent — first live LLM call verified.** The May 8 agent had never been
+run live. Smoke test (`scripts/verify-budget-strategist-live.ts`) caught
+two real schema bugs on the very first call:
+- rationale cap of 800 chars rejected the LLM's natural verbosity → raised
+  to 1200, added "keep rationale under 1000 chars" prompt hint.
+- `manualMissionPrompt: z.string().min(1).max(800).optional()` rejected
+  empty strings (which LLMs send instead of omitting). Fixed via Zod
+  preprocess that coerces `''` → undefined. Added "OMIT the field entirely"
+  to the prompt rules.
+- Second run: 35/35 assertions pass, ~$0.04 per call on claude-sonnet-4.6.
+- Real output quality: Meta self-reported 19 conversions vs CRM-attributed
+  4 → strategist recommended cutting Meta by $800 with "trust the CRM"
+  language. Brand DNA voice intact.
+
+**2. UTM capture on every public lead-capture surface.** Operator goal:
+real ad-platform conversions need to flow into CRM as source-attributed
+leads so BUDGET_STRATEGIST can read them.
+- `src/lib/utm-tracking.ts` (NEW) — captures utm_source/medium/campaign/
+  term/content from URL, persists across navigation via sessionStorage
+  (30-day TTL), surfaces via `buildUtmMetadata()` for form submits.
+- `PublicLayout.tsx` calls `persistUtmsIfPresent()` on mount so UTMs survive
+  cross-page nav before the eventual lead form.
+- `/api/public/early-access` route + page wired to read/persist UTMs.
+  Derives `lead.source = "<utm_source>/<utm_medium>"` lowercase.
+- `/api/public/contact` route REWRITTEN — previously persisted
+  `contactSubmissions` only, no Lead created. Now creates a Lead with the
+  same UTM normalization + source field + submission backlink. The dynamic
+  `/api/public/forms/[formId]` already did this, so all three surfaces now
+  match.
+
+**3. CRM-attributed conversion aggregation.**
+- `src/lib/marketing/budget-conversion-aggregator.ts` (NEW) — queries
+  `getSubCollection('leads')` filtered by `createdAt` window, normalizes
+  source strings to platform keys ("google_ads/cpc" → "google_ads",
+  "form" → "direct"), returns per-platform counts. Uses Admin SDK.
+- `GET /api/marketing/budget/conversions?windowDays=30` exposes the
+  aggregation gated by requireRole(['owner','admin']).
+- `scripts/verify-budget-conversion-aggregator.ts` — 9/9 normalizer unit
+  checks + live Firestore query (returned 4 leads, all `direct`, because
+  UTM capture only shipped today and no UTM-tagged traffic has flowed
+  through yet — by-design).
+- Budget page "Pull from CRM" button calls /conversions and populates
+  matching platform rows' conversion counts automatically. Unmatched CRM
+  platforms surface as a callout so operator can add rows.
+
+**4. Snapshot persistence + dashboard widget.**
+- New `marketingBudgetSnapshots` collection in `COLLECTIONS` registry +
+  `getMarketingBudgetSnapshotsCollection()` getter.
+- `src/lib/marketing/budget-snapshot-service.ts` (NEW) — persist,
+  getLatest (orderBy createdAt desc + limit 1), listSnapshots.
+- Analyze endpoint now persists on success and returns `snapshotId`. Wrapped
+  in try/catch so a Firestore hiccup never loses the LLM output the operator
+  already paid for.
+- `GET /api/marketing/budget/latest` for the dashboard widget.
+- `src/components/marketing/MarketingBudgetWidget.tsx` (NEW) — renders
+  top 2 highest-impact recommendations with action icons + delta amounts,
+  click-through to /marketing/budget, empty state with "Start analysis" CTA,
+  insufficient-data warning when conversion volume is low.
+- Mounted in dashboard Row 2 alongside Conversations + AI Workforce
+  (md:grid-cols-2 → md:grid-cols-2 lg:grid-cols-3).
+- `scripts/verify-budget-snapshot-service.ts` — 4/4 round-trip pass against
+  live Firestore (persist → getLatest → list → cleanup).
+
+**5. Google Ads integration scaffolding.** Key win: `GOOGLE_FULL_SCOPE_BUNDLE`
+already grants the `https://www.googleapis.com/auth/adwords` scope. So
+Google Ads doesn't need its own OAuth — just developer token + customer ID
+on top of the existing central Google connection.
+- `src/lib/integrations/google-ads-service.ts` — GAQL query for spend +
+  budgets + conversions over a date range. `updateCampaignBudget` mutates
+  the SHARED campaign budget (Google Ads budgets are shared resources
+  potentially powering multiple campaigns). Auto-refreshes OAuth tokens.
+- `getGoogleAdsConfig` / `saveGoogleAdsConfig` for the developer token +
+  customer ID + optional MCC `loginCustomerId`.
+- `getGoogleAdsStatus()` returns a composed status snapshot
+  (googleAccountConnected, hasAdwordsScope, developerToken,
+  customerId, plain-English diagnostic for the UI).
+- Routes: `/status`, `/save-config`.
+- `GoogleAdsConfigCard` mounted in `/settings/integrations` as a new
+  "Marketing Ads" category (per integrate-into-existing-hubs rule).
+
+**6. Meta Ads integration scaffolding.** Separate OAuth (ads_management is
+App-Review-gated; can't share with organic FB/IG path).
+- `src/lib/integrations/meta-ads-service.ts` — Marketing API client on
+  raw fetch. fetchAdSetSpend joins /insights (spend + actions) with /adsets
+  (current daily_budget). updateAdSetBudget POSTs daily_budget mutation in
+  cents (Meta minor units).
+- Full OAuth flow: `/auth` (Facebook OAuth dialog with
+  ads_management,ads_read,business_management scope) → `/callback`
+  (validate state → short-lived → long-lived ~60d → /me userId → list
+  ad accounts → save first one as default).
+- `/status`, `/ad-accounts`, `/save-ad-account` routes.
+- Tokens encrypted at rest via existing `encryptToken` helper.
+- `MetaAdsConfigCard` with Connect button + ad-account picker.
+
+**7. Apply pipeline.**
+- `src/lib/marketing/budget-apply-service.ts` — translates a per-platform
+  recommendation into per-campaign / per-adset budget changes via
+  PROPORTIONAL DISTRIBUTION (preserves the operator's existing campaign
+  mix while scaling the total).
+- `windowSpendToDailyBudget(spendUsd, windowDays)` converts the
+  recommendation's per-window total to a daily-budget number for the API.
+- Outcomes: `auto_applied`, `manual_mission_required`, `not_configured`,
+  `no_active_campaigns`, `partial_failure`, `failed`. Each with a
+  plain-English summary the UI surfaces.
+- `POST /api/marketing/budget/apply` with `confirmed: true` literal in
+  Zod schema as a server-side guard against bypass of the two-step UI.
+  Accepts optional `overrideSpendUsd` for operator-edited amounts.
+
+**8. Two-step Apply button in the budget page.**
+- Replaces the prior "auto-apply not wired yet" placeholder.
+- First click arms (Cancel + red "Click again to apply" button). 5-second
+  auto-disarm. Second click fires.
+- Per-leaf budget changes ("Campaign X: $50 → $75/day") rendered on success.
+- Falls back to mission-prompt copy when `outcome=manual_mission_required`
+  (e.g., for `not_configured` platforms).
+
+**9. Hourly cron refresh.**
+- `/api/cron/budget-strategist-refresh` — pulls fresh CRM source
+  attribution + (if connected) live spend from Google Ads / Meta Ads,
+  uses the LATEST operator-created snapshot as the input template, runs
+  analyze, persists with `createdBy='cron'`.
+- Graceful early-exit when no operator snapshot exists ("nothing to
+  refresh against").
+- Schedule: `0 * * * *` in vercel.json. Gated by CRON_SECRET via
+  `verifyCronAuth`.
+
+**10. End-to-end verification.**
+- `scripts/verify-budget-apply-service.ts` — 9/9 pass: manual platform
+  returns mission prompt, unconfigured Google Ads + Meta Ads both
+  fall through cleanly with operator-actionable error messages,
+  proportional distribution math correct, zero-window edge case handled.
+- Real spend → real budget shift is deferred — pipeline is correct
+  ahead of credentials.
+
+## Operator action required after dinner
+
+Walk through these with operator step-by-step (per the full-walkthrough
+rule):
+
+1. **Google Ads developer token.** Visit https://ads.google.com/aw/apicenter,
+   apply for basic access (1-5 business days). Once approved, paste the
+   token into Settings → Integrations → Marketing Ads → Google Ads card,
+   along with the 10-digit customer ID (top-right of ads.google.com).
+2. **Google Ads scope check.** Settings → Integrations → Google Services
+   card. If "Reconnect Google" appears, do it — adds the adwords scope
+   if missing from prior consent.
+3. **Meta Business Verification.** Was paused April 28 on the device-trust
+   block per memory. If unblocked, complete verification then submit the
+   Meta App for ads_management permission via App Review (days-to-weeks
+   queue).
+4. **Meta App Review.** Submit the app with a clear ads_management
+   use-case. Once approved, click Connect Meta Ads in settings → walks
+   the OAuth flow.
+5. **First live test.** Once one or both connect, click "Pull from CRM",
+   then Analyze on /marketing/budget. Click Apply on a small recommendation
+   to confirm the two-step + budget-mutation API path works end-to-end.
+   Watch for RATE_EXCEEDED on Google Ads (quota recovers per second).
+6. **GA4 (optional, smaller win).** Conversion fallback when CRM source
+   isn't populated yet. Add GA4 property ID in a future settings card —
+   service stub not yet built (this session ran long enough).
+
+## Shortcuts named per standing rule
+
+- **Operator-edited amounts vs Apply path:** the page lets the operator
+  edit recommended amounts. The apply route now respects edits via
+  `overrideSpendUsd`. NOT yet verified live with a real platform call.
+- **Proportional distribution assumes steady pacing.** A lifetime-budget
+  campaign (e.g., promotional bursts) won't behave correctly under the
+  "daily budget = windowSpend / windowDays" math. Documented in
+  `windowSpendToDailyBudget`. Most campaigns are steady-paced; flag this
+  if the operator runs lifetime-budget campaigns regularly.
+- **Apply auto-picks the first ad account** on Meta multi-account
+  operators. Operator can change via the Change ad account button in
+  settings; not surfaced in the OAuth callback itself.
+- **Google Ads scope might require reconsent.** The adwords scope is in
+  `GOOGLE_FULL_SCOPE_BUNDLE` today, but earlier OAuth flows (before that
+  scope was added) won't have it. `getGoogleAdsStatus` correctly flags
+  `hasAdwordsScope: false` in that case; operator clicks Reconnect.
+- **No live cron test yet.** Cron route compiles and types match; haven't
+  exercised it against a real Vercel cron firing. First production run
+  hits Sunday 00:00 UTC.
+- **GA4 service not built this session.** Same OAuth covers it; scaffolding
+  similar to Google Ads (config card for property ID + service for
+  /v1beta:runReport) deferred. Won't block first auto-apply tests.
+
+## Files touched this session
+
+New:
+- `src/lib/utm-tracking.ts`
+- `src/lib/marketing/budget-conversion-aggregator.ts`
+- `src/lib/marketing/budget-snapshot-service.ts`
+- `src/lib/marketing/budget-apply-service.ts`
+- `src/lib/integrations/google-ads-service.ts`
+- `src/lib/integrations/meta-ads-service.ts`
+- `src/components/integrations/GoogleAdsConfigCard.tsx`
+- `src/components/integrations/MetaAdsConfigCard.tsx`
+- `src/components/marketing/MarketingBudgetWidget.tsx`
+- `src/app/api/marketing/budget/analyze/route.ts` (also: latest, conversions, apply)
+- `src/app/api/integrations/google-ads/{status,save-config}/route.ts`
+- `src/app/api/integrations/meta-ads/{auth,callback,status,ad-accounts,save-ad-account}/route.ts`
+- `src/app/api/cron/budget-strategist-refresh/route.ts`
+- `src/app/(dashboard)/marketing/budget/page.tsx`
+- 4 verify scripts under `scripts/verify-budget-*.ts`
+- `scripts/inspect-ad-api-creds.ts`
+
+Modified:
+- `src/lib/agents/marketing/budget/specialist.ts` (schema fix)
+- `src/lib/firebase/collections.ts` (new collection + getter)
+- `src/components/PublicLayout.tsx` (UTM persistence on mount)
+- `src/app/api/public/{early-access,contact}/route.ts` (UTM capture + lead creation)
+- `src/app/(public)/{early-access,contact}/page.tsx` (UTM in POST body)
+- `src/app/(dashboard)/dashboard/page.tsx` (widget mount + sidebar link)
+- `src/app/(dashboard)/settings/integrations/page.tsx` (Marketing Ads category)
+- `src/lib/agents/agent-registry.ts` (auto-regenerated for BUDGET_STRATEGIST)
+- `vercel.json` (cron entry)
+- `CONTINUATION_PROMPT.md` (this update)
 
 ---
 
