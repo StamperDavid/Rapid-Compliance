@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import SubpageNav from '@/components/ui/SubpageNav';
@@ -16,29 +16,38 @@ import {
   Edit3,
   Layers
 } from 'lucide-react';
-import { getNurtureCampaigns, type NurtureCampaign } from '@/lib/outbound/nurture-service';
-import { usePagination } from '@/hooks/usePagination';
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import type { NurtureCampaign } from '@/lib/outbound/nurture-service';
+import { logger } from '@/lib/logger/logger';
 
 export default function NurtureCampaignsPage() {
   const router = useRouter();
+  const [campaigns, setCampaigns] = useState<NurtureCampaign[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-  // Fetch function with pagination using service layer
-  const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
-    return getNurtureCampaigns(
-      undefined,
-      { pageSize: 50, lastDoc }
-    );
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/nurture/campaigns');
+      if (!response.ok) {
+        const errBody = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errBody.error ?? `Request failed with ${response.status}`);
+      }
+      const body = (await response.json()) as { campaigns: NurtureCampaign[]; hasMore: boolean };
+      setCampaigns(body.campaigns);
+      setHasMore(body.hasMore);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load nurture campaigns';
+      setError(message);
+      logger.error('Error loading nurture campaigns:', err instanceof Error ? err : new Error(String(err)), { file: 'nurture/page.tsx' });
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const {
-    data: campaigns,
-    loading,
-    error,
-    hasMore,
-    loadMore,
-    refresh
-  } = usePagination<NurtureCampaign, QueryDocumentSnapshot>({ fetchFn: fetchCampaigns });
+  const loadMore = useCallback(() => refresh(), [refresh]);
 
   // Initial load
   useEffect(() => {
