@@ -12,6 +12,7 @@ import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
 import { logger } from '@/lib/logger/logger';
+import { buildUtmMetadata } from '@/lib/utm-tracking';
 import { Sparkles, ArrowRight, CheckCircle2, Calendar, Loader2, Video } from 'lucide-react';
 
 const ROLE_OPTIONS = [
@@ -167,10 +168,14 @@ export default function EarlyAccessPage() {
     let leadOk = false;
     let leadErrorMsg: string | null = null;
     try {
+      const utmMetadata = buildUtmMetadata();
       const res = await fetch('/api/public/early-access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          ...(utmMetadata ? { metadata: utmMetadata } : {}),
+        }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };

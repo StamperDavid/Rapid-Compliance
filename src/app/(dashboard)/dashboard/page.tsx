@@ -468,6 +468,7 @@ export default function WorkspaceDashboardPage() {
             <NavRow icon={<Mail size={14} />} label="Email Campaigns" href="/email/campaigns" />
             <NavRow icon={<Send size={14} />} label="Sequences" href="/outbound/sequences" />
             <NavRow icon={<Share2 size={14} />} label="Social Hub" href="/social" />
+            <NavRow icon={<DollarSign size={14} />} label="Marketing Budget" href="/marketing/budget" />
             <NavRow icon={<FileText size={14} />} label="Forms" href="/forms" />
           </div>
           <SectionFooter text="View outreach" />

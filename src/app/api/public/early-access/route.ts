@@ -25,6 +25,15 @@ import type { CreateLeadInput } from '@/types/crm-entities';
 // Validation
 // ----------------------------------------------------------------------------
 
+const UtmMetadataSchema = z.object({
+  utmSource: z.string().max(200).optional(),
+  utmMedium: z.string().max(200).optional(),
+  utmCampaign: z.string().max(200).optional(),
+  utmTerm: z.string().max(200).optional(),
+  utmContent: z.string().max(200).optional(),
+  referrer: z.string().max(2000).optional(),
+}).optional();
+
 const EarlyAccessSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   email: z.string().email('Valid email is required').max(320),
@@ -34,6 +43,10 @@ const EarlyAccessSchema = z.object({
   referralSource: z.string().max(200).optional().default(''),
   // Honeypot — must be empty. Bots tend to fill every field.
   website: z.string().max(0).optional().default(''),
+  // Marketing attribution — UTM params captured client-side from the
+  // landing URL or sessionStorage. Feeds BUDGET_STRATEGIST's per-platform
+  // conversion attribution.
+  metadata: UtmMetadataSchema,
 });
 
 // ----------------------------------------------------------------------------
@@ -99,7 +112,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, company, role, useCase, referralSource, website } = parsed.data;
+    const { name, email, company, role, useCase, referralSource, website, metadata } = parsed.data;
 
     // Honeypot trip — silently 200 so bots don't learn the field exists.
     if (website && website.length > 0) {
@@ -109,6 +122,17 @@ export async function POST(request: NextRequest) {
 
     const { firstName, lastName } = splitName(name);
     const notesText = buildNotes(useCase, referralSource);
+
+    // Derive source from UTM params if present, else fall back to the
+    // early-access-specific tag. Format mirrors /api/public/forms/[formId]:
+    // "<utm_source>/<utm_medium>" lowercase, so BUDGET_STRATEGIST can group
+    // by source key consistently across all public lead-capture surfaces.
+    const utmSource = metadata?.utmSource?.trim() ?? undefined;
+    const utmMedium = metadata?.utmMedium?.trim() ?? undefined;
+    const utmCampaign = metadata?.utmCampaign?.trim() ?? undefined;
+    const derivedSource = utmSource
+      ? `${utmSource.toLowerCase()}${utmMedium ? `/${utmMedium.toLowerCase()}` : ''}`
+      : 'early_access_signup';
 
     // Build the lead. Auto-enrichment is disabled — this is a self-submitted
     // signup, not a scraped record, and the operator hasn't approved running
@@ -126,13 +150,19 @@ export async function POST(request: NextRequest) {
       ...(company.trim() ? { company: company.trim() } : {}),
       ...(role.trim() ? { title: role.trim() } : {}),
       status: 'new',
-      source: 'early_access_signup',
+      source: derivedSource,
+      ...(utmSource ? { utmSource } : {}),
+      ...(utmMedium ? { utmMedium } : {}),
+      ...(utmCampaign ? { utmCampaign } : {}),
       acquisitionMethod: 'form',
       tags: ['early-access', 'pre-launch'],
       customFields: {
         notes: notesText,
         useCase: useCase.trim(),
         referralSource: referralSource.trim(),
+        ...(metadata?.utmTerm ? { utmTerm: metadata.utmTerm } : {}),
+        ...(metadata?.utmContent ? { utmContent: metadata.utmContent } : {}),
+        ...(metadata?.referrer ? { firstReferrer: metadata.referrer } : {}),
       },
       updatedAt: new Date(),
     };
