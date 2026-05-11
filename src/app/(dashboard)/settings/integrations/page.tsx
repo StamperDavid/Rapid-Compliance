@@ -20,6 +20,7 @@ import GoogleServicesIntegration from '@/components/integrations/GoogleServicesI
 import MicrosoftServicesIntegration from '@/components/integrations/MicrosoftServicesIntegration';
 import MetaServicesIntegration from '@/components/integrations/MetaServicesIntegration';
 import GoogleAdsConfigCard from '@/components/integrations/GoogleAdsConfigCard';
+import MetaAdsConfigCard from '@/components/integrations/MetaAdsConfigCard';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
 import toast from 'react-hot-toast';
@@ -324,6 +325,7 @@ export default function IntegrationsPage() {
       icon: '💰',
       integrations: [
         { id: 'google-ads-config', component: null },
+        { id: 'meta-ads-config', component: null },
       ],
     },
     {
@@ -552,6 +554,11 @@ export default function IntegrationsPage() {
                 // status via /api/integrations/google-ads/status.
                 if (id === 'google-ads-config') {
                   return <GoogleAdsConfigCard key={id} />;
+                }
+                // Meta Ads — its own OAuth (separate from organic FB/IG
+                // posting) because ads_management is App-Review-gated.
+                if (id === 'meta-ads-config') {
+                  return <MetaAdsConfigCard key={id} />;
                 }
                 // Unified Meta Services card — one Facebook OAuth covers
                 // Facebook Page, Instagram Business, Threads, and

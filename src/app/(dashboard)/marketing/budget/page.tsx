@@ -20,7 +20,7 @@
  *   - No cron refresh — operator clicks Analyze on demand. Item #4.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { auth } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,7 @@ export default function MarketingBudgetPage() {
   const [platforms, setPlatforms] = useState<PlatformRow[]>(DEFAULT_PLATFORMS);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<BudgetStrategistResult | null>(null);
+  const [snapshotId, setSnapshotId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
   const [pullingFromCrm, setPullingFromCrm] = useState(false);
@@ -261,7 +262,7 @@ export default function MarketingBudgetPage() {
       });
 
       const raw: unknown = await response.json();
-      const data = raw as { success?: boolean; result?: BudgetStrategistResult; error?: string };
+      const data = raw as { success?: boolean; result?: BudgetStrategistResult; snapshotId?: string; error?: string };
 
       if (!response.ok || data.success !== true || !data.result) {
         setErrorMessage(data.error ?? `Analyze failed (HTTP ${response.status}).`);
@@ -269,6 +270,7 @@ export default function MarketingBudgetPage() {
       }
 
       setResult(data.result);
+      setSnapshotId(data.snapshotId ?? null);
       setEditedAmounts({});
       toast.success('Budget analysis ready.');
     } catch (err) {
@@ -573,6 +575,7 @@ export default function MarketingBudgetPage() {
       {result && (
         <ResultPanel
           result={result}
+          snapshotId={snapshotId}
           editedAmounts={editedAmounts}
           setEditedAmounts={setEditedAmounts}
           editedSum={editedSum}
@@ -600,6 +603,7 @@ export default function MarketingBudgetPage() {
 
 interface ResultPanelProps {
   result: BudgetStrategistResult;
+  snapshotId: string | null;
   editedAmounts: Record<string, string>;
   setEditedAmounts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   editedSum: number;
@@ -610,6 +614,7 @@ interface ResultPanelProps {
 
 function ResultPanel({
   result,
+  snapshotId,
   editedAmounts,
   setEditedAmounts,
   editedSum,
@@ -668,6 +673,7 @@ function ResultPanel({
           <RecommendationCard
             key={rec.platform}
             rec={rec}
+            snapshotId={snapshotId}
             editedValue={editedAmounts[rec.platform] ?? ''}
             onEditChange={(value) =>
               setEditedAmounts((prev) => ({ ...prev, [rec.platform]: value }))
@@ -716,6 +722,7 @@ function SummaryStat({
 
 interface RecommendationCardProps {
   rec: BudgetRecommendation;
+  snapshotId: string | null;
   editedValue: string;
   onEditChange: (value: string) => void;
   onResetEdit: () => void;
@@ -724,6 +731,7 @@ interface RecommendationCardProps {
 
 function RecommendationCard({
   rec,
+  snapshotId,
   editedValue,
   onEditChange,
   onResetEdit,
@@ -797,25 +805,188 @@ function RecommendationCard({
           </Button>
         </div>
       ) : (
-        <div className="flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-900/10 p-3 text-sm text-yellow-100">
-          <Info size={14} className="mt-0.5 shrink-0" />
-          <span>
-            Auto-apply for {rec.displayName} isn&apos;t wired yet (item #5). For now,
-            adjust this manually in the platform&apos;s ad dashboard, or copy the prompt
-            and run it through Jasper.
-            <button
-              type="button"
-              onClick={() =>
-                onCopyMissionPrompt(
-                  { ...rec, requiresManualMissionTask: true },
-                  finalAmount,
-                )
-              }
-              className="ml-2 underline-offset-2 hover:underline"
+        <TwoStepApplyButton
+          rec={rec}
+          finalAmount={finalAmount}
+          snapshotId={snapshotId}
+          onCopyMissionPrompt={onCopyMissionPrompt}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// TWO-STEP APPLY BUTTON — destructive-actions standing rule
+// ============================================================================
+
+interface ApplyApiResult {
+  success?: boolean;
+  result?: {
+    outcome: string;
+    summary: string;
+    details?: Array<{ leafId: string; leafName: string; previousBudgetUsd: number; newBudgetUsd: number; success: boolean; error?: string }>;
+    missionPrompt?: string;
+  };
+  error?: string;
+}
+
+function TwoStepApplyButton({
+  rec,
+  finalAmount,
+  snapshotId,
+  onCopyMissionPrompt,
+}: {
+  rec: BudgetRecommendation;
+  finalAmount: number;
+  snapshotId: string | null;
+  onCopyMissionPrompt: (rec: BudgetRecommendation, finalAmount: number) => void;
+}) {
+  const toast = useToast();
+  const [armed, setArmed] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [outcome, setOutcome] = useState<ApplyApiResult['result'] | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const disarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (disarmTimerRef.current) {clearTimeout(disarmTimerRef.current);}
+    };
+  }, []);
+
+  const arm = () => {
+    setArmed(true);
+    setErrorMessage(null);
+    if (disarmTimerRef.current) {clearTimeout(disarmTimerRef.current);}
+    disarmTimerRef.current = setTimeout(() => setArmed(false), 5000);
+  };
+
+  const cancel = () => {
+    setArmed(false);
+    if (disarmTimerRef.current) {
+      clearTimeout(disarmTimerRef.current);
+      disarmTimerRef.current = null;
+    }
+  };
+
+  const fire = async () => {
+    setArmed(false);
+    if (disarmTimerRef.current) {clearTimeout(disarmTimerRef.current);}
+    setApplying(true);
+    setErrorMessage(null);
+    try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) {
+        setErrorMessage('Not authenticated. Refresh and sign in again.');
+        return;
+      }
+      const res = await fetch('/api/marketing/budget/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          platform: rec.platform,
+          confirmed: true,
+          ...(snapshotId ? { snapshotId } : {}),
+          ...(Math.abs(finalAmount - rec.recommendedSpendUsd) > 0.5
+            ? { overrideSpendUsd: finalAmount }
+            : {}),
+        }),
+      });
+      const data = (await res.json()) as ApplyApiResult;
+      setOutcome(data.result ?? null);
+      if (!res.ok || data.success !== true) {
+        setErrorMessage(data.error ?? data.result?.summary ?? `Apply failed (HTTP ${res.status})`);
+        // If apply fell through to manual path (e.g., "not configured"), offer copy prompt
+        if (data.result?.outcome === 'manual_mission_required' && data.result.missionPrompt) {
+          toast.info('Auto-apply not available — use Copy mission prompt to handle manually.');
+        }
+        return;
+      }
+      toast.success(data.result?.summary ?? 'Budget applied.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Apply request failed');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 pt-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Caption>
+          Auto-apply moves money on {rec.displayName}. Requires two clicks per the
+          destructive-action rule.
+        </Caption>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onCopyMissionPrompt(rec, finalAmount)}
+            disabled={applying}
+          >
+            <Copy size={14} className="mr-1.5" /> Copy mission prompt
+          </Button>
+          {!armed ? (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={arm}
+              disabled={applying}
             >
-              Copy mission prompt
-            </button>
-          </span>
+              {applying ? (
+                <><Loader2 size={14} className="mr-1.5 animate-spin" /> Applying…</>
+              ) : (
+                <>Apply ${finalAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</>
+              )}
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={cancel}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => void fire()}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Click again to apply
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {errorMessage && (
+        <div className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-900/20 p-3 text-sm text-red-200">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <div>{errorMessage}</div>
+            {outcome?.outcome === 'not_configured' && (
+              <Caption className="mt-1">
+                Open{' '}
+                <a href="/settings/integrations?category=marketing-ads" className="underline">
+                  Settings → Integrations → Marketing Ads
+                </a>
+                {' '}to connect this platform.
+              </Caption>
+            )}
+          </div>
+        </div>
+      )}
+
+      {outcome?.outcome === 'auto_applied' && outcome.details && outcome.details.length > 0 && (
+        <div className="rounded-md border border-success/30 bg-success/5 p-3 space-y-1.5 text-sm">
+          <div className="text-success font-medium">{outcome.summary}</div>
+          {outcome.details.map((d) => (
+            <div key={d.leafId} className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-foreground overflow-hidden text-ellipsis whitespace-nowrap">{d.leafName}</span>
+              <span className="text-muted-foreground tabular-nums">
+                ${d.previousBudgetUsd.toFixed(2)} → ${d.newBudgetUsd.toFixed(2)}/day
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
