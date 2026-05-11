@@ -12,6 +12,7 @@ import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
 // into the dashboard layout. The component still exists for any other
 // surface that wants to mount it inline.
 import UnifiedCalendarSection from '@/components/calendar/UnifiedCalendarSection';
+import MarketingBudgetWidget from '@/components/marketing/MarketingBudgetWidget';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import {
   Target,
@@ -379,8 +380,8 @@ export default function WorkspaceDashboardPage() {
         <KPICard label="AI Agents" value={val(`${agentHealth.functional}/${agentHealth.total}`)} icon={<Bot size={16} />} color={agentHealth.health === 'HEALTHY' ? 'var(--color-success)' : 'var(--color-warning)'} href="/workforce" subtitle={agentHealth.health !== 'UNKNOWN' ? agentHealth.health : undefined} />
       </div>
 
-      {/* Row 2: Conversations Monitor + Agent Health */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Row 2: Conversations Monitor + Agent Health + Marketing Budget */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Link href="/conversations" className="no-underline">
           <SectionCard>
             <SectionHeader title="Conversations" icon={<MessageSquare size={16} />} />
@@ -423,6 +424,9 @@ export default function WorkspaceDashboardPage() {
             </div>
           </SectionCard>
         </Link>
+
+        {/* Marketing Budget — surfaces latest BUDGET_STRATEGIST snapshot. */}
+        <MarketingBudgetWidget />
       </div>
 
       {/* Unified calendar — meetings, demos, scheduled posts, CRM activity, Google Calendar in one place */}

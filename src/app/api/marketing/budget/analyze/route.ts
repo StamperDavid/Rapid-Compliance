@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { runBudgetStrategist } from '@/lib/agents/marketing/budget/specialist';
+import { persistBudgetSnapshot } from '@/lib/marketing/budget-snapshot-service';
 import type { AnalyzeBudgetRequest } from '@/types/budget-strategist';
 
 export const dynamic = 'force-dynamic';
@@ -63,7 +64,29 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await runBudgetStrategist(req);
-    return NextResponse.json({ success: true, result });
+
+    // Persist for the dashboard widget + history. Snapshot persistence
+    // must NOT fail the request — the operator already paid for the LLM
+    // call, so we return the result even if the write hiccups.
+    let snapshotId: string | null = null;
+    try {
+      snapshotId = await persistBudgetSnapshot({
+        inputs: req,
+        result,
+        createdBy: 'operator',
+        userId: authResult.user.uid,
+      });
+    } catch (snapshotErr) {
+      logger.warn('[BudgetAnalyzeAPI] snapshot persist failed (result still returned)', {
+        error: snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr),
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      result,
+      ...(snapshotId ? { snapshotId } : {}),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     logger.error(

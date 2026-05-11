@@ -126,6 +126,11 @@ export const COLLECTIONS = {
   GROWTH_STRATEGIES: `${PREFIX}growthStrategies`,
   GROWTH_AI_VISIBILITY: `${PREFIX}growthAiVisibility`,
   GROWTH_ACTIVITY_LOG: `${PREFIX}growthActivityLog`,
+
+  // ========================================
+  // MARKETING BUDGET (BUDGET_STRATEGIST snapshots)
+  // ========================================
+  MARKETING_BUDGET_SNAPSHOTS: `${PREFIX}marketingBudgetSnapshots`,
 } as const;
 
 /**
@@ -177,6 +182,7 @@ export const getCallsCollection = (): string => getSubCollection('calls');
 export const getScheduledCallsCollection = (): string => getSubCollection('scheduledCalls');
 export const getTasksCollection = (): string => getSubCollection('tasks');
 export const getConversationsCollection = (): string => getSubCollection('conversations');
+export const getMarketingBudgetSnapshotsCollection = (): string => getSubCollection('marketingBudgetSnapshots');
 export const getSocialPostsCollection = (): string => getSubCollection('socialPosts');
 export const getBlogPostsCollection = (): string => getSubCollection('blogPosts');
 export const getWebhooksCollection = (): string => getSubCollection('webhooks');
