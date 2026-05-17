@@ -21,13 +21,28 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
-const RequestSchema = z.object({
-  phoneNumber: z.string().min(7).max(32),
-  // The industry page collects "express_written" consent (explicit checkbox
-  // with full CTIA disclosure). Other types are reserved for future paths.
-  consentType: z.enum(['express_written', 'express_oral', 'implied']).default('express_written'),
-  source: z.string().min(2).max(120).default('onboarding_signup'),
-});
+const RequestSchema = z
+  .object({
+    phoneNumber: z.string().min(7).max(32),
+    // The industry page collects "express_written" consent (explicit
+    // checkbox with full CTIA + Twilio TFV disclosure). Other types are
+    // reserved for future paths.
+    consentType: z
+      .enum(['express_written', 'express_oral', 'implied'])
+      .default('express_written'),
+    source: z.string().min(2).max(120).default('onboarding_signup'),
+    // Per-category consent — mirrors Twilio's reference opt-in form so a
+    // user can grant marketing and non-marketing consent independently.
+    // Defaulted false for backward compat; route requires at least one
+    // true via .refine below.
+    consentMarketing: z.boolean().optional().default(false),
+    consentTransactional: z.boolean().optional().default(false),
+  })
+  .refine((d) => d.consentMarketing || d.consentTransactional, {
+    message:
+      'At least one of consentMarketing or consentTransactional must be true.',
+    path: ['consentMarketing'],
+  });
 
 function normalizePhone(phone: string): string {
   return phone.replace(/[^\d+]/g, '');
@@ -78,7 +93,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { phoneNumber, consentType, source } = parsed.data;
+  const {
+    phoneNumber,
+    consentType,
+    source,
+    consentMarketing,
+    consentTransactional,
+  } = parsed.data;
   const normalizedPhone = normalizePhone(phoneNumber);
   if (normalizedPhone.length < 7) {
     return NextResponse.json({ error: 'Phone number too short after normalization' }, { status: 400 });
@@ -95,6 +116,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     consentDate: new Date().toISOString(),
     source,
     grantedByUserId: userId,
+    consentMarketing,
+    consentTransactional,
+    consentCategories: [
+      ...(consentTransactional ? ['account_notifications', 'customer_care'] : []),
+      ...(consentMarketing ? ['marketing'] : []),
+    ],
   };
 
   await adminDb.collection(collectionPath).doc(consentId).set(record);
@@ -104,6 +131,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     phoneNumber: normalizedPhone,
     consentType,
     source,
+    consentMarketing,
+    consentTransactional,
   });
 
   return NextResponse.json({

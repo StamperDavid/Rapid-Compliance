@@ -43,14 +43,20 @@ export default function IndustrySelectionPage() {
     fullName: storedFullName,
     email: storedEmail,
     phoneNumber: storedPhoneNumber,
-    smsConsent: storedSmsConsent,
+    smsConsentMarketing: storedSmsConsentMarketing,
+    smsConsentTransactional: storedSmsConsentTransactional,
   } = useOnboardingStore();
 
   // Form state
   const [fullName, setFullName] = useState(storedFullName || '');
   const [email, setEmail] = useState(storedEmail || '');
   const [phoneNumber, setPhoneNumber] = useState(storedPhoneNumber || '');
-  const [smsConsent, setSmsConsentLocal] = useState<boolean>(storedSmsConsent ?? false);
+  const [smsConsentMarketing, setSmsConsentMarketingLocal] = useState<boolean>(
+    storedSmsConsentMarketing ?? false,
+  );
+  const [smsConsentTransactional, setSmsConsentTransactionalLocal] = useState<boolean>(
+    storedSmsConsentTransactional ?? false,
+  );
 
   // Combobox state
   const [isOpen, setIsOpen] = useState(false);
@@ -141,8 +147,13 @@ export default function IndustrySelectionPage() {
     });
 
     // Save SMS opt-in. Only meaningful when a phone number was provided
-    // — without a phone, the consent has nothing to attach to.
-    setSmsConsent(phoneNumber.trim().length > 0 && smsConsent);
+    // — without a phone, the consent has nothing to attach to. Marketing
+    // and transactional are recorded independently per Twilio TFV.
+    const hasPhone = phoneNumber.trim().length > 0;
+    setSmsConsent({
+      marketing: hasPhone && smsConsentMarketing,
+      transactional: hasPhone && smsConsentTransactional,
+    });
 
     // Save inline answers if applicable
     if (selectedCategory.templateIds.length === 0) {
@@ -269,39 +280,100 @@ export default function IndustrySelectionPage() {
               </div>
             </div>
 
-            {/* SMS opt-in (CTIA-compliant). Only shown when a phone number
-                has been entered. Unchecked by default — never auto-checked.
-                Submitting unchecked is fine; the user simply won't receive
-                SMS. Checking this records explicit express-written consent
-                in tcpa_consent on account creation. */}
+            {/* SMS opt-in (CTIA + Twilio TFV compliant). Only shown when a
+                phone number has been entered. Both checkboxes are unchecked
+                by default — never auto-checked. Submitting with neither
+                ticked is fine; the user simply won't receive SMS. The two
+                checkboxes mirror Twilio's published reference opt-in form:
+                marketing and non-marketing are consented to independently.
+                Per-category consent is recorded in tcpa_consent on account
+                creation. */}
             {phoneNumber.trim().length > 0 && (
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
+                <div className="text-sm text-gray-300">
+                  <p className="font-medium text-white">
+                    SMS opt-in (optional)
+                  </p>
+                  <p className="mt-1.5 text-gray-400">
+                    SalesVelocity.ai sends three types of SMS messages. You
+                    can consent to each independently.
+                  </p>
+                  <ul className="mt-2 space-y-1.5 text-xs text-gray-400">
+                    <li>
+                      <span className="text-gray-300">Account notifications</span>{' '}
+                      (non-marketing): verification codes, password resets,
+                      billing alerts. Example: &ldquo;Your SalesVelocity.ai
+                      verification code is 482910. Reply STOP to opt out.&rdquo;
+                    </li>
+                    <li>
+                      <span className="text-gray-300">Customer care</span>{' '}
+                      (non-marketing): support replies to messages you send us.
+                    </li>
+                    <li>
+                      <span className="text-gray-300">Marketing</span>: product
+                      announcements, feature releases, promotional offers.
+                    </li>
+                  </ul>
+                </div>
+
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={smsConsent}
-                    onChange={(e) => setSmsConsentLocal(e.target.checked)}
+                    checked={smsConsentMarketing}
+                    onChange={(e) => setSmsConsentMarketingLocal(e.target.checked)}
                     className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer"
                   />
                   <span className="text-sm text-gray-300 leading-relaxed">
-                    Yes, I agree to receive recurring text messages from SalesVelocity.ai
-                    at the phone number provided, including account notifications,
-                    marketing updates, and customer-care messages. Message frequency
-                    varies. Message and data rates may apply. Reply STOP to opt out,
-                    HELP for help. See our{' '}
-                    <a
-                      href="https://www.salesvelocity.ai/privacy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-indigo-400 hover:text-indigo-300 underline"
-                    >
-                      Privacy Policy
-                    </a>
-                    {' '}for details on how we handle your data. SMS consent is
-                    independent of our Terms of Service — you can sign up without
-                    receiving any text messages.
+                    I consent to receive recurring{' '}
+                    <strong className="text-white">marketing</strong> text
+                    messages from SalesVelocity.ai at the phone number
+                    provided. Frequency may vary. Message &amp; data rates
+                    may apply. Text HELP for assistance, reply STOP to opt
+                    out. Consent is not a condition of purchase.
                   </span>
                 </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={smsConsentTransactional}
+                    onChange={(e) => setSmsConsentTransactionalLocal(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-300 leading-relaxed">
+                    I consent to receive recurring{' '}
+                    <strong className="text-white">non-marketing</strong> text
+                    messages from SalesVelocity.ai at the phone number
+                    provided — including account notifications and customer-care
+                    replies. Message &amp; data rates may apply. Text HELP for
+                    assistance, reply STOP to opt out.
+                  </span>
+                </label>
+
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  SalesVelocity.ai does not sell, rent, lease, or share mobile
+                  phone numbers or SMS opt-in data with third parties for their
+                  marketing purposes. See our{' '}
+                  <a
+                    href="https://www.salesvelocity.ai/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 hover:text-indigo-300 underline"
+                  >
+                    Privacy Policy
+                  </a>{' '}
+                  and{' '}
+                  <a
+                    href="https://www.salesvelocity.ai/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 hover:text-indigo-300 underline"
+                  >
+                    Terms &amp; Conditions
+                  </a>
+                  . SMS consent is independent of any other agreement — you
+                  can sign up without receiving any text messages.
+                </p>
               </div>
             )}
 

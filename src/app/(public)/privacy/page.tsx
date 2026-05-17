@@ -10,7 +10,7 @@ function FallbackContent() {
     <div className="pt-44 pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-5xl font-bold text-white mb-4">Privacy Policy</h1>
-        <p className="text-gray-400 mb-12">Last updated: February 2026</p>
+        <p className="text-gray-400 mb-12">Last updated: May 2026</p>
 
         <div className="prose prose-invert max-w-none space-y-8">
           <section>
@@ -73,7 +73,31 @@ function FallbackContent() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">5. Data Retention & Deletion</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">5. SMS / Mobile Phone Numbers</h2>
+            <p className="text-gray-300 leading-relaxed mb-3">
+              When you opt in to receive SMS messages from SalesVelocity.ai — either through our public
+              opt-in form at <a href="/sms-opt-in" className="text-indigo-400 underline hover:text-indigo-300">/sms-opt-in</a>,
+              during account onboarding, or by texting one of our numbers — we store your mobile number and
+              your express written consent so we can deliver only the categories of messages you agreed to
+              receive (account notifications, customer care, and/or marketing).
+            </p>
+            <p className="text-gray-300 leading-relaxed mb-3">
+              <span className="font-semibold text-white">We do not sell, rent, lease, or share your mobile
+              phone number or SMS opt-in data with any third party for their marketing purposes.</span> Your
+              mobile information is used solely by SalesVelocity.ai and the regulated telecommunications
+              providers (e.g., Twilio) that deliver our messages to your handset. Phone numbers and opt-in
+              data are never disclosed to third-party advertisers, data brokers, or marketing affiliates.
+            </p>
+            <p className="text-gray-300 leading-relaxed">
+              You can withdraw SMS consent at any time by replying <span className="font-semibold text-white">STOP</span>{' '}
+              to any message, or by emailing privacy@salesvelocity.ai. Reply{' '}
+              <span className="font-semibold text-white">HELP</span> for help. Message frequency varies.
+              Message and data rates may apply.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-white mb-4">6. Data Retention & Deletion</h2>
             <p className="text-gray-300 leading-relaxed">
               We retain your data for as long as your account is active. Upon account termination, your data
               is retained for 30 days to allow for export, after which it is permanently deleted. You may request
@@ -82,7 +106,7 @@ function FallbackContent() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">6. Your Rights</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">7. Your Rights</h2>
             <p className="text-gray-300 leading-relaxed">
               You have the right to access, correct, export, and delete your personal data at any time.
               You may also opt out of non-essential communications. For GDPR-covered individuals, you have
@@ -91,7 +115,7 @@ function FallbackContent() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">7. Cookies & Tracking</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">8. Cookies & Tracking</h2>
             <p className="text-gray-300 leading-relaxed">
               We use essential cookies for authentication and session management. We use analytics cookies
               to understand platform usage and improve our service. You can manage cookie preferences through

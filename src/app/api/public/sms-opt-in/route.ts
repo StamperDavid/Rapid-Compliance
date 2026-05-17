@@ -21,10 +21,24 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
-const RequestSchema = z.object({
-  phoneNumber: z.string().min(7).max(32),
-  email: z.string().email().optional(),
-});
+const RequestSchema = z
+  .object({
+    phoneNumber: z.string().min(7).max(32),
+    email: z.string().email().optional(),
+    name: z.string().min(1).max(120).optional(),
+    // Two independent consent flags, mirroring Twilio's reference opt-in
+    // form (marketing vs non-marketing). Defaulted to false for backward
+    // compatibility with any caller that still posts the old payload —
+    // those legacy callers will record a no-consent row, which is the
+    // safe failure mode.
+    consentMarketing: z.boolean().optional().default(false),
+    consentTransactional: z.boolean().optional().default(false),
+  })
+  .refine((d) => d.consentMarketing || d.consentTransactional, {
+    message:
+      'At least one of consentMarketing or consentTransactional must be true.',
+    path: ['consentMarketing'],
+  });
 
 function normalizePhone(phone: string): string {
   const digits = phone.replace(/[^\d]/g, '');
@@ -59,7 +73,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { phoneNumber, email } = parsed.data;
+  const { phoneNumber, email, name, consentMarketing, consentTransactional } =
+    parsed.data;
   const normalizedPhone = normalizePhone(phoneNumber);
   if (normalizedPhone.length < 8) {
     return NextResponse.json(
@@ -79,6 +94,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     consentDate: new Date().toISOString(),
     source: 'public_sms_opt_in_form',
     email: email ?? null,
+    name: name ?? null,
+    // Per-category flags so downstream sending code can gate marketing vs
+    // transactional traffic against the actual consent the user granted.
+    consentMarketing,
+    consentTransactional,
+    consentCategories: [
+      ...(consentTransactional ? ['account_notifications', 'customer_care'] : []),
+      ...(consentMarketing ? ['marketing'] : []),
+    ],
     ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
     userAgent: request.headers.get('user-agent') ?? null,
   };
@@ -100,6 +124,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   logger.info('Public SMS opt-in recorded', {
     phoneNumber: normalizedPhone,
     hasEmail: typeof email === 'string' && email.length > 0,
+    hasName: typeof name === 'string' && name.length > 0,
+    consentMarketing,
+    consentTransactional,
   });
 
   return NextResponse.json({
