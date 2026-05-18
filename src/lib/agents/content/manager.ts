@@ -46,27 +46,16 @@ import {
   broadcastSignal,
   readAgentInsights,
 } from '../shared/memory-vault';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
 import { logger } from '@/lib/logger/logger';
 import type { TechnicalBrief, PageSEORequirements } from '../architect/manager';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { adminDb } from '@/lib/firebase/admin';
+
+const CONTENT_INDUSTRY_KEY = 'saas_sales_ops';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { generateAndStoreBlogFeaturedImage } from '@/lib/content/blog-featured-image';
 import { buildResearchContextFromVault } from '@/lib/content/intelligence-context';
-
-// Minimal BrandDNA type for this manager (used by getBrandDNA return type)
-interface _BrandDNA {
-  companyDescription?: string;
-  uniqueValue?: string;
-  targetAudience?: string;
-  toneOfVoice?: string;
-  communicationStyle?: string;
-  keyPhrases?: string[];
-  avoidPhrases?: string[];
-  industry?: string;
-  competitors?: string[];
-}
 
 // ============================================================================
 // SYSTEM PROMPT - Multi-Modal Content Production Orchestration
@@ -788,22 +777,23 @@ export class ContentManager extends BaseManager {
     }
 
     try {
-      const brandDNA = await getBrandDNA();
+      const gm = await getActiveManagerGMByIndustry('CONTENT_MANAGER', CONTENT_INDUSTRY_KEY);
+      const snapshot = gm?.brandDNASnapshot;
 
-      if (!brandDNA) {
-        this.log('WARN', `No Brand DNA found for org ${PLATFORM_ID}, using defaults`);
+      if (!snapshot) {
+        this.log('WARN', `CONTENT_MANAGER GM not seeded or missing brandDNASnapshot for org ${PLATFORM_ID}, using defaults`);
         return this.createDefaultBrandContext();
       }
 
       const brandContext: BrandContext = {
-        companyDescription: brandDNA.companyDescription ?? '',
-        uniqueValue: brandDNA.uniqueValue ?? '',
-        targetAudience: brandDNA.targetAudience ?? '',
-        industry: brandDNA.industry ?? 'General',
-        toneOfVoice: brandDNA.toneOfVoice ?? 'professional',
-        communicationStyle: brandDNA.communicationStyle ?? '',
-        keyPhrases: brandDNA.keyPhrases ?? [],
-        avoidPhrases: brandDNA.avoidPhrases ?? [],
+        companyDescription: snapshot.companyDescription,
+        uniqueValue: snapshot.uniqueValue,
+        targetAudience: snapshot.targetAudience,
+        industry: snapshot.industry,
+        toneOfVoice: snapshot.toneOfVoice,
+        communicationStyle: snapshot.communicationStyle,
+        keyPhrases: snapshot.keyPhrases,
+        avoidPhrases: snapshot.avoidPhrases,
         colorPalette: {
           primary: '#2563eb', // Default primary color (primaryColor removed from BrandDNA)
           secondary: '#7c3aed',
@@ -815,11 +805,11 @@ export class ContentManager extends BaseManager {
 
       // Cache for performance
       this.brandContextCache.set(PLATFORM_ID, brandContext);
-      this.log('INFO', `Loaded Brand DNA for org ${PLATFORM_ID} (Industry: ${brandContext.industry})`);
+      this.log('INFO', `Loaded Brand DNA from GM snapshot for org ${PLATFORM_ID} (Industry: ${brandContext.industry})`);
 
       return brandContext;
     } catch (error) {
-      this.log('ERROR', `Failed to load Brand DNA: ${error instanceof Error ? error.message : String(error)}`);
+      this.log('ERROR', `Failed to load Brand DNA from GM: ${error instanceof Error ? error.message : String(error)}`);
       return this.createDefaultBrandContext();
     }
   }

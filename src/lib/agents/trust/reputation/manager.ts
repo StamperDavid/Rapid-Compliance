@@ -43,8 +43,10 @@ import {
   shareInsight,
   broadcastSignal,
 } from '../../shared/memory-vault';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+
+const REPUTATION_INDUSTRY_KEY = 'saas_sales_ops';
 
 // Minimal BrandDNA type for this manager
 interface BrandDNA {
@@ -1388,15 +1390,6 @@ export class ReputationManager extends BaseManager {
   ): Promise<ReputationAnalysisOutput> {
     this.log('INFO', `Generating response for ${reviewData.rating}-star review on ${reviewData.platform}`);
 
-    // Load Brand DNA for tone alignment
-    let brandTone = 'professional';
-    try {
-      const brandDNA = await this.loadBrandDNA();
-      brandTone = brandDNA?.toneOfVoice ?? 'professional';
-    } catch {
-      this.log('WARN', 'Could not load Brand DNA, using default tone');
-    }
-
     // Load response templates from MemoryVault
     const templateKey = `review_template_${reviewData.rating}_star`;
     const cachedTemplate = await this.memoryVault.read('CONTENT', templateKey, this.identity.id);
@@ -1410,7 +1403,6 @@ export class ReputationManager extends BaseManager {
       payload: {
         ...reviewData,
         action: 'generateResponse',
-        brandTone,
         templateHint: cachedTemplate?.value,
       },
       timestamp: new Date(),
@@ -2013,12 +2005,17 @@ export class ReputationManager extends BaseManager {
   }
 
   /**
-   * Load Brand DNA for organization personalization
+   * Load Brand DNA from this manager's own GM snapshot (Standing Rule #1).
+   * Reads the brandDNASnapshot baked in at seed time — no live org-doc fetch.
    */
   private async loadBrandDNA(): Promise<BrandDNA | null> {
     try {
-      const brandDNA = await getBrandDNA();
-      return brandDNA;
+      const gm = await getActiveManagerGMByIndustry('REPUTATION_MANAGER', REPUTATION_INDUSTRY_KEY);
+      if (!gm?.brandDNASnapshot) {
+        this.log('WARN', 'REPUTATION_MANAGER GM not seeded or missing brandDNASnapshot');
+        return null;
+      }
+      return gm.brandDNASnapshot;
     } catch {
       return null;
     }

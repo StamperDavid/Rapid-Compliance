@@ -64,22 +64,11 @@ import {
   type InsightData,
   type SignalEntry,
 } from '../shared/memory-vault';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
-import { logger } from '@/lib/logger/logger';
 
-// Minimal BrandDNA type for this manager (used by getBrandDNA return type)
-interface _BrandDNA {
-  companyDescription?: string;
-  uniqueValue?: string;
-  targetAudience?: string;
-  toneOfVoice?: string;
-  communicationStyle?: string;
-  keyPhrases?: string[];
-  avoidPhrases?: string[];
-  industry?: string;
-  competitors?: string[];
-}
+const MARKETING_INDUSTRY_KEY = 'saas_sales_ops';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // SYSTEM PROMPT - Industry-Agnostic Marketing Orchestration
@@ -1166,19 +1155,6 @@ export class MarketingManager extends BaseManager {
     }
     this.log('INFO', `Inbound ${platform} DM fast-path: routing to ${specialistId}.compose_dm_reply for event ${inboundEventId}`);
 
-    // Pass brand context through the same way orchestrateCampaign does
-    // so the X Expert's compose_dm_reply prompt has tone-of-voice and
-    // avoid-phrases. Brand DNA is already baked into the GM systemPrompt
-    // per Standing Rule #1 — this is the SECONDARY hint the specialist
-    // accepts for runtime-overridable tweaks.
-    const brand = await getBrandDNA();
-    const brandContext = brand ? {
-      industry: brand.industry,
-      toneOfVoice: brand.toneOfVoice,
-      keyPhrases: brand.keyPhrases,
-      avoidPhrases: brand.avoidPhrases,
-    } : undefined;
-
     const expert = await (async () => {
       switch (platform) {
         case 'bluesky': return (await import('./bluesky/specialist')).getBlueskyExpert();
@@ -1204,7 +1180,6 @@ export class MarketingManager extends BaseManager {
         inboundText,
         ...(senderHandle ? { senderHandle } : {}),
         ...(senderId ? { senderId } : {}),
-        ...(brandContext ? { brandContext } : {}),
       },
     );
 
@@ -1301,15 +1276,6 @@ export class MarketingManager extends BaseManager {
     }
     this.log('INFO', `Single-platform post fast-path: dispatching to ${specialistId}.generate_content for platform=${platform}`);
 
-    // Brand context for downstream specialist + image gen
-    const brand = await getBrandDNA();
-    const brandContext = brand ? {
-      industry: brand.industry,
-      toneOfVoice: brand.toneOfVoice,
-      keyPhrases: brand.keyPhrases,
-      avoidPhrases: brand.avoidPhrases,
-    } : undefined;
-
     // Dispatch to the specialist
     const expert = await (async () => {
       switch (platform) {
@@ -1346,7 +1312,6 @@ export class MarketingManager extends BaseManager {
         ...(targetAudience ? { targetAudience } : {}),
         ...(campaignGoal ? { campaignGoal } : {}),
         ...(verbatimText ? { verbatimText } : {}),
-        ...(brandContext ? { brandContext } : {}),
       },
     );
 
@@ -1393,7 +1358,6 @@ export class MarketingManager extends BaseManager {
         platform,
         postText: primaryPost,
         topic,
-        ...(brandContext?.toneOfVoice ? { brandStyleHint: brandContext.toneOfVoice } : {}),
         ...(operatorImageUrl ? { providedImageUrl: operatorImageUrl } : {}),
       });
       if (imageResult) {
@@ -1824,33 +1788,34 @@ export class MarketingManager extends BaseManager {
     }
 
     try {
-      const brandDNA = await getBrandDNA();
+      const gm = await getActiveManagerGMByIndustry('MARKETING_MANAGER', MARKETING_INDUSTRY_KEY);
+      const snapshot = gm?.brandDNASnapshot;
 
-      if (!brandDNA) {
-        this.log('WARN', `No Brand DNA found for organization ${PLATFORM_ID}, using defaults`);
+      if (!snapshot) {
+        this.log('WARN', `MARKETING_MANAGER GM not seeded or missing brandDNASnapshot for organization ${PLATFORM_ID}, using defaults`);
         return this.createDefaultBrandContext();
       }
 
       const brandContext: BrandContext = {
-        companyDescription: brandDNA.companyDescription ?? '',
-        uniqueValue: brandDNA.uniqueValue ?? '',
-        targetAudience: brandDNA.targetAudience ?? '',
-        industry: brandDNA.industry ?? 'General',
-        toneOfVoice: brandDNA.toneOfVoice ?? 'professional',
-        communicationStyle: brandDNA.communicationStyle ?? '',
-        keyPhrases: brandDNA.keyPhrases ?? [],
-        avoidPhrases: brandDNA.avoidPhrases ?? [],
-        competitors: brandDNA.competitors ?? [],
+        companyDescription: snapshot.companyDescription,
+        uniqueValue: snapshot.uniqueValue,
+        targetAudience: snapshot.targetAudience,
+        industry: snapshot.industry,
+        toneOfVoice: snapshot.toneOfVoice,
+        communicationStyle: snapshot.communicationStyle,
+        keyPhrases: snapshot.keyPhrases,
+        avoidPhrases: snapshot.avoidPhrases,
+        competitors: snapshot.competitors,
         loaded: true,
       };
 
       // Cache for performance
       this.brandContextCache.set(PLATFORM_ID, brandContext);
-      this.log('INFO', `Loaded Brand DNA for organization ${PLATFORM_ID} (Industry: ${brandContext.industry})`);
+      this.log('INFO', `Loaded Brand DNA from GM snapshot for organization ${PLATFORM_ID} (Industry: ${brandContext.industry})`);
 
       return brandContext;
     } catch (error) {
-      this.log('ERROR', `Failed to load Brand DNA: ${error instanceof Error ? error.message : String(error)}`);
+      this.log('ERROR', `Failed to load Brand DNA from GM: ${error instanceof Error ? error.message : String(error)}`);
       return this.createDefaultBrandContext();
     }
   }

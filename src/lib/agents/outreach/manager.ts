@@ -34,8 +34,10 @@ import {
   type InsightData,
   type SignalData as _SignalData,
 } from '../shared/memory-vault';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
 import { logger } from '@/lib/logger/logger';
+
+const OUTREACH_INDUSTRY_KEY = 'saas_sales_ops';
 
 // ============================================================================
 // SYSTEM PROMPT - Omni-Channel Communication Orchestration
@@ -1745,12 +1747,14 @@ export class OutreachManager extends BaseManager {
       return payload.sequence as OutreachSequence;
     }
 
-    // Load brand DNA for personalization context
+    // Load brand DNA from this manager's own GM snapshot (Standing Rule #1)
     let brandContext = '';
     try {
-      const brandDNA = await getBrandDNA();
-      if (brandDNA) {
-        brandContext = brandDNA.companyDescription ?? '';
+      const gm = await getActiveManagerGMByIndustry('OUTREACH_MANAGER', OUTREACH_INDUSTRY_KEY);
+      if (gm?.brandDNASnapshot) {
+        brandContext = gm.brandDNASnapshot.companyDescription;
+      } else {
+        logger.warn('[OutreachManager] OUTREACH_MANAGER GM not seeded or missing brandDNASnapshot — proceeding without brand context');
       }
     } catch {
       // Continue without brand context

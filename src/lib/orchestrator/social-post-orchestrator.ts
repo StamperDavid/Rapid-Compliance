@@ -33,7 +33,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger/logger';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import {
   createMission,
   getMission,
@@ -175,7 +174,6 @@ interface SpecialistGenerateBriefInput {
   specialistId: string;
   topic: string;
   format: string;
-  brandContext?: Record<string, unknown>;
 }
 
 interface SpecialistBriefResult {
@@ -242,7 +240,6 @@ async function runSpecialistGenerateBrief(
       action: 'generate_content',
       topic: input.topic,
       contentType: input.format,
-      ...(input.brandContext ? { brandContext: input.brandContext } : {}),
     },
     requiresResponse: true,
     traceId: `spog-${msgId}`,
@@ -600,22 +597,11 @@ export async function runSocialPostMission(missionId: string): Promise<void> {
 
   let briefText: string;
   try {
-    const brand = await getBrandDNA();
-    const brandContext = brand
-      ? {
-          industry: brand.industry,
-          toneOfVoice: brand.toneOfVoice,
-          keyPhrases: brand.keyPhrases,
-          avoidPhrases: brand.avoidPhrases,
-        }
-      : undefined;
-
     const briefResult = await runSpecialistGenerateBrief({
       platform,
       specialistId,
       topic,
       format,
-      brandContext: brandContext as Record<string, unknown> | undefined,
     });
 
     briefText = briefResult.primaryPost;
@@ -653,13 +639,11 @@ export async function runSocialPostMission(missionId: string): Promise<void> {
 
   let materialised: MaterializeResult;
   try {
-    const brand = await getBrandDNA();
     materialised = await materializeContent({
       format,
       platform,
       briefText,
       topic,
-      brandStyleHint: brand?.toneOfVoice,
       missionId,
     });
 

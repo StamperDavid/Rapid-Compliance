@@ -21,7 +21,8 @@ import {
   generateMusic,
   type BrandDNAContext,
 } from '@/lib/music/music-generation-service';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import type { BrandDNA } from '@/lib/brand/brand-dna-service';
 import { persistUrlToStorage } from '@/lib/firebase/storage-utils';
 import { adminStorage } from '@/lib/firebase/admin';
 import AdminFirestoreService from '@/lib/db/admin-firestore-service';
@@ -84,20 +85,35 @@ function musicTrackStoragePath(assetId: string): string {
   return `organizations/${PLATFORM_ID}/media/music/${assetId}.mp3`;
 }
 
+/**
+ * Narrow a brandDNASnapshot to the subset of fields used for music generation.
+ * Returns null when the snapshot is absent or all four fields are empty.
+ */
+function extractMusicBrandContext(dna: BrandDNA | undefined): BrandDNAContext | null {
+  if (!dna) { return null; }
+  const { companyDescription, toneOfVoice, communicationStyle, industry } = dna;
+  if (!companyDescription && !toneOfVoice && !communicationStyle && !industry) {
+    return null;
+  }
+  return { companyDescription, toneOfVoice, communicationStyle, industry };
+}
+
 async function loadBrandContext(): Promise<BrandDNAContext | null> {
+  // Read brand context from the MUSIC_PLANNER GM's baked-in brandDNASnapshot (Standing Rule #1).
+  // getBrandDNA() is intentionally not called here — runtime brand DNA reads are prohibited.
   try {
-    const dna = await getBrandDNA();
-    if (!dna) {
+    const gm = await getActiveSpecialistGMByIndustry('MUSIC_PLANNER', 'saas_sales_ops');
+    if (!gm) {
+      logger.warn('[music-generate] MUSIC_PLANNER GM not found — generating without brand context', { file: FILE });
       return null;
     }
-    return {
-      companyDescription: dna.companyDescription,
-      toneOfVoice: dna.toneOfVoice,
-      communicationStyle: dna.communicationStyle,
-      industry: dna.industry,
-    };
+    const ctx = extractMusicBrandContext(gm.brandDNASnapshot);
+    if (!ctx) {
+      logger.warn('[music-generate] MUSIC_PLANNER brandDNASnapshot is empty — generating without brand context', { file: FILE });
+    }
+    return ctx;
   } catch (error) {
-    logger.warn('[music-generate] Brand DNA load failed; generating without it', {
+    logger.warn('[music-generate] MUSIC_PLANNER GM load failed; generating without brand context', {
       error: error instanceof Error ? error.message : String(error),
       file: FILE,
     });

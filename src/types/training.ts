@@ -4,6 +4,7 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
+import type { BrandDNA } from '@/lib/brand/brand-dna-service';
 
 /**
  * Training Session
@@ -449,6 +450,7 @@ export interface SpecialistGoldenMaster {
   industryKey?: string;                            // "saas_sales_ops", "real_estate", etc. — optional for back-compat with pre-rebuild specialists
   config: Record<string, unknown>;                 // Full config snapshot
   systemPromptSnapshot?: string;                   // Prompt if overridden
+  brandDNASnapshot?: BrandDNA;                     // Brand DNA baked in at seed time (Standing Rule #1 — runtime source of truth)
   sourceImprovementRequestId: string | null;       // null for v1 (seed)
   changesApplied: ProposedSpecialistChange[];
   isActive: boolean;
@@ -522,7 +524,7 @@ export interface ManagerGoldenMaster {
   industryKey: string;                             // "saas_sales_ops", "real_estate", etc.
   config: Record<string, unknown>;                 // Full config snapshot (systemPrompt, model, temperature, maxTokens)
   systemPromptSnapshot?: string;                   // Convenience copy of config.systemPrompt
-  brandDNASnapshot?: Record<string, unknown>;      // Brand DNA baked in at seed time (audit trail)
+  brandDNASnapshot?: BrandDNA;                     // Brand DNA baked in at seed time (Standing Rule #1 — runtime source of truth)
   sourceImprovementRequestId: string | null;       // null for v1 (seed)
   changesApplied: ProposedSpecialistChange[];      // Reuses the specialist change type
   isActive: boolean;

@@ -34,8 +34,10 @@ import {
   readAgentInsights,
   type InsightEntry,
 } from '../shared/memory-vault';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+
+const ARCHITECT_INDUSTRY_KEY = 'saas_sales_ops';
 
 // Minimal BrandDNA type for this manager
 interface BrandDNA {
@@ -946,16 +948,19 @@ export class ArchitectManager extends BaseManager {
   }> {
     this.log('INFO', `Loading context for organization: ${PLATFORM_ID}`);
 
-    // Load Brand DNA
+    // Load Brand DNA from this manager's own GM snapshot (Standing Rule #1)
     let brandDNA: BrandDNA | null = null;
     try {
-      brandDNA = await getBrandDNA();
-      if (brandDNA) {
-        this.log('INFO', `Loaded Brand DNA: ${brandDNA.industry} industry, ${brandDNA.toneOfVoice} tone`);
+      const gm = await getActiveManagerGMByIndustry('ARCHITECT_MANAGER', ARCHITECT_INDUSTRY_KEY);
+      if (gm?.brandDNASnapshot) {
+        brandDNA = gm.brandDNASnapshot;
+        this.log('INFO', `Loaded Brand DNA from GM snapshot: ${brandDNA.industry} industry, ${brandDNA.toneOfVoice} tone`);
+      } else {
+        this.log('WARN', 'ARCHITECT_MANAGER GM not seeded or missing brandDNASnapshot — no Brand DNA available');
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.log('WARN', `Failed to load Brand DNA: ${errorMsg}`);
+      this.log('WARN', `Failed to load Brand DNA from GM: ${errorMsg}`);
     }
 
     // Load Intelligence Briefs from MemoryVault
