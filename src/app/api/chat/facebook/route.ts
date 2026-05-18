@@ -19,6 +19,7 @@ import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { verifyFacebookSignature } from '@/lib/security/webhook-verification';
 import { logger } from '@/lib/logger/logger';
 import type { ChatMessage, ModelName } from '@/types/ai-models';
 import type { ConversationMessage } from '@/types/agent-memory';
@@ -103,7 +104,44 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const body: unknown = await request.json();
+    // -----------------------------------------------------------------------
+    // HMAC-SHA256 signature verification (X-Hub-Signature-256)
+    // Must use raw body — JSON.parse before HMAC would be lossy.
+    // -----------------------------------------------------------------------
+    const rawBody = await request.text();
+
+    const appSecret = process.env.FACEBOOK_APP_SECRET;
+    if (!appSecret) {
+      logger.error(
+        'FACEBOOK_APP_SECRET is not set — webhook requests cannot be verified',
+        new Error('Missing FACEBOOK_APP_SECRET'),
+        { route: '/api/chat/facebook' }
+      );
+      return NextResponse.json(
+        { error: 'Webhook not configured' },
+        { status: 500 }
+      );
+    }
+
+    const signatureHeader = request.headers.get('x-hub-signature-256');
+    if (!signatureHeader) {
+      logger.warn('Facebook webhook missing X-Hub-Signature-256 header — rejecting', {
+        route: '/api/chat/facebook',
+        bodyLength: rawBody.length,
+      });
+      return NextResponse.json({ error: 'Webhook signature missing' }, { status: 401 });
+    }
+
+    if (!verifyFacebookSignature(rawBody, signatureHeader, appSecret)) {
+      logger.warn('Facebook webhook signature mismatch — rejecting', {
+        route: '/api/chat/facebook',
+        bodyLength: rawBody.length,
+      });
+      return NextResponse.json({ error: 'Webhook signature mismatch' }, { status: 401 });
+    }
+
+    // Signature verified — safe to parse body.
+    const body: unknown = JSON.parse(rawBody);
     const parseResult = facebookWebhookSchema.safeParse(body);
 
     if (!parseResult.success) {

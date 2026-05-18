@@ -238,6 +238,62 @@ export function verifyHmacSignature(
 }
 
 // ============================================================================
+// Facebook Messenger Webhook Verification (X-Hub-Signature-256)
+// https://developers.facebook.com/docs/messenger-platform/webhooks#validate-payloads
+// ============================================================================
+
+/**
+ * Verify a Facebook Messenger webhook payload using HMAC-SHA256.
+ *
+ * Facebook sends an `X-Hub-Signature-256` header in the form `sha256=<hex>`.
+ * The signature is computed over the raw request body using the App Secret as key.
+ *
+ * @param rawBody         - Raw request body string (must NOT be JSON-parsed before passing)
+ * @param signatureHeader - Full value of the X-Hub-Signature-256 header
+ * @param appSecret       - FACEBOOK_APP_SECRET environment variable value
+ */
+export function verifyFacebookSignature(
+  rawBody: string,
+  signatureHeader: string,
+  appSecret: string
+): boolean {
+  try {
+    // Header format: "sha256=<hex-digest>"
+    if (!signatureHeader.startsWith('sha256=')) {
+      logger.warn('Facebook webhook signature header has unexpected format', {
+        file: 'webhook-verification.ts',
+        headerPrefix: signatureHeader.slice(0, 10),
+      });
+      return false;
+    }
+
+    const receivedHex = signatureHeader.slice('sha256='.length);
+
+    const expectedHex = crypto
+      .createHmac('sha256', appSecret)
+      .update(Buffer.from(rawBody, 'utf-8'))
+      .digest('hex');
+
+    // Lengths must match for timingSafeEqual; mismatched length is always invalid.
+    if (receivedHex.length !== expectedHex.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(
+      Buffer.from(receivedHex),
+      Buffer.from(expectedHex)
+    );
+  } catch (error) {
+    logger.error(
+      'Facebook signature verification error',
+      error instanceof Error ? error : new Error(String(error)),
+      { file: 'webhook-verification.ts' }
+    );
+    return false;
+  }
+}
+
+// ============================================================================
 // Helper: Parse URL-encoded form body
 // ============================================================================
 

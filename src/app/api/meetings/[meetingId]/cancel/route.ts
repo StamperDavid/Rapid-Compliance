@@ -20,6 +20,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { deleteSalesVelocityCalendarEvent } from '@/lib/integrations/google-calendar-service';
@@ -46,6 +47,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ meetingId: string }> }
 ) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const { meetingId } = await params;
     if (!meetingId) {
