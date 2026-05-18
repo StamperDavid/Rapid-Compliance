@@ -76,11 +76,14 @@ export interface OnboardingState {
   nicheDescription: string;
   companyName: string;
 
-  // SMS opt-in (CTIA-compliant consent collected in step 1).
-  // True only when the user explicitly checked the consent box. Persisted
-  // through onboarding so the final account-creation step can record it
-  // in the tcpa_consent collection. Defaults to false; never auto-checked.
-  smsConsent: boolean;
+  // SMS opt-in (CTIA + Twilio TFV-compliant consent collected in step 1).
+  // Two independent flags mirroring Twilio's reference opt-in form —
+  // marketing vs non-marketing (account notifications + customer care) —
+  // so a user can consent to one category without the other. Persisted
+  // through onboarding so the final account-creation step can record
+  // both on the tcpa_consent row. Default false; never auto-checked.
+  smsConsentMarketing: boolean;
+  smsConsentTransactional: boolean;
 
   // Default trial plan (hidden from user)
   planId: string;
@@ -94,7 +97,7 @@ export interface OnboardingState {
   setIndustry: (industry: IndustryOption) => void;
   setCustomIndustry: (name: string) => void;
   setContactInfo: (info: { fullName: string; email: string; phoneNumber: string; nicheDescription: string }) => void;
-  setSmsConsent: (consent: boolean) => void;
+  setSmsConsent: (consent: { marketing: boolean; transactional: boolean }) => void;
   setAccountInfo: (email: string, companyName: string) => void;
   setStep: (step: OnboardingState['currentStep']) => void;
   reset: () => void;
@@ -125,7 +128,8 @@ const initialState = {
   phoneNumber: '',
   nicheDescription: '',
   companyName: '',
-  smsConsent: false,
+  smsConsentMarketing: false,
+  smsConsentTransactional: false,
   planId: 'trial',
   trialRecords: 1000,
   startedAt: null as string | null,
@@ -152,7 +156,10 @@ export const useOnboardingStore = create<OnboardingState>()(
         nicheDescription: info.nicheDescription,
       }),
 
-      setSmsConsent: (consent) => set({ smsConsent: consent }),
+      setSmsConsent: (consent) => set({
+        smsConsentMarketing: consent.marketing,
+        smsConsentTransactional: consent.transactional,
+      }),
 
       setAccountInfo: (email, companyName) => set({ email, companyName }),
 

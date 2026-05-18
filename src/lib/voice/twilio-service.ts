@@ -2,10 +2,12 @@
  * Twilio Voice Service
  * Voice agents - AI that speaks and listens via phone calls
  */
+import 'server-only';
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { checkTCPAConsent } from '@/lib/compliance/tcpa-service';
 
 export interface VoiceConfig {
   accountSid: string;
@@ -43,6 +45,20 @@ export async function initiateCall(
     timeout?: number;
   }
 ): Promise<VoiceCall> {
+  // TCPA consent gate — fail closed. Must pass before any dial attempt.
+  const tcpaCheck = await checkTCPAConsent(to, 'call');
+  if (!tcpaCheck.allowed) {
+    logger.warn('[Twilio] Outbound call blocked by TCPA consent check', {
+      to,
+      agentId,
+      reason: tcpaCheck.reason,
+      file: 'twilio-service.ts',
+    });
+    throw new Error(
+      `Call blocked: TCPA consent not on file for this number. ${tcpaCheck.reason ?? 'No consent record found.'}`
+    );
+  }
+
   try {
     const config = await getTwilioConfig();
     const twilio = await import('twilio');

@@ -4,6 +4,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -359,6 +360,25 @@ export async function getPipelineSummary(): Promise<Record<string, { count: numb
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to get pipeline summary', error instanceof Error ? error : new Error(String(error)));
     throw new Error(`Failed to get pipeline summary: ${errorMessage}`);
+  }
+}
+
+// ============================================================================
+// SERVER-SIDE HELPERS — Admin SDK required (used by merge route)
+// ============================================================================
+
+/**
+ * Find all deals whose contactId matches the given value.
+ * Uses the Admin SDK so this can be called from server-side API routes.
+ */
+export async function findDealsByContactId(contactId: string): Promise<Deal[]> {
+  try {
+    const db = AdminFirestoreService.collection(getSubCollection('deals'));
+    const snapshot = await db.where('contactId', '==', contactId).get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Deal);
+  } catch (error) {
+    logger.error('Failed to find deals by contactId', error instanceof Error ? error : new Error(String(error)), { contactId });
+    throw new Error(`Failed to find deals by contactId: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

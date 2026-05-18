@@ -315,15 +315,30 @@ export class SequenceEngine {
       throw new Error('FROM_EMAIL not configured for this organization');
     }
 
+    // CAN-SPAM: inject unsubscribe footer and build List-Unsubscribe headers
+    // before the body reaches any send path.  The contactId is the prospectId
+    // (same document in the leads collection); the stepId is used as emailId
+    // so the unsubscribe URL is step-scoped for audit purposes.
+    const { injectUnsubscribe, buildListUnsubscribeHeaders } =
+      await import('@/lib/compliance/can-spam-service');
+    const { html: compliantHtml, unsubscribeUrl } = injectUnsubscribe(
+      step.body,
+      undefined,
+      enrollment.prospectId,
+      step.id,
+    );
+    const listUnsubHeaders = buildListUnsubscribeHeaders(unsubscribeUrl);
+
     // Try Gmail API first (free, integrated)
     try {
       const { sendEmailViaGmail } = await import('@/lib/integrations/gmail-service');
-      
+
       await sendEmailViaGmail({
         to: prospect.email,
         from: fromEmail,
         subject:(step.subject !== '' && step.subject != null) ? step.subject : 'Follow-up',
-        body: step.body,
+        body: compliantHtml,
+        listUnsubscribeHeaders: listUnsubHeaders,
         metadata: {
           enrollmentId: enrollment.id,
           stepId: step.id,
@@ -336,12 +351,12 @@ export class SequenceEngine {
     } catch (gmailError) {
       const gmailErrorMessage = gmailError instanceof Error ? gmailError.message : 'Unknown Gmail error';
       logger.warn('[Sequence Engine] Gmail send failed, trying fallback', { error: gmailErrorMessage, file: 'sequence-engine.ts' });
-      
+
       // Fallback to SendGrid if Gmail fails
       if (emailProvider === 'sendgrid') {
         const { getAPIKey } = await import('@/lib/config/api-keys');
         const sendgridKey = await getAPIKey('sendgrid');
-        
+
         if (!sendgridKey) {
           throw new Error('Gmail failed and SendGrid not configured. Cannot send email.');
         }
@@ -349,10 +364,11 @@ export class SequenceEngine {
         const { sendEmail } = await import('@/lib/email/sendgrid-service');
         const result = await sendEmail({
           to: prospect.email,
-          subject: (step.subject !== '' && step.subject != null) 
-            ? step.subject 
+          subject: (step.subject !== '' && step.subject != null)
+            ? step.subject
             : 'Follow-up',
-          html: step.body,
+          html: compliantHtml,
+          headers: listUnsubHeaders,
           tracking: {
             trackOpens: true,
             trackClicks: true,
@@ -365,8 +381,8 @@ export class SequenceEngine {
         }, sendgridKey);
 
         if (!result.success) {
-          throw new Error((result.error !== '' && result.error != null) 
-            ? result.error 
+          throw new Error((result.error !== '' && result.error != null)
+            ? result.error
             : 'Failed to send email via SendGrid');
         }
 

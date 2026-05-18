@@ -5,6 +5,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -301,5 +302,24 @@ export async function recordInvoicePayment(
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     logger.error('Failed to record invoice payment', error instanceof Error ? error : undefined, { invoiceId });
     throw new Error(`Failed to record payment: ${errorMessage}`);
+  }
+}
+
+// ============================================================================
+// SERVER-SIDE HELPERS — Admin SDK required (used by merge route)
+// ============================================================================
+
+/**
+ * Find all invoices whose contactId matches the given value.
+ * Uses the Admin SDK so this can be called from server-side API routes.
+ */
+export async function findInvoicesByContactId(contactId: string): Promise<Invoice[]> {
+  try {
+    const db = AdminFirestoreService.collection(getSubCollection('invoices'));
+    const snapshot = await db.where('contactId', '==', contactId).get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Invoice);
+  } catch (error) {
+    logger.error('Failed to find invoices by contactId', error instanceof Error ? error : new Error(String(error)), { contactId });
+    throw new Error(`Failed to find invoices by contactId: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

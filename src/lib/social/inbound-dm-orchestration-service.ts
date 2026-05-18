@@ -34,8 +34,6 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
-
 export type InboundDmPlatform =
   | 'x'
   | 'bluesky'
@@ -135,14 +133,6 @@ interface ComposeDmReplyData {
  * persisting it into a mission via `createInboundDmMission`.
  */
 async function composeReplyDirect(input: InboundDmInput): Promise<ComposeDmReplyData> {
-  const brand = await getBrandDNA();
-  const brandContext = brand ? {
-    industry: brand.industry,
-    toneOfVoice: brand.toneOfVoice,
-    keyPhrases: brand.keyPhrases,
-    avoidPhrases: brand.avoidPhrases,
-  } : undefined;
-
   const message = {
     id: `inbound_dm_compose_${input.platform}_${input.inboundEventId}`,
     timestamp: new Date(),
@@ -157,7 +147,6 @@ async function composeReplyDirect(input: InboundDmInput): Promise<ComposeDmReply
       inboundText: input.inboundText,
       senderId: input.senderId,
       ...(input.senderHandle ? { senderHandle: input.senderHandle } : {}),
-      ...(brandContext ? { brandContext } : {}),
       ...(input.mediaAttachments && input.mediaAttachments.length > 0
         ? { mediaAttachments: input.mediaAttachments }
         : {}),

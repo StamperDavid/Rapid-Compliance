@@ -161,16 +161,24 @@ export async function sendGmailEmail(
     body: string;
     inReplyTo?: string;
     references?: string;
+    /** Additional RFC 2822 headers to include, e.g. List-Unsubscribe */
+    extraHeaders?: Record<string, string>;
   }
 ): Promise<{ id: string; threadId: string }> {
   const auth = createOAuth2Client(tokens);
   const gmail = google.gmail({ version: 'v1', auth });
+
+  // Build additional header lines from the extraHeaders map
+  const extraHeaderLines = options.extraHeaders
+    ? Object.entries(options.extraHeaders).map(([name, value]) => `${name}: ${value}`)
+    : [];
 
   // Create email in RFC 2822 format
   const email = [
     `To: ${options.to}`,
     `Subject: ${options.subject}`,
     'Content-Type: text/html; charset=utf-8',
+    ...extraHeaderLines,
     '',
     options.body,
   ].join('\n');
@@ -296,12 +304,18 @@ export function getEmailBody(message: GmailMessage): { text: string; html: strin
 
 /**
  * Send email via Gmail (wrapper for sequence engine)
+ *
+ * `listUnsubscribeHeaders` — when provided, these are injected as RFC 2822
+ * headers on the raw message so Gmail propagates them to receiving clients.
+ * Pass the output of `buildListUnsubscribeHeaders()` from can-spam-service.ts
+ * for every marketing email.
  */
 export async function sendEmailViaGmail(options: {
   to: string;
   from: string;
   subject: string;
   body: string;
+  listUnsubscribeHeaders?: Record<string, string>;
   metadata?: Record<string, string>;
 }): Promise<void> {
   // Get Gmail tokens from organization's integrations
@@ -330,6 +344,7 @@ export async function sendEmailViaGmail(options: {
     to: options.to,
     subject: options.subject,
     body: options.body,
+    extraHeaders: options.listUnsubscribeHeaders,
   });
 
   logger.info('Gmail Email sent successfully', { file: 'gmail-service.ts' });

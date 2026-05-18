@@ -593,6 +593,54 @@ export async function bulkCreateActivities(
   }
 }
 
+// ============================================================================
+// SERVER-SIDE HELPERS — Admin SDK required (used by merge route)
+// ============================================================================
+
+/**
+ * Find all activities that reference a given contact via the `relatedTo` array.
+ * Because `relatedTo` is an array of objects, Firestore cannot use a composite
+ * index on nested fields — we query by `relatedTo` array-contains semantics
+ * using the Admin SDK and filter client-side.
+ *
+ * Returns the activity documents along with the index of the matching element
+ * so the caller can perform a targeted array-element update.
+ */
+export async function findActivitiesByContactId(
+  contactId: string
+): Promise<Array<{ activity: Activity; relatedToIndex: number }>> {
+  try {
+    // array-contains-any is not available for object elements, so we pull all
+    // activities that have a relatedTo entry with entityType === 'contact' and
+    // filter to the specific contactId client-side.
+    const snapshot = await AdminFirestoreService.collection(getSubCollection('activities'))
+      .where('relatedTo', 'array-contains', { entityType: 'contact', entityId: contactId })
+      .get()
+      .catch(() =>
+        // Firestore may reject the exact-object array-contains query if the
+        // index is absent.  Fall back to a full-scan with client-side filter.
+        AdminFirestoreService.collection(getSubCollection('activities')).get()
+      );
+
+    const results: Array<{ activity: Activity; relatedToIndex: number }> = [];
+
+    for (const doc of snapshot.docs) {
+      const activity = { id: doc.id, ...doc.data() } as Activity;
+      const index = activity.relatedTo?.findIndex(
+        rel => rel.entityType === 'contact' && rel.entityId === contactId
+      ) ?? -1;
+      if (index !== -1) {
+        results.push({ activity, relatedToIndex: index });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    logger.error('Failed to find activities by contactId', error instanceof Error ? error : new Error(String(error)), { contactId });
+    throw new Error(`Failed to find activities by contactId: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 /**
  * Delete activity
  */

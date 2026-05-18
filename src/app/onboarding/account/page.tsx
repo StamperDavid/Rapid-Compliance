@@ -36,7 +36,8 @@ export default function AccountCreationPage() {
     fullName,
     email: storedEmail,
     phoneNumber,
-    smsConsent,
+    smsConsentMarketing,
+    smsConsentTransactional,
     companyName: storedCompanyName,
     setAccountInfo,
     setStep,
@@ -181,8 +182,10 @@ export default function AccountCreationPage() {
       // Record SMS consent if the user opted in on the industry page.
       // This is fire-and-forget — failure does not block onboarding,
       // because the user's account is already created and they can opt
-      // in later from settings if needed.
-      if (smsConsent && phoneNumber && phoneNumber.trim().length > 0) {
+      // in later from settings if needed. Marketing and transactional
+      // consent are recorded independently per Twilio TFV requirements.
+      const hasAnyConsent = smsConsentMarketing || smsConsentTransactional;
+      if (hasAnyConsent && phoneNumber && phoneNumber.trim().length > 0) {
         try {
           const idToken = await userCredential.user.getIdToken();
           await fetch('/api/onboarding/record-sms-consent', {
@@ -195,6 +198,8 @@ export default function AccountCreationPage() {
               phoneNumber: phoneNumber.trim(),
               consentType: 'express_written',
               source: 'onboarding_signup',
+              consentMarketing: smsConsentMarketing,
+              consentTransactional: smsConsentTransactional,
             }),
           });
         } catch {

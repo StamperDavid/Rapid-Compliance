@@ -266,6 +266,8 @@ async function createStripeCheckout(req: SubscriptionCheckoutRequest): Promise<S
       : req.tier.monthlyPriceCents;
     const interval = req.billingPeriod === 'annual' ? 'year' as const : 'month' as const;
 
+    const trialDays = req.tier.trialDays > 0 ? req.tier.trialDays : undefined;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{
@@ -281,6 +283,9 @@ async function createStripeCheckout(req: SubscriptionCheckoutRequest): Promise<S
         quantity: 1,
       }],
       ...(req.stripeCouponId ? { discounts: [{ coupon: req.stripeCouponId }] } : {}),
+      ...(trialDays !== undefined ? {
+        subscription_data: { trial_period_days: trialDays },
+      } : {}),
       success_url: `${req.appUrl}/settings/subscription?checkout=success&session_id={CHECKOUT_SESSION_ID}&tier=${req.tier.key}`,
       cancel_url: `${req.appUrl}/settings/subscription?checkout=cancelled`,
       customer_email: req.userEmail,
@@ -508,17 +513,57 @@ async function verifyAuthorizeNetSession(sessionId: string, _userEmail: string):
     }
 
     const session = doc.data() as Record<string, unknown>;
-    if (session.status === 'completed') {
-      return { valid: true, subscriptionId: session.arbSubscriptionId as string | undefined };
-    }
 
-    // For Authorize.Net, the webhook will update session status to 'completed'
-    // If still pending, the payment hasn't been confirmed yet
-    if (session.status === 'pending') {
+    // The webhook writes arbSubscriptionId once the first payment settles.
+    // We do not trust the local session.status alone — we re-query the ARB
+    // subscription at Authorize.Net to confirm it is genuinely active.
+    const arbSubscriptionId = session.arbSubscriptionId as string | undefined;
+
+    if (!arbSubscriptionId) {
+      // Webhook has not yet set the ARB ID — payment not confirmed
       return { valid: false, error: 'Payment not yet confirmed. Please wait for processing.' };
     }
 
-    return { valid: false, error: `Session status: ${session.status as string}` };
+    // Re-query ARB subscription status from Authorize.Net
+    const keys = await getAuthorizeNetKeys();
+    if (!keys) {
+      return { valid: false, error: 'Authorize.Net not configured' };
+    }
+
+    const payload = {
+      ARBGetSubscriptionRequest: {
+        merchantAuthentication: {
+          name: keys.apiLoginId,
+          transactionKey: keys.transactionKey,
+        },
+        subscriptionId: arbSubscriptionId,
+        includeTransactions: false,
+      },
+    };
+
+    const res = await fetch(getAuthorizeNetUrl(keys.sandbox), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json() as {
+      subscription?: { status?: string };
+      messages?: { resultCode?: string; message?: Array<{ code?: string; text?: string }> };
+    };
+
+    if (data.messages?.resultCode !== 'Ok' || !data.subscription) {
+      const errText = data.messages?.message?.[0]?.text ?? 'Failed to retrieve ARB subscription';
+      return { valid: false, error: errText };
+    }
+
+    // Authorize.Net ARB statuses: 'active', 'expired', 'suspended', 'canceled', 'terminated'
+    // Only 'active' indicates a live, paid subscription.
+    if (data.subscription.status !== 'active') {
+      return { valid: false, error: `ARB subscription status: ${data.subscription.status ?? 'unknown'}` };
+    }
+
+    return { valid: true, subscriptionId: arbSubscriptionId };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error(`${LOG_PREFIX} Authorize.Net verification failed`, err instanceof Error ? err : new Error(msg));

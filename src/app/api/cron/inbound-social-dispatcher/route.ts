@@ -41,7 +41,7 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -135,10 +135,16 @@ async function loadTwitterCreds(): Promise<TwitterCreds | null> {
 }
 
 async function generateReplyText(inboundText: string): Promise<string> {
-  const brand = await getBrandDNA();
-  const brandDescription = brand?.companyDescription ?? 'SalesVelocity.ai — an AI agent swarm for sales and marketing.';
-  const tone = brand?.toneOfVoice ?? 'professional yet approachable';
-  const avoid = brand?.avoidPhrases?.join('", "') ?? '';
+  // Read brand context from the X_EXPERT GM's baked-in brandDNASnapshot (Standing Rule #1).
+  // getBrandDNA() is intentionally not called here — runtime brand DNA reads are prohibited.
+  const xExpertGM = await getActiveSpecialistGMByIndustry('X_EXPERT', 'saas_sales_ops');
+  if (!xExpertGM) {
+    logger.warn('[inbound-social-dispatcher] X_EXPERT GM not found — falling back to defaults for brand context');
+  }
+  const dna = xExpertGM?.brandDNASnapshot;
+  const brandDescription = dna?.companyDescription ?? 'SalesVelocity.ai — an AI agent swarm for sales and marketing.';
+  const tone = dna?.toneOfVoice ?? 'professional yet approachable';
+  const avoid = dna?.avoidPhrases?.join('", "') ?? '';
 
   const systemPrompt = [
     `You are the brand X / Twitter DM responder for ${brandDescription}`,

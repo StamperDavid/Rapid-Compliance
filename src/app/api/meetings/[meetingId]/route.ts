@@ -7,6 +7,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
@@ -28,9 +29,14 @@ const rescheduleSchema = z.object({
 });
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ meetingId: string }> }
 ) {
+  const authResult = await requireAuth(req);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const { meetingId } = await params;
     if (!meetingId) {
@@ -38,6 +44,11 @@ export async function DELETE(
     }
 
     const bookingsPath = getSubCollection('bookings');
+    const existing = await AdminFirestoreService.get<BookingDoc>(bookingsPath, meetingId);
+    if (!existing) {
+      return NextResponse.json({ success: false, error: 'Meeting not found' }, { status: 404 });
+    }
+
     await AdminFirestoreService.delete(bookingsPath, meetingId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
@@ -51,6 +62,11 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ meetingId: string }> }
 ) {
+  const authResult = await requireAuth(req);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const { meetingId } = await params;
     if (!meetingId) {

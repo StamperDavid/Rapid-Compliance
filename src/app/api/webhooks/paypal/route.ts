@@ -125,15 +125,24 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text();
     const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'paypal')) as PayPalKeys | null;
 
-    // Verify signature if webhook ID is configured
-    if (keys?.webhookId) {
-      const isValid = await verifyPayPalWebhook(rawBody, request.headers, keys);
-      if (!isValid) {
-        logger.warn('PayPal webhook signature verification failed', {
-          route: '/api/webhooks/paypal',
-        });
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-      }
+    // Fail closed: webhookId is mandatory. Without it we cannot verify the
+    // request origin and must refuse to process — a missing config is not a
+    // reason to process unverified events.
+    if (!keys?.webhookId || !keys.clientId || !keys.clientSecret) {
+      logger.error(
+        'PayPal webhookId not configured; rejecting webhook to prevent unverified processing.',
+        new Error('Missing PayPal webhook credentials'),
+        { route: '/api/webhooks/paypal' },
+      );
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+    }
+
+    const isValid = await verifyPayPalWebhook(rawBody, request.headers, keys);
+    if (!isValid) {
+      logger.warn('PayPal webhook signature verification failed', {
+        route: '/api/webhooks/paypal',
+      });
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     const event = JSON.parse(rawBody) as PayPalEvent;
