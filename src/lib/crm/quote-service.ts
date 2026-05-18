@@ -5,6 +5,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -322,5 +323,24 @@ export async function convertQuoteToInvoice(quoteId: string): Promise<string> {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     logger.error('Failed to convert quote to invoice', error instanceof Error ? error : undefined, { quoteId });
     throw new Error(`Failed to convert quote: ${errorMessage}`);
+  }
+}
+
+// ============================================================================
+// SERVER-SIDE HELPERS — Admin SDK required (used by merge route)
+// ============================================================================
+
+/**
+ * Find all quotes whose contactId matches the given value.
+ * Uses the Admin SDK so this can be called from server-side API routes.
+ */
+export async function findQuotesByContactId(contactId: string): Promise<Quote[]> {
+  try {
+    const db = AdminFirestoreService.collection(getSubCollection('quotes'));
+    const snapshot = await db.where('contactId', '==', contactId).get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Quote);
+  } catch (error) {
+    logger.error('Failed to find quotes by contactId', error instanceof Error ? error : new Error(String(error)), { contactId });
+    throw new Error(`Failed to find quotes by contactId: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

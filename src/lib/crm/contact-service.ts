@@ -4,6 +4,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -372,6 +373,34 @@ export async function recordInteraction(
   }
 }
 
+// ============================================================================
+// SERVER-SIDE HELPERS — Admin SDK required (used by merge route)
+// ============================================================================
 
+/**
+ * Minimal shape for synced email records stored in the `emails` collection
+ * by gmail-sync-service and outlook-sync-service.
+ */
+export interface SyncedEmail {
+  id: string;
+  contactId?: string;
+  [key: string]: unknown;
+}
 
-
+/**
+ * Find all synced email records whose contactId matches the given value.
+ * These are records written to the `emails` collection by
+ * gmail-sync-service / outlook-sync-service — not campaign emails.
+ * Uses the Admin SDK so this can be called from server-side API routes.
+ */
+export async function findEmailsByContactId(contactId: string): Promise<SyncedEmail[]> {
+  try {
+    const snapshot = await AdminFirestoreService.collection(getSubCollection('emails'))
+      .where('contactId', '==', contactId)
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as SyncedEmail);
+  } catch (error) {
+    logger.error('Failed to find emails by contactId', error instanceof Error ? error : new Error(String(error)), { contactId });
+    throw new Error(`Failed to find emails by contactId: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}

@@ -5,6 +5,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -191,5 +192,24 @@ export async function deletePayment(paymentId: string): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     logger.error('Failed to delete payment', error instanceof Error ? error : undefined, { paymentId });
     throw new Error(`Failed to delete payment: ${errorMessage}`);
+  }
+}
+
+// ============================================================================
+// SERVER-SIDE HELPERS — Admin SDK required (used by merge route)
+// ============================================================================
+
+/**
+ * Find all payments whose contactId matches the given value.
+ * Uses the Admin SDK so this can be called from server-side API routes.
+ */
+export async function findPaymentsByContactId(contactId: string): Promise<CrmPayment[]> {
+  try {
+    const db = AdminFirestoreService.collection(getSubCollection('payments'));
+    const snapshot = await db.where('contactId', '==', contactId).get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as CrmPayment);
+  } catch (error) {
+    logger.error('Failed to find payments by contactId', error instanceof Error ? error : new Error(String(error)), { contactId });
+    throw new Error(`Failed to find payments by contactId: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
