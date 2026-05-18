@@ -24,6 +24,8 @@ export interface SendEmailOptions {
     trackClicks: boolean;
   };
   metadata?: Record<string, string>;
+  /** Additional SMTP headers, e.g. List-Unsubscribe for CAN-SPAM compliance */
+  headers?: Record<string, string>;
 }
 
 export interface EmailTrackingData {
@@ -76,6 +78,11 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
     // Add reply-to if specified
     if (options.replyTo) {
       msg.replyTo = options.replyTo;
+    }
+
+    // Add custom SMTP headers (e.g. List-Unsubscribe for CAN-SPAM compliance)
+    if (options.headers) {
+      msg.headers = options.headers;
     }
 
     // Add custom headers for tracking

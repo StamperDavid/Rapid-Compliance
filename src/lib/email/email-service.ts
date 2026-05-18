@@ -25,6 +25,8 @@ export interface EmailOptions {
     trackClicks?: boolean;
   };
   metadata?: Record<string, unknown>;
+  /** Additional SMTP/API headers, e.g. List-Unsubscribe for CAN-SPAM compliance */
+  headers?: Record<string, string>;
 }
 
 export interface EmailAttachment {
@@ -191,6 +193,7 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
 
   interface SendGridPayloadWithReplyTo extends SendGridPayload {
     reply_to?: { email: string };
+    headers?: Record<string, string>;
   }
 
   const payload: SendGridPayloadWithReplyTo = {
@@ -236,6 +239,11 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
       type:(att.contentType !== '' && att.contentType != null) ? att.contentType : 'application/octet-stream',
       disposition: 'attachment',
     }));
+  }
+
+  // Pass through any additional headers (e.g. List-Unsubscribe for CAN-SPAM)
+  if (options.headers) {
+    payload.headers = options.headers;
   }
 
   const apiKey = typeof credentials.apiKey === 'string' ? credentials.apiKey : '';
