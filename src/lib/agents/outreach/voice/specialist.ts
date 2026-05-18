@@ -25,6 +25,8 @@
  * transfer_call, get_recording, log_outcome. All deterministic.
  */
 
+import 'server-only';
+
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, AgentStatus, SpecialistConfig, Signal } from '../../types';
 import { VoiceProviderFactory } from '@/lib/voice/voice-factory';
@@ -32,6 +34,7 @@ import type { VoiceCall, VoiceProvider, InitiateCallOptions } from '@/lib/voice/
 import { logger } from '@/lib/logger/logger';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { checkTCPAConsent } from '@/lib/compliance/tcpa-service';
 
 // ============== Configuration ==============
 
@@ -271,6 +274,21 @@ export class VoiceAiSpecialist extends BaseSpecialist {
         success: false,
         action: 'make_call',
         error: `Invalid phone number format (E.164 required): ${payload.to}`,
+      };
+    }
+
+    // TCPA consent gate — fail closed. Must pass before any dial attempt.
+    const tcpaCheck = await checkTCPAConsent(payload.to, 'call');
+    if (!tcpaCheck.allowed) {
+      logger.warn('[Voice Specialist] Outbound call blocked by TCPA consent check', {
+        to: payload.to,
+        reason: tcpaCheck.reason,
+        file: 'voice/specialist.ts',
+      });
+      return {
+        success: false,
+        action: 'make_call',
+        error: `Call blocked: TCPA consent not on file for this number. ${tcpaCheck.reason ?? 'No consent record found.'}`,
       };
     }
 

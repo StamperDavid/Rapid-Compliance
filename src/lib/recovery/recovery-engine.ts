@@ -3,6 +3,8 @@
  *
  * Triggers Email, SMS, and Voice recovery sequences when leads abandon.
  */
+import 'server-only';
+
 import type { PendingMerchant } from '@/lib/stores/pending-merchants-store';
 import { getRecoverySequence, type RecoveryStep } from './recovery-sequences';
 import { logger } from '@/lib/logger/logger';

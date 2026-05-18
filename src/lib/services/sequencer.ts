@@ -1,6 +1,6 @@
 /**
  * Omni-Channel Sequencer
- * 
+ *
  * This service is 100% native and relies on zero third-party data APIs.
  * 
  * Native sequence manager for outreach orchestration across multiple channels:
@@ -19,6 +19,8 @@
  * - Status tracking
  * - Analytics
  */
+
+import 'server-only';
 
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
