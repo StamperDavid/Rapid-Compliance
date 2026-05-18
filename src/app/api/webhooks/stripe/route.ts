@@ -343,6 +343,10 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
         ? subscription.current_period_end
         : null;
       const cancelAtPeriodEnd = subscription.cancel_at_period_end === true;
+      // trial_end is a Unix timestamp (number) when a trial is active; null otherwise
+      const trialEnd = typeof subscription.trial_end === 'number'
+        ? subscription.trial_end
+        : null;
 
       // Store in stripe_subscriptions for audit/lookup
       await AdminFirestoreService.set(
@@ -354,18 +358,27 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
           status,
           currentPeriodEnd,
           cancelAtPeriodEnd,
+          trialEnd,
           updatedAt: new Date().toISOString(),
           eventType: event.type,
         }
       );
 
-      // Sync to user's subscription record
+      // Sync to user's subscription record.
+      // paymentStatus reflects whether the customer owes money right now:
+      //   'trialing' — within free trial, no charge yet
+      //   'current'  — paid and up to date (set by invoice.payment_succeeded)
+      //   'past_due' — payment failed (set by invoice.payment_failed)
+      const paymentStatus = status === 'trialing' ? 'trialing' : undefined;
+
       const userSub = await findUserSubscription(subscriptionId);
       if (userSub?.id) {
         await AdminFirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
           stripeStatus: status,
           currentPeriodEnd,
           cancelAtPeriodEnd,
+          trialEnd,
+          ...(paymentStatus !== undefined ? { paymentStatus } : {}),
           updatedAt: new Date().toISOString(),
         });
       }
@@ -375,6 +388,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
         subscriptionId,
         customerId,
         status,
+        trialEnd,
       });
       break;
     }
@@ -451,10 +465,15 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
         ? invoice.subscription
         : null;
 
-      // Flag subscription payment failure
+      // Flag subscription payment failure — but only when the subscription has
+      // transitioned out of trial. During the trial period Stripe may issue a
+      // $0 setup invoice that shows as "failed"; marking the account past_due
+      // at that point would be incorrect. The subscription's stripeStatus field
+      // is the authoritative signal: if it is still 'trialing', skip the update.
       if (subscriptionId) {
         const userSub = await findUserSubscription(subscriptionId);
-        if (userSub?.id) {
+        const isTrialing = String(userSub?.['stripeStatus'] ?? '') === 'trialing';
+        if (userSub?.id && !isTrialing) {
           await AdminFirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
             paymentStatus: 'past_due',
             lastPaymentFailedAt: new Date().toISOString(),

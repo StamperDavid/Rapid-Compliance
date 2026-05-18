@@ -28,6 +28,8 @@ export interface SubscriptionTier {
   icon: string;
   highlight: boolean;
   features: string[];
+  /** Free trial length in days. 0 means no trial. */
+  trialDays: number;
 }
 
 const MONTHLY_PRICE = PRICING.monthlyPrice;
@@ -42,6 +44,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     annualPrice: ANNUAL_PRICE,
     monthlyPriceCents: MONTHLY_PRICE * 100,
     annualPriceCents: ANNUAL_PRICE * 100,
+    trialDays: PRICING.trial.days,
     icon: '🚀',
     color: '#6366f1',
     highlight: true,

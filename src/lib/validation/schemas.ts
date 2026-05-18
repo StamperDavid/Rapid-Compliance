@@ -148,6 +148,8 @@ export const checkoutCompleteSchema = z.object({
   paymentIntentId: z.string().min(1),
   sessionId: z.string().optional(),
   orderData: z.record(z.string(), z.unknown()).optional(),
+  expectedAmountCents: z.number().int().positive().optional(),
+  expectedCurrency: z.string().length(3).optional(),
 });
 
 /**

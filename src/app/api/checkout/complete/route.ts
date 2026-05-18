@@ -182,24 +182,80 @@ async function verifyMollie(paymentId: string): Promise<VerificationResult> {
   };
 }
 
-function verifyAuthorizeNet(transactionId: string): Promise<VerificationResult> {
-  // Authorize.Net transactions are verified at creation time — Accept.js flow
-  // completes the charge server-side, so we trust the transaction ID
-  return Promise.resolve({
+interface AuthorizeNetKeys { apiLoginId?: string; transactionKey?: string; sandbox?: boolean }
+
+async function verifyAuthorizeNet(transactionId: string): Promise<VerificationResult> {
+  const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'authorizenet')) as AuthorizeNetKeys | null;
+  if (!keys?.apiLoginId || !keys.transactionKey) {
+    return { verified: false, error: 'Authorize.Net not configured' };
+  }
+
+  const baseUrl = keys.sandbox
+    ? 'https://apitest.authorize.net/xml/v1/request.api'
+    : 'https://api.authorize.net/xml/v1/request.api';
+
+  const payload = {
+    getTransactionDetailsRequest: {
+      merchantAuthentication: {
+        name: keys.apiLoginId,
+        transactionKey: keys.transactionKey,
+      },
+      transId: transactionId,
+    },
+  };
+
+  const response = await fetch(baseUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as {
+    transaction?: {
+      transId?: string;
+      transactionStatus?: string;
+      settleAmount?: number;
+      order?: { invoiceNumber?: string };
+    };
+    messages?: { resultCode?: string; message?: Array<{ code?: string; text?: string }> };
+  };
+
+  if (data.messages?.resultCode !== 'Ok' || !data.transaction) {
+    const errText = data.messages?.message?.[0]?.text ?? 'Failed to retrieve Authorize.Net transaction';
+    return { verified: false, error: errText };
+  }
+
+  // Only treat fully settled transactions as verified — 'authorizedPendingCapture'
+  // is NOT sufficient because the funds have not moved.
+  const status = data.transaction.transactionStatus;
+  if (status !== 'settledSuccessfully') {
+    return { verified: false, error: `Authorize.Net transaction status: ${status ?? 'unknown'}` };
+  }
+
+  // settleAmount is a decimal number (e.g. 99.00); convert to integer cents.
+  const rawAmount = data.transaction.settleAmount;
+  const amountCents = typeof rawAmount === 'number'
+    ? Math.round(rawAmount * 100)
+    : undefined;
+
+  return {
     verified: true,
-    amount: undefined,
+    amount: amountCents,
     currency: 'usd',
     metadata: { transactionId },
-  });
+  };
 }
 
 function verify2Checkout(_referenceId: string): Promise<VerificationResult> {
-  // 2Checkout hosted checkout verifies via IPN/webhook callback
-  // The redirect back to our success page means the order was placed
+  // 2Checkout real-query requires full OAuth 2.0 against the Verifone API
+  // (POST /oauth/token then GET /api/orders/{reference}).  That integration
+  // is not yet complete.  Block the provider so a fake transaction ID cannot
+  // bypass payment collection.  When the OAuth flow is wired, replace this
+  // stub with a real fetch that checks order.Status === 'COMPLETE' and
+  // compares order.GrossPrice (decimal string) against expectedAmountCents.
   return Promise.resolve({
-    verified: true,
-    amount: undefined,
-    currency: undefined,
+    verified: false,
+    error: '2Checkout verification is not yet implemented. Provider temporarily unavailable.',
   });
 }
 
@@ -500,6 +556,44 @@ export async function POST(request: NextRequest) {
         { success: false, error: verification.error ?? 'Payment verification failed' },
         { status: 400 },
       );
+    }
+
+    // ── Amount / currency guard ───────────────────────────────────────────────
+    // When the caller supplies expectedAmountCents / expectedCurrency we cross-
+    // check against the amount the provider actually confirmed.  Integer cents
+    // arithmetic only — no parseFloat on expected values.
+    const { expectedAmountCents, expectedCurrency } = validation.data;
+
+    if (expectedAmountCents !== undefined && verification.amount !== undefined) {
+      if (verification.amount !== expectedAmountCents) {
+        logger.warn('Payment amount mismatch', {
+          route: '/api/checkout/complete',
+          provider,
+          observed: verification.amount,
+          expected: expectedAmountCents,
+        });
+        return NextResponse.json(
+          { success: false, error: 'Payment amount does not match order total' },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (expectedCurrency !== undefined && verification.currency !== undefined) {
+      const normalizedObserved = verification.currency.toUpperCase();
+      const normalizedExpected = expectedCurrency.toUpperCase();
+      if (normalizedObserved !== normalizedExpected) {
+        logger.warn('Payment currency mismatch', {
+          route: '/api/checkout/complete',
+          provider,
+          observed: normalizedObserved,
+          expected: normalizedExpected,
+        });
+        return NextResponse.json(
+          { success: false, error: 'Payment currency does not match order currency' },
+          { status: 400 },
+        );
+      }
     }
 
     // Create canonical order record matching the Order type from types/ecommerce.ts
