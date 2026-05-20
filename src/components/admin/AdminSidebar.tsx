@@ -50,6 +50,7 @@ import {
   LayoutTemplate,
   BookOpen,
   Link2,
+  Zap,
 } from 'lucide-react';
 
 // ============================================================================
@@ -88,20 +89,16 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'products-pricing-payments', label: 'Products, Pricing & Payments', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
     ],
   },
-  // ── Marketing (8 items — absorbed Outreach + Coupons) ─────────────
-  // Email Studio tabs: Compose, Sequences, Templates
+  // ── Marketing — channel tools + strategic Campaigns (May 19 2026) ────
+  // Email Studio sub-tabs: Compose, Campaigns, Builder
   {
     id: 'marketing',
     label: 'Marketing',
     icon: Megaphone,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
+      { id: 'campaigns', label: 'Campaigns', href: '/campaigns', icon: Megaphone, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEmailCampaigns' },
       { id: 'social-hub', label: 'Social Hub', href: '/social', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
-      // Content Generator hub absorbs Studio, Video Editor, and Media Library
-      // as tabs (Apr 29 2026). Per the integrate-don't-sprawl rule, those three
-      // top-level entries were removed and their content lives under
-      // /content/video/{studio,editor,library}. Feature-module gating
-      // intentionally limited to role only (Apr 28 2026 fix).
       { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
@@ -122,15 +119,15 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'website-analytics', label: 'Analytics', href: '/website/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
     ],
   },
-  // ── AI Workforce (standalone — no section header) ──────────────────
+  // ── AI Workforce — workforce + workflows (May 19 2026 moved Workflows in) ────
   {
     id: 'ai_workforce',
     label: 'AI Workforce',
     icon: Bot,
     allowedRoles: ['owner', 'admin', 'manager'],
-    standalone: true,
     items: [
-      { id: 'ai-workforce', label: 'AI Workforce', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
+      { id: 'ai-workforce', label: 'Workforce', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
+      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Zap, iconColor: 'var(--color-warning)', requiredPermission: 'canDeployAIAgents' },
     ],
   },
   // ── System (standalone — owner only) ───────────────────────────────
@@ -261,7 +258,11 @@ export default function AdminSidebar() {
       return pathname.startsWith('/deals') || pathname.startsWith('/risk') || pathname.startsWith('/living-ledger');
     }
 
-    // Email Studio — email writer + nurture + email builder + templates + sequences + email campaigns + workflows + campaigns
+    // Email Studio — Compose + Campaigns (email-only) + Builder.
+    // Orchestrated multi-channel /campaigns moved to Marketing > Campaigns.
+    // /workflows moved to AI Workforce > Workflows.
+    // /nurture + /templates are absorbed orphans (not in any nav) but still
+    // highlight Email Studio if a user reaches them via direct link.
     if (href === '/email-writer') {
       return pathname.startsWith('/email-writer') ||
         pathname.startsWith('/nurture') ||
@@ -269,11 +270,17 @@ export default function AdminSidebar() {
         pathname === '/templates' ||
         pathname.startsWith('/outbound/sequences') ||
         pathname.startsWith('/email/campaigns') ||
-        pathname.startsWith('/entities/email_templates') ||
-        pathname === '/workflows' ||
-        pathname.startsWith('/workflows/') ||
-        pathname === '/campaigns' ||
-        pathname.startsWith('/campaigns/');
+        pathname.startsWith('/entities/email_templates');
+    }
+
+    // Marketing > Campaigns — orchestrated multi-channel campaigns hub.
+    if (href === '/campaigns') {
+      return pathname === '/campaigns' || pathname.startsWith('/campaigns/');
+    }
+
+    // AI Workforce > Workflows — trigger-based automation.
+    if (href === '/workflows') {
+      return pathname === '/workflows' || pathname.startsWith('/workflows/');
     }
 
     // Social Hub — all /social/* (analytics now absorbed as tab)

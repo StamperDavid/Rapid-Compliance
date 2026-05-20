@@ -46,7 +46,7 @@ export default function SettingsPage() {
       items: [
         { icon: '🏢', label: 'Organization Profile', description: 'Company name, address, phone, website, industry, and social media', href: `/settings/organization`, permission: canManageOrganization },
         { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: `/settings/api-keys`, permission: canManageAPIKeys },
-        { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, billing, and outbound feature limits', href: `/settings/billing`, permission: canManageBilling },
+        { icon: '💳', label: 'Subscription', description: 'Start free trial, manage your subscription, or update payment method', href: `/settings/subscription`, permission: canManageBilling },
         { icon: '🎛️', label: 'Feature Toggles', description: 'Enable or disable platform modules for your organization', href: `/settings/features`, permission: canManageOrganization },
         // Meeting availability moved to per-day "Hours" popout on the dashboard calendar (Apr 29 2026).
         { icon: '✉️', label: 'Scheduling Messages', description: 'Edit the email + on-screen copy for early-access, demo confirmations, Zoom topic, and reminders', href: `/settings/scheduling-messages`, permission: canManageOrganization },

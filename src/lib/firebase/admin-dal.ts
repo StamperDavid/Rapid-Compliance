@@ -66,6 +66,15 @@ export class FirestoreAdminDAL {
     return this.db.collection(path);
   }
 
+  /**
+   * Alias for getPlatformCollection so this class is interface-compatible
+   * with BaseAgentDAL (client DAL). SignalCoordinator and other shared
+   * orchestration code use the BaseAgentDAL name and accept either DAL.
+   */
+  getPlatformSubCollection(subCollection: string): CollectionReference {
+    return this.getPlatformCollection(subCollection);
+  }
+
   /** @deprecated Use getPlatformCollection instead */
   getOrgCollection(subCollection: string): CollectionReference {
     return this.getPlatformCollection(subCollection);

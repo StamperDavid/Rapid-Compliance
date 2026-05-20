@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/email-service';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { validateEmailCompliance, ensureCompliance } from '@/lib/compliance/can-spam-service';
+import { validateEmailCompliance, injectUnsubscribe, buildListUnsubscribeHeaders } from '@/lib/compliance/can-spam-service';
 import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
@@ -127,18 +127,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // MAJ-29: Ensure HTML content includes required CAN-SPAM footer
+    // CAN-SPAM: inject footer + build List-Unsubscribe headers (RFC 8058 one-click).
     const contactId = typeof emailMetadata?.contactId === 'string' ? emailMetadata.contactId : 'unknown';
     const emailId = typeof emailMetadata?.emailId === 'string' ? emailMetadata.emailId : undefined;
-    const compliantHtml = typeof emailData.html === 'string'
-      ? ensureCompliance(emailData.html, contactId, emailId)
-      : emailData.html;
+    let compliantHtml: typeof emailData.html = emailData.html;
+    let listUnsubHeaders: Record<string, string> | undefined;
+    if (typeof emailData.html === 'string') {
+      const injected = injectUnsubscribe(emailData.html, undefined, contactId, emailId);
+      compliantHtml = injected.html;
+      listUnsubHeaders = buildListUnsubscribeHeaders(injected.unsubscribeUrl);
+    }
 
     // Send email with type assertion after validation
     const result = await sendEmail({
       ...emailData,
       html: compliantHtml,
       metadata: { ...emailData.metadata, userId: user.uid },
+      ...(listUnsubHeaders ? { headers: listUnsubHeaders } : {}),
     } as Parameters<typeof sendEmail>[0]);
 
     if (!result.success) {

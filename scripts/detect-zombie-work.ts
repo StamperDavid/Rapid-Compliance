@@ -31,8 +31,8 @@
 import { readFileSync, existsSync, statSync, appendFileSync, writeFileSync, createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 
-const LOG_PATH = 'D:/rapid-dev/dev-server.log';
-const ALERT_LOG_PATH = 'D:/rapid-dev/zombie-alerts.log';
+const LOG_PATH = process.env.DEV_SERVER_LOG_PATH ?? 'D:/Future Rapid Compliance/dev-server.log';
+const ALERT_LOG_PATH = process.env.ZOMBIE_ALERT_LOG_PATH ?? 'D:/Future Rapid Compliance/zombie-alerts.log';
 const GRACE_MS = 10_000;
 const MAX_TRACK_MS = 15 * 60 * 1000;
 

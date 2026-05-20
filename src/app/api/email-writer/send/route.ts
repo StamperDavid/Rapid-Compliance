@@ -13,7 +13,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 import { sendEmail } from '@/lib/email-writer/email-delivery-service';
 import { wrapEmailBody, stripHTML } from '@/lib/email-writer/email-html-templates';
-import { ensureCompliance } from '@/lib/compliance/can-spam-service';
+import { injectUnsubscribe, buildListUnsubscribeHeaders } from '@/lib/compliance/can-spam-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,9 +112,11 @@ export async function POST(request: NextRequest) {
       branding: validData.branding,
     });
 
-    // CAN-SPAM: Ensure compliance footer (unsubscribe link + physical address)
+    // CAN-SPAM: inject footer + build List-Unsubscribe headers (RFC 8058 one-click).
     const contactId = validData.emailId ?? validData.to;
-    htmlBody = ensureCompliance(htmlBody, contactId, validData.emailId);
+    const injected = injectUnsubscribe(htmlBody, undefined, contactId, validData.emailId);
+    htmlBody = injected.html;
+    const listUnsubHeaders = buildListUnsubscribeHeaders(injected.unsubscribeUrl);
 
     // 4. Generate plain text version if not provided
     const plainTextBody = validData.bodyPlain ?? stripHTML(htmlBody);
@@ -140,6 +142,7 @@ export async function POST(request: NextRequest) {
       campaignId: validData.campaignId,
       replyTo: validData.replyTo,
       replyToName: validData.replyToName,
+      headers: listUnsubHeaders,
     });
 
     const duration = Date.now() - startTime;

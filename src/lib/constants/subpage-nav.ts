@@ -22,7 +22,6 @@ export const CATALOG_TABS: SubpageNavItem[] = [
   { label: 'Services', href: '/products/services' },
   { label: 'Orders', href: '/orders' },
   { label: 'Coupons', href: '/coupons' },
-  { label: 'Subscriptions', href: '/subscriptions' },
   { label: 'Payments', href: '/deals/payments' },
 ];
 
@@ -97,15 +96,15 @@ export const LEAD_INTEL_TABS: SubpageNavItem[] = [
   { label: 'Marketing Scraper', href: '/scraper' },
 ];
 
-// ── Email Studio ────────────────────────────────────────────────────────────
+// ── Email Studio (May 19 2026: dropped 4 tabs that did not belong) ───────────
+// Orchestrated /campaigns moved to Marketing > Campaigns.
+// /workflows moved to AI Workforce > Workflows.
+// /nurture absorbed into Compose as sequence mode (separate page deprecated).
+// /templates absorbed into Builder as a template picker (separate page deprecated).
 export const EMAIL_STUDIO_TABS: SubpageNavItem[] = [
-  { label: 'Email Writer', href: '/email-writer' },
-  { label: 'Campaigns', href: '/campaigns' },
-  { label: 'Email Campaigns', href: '/email/campaigns' },
-  { label: 'Workflows', href: '/workflows' },
-  { label: 'Nurture', href: '/nurture' },
-  { label: 'Email Builder', href: '/marketing/email-builder' },
-  { label: 'Templates', href: '/templates' },
+  { label: 'Compose', href: '/email-writer' },
+  { label: 'Campaigns', href: '/email/campaigns' },
+  { label: 'Builder', href: '/marketing/email-builder' },
 ];
 
 // ── Coaching ────────────────────────────────────────────────────────────────
@@ -194,10 +193,11 @@ export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
   { label: 'Audio Lab', href: '/content/voice-lab' },
 ];
 
-// ── AI Workforce Hub (all 5 AI items → 1 hub) ──────────────────────────────
+// ── AI Workforce Hub (May 19 2026: added Workflows) ─────────────────────────
 export const AI_WORKFORCE_TABS: SubpageNavItem[] = [
   { label: 'Agents', href: '/workforce' },
   { label: 'Mission Control', href: '/mission-control' },
+  { label: 'Workflows', href: '/workflows' },
   { label: 'Performance', href: '/workforce/performance' },
   { label: 'Training', href: '/settings/ai-agents/training' },
   { label: 'Models & Data', href: '/ai/datasets' },

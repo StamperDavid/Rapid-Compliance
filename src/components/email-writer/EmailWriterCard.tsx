@@ -88,34 +88,39 @@ function EmailWriterCardInner({
    * Generate email with AI
    */
   const handleGenerateEmail = useCallback(async () => {
-    // Validation
-    if (!dealId) {
+    // Validation: need at least a recipient email or a deal/lead to anchor the email.
+    // Deal is only created once someone signs up for the trial. Before that, the
+    // input is a lead or a raw recipient (cold outreach, social contact, etc.).
+    if (!recipientEmail && !dealId) {
       setGenerationState({
         isGenerating: false,
-        error: 'Please select a deal',
+        error: 'Enter a recipient email (for cold outreach) or a deal ID (for active sales)',
         generatedEmail: null,
         suggestedImprovements: [],
       });
       return;
     }
-    
+
     setGenerationState({
       isGenerating: true,
       error: null,
       generatedEmail: null,
       suggestedImprovements: [],
     });
-    
+
     try {
+      const auth = getAuth();
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/email-writer/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           userId,
           emailType,
-          dealId,
+          dealId: dealId || undefined,
           recipientName: recipientName || undefined,
           recipientEmail: recipientEmail || undefined,
           recipientTitle: recipientTitle || undefined,
@@ -294,13 +299,13 @@ function EmailWriterCardInner({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Deal ID *
+            Deal ID (optional)
           </label>
           <input
             type="text"
             value={dealId}
             onChange={(e) => setDealId(e.target.value)}
-            placeholder="deal_123"
+            placeholder="Leave blank for lead/cold outreach"
             className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -441,24 +446,64 @@ function EmailWriterCardInner({
         </p>
       </div>
       
-      {/* Generate Button */}
-      <button
-        onClick={() => { void handleGenerateEmail(); }}
-        disabled={generationState.isGenerating || !dealId}
-        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
-      >
-        {generationState.isGenerating ? (
-          <span className="flex items-center justify-center">
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Generating Email...
-          </span>
-        ) : (
-          'Generate Email with AI'
-        )}
-      </button>
+      {/* Compose actions — AI generate, or start from blank */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button
+          onClick={() => { void handleGenerateEmail(); }}
+          disabled={generationState.isGenerating || (!dealId && !recipientEmail)}
+          className="py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
+        >
+          {generationState.isGenerating ? (
+            <span className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generating Email...
+            </span>
+          ) : (
+            'Generate Email with AI'
+          )}
+        </button>
+        <button
+          onClick={() => {
+            const blankId = `manual_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            const blank: GeneratedEmail = {
+              id: blankId,
+              userId,
+              subject: '',
+              body: '',
+              bodyPlain: '',
+              emailType,
+              dealId: dealId || undefined,
+              templateId: undefined,
+              tone,
+              length,
+              includeCompetitive,
+              includeSocialProof: true,
+              model: 'manual',
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+              version: 1,
+              generatedAt: new Date(),
+            };
+            setGenerationState({
+              isGenerating: false,
+              error: null,
+              generatedEmail: blank,
+              suggestedImprovements: [],
+            });
+            setEditedSubject('');
+            setEditedBody('');
+            setIsEditing(true);
+          }}
+          disabled={generationState.isGenerating}
+          className="py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white font-medium rounded-md transition-colors"
+        >
+          Write Manually
+        </button>
+      </div>
       
       {/* Error Message */}
       {generationState.error && (

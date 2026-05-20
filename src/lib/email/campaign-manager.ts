@@ -4,7 +4,7 @@
  */
 
 import { sendBulkEmails } from './email-service';
-import { ensureCompliance } from '@/lib/compliance/can-spam-service';
+import { injectUnsubscribe, buildListUnsubscribeHeaders } from '@/lib/compliance/can-spam-service';
 import { getEmailCampaignsCollection } from '@/lib/firebase/collections';
 
 export interface EmailCampaign {
@@ -180,10 +180,16 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
     return { success: false, error: `Campaign cannot be sent. Current status: ${campaign.status}` };
   }
 
-  // CAN-SPAM: Ensure all campaign HTML content has compliance footer
-  campaign.htmlContent = ensureCompliance(campaign.htmlContent, campaignId);
+  // CAN-SPAM: inject footer + build List-Unsubscribe headers (RFC 8058 one-click).
+  // Note: this campaign-level injection shares one unsubscribe URL across recipients
+  // because the existing campaign-manager flow is not per-recipient. Per-contact
+  // personalization is a separate bug tracked outside this CAN-SPAM headers fix.
+  const injectedA = injectUnsubscribe(campaign.htmlContent, undefined, campaignId);
+  campaign.htmlContent = injectedA.html;
+  const listUnsubHeaders = buildListUnsubscribeHeaders(injectedA.unsubscribeUrl);
   if (campaign.htmlContentB) {
-    campaign.htmlContentB = ensureCompliance(campaign.htmlContentB, campaignId);
+    const injectedB = injectUnsubscribe(campaign.htmlContentB, undefined, campaignId);
+    campaign.htmlContentB = injectedB.html;
   }
 
   // Update status
@@ -217,6 +223,7 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
           campaignId: campaign.id,
           variant: 'A',
         },
+        headers: listUnsubHeaders,
       });
 
       // Send B variant
@@ -235,6 +242,7 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
           campaignId: campaign.id,
           variant: 'B',
         },
+        headers: listUnsubHeaders,
       });
 
       campaign.sentCount = aResults.length + bResults.length;
@@ -255,6 +263,7 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
         const localTrackOpens = campaign.trackOpens;
         const localTrackClicks = campaign.trackClicks;
         const localCampaignId = campaign.id;
+        const localListUnsubHeaders = listUnsubHeaders;
 
         setTimeout(() => {
           void (async () => {
@@ -277,6 +286,7 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
                 campaignId: localCampaignId,
                 variant: winner,
               },
+              headers: localListUnsubHeaders,
             });
           })();
         }, campaign.abTest.testDuration * 60 * 60 * 1000);
@@ -297,6 +307,7 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
         metadata: {
           campaignId: campaign.id,
         },
+        headers: listUnsubHeaders,
       });
 
       campaign.sentCount = results.length;

@@ -11,7 +11,6 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { getTier } from '@/lib/pricing/subscription-tiers';
 import { adminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import type { PlatformCoupon } from '@/types/pricing';
@@ -27,12 +26,6 @@ import { z } from 'zod';
 export const dynamic = 'force-dynamic';
 
 const checkoutSchema = z.object({
-  // Single flat-rate tier — 'pro' is the only paid plan.
-  // Legacy tier names are coerced so existing links/bookmarks don't break.
-  tier: z.enum(['pro', 'starter', 'professional', 'enterprise']).transform((v) =>
-    v === 'starter' || v === 'professional' || v === 'enterprise' ? 'pro' : v
-  ),
-  billingPeriod: z.enum(['monthly', 'annual']).default('monthly'),
   couponCode: z.string().optional(),
   provider: z.enum(['stripe', 'authorizenet', 'paypal', 'square', 'paddle', 'chargebee']).optional(),
 });
@@ -55,12 +48,7 @@ export async function POST(request: NextRequest) {
       return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid checkout data');
     }
 
-    const { tier, billingPeriod, couponCode, provider } = parseResult.data;
-    const tierConfig = getTier(tier);
-
-    if (!tierConfig) {
-      return errors.badRequest('Invalid subscription tier');
-    }
+    const { couponCode, provider } = parseResult.data;
 
     const resolvedProvider: SubscriptionProviderId = provider ?? await getSubscriptionProvider();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -73,7 +61,6 @@ export async function POST(request: NextRequest) {
       }
 
       const normalizedCode = couponCode.toUpperCase().trim();
-      const billingCycleForCoupon = billingPeriod === 'annual' ? 'yearly' : 'monthly';
 
       const couponsRef = adminDb.collection(COLLECTIONS.PLATFORM_COUPONS);
       const snapshot = await couponsRef.where('code', '==', normalizedCode).get();
@@ -104,14 +91,6 @@ export async function POST(request: NextRequest) {
 
       if (coupon.max_uses !== undefined && coupon.current_uses >= coupon.max_uses) {
         return errors.badRequest('This coupon has reached its usage limit');
-      }
-
-      if (coupon.applies_to_plans !== 'all' && !coupon.applies_to_plans.includes(tier)) {
-        return errors.badRequest('This coupon does not apply to the selected plan');
-      }
-
-      if (coupon.billing_cycles !== 'all' && !coupon.billing_cycles.includes(billingCycleForCoupon)) {
-        return errors.badRequest(`This coupon is not valid for ${billingPeriod} billing`);
       }
 
       const isFreeForever = coupon.is_free_forever ||
@@ -149,8 +128,6 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await createCheckoutSession({
-      tier: tierConfig,
-      billingPeriod,
       userId: authResult.user.uid,
       userEmail: authResult.user.email ?? '',
       couponCode: couponCode?.toUpperCase().trim(),
@@ -167,8 +144,6 @@ export async function POST(request: NextRequest) {
 
     logger.info('Subscription checkout session created', {
       route: '/api/subscriptions/checkout',
-      tier,
-      billingPeriod,
       provider: resolvedProvider,
       userId: authResult.user.uid,
       sessionId: result.sessionId,

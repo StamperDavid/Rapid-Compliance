@@ -59,8 +59,9 @@ export default function SystemPage(): React.ReactElement {
     void fetchHealth();
   }, [fetchHealth]);
 
-  // Access control - admin only
-  if (!user?.role || user.role !== 'admin') {
+  // Access control: owner or admin. Sidebar gates this entry to 'owner',
+  // and admin is treated as equivalent for platform-management surfaces.
+  if (!user?.role || (user.role !== 'owner' && user.role !== 'admin')) {
     return (
       <div className="text-center py-12">
         <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-error" />
@@ -68,7 +69,7 @@ export default function SystemPage(): React.ReactElement {
           Access Denied
         </h2>
         <p className="text-muted-foreground">
-          This page is only accessible to administrators.
+          This page is only accessible to owners and administrators.
         </p>
       </div>
     );
