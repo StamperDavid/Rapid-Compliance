@@ -22,6 +22,15 @@ export interface SendEmailOptions {
   tracking?: {
     trackOpens: boolean;
     trackClicks: boolean;
+    /**
+     * Whether to ALSO rewrite URLs found in the plain-text part for click
+     * tracking. Defaults to false so plain-text unsubscribe links never get
+     * routed through SendGrid's click-tracking subdomain (url8565.<domain>),
+     * which has bitten us with NET::ERR_CERT_COMMON_NAME_INVALID warnings.
+     * HTML click tracking remains on by default; individual <a> tags can
+     * opt out per-link with the `clicktracking="off"` attribute.
+     */
+    trackClicksText?: boolean;
   };
   metadata?: Record<string, string>;
   /** Additional SMTP headers, e.g. List-Unsubscribe for CAN-SPAM compliance */
@@ -68,6 +77,7 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
       trackingSettings: {
         clickTracking: {
           enable: options.tracking?.trackClicks ?? true,
+          enableText: options.tracking?.trackClicksText ?? false,
         },
         openTracking: {
           enable: options.tracking?.trackOpens ?? true,
