@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { buildEmailHTML, type EmailTemplate, type EmailBlock } from '@/lib/email/email-builder';
 import { useToast } from '@/hooks/useToast';
@@ -176,7 +175,6 @@ function TemplateGallery({ onSelectTemplate, onStartFromScratch }: TemplateGalle
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function EmailBuilderPage() {
-  const router = useRouter();
   const authFetch = useAuthFetch();
   const toast = useToast();
 
@@ -297,10 +295,22 @@ export default function EmailBuilderPage() {
         body: JSON.stringify(template),
       });
 
-      if (response.ok) {
-        toast.success('Template saved!');
-        router.push(`/marketing/templates`);
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        toast.error(payload.error ?? 'Failed to save template');
+        return;
       }
+
+      const result = (await response.json()) as {
+        success: boolean;
+        template: EmailTemplate & { id: string };
+        isNew: boolean;
+      };
+
+      // Keep the saved id on the local template so subsequent saves update the
+      // same doc instead of creating duplicates.
+      setTemplate(prev => ({ ...prev, id: result.template.id }));
+      toast.success(result.isNew ? 'Template saved!' : 'Template updated!');
     } catch (_error) {
       toast.error('Failed to save template');
     }
