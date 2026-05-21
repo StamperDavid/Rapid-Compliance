@@ -31,7 +31,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 
-const LOG_PATH = 'D:/rapid-dev/dev-server.log';
+const LOG_PATH = process.env.DEV_SERVER_LOG_PATH ?? 'D:/Future Rapid Compliance/dev-server.log';
 
 // Cost constants (dollars)
 const CLAUDE_INPUT_PER_MTOK = 3.0;

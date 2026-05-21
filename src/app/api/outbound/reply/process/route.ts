@@ -17,7 +17,7 @@ import {
 import { sendEmail } from '@/lib/email/email-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { ensureCompliance } from '@/lib/compliance/can-spam-service';
+import { injectUnsubscribe, buildListUnsubscribeHeaders } from '@/lib/compliance/can-spam-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
@@ -102,16 +102,18 @@ export async function POST(request: NextRequest) {
           inReplyTo: replyMessageId,
           references: replyMessageId,
         };
-        // CAN-SPAM: Ensure compliance footer on auto-sent replies
-        const compliantHtml = ensureCompliance(suggestedResponse.body, validatedReply.from);
+        // CAN-SPAM: inject footer + build List-Unsubscribe headers (RFC 8058 one-click).
+        const injected = injectUnsubscribe(suggestedResponse.body, undefined, validatedReply.from);
+        const listUnsubHeaders = buildListUnsubscribeHeaders(injected.unsubscribeUrl);
 
         await sendEmail({
           to: validatedReply.from,
           subject: `Re: ${(validatedReply.subject !== '' && validatedReply.subject != null) ? validatedReply.subject : 'Your inquiry'}`,
-          html: compliantHtml,
+          html: injected.html,
           text: suggestedResponse.body,
           from: validatedReply.to,
           metadata: emailMetadata,
+          headers: listUnsubHeaders,
         });
 
         logger.info('Auto-sent reply', {

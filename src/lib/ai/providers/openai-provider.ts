@@ -141,11 +141,16 @@ export class OpenAIProvider implements ModelProvider {
       const data = await response.json() as OpenAIAPIResponse;
       const choice = data.choices[0];
 
-      // Calculate cost
+      // Calculate cost. MODEL_CAPABILITIES may not have an entry for every
+      // model name (e.g. newer models added after this dict was last edited).
+      // Fall back to 0 cost rather than crashing the whole response — the
+      // generation already succeeded.
       const capabilities = MODEL_CAPABILITIES[request.model];
+      const inputRate = capabilities?.costPerInputToken ?? 0;
+      const outputRate = capabilities?.costPerOutputToken ?? 0;
       const cost =
-        (data.usage.prompt_tokens * capabilities.costPerInputToken) +
-        (data.usage.completion_tokens * capabilities.costPerOutputToken);
+        (data.usage.prompt_tokens * inputRate) +
+        (data.usage.completion_tokens * outputRate);
 
       return {
         id: data.id,
@@ -270,9 +275,11 @@ export class OpenAIProvider implements ModelProvider {
    */
   estimateCost(promptTokens: number, completionTokens: number, model: ModelName): number {
     const capabilities = MODEL_CAPABILITIES[model];
+    const inputRate = capabilities?.costPerInputToken ?? 0;
+    const outputRate = capabilities?.costPerOutputToken ?? 0;
     return (
-      (promptTokens * capabilities.costPerInputToken) +
-      (completionTokens * capabilities.costPerOutputToken)
+      (promptTokens * inputRate) +
+      (completionTokens * outputRate)
     );
   }
 

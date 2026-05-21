@@ -25,6 +25,142 @@
 
 ---
 
+# 🗺️ PENTHOUSE COMPLETION → MULTI-TENANT FLIP ROADMAP
+*(consolidated May 21, 2026 — replaces the May 19 Sprint #1-#7 structure after operator pushback on quality bar: "you have been creating and passing stuff that is super basic rather than creating actual quality stuff that competes in the market". New plan: three parallel workstreams. Old Sprint structure preserved below this section as historical context.)*
+
+**Goal:** finish single-tenant ("penthouse") mode end-to-end at a quality level that competes with Klaviyo, HubSpot, and Buffer in their respective lanes, every feature walked operator-in-loop, BEFORE flipping the codebase to multi-tenant.
+
+**Quality bar — applied to every "done" decision:**
+- Code-shipped is NOT done. Real data flowing through it is done.
+- Smoke-tested is NOT done. Operator-walked end-to-end is done.
+- One starter template per category is NOT done. Competitive parity (50+ tested templates) is done.
+- A working feature with no AI leverage when Brand DNA is sitting right there is a placeholder, not "done".
+
+---
+
+## Workstream A — Connect every platform end to end
+
+For each platform: WE create the business account under the SalesVelocity brand. WE apply for the developer app with the right scopes. WE build the OAuth flow into Settings → Integrations so clients click ONE button to connect (central-developer-app architecture, April 28). WE test posting from our own brand to confirm it works. WE train that platform's specialist with platform-specific algorithm knowledge.
+
+- **A.1 Pinterest** — fastest external clock (1-3 days). Apply for developer access, build OAuth, verify a real post lands.
+- **A.2 Meta (Facebook + Instagram + Threads)** — one app unlocks three. Blocked since April 28 on Meta dev-portal device-trust. Needs another attempt with a fresh approach (fresh browser profile + VPN if needed).
+- **A.3 LinkedIn** — Marketing Developer Program approval. Days to weeks. Posting only — DM is enterprise-tier, permanent gap.
+- **A.4 YouTube** — Google OAuth app verification. Weeks of review.
+- **A.5 Google Business Profile** — claim + postcard verification (5-14 days mail).
+- **A.6 TikTok** — form in-flight; blocked on icon + demo video + product/scope fields.
+- **A.7 X (Twitter)** — posting verified. DMs permanently off the table (no consumer DM API at our tier).
+- **A.8 Bluesky** — connected. Needs one fresh outbound verify under current Jasper version.
+- **A.9 Mastodon** — connected. Vision DM with attached image is the last unverified path.
+- **A.10 Discord** — in scope per April 28. Bot/dev registration + OAuth scaffolding to build from scratch.
+- **A.11 Twitch** — in scope per April 28. Same shape as Discord.
+- **A.12 Delete Reddit + Telegram code** — authorized April 27. ~12 files. Quick cleanup, no external dependency.
+
+Every connect button walks the OAuth flow WITHOUT leaving our app — same shape as Buffer/Hootsuite. Central-developer-app architecture: WE own one developer app per platform; every future tenant OAuths into that same central app. App metadata tenant-agnostic from day one.
+
+---
+
+## Workstream B — Lift quality from "starter" to "competitive"
+
+Every item below is currently below the competitive bar. Target = the named incumbent.
+
+- **B.1 Email Builder upgrade.** Phase 1 shipped (8 templates, basic block editor). Build Phases 2-5: per-block color/font/padding/alignment controls, drag-and-drop block reordering with handles, mobile preview toggle, image upload to Firebase Storage, HTML export, reusable block library, merge-tag picker UI. Target: Klaviyo / Mailchimp.
+- **B.2 Email Template Library to 50+.** Build out welcome (5), abandoned-cart (5), win-back (5), newsletter (5), promotional (8), transactional (5), re-engagement (5), event (3), sales (5), nurture sequences (4 multi-step). Every template hand-tuned with proven copy patterns. Target: Klaviyo's library.
+- **B.3 Social Composer upgrade.** Currently text + one image. Build: carousels (Instagram, LinkedIn), short-form video composer with auto-captions, AI thumbnail generation, threaded posts (X, Threads, Bluesky), Stories format (IG/FB), Reels format. Per-platform scheduling intelligence based on real audience engagement. Target: Buffer + Later.
+- **B.4 CRM AI layer.** AI lead enrichment from public data (wire the existing Scraper Specialist), deal scoring with plain-English reasoning, predictive churn modeling, multi-touch attribution beyond Budget Strategist's first-touch. Target: HubSpot Sales Hub.
+- **B.5 Forms upgrade.** Conditional logic ("if Enterprise, show extra fields"), multi-step flows with progress bars, embeddable widget script. Target: Typeform / Tally.
+- **B.6 Voice AI end-to-end walkthrough.** Built but never tested. Outbound TCPA-gated dial → real conversation → transcript → CRM logging → follow-up trigger. Gated on Twilio toll-free approval. Target: Air AI / Synthflow.
+- **B.7 Workflows polish.** Engine exists. Template gallery + visual editor are basic. Real if-this-then-that builder for non-technical users. Target: Zapier visual builder.
+- **B.8 Storefront end-to-end walkthrough.** Exists, never walked. Almost certainly has surface bugs. Target: Shopify Lite.
+- **B.9 Website Builder.** Limited templates, no AI assistance. Add AI-assisted layout suggestions, conversion optimization hints, 20+ proven landing-page templates. Target: Webflow / Framer.
+- **B.10 Onboarding Wizard walk + repair.** 24 steps. Not fully walked since YC (April 30). Foundation for multi-tenant flip. Target: Stripe onboarding.
+- **B.11 Settings audit.** 29 pages. Never audited as a group. Pass through every page, capture bugs, normalize design-system compliance.
+- **B.12 Dashboard upgrade.** Functional widgets but visually plain. Tell a story (anomalies, opportunities, threats), not just numbers. Drillable cards + insight surfacing. Target: Mixpanel home + HubSpot dashboard.
+
+---
+
+## Workstream C — Cutting-edge differentiators
+
+Do NOT start C items until B is at parity with the named incumbents.
+
+- **C.1 AI template generation from Brand DNA.** Brand DNA + Email Builder = user lands in their account with 30 emails already written in their voice. Differentiator vs Klaviyo's static library.
+- **C.2 Predictive lead scoring with reasoning.** Transparent scoring: "scored 87 because they visited pricing twice this week and opened both of your last emails." Differentiator vs HubSpot's opaque score.
+- **C.3 Engagement-based send time optimization.** Per-contact send-time optimization based on personal engagement peaks, not "Tuesday 10am". Differentiator vs Mailchimp segment-level timing.
+- **C.4 Cross-channel A/B testing.** Same campaign across email + SMS + social; system reports which channel won which segment with statistical confidence. Differentiator — most tools test within a single channel.
+- **C.5 Customer journey visualization.** Funnel map showing where leads drop off. Budget Strategist's source aggregation is the seed; expand to full funnel.
+- **C.6 Real-time competitor intelligence feed.** Wire the existing Competitor Researcher agent to a recurring job surfacing competitor moves (launches, pricing, ads) in a daily feed. Differentiator — no incumbent does this in-product.
+- **C.7 AI landing page builder with CRO suggestions.** Brand DNA + offer + AI that suggests CRO improvements ("your headline is hiding your value prop, try this"). Differentiator vs static page builders.
+- **C.8 Automated UTM hygiene + paid-attribution loop.** Auto-generate tracked links for outbound (email, SMS, social) so every click is attributable end-to-end without manual UTM tagging.
+- **C.9 In-product onboarding tour.** New client lands in dashboard, walks through first AI mission with live tooltips. Embedded in product. Differentiator vs separate help docs.
+
+---
+
+## Sequencing
+
+Three workstreams run in PARALLEL. They use different muscles.
+
+1. **Today:** start every external clock in Workstream A — Pinterest, LinkedIn MDP, YouTube OAuth, Google Business Profile postcard, TikTok form completion, Meta dev-portal retry. Five+ parallel clocks running by EOD.
+2. **This week + next:** Workstream B foundational items in parallel via subagents (per orchestration mode below). Owner reviews each delivery before next subagent fires. Priority order: B.1 (Email Builder Phase 2-3), B.2 (template library to 50+), B.3 (social composer carousels + video), B.10 (onboarding wizard walk + repair), B.11 (settings audit).
+3. **Following:** Workstream C — start with C.1 (AI template generation from Brand DNA — fastest payoff, leverages existing Brand DNA).
+4. **Then and only then:** Sprint #7 multi-tenant flip (preserved unchanged below).
+
+---
+
+## In-flight items parked waiting on external
+
+These are current threads paused on third-party clocks. No work needed until external state changes.
+
+- **SendGrid Link Branding cert** for url145.salesvelocity.ai. Support ticket submitted May 21. Waiting on SendGrid to manually trigger LE cert provisioning. Unblocks CAN-SPAM walkthrough.
+- **Twilio toll-free verification.** Resubmitted; under review. Unblocks TCPA voice gate, SMS opt-in walkthrough, inbound SMS webhook, first SMS round-trip, Voice AI walkthrough (B.6).
+- **Meta developer-portal device-trust.** Paused April 28. Unblocks A.2.
+- **Google Ads billing PIN.** Paused May 10. Unblocks the live Budget Strategist walkthrough.
+
+---
+
+## Deferred items (resurface after multi-tenant flip)
+
+- Stripe 14-day trial wire (needs real customer signup post-flip).
+- Authorize.Net + 2Checkout verifiers (needs real customer payments).
+- Mollie/PayPal/Square/Adyen amount/currency live verification (same).
+- Budget Strategist live walkthrough with real Google Ads + Meta Ads spend data (gated on the Google Ads PIN unblock above).
+
+---
+
+## Known bug backlog (surface during walkthrough or fix when adjacent)
+
+- Bug F — missing `INDUSTRY_RESEARCHER`
+- Bug H — zombie work after mission cancel/halt
+- Bug L — Content Manager unreachable specialists (BLOG_WRITER, PODCAST_SPECIALIST, MUSIC_PLANNER)
+- `scan_leads` Apollo filter dropout
+- Two missing composite Firestore indexes — deploy `firestore.indexes.json`
+- `/social/linkedin` useContext 500
+- `AGENT_REGISTRY.json` stale → regenerate from source
+- Static-only mode for canonicalization audit → CI wire as build-blocker
+- Cosmetic rename `delegateWithReview` → `delegate` across 9 manager subclasses
+- Sentry `instrumentation-client.ts` rename (required for Next 15)
+- 10 untracked files at repo root (build/dev/health/zombie logs, 3 HTML files, 2 scripts)
+- Old `/templates` and `/nurture` orphan routes — either delete page files or wire redirects after Email Builder merges land.
+
+---
+
+## 🤖 Orchestration mode (May 21 standing instruction)
+
+Owner instruction May 21: "use your sub agents to do the brunt of the work but we have had issues with some of their work in the past so you are to review the work of your sub agents." Claude orchestrates; subagents do the bulk; Claude reviews every output BEFORE declaring anything done.
+
+**Pattern:**
+- Fan out parallel subagents for any task with ≥3 file-level units sharing a pattern (e.g., 5 OAuth flows, 15 email templates, 29 settings pages).
+- Each subagent gets a self-contained brief that includes the named competitive target ("must reach parity with Klaviyo template library", not just "build 5 templates").
+- Every subagent output reviewed BEFORE the task is marked done.
+- Reviewer specifically checks:
+  - Feature parity vs the named incumbent
+  - Code quality: no `any` types, no `eslint-disable`, no `@ts-ignore`, no `as unknown as` shortcuts
+  - Design-system compliance (typography components, color tokens, responsive grids — per CLAUDE.md)
+  - Standing Rule #1 held (Brand DNA baked into any LLM agent's GM at seed time)
+  - Standing Rule #2 held (no autonomous GM edits)
+- "It compiles" is NOT done. "It would compete with the named incumbent" is done.
+- Owner reviews each delivery before the next subagent fires on the same surface.
+
+---
+
 # 🛠️ SESSION — BUDGET_STRATEGIST end-to-end build (May 10, 2026 evening)
 
 ## What this session was

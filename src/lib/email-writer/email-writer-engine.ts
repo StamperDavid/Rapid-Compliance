@@ -46,8 +46,9 @@ export interface EmailGenerationOptions {
   // Email configuration
   emailType: EmailType;
 
-  // Deal context
-  dealId: string;
+  // Deal context (optional — leads do not have a deal until they sign up for the trial)
+  dealId?: string;
+  leadId?: string;
   deal?: Deal; // Optional if you already have the deal
   dealScore?: DealScore; // Optional if you already have the score
 
@@ -87,7 +88,8 @@ export interface GeneratedEmail {
 
   // Context used for generation
   emailType: EmailType;
-  dealId: string;
+  dealId?: string;
+  leadId?: string;
   dealScore?: number; // 0-100
   dealTier?: 'hot' | 'warm' | 'cold' | 'at-risk';
   templateId?: string;
@@ -158,9 +160,10 @@ export async function generateSalesEmail(
       throw new Error(`Email template not found: ${options.emailType}`);
     }
 
-    // 2. Get deal score (for personalization)
+    // 2. Get deal score (for personalization) — only if we have a deal.
+    // Lead/cold outreach skips this; the email still generates fine.
     let dealScore: DealScore | undefined = options.dealScore;
-    if (!dealScore && options.deal) {
+    if (!dealScore && options.deal && options.dealId) {
       dealScore = await calculateDealScore({
         dealId: options.dealId,
         deal: options.deal,
@@ -217,7 +220,7 @@ export async function generateSalesEmail(
           content: prompt,
         },
       ],
-      model: 'gpt-4o', // Use GPT-4o for high-quality email generation
+      model: 'gpt-4-turbo', // Use GPT-4o for high-quality email generation
       temperature: 0.7, // Balance creativity with consistency
       maxTokens: 1500, // Enough for comprehensive emails
     });
@@ -250,7 +253,7 @@ export async function generateSalesEmail(
       includeCompetitive: options.includeCompetitive ?? false,
       includeSocialProof: options.includeSocialProof ?? false,
 
-      model: 'gpt-4o',
+      model: 'gpt-4-turbo',
       promptTokens: llmResponse.usage?.promptTokens ?? 0,
       completionTokens: llmResponse.usage?.completionTokens ?? 0,
       totalTokens: llmResponse.usage?.totalTokens ?? 0,

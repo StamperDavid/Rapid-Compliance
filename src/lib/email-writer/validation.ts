@@ -67,10 +67,20 @@ export const GenerateEmailSchema = z.object({
   
   emailType: EmailTypeSchema,
   
+  // Optional. Leads do not have a deal yet. A deal is only created when a
+  // lead signs up for the free trial and enters payment info, so all
+  // pre-trial outreach (cold leads, social contacts, scraped prospects)
+  // generates emails without a dealId.
   dealId: z
     .string()
-    .min(1, 'Deal ID is required')
-    .max(100, 'Deal ID is too long'),
+    .min(1)
+    .max(100, 'Deal ID is too long')
+    .optional(),
+  leadId: z
+    .string()
+    .min(1)
+    .max(100, 'Lead ID is too long')
+    .optional(),
   
   // Optional recipient context
   recipientName: z

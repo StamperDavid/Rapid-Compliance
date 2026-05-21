@@ -12,9 +12,14 @@
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
-import type { SubscriptionTier } from '@/lib/pricing/subscription-tiers';
+import { PRICING } from '@/lib/config/pricing';
 
 const LOG_PREFIX = '[SubscriptionProvider]';
+
+const PRICE_CENTS = PRICING.monthlyPrice * 100;
+const PRODUCT_NAME = 'SalesVelocity.ai';
+const PRODUCT_DESCRIPTION = `${PRODUCT_NAME} — flat $${PRICING.monthlyPrice}/month, billed monthly. Includes ${PRICING.trial.days}-day free trial.`;
+const TRIAL_DAYS = PRICING.trial.days;
 
 // ============================================================================
 // TYPES
@@ -29,8 +34,6 @@ export type SubscriptionProviderId =
   | 'chargebee';
 
 export interface SubscriptionCheckoutRequest {
-  tier: SubscriptionTier;
-  billingPeriod: 'monthly' | 'annual';
   userId: string;
   userEmail: string;
   couponCode?: string;
@@ -261,12 +264,7 @@ async function createStripeCheckout(req: SubscriptionCheckoutRequest): Promise<S
       return { success: false, provider: 'stripe', error: 'Stripe not configured' };
     }
 
-    const priceInCents = req.billingPeriod === 'annual'
-      ? req.tier.annualPriceCents
-      : req.tier.monthlyPriceCents;
-    const interval = req.billingPeriod === 'annual' ? 'year' as const : 'month' as const;
-
-    const trialDays = req.tier.trialDays > 0 ? req.tier.trialDays : undefined;
+    const trialDays = TRIAL_DAYS > 0 ? TRIAL_DAYS : undefined;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -274,11 +272,11 @@ async function createStripeCheckout(req: SubscriptionCheckoutRequest): Promise<S
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `SalesVelocity.ai ${req.tier.label} Plan`,
-            description: `${req.tier.label} subscription — billed ${req.billingPeriod === 'annual' ? 'annually' : 'monthly'}`,
+            name: PRODUCT_NAME,
+            description: PRODUCT_DESCRIPTION,
           },
-          unit_amount: priceInCents,
-          recurring: { interval },
+          unit_amount: PRICE_CENTS,
+          recurring: { interval: 'month' },
         },
         quantity: 1,
       }],
@@ -286,13 +284,11 @@ async function createStripeCheckout(req: SubscriptionCheckoutRequest): Promise<S
       ...(trialDays !== undefined ? {
         subscription_data: { trial_period_days: trialDays },
       } : {}),
-      success_url: `${req.appUrl}/settings/subscription?checkout=success&session_id={CHECKOUT_SESSION_ID}&tier=${req.tier.key}`,
+      success_url: `${req.appUrl}/settings/subscription?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.appUrl}/settings/subscription?checkout=cancelled`,
       customer_email: req.userEmail,
       client_reference_id: req.userEmail,
       metadata: {
-        tier: req.tier.key,
-        billingPeriod: req.billingPeriod,
         userId: req.userId,
         ...(req.couponCode ? { couponCode: req.couponCode } : {}),
       },
@@ -402,12 +398,8 @@ async function createAuthorizeNetCheckout(req: SubscriptionCheckoutRequest): Pro
       return { success: false, provider: 'authorizenet', error: 'Authorize.Net not configured' };
     }
 
-    const amount = req.billingPeriod === 'annual'
-      ? (req.tier.annualPriceCents / 100).toFixed(2)
-      : (req.tier.monthlyPriceCents / 100).toFixed(2);
-    const interval = req.billingPeriod === 'annual'
-      ? { length: '12', unit: 'months' as const }
-      : { length: '1', unit: 'months' as const };
+    const amount = (PRICE_CENTS / 100).toFixed(2);
+    const interval = { length: '1', unit: 'months' as const };
 
     // Create ARB (Automated Recurring Billing) subscription via Accept Hosted
     // Use getHostedPaymentPageRequest for a hosted checkout experience
@@ -421,8 +413,8 @@ async function createAuthorizeNetCheckout(req: SubscriptionCheckoutRequest): Pro
           transactionType: 'authCaptureTransaction',
           amount,
           order: {
-            invoiceNumber: `sub-${req.tier.key}-${Date.now()}`,
-            description: `SalesVelocity.ai ${req.tier.label} Plan — ${req.billingPeriod}`,
+            invoiceNumber: `sub-${Date.now()}`,
+            description: PRODUCT_DESCRIPTION,
           },
           customer: {
             email: req.userEmail,
@@ -432,17 +424,17 @@ async function createAuthorizeNetCheckout(req: SubscriptionCheckoutRequest): Pro
           setting: [
             { settingName: 'hostedPaymentReturnOptions', settingValue: JSON.stringify({
               showReceipt: false,
-              url: `${req.appUrl}/settings/subscription?checkout=success&provider=authorizenet&tier=${req.tier.key}`,
+              url: `${req.appUrl}/settings/subscription?checkout=success&provider=authorizenet`,
               urlText: 'Return to SalesVelocity.ai',
               cancelUrl: `${req.appUrl}/settings/subscription?checkout=cancelled`,
               cancelUrlText: 'Cancel',
             })},
             { settingName: 'hostedPaymentButtonOptions', settingValue: JSON.stringify({
-              text: `Subscribe — $${amount}/${req.billingPeriod === 'annual' ? 'yr' : 'mo'}`,
+              text: `Subscribe — $${amount}/mo`,
             })},
             { settingName: 'hostedPaymentOrderOptions', settingValue: JSON.stringify({
               show: true,
-              merchantName: 'SalesVelocity.ai',
+              merchantName: PRODUCT_NAME,
             })},
           ],
         },
@@ -482,8 +474,6 @@ async function createAuthorizeNetCheckout(req: SubscriptionCheckoutRequest): Pro
       await adminDb.collection(getSubCollection('subscription_sessions')).doc(sessionId).set({
         provider: 'authorizenet',
         token: data.token,
-        tier: req.tier.key,
-        billingPeriod: req.billingPeriod,
         interval,
         amount,
         userId: req.userId,
@@ -656,9 +646,7 @@ async function createPayPalCheckout(req: SubscriptionCheckoutRequest): Promise<S
       ? 'https://api-m.sandbox.paypal.com'
       : 'https://api-m.paypal.com';
 
-    const amount = req.billingPeriod === 'annual'
-      ? (req.tier.annualPriceCents / 100).toFixed(2)
-      : (req.tier.monthlyPriceCents / 100).toFixed(2);
+    const amount = (PRICE_CENTS / 100).toFixed(2);
 
     // Create a PayPal billing plan
     const planRes = await fetch(`${baseUrl}/v1/billing/plans`, {
@@ -668,13 +656,13 @@ async function createPayPalCheckout(req: SubscriptionCheckoutRequest): Promise<S
         'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
-        product_id: `salesvelocity-${req.tier.key}`,
-        name: `SalesVelocity.ai ${req.tier.label} Plan`,
-        description: `${req.tier.label} subscription — ${req.billingPeriod}`,
+        product_id: 'salesvelocity',
+        name: PRODUCT_NAME,
+        description: PRODUCT_DESCRIPTION,
         status: 'ACTIVE',
         billing_cycles: [{
           frequency: {
-            interval_unit: req.billingPeriod === 'annual' ? 'YEAR' : 'MONTH',
+            interval_unit: 'MONTH',
             interval_count: 1,
           },
           tenure_type: 'REGULAR',
@@ -710,8 +698,8 @@ async function createPayPalCheckout(req: SubscriptionCheckoutRequest): Promise<S
           email_address: req.userEmail,
         },
         application_context: {
-          brand_name: 'SalesVelocity.ai',
-          return_url: `${req.appUrl}/settings/subscription?checkout=success&provider=paypal&tier=${req.tier.key}`,
+          brand_name: PRODUCT_NAME,
+          return_url: `${req.appUrl}/settings/subscription?checkout=success&provider=paypal`,
           cancel_url: `${req.appUrl}/settings/subscription?checkout=cancelled`,
           user_action: 'SUBSCRIBE_NOW',
         },
@@ -842,9 +830,7 @@ async function createSquareCheckout(req: SubscriptionCheckoutRequest): Promise<S
       ? 'https://connect.squareupsandbox.com/v2'
       : 'https://connect.squareup.com/v2';
 
-    const amount = req.billingPeriod === 'annual'
-      ? req.tier.annualPriceCents
-      : req.tier.monthlyPriceCents;
+    const amount = PRICE_CENTS;
 
     // Square uses catalog-based subscriptions — create a subscription plan first
     const planRes = await fetch(`${baseUrl}/catalog/object`, {
@@ -855,14 +841,14 @@ async function createSquareCheckout(req: SubscriptionCheckoutRequest): Promise<S
         'Square-Version': '2024-01-18',
       },
       body: JSON.stringify({
-        idempotency_key: `plan-${req.tier.key}-${Date.now()}`,
+        idempotency_key: `plan-${Date.now()}`,
         object: {
           type: 'SUBSCRIPTION_PLAN',
-          id: `#salesvelocity-${req.tier.key}-${req.billingPeriod}`,
+          id: '#salesvelocity-monthly',
           subscription_plan_data: {
-            name: `SalesVelocity.ai ${req.tier.label} Plan (${req.billingPeriod})`,
+            name: PRODUCT_NAME,
             phases: [{
-              cadence: req.billingPeriod === 'annual' ? 'ANNUAL' : 'MONTHLY',
+              cadence: 'MONTHLY',
               recurring_price_money: {
                 amount,
                 currency: 'USD',
@@ -919,12 +905,12 @@ async function createSquareCheckout(req: SubscriptionCheckoutRequest): Promise<S
       body: JSON.stringify({
         idempotency_key: `sub-checkout-${Date.now()}`,
         quick_pay: {
-          name: `SalesVelocity.ai ${req.tier.label} Plan`,
+          name: PRODUCT_NAME,
           price_money: { amount, currency: 'USD' },
           location_id: 'main',
         },
         checkout_options: {
-          redirect_url: `${req.appUrl}/settings/subscription?checkout=success&provider=square&tier=${req.tier.key}`,
+          redirect_url: `${req.appUrl}/settings/subscription?checkout=success&provider=square`,
           subscription_plan_id: planId,
         },
         pre_populated_data: {
@@ -1050,11 +1036,6 @@ async function createPaddleCheckout(req: SubscriptionCheckoutRequest): Promise<S
       return { success: false, provider: 'paddle', error: 'Paddle not configured' };
     }
 
-    const priceInCents = req.billingPeriod === 'annual'
-      ? req.tier.annualPriceCents
-      : req.tier.monthlyPriceCents;
-    const interval = req.billingPeriod === 'annual' ? 'year' : 'month';
-
     // Create a Paddle transaction with subscription billing
     const res = await fetch(`${config.baseUrl}/transactions`, {
       method: 'POST',
@@ -1065,14 +1046,14 @@ async function createPaddleCheckout(req: SubscriptionCheckoutRequest): Promise<S
       body: JSON.stringify({
         items: [{
           price: {
-            description: `SalesVelocity.ai ${req.tier.label} Plan`,
-            name: `${req.tier.label} — ${req.billingPeriod}`,
+            description: PRODUCT_DESCRIPTION,
+            name: PRODUCT_NAME,
             unit_price: {
-              amount: String(priceInCents),
+              amount: String(PRICE_CENTS),
               currency_code: 'USD',
             },
             billing_cycle: {
-              interval,
+              interval: 'month',
               frequency: 1,
             },
           },
@@ -1082,11 +1063,9 @@ async function createPaddleCheckout(req: SubscriptionCheckoutRequest): Promise<S
           email: req.userEmail,
         },
         checkout: {
-          url: `${req.appUrl}/settings/subscription?checkout=success&provider=paddle&tier=${req.tier.key}`,
+          url: `${req.appUrl}/settings/subscription?checkout=success&provider=paddle`,
         },
         custom_data: {
-          tier: req.tier.key,
-          billingPeriod: req.billingPeriod,
           userId: req.userId,
           ...(req.couponCode ? { couponCode: req.couponCode } : {}),
         },

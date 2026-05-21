@@ -67,11 +67,15 @@ export function validateEmailCompliance(emailContent: EmailComplianceCheck): Com
 export function getRequiredEmailFooter(unsubscribeUrl: string): string {
   const physicalAddress = DEFAULT_PHYSICAL_ADDRESS;
 
+  // clicktracking="off" tells SendGrid not to rewrite this specific link
+  // through its click-tracking proxy. Unsubscribe links must point at our
+  // own endpoint directly so the recipient lands on a verified-cert URL
+  // and the suppression record writes to our Firestore, not a third-party.
   return `
 <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; text-align: center;">
   <p>${physicalAddress}</p>
   <p>
-    <a href="${unsubscribeUrl}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
+    <a href="${unsubscribeUrl}" clicktracking="off" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
     from these emails.
   </p>
 </div>`.trim();

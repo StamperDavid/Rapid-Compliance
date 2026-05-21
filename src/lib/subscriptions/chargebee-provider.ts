@@ -11,6 +11,7 @@
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import { PRICING } from '@/lib/config/pricing';
 import type {
   SubscriptionCheckoutRequest,
   SubscriptionCheckoutResult,
@@ -20,6 +21,7 @@ import type {
 } from './subscription-provider-service';
 
 const LOG_PREFIX = '[Chargebee]';
+const PRICE_CENTS = PRICING.monthlyPrice * 100;
 
 // ─── Key Config ──────────────────────────────────────────────────────────────
 
@@ -119,16 +121,11 @@ export async function createChargebeeCheckout(
       return { success: false, provider: 'chargebee', error: 'Chargebee not configured' };
     }
 
-    const priceInCents = req.billingPeriod === 'annual'
-      ? req.tier.annualPriceCents
-      : req.tier.monthlyPriceCents;
-    const periodUnit = req.billingPeriod === 'annual' ? 'year' : 'month';
-
     const params: Record<string, string> = {
-      'subscription[plan_id]': `sv_${req.tier.key}_${periodUnit}ly`,
-      'subscription[plan_unit_price]': String(priceInCents),
+      'subscription[plan_id]': 'sv_monthly',
+      'subscription[plan_unit_price]': String(PRICE_CENTS),
       'customer[email]': req.userEmail,
-      'redirect_url': `${req.appUrl}/settings/subscription?checkout=success&provider=chargebee&tier=${req.tier.key}`,
+      'redirect_url': `${req.appUrl}/settings/subscription?checkout=success&provider=chargebee`,
       'cancel_url': `${req.appUrl}/settings/subscription?checkout=cancelled`,
     };
 

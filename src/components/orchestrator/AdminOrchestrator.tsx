@@ -96,7 +96,7 @@ export function AdminOrchestrator() {
   // This ensures all core system data (personas, config, pricing) exists
   useEffect(() => {
     async function runProvisionerViaAPI() {
-      if (adminUser?.role !== 'admin') {
+      if (adminUser?.role !== 'owner' && adminUser?.role !== 'admin') {
         return;
       }
 

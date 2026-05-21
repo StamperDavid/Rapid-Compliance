@@ -11,9 +11,23 @@ const nextConfig = {
   // ESLint - ZERO SUPPRESSION POLICY (per Project Constitution)
   // All builds must be 100% clean. No bypass mechanisms allowed.
 
-  // Image optimization
+  // Image optimization.
+  // NOTE: the email builder canvas previews user/template image URLs via
+  // next/image. Common email image sources are allowlisted here so the
+  // built-in seeded templates render without console errors. A future
+  // Phase 4 task will add a proper image upload flow that puts user images
+  // on Firebase Storage (already in this allowlist).
   images: {
-    domains: ['localhost', 'firebasestorage.googleapis.com', 'files2.heygen.ai', 'files.heygen.ai', 'imagedelivery.net'],
+    domains: [
+      'localhost',
+      'firebasestorage.googleapis.com',
+      'files2.heygen.ai',
+      'files.heygen.ai',
+      'imagedelivery.net',
+      'placehold.co',
+      'picsum.photos',
+      'images.unsplash.com',
+    ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 31536000, // 1 year
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],

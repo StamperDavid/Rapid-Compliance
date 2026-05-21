@@ -65,6 +65,8 @@ export interface EmailDeliveryOptions {
 
   // Custom headers
   customArgs?: Record<string, string>; // Custom data for tracking
+  /** Additional SMTP headers, e.g. List-Unsubscribe for CAN-SPAM compliance */
+  headers?: Record<string, string>;
 
   // Reply-to
   replyTo?: string;
@@ -149,28 +151,59 @@ export interface EmailDeliveryRecord {
 // ============================================================================
 
 /**
- * Initialize SendGrid with API key
+ * Resolve the SendGrid API key. Prefer the env var (for CI/test contexts),
+ * fall back to the platform's Firestore-stored API key (matches the generic
+ * email-service.ts pattern so a single key edit in Settings > API Keys
+ * propagates everywhere).
  */
-function initializeSendGrid(): void {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  if (!apiKey) {
-    throw new Error('SENDGRID_API_KEY environment variable is required');
+async function resolveSendGridApiKey(): Promise<string> {
+  const envKey = process.env.SENDGRID_API_KEY;
+  if (envKey && envKey.trim().length > 0) {
+    return envKey;
   }
+
+  const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
+  const stored = await apiKeyService.getServiceKey(PLATFORM_ID, 'sendgrid') as { apiKey?: string } | null;
+  if (stored?.apiKey && stored.apiKey.trim().length > 0) {
+    return stored.apiKey;
+  }
+
+  throw new Error('SendGrid API key is not configured (neither SENDGRID_API_KEY env var nor platform Firestore key)');
+}
+
+/**
+ * Initialize SendGrid with API key (env var or platform Firestore key).
+ */
+async function initializeSendGrid(): Promise<void> {
+  const apiKey = await resolveSendGridApiKey();
   sgMail.setApiKey(apiKey);
 }
 
 /**
- * Get from email and name from environment
+ * Resolve the verified From address. Prefer FROM_EMAIL / FROM_NAME env vars,
+ * fall back to the platform's Firestore-stored SendGrid config so an
+ * operator who set them in Settings > API Keys does not also need to mirror
+ * them in .env.local.
  */
-function getFromAddress(): { email: string; name: string } {
-  const fromEmail = process.env.FROM_EMAIL;
-  const fromName =(process.env.FROM_NAME !== '' && process.env.FROM_NAME != null) ? process.env.FROM_NAME : 'SalesVelocity';
-  
-  if (!fromEmail) {
-    throw new Error('FROM_EMAIL environment variable is required');
+async function getFromAddress(): Promise<{ email: string; name: string }> {
+  const envEmail = process.env.FROM_EMAIL;
+  if (envEmail && envEmail.trim().length > 0) {
+    const envName = (process.env.FROM_NAME && process.env.FROM_NAME.trim().length > 0) ? process.env.FROM_NAME : 'SalesVelocity';
+    return { email: envEmail, name: envName };
   }
-  
-  return { email: fromEmail, name: fromName };
+
+  const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
+  const stored = await apiKeyService.getServiceKey(PLATFORM_ID, 'sendgrid') as { fromEmail?: string; fromName?: string } | null;
+  if (stored?.fromEmail && stored.fromEmail.trim().length > 0) {
+    return {
+      email: stored.fromEmail,
+      name: (stored.fromName && stored.fromName.trim().length > 0) ? stored.fromName : 'SalesVelocity',
+    };
+  }
+
+  throw new Error('Verified From address is not configured (set FROM_EMAIL env var or fromEmail in Settings > API Keys > SendGrid)');
 }
 
 /**
@@ -184,11 +217,11 @@ export async function sendEmail(
   try {
     const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
-    // Initialize SendGrid
-    initializeSendGrid();
+    // Initialize SendGrid (env var or platform Firestore key)
+    await initializeSendGrid();
 
     // Get from address
-    const from = getFromAddress();
+    const from = await getFromAddress();
 
     // Create delivery record
     const deliveryId = `delivery_${PLATFORM_ID}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -226,6 +259,7 @@ export async function sendEmail(
         },
       },
       customArgs,
+      ...(options.headers && Object.keys(options.headers).length > 0 ? { headers: options.headers } : {}),
       ...(options.replyTo && {
         replyTo: {
           email: options.replyTo,
