@@ -7,6 +7,7 @@ import { generateEmbedding, type EmbeddingResult } from './embeddings-service';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { where } from 'firebase/firestore';
 
 export interface SearchResult {
   text: string;
@@ -23,6 +24,7 @@ interface KnowledgeEmbeddingDoc {
   source?: 'document' | 'url' | 'faq' | 'product';
   sourceId?: string;
   metadata?: Record<string, unknown>;
+  agentId?: string;
 }
 
 interface KnowledgeBaseDocument {
@@ -92,32 +94,42 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
  */
 export async function searchKnowledgeBase(
   query: string,
-  limit: number = 5
+  limit: number = 5,
+  agentId?: string,
 ): Promise<SearchResult[]> {
   try {
     // Generate embedding for query
     const queryEmbedding = await generateEmbedding(query);
-    
-    // Get all knowledge base embeddings from Firestore (uses Admin SDK — no permissions error)
+
+    // Per-agent isolation: when agentId is given, read ONLY that agent's source
+    // doc + embeddings (filtered by agentId). Without agentId, falls back to the
+    // legacy global knowledge base (the chat/Jasper RAG path) — backward compatible.
+    const kbDocId = agentId ?? 'current';
     const knowledgeBase = await AdminFirestoreService.get<KnowledgeBase>(
       getSubCollection('knowledgeBase'),
-      'current'
+      kbDocId
     );
 
     if (!knowledgeBase) {
       return [];
     }
 
-    // Get all embeddings
+    // Get embeddings (scoped to the agent when agentId is provided)
     const embeddings = await AdminFirestoreService.getAll<KnowledgeEmbeddingDoc>(
       getSubCollection('knowledgeEmbeddings'),
-      [],
+      agentId ? [where('agentId', '==', agentId)] : [],
     );
+
+    // Isolation both ways: the global path (no agentId) must NOT pull any
+    // agent-private vectors into the shared chat/Jasper RAG. The per-agent path
+    // is already scoped by the Firestore filter above. (In-memory drop keeps
+    // existing un-tagged global vectors working without a reindex.)
+    const scopedEmbeddings = agentId ? embeddings : embeddings.filter((e) => !e.agentId);
 
     // Calculate similarity scores
     const results: SearchResult[] = [];
 
-    for (const embeddingDoc of embeddings) {
+    for (const embeddingDoc of scopedEmbeddings) {
       const embedding = embeddingDoc.embedding;
       if (!embedding || embedding.length === 0) {continue;}
 
@@ -155,11 +167,12 @@ export async function storeEmbedding(
   embedding: EmbeddingResult,
   source: 'document' | 'url' | 'faq' | 'product',
   sourceId: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
+  agentId?: string,
 ): Promise<void> {
   try {
     const embeddingId = `emb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     await AdminFirestoreService.set(
       getSubCollection('knowledgeEmbeddings'),
       embeddingId,
@@ -171,6 +184,7 @@ export async function storeEmbedding(
         metadata: metadata ?? {},
         model: embedding.model,
         createdAt: new Date().toISOString(),
+        ...(agentId ? { agentId } : {}),
       },
       false
     );
@@ -183,16 +197,28 @@ export async function storeEmbedding(
 /**
  * Index knowledge base documents (generate and store embeddings)
  */
-export async function indexKnowledgeBase(): Promise<void> {
+export async function indexKnowledgeBase(agentId?: string): Promise<void> {
   try {
-    // Get knowledge base (uses Admin SDK — no permissions error)
+    // Per-agent doc when agentId given; legacy global 'current' otherwise.
     const knowledgeBaseData = await AdminFirestoreService.get<KnowledgeBase>(
       getSubCollection('knowledgeBase'),
-      'current'
+      agentId ?? 'current'
     );
 
     if (!knowledgeBaseData) {
       return;
+    }
+
+    // Re-index replaces this agent's vectors: delete its old embeddings first so
+    // a re-upload doesn't leave stale duplicates (embedding ids are random).
+    if (agentId) {
+      const stale = await AdminFirestoreService.getAll<{ id: string }>(
+        getSubCollection('knowledgeEmbeddings'),
+        [where('agentId', '==', agentId)],
+      );
+      for (const old of stale) {
+        await AdminFirestoreService.delete(getSubCollection('knowledgeEmbeddings'), old.id);
+      }
     }
 
     // Index documents
@@ -203,7 +229,7 @@ export async function indexKnowledgeBase(): Promise<void> {
           await storeEmbedding(embedding, 'document', doc.id, {
             filename: doc.filename,
             type: doc.type,
-          });
+          }, agentId);
         }
       }
     }
@@ -216,7 +242,7 @@ export async function indexKnowledgeBase(): Promise<void> {
           await storeEmbedding(embedding, 'url', url.id, {
             url: url.url,
             title: url.title,
-          });
+          }, agentId);
         }
       }
     }
@@ -229,7 +255,7 @@ export async function indexKnowledgeBase(): Promise<void> {
         await storeEmbedding(embedding, 'faq', faq.id, {
           question: faq.question,
           category: faq.category,
-        });
+        }, agentId);
       }
     }
 
@@ -242,7 +268,7 @@ export async function indexKnowledgeBase(): Promise<void> {
           name: product.name,
           price: product.price,
           category: product.category,
-        });
+        }, agentId);
       }
     }
   } catch (error) {

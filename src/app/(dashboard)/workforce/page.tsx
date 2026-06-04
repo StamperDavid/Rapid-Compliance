@@ -36,6 +36,7 @@ interface AgentCardProps {
   agent: SystemAgentStatus;
   onExecute: (agentId: string) => void;
   onConfigure: (agentId: string) => void;
+  onKnowledge: (agentId: string) => void;
   onViewLogs: (agentId: string) => void;
   compact?: boolean;
 }
@@ -44,6 +45,7 @@ const AgentCard = memo(function AgentCard({
   agent,
   onExecute,
   onConfigure,
+  onKnowledge,
   onViewLogs,
   compact = false,
 }: AgentCardProps) {
@@ -304,6 +306,23 @@ const AgentCard = memo(function AgentCard({
             Configure
           </button>
         </Tooltip>
+        <Tooltip content="Add private documents, examples, links and FAQs only this agent can use." position="bottom">
+          <button
+            onClick={() => onKnowledge(agent.id)}
+            style={{
+              flex: 1,
+              padding: '0.5rem',
+              backgroundColor: 'var(--color-bg-paper)',
+              border: '1px solid var(--color-border-strong)',
+              borderRadius: '0.375rem',
+              color: 'var(--color-text-secondary)',
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+            }}
+          >
+            Knowledge
+          </button>
+        </Tooltip>
         <Tooltip content="View this agent's execution history." position="bottom">
           <button
             onClick={() => onViewLogs(agent.id)}
@@ -338,6 +357,7 @@ interface HierarchySectionProps {
   onToggle: () => void;
   onExecute: (agentId: string) => void;
   onConfigure: (agentId: string) => void;
+  onKnowledge: (agentId: string) => void;
   onViewLogs: (agentId: string) => void;
 }
 
@@ -349,6 +369,7 @@ const HierarchySection = memo(function HierarchySection({
   onToggle,
   onExecute,
   onConfigure,
+  onKnowledge,
   onViewLogs,
 }: HierarchySectionProps) {
   const functionalCount = agents.filter(
@@ -416,6 +437,7 @@ const HierarchySection = memo(function HierarchySection({
               agent={agent}
               onExecute={onExecute}
               onConfigure={onConfigure}
+              onKnowledge={onKnowledge}
               onViewLogs={onViewLogs}
               compact
             />
@@ -503,6 +525,11 @@ export default function WorkforceCommandCenterPage() {
   const handleConfigure = useCallback((agentId: string) => {
     // Navigate to agent configuration
     router.push(`/settings/ai-agents/configuration?agentId=${agentId}`);
+  }, [router]);
+
+  const handleKnowledge = useCallback((agentId: string) => {
+    // Navigate to this agent's private knowledge base
+    router.push(`/workforce/agents/${agentId}/knowledge`);
   }, [router]);
 
   const handleViewLogs = useCallback((agentId: string) => {
@@ -764,6 +791,7 @@ export default function WorkforceCommandCenterPage() {
                 onToggle={() => toggleSection('L1')}
                 onExecute={handleExecute}
                 onConfigure={handleConfigure}
+                onKnowledge={handleKnowledge}
                 onViewLogs={handleViewLogs}
               />
             )}
@@ -778,6 +806,7 @@ export default function WorkforceCommandCenterPage() {
                 onToggle={() => toggleSection('L2')}
                 onExecute={handleExecute}
                 onConfigure={handleConfigure}
+                onKnowledge={handleKnowledge}
                 onViewLogs={handleViewLogs}
               />
             )}
@@ -799,6 +828,7 @@ export default function WorkforceCommandCenterPage() {
                       onToggle={() => toggleSection(manager.id)}
                       onExecute={handleExecute}
                       onConfigure={handleConfigure}
+                      onKnowledge={handleKnowledge}
                       onViewLogs={handleViewLogs}
                     />
                   );
@@ -816,6 +846,7 @@ export default function WorkforceCommandCenterPage() {
                 onToggle={() => toggleSection('STANDALONE')}
                 onExecute={handleExecute}
                 onConfigure={handleConfigure}
+                onKnowledge={handleKnowledge}
                 onViewLogs={handleViewLogs}
               />
             )}
@@ -829,6 +860,7 @@ export default function WorkforceCommandCenterPage() {
                 agent={agent}
                 onExecute={handleExecute}
                 onConfigure={handleConfigure}
+                onKnowledge={handleKnowledge}
                 onViewLogs={handleViewLogs}
               />
             ))}

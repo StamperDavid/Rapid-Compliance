@@ -71,6 +71,39 @@ export async function getRAGContext(
 }
 
 /**
+ * Per-agent knowledge retrieval.
+ *
+ * Returns a prompt-injectable block built ONLY from the given agent's own
+ * knowledge base (isolated via agentId — no cross-agent bleed). Returns '' when
+ * the agent has no knowledge or nothing relevant, so callers can safely append
+ * the result to a system prompt unconditionally.
+ */
+export async function getAgentKnowledgeContext(
+  agentId: string,
+  query: string,
+  maxChunks: number = 5
+): Promise<string> {
+  if (!agentId || !query) {
+    return '';
+  }
+
+  const searchResults = await searchKnowledgeBase(query, maxChunks, agentId);
+  if (searchResults.length === 0) {
+    return '';
+  }
+
+  let block = '\n\n# YOUR KNOWLEDGE BASE\n';
+  block += 'The following material was provided specifically to you. Use it when it helps answer accurately, and prefer it over general knowledge when they conflict:\n\n';
+
+  searchResults.forEach((result, index) => {
+    block += `[${index + 1}] (${result.source}, ${(result.score * 100).toFixed(0)}% match)\n`;
+    block += `${result.text.substring(0, 700)}${result.text.length > 700 ? '…' : ''}\n\n`;
+  });
+
+  return block;
+}
+
+/**
  * Enhance chat messages with RAG context
  */
 export async function enhanceChatWithRAG(
