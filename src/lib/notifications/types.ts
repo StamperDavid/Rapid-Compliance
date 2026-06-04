@@ -14,7 +14,7 @@
  * - Retry logic with exponential backoff
  */
 
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase-admin/firestore';
 import type { SignalType } from '@/lib/orchestration/types';
 
 /**
