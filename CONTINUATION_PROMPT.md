@@ -2,7 +2,49 @@
 
 ---
 
-# 🔧 CURRENT SESSION — Server-SDK "wrong door" remediation (June 2–3, 2026)
+# 🎯 CURRENT SESSION — Per-agent knowledge bases DONE + penthouse-finish ground truth (June 4, 2026)
+
+## Shipped + PROVEN this session (commits `583ff92b`, `40f6c5ce`, pushed to dev)
+**Per-agent isolated knowledge bases.** Every agent gets its OWN knowledge base — no cross-agent bleed, no bleed into the global Jasper/chat RAG. Pilot agent = **Copywriter (`COPYWRITER`)**.
+- `vector-search.ts`: `searchKnowledgeBase`/`storeEmbedding`/`indexKnowledgeBase` take an optional `agentId` (canonical registry id). Per-agent doc, `agentId`-tagged embeddings, stale-cleanup on re-index; global path filters OUT agent-tagged vectors. No agentId = legacy global (backward compatible).
+- `rag-service.getAgentKnowledgeContext(agentId, query)` → prompt block. Copywriter wired in `callOpenRouter` to pull its own KB every action.
+- API `GET/POST/DELETE /api/agent/knowledge/[agentId]` (files, URLs, FAQs, pasted text, **video/audio auto-transcribed**; merges + re-indexes; id validated vs registry).
+- UI `/workforce/agents/[agentId]/knowledge` (upload / list / two-step-delete), reached via a new **"Knowledge"** button on each Workforce agent card.
+- **Embeddings now run on OpenAI** `text-embedding-3-small` (768 dims) via the central Firestore key (`apiKeyService`) — the Gemini embed key was failing, so it had been silently on the hash fallback. Proven semantic: related 0.54 cosine, unrelated 0.04.
+- **Video/audio → transcript** via Deepgram (`transcribeAudioBuffer`, accepts video containers directly, no ffmpeg). Proven: OpenAI-TTS→Deepgram returned the exact sentence.
+- **Live output PROVEN** (`scripts/verify-copywriter-knowledge-live.ts`): an INVENTED guarantee seeded into the Copywriter's KB appeared verbatim in real generated email copy — the full upload→embed→retrieve→inject→generate loop. Three verify scripts total (`verify-per-agent-knowledge.ts` 6/6 isolation, plus the live one).
+- **NOT rolled out to the other 73 agents** — waits on an operator manual walkthrough confirming the pilot.
+- **Found (separate fix):** the ElevenLabs key stored in Firestore is INVALID (401) — voice/TTS on that provider is dead.
+
+## VERIFIED GROUND TRUTH for the penthouse-finish (measured against CODE on June 4, not docs — re-verify before trusting)
+A second AI (Cursor) reviewed the repo; most of its structural claims are TRUE and often understated, but the one it called the multi-tenant blocker is WRONG for current code:
+- **Type safety:** `as any` = 0, `@ts-ignore` = 0, eslint-disable = 9. The real "trust me" debt = **232 `as unknown as`** double-casts. (Total `as` ~6,180, mostly legit narrowing.) So "zero shortcuts" is mostly true with 232 exceptions.
+- **Tests:** only **4** real test files in `src/` for ~300k LOC; jest installed but unused. **221** one-off `scripts/` (57 `verify-*`) that prove things once then go stale. Need ~5 permanent automated tests over the core flows.
+- **God components (no new features until split):** `jasper-tools.ts` 7,639 · `onboarding/page.tsx` 2,674 · `settings/ai-agents/training/page.tsx` 3,237 · `settings/email-templates/page.tsx` 2,578 · several agent managers 2,300–3,572.
+- **Design-system violations** concentrated in Mission Control: **612 inline `style={{`** + **111 hardcoded hex** colors.
+- **DATA PATH IS NOT A CRISIS (correction):** client→`useAuthFetch`→`/api` is the norm (**164** files); the old client `firestore-service` is imported by **0** files. Only **TWO** client pages still read Firestore directly in the browser: `(dashboard)/academy/page.tsx` and `(dashboard)/dashboard/page.tsx`. Convert just those two (matters for multi-tenant isolation) and this category is closed. The "32 browser-read screens" figure is stale/wrong.
+- **Payment sprawl is real:** 8+ provider webhook handlers (stripe, paypal, 2checkout, adyen, authorizenet, braintree, chargebee, hyperswitch). Pre-launch: keep Stripe (+PayPal?), park the rest behind "contact us", delete the dead provider code.
+- **Dead cut-platform code still present:** Reddit (34 files) + Telegram (27 files), both already decided-cut. Lemon8 = 0 (correctly never built).
+
+## AGREED FINISH PLAN (single-tenant → fully tested → multi-tenant). Reordered now that the data path is a 2-file fix, not a blocker.
+1. **Freeze scope** — no new features until the current set is green (precondition for "done" to mean anything).
+2. **Inventory + triage** every page/feature into works / half-works / dead / unknown (fan out with subagents, REVIEW their output). Becomes the real burn-down list here.
+3. **Delete the dead:** Reddit + Telegram code, parked payment providers, confirmed-dead routes/files. Less surface to test.
+4. **Convert the 2 browser-read pages** (academy, dashboard) to the API path.
+5. **Lay ~5 automated tests** over core flows (login, add a lead, connect Google, run a mission, send an email) so fixes stop silently breaking each other — replaces hand-run verify scripts for core flows.
+6. **Walk verticals end-to-end together** (owner-manual + Claude-guided, one step per turn, one vertical fully done before the next). Spine first: **CRM + Jasper + Mission Control + email**. A vertical isn't done until walked with a real account AND covered by an automated test.
+7. **UX/UI consistency pass** — only on verticals that already work. Mission Control's 612 inline styles first.
+8. **Multi-tenant flip** — only after the above is green. Anything touching tenant boundaries is built/verified against the multi-tenant design NOW (use `getSubCollection()`, never hardcode the org) so it isn't re-tested twice. The 3 hard gates remain: tenantId threading, tenant-isolated Firestore rules, tenant provisioning. Single-tenant testing cannot catch cross-tenant data leaks — a dedicated isolation pass is still owed at the flip.
+
+## STRATEGIC NOTE (log, do NOT build yet)
+Possible direction: keep our own CRM as the clean workspace the AI operates on, PLUS a **one-way import connector** for customers already on HubSpot/Salesforce — instead of forcing the proprietary CRM on everyone or attempting fragile two-way sync with every CRM. Validate with one real customer conversation before writing connector code. Decision hinges on whether the first paying customer already owns a CRM. Two-way sync is a multi-month tar pit; do not let this blow up the freeze-and-finish.
+
+## Testing doctrine (owner, standing)
+Test EVERY feature via BOTH the AI-agent path AND the manual UI path. Recursive-delete all test data (deleting a Firestore doc does NOT delete subcollections). Code-shipped ≠ done; nothing is done until PROVEN with real data. ALL api keys live in Firestore (API Keys page), never env vars. Plain English, no jargon/tables when guiding the owner. Check CODE not docs; update docs to match reality.
+
+---
+
+# 🔧 PREVIOUS SESSION — Server-SDK "wrong door" remediation (June 2–3, 2026) — COMPLETE
 
 ## The finding
 Systemic bug: server-side code (API routes, crons, webhooks, and the lib services they call) used the **client** Firebase SDK instead of the **Admin** SDK. On the server there is no signed-in user, so Firestore security rules silently reject the calls — reads return []/null, writes denied, errors swallowed. Confirmed real (firestore.rules requires `isAuthenticated()` on essentially everything; default-deny at the bottom).
