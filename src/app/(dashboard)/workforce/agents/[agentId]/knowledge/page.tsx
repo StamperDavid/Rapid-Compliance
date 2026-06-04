@@ -113,13 +113,17 @@ export default function AgentKnowledgePage() {
       fd.append('assetType', assetType);
 
       const res = await authFetch(`/api/agent/knowledge/${encodeURIComponent(agentId)}`, { method: 'POST', body: fd });
-      const json = (await res.json()) as { success?: boolean; added?: { documents: number; urls: number; faqs: number }; error?: string };
+      const json = (await res.json()) as { success?: boolean; added?: { documents: number; urls: number; faqs: number }; media?: { transcribed: number; failed: number }; error?: string };
       if (!res.ok || !json.success || !json.added) {
         setMessage({ type: 'error', text: json.error ?? 'Upload failed.' });
         return;
       }
       const a = json.added;
-      setMessage({ type: 'success', text: `Added ${a.documents} document(s), ${a.urls} link(s), ${a.faqs} FAQ(s) to ${agentName}'s knowledge.` });
+      const m = json.media;
+      let text = `Added ${a.documents} document(s), ${a.urls} link(s), ${a.faqs} FAQ(s) to ${agentName}'s knowledge.`;
+      if (m && m.transcribed > 0) { text += ` Transcribed ${m.transcribed} video/audio file(s) to text.`; }
+      if (m && m.failed > 0) { text += ` ${m.failed} video/audio file(s) could not be transcribed (no speech found, or transcription is unavailable).`; }
+      setMessage({ type: m && m.failed > 0 ? 'error' : 'success', text });
       // Reset form
       setFiles([]);
       setUrlList([]);
@@ -212,7 +216,7 @@ export default function AgentKnowledgePage() {
         </div>
 
         <div>
-          <Caption>Upload files (PDF, Word, Excel/CSV, or text — e.g. examples of great work)</Caption>
+          <Caption>Upload files (PDF, Word, Excel/CSV, text, or video/audio — e.g. examples of great work or a training video). Video and audio are automatically transcribed to text.</Caption>
           <input
             type="file"
             multiple
@@ -267,7 +271,7 @@ export default function AgentKnowledgePage() {
           <Button variant="default" disabled={!hasSomethingToUpload || uploading} onClick={() => void upload()}>
             {uploading ? 'Saving…' : 'Save to knowledge base'}
           </Button>
-          <Caption>Video training (transcribed to text) is coming next — files, links, pasted text and FAQs work now.</Caption>
+          <Caption>Files, video/audio (auto-transcribed), links, pasted text, and FAQs all work.</Caption>
         </div>
       </div>
 

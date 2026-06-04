@@ -33,6 +33,22 @@ interface DeepgramWord {
 export async function transcribeAudio(
   audioFilePath: string,
 ): Promise<TranscriptionResult | null> {
+  const audioBuffer = await readFile(audioFilePath);
+  return transcribeAudioBuffer(audioBuffer);
+}
+
+/**
+ * Transcribe audio/video that is already in memory (e.g. an uploaded File).
+ *
+ * Deepgram's prerecorded API accepts common video containers (mp4/mov/webm/etc.)
+ * and extracts the audio server-side, so no local ffmpeg step is required here.
+ * Returns null gracefully if the key is missing or transcription fails.
+ *
+ * @param audioBuffer - Raw bytes of a WAV/MP3/MP4/MOV/WebM file
+ */
+export async function transcribeAudioBuffer(
+  audioBuffer: Buffer,
+): Promise<TranscriptionResult | null> {
   // Get Deepgram API key from Firestore
   const apiKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'deepgram');
   if (typeof apiKey !== 'string' || apiKey.length === 0) {
@@ -43,8 +59,6 @@ export async function transcribeAudio(
   }
 
   try {
-    const audioBuffer = await readFile(audioFilePath);
-
     // SDK v5: constructor takes { apiKey } options object
     const deepgram = new DeepgramClient({ apiKey });
 
@@ -118,7 +132,7 @@ export async function transcribeAudio(
       'Deepgram transcription failed',
       error instanceof Error ? error : new Error(message),
       {
-        audioFilePath,
+        bytes: audioBuffer.length,
         file: 'transcription-service.ts',
       },
     );
