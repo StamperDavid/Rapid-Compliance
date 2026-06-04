@@ -407,7 +407,7 @@ export async function POST(
           utmSource,
           utmMedium,
           utmCampaign,
-        }, { autoEnrich: true });
+        }, { autoEnrich: true, useAdminSdk: true });
         logger.info('Lead auto-created from form submission', {
           formId,
           submissionId: submissionRef.id,

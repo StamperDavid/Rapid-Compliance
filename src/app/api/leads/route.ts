@@ -122,7 +122,7 @@ export async function POST(
       ...(leadData.campaignId && { campaignId: leadData.campaignId }),
       ...(leadData.discoveryBatchId && { discoveryBatchId: leadData.discoveryBatchId }),
     };
-    const result = await createLead(leadInput);
+    const result = await createLead(leadInput, { useAdminSdk: true });
 
     // Auto-score the new lead (fire-and-forget — don't block the response)
     void (async () => {

@@ -265,7 +265,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       };
 
       try {
-        const created = await createLead(leadInput);
+        const created = await createLead(leadInput, { useAdminSdk: true });
         createdLeadIds.push(created.id);
         summary.imported++;
       } catch (createError) {
