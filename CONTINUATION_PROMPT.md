@@ -32,8 +32,18 @@ All six remaining items completed, verified (tsc+lint), committed, pushed:
 
 **The client-SDK-on-server "wrong door" remediation for every broken-AND-used surface is COMPLETE.** Remaining = TIER 3 (below) + the multi-tenant flip (Step 2).
 
-## TIER 3 — needs a SAFETY SWITCH (do last)
-**Workflow engine** (`lib/workflows/` PLURAL is canonical) + **email-sequence engine** — converting to Admin SDK makes them START FIRING for the first time (dormant automations send real emails/actions). Land switched-OFF by default with a preview of what's queued. Also: PLURAL CRUD API validates with the SINGULAR engine's Zod schema (rejects builder-shaped workflows) — Phase 1 is to add PLURAL Zod schemas. SINGULAR deal-scoring Signal Bus path (`WorkflowCoordinator.handleSignal`) is DEAD CODE (no caller) — safe to delete later; lead/deal SCORING stays (owner confirmed).
+## TIER 3 — automation engines (IN PROGRESS, default OFF)
+**DONE:**
+- `e160ab7a` master kill-switch `areAutomationsEnabled()` (`src/lib/automation/automation-gate.ts`, env `AUTOMATIONS_ENABLED`, default false) gating the 3 crons (workflow-scheduler, workflow-entity-poll, process-sequences) — each no-ops with reason 'automations_disabled'.
+- `9811f75d` execution path of both engines → Admin SDK: workflow-engine, schedule/firestore triggers, entity/slack/ai-agent actions, outbound/sequence-engine. Verified tsc + lint + full `npm run build` (no client-bundle leak).
+
+**REMAINING:**
+- **workflow-service.ts + workflow-executions-service.ts client/server split** — imported by the BROWSER builder/list pages (work there) AND server CRUD API routes (broken there). Cannot wholesale-convert (breaks the client bundle). Split into a client-safe read module + a server-only Admin module, or have the CRUD routes use Admin directly.
+- **PLURAL Zod schemas** — `/api/workflows` POST/PUT validate with the SINGULAR engine's Zod schema and reject builder-shaped workflows. Add PLURAL schemas (mirror `@/types/workflow`, `.passthrough()`, `actions.min(0)`). Builder bypasses the API (writes Firestore directly) so this only affects programmatic API callers.
+- **"Preview what's queued"** — read-only dry-run listing scheduled/triggered workflows + ready sequence steps, to review BEFORE flipping the switch on.
+- SINGULAR `WorkflowCoordinator.handleSignal` is DEAD CODE (no caller) — safe to delete later; lead/deal SCORING stays (owner confirmed).
+
+**To turn automations ON:** set env `AUTOMATIONS_ENABLED=true` (after previewing what's queued).
 
 ## DEAD / "doesn't matter" — DO NOT DELETE without proving unused + owner OK
 No live caller: battlecard competitive-monitor, playbook-engine, schema-change-* handlers (`/api/schema-changes` UI unmounted), `/api/learning/ab-test`+`/fine-tune`, HTML `/api/email-templates` route, `/api/notifications/send` route, and dead files (analytics-service, workflow-analytics, ecommerce-analytics, schema-manager, advanced-rag, vertex-tuner, knowledge-analyzer, knowledge-processor-enhanced). gemini-service's client-SDK key read is dead on the server (keys resolve via Admin-first api-key-service — that is WHY AI works).
