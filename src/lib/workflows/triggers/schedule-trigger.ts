@@ -3,7 +3,7 @@
  * Handles scheduled workflow execution (cron jobs)
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import type { Workflow, ScheduleTrigger, WorkflowTriggerData } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
@@ -71,7 +71,7 @@ export async function registerScheduleTrigger(
   // Store schedule configuration
   const { getSubCollection } = await import('@/lib/firebase/collections');
   const nextRun = calculateNextRun(trigger.schedule);
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     getSubCollection('scheduleTriggers'),
     workflow.id,
     {
@@ -178,7 +178,7 @@ export async function executeScheduledWorkflows(): Promise<void> {
   const { where, orderBy, limit } = await import('firebase/firestore');
   const { getSubCollection } = await import('@/lib/firebase/collections');
 
-  const triggers = await FirestoreService.getAll(
+  const triggers = await AdminFirestoreService.getAll(
     getSubCollection('scheduleTriggers'),
     [
       where('nextRun', '<=', now),
@@ -204,7 +204,7 @@ export async function executeScheduledWorkflows(): Promise<void> {
       }
 
       // Load workflow
-      const workflowDoc = await FirestoreService.get(
+      const workflowDoc = await AdminFirestoreService.get<Workflow>(
         getSubCollection('workflows'),
         workflowId
       );
@@ -214,7 +214,7 @@ export async function executeScheduledWorkflows(): Promise<void> {
         continue;
       }
 
-      const workflow = workflowDoc as Workflow;
+      const workflow = workflowDoc;
       if (workflow.status !== 'active') {
         continue; // Skip inactive workflows
       }
@@ -243,7 +243,7 @@ export async function executeScheduledWorkflows(): Promise<void> {
       const scheduleTrigger = workflow.trigger as ScheduleTrigger;
       const nextRun = calculateNextRun(scheduleTrigger.schedule);
 
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('scheduleTriggers'),
         workflowId,
         {
@@ -274,7 +274,7 @@ export async function unregisterScheduleTrigger(
   workflowId: string
 ): Promise<void> {
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  await FirestoreService.delete(
+  await AdminFirestoreService.delete(
     getSubCollection('scheduleTriggers'),
     workflowId
   );

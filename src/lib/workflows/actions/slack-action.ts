@@ -76,13 +76,13 @@ export async function executeSlackAction(
   } = action.config;
 
   // Get Slack credentials
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
   let slackToken: string | null = null;
 
   try {
     // Check for organization-level Slack integration
-    const integration = await FirestoreService.get(
+    const integration = await AdminFirestoreService.get(
       getIntegrationsCollection(),
       'slack'
     ) as unknown;
