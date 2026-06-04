@@ -81,13 +81,13 @@ export async function getLeads(
  * Get a single lead by ID
  */
 export async function getLead(
-  leadId: string
+  leadId: string,
+  options: { useAdminSdk?: boolean } = {}
 ): Promise<Lead | null> {
   try {
-    const lead = await FirestoreService.get<Lead>(
-      getSubCollection('leads'),
-      leadId
-    );
+    const lead = options.useAdminSdk
+      ? await AdminFirestoreService.get<Lead>(getSubCollection('leads'), leadId)
+      : await FirestoreService.get<Lead>(getSubCollection('leads'), leadId);
 
     if (!lead) {
       logger.warn('Lead not found', { leadId });
@@ -240,11 +240,12 @@ export async function createLead(
  */
 export async function updateLead(
   leadId: string,
-  updates: Partial<Omit<Lead, 'id' | 'createdAt'>>
+  updates: Partial<Omit<Lead, 'id' | 'createdAt'>>,
+  options: { useAdminSdk?: boolean } = {}
 ): Promise<Lead> {
   try {
     // Get current lead for comparison
-    const currentLead = await getLead(leadId);
+    const currentLead = await getLead(leadId, options);
     if (!currentLead) {
       throw new Error('Lead not found');
     }
@@ -254,11 +255,11 @@ export async function updateLead(
       updatedAt: new Date(),
     };
 
-    await FirestoreService.update(
-      getSubCollection('leads'),
-      leadId,
-      updatedData
-    );
+    if (options.useAdminSdk) {
+      await AdminFirestoreService.update(getSubCollection('leads'), leadId, updatedData);
+    } else {
+      await FirestoreService.update(getSubCollection('leads'), leadId, updatedData);
+    }
 
     logger.info('Lead updated', {
       leadId,
@@ -266,7 +267,7 @@ export async function updateLead(
     });
 
     // Return updated lead
-    const lead = await getLead(leadId);
+    const lead = await getLead(leadId, options);
     if (!lead) {
       throw new Error('Lead not found after update');
     }

@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     // 3. FETCH LEAD FROM FIRESTORE
     // =========================================================================
-    const crmLead = await getLead(leadId);
+    const crmLead = await getLead(leadId, { useAdminSdk: true });
 
     if (!crmLead) {
       logger.warn('Lead not found for routing', { leadId, PLATFORM_ID });
@@ -239,7 +239,8 @@ export async function POST(request: NextRequest) {
 
     await updateLead(
       leadId,
-      { ownerId: routingResult.assignedTo }
+      { ownerId: routingResult.assignedTo },
+      { useAdminSdk: true }
     );
 
     logger.info('Lead owner updated', {
