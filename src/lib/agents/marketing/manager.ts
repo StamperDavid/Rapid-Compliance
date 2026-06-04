@@ -65,6 +65,7 @@ import {
   type SignalEntry,
 } from '../shared/memory-vault';
 import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
+import type { ModelName } from '@/types/ai-models';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 
 const MARKETING_INDUSTRY_KEY = 'saas_sales_ops';
@@ -2323,6 +2324,9 @@ export class MarketingManager extends BaseManager {
     platformRationale: string;
   } | null> {
     try {
+      const gm = await getActiveManagerGMByIndustry('MARKETING_MANAGER', MARKETING_INDUSTRY_KEY);
+      const rawModel = gm?.config.model;
+      const model: ModelName = typeof rawModel === 'string' ? (rawModel as ModelName) : 'claude-sonnet-4.6';
       const provider = new OpenRouterProvider(PLATFORM_ID);
       const userPrompt = [
         'Analyze this marketing campaign goal and return a JSON object with platform and audience recommendations.',
@@ -2355,7 +2359,7 @@ export class MarketingManager extends BaseManager {
       ].join('\n');
 
       const response = await provider.chat({
-        model: 'claude-sonnet-4.6',
+        model,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt },

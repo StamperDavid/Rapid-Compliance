@@ -295,6 +295,80 @@ export async function createManagerGMVersionFromEdit(
   return newGM;
 }
 
+/**
+ * Create a new MANAGER GM version that changes ONLY the LLM model
+ * (config.model), preserving the systemPrompt + baked-in Brand DNA. This is
+ * operator-initiated config (exempt from the grade-gated prompt pipeline), but
+ * versioned so a model swap that hurts behavior can be rolled back via
+ * deployManagerGMVersion. Created inactive; deploy it to activate.
+ */
+export async function createManagerGMVersionFromModelChange(
+  managerId: string,
+  industryKey: string,
+  newModel: string,
+  createdBy: string,
+): Promise<ManagerGoldenMaster | null> {
+  if (!adminDb) { return null; }
+
+  const activeGM = await getActiveManagerGMByIndustry(managerId, industryKey);
+  if (!activeGM) {
+    logger.error(
+      '[ManagerGMService] No active manager GM found — cannot change model',
+      undefined,
+      { managerId, industryKey },
+    );
+    return null;
+  }
+
+  const previousModel = typeof activeGM.config.model === 'string'
+    ? activeGM.config.model
+    : 'claude-sonnet-4.6';
+  if (previousModel === newModel) {
+    return activeGM; // No-op
+  }
+
+  const newVersion = activeGM.version + 1;
+  const newDocId = buildManagerGMDocId(managerId, industryKey, newVersion);
+  const now = new Date().toISOString();
+  const newConfig = {
+    ...activeGM.config,
+    model: newModel,
+  };
+
+  const newGM: ManagerGoldenMaster = {
+    ...activeGM,
+    id: newDocId,
+    managerId,
+    industryKey,
+    version: newVersion,
+    config: newConfig,
+    sourceImprovementRequestId: `model-change-${now}`,
+    changesApplied: [
+      {
+        field: 'model',
+        currentValue: previousModel,
+        proposedValue: newModel,
+        reason: `Operator changed model from ${previousModel} to ${newModel}`,
+        confidence: 1,
+      },
+    ],
+    isActive: false,
+    createdAt: now,
+    createdBy,
+    notes: `Model change ${previousModel} -> ${newModel}. Not yet deployed.`,
+    previousVersion: activeGM.version,
+  };
+
+  await adminDb.collection(getGMCollectionPath()).doc(newDocId).set(newGM);
+
+  logger.info(
+    `[ManagerGMService] Created v${newVersion} for ${managerId}:${industryKey} (model ${previousModel} -> ${newModel})`,
+    { managerId, industryKey, version: newVersion, newDocId },
+  );
+
+  return newGM;
+}
+
 // ============================================================================
 // PUBLIC API — DEPLOY (Phase 3 grading pipeline)
 // ============================================================================
