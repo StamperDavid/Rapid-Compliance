@@ -8,7 +8,7 @@ import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';
+import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 export type { Deal } from './deal-service-types';
@@ -396,7 +396,7 @@ async function emitDealSignal(params: {
 }): Promise<void> {
   try {
     const { type, deal, metadata = {} } = params;
-    const coordinator = getClientSignalCoordinator();
+    const coordinator = getServerSignalCoordinator();
 
     // Determine signal priority based on deal value and type
     let priority: 'High' | 'Medium' | 'Low' = 'Medium';
