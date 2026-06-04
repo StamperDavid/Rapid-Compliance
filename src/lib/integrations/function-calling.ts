@@ -477,7 +477,7 @@ export async function getAvailableFunctions(): Promise<AIFunction[]> {
   try {
     // Get connected integrations for this org
     const { listConnectedIntegrations } = await import('./integration-manager');
-    const connectedIntegrations = await listConnectedIntegrations();
+    const connectedIntegrations = await listConnectedIntegrations({ useAdminSdk: true });
 
     // Only return functions for connected integrations (credentials exist = active)
     const activeProviderIds = connectedIntegrations

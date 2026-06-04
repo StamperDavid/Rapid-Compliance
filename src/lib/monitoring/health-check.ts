@@ -226,7 +226,7 @@ async function checkPayments(): Promise<HealthStatus> {
 async function checkIntegrations(): Promise<HealthStatus> {
   try {
     const { listConnectedIntegrations } = await import('@/lib/integrations/integration-manager');
-    const integrations = await listConnectedIntegrations();
+    const integrations = await listConnectedIntegrations({ useAdminSdk: true });
     const count = integrations.length;
 
     // Check for expired tokens

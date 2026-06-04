@@ -445,11 +445,13 @@ export async function disconnectIntegration(
 /**
  * List all connected integrations for an organization
  */
-export async function listConnectedIntegrations(): Promise<IntegrationCredentials[]> {
+export async function listConnectedIntegrations(
+  options: CredentialAccessOptions = {}
+): Promise<IntegrationCredentials[]> {
   try {
-    const result = await FirestoreService.getAll<IntegrationCredentials>(
-      getSubCollection('integrations')
-    );
+    const result = options.useAdminSdk
+      ? await AdminFirestoreService.getAll<IntegrationCredentials>(getSubCollection('integrations'))
+      : await FirestoreService.getAll<IntegrationCredentials>(getSubCollection('integrations'));
 
     return result;
 
@@ -474,17 +476,19 @@ export async function getIntegration(
  */
 export async function updateIntegration(
   integrationId: string,
-  updates: Partial<IntegrationCredentials>
+  updates: Partial<IntegrationCredentials>,
+  options: CredentialAccessOptions = {}
 ): Promise<void> {
   try {
-    await FirestoreService.update(
-      getSubCollection('integrations'),
-      integrationId,
-      {
-        ...updates,
-        updatedAt: new Date(),
-      }
-    );
+    const data: Record<string, unknown> = {
+      ...updates,
+      updatedAt: new Date(),
+    };
+    if (options.useAdminSdk) {
+      await AdminFirestoreService.update(getSubCollection('integrations'), integrationId, data);
+    } else {
+      await FirestoreService.update(getSubCollection('integrations'), integrationId, data);
+    }
 
     logger.info('Integration updated', { integrationId });
 
@@ -508,13 +512,14 @@ export async function deleteIntegration(
  * Sync integration data — verifies credentials are valid and refreshes if needed
  */
 export async function syncIntegration(
-  integrationId: string
+  integrationId: string,
+  options: CredentialAccessOptions = {}
 ): Promise<{ success: boolean; synced?: number; error?: string }> {
   try {
     logger.info('Syncing integration', { integrationId });
 
     // Verify credentials exist and are valid
-    const credentials = await getIntegrationCredentials(integrationId);
+    const credentials = await getIntegrationCredentials(integrationId, options);
     if (!credentials) {
       return { success: false, error: 'Integration not connected or token expired' };
     }
@@ -539,10 +544,11 @@ export async function syncIntegration(
  * Test integration connection — makes a lightweight API call to verify the token works
  */
 export async function testIntegration(
-  integrationId: string
+  integrationId: string,
+  options: CredentialAccessOptions = {}
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const credentials = await getIntegrationCredentials(integrationId);
+    const credentials = await getIntegrationCredentials(integrationId, options);
 
     if (!credentials) {
       return { success: false, error: 'Integration not found or token expired' };
