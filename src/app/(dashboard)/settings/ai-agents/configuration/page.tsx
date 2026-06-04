@@ -1320,7 +1320,6 @@ export default function AgentConfigurationPage() {
                 transition: 'all 0.2s',
               }}
             >
-              <span style={{ marginRight: '0.5rem' }}>{section.icon}</span>
               {section.label}
             </button>
           ))}
