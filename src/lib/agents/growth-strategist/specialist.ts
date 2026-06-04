@@ -31,6 +31,7 @@ import {
   type BusinessSnapshot,
 } from './data-aggregator';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import type { ModelName } from '@/types/ai-models';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
@@ -407,7 +408,7 @@ export class GrowthStrategist extends BaseSpecialist {
         'Growth Strategist GM not found. Run: node scripts/seed-growth-strategist-gm.js',
       );
     }
-    const gmConfig = gmRecord.config as { systemPrompt?: string } | undefined;
+    const gmConfig = gmRecord.config as { systemPrompt?: string; model?: ModelName } | undefined;
     const resolvedSystemPrompt = gmConfig?.systemPrompt ?? gmRecord.systemPromptSnapshot ?? '';
     if (resolvedSystemPrompt.length < 100) {
       throw new Error(
@@ -417,7 +418,7 @@ export class GrowthStrategist extends BaseSpecialist {
 
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
-      model: 'claude-sonnet-4.6',
+      model: gmConfig?.model ?? 'claude-sonnet-4.6',
       messages: [
         { role: 'system', content: resolvedSystemPrompt },
         { role: 'user', content: userPrompt },
@@ -776,7 +777,7 @@ Respond with ONLY a valid JSON object:
           'Growth Strategist GM not found. Run: node scripts/seed-growth-strategist-gm.js to seed.',
         );
       }
-      const gmConfig = gmRecord.config as { systemPrompt?: string } | undefined;
+      const gmConfig = gmRecord.config as { systemPrompt?: string; model?: ModelName } | undefined;
       const resolvedSystemPrompt = gmConfig?.systemPrompt ?? gmRecord.systemPromptSnapshot ?? '';
       if (resolvedSystemPrompt.length < 100) {
         throw new Error(
@@ -896,7 +897,7 @@ Respond with ONLY a JSON object with these exact fields:
 
       const provider = new OpenRouterProvider(PLATFORM_ID);
       const response = await provider.chat({
-        model: 'claude-sonnet-4.6',
+        model: gmConfig?.model ?? 'claude-sonnet-4.6',
         messages: [
           { role: 'system', content: resolvedSystemPrompt },
           { role: 'user', content: userPrompt },
