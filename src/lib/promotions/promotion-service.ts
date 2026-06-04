@@ -11,7 +11,8 @@
  * Collection: platform_promotions (platform-level promotional campaigns)
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -129,7 +130,7 @@ export class PromotionService {
     };
 
     try {
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         PromotionService.getCollectionPath(),
         promotionId,
         promotion,
@@ -164,7 +165,7 @@ export class PromotionService {
    */
   static async getPromotion(promotionId: string): Promise<Promotion | null> {
     try {
-      const promotion = await FirestoreService.get<Promotion>(
+      const promotion = await AdminFirestoreService.get<Promotion>(
         PromotionService.getCollectionPath(),
         promotionId
       );
@@ -189,7 +190,7 @@ export class PromotionService {
     try {
       const { where, orderBy } = await import('firebase/firestore');
 
-      const promotions = await FirestoreService.getAll<Promotion>(
+      const promotions = await AdminFirestoreService.getAll<Promotion>(
         PromotionService.getCollectionPath(),
         [
           where('status', '==', 'active'),
@@ -214,7 +215,7 @@ export class PromotionService {
     try {
       const { orderBy, limit: firestoreLimit } = await import('firebase/firestore');
 
-      const promotions = await FirestoreService.getAll<Promotion>(
+      const promotions = await AdminFirestoreService.getAll<Promotion>(
         PromotionService.getCollectionPath(),
         [
           orderBy('createdAt', 'desc'),
@@ -245,7 +246,7 @@ export class PromotionService {
         updatedAt: new Date(),
       };
 
-      await FirestoreService.update(
+      await AdminFirestoreService.update(
         PromotionService.getCollectionPath(),
         promotionId,
         updateData
@@ -318,7 +319,7 @@ export class PromotionService {
         updates.status = 'paused';
       }
 
-      await FirestoreService.update(
+      await AdminFirestoreService.update(
         PromotionService.getCollectionPath(),
         promotionId,
         updates
@@ -352,7 +353,7 @@ export class PromotionService {
    */
   static async deletePromotion(promotionId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      await FirestoreService.delete(
+      await AdminFirestoreService.delete(
         PromotionService.getCollectionPath(),
         promotionId
       );
