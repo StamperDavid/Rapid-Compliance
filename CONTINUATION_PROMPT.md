@@ -21,13 +21,16 @@ Systemic bug: server-side code (API routes, crons, webhooks, and the lib service
 ## DONE this session (committed + pushed to dev)
 `2be79c2b` Google OAuth granted-scope persist · `2eba3cb6` social disconnect two-step · `2998bfd0` forms conditional show/hide · `df5f5bf2` TCPA STOP + meeting reminders · `657aefee` OAuth + Gmail services (+ fixed OAuth callback malformed `organizations/*/oauthStates` read path) · `367061d6` quote/invoice/payment services · `8c965ce0` forms builder get/update/publish · `c9355921` leads createLead useAdminSdk (manual + public-form + import) · `c4d1e4bf` deal + contact services (fixes delete deals/contacts + getDeal) · `c1c1208a` enrichment + cache services · `c61a4459` voice TTS config read/save · `4340a4ce` commerce specialists + manager.
 
-## STILL BROKEN-AND-USED — do next (same fix pattern)
-1. **notification-service.ts** — DEFERRED, riskiest. Writes use the client `Timestamp` class and `src/lib/notifications/types.ts` types every timestamp field with the CLIENT Timestamp — switching can cascade type errors into client screens (NotificationCenter.tsx). Only live trigger is the workflow engine (Tier 3, not running yet) → low live impact. Careful dedicated pass: switch notification-service AND types.ts Timestamp imports to `firebase-admin/firestore`, then chase the cascade.
-2. **integration-manager callers** — `/api/integrations/[integrationId]` GET/PATCH/DELETE, `/sync`, `/test` fail for every integration except Zoom. `updateIntegration`, `syncIntegration`, `testIntegration`, `listConnectedIntegrations` have NO option param — add `useAdminSdk` to those signatures (and the internal getIntegrationCredentials call) first. `listConnectedIntegrations` is hit by public `/api/health` (always reports 0 integrations).
-3. **promotion-service.ts** — clean swap scoped (import bundles COLLECTIONS; `await FirestoreService.` pattern). OPEN QUESTION: is there a promotions admin UI calling `/api/admin/promotions`? If not, orphan / low priority.
-4. **golden-master-updater.ts** (legacy training "apply/deploy" tab) — clean swap scoped. OPEN QUESTION for owner: do you use the OLD training tab (`/api/training/apply-update` + `/deploy-golden-master`) or the newer Mission-Control grade pipeline (already clean/Admin)? Only fix old one if still used.
-5. **lead-service updateLead/getLead on server** — lead-routing paths (`/api/leads/route-lead`, `/api/routing/route-lead`, `/api/leads` PATCH) call updateLead which is client-SDK-only (no option). Add useAdminSdk option + admin path.
-6. **deal-service `getClientSignalCoordinator`** (line 11) — latent best-effort signal emission still on the client coordinator; separate from the data CRUD (fixed).
+## ✅ STILL BROKEN-AND-USED — ALL DONE (June 3–4)
+All six remaining items completed, verified (tsc+lint), committed, pushed:
+1. notification-service.ts — `c81d586e` (switched to admin Timestamp + Admin SDK; the feared cascade did NOT happen — admin/client Timestamp are structurally compatible).
+2. integration-manager view/update/sync/test/list — `3c96e328` (added `useAdminSdk` to the 4 functions lacking it + passed it from all server callers; only Zoom worked before).
+3. promotion-service.ts — `dcc72e0a`.
+4. golden-master-updater.ts (legacy training apply/deploy) — `dcc72e0a`.
+5. lead-service getLead/updateLead + lead-routing.ts engine — `4d5c54b8` (the settings/lead-routing page imports TYPES only → safe to convert the engine).
+6. deal-service signal emit → getServerSignalCoordinator — `5daba17d` (best-effort path).
+
+**The client-SDK-on-server "wrong door" remediation for every broken-AND-used surface is COMPLETE.** Remaining = TIER 3 (below) + the multi-tenant flip (Step 2).
 
 ## TIER 3 — needs a SAFETY SWITCH (do last)
 **Workflow engine** (`lib/workflows/` PLURAL is canonical) + **email-sequence engine** — converting to Admin SDK makes them START FIRING for the first time (dormant automations send real emails/actions). Land switched-OFF by default with a preview of what's queued. Also: PLURAL CRUD API validates with the SINGULAR engine's Zod schema (rejects builder-shaped workflows) — Phase 1 is to add PLURAL Zod schemas. SINGULAR deal-scoring Signal Bus path (`WorkflowCoordinator.handleSignal`) is DEAD CODE (no caller) — safe to delete later; lead/deal SCORING stays (owner confirmed).
