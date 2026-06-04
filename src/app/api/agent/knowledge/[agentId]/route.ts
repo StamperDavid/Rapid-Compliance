@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { processKnowledgeBase } from '@/lib/agent/knowledge-processor';
+import { transcribeAudioBuffer } from '@/lib/video/transcription-service';
 import { indexKnowledgeBase } from '@/lib/agent/vector-search';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getAgentById } from '@/lib/agents/agent-registry';
@@ -47,6 +48,13 @@ function parseAssetType(raw: FormDataEntryValue | null): AssetType {
   return typeof raw === 'string' && (ASSET_TYPES as readonly string[]).includes(raw)
     ? (raw as AssetType)
     : 'document';
+}
+
+/** Audio/video files are transcribed to text via Deepgram, not parsed as documents. */
+const MEDIA_EXTENSIONS = ['mp4', 'mov', 'webm', 'm4a', 'mp3', 'wav', 'aac', 'ogg', 'mkv', 'avi'];
+function isMediaFile(filename: string): boolean {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  return MEDIA_EXTENSIONS.includes(ext);
 }
 
 function parseUrlsArray(urlsJson: FormDataEntryValue | null): string[] {
@@ -163,9 +171,14 @@ export async function POST(
       return errors.badRequest('Nothing to upload — provide at least one file, URL, FAQ, or pasted text.');
     }
 
-    // Build KB entries from the new inputs (files / urls / faqs).
+    // Split audio/video off — Deepgram transcribes those to text; everything
+    // else (PDF/Word/Excel/text) goes through the document/URL/FAQ processor.
+    const mediaFiles = upload.files.filter((f) => isMediaFile(f.name));
+    const docFiles = upload.files.filter((f) => !isMediaFile(f.name));
+
+    // Build KB entries from the non-media inputs (files / urls / faqs).
     const fresh = await processKnowledgeBase({
-      uploadedFiles: upload.files,
+      uploadedFiles: docFiles,
       urls: upload.urls,
       faqs: upload.faqs ?? undefined,
     });
@@ -175,6 +188,44 @@ export async function POST(
       ...d,
       metadata: { ...(d.metadata ?? {}), assetType: upload.assetType },
     }));
+
+    // Transcribe each audio/video file and store the transcript as a text document.
+    let transcribed = 0;
+    let mediaFailed = 0;
+    for (const media of mediaFiles) {
+      try {
+        const buffer = Buffer.from(await media.arrayBuffer());
+        const result = await transcribeAudioBuffer(buffer);
+        if (result && result.transcript.trim().length > 0) {
+          fresh.documents.push({
+            id: `doc_av_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            filename: media.name,
+            type: 'text',
+            uploadedAt: new Date().toISOString(),
+            processedAt: new Date().toISOString(),
+            extractedContent: result.transcript,
+            metadata: {
+              assetType: upload.assetType,
+              source: 'video-transcript',
+              durationSeconds: result.durationSeconds,
+            },
+          });
+          transcribed += 1;
+        } else {
+          // Null = Deepgram key missing or no speech found. Don't fail the whole
+          // upload; report it so the operator knows the video didn't land.
+          mediaFailed += 1;
+        }
+      } catch (mediaErr) {
+        mediaFailed += 1;
+        logger.warn('Media transcription failed', {
+          file: FILE,
+          agentId,
+          name: media.name,
+          error: mediaErr instanceof Error ? mediaErr.message : String(mediaErr),
+        });
+      }
+    }
 
     // Pasted text → a plain-text document so it gets embedded like any other doc.
     if (upload.pastedText) {
@@ -224,6 +275,7 @@ export async function POST(
         urls: fresh.urls.length,
         faqs: fresh.faqs.length,
       },
+      media: { transcribed, failed: mediaFailed },
       counts: {
         documents: merged.documents.length,
         urls: merged.urls.length,

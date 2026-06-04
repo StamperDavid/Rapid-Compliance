@@ -18,16 +18,78 @@ export interface EmbeddingResult {
 }
 
 /**
+ * Every vector in the system MUST be this length. cosineSimilarity returns 0 on
+ * a length mismatch, so a model that emits a different size would silently fail
+ * to match anything. OpenAI v3 models are pinned to this via the `dimensions`
+ * param; Google text-embedding-004 already returns 768; the hash fallback too.
+ */
+const EMBEDDING_DIMENSIONS = 768;
+
+/**
+ * Preferred provider: OpenAI embeddings via the central (platform-owned) key —
+ * no client setup, same shape as OpenRouter powering the agent brains. Pinned to
+ * 768 dims for compatibility. Returns null (not throw) so the caller falls
+ * through to Google, then the deterministic hash.
+ */
+async function tryOpenAIEmbedding(text: string): Promise<EmbeddingResult | null> {
+  try {
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const raw = await apiKeyService.getServiceKey(PLATFORM_ID, 'openai') as string | { apiKey: string } | null;
+    const apiKey = typeof raw === 'string' ? raw : raw?.apiKey;
+    if (!apiKey) {
+      return null;
+    }
+
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: text.substring(0, 8000),
+        dimensions: EMBEDDING_DIMENSIONS,
+      }),
+    });
+
+    if (!response.ok) {
+      logger.warn('OpenAI embedding call failed — trying next provider', {
+        file: 'embeddings-service.ts',
+        status: response.status,
+      });
+      return null;
+    }
+
+    const data = await response.json() as { data?: Array<{ embedding?: number[] }> };
+    const values = data.data?.[0]?.embedding;
+    if (!values || values.length === 0) {
+      return null;
+    }
+    return { embedding: { values, text }, model: 'text-embedding-3-small' };
+  } catch (error: unknown) {
+    logger.warn('OpenAI embedding threw — trying next provider', {
+      file: 'embeddings-service.ts',
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
  * Generate embedding for a single text
  */
 export async function generateEmbedding(
   text: string
 ): Promise<EmbeddingResult> {
+  // 1. OpenAI (central key, works today). Falls through on any failure.
+  const openaiResult = await tryOpenAIEmbedding(text);
+  if (openaiResult) {
+    return openaiResult;
+  }
+
   try {
-    // Get API key
+    // 2. Google Gemini (legacy path — kept as a fallback)
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
     const geminiKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'gemini') as string | { apiKey: string } | null;
-    
+
     if (!geminiKey) {
       throw new Error('Gemini API key not configured');
     }
@@ -92,7 +154,7 @@ export async function generateEmbedding(
 function generateEmbeddingFallback(text: string): EmbeddingResult {
   // Simple hash-based embedding (not semantic, but works for testing)
   // In production, MUST use Vertex AI Embeddings API
-  const embedding: number[] = Array.from({ length: 768 }, () => 0);
+  const embedding: number[] = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0);
   const words = text.toLowerCase().split(/\s+/);
   
   words.forEach((word, index) => {
