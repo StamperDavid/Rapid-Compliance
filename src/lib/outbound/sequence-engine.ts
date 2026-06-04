@@ -9,7 +9,7 @@ import type {
   SequenceStep,
   StepAction
 } from '@/types/outbound-sequence';
-import { FirestoreService } from '@/lib/db/firestore-service'
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service'
 import { adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -52,7 +52,7 @@ export class SequenceEngine {
     // MAJ-30: Race condition prevention - check-then-create pattern
     // Use Firestore query to check for existing enrollment before creating
     const { where } = await import('firebase/firestore');
-    const existingEnrollments = await FirestoreService.getAll<ProspectEnrollment>(
+    const existingEnrollments = await AdminFirestoreService.getAll<ProspectEnrollment>(
       getSubCollection('enrollments'),
       [
         where('prospectId', '==', prospectId),
@@ -290,10 +290,10 @@ export class SequenceEngine {
     enrollment: ProspectEnrollment,
     step: SequenceStep
   ): Promise<void> {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
 
     // Get prospect email from CRM
-    const prospect: ProspectData | null = await FirestoreService.get(
+    const prospect: ProspectData | null = await AdminFirestoreService.get(
       getSubCollection('leads'),
       enrollment.prospectId
     );
@@ -303,7 +303,7 @@ export class SequenceEngine {
     }
 
     // Get organization settings to determine email provider
-    const orgData: OrgData | null = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
+    const orgData: OrgData | null = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     const emailProvider = (orgData?.emailProvider !== '' && orgData?.emailProvider != null)
       ? orgData.emailProvider
       : 'gmail'; // Default to Gmail
@@ -403,7 +403,7 @@ export class SequenceEngine {
 
 
     // Get prospect details
-    const prospect: ProspectData | null = await FirestoreService.get(
+    const prospect: ProspectData | null = await AdminFirestoreService.get(
       getSubCollection('prospects'),
       enrollment.prospectId
     );
@@ -413,7 +413,7 @@ export class SequenceEngine {
     }
 
     // Get LinkedIn integration credentials
-    const integrations: IntegrationData[] = await FirestoreService.getAll(
+    const integrations: IntegrationData[] = await AdminFirestoreService.getAll(
       getSubCollection('integrations')
     );
     const integration = integrations.filter((i) => i.service === 'linkedin');
@@ -447,7 +447,7 @@ export class SequenceEngine {
 
 
     // Get prospect details
-    const prospect: ProspectData | null = await FirestoreService.get(
+    const prospect: ProspectData | null = await AdminFirestoreService.get(
       getSubCollection('prospects'),
       enrollment.prospectId
     );
@@ -472,7 +472,7 @@ export class SequenceEngine {
     
     // Save SMS record with Twilio message ID for webhook tracking
     const smsRecordId = result.messageId ?? `${Date.now()}-${enrollment.prospectId}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('smsMessages'),
       smsRecordId,
       {
@@ -508,7 +508,7 @@ export class SequenceEngine {
     
     
     // Get prospect details
-    const prospect: ProspectData | null = await FirestoreService.get(
+    const prospect: ProspectData | null = await AdminFirestoreService.get(
       getSubCollection('prospects'),
       enrollment.prospectId
     );
@@ -548,7 +548,7 @@ export class SequenceEngine {
       updatedAt: new Date(),
     };
     
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('tasks'),
       taskId,
       task
@@ -570,7 +570,7 @@ export class SequenceEngine {
     try {
       const analyticsId = `${enrollmentId}-${stepId}-${Date.now()}`;
 
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('sequenceAnalytics'),
         analyticsId,
         {
@@ -585,7 +585,7 @@ export class SequenceEngine {
 
       // Update step statistics
       const statsId = `step-${stepId}`;
-      const currentStats: StepStats | null = await FirestoreService.get(
+      const currentStats: StepStats | null = await AdminFirestoreService.get(
         getSubCollection('sequenceStepStats'),
         statsId
       );
@@ -605,7 +605,7 @@ export class SequenceEngine {
       stats.updatedAt = new Date();
 
 
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('sequenceStepStats'),
         statsId,
         stats
@@ -732,7 +732,7 @@ export class SequenceEngine {
   private static async getSequence(
     sequenceId: string
   ): Promise<OutboundSequence | null> {
-    return FirestoreService.get(
+    return AdminFirestoreService.get<OutboundSequence>(
       getSubCollection('sequences'),
       sequenceId
     );
@@ -748,7 +748,7 @@ export class SequenceEngine {
     try {
       const { where, limit } = await import('firebase/firestore');
 
-      const enrollments = await FirestoreService.getAll<ProspectEnrollment>(
+      const enrollments = await AdminFirestoreService.getAll<ProspectEnrollment>(
         getSubCollection('enrollments'),
         [
           where('prospectId', '==', prospectId),
@@ -770,7 +770,7 @@ export class SequenceEngine {
   private static async getEnrollmentById(
     enrollmentId: string
   ): Promise<ProspectEnrollment | null> {
-    return FirestoreService.get(
+    return AdminFirestoreService.get<ProspectEnrollment>(
       getSubCollection('enrollments'),
       enrollmentId
     );
@@ -780,7 +780,7 @@ export class SequenceEngine {
    * Save enrollment
    */
   private static async saveEnrollment(enrollment: ProspectEnrollment): Promise<void> {
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('enrollments'),
       enrollment.id,
       enrollment,
@@ -837,7 +837,7 @@ export class SequenceEngine {
       sequence.analytics.lastRun = new Date().toISOString();
     }
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('sequences'),
       sequenceId,
       sequence,
@@ -855,7 +855,7 @@ export class SequenceEngine {
     try {
       // Find the sequence that contains this step
       const sequencesPath = getSubCollection('sequences');
-      const sequences = await FirestoreService.getAll<OutboundSequence>(sequencesPath);
+      const sequences = await AdminFirestoreService.getAll<OutboundSequence>(sequencesPath);
       
       let targetSequence: OutboundSequence | null = null;
       let targetStepIndex = -1;
@@ -893,7 +893,7 @@ export class SequenceEngine {
 
       // Save the updated sequence
       const sequencePath = getSubCollection('sequences');
-      await FirestoreService.set(sequencePath, targetSequence.id, targetSequence, false);
+      await AdminFirestoreService.set(sequencePath, targetSequence.id, targetSequence, false);
 
       logger.info('Step analytics updated', {
         stepId,

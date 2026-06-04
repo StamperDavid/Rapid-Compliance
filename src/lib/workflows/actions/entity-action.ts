@@ -71,8 +71,8 @@ export async function executeCreateEntityAction(
 ): Promise<unknown> {
   // Get schema for field resolution
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
-  const schemaData = await FS.get(
+  const { AdminFirestoreService: FS } = await import('@/lib/db/admin-firestore-service');
+  const schemaData = await FS.get<Schema>(
     getSubCollection('schemas'),
     action.schemaId
   );
@@ -81,7 +81,7 @@ export async function executeCreateEntityAction(
     throw new Error(`Schema ${action.schemaId} not found`);
   }
 
-  const schema = schemaData as Schema;
+  const schema = schemaData;
 
   // Build entity data from field mappings with dynamic field resolution
   const entityData: EntityData = {};
@@ -170,8 +170,8 @@ export async function executeUpdateEntityAction(
 ): Promise<unknown> {
   // Get schema
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
-  const schemaData = await FS.get(
+  const { AdminFirestoreService: FS } = await import('@/lib/db/admin-firestore-service');
+  const schemaData = await FS.get<Schema>(
     getSubCollection('schemas'),
     action.schemaId
   );
@@ -180,7 +180,7 @@ export async function executeUpdateEntityAction(
     throw new Error(`Schema ${action.schemaId} not found`);
   }
 
-  const schema = schemaData as Schema;
+  const schema = schemaData;
   const entityName = (schema as Schema & { name?: string }).name ?? action.schemaId;
   const entityPath = `${getSubCollection('entities')}/${entityName}`;
 
@@ -277,8 +277,8 @@ export async function executeDeleteEntityAction(
 ): Promise<unknown> {
   // Get schema
   const { getSubCollection } = await import('@/lib/firebase/collections');
-  const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
-  const schemaData = await FS.get(
+  const { AdminFirestoreService: FS } = await import('@/lib/db/admin-firestore-service');
+  const schemaData = await FS.get<Schema>(
     getSubCollection('schemas'),
     action.schemaId
   );
@@ -287,7 +287,7 @@ export async function executeDeleteEntityAction(
     throw new Error(`Schema ${action.schemaId} not found`);
   }
 
-  const schema = schemaData as Schema;
+  const schema = schemaData;
   const entityName = (schema as Schema & { name?: string }).name ?? action.schemaId;
   const entityPath = `${getSubCollection('entities')}/${entityName}`;
 
@@ -460,7 +460,7 @@ Generate ONLY the value for this field. Do not include any explanation or format
  */
 async function queryEntities(params: QueryEntitiesParams): Promise<EntityRecord[]> {
   const { entityPath, query, triggerData } = params;
-  const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
+  const { AdminFirestoreService: FS } = await import('@/lib/db/admin-firestore-service');
 
   // Build Firestore QueryConstraints from criteria
   const constraints: QueryConstraint[] = [];
