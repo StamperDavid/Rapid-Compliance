@@ -200,5 +200,6 @@ export const AI_WORKFORCE_TABS: SubpageNavItem[] = [
   { label: 'Workflows', href: '/workflows' },
   { label: 'Performance', href: '/workforce/performance' },
   { label: 'Training', href: '/settings/ai-agents/training' },
+  { label: 'Agent Models', href: '/workforce/models' },
   { label: 'Models & Data', href: '/ai/datasets' },
 ];

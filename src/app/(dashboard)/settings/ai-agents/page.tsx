@@ -43,16 +43,6 @@ export default function AIAgentsPage() {
         { label: 'Provider', value: 'ElevenLabs' },
         { label: 'Voices Available', value: '13' }
       ]
-    },
-    {
-      title: 'Model Management',
-      description: 'Choose which AI model each agent uses. Change it, test it, and roll back to the previous version if the new model behaves worse',
-      icon: '🧠',
-      href: `/settings/ai-agents/models`,
-      stats: [
-        { label: 'Agents', value: 'All' },
-        { label: 'Rollback', value: 'Versioned' }
-      ]
     }
   ];
 
