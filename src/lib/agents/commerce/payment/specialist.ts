@@ -277,9 +277,9 @@ export class PaymentSpecialist extends BaseSpecialist {
    */
   private async getConfiguredProvider(): Promise<string> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
-      const ecommerceConfig = await FirestoreService.get<{
+      const ecommerceConfig = await AdminFirestoreService.get<{
         payments?: { providers?: Array<{ provider: string; isDefault: boolean; enabled: boolean }> };
       }>(
         getSubCollection('ecommerce'),
@@ -317,7 +317,7 @@ export class PaymentSpecialist extends BaseSpecialist {
     }
 
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
       const provider = await this.getConfiguredProvider();
@@ -364,7 +364,7 @@ export class PaymentSpecialist extends BaseSpecialist {
       const sessionId = paymentResult.transactionId ?? `${provider}_${Date.now()}`;
 
       // Store session reference in Firestore for tracking
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('checkout_sessions'),
         sessionId,
         {
@@ -412,7 +412,7 @@ export class PaymentSpecialist extends BaseSpecialist {
     total: number,
     appUrl: string,
   ): Promise<PaymentResult> {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getSubCollection } = await import('@/lib/firebase/collections');
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
     const { PLATFORM_ID } = await import('@/lib/constants/platform');
@@ -458,7 +458,7 @@ export class PaymentSpecialist extends BaseSpecialist {
       },
     });
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('checkout_sessions'),
       session.id,
       {
@@ -504,7 +504,7 @@ export class PaymentSpecialist extends BaseSpecialist {
     }
 
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
       const provider = await this.getConfiguredProvider();
@@ -535,7 +535,7 @@ export class PaymentSpecialist extends BaseSpecialist {
           metadata: payload.metadata as Record<string, string> ?? {},
         });
 
-        await FirestoreService.set(
+        await AdminFirestoreService.set(
           getSubCollection('payment_intents'),
           intent.id,
           {
@@ -590,7 +590,7 @@ export class PaymentSpecialist extends BaseSpecialist {
 
       const intentId = paymentResult.transactionId ?? `${provider}_${Date.now()}`;
 
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('payment_intents'),
         intentId,
         {
@@ -640,12 +640,12 @@ export class PaymentSpecialist extends BaseSpecialist {
     }
 
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
       if (payload.sessionId) {
         // Find session across organizations (would need org context in production)
         const { where } = await import('firebase/firestore');
-        const sessions = await FirestoreService.getAll(
+        const sessions = await AdminFirestoreService.getAll(
           'checkout_sessions',
           [where('id', '==', payload.sessionId)]
         );
@@ -782,10 +782,10 @@ export class PaymentSpecialist extends BaseSpecialist {
    */
   private async handleCheckoutStatus(payload: CheckoutStatusPayload): Promise<PaymentResult> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
       const { where } = await import('firebase/firestore');
 
-      const sessions: Array<{ id: string; status: string; total?: number; currency?: string }> = await FirestoreService.getAll(
+      const sessions: Array<{ id: string; status: string; total?: number; currency?: string }> = await AdminFirestoreService.getAll(
         'checkout_sessions',
         [where('id', '==', payload.sessionId)]
       );

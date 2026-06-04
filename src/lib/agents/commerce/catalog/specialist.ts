@@ -20,7 +20,7 @@ import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
@@ -286,7 +286,6 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleFetchProducts(payload: FetchProductsPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
       const { where, orderBy: _orderBy, limit: _limit } = await import('firebase/firestore');
 
       const constraints = [];
@@ -301,7 +300,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       }
 
       // Get e-commerce config for product schema
-      const ecommerceConfig = await FirestoreService.get(
+      const ecommerceConfig = await AdminFirestoreService.get<{ productSchema?: unknown; productMappings?: unknown }>(
         getSubCollection('ecommerce'),
         'config'
       );
@@ -311,7 +310,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       if (ecommerceConfig?.productSchema) {
         // Fetch from configured entity schema
         const productSchema = String(ecommerceConfig.productSchema);
-        const records = await FirestoreService.getAll(
+        const records = await AdminFirestoreService.getAll(
           getSubCollection(productSchema),
           constraints
         );
@@ -322,7 +321,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       } else {
         // Fallback to direct products collection
         const productsPath = getSubCollection('products');
-        products = await FirestoreService.getAll(productsPath, constraints);
+        products = await AdminFirestoreService.getAll<Product>(productsPath, constraints);
       }
 
       // Apply client-side filtering for complex queries
@@ -389,10 +388,9 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleGetProduct(payload: GetProductPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       // Get e-commerce config
-      const ecommerceConfig = await FirestoreService.get(
+      const ecommerceConfig = await AdminFirestoreService.get<{ productSchema?: unknown; productMappings?: unknown }>(
         getSubCollection('ecommerce'),
         'config'
       );
@@ -401,7 +399,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       if (ecommerceConfig?.productSchema) {
         const productSchema = String(ecommerceConfig.productSchema);
-        const record = await FirestoreService.get(
+        const record = await AdminFirestoreService.get(
           getSubCollection(productSchema),
           payload.productId
         );
@@ -411,7 +409,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
           product = this.mapRecordToProduct(record, mappings);
         }
       } else {
-        product = await FirestoreService.get(
+        product = await AdminFirestoreService.get<Product>(
           getSubCollection('products'),
           payload.productId
         );
@@ -445,7 +443,6 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleCreateProduct(payload: CreateProductPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       const productId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
       const now = new Date().toISOString();
@@ -460,7 +457,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
         updatedAt: now,
       };
 
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('products'),
         productId,
         product,
@@ -489,9 +486,8 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleUpdateProduct(payload: UpdateProductPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const existingProduct = await FirestoreService.get(
+      const existingProduct = await AdminFirestoreService.get<Product>(
         getSubCollection('products'),
         payload.productId
       );
@@ -509,7 +505,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
         updatedAt: new Date().toISOString(),
       };
 
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('products'),
         payload.productId,
         updates,
@@ -517,7 +513,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       );
 
       const updatedProduct: Product = {
-        ...(existingProduct as Product),
+        ...existingProduct,
         ...updates,
       };
 
@@ -571,13 +567,12 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleGetCatalogSummary(_payload: GetCatalogSummaryPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const rawProducts = await FirestoreService.getAll(
+      const rawProducts = await AdminFirestoreService.getAll<Product>(
         getSubCollection('products'),
         []
       );
-      const products = rawProducts as Product[];
+      const products = rawProducts;
 
       const activeProducts = products.filter(p => p.status === 'active');
       const draftProducts = products.filter(p => p.status === 'draft');
@@ -720,7 +715,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
           product.currency = (sp.default_price.currency ?? 'USD').toUpperCase();
         }
 
-        await FirestoreService.set(productsCollection, product.id, product, false);
+        await AdminFirestoreService.set(productsCollection, product.id, product, false);
         syncedCount++;
       }
 
@@ -837,7 +832,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
           updatedAt: sp.updated_at,
         };
 
-        await FirestoreService.set(productsCollection, product.id, product, false);
+        await AdminFirestoreService.set(productsCollection, product.id, product, false);
         syncedCount++;
       }
 
@@ -952,7 +947,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
           updatedAt: wp.date_modified,
         };
 
-        await FirestoreService.set(productsCollection, product.id, product, false);
+        await AdminFirestoreService.set(productsCollection, product.id, product, false);
         syncedCount++;
       }
 
@@ -989,7 +984,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
         updatedAt: now,
       };
 
-      await FirestoreService.set(productsCollection, id, product, false);
+      await AdminFirestoreService.set(productsCollection, id, product, false);
       syncedCount++;
     }
 
