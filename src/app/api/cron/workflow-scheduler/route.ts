@@ -9,6 +9,7 @@ import { executeScheduledWorkflows } from '@/lib/workflows/triggers/schedule-tri
 import { fireReadySequenceJobs } from '@/lib/workflows/sequence-scheduler';
 import { logger } from '@/lib/logger/logger';
 import { verifyCronAuth } from '@/lib/auth/api-auth';
+import { areAutomationsEnabled } from '@/lib/automation/automation-gate';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -29,6 +30,11 @@ export async function GET(request: NextRequest) {
   try {
     const authError = verifyCronAuth(request, '/api/cron/workflow-scheduler');
     if (authError) { return authError; }
+
+    if (!areAutomationsEnabled()) {
+      logger.info('Automations disabled — skipping workflow scheduler', { route: '/api/cron/workflow-scheduler' });
+      return NextResponse.json({ success: true, skipped: true, reason: 'automations_disabled', timestamp: new Date().toISOString() });
+    }
 
     logger.info('Starting workflow scheduler cron', {
       route: '/api/cron/workflow-scheduler',

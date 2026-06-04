@@ -9,6 +9,7 @@ import { handleEntityChange } from '@/lib/workflows/triggers/firestore-trigger';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { verifyCronAuth } from '@/lib/auth/api-auth';
+import { areAutomationsEnabled } from '@/lib/automation/automation-gate';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,11 @@ export async function GET(request: NextRequest) {
   try {
     const authError = verifyCronAuth(request, '/api/cron/workflow-entity-poll');
     if (authError) { return authError; }
+
+    if (!areAutomationsEnabled()) {
+      logger.info('Automations disabled — skipping entity poll', { route: '/api/cron/workflow-entity-poll' });
+      return NextResponse.json({ success: true, skipped: true, reason: 'automations_disabled', timestamp: new Date().toISOString() });
+    }
 
     logger.info('Starting entity poll cron', {
       route: '/api/cron/workflow-entity-poll',

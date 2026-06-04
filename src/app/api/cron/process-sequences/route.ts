@@ -15,6 +15,7 @@ import { processSequences } from '@/lib/outbound/sequence-scheduler';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { verifyCronAuth } from '@/lib/auth/api-auth';
+import { areAutomationsEnabled } from '@/lib/automation/automation-gate';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
@@ -28,6 +29,11 @@ export async function GET(request: NextRequest) {
     // Verify cron secret
     const authError = verifyCronAuth(request, '/api/cron/process-sequences');
     if (authError) { return authError; }
+
+    if (!areAutomationsEnabled()) {
+      logger.info('Automations disabled — skipping sequence processing', { route: '/api/cron/process-sequences' });
+      return NextResponse.json({ success: true, skipped: true, reason: 'automations_disabled', timestamp: new Date().toISOString() });
+    }
 
     logger.info('Processing sequences (cron)', { route: '/api/cron/process-sequences' });
 
