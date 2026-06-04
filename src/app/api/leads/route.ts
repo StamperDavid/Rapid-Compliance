@@ -189,7 +189,7 @@ export async function PATCH(
 
     const { leadId, updates } = bodyResult.data;
     const { updateLead } = await import('@/lib/crm/lead-service');
-    const result = await updateLead(leadId, updates as Partial<Omit<Lead, 'id' | 'createdAt'>>);
+    const result = await updateLead(leadId, updates as Partial<Omit<Lead, 'id' | 'createdAt'>>, { useAdminSdk: true });
 
     // Re-score if data fields that affect scoring were changed
     const scoringFields = ['company', 'companyName', 'title', 'email', 'enrichmentData', 'status'];

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { leadId } = parsed.data;
 
     // Get lead
-    const lead = await getLead(leadId);
+    const lead = await getLead(leadId, { useAdminSdk: true });
     if (!lead) {
       return NextResponse.json(
         { error: 'Lead not found' },
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Update lead with assignment
     await updateLead(leadId, {
       ownerId: routingResult.assignedTo,
-    });
+    }, { useAdminSdk: true });
 
     return NextResponse.json({
       success: true,
