@@ -97,15 +97,19 @@ export async function GET(request: NextRequest) {
     // account, consumed by every Google-touching service (Gmail send,
     // Calendar writes, Drive, YouTube, GBP, GA4, Ads, GSC).
     if (!isGSC) {
-      // `scope` is not currently returned by getTokensFromCode (the
-      // googleapis client strips it). Future enhancement: pull it from
-      // the raw token endpoint response. For now the save defaults it
-      // to empty string and the bundle is recoverable from the auth
-      // route's GOOGLE_FULL_SCOPE_BUNDLE constant if needed.
+      // Google passes the granted scope back as a `?scope=` query param
+      // on the callback URL (space-separated, URL-encoded). The
+      // googleapis client strips it from the token-exchange response,
+      // so we have to read it off the request URL directly here.
+      // Without this, the central token doc stores scope=""  and every
+      // downstream `hasAdwordsScope` / `hasYoutubeScope` check returns
+      // false even when the operator actually granted those scopes.
+      const grantedScope = searchParams.get('scope') ?? '';
       const saveResult = await saveConnectedGoogleTokens({
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token ?? null,
         expiryDate: tokens.expiry_date ?? null,
+        scope: grantedScope,
         accountEmail,
       });
       if (!saveResult.success) {

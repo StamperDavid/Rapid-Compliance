@@ -4,9 +4,9 @@
  * Revenue flow: Deal -> Quote -> Invoice -> Payment
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { CrmPayment, CrmPaymentFilters, CreatePaymentInput, UpdatePaymentInput } from '@/types/payment';
@@ -28,7 +28,7 @@ interface PaginatedResult<T> {
  */
 async function generatePaymentNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const existing = await FirestoreService.getAll(
+  const existing = await AdminFirestoreService.getAll(
     getSubCollection('payments'),
     [orderBy('createdAt', 'desc')]
   );
@@ -72,7 +72,7 @@ export async function getPayments(
 
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<CrmPayment>(
+    const result = await AdminFirestoreService.getAllPaginated<CrmPayment>(
       getSubCollection('payments'),
       constraints,
       options?.pageSize ?? 50,
@@ -93,7 +93,7 @@ export async function getPayments(
  */
 export async function getPayment(paymentId: string): Promise<CrmPayment | null> {
   try {
-    const payment = await FirestoreService.get<CrmPayment>(
+    const payment = await AdminFirestoreService.get<CrmPayment>(
       getSubCollection('payments'),
       paymentId
     );
@@ -132,7 +132,7 @@ export async function createPayment(data: CreatePaymentInput): Promise<CrmPaymen
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('payments'),
       paymentId,
       payment,
@@ -161,7 +161,7 @@ export async function updatePayment(
   updates: UpdatePaymentInput
 ): Promise<CrmPayment> {
   try {
-    await FirestoreService.update(
+    await AdminFirestoreService.update(
       getSubCollection('payments'),
       paymentId,
       { ...updates, updatedAt: new Date() }
@@ -186,7 +186,7 @@ export async function updatePayment(
  */
 export async function deletePayment(paymentId: string): Promise<void> {
   try {
-    await FirestoreService.delete(getSubCollection('payments'), paymentId);
+    await AdminFirestoreService.delete(getSubCollection('payments'), paymentId);
     logger.info('Payment deleted', { paymentId });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

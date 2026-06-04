@@ -1,5 +1,45 @@
 # SalesVelocity.ai — Full-Orchestration Continuation Prompt
 
+---
+
+# 🔧 CURRENT SESSION — Server-SDK "wrong door" remediation (June 2–3, 2026)
+
+## The finding
+Systemic bug: server-side code (API routes, crons, webhooks, and the lib services they call) used the **client** Firebase SDK instead of the **Admin** SDK. On the server there is no signed-in user, so Firestore security rules silently reject the calls — reads return []/null, writes denied, errors swallowed. Confirmed real (firestore.rules requires `isAuthenticated()` on essentially everything; default-deny at the bottom).
+
+**Why it went unnoticed (it is NOT "never worked"):** (a) a half-finished Apr 30 migration — the bug was found during the YC crunch and the fix (`useAdminSdk` flag / Admin conversion) was applied to only a couple of spots (Zoom, public early-access leads) then dropped (commits `3e2252b0`, `c0a3d851`); plus (b) features built as scaffolding and never test-driven (Quotes/Invoices/Payments, built `196cd1d5` Apr 9). Also: dashboard screens often write to Firestore DIRECTLY from the browser (authenticated → works), which is why everyday CRM create/edit was fine while the duplicate server routes were broken.
+
+## The fix pattern (use for all remaining items)
+- Confirm the file is **server-only** (no `'use client'` importer) before converting — Admin SDK cannot be in a browser bundle.
+- `FirestoreService.X` → `AdminFirestoreService.X` (same signatures). Search on `await FirestoreService.` to avoid double-prefixing files that already import AdminFirestoreService.
+- Keep `where`/`orderBy`/`limit` from `firebase/firestore` — constraint builders; AdminFirestoreService.getAll/getAllPaginated parse them.
+- Pagination cursor type: `QueryDocumentSnapshot` from `firebase-admin/firestore`.
+- Writes needing serverTimestamp/increment/Timestamp: `FieldValue`/`Timestamp` from `firebase-admin/firestore`.
+- AdminFirestoreService.get/getAll default to `FirestoreDocument` — add a generic (`get<Product>(...)`) where the result is assigned to a typed object, and drop now-redundant `as X` casts.
+- Verify EACH: `npx tsc --noEmit` + `npx eslint <files>` + commit (quality-gate hook runs tsc/eslint). Run tsc to completion BEFORE committing (concurrent tsc with the commit hook can OOM-crash the hook — just retry the commit).
+
+## DONE this session (committed + pushed to dev)
+`2be79c2b` Google OAuth granted-scope persist · `2eba3cb6` social disconnect two-step · `2998bfd0` forms conditional show/hide · `df5f5bf2` TCPA STOP + meeting reminders · `657aefee` OAuth + Gmail services (+ fixed OAuth callback malformed `organizations/*/oauthStates` read path) · `367061d6` quote/invoice/payment services · `8c965ce0` forms builder get/update/publish · `c9355921` leads createLead useAdminSdk (manual + public-form + import) · `c4d1e4bf` deal + contact services (fixes delete deals/contacts + getDeal) · `c1c1208a` enrichment + cache services · `c61a4459` voice TTS config read/save · `4340a4ce` commerce specialists + manager.
+
+## STILL BROKEN-AND-USED — do next (same fix pattern)
+1. **notification-service.ts** — DEFERRED, riskiest. Writes use the client `Timestamp` class and `src/lib/notifications/types.ts` types every timestamp field with the CLIENT Timestamp — switching can cascade type errors into client screens (NotificationCenter.tsx). Only live trigger is the workflow engine (Tier 3, not running yet) → low live impact. Careful dedicated pass: switch notification-service AND types.ts Timestamp imports to `firebase-admin/firestore`, then chase the cascade.
+2. **integration-manager callers** — `/api/integrations/[integrationId]` GET/PATCH/DELETE, `/sync`, `/test` fail for every integration except Zoom. `updateIntegration`, `syncIntegration`, `testIntegration`, `listConnectedIntegrations` have NO option param — add `useAdminSdk` to those signatures (and the internal getIntegrationCredentials call) first. `listConnectedIntegrations` is hit by public `/api/health` (always reports 0 integrations).
+3. **promotion-service.ts** — clean swap scoped (import bundles COLLECTIONS; `await FirestoreService.` pattern). OPEN QUESTION: is there a promotions admin UI calling `/api/admin/promotions`? If not, orphan / low priority.
+4. **golden-master-updater.ts** (legacy training "apply/deploy" tab) — clean swap scoped. OPEN QUESTION for owner: do you use the OLD training tab (`/api/training/apply-update` + `/deploy-golden-master`) or the newer Mission-Control grade pipeline (already clean/Admin)? Only fix old one if still used.
+5. **lead-service updateLead/getLead on server** — lead-routing paths (`/api/leads/route-lead`, `/api/routing/route-lead`, `/api/leads` PATCH) call updateLead which is client-SDK-only (no option). Add useAdminSdk option + admin path.
+6. **deal-service `getClientSignalCoordinator`** (line 11) — latent best-effort signal emission still on the client coordinator; separate from the data CRUD (fixed).
+
+## TIER 3 — needs a SAFETY SWITCH (do last)
+**Workflow engine** (`lib/workflows/` PLURAL is canonical) + **email-sequence engine** — converting to Admin SDK makes them START FIRING for the first time (dormant automations send real emails/actions). Land switched-OFF by default with a preview of what's queued. Also: PLURAL CRUD API validates with the SINGULAR engine's Zod schema (rejects builder-shaped workflows) — Phase 1 is to add PLURAL Zod schemas. SINGULAR deal-scoring Signal Bus path (`WorkflowCoordinator.handleSignal`) is DEAD CODE (no caller) — safe to delete later; lead/deal SCORING stays (owner confirmed).
+
+## DEAD / "doesn't matter" — DO NOT DELETE without proving unused + owner OK
+No live caller: battlecard competitive-monitor, playbook-engine, schema-change-* handlers (`/api/schema-changes` UI unmounted), `/api/learning/ab-test`+`/fine-tune`, HTML `/api/email-templates` route, `/api/notifications/send` route, and dead files (analytics-service, workflow-analytics, ecommerce-analytics, schema-manager, advanced-rag, vertex-tuner, knowledge-analyzer, knowledge-processor-enhanced). gemini-service's client-SDK key read is dead on the server (keys resolve via Admin-first api-key-service — that is WHY AI works).
+
+## Standing context
+This remediation is **Step 1** of the May 21 roadmap (fix what's broken) and doubles as prep for **Step 2** (multi-tenant flip — server routes need Admin SDK + a runtime tenantId threaded through getSubCollection). The 3 hard multi-tenant gates remain: tenantId threading, tenant-isolated Firestore rules, tenant provisioning. Communicate in PLAIN ENGLISH — owner has repeatedly asked for no jargon.
+
+---
+
 > **PAUSED:** May 10, 2026 late evening — mid-Google-Ads-walkthrough.
 > Operator created the Google Ads account in **Expert Mode** (clicked Skip
 > → "Leave campaign creation" — account shell exists, no campaigns yet).

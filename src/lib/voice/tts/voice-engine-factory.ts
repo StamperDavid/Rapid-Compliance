@@ -3,8 +3,8 @@
  * Routes TTS requests to the appropriate provider based on organization settings
  */
 
-import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { Timestamp } from 'firebase-admin/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
@@ -143,15 +143,12 @@ export class VoiceEngineFactory {
     }
 
     try {
-      if (!db) {
-        logger.warn('Firestore not initialized, using default TTS config', { file: 'voice-engine-factory.ts' });
-        return DEFAULT_TTS_CONFIGS.elevenlabs as TTSEngineConfig;
-      }
-      const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, 'settings', 'ttsEngine');
-      const docSnap = await getDoc(docRef);
+      const config = await AdminFirestoreService.get<TTSEngineConfig>(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/settings`,
+        'ttsEngine'
+      );
 
-      if (docSnap.exists()) {
-        const config = docSnap.data() as TTSEngineConfig;
+      if (config) {
         configCache.set(PLATFORM_ID, { config, timestamp: Date.now() });
         return config;
       }
@@ -189,11 +186,12 @@ export class VoiceEngineFactory {
       updatedBy: userId,
     };
 
-    if (!db) {
-      throw new Error('Firestore not initialized');
-    }
-    const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, 'settings', 'ttsEngine');
-    await setDoc(docRef, updatedConfig, { merge: true });
+    await AdminFirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/settings`,
+      'ttsEngine',
+      updatedConfig,
+      true
+    );
 
     // Clear cache
     configCache.delete(PLATFORM_ID);

@@ -4,9 +4,9 @@
  * Revenue flow: Deal -> Quote -> Invoice -> Payment
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Quote, QuoteFilters, QuoteLineItem, CreateQuoteInput, UpdateQuoteInput, QuoteLineItemInput } from '@/types/quote';
@@ -27,7 +27,7 @@ interface PaginatedResult<T> {
  */
 async function generateQuoteNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const existing = await FirestoreService.getAll<Quote>(
+  const existing = await AdminFirestoreService.getAll<Quote>(
     getSubCollection('quotes'),
     [orderBy('createdAt', 'desc')]
   );
@@ -118,7 +118,7 @@ export async function getQuotes(
 
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Quote>(
+    const result = await AdminFirestoreService.getAllPaginated<Quote>(
       getSubCollection('quotes'),
       constraints,
       options?.pageSize ?? 50,
@@ -139,7 +139,7 @@ export async function getQuotes(
  */
 export async function getQuote(quoteId: string): Promise<Quote | null> {
   try {
-    const quote = await FirestoreService.get<Quote>(
+    const quote = await AdminFirestoreService.get<Quote>(
       getSubCollection('quotes'),
       quoteId
     );
@@ -181,7 +181,7 @@ export async function createQuote(data: CreateQuoteInput): Promise<Quote> {
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('quotes'),
       quoteId,
       quote,
@@ -213,7 +213,7 @@ export async function updateQuote(
       processedUpdates = { ...processedUpdates, lineItems, ...totals };
     }
 
-    await FirestoreService.update(
+    await AdminFirestoreService.update(
       getSubCollection('quotes'),
       quoteId,
       { ...processedUpdates, updatedAt: new Date() }
@@ -244,7 +244,7 @@ export async function deleteQuote(quoteId: string): Promise<void> {
       throw new Error('Cannot delete a quote that has been converted to an invoice.');
     }
 
-    await FirestoreService.delete(getSubCollection('quotes'), quoteId);
+    await AdminFirestoreService.delete(getSubCollection('quotes'), quoteId);
     logger.info('Quote deleted', { quoteId });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -275,7 +275,7 @@ export async function convertQuoteToInvoice(quoteId: string): Promise<string> {
     // Create invoice from quote data
     const invoiceId = `invoice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const year = new Date().getFullYear();
-    const existingInvoices = await FirestoreService.getAll(
+    const existingInvoices = await AdminFirestoreService.getAll(
       getSubCollection('invoices'),
       [orderBy('createdAt', 'desc')]
     );
@@ -309,7 +309,7 @@ export async function convertQuoteToInvoice(quoteId: string): Promise<string> {
       updatedAt: now,
     };
 
-    await FirestoreService.set(getSubCollection('invoices'), invoiceId, invoice, false);
+    await AdminFirestoreService.set(getSubCollection('invoices'), invoiceId, invoice, false);
 
     // Update quote status
     await updateQuote(quoteId, {

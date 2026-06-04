@@ -16,7 +16,9 @@ import Link from 'next/link';
 import type {
   FormDefinition,
   FormFieldConfig,
+  FieldResponse,
 } from '@/lib/forms/types';
+import { evaluateConditions } from '@/lib/forms/conditional-logic';
 
 // ============================================================================
 // TYPES
@@ -703,6 +705,38 @@ export default function PublicFormPage() {
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [formData, currentPage]);
 
+  // Build a fieldId-keyed response map across ALL fields so conditional
+  // logic can reference fields on any page. evaluateConditions returns true
+  // when a field has no logic (or logic is disabled), so untouched forms are
+  // unaffected.
+  const responsesMap = useMemo(() => {
+    const map = new Map<string, FieldResponse>();
+    if (!formData) {
+      return map;
+    }
+    formData.fields.forEach((f) => {
+      if (!f.id || !f.name) {
+        return;
+      }
+      map.set(f.id, {
+        fieldId: f.id,
+        fieldName: f.name,
+        fieldType: f.type ?? 'text',
+        value: values[f.name],
+      });
+    });
+    return map;
+  }, [formData, values]);
+
+  // Fields on the current page that should be shown given the current answers.
+  const visiblePageFields = useMemo(
+    () =>
+      pageFields.filter((f) =>
+        f.conditionalLogic ? evaluateConditions(f.conditionalLogic, responsesMap) : true
+      ),
+    [pageFields, responsesMap]
+  );
+
   // Total pages
   const totalPages = formData?.form.pages?.length ?? 1;
 
@@ -710,7 +744,7 @@ export default function PublicFormPage() {
   const validatePage = useCallback(() => {
     const newErrors: Record<string, string> = {};
 
-    pageFields.forEach((field) => {
+    visiblePageFields.forEach((field) => {
       if (!field.name) {
         return;
       }
@@ -739,7 +773,7 @@ export default function PublicFormPage() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [pageFields, values]);
+  }, [visiblePageFields, values]);
 
   // Handle value change
   const handleChange = useCallback((fieldName: string, value: unknown) => {
@@ -906,7 +940,7 @@ export default function PublicFormPage() {
 
         {/* Form Fields */}
         <form onSubmit={(e) => e.preventDefault()}>
-          {pageFields.map((field) => (
+          {visiblePageFields.map((field) => (
             <FieldRenderer
               key={field.id}
               field={field}

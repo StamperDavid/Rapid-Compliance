@@ -257,13 +257,13 @@ export class PricingStrategist extends BaseSpecialist {
       };
     }
 
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     const validItems: Array<{ productId: string; valid: boolean; reason?: string }> = [];
 
     for (const item of payload.items) {
       // Fetch product to validate price
-      const product: { price?: number; status?: string } | null = await FirestoreService.get(
+      const product: { price?: number; status?: string } | null = await AdminFirestoreService.get(
         getSubCollection('products'),
         item.productId
       );
@@ -315,7 +315,7 @@ export class PricingStrategist extends BaseSpecialist {
       };
     }
 
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     // Fetch discount code
     const discount: {
@@ -327,7 +327,7 @@ export class PricingStrategist extends BaseSpecialist {
       usageCount?: number;
       usageLimit?: number;
       active?: boolean;
-    } | null = await FirestoreService.get(
+    } | null = await AdminFirestoreService.get(
       getSubCollection('discounts'),
       payload.discountCode.toUpperCase()
     );

@@ -30,6 +30,8 @@ import {
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // Helper to ensure db is available
 function getDb() {
@@ -100,14 +102,9 @@ export async function createForm(
 export async function getForm(
   formId: string
 ): Promise<FormDefinition | null> {
-  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
-  const formSnap = await getDoc(formRef);
-
-  if (!formSnap.exists()) {
-    return null;
-  }
-
-  return formSnap.data() as FormDefinition;
+  // Server-only path (dashboard form routes): use Admin SDK so the read
+  // isn't rejected by Firestore rules (no auth context on the server).
+  return AdminFirestoreService.get<FormDefinition>(getFormsCollectionPath(), formId);
 }
 
 /**
@@ -117,12 +114,10 @@ export async function updateForm(
   formId: string,
   updates: Partial<FormDefinition>
 ): Promise<void> {
-  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
-
-  await updateDoc(formRef, {
+  await AdminFirestoreService.update(getFormsCollectionPath(), formId, {
     ...updates,
-    updatedAt: serverTimestamp(),
-    version: increment(1),
+    updatedAt: FieldValue.serverTimestamp(),
+    version: FieldValue.increment(1),
   });
 
   logger.info('Form updated', { formId });
@@ -201,12 +196,10 @@ export async function listForms(
 export async function publishForm(
   formId: string
 ): Promise<void> {
-  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
-
-  await updateDoc(formRef, {
+  await AdminFirestoreService.update(getFormsCollectionPath(), formId, {
     status: 'published',
-    publishedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    publishedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   });
 
   logger.info('Form published', { formId });

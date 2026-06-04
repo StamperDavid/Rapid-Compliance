@@ -16,7 +16,7 @@
  * and now live in the unified MetaServicesIntegration card.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
@@ -133,6 +133,44 @@ export default function SocialPlatformIntegration({
   const [connecting, setConnecting] = useState(false);
   const [creds, setCreds] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  // Two-step disconnect confirmation (Standing Rule: no single-click
+  // destructive actions). First click arms, second click fires, and the
+  // armed state auto-disarms after 5 seconds.
+  const [disconnectArmed, setDisconnectArmed] = useState(false);
+  const disarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (disarmTimerRef.current) {
+        clearTimeout(disarmTimerRef.current);
+      }
+    };
+  }, []);
+
+  const armDisconnect = (): void => {
+    setDisconnectArmed(true);
+    if (disarmTimerRef.current) {
+      clearTimeout(disarmTimerRef.current);
+    }
+    disarmTimerRef.current = setTimeout(() => {
+      setDisconnectArmed(false);
+      disarmTimerRef.current = null;
+    }, 5000);
+  };
+
+  const cancelDisconnect = (): void => {
+    setDisconnectArmed(false);
+    if (disarmTimerRef.current) {
+      clearTimeout(disarmTimerRef.current);
+      disarmTimerRef.current = null;
+    }
+  };
+
+  const confirmDisconnect = (): void => {
+    cancelDisconnect();
+    onDisconnect();
+  };
 
   const isConnected = integration?.status === 'active';
   const accountHandle = typeof integration?.handle === 'string' ? integration.handle : null;
@@ -322,15 +360,26 @@ export default function SocialPlatformIntegration({
         </div>
       </div>
 
-      <Button
-        variant="outline"
-        onClick={onDisconnect}
-        style={{
-          width: '100%',
-        }}
-      >
-        Disconnect
-      </Button>
+      {disconnectArmed ? (
+        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+          <Button variant="destructive" onClick={confirmDisconnect} style={{ flex: 1 }}>
+            Click again to confirm
+          </Button>
+          <Button variant="outline" onClick={cancelDisconnect}>
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <Button
+          variant="outline"
+          onClick={armDisconnect}
+          style={{
+            width: '100%',
+          }}
+        >
+          Disconnect
+        </Button>
+      )}
     </div>
   );
 }
