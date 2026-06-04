@@ -541,6 +541,85 @@ export async function createIndustryGMVersionFromEdit(
 }
 
 /**
+ * Create a new GM version that changes ONLY the LLM model (config.model),
+ * preserving the systemPrompt and baked-in Brand DNA verbatim.
+ *
+ * This is operator-initiated infrastructure config — NOT an agent editing its
+ * own prompt — so it is exempt from the grade-gated prompt pipeline (Standing
+ * Rule #2 guards prompt drift, not model selection). It IS versioned, so a
+ * model swap that hurts behavior can be rolled back to the previous version
+ * via deployIndustryGMVersion. Created inactive; deploy it to activate.
+ */
+export async function createIndustryGMVersionFromModelChange(
+  rawSpecialistId: string,
+  industryKey: string,
+  newModel: string,
+  createdBy: string,
+): Promise<SpecialistGoldenMaster | null> {
+  if (!adminDb) { return null; }
+
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
+  const activeGM = await getActiveSpecialistGMByIndustry(specialistId, industryKey);
+  if (!activeGM) {
+    logger.error(
+      '[SpecialistGMService] No active industry GM found — cannot change model',
+      undefined,
+      { specialistId, industryKey },
+    );
+    return null;
+  }
+
+  const previousModel = typeof activeGM.config.model === 'string'
+    ? activeGM.config.model
+    : 'claude-sonnet-4.6';
+  if (previousModel === newModel) {
+    return activeGM; // No-op: already on that model
+  }
+
+  const newVersion = activeGM.version + 1;
+  const newDocId = buildIndustryGMDocId(specialistId, industryKey, newVersion);
+  const now = new Date().toISOString();
+  const newConfig: Record<string, unknown> = {
+    ...activeGM.config,
+    model: newModel,
+  };
+
+  const newGM: SpecialistGoldenMaster = {
+    id: newDocId,
+    specialistId: activeGM.specialistId,
+    specialistName: activeGM.specialistName,
+    version: newVersion,
+    industryKey,
+    config: newConfig,
+    systemPromptSnapshot: activeGM.systemPromptSnapshot,
+    sourceImprovementRequestId: `model-change-${now}`,
+    changesApplied: [
+      {
+        field: 'model',
+        currentValue: previousModel,
+        proposedValue: newModel,
+        reason: `Operator changed model from ${previousModel} to ${newModel}`,
+        confidence: 1,
+      },
+    ],
+    isActive: false,
+    createdAt: now,
+    createdBy,
+    notes: `Model change ${previousModel} -> ${newModel}. Not yet deployed.`,
+    previousVersion: activeGM.version,
+  };
+
+  await adminDb.collection(getGMCollectionPath()).doc(newDocId).set(newGM);
+
+  logger.info(
+    `[SpecialistGMService] Created industry-scoped v${newVersion} for ${specialistId}:${industryKey} (model ${previousModel} -> ${newModel})`,
+    { specialistId, industryKey, version: newVersion, newDocId },
+  );
+
+  return newGM;
+}
+
+/**
  * Deploy a specific industry-scoped GM version. Deactivates any other active
  * versions for the same (specialistId, industryKey) pair and activates the
  * target. Runs in a single Firestore batch. Invalidates the cache so the
