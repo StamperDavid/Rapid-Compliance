@@ -29,7 +29,7 @@ export async function POST(
 
     const { user: _user } = authResult;
 
-    const result = await testIntegration(integrationId);
+    const result = await testIntegration(integrationId, { useAdminSdk: true });
 
     return NextResponse.json({
       success: result.success,
