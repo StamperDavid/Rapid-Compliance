@@ -24,6 +24,7 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getAgentKnowledgeContext } from '@/lib/agent/rag-service';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -280,12 +281,34 @@ function stripJsonFences(raw: string): string {
 async function callOpenRouter(
   ctx: LlmCallContext,
   userPrompt: string,
+  knowledgeQuery?: string,
 ): Promise<string> {
   const provider = new OpenRouterProvider(PLATFORM_ID);
+
+  // Per-agent knowledge: pull only from THIS Copywriter's own knowledge base
+  // (isolated by SPECIALIST_ID). Returns '' when the agent has no KB or nothing
+  // relevant, so the system prompt is unchanged in that case. No cross-agent bleed.
+  let systemContent = ctx.resolvedSystemPrompt;
+  if (knowledgeQuery && knowledgeQuery.trim().length > 0) {
+    try {
+      const kb = await getAgentKnowledgeContext(SPECIALIST_ID, knowledgeQuery);
+      if (kb) {
+        systemContent += kb;
+      }
+    } catch (kbError) {
+      // Knowledge retrieval is best-effort enrichment — never fail the generation
+      // because the KB lookup hiccuped. Log and proceed with the base prompt.
+      logger.warn('[Copywriter] knowledge retrieval failed; proceeding without KB', {
+        file: FILE,
+        error: kbError instanceof Error ? kbError.message : String(kbError),
+      });
+    }
+  }
+
   const response = await provider.chat({
     model: ctx.gm.model,
     messages: [
-      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'system', content: systemContent },
       { role: 'user', content: userPrompt },
     ],
     temperature: ctx.gm.temperature,
@@ -386,7 +409,8 @@ async function executePageCopy(
   ctx: LlmCallContext,
 ): Promise<PageCopyResult> {
   const userPrompt = buildPageCopyUserPrompt(req);
-  const rawContent = await callOpenRouter(ctx, userPrompt);
+  const knowledgeQuery = `${req.pageName} ${req.pagePurpose ?? ''} ${(req.seoKeywords ?? []).join(' ')}`.trim();
+  const rawContent = await callOpenRouter(ctx, userPrompt, knowledgeQuery);
 
   let parsed: unknown;
   try {
@@ -478,7 +502,8 @@ async function executeProposal(
   ctx: LlmCallContext,
 ): Promise<ProposalResult> {
   const userPrompt = buildProposalUserPrompt(req);
-  const rawContent = await callOpenRouter(ctx, userPrompt);
+  const knowledgeQuery = `${req.companyName} ${req.industry ?? ''} ${(req.painPoints ?? []).join(' ')}`.trim();
+  const rawContent = await callOpenRouter(ctx, userPrompt, knowledgeQuery);
 
   let parsed: unknown;
   try {
@@ -582,7 +607,8 @@ async function executeEmailSequence(
   ctx: LlmCallContext,
 ): Promise<EmailSequenceResult> {
   const userPrompt = buildEmailSequenceUserPrompt(req);
-  const rawContent = await callOpenRouter(ctx, userPrompt);
+  const knowledgeQuery = `${req.topic} ${req.audience}`.trim();
+  const rawContent = await callOpenRouter(ctx, userPrompt, knowledgeQuery);
 
   let parsed: unknown;
   try {
