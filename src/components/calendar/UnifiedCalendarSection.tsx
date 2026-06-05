@@ -793,6 +793,7 @@ function formatMeetingTime(m: MeetingRecord): string {
 }
 
 function MeetingsPanel() {
+  const authFetch = useAuthFetch();
   const [meetings, setMeetings] = useState<MeetingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -803,7 +804,7 @@ function MeetingsPanel() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/meetings/list', { method: 'GET' });
+      const res = await authFetch('/api/meetings/list', { method: 'GET' });
       const data = (await res.json()) as { success: boolean; meetings?: MeetingRecord[]; error?: string };
       if (!data.success) {throw new Error(data.error ?? 'Failed to load');}
       setMeetings(data.meetings ?? []);
@@ -812,7 +813,7 @@ function MeetingsPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => { void load(); }, [load]);
 

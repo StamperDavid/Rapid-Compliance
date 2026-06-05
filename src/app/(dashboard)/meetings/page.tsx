@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { CalendarClock, Video, Trash2, X, RefreshCw, Plus, ExternalLink } from 'lucide-react';
 import { PageTitle, SectionDescription, Caption } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface Meeting {
   id: string;
@@ -66,6 +67,7 @@ function statusPill(status: string | undefined): { label: string; className: str
 }
 
 export default function MeetingsPage() {
+  const authFetch = useAuthFetch();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export default function MeetingsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/meetings/list', { method: 'GET' });
+      const res = await authFetch('/api/meetings/list', { method: 'GET' });
       const data = (await res.json()) as ListResponse;
       if (!data.success) {
         throw new Error(data.error ?? 'Failed to load meetings');
@@ -89,7 +91,7 @@ export default function MeetingsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void load();

@@ -8,10 +8,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireAuth(req);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const bookingsPath = getSubCollection('bookings');
     const docs = await AdminFirestoreService.getAll(bookingsPath, []);
 
