@@ -20,6 +20,8 @@ interface Field {
   required: boolean;
   config?: { linkedSchema?: string };
   lookupEntity?: string;
+  options?: string[];
+  description?: string;
 }
 
 interface Schema {
@@ -101,6 +103,11 @@ export default function SchemaBuilderPage() {
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingSchema, setEditingSchema] = useState<Schema | null>(null);
+
+  // Per-row draft text for the "add a choice" input, keyed by editor + field index.
+  const [optionDrafts, setOptionDrafts] = useState<Record<string, string>>({});
+  const setOptionDraft = (draftKey: string, value: string) =>
+    setOptionDrafts(prev => ({ ...prev, [draftKey]: value }));
 
   const [newSchema, setNewSchema] = useState<{ name: string; pluralName: string; icon: string; fields: Field[] }>({
     name: '',
@@ -199,7 +206,7 @@ export default function SchemaBuilderPage() {
     });
   };
 
-  const updateField = (index: number, key: string, value: string | boolean) => {
+  const updateField = (index: number, key: string, value: string | boolean | string[]) => {
     const updatedFields = [...newSchema.fields];
     const currentField = updatedFields[index];
     if (currentField) {
@@ -561,6 +568,72 @@ export default function SchemaBuilderPage() {
                             </button>
                           )}
                         </div>
+
+                        {/* Help text / description */}
+                        <input
+                          type="text"
+                          value={field.description ?? ''}
+                          onChange={(e) => updateField(index, 'description', e.target.value)}
+                          placeholder="Help text (shown under the field)"
+                          style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.8125rem' }}
+                        />
+
+                        {/* Options editor — single/multi select only */}
+                        {(field.type === 'singleSelect' || field.type === 'multiSelect') && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Choices</span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {(field.options ?? []).map((opt, optIndex) => (
+                                <span key={`${field.id}-opt-${optIndex}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '9999px', fontSize: '0.75rem', color: 'var(--color-text-primary)' }}>
+                                  {opt}
+                                  <button
+                                    type="button"
+                                    onClick={() => updateField(index, 'options', (field.options ?? []).filter((_, i) => i !== optIndex))}
+                                    style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', lineHeight: 1, padding: 0 }}
+                                    aria-label={`Remove ${opt}`}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              ))}
+                              {(field.options ?? []).length === 0 && (
+                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>No choices yet.</span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <input
+                                type="text"
+                                value={optionDrafts[`new-${index}`] ?? ''}
+                                onChange={(e) => setOptionDraft(`new-${index}`, e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const draft = (optionDrafts[`new-${index}`] ?? '').trim();
+                                    if (draft && !(field.options ?? []).includes(draft)) {
+                                      updateField(index, 'options', [...(field.options ?? []), draft]);
+                                    }
+                                    setOptionDraft(`new-${index}`, '');
+                                  }
+                                }}
+                                placeholder="Add a choice…"
+                                style={{ flex: 1, padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.8125rem' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const draft = (optionDrafts[`new-${index}`] ?? '').trim();
+                                  if (draft && !(field.options ?? []).includes(draft)) {
+                                    updateField(index, 'options', [...(field.options ?? []), draft]);
+                                  }
+                                  setOptionDraft(`new-${index}`, '');
+                                }}
+                                style={{ padding: '0.5rem 0.875rem', backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: '600' }}
+                              >
+                                Add
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -728,6 +801,84 @@ export default function SchemaBuilderPage() {
                           >
                             ✕
                           </button>
+                        )}
+
+                        {/* Help text / description — full width on its own line */}
+                        <input
+                          type="text"
+                          value={field.description ?? ''}
+                          onChange={(e) => {
+                            const updatedFields = [...editingSchema.fields];
+                            updatedFields[index] = { ...field, description: e.target.value };
+                            setEditingSchema({ ...editingSchema, fields: updatedFields });
+                          }}
+                          placeholder="Help text (shown under the field)"
+                          style={{ flexBasis: '100%', width: '100%', padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.8125rem' }}
+                        />
+
+                        {/* Options editor — single/multi select only */}
+                        {(field.type === 'singleSelect' || field.type === 'multiSelect') && (
+                          <div style={{ flexBasis: '100%', width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.375rem', border: '1px solid var(--color-border-light)' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Choices</span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {(field.options ?? []).map((opt, optIndex) => (
+                                <span key={`${field.id}-eopt-${optIndex}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '9999px', fontSize: '0.75rem', color: 'var(--color-text-primary)' }}>
+                                  {opt}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedFields = [...editingSchema.fields];
+                                      updatedFields[index] = { ...field, options: (field.options ?? []).filter((_, i) => i !== optIndex) };
+                                      setEditingSchema({ ...editingSchema, fields: updatedFields });
+                                    }}
+                                    style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', lineHeight: 1, padding: 0 }}
+                                    aria-label={`Remove ${opt}`}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              ))}
+                              {(field.options ?? []).length === 0 && (
+                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>No choices yet.</span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <input
+                                type="text"
+                                value={optionDrafts[`edit-${index}`] ?? ''}
+                                onChange={(e) => setOptionDraft(`edit-${index}`, e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const draft = (optionDrafts[`edit-${index}`] ?? '').trim();
+                                    if (draft && !(field.options ?? []).includes(draft)) {
+                                      const updatedFields = [...editingSchema.fields];
+                                      updatedFields[index] = { ...field, options: [...(field.options ?? []), draft] };
+                                      setEditingSchema({ ...editingSchema, fields: updatedFields });
+                                    }
+                                    setOptionDraft(`edit-${index}`, '');
+                                  }
+                                }}
+                                placeholder="Add a choice…"
+                                style={{ flex: 1, minWidth: '120px', padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.8125rem' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const draft = (optionDrafts[`edit-${index}`] ?? '').trim();
+                                  if (draft && !(field.options ?? []).includes(draft)) {
+                                    const updatedFields = [...editingSchema.fields];
+                                    updatedFields[index] = { ...field, options: [...(field.options ?? []), draft] };
+                                    setEditingSchema({ ...editingSchema, fields: updatedFields });
+                                  }
+                                  setOptionDraft(`edit-${index}`, '');
+                                }}
+                                style={{ padding: '0.5rem 0.875rem', backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: '600' }}
+                              >
+                                Add
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
                     ))}

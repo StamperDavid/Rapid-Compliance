@@ -16,7 +16,7 @@ import SubpageNav from '@/components/ui/SubpageNav';
 import { LEADS_TABS } from '@/lib/constants/subpage-nav';
 
 // Proper type for dynamic record data
-type RecordValue = string | number | boolean | null;
+type RecordValue = string | number | boolean | string[] | null;
 
 interface EntityRecord {
   id: string;
@@ -30,6 +30,7 @@ interface SchemaField {
   type: string;
   required?: boolean;
   options?: string[];
+  description?: string;
   config?: { linkedSchema?: string };
   lookupEntity?: string;
 }
@@ -132,6 +133,9 @@ export default function EntityTablePage() {
           break;
         case 'singleSelect':
           defaults[field.key] = '';
+          break;
+        case 'multiSelect':
+          defaults[field.key] = [];
           break;
         default:
           defaults[field.key] = '';
@@ -390,6 +394,51 @@ export default function EntityTablePage() {
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
+        );
+      }
+
+      case 'multiSelect': {
+        const options = getPicklistOptions(field);
+        const selected = Array.isArray(value) ? value : [];
+        const toggleOption = (opt: string) => {
+          const next = selected.includes(opt)
+            ? selected.filter(v => v !== opt)
+            : [...selected, opt];
+          setFormData({ ...formData, [field.key]: next });
+        };
+        return (
+          <div
+            style={{
+              ...baseInputStyle,
+              padding: '0.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              maxHeight: '200px',
+              overflowY: 'auto',
+            }}
+          >
+            {options.length === 0 ? (
+              <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                No options available
+              </span>
+            ) : (
+              options.map(opt => (
+                <label
+                  key={opt}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(opt)}
+                    onChange={() => toggleOption(opt)}
+                    style={{ width: '1rem', height: '1rem', accentColor: 'var(--color-primary)' }}
+                  />
+                  <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>{opt}</span>
+                </label>
+              ))
+            )}
+          </div>
         );
       }
 
@@ -816,6 +865,11 @@ export default function EntityTablePage() {
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                       {field.label} {field.required && <span style={{ color: 'var(--color-error)' }}>*</span>}
                     </label>
+                    {field.description && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+                        {field.description}
+                      </p>
+                    )}
                     {renderFormField(field)}
                   </div>
                 ))}
