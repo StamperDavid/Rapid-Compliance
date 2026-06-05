@@ -18,6 +18,8 @@ interface SchemaField {
   label?: string;
   type?: string;
   required?: boolean;
+  options?: string[];
+  description?: string;
   createdAt?: FirebaseFirestore.FieldValue;
   updatedAt?: FirebaseFirestore.FieldValue;
 }
@@ -42,6 +44,8 @@ const SchemaFieldInputSchema = z.object({
   label: z.string().optional(),
   type: z.string().optional(),
   required: z.boolean().optional(),
+  options: z.array(z.string()).optional(),
+  description: z.string().optional(),
 });
 
 const SchemaPermissionsInputSchema = z.object({
@@ -79,6 +83,8 @@ interface ProcessedSchemaField {
   label: string;
   type: string;
   required: boolean;
+  options?: string[];
+  description?: string;
   createdAt: FirebaseFirestore.FieldValue;
   updatedAt: FirebaseFirestore.FieldValue;
 }
@@ -206,6 +212,8 @@ export async function POST(request: NextRequest) {
       label: (field.label ?? field.key ?? 'Field'),
       type: (field.type ?? 'text'),
       required: !!field.required,
+      ...(field.options ? { options: field.options } : {}),
+      ...(field.description ? { description: field.description } : {}),
       createdAt: now,
       updatedAt: now,
     }));

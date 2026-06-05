@@ -66,6 +66,9 @@ export interface SchemaField {
   // Type
   type: FieldType;
   config: FieldConfig; // Type-specific configuration
+
+  // Pick-list options (flat, for select/multiSelect fields). Mirrors config.options.
+  options?: string[];
   
   // Validation
   required: boolean;
