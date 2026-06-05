@@ -1,12 +1,10 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { OutboundSequence, ProspectEnrollment } from '@/types/outbound-sequence'
 import { logger } from '@/lib/logger/logger';
 import { PageTitle } from '@/components/ui/typography';
@@ -14,6 +12,7 @@ import { PageTitle } from '@/components/ui/typography';
 export default function EmailSequencesPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [sequences, setSequences] = useState<OutboundSequence[]>([]);
   const [enrollments, setEnrollments] = useState<ProspectEnrollment[]>([]);
@@ -22,94 +21,48 @@ export default function EmailSequencesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  // Load sequences from Firestore
+  // Load sequences + enrollments via API
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const [seqRes, enrRes] = await Promise.all([
+        authFetch('/api/outbound/sequences'),
+        authFetch('/api/outbound/sequences/enrollments'),
+      ]);
+
+      const seqJson = (await seqRes.json()) as { success?: boolean; sequences?: OutboundSequence[] };
+      const enrJson = (await enrRes.json()) as { success?: boolean; enrollments?: ProspectEnrollment[] };
+
+      setSequences(seqJson.sequences ?? []);
+      setEnrollments(enrJson.enrollments ?? []);
+    } catch (error) {
+      logger.error('Error loading sequences:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
+
   useEffect(() => {
-    if (!PLATFORM_ID) {return;}
-
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        
-        // Load sequences
-        const seqs = await FirestoreService.getAll<OutboundSequence>(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
-          []
-        );
-        setSequences(seqs);
-
-        // Load enrollments
-        const enr = await FirestoreService.getAll<ProspectEnrollment>(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequenceEnrollments`,
-          []
-        );
-        setEnrollments(enr);
-      } catch (error) {
-        logger.error('Error loading sequences:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     void loadData();
-  }, []);
+  }, [loadData]);
 
   const handleCreateSequence = async (name: string, description: string) => {
-    if (!PLATFORM_ID || !user) {return;}
+    if (!user) {return;}
 
     try {
-      const sequenceId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const newSequence: OutboundSequence = {
-        id: sequenceId,
-        name,
-        description,
-        status: 'draft',
-        steps: [],
-        settings: {
-          stopOnReply: true,
-          stopOnBounc: true,
-          stopOnUnsubscribe: true,
-          sendingWindow: {
-            enabled: true,
-            timezone: 'America/New_York',
-            days: [1, 2, 3, 4, 5], // Mon-Fri
-            startHour: 9,
-            endHour: 17,
-          },
-        },
-        analytics: {
-          totalEnrolled: 0,
-          activeProspects: 0,
-          completedProspects: 0,
-          totalSent: 0,
-          totalDelivered: 0,
-          totalOpened: 0,
-          totalClicked: 0,
-          totalReplied: 0,
-          totalBounced: 0,
-          totalUnsubscribed: 0,
-          meetingsBooked: 0,
-          dealsCreated: 0,
-          revenue: 0,
-          deliveryRate: 0,
-          openRate: 0,
-          clickRate: 0,
-          replyRate: 0,
-          conversionRate: 0,
-        },
-        createdBy: user.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      const res = await authFetch('/api/outbound/sequences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description }),
+      });
+      const json = (await res.json()) as { success?: boolean; sequence?: OutboundSequence; error?: string };
 
-      await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
-        sequenceId,
-        newSequence,
-        false
-      );
+      if (!json.success || !json.sequence) {
+        throw new Error(json.error ?? 'Failed to create sequence');
+      }
 
-      setSequences([...sequences, newSequence]);
+      setSequences([...sequences, json.sequence]);
       setShowCreateModal(false);
     } catch (error) {
       logger.error('Error creating sequence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -119,11 +72,15 @@ export default function EmailSequencesPage() {
 
   const handleActivateSequence = async (sequenceId: string) => {
     try {
-      await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
-        sequenceId,
-        { status: 'active' }
-      );
+      const res = await authFetch(`/api/outbound/sequences/${sequenceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!json.success) {
+        throw new Error(json.error ?? 'Failed to activate sequence');
+      }
 
       setSequences(sequences.map(s =>
         s.id === sequenceId ? { ...s, status: 'active' as const } : s
@@ -137,10 +94,11 @@ export default function EmailSequencesPage() {
   const confirmDeleteSequence = async () => {
     if (!deleteTarget) { return; }
     try {
-      await FirestoreService.delete(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
-        deleteTarget
-      );
+      const res = await authFetch(`/api/outbound/sequences/${deleteTarget}`, { method: 'DELETE' });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!json.success) {
+        throw new Error(json.error ?? 'Failed to delete sequence');
+      }
       setSequences(sequences.filter(s => s.id !== deleteTarget));
       toast.success('Sequence deleted');
     } catch (error) {
@@ -153,11 +111,15 @@ export default function EmailSequencesPage() {
 
   const handlePauseSequence = async (sequenceId: string) => {
     try {
-      await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
-        sequenceId,
-        { status: 'paused' }
-      );
+      const res = await authFetch(`/api/outbound/sequences/${sequenceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'paused' }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!json.success) {
+        throw new Error(json.error ?? 'Failed to pause sequence');
+      }
 
       setSequences(sequences.map(s =>
         s.id === sequenceId ? { ...s, status: 'paused' as const } : s

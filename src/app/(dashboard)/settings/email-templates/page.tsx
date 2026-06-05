@@ -15,8 +15,6 @@ import SafeHtml from '@/components/SafeHtml';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm, usePrompt } from '@/hooks/useConfirm';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
 
 // Type definitions for email template designer
 // Using a flat interface since the code accesses properties after type checking block.type
@@ -91,8 +89,6 @@ interface SmsTemplate {
   isCustom: boolean;
 }
 
-const emailTemplatesPath = getSubCollection('emailTemplates');
-
 export default function EmailTemplatesPage() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
@@ -120,17 +116,18 @@ export default function EmailTemplatesPage() {
   const [showSmsCustomTrigger, setShowSmsCustomTrigger] = useState(false);
   const [showFilterBuilder, setShowFilterBuilder] = useState(false);
 
-  // Load custom templates from Firestore on mount
+  // Load custom templates on mount
   const loadCustomTemplates = useCallback(async () => {
     try {
-      const saved = await FirestoreService.getAll<CustomTemplate>(emailTemplatesPath);
-      if (saved.length > 0) {
-        setCustomTemplates(saved);
+      const res = await authFetch('/api/email/html-templates');
+      const json = (await res.json()) as { success?: boolean; templates?: CustomTemplate[] };
+      if (json.success && json.templates && json.templates.length > 0) {
+        setCustomTemplates(json.templates);
       }
     } catch {
       // Silent fail — templates just won't be pre-loaded
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     if (user) {
@@ -620,9 +617,16 @@ Best regards,
                                       });
                                       if (confirmed) {
                                         setCustomTemplates(customTemplates.filter(t => t.id !== template.id));
-                                        void FirestoreService.delete(emailTemplatesPath, template.id).catch(() => {
-                                          toast.error('Failed to delete template from database');
-                                        });
+                                        void authFetch(`/api/email/html-templates/${template.id}`, { method: 'DELETE' })
+                                          .then(async (res) => {
+                                            const json = (await res.json()) as { success?: boolean };
+                                            if (!json.success) {
+                                              toast.error('Failed to delete template from database');
+                                            }
+                                          })
+                                          .catch(() => {
+                                            toast.error('Failed to delete template from database');
+                                          });
                                       }
                                     })();
                                   }}
@@ -752,10 +756,21 @@ Best regards,
                               : [...customTemplates, savedTemplate];
 
                             setCustomTemplates(updated);
-                            // Persist to Firestore
-                            void FirestoreService.set(emailTemplatesPath, savedTemplate.id, savedTemplate, true).catch(() => {
-                              toast.error('Failed to persist template to database');
-                            });
+                            // Persist via API
+                            void authFetch('/api/email/html-templates', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify(savedTemplate),
+                            })
+                              .then(async (res) => {
+                                const json = (await res.json()) as { success?: boolean };
+                                if (!json.success) {
+                                  toast.error('Failed to persist template to database');
+                                }
+                              })
+                              .catch(() => {
+                                toast.error('Failed to persist template to database');
+                              });
                             setShowDesigner(false);
                             setSelectedBlock(null);
                             toast.success('Template saved successfully! You can now use it in automated workflows and campaigns.');

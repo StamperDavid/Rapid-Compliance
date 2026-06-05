@@ -4,9 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { orderBy, limit } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { PageTitle } from '@/components/ui/typography';
 
 interface SecuritySettings {
@@ -37,12 +35,10 @@ const DEFAULT_SETTINGS: SecuritySettings = {
   auditLogRetention: '90',
 };
 
-const settingsPath = getSubCollection('securitySettings');
-const auditLogsPath = getSubCollection('auditLogs');
-
 export default function SecuritySettingsPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [settings, setSettings] = useState<SecuritySettings>(DEFAULT_SETTINGS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -54,24 +50,26 @@ export default function SecuritySettingsPage() {
     try {
       setLoading(true);
 
-      // Load security settings (single doc keyed 'config')
-      const saved = await FirestoreService.get<SecuritySettings>(settingsPath, 'config');
-      if (saved) {
-        setSettings(saved);
+      const res = await authFetch('/api/settings/security');
+      const json = (await res.json()) as {
+        success?: boolean;
+        settings?: SecuritySettings | null;
+        auditLogs?: AuditLogEntry[];
+        error?: string;
+      };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to load security settings');
       }
-
-      // Load recent audit logs
-      const logs = await FirestoreService.getAll<AuditLogEntry>(
-        auditLogsPath,
-        [orderBy('timestamp', 'desc'), limit(50)]
-      );
-      setAuditLogs(logs);
+      if (json.settings) {
+        setSettings(json.settings);
+      }
+      setAuditLogs(json.auditLogs ?? []);
     } catch {
       toast.error('Failed to load security settings');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [authFetch, toast]);
 
   useEffect(() => {
     if (user) {
@@ -88,11 +86,15 @@ export default function SecuritySettingsPage() {
     if (!user) { return; }
     setSaving(true);
     try {
-      await FirestoreService.set(settingsPath, 'config', {
-        ...settings,
-        updatedAt: new Date().toISOString(),
-        updatedBy: user.id,
-      }, true);
+      const res = await authFetch('/api/settings/security', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to save security settings');
+      }
       setHasChanges(false);
       toast.success('Security settings saved');
     } catch {

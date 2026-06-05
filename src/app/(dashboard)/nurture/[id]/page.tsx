@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore'
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -18,6 +16,7 @@ export default function EditNurtureCampaignPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const campaignId = params.id as string;
   const [campaign, setCampaign] = useState<NurtureCampaignData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,14 +24,17 @@ export default function EditNurtureCampaignPage() {
 
   const loadCampaign = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(getSubCollection('nurtureSequences'), campaignId);
-      setCampaign(data as NurtureCampaignData);
+      const res = await authFetch(`/api/nurture/${campaignId}`);
+      const json = (await res.json()) as { success?: boolean; sequence?: NurtureCampaignData };
+      if (json.success && json.sequence) {
+        setCampaign(json.sequence);
+      }
     } catch (error) {
       logger.error('Error loading campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [campaignId]);
+  }, [authFetch, campaignId]);
 
   useEffect(() => {
     void loadCampaign();
@@ -45,7 +47,19 @@ export default function EditNurtureCampaignPage() {
 
     try {
       setSaving(true);
-      await FirestoreService.update(getSubCollection('nurtureSequences'), campaignId, { ...campaign, updatedAt: Timestamp.now() });
+      const res = await authFetch(`/api/nurture/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: campaign.name,
+          description: campaign.description,
+          status: campaign.status,
+        }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to save campaign');
+      }
       router.push(`/nurture`);
     } catch (error) {
       logger.error('Error saving campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

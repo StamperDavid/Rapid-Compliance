@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface AccountingConfig {
   platform: 'quickbooks' | 'xero' | 'freshbooks' | 'wave' | 'sage' | 'none';
@@ -80,28 +79,28 @@ const PLATFORMS = [
   },
 ];
 
-const accountingConfigPath = getSubCollection('accountingConfig');
-
 export default function AccountingPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const [config, setConfig] = useState<AccountingConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
   const [_showConnectionModal, setShowConnectionModal] = useState(false);
 
   const loadConfig = useCallback(async () => {
     try {
-      const configData = await FirestoreService.get<AccountingConfig>(
-        accountingConfigPath,
-        'default'
-      );
-      if (configData) {
-        setConfig(configData);
+      const res = await authFetch('/api/settings/accounting');
+      const json = (await res.json()) as { success?: boolean; config?: AccountingConfig | null; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to load accounting config');
+      }
+      if (json.config) {
+        setConfig(json.config);
       }
     } catch {
       toast.error('Failed to load accounting config');
     }
-  }, [toast]);
+  }, [authFetch, toast]);
 
   useEffect(() => {
     if (user) {
@@ -114,15 +113,15 @@ export default function AccountingPage() {
 
     setIsSaving(true);
     try {
-      await FirestoreService.set(
-        accountingConfigPath,
-        'default',
-        {
-          ...config,
-          updatedAt: new Date().toISOString(),
-        },
-        true
-      );
+      const res = await authFetch('/api/settings/accounting', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to save accounting config');
+      }
       toast.success('Accounting settings saved');
     } catch {
       toast.error('Failed to save accounting config');

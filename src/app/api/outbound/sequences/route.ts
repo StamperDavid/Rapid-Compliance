@@ -50,7 +50,9 @@ const sequenceStepInputSchema = z.object({
 const sequenceCreateRequestSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  steps: z.array(sequenceStepInputSchema).min(1).max(50),
+  // Allow empty step lists so sequences can be created as drafts and have
+  // their steps added later (the sequences page creates name-only drafts).
+  steps: z.array(sequenceStepInputSchema).min(0).max(50).optional().default([]),
   autoEnroll: z.boolean().optional().default(false),
 });
 

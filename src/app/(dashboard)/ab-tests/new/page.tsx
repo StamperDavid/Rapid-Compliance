@@ -7,9 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { abTestFormSchema, type ABTestFormValues } from '@/lib/validation/ab-test-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -40,6 +38,7 @@ const DEFAULT_METRICS = {
 export default function NewABTestPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const [variants, setVariants] = useState<VariantInput[]>([
     { name: 'Control', description: '', trafficWeight: 50 },
     { name: 'Variant B', description: '', trafficWeight: 50 },
@@ -99,10 +98,10 @@ export default function NewABTestPage() {
 
     try {
       const testId = `abtest-${Date.now()}`;
-      await FirestoreService.set(
-        getSubCollection('abTests'),
-        testId,
-        {
+      const res = await authFetch('/api/ab-tests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           ...data,
           id: testId,
           status: 'draft',
@@ -114,10 +113,12 @@ export default function NewABTestPage() {
             config: {},
             metrics: { impressions: 0, conversions: 0, conversionRate: 0 },
           })),
-          createdAt: Timestamp.now(),
-        },
-        false
-      );
+        }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to create test');
+      }
       toast.success('A/B test created');
       router.push('/ab-tests');
     } catch (error: unknown) {
