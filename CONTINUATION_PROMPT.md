@@ -45,7 +45,24 @@ Owner verdict: the 6 tabs feel like separate systems; capabilities exist, design
 - **AUDIO LAB** = Suno-style MUSIC first (styles + an AI music agent); voice/clone as secondary.
 - **CHARACTERS (new tab)** = create + manage reusable digital clones. Guided flow: record chroma-key video → Hedra avatar/clone; record the PROVEN inflection-capturing voice script (already exists in Audio Lab "Voice Clone Script") → voice clone; save as a named **Character**. Cast a Character into any video scene's extras/characters field (Hedra renders them speaking the line in their voice); copy-forward keeps them consistent across scenes. UNIFIES the currently-split avatar (`/api/video/avatar-profiles`, clone wizard) + voice (Audio Lab).
 
-**BUILD ORDER (finish + verify each before next):** (1) Studio removal + Content Assistant, (2) Video redesign (Script→Plan→Generate→Review→Assemble→Polish→Publish), (3) Image cleanup, (4) Audio Lab → music-first, (5) Characters tab, (6) Editor/Library polish. (Video infra fully mapped Jun 5 — see the mapping agent transcript; backend already supports the flow, mostly a frontend reshuffle.)
+**BUILD ORDER (finish + verify each before next):** (1) Studio removal + Content Assistant ✅ DONE (`93447148` — slide-in panel on every content tab, Brand-DNA system prompt, OpenRouter; v1 conversation-only, hand-off/fields/uploads still TODO), (2) **Video storyboard step ← NEXT, design locked, build this**, (3) rest of Video pipeline (Script/Review/Polish), (4) Image cleanup, (5) Audio Lab → music-first, (6) Characters tab, (7) Editor/Library polish.
+
+## ▶️ VIDEO STORYBOARD STEP — BUILD SPEC (next task, design locked Jun 5; START HERE for content-gen)
+Reshape the EXISTING `src/app/(dashboard)/content/video/components/StepStoryboard.tsx` into a HUMAN-WALKABLE scene builder. **REUSE the advanced model — do NOT reinvent:** `PipelineScene` (`src/types/video-pipeline.ts:111`) + `CinematicConfig` (`src/types/creative-studio.ts:79-95`: shotType, viewingDirection, subjectUnawareOfCamera, lighting, atmosphere, camera, focalLength, lensType, filmStock, aspectRatio, temperature, photographerStyle, movieLook, filters, artStyle, composition), per-scene `avatarId`/`voiceId`, `referenceImages`/`CharacterReference`, the preset library, and store actions `addScene/updateScene/removeScene/reorderScenes` (`src/lib/stores/video-pipeline-store.ts`). The advanced cinematic fields the owner remembered = `CinematicConfig` (modeled after a high-end cinematic prompt tool).
+
+FLOW (manual-first; AI-assist optional):
+- Scenes shown as a strip; current scene's context form open. Fields grouped in PLAIN language, mapped onto CinematicConfig + scene plain fields: **Shot** (title, action, dialogue/VO, duration) · **Setting** (location, time of day, weather) · **Look** (lighting, color/mood, style; advanced: focal length, lens, film stock, photographer/movie look, temperature) · **Sound** (background ambience/noise, music cue) · **Cast** (character/clone select per scene → `avatarId`; wardrobe) · **Camera** (shot type, movement, angle) · **References** (drop image/video per scene).
+- Content Assistant can pre-fill fields (Brand-DNA defaults + ask gaps).
+- **UNLIMITED scenes** (no fixed count): **"+ Add Scene"** (optionally per-field copy-forward "same as previous" for setting/look/cast → longer continuous scenes) or **"Generate Video"**.
+- Wire **drag-reorder** to `reorderScenes` (UI handle exists, not wired); duplicate; delete.
+- **AUTO-THUMBNAIL (owner detail):** on finishing a scene (Add Scene OR Generate), auto-generate a thumbnail image FROM the scene description (reuse the existing storyboard-preview generation in StepStoryboard / `/api/content/asset-generator/generate`) → set `scene.screenshotUrl` so the operator SEES each scene visually before submitting the project.
+- **Engine = Hedra (only video API).** Model inferred per scene: character present → Hedra **Character-3** (avatar); none → Hedra **Kling O3** (prompt-only). Any override labeled "**Hedra model**" — NOT a fake provider list (the `StudioModePanel` "Video API Provider: kling/google/fal" dropdown is MISLABELED; it dies when StudioModePanel is retired).
+
+GENERATE → each scene → Hedra clip (`/api/video/generate-scenes`) → Review & Edit → Assemble/stitch in order (`/api/video/assemble`, already concatenates N scenes).
+
+**LIBRARY round-trip (owner detail):** finished/edited videos save to the Media Library; edits save OVER the original; Library supports copy-and-edit of existing items.
+
+REMOVE the wrong `request`/Studio opening (`StudioModePanel`) — replace with this storyboard-first flow. Persistence = `video_pipeline_projects` (Admin SDK, already API-path). VERIFY: tsc + full `npm run build` (real exit 0) + walk it manually on localhost:3000. Full Video-tab map is in the Jun-5 mapping-agent transcript.
 
 ---
 
