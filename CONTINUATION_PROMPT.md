@@ -18,6 +18,17 @@
 
 Decisions locked: keep ALL payment processors (single active, switchable); WhatsApp kept. Standing order: Claude orchestrates, subagents do the work, Claude verifies every output before "done".
 
+## MANUAL TEST PLAN — CRM vertical (the spine). Walk one step at a time, operator-in-loop, on localhost:3000. Mark PASS/FAIL as we go.
+Doctrine: test each capability via BOTH the manual UI AND the AI (Jasper) path. "Done" = watched it work with real data, not "code looks right".
+- **A. App loads** — open localhost:3000, land on dashboard logged in.
+- **B. Leads (manual UI):** (1) list loads with data · (2) create a lead via the form → appears in list · (3) open the lead → detail renders · (4) edit → change saves · (5) "Convert to deal" → deal created [NOTE: currently a client-side write — data-path Tier-1 item] · (6) CSV import → rows imported · (7) delete a test lead.
+- **C. Contacts:** list / create / open / edit / delete.
+- **D. Companies:** list loads · create · **open a company → KNOWN BROKEN (404, no `[id]` page)** — expected fail, already on the fix list.
+- **E. Deals:** list / create / open / edit / move stage · **invoices drill-down → KNOWN BROKEN (404, no `[id]`)**.
+- **F. Lead scoring:** page loads · recalculate score.
+- **G. AI path (Jasper):** in chat, "create a lead for <name> at <company>" → Jasper delegates → Mission Control plan → operator approves → lead appears in CRM. Then grade the step.
+Known data-path caveat for this vertical: several of these CRM pages read/write Firestore in the browser (Tier-1 burn-down) — they WORK today but get converted before multi-tenant.
+
 ## Shipped + PROVEN this session (commits `583ff92b`, `40f6c5ce`, pushed to dev)
 **Per-agent isolated knowledge bases.** Every agent gets its OWN knowledge base — no cross-agent bleed, no bleed into the global Jasper/chat RAG. Pilot agent = **Copywriter (`COPYWRITER`)**.
 - `vector-search.ts`: `searchKnowledgeBase`/`storeEmbedding`/`indexKnowledgeBase` take an optional `agentId` (canonical registry id). Per-agent doc, `agentId`-tagged embeddings, stale-cleanup on re-index; global path filters OUT agent-tagged vectors. No agentId = legacy global (backward compatible).
@@ -70,6 +81,7 @@ Effort split (agent's claim — re-confirm per page when doing the work):
 - **~9 page-groups = pure REWIRE to an EXISTING route** (cheap): contacts, deals, leads, workflows (`/api/workflows`), email campaigns (`/api/email/campaigns`), email-templates (`/api/email/templates`), outbound/sequences (`/api/outbound/sequences`).
 - **~14 page-groups = need a NEW Admin-SDK route built first**: ab-tests, ai/datasets, ai/fine-tuning, nurture (own route, not `/api/leads/nurture`), proposal-template CRUD, academy, dashboard-aggregate, calls, compliance-reports, settings/accounting, settings/lead-routing, settings/security, settings/sms-messages, products catalog CRUD.
 - NOTE: `settings/storefront/page.tsx` ALSO writes Firestore client-side (`:151,:182`) — 37th data-path page, found during payments verification.
+- ⚠️ **PRIORITY pre-multi-tenant fix — workflow builder/new schema mismatch (found Jun 5):** `workflows/builder/page.tsx` + `workflows/new/page.tsx` write browser→Firestore today and could NOT be converted in the Jun-5 wave. The builder/form emit a workflow shape (flat config, trigger types like `entity.created`, action types like `delay`/`send_email`, plus `_nodePositions`) that the `/api/workflows` route's strict domain schema (`src/lib/workflow/validation.ts`: deal-event trigger enum, nested `config` object, `actions.min(1)`) REJECTS. NOT newly broken — the browser-direct write masked a pre-existing builder↔engine schema mismatch (same "PLURAL Zod" issue flagged Jun 2–3). MUST reconcile BEFORE multi-tenant: either a builder-shaped POST/PUT schema + service path, or a client→domain adapter (+ a home for `_nodePositions`). Open question it raises: do builder-saved workflows actually EXECUTE correctly through the engine given the shape gap? (Latent — automations gated OFF.) The other 2 workflow pages (list, `[workflowId]` edit) WERE converted Jun 5.
 
 ## BROKEN BUTTONS & DEAD-ENDS — verified June 4 (subagent + Claude spot-check). 15 confirmed; fix all before launch.
 HIGHEST IMPACT:

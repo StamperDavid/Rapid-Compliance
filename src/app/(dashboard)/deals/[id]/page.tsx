@@ -2,9 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getDealsCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import ActivityTimeline from '@/components/ActivityTimeline';
 import type { DealHealthScore } from '@/lib/crm/deal-health-types';
@@ -77,15 +74,18 @@ export default function DealDetailPage() {
 
   const loadDeal = useCallback(async () => {
     try {
-      const data = await FirestoreService.get<Deal>(getDealsCollection(), dealId);
-      setDeal(data);
+      const res = await authFetch(`/api/deals/${dealId}`);
+      const json = (await res.json()) as { success?: boolean; deal?: Deal };
+      if (json.success && json.deal) {
+        setDeal(json.deal);
+      }
       void loadDealHealth();
     } catch (error: unknown) {
       logger.error('Error loading deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [dealId, loadDealHealth]);
+  }, [authFetch, dealId, loadDealHealth]);
 
   useEffect(() => {
     void loadDeal();
@@ -93,11 +93,15 @@ export default function DealDetailPage() {
 
   const handleMarkWon = useCallback(async () => {
     try {
-      await FirestoreService.update(
-        getDealsCollection(),
-        dealId,
-        { stage: 'closed_won', closedAt: Timestamp.now(), actualCloseDate: Timestamp.now(), status: 'won' }
-      );
+      const res = await authFetch(`/api/deals/${dealId}/stage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: 'closed_won' }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to update deal');
+      }
       await loadDeal();
       toast.success('Deal marked as won!');
       setShowWonConfirm(false);
@@ -105,7 +109,7 @@ export default function DealDetailPage() {
       logger.error('Error updating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       toast.error('Failed to update deal');
     }
-  }, [dealId, loadDeal, toast]);
+  }, [authFetch, dealId, loadDeal, toast]);
 
   const handleMarkLost = useCallback(async () => {
     if (!lostReason.trim()) {
@@ -113,11 +117,26 @@ export default function DealDetailPage() {
       return;
     }
     try {
-      await FirestoreService.update(
-        getDealsCollection(),
-        dealId,
-        { stage: 'closed_lost', closedAt: Timestamp.now(), actualCloseDate: Timestamp.now(), status: 'lost', lostReason }
-      );
+      // Persist the loss reason, then move the deal to the closed_lost stage so
+      // the stage route fires the deal.lost signal and sets the close date.
+      const reasonRes = await authFetch(`/api/deals/${dealId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lostReason }),
+      });
+      const reasonJson = (await reasonRes.json()) as { success?: boolean; error?: string };
+      if (!reasonRes.ok || !reasonJson.success) {
+        throw new Error(reasonJson.error ?? 'Failed to update deal');
+      }
+      const stageRes = await authFetch(`/api/deals/${dealId}/stage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: 'closed_lost' }),
+      });
+      const stageJson = (await stageRes.json()) as { success?: boolean; error?: string };
+      if (!stageRes.ok || !stageJson.success) {
+        throw new Error(stageJson.error ?? 'Failed to update deal');
+      }
       await loadDeal();
       toast.success('Deal marked as lost');
       setShowLostModal(false);
@@ -126,7 +145,7 @@ export default function DealDetailPage() {
       logger.error('Error updating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       toast.error('Failed to update deal');
     }
-  }, [dealId, lostReason, loadDeal, toast]);
+  }, [authFetch, dealId, lostReason, loadDeal, toast]);
 
   if (loading || !deal) {
     return <div className="p-8">Loading...</div>;

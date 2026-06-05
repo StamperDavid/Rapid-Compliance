@@ -6,15 +6,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { contactFormSchema, type ContactFormValues } from '@/lib/validation/contact-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { PageTitle } from '@/components/ui/typography';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getContactsCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
 export default function NewContactPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
@@ -30,13 +29,24 @@ export default function NewContactPage() {
 
   const onSubmit = async (data: ContactFormValues) => {
     try {
-      const contactId = `contact-${Date.now()}`;
-      await FirestoreService.set(
-        getContactsCollection(),
-        contactId,
-        { ...data, id: contactId, createdAt: Timestamp.now() },
-        false
-      );
+      const payload: Record<string, unknown> = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        title: data.title,
+      };
+      if (data.linkedIn) { payload.linkedInUrl = data.linkedIn; }
+      const res = await authFetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to create contact');
+      }
       router.push('/contacts');
     } catch (error: unknown) {
       logger.error('Error creating contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

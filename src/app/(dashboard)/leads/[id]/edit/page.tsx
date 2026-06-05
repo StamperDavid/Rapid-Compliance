@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getLeadsCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore'
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -18,13 +16,13 @@ interface Lead {
   companyName?: string;
   title?: string;
   status?: string;
-  updatedAt?: Timestamp;
 }
 
 export default function EditLeadPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const leadId = params.id as string;
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,14 +30,17 @@ export default function EditLeadPage() {
 
   const loadLead = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(getLeadsCollection(), leadId);
-      setLead(data as Lead);
+      const res = await authFetch(`/api/leads/${leadId}`);
+      const json = (await res.json()) as { success?: boolean; lead?: Lead };
+      if (json.success && json.lead) {
+        setLead(json.lead);
+      }
     } catch (error: unknown) {
       logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [leadId]);
+  }, [authFetch, leadId]);
 
   useEffect(() => {
     void loadLead();
@@ -47,9 +48,26 @@ export default function EditLeadPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!lead) { return; }
     try {
       setSaving(true);
-      await FirestoreService.update(getLeadsCollection(), leadId, { ...lead, updatedAt: Timestamp.now() });
+      const res = await authFetch(`/api/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          email: lead.email,
+          phone: lead.phone,
+          company: lead.company,
+          title: lead.title,
+          status: lead.status,
+        }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to update lead');
+      }
       router.push(`/leads/${leadId}`);
     } catch (error: unknown) {
       logger.error('Error updating lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

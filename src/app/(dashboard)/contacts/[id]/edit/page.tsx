@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getContactsCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { showErrorToast } from '@/components/ErrorToast';
 import type { Contact } from '@/types/contact';
@@ -12,6 +10,7 @@ import type { Contact } from '@/types/contact';
 export default function EditContactPage() {
   const params = useParams();
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const contactId = params.id as string;
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,14 +18,17 @@ export default function EditContactPage() {
 
   const loadContact = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(getContactsCollection(), contactId);
-      setContact(data as Contact);
+      const res = await authFetch(`/api/contacts/${contactId}`);
+      const json = (await res.json()) as { success?: boolean; contact?: Contact };
+      if (json.success && json.contact) {
+        setContact(json.contact);
+      }
     } catch (error: unknown) {
       logger.error('Error loading contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [contactId]);
+  }, [authFetch, contactId]);
 
   useEffect(() => {
     void loadContact();
@@ -40,7 +42,15 @@ export default function EditContactPage() {
 
     try {
       setSaving(true);
-      await FirestoreService.update(getContactsCollection(), contactId, { ...contact, updatedAt: Timestamp.now() });
+      const res = await authFetch(`/api/contacts/${contactId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to update contact');
+      }
       router.push(`/contacts/${contactId}`);
     } catch (error: unknown) {
       logger.error('Error updating contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

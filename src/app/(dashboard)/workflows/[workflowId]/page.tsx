@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getWorkflowsCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore'
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -19,6 +17,7 @@ export default function WorkflowEditPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const workflowId = params.workflowId as string;
 
   const [workflow, setWorkflow] = useState<WorkflowData | null>(null);
@@ -27,15 +26,18 @@ export default function WorkflowEditPage() {
 
   const loadWorkflow = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(getWorkflowsCollection(), workflowId);
-      setWorkflow(data as WorkflowData);
+      const res = await authFetch(`/api/workflows/${workflowId}`);
+      const json = (await res.json()) as { success?: boolean; workflow?: WorkflowData };
+      if (json.success && json.workflow) {
+        setWorkflow(json.workflow);
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       logger.error('Error loading workflow:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [workflowId]);
+  }, [authFetch, workflowId]);
 
   useEffect(() => {
     void loadWorkflow();
@@ -48,15 +50,26 @@ export default function WorkflowEditPage() {
 
     try {
       setSaving(true);
-      await FirestoreService.update(getWorkflowsCollection(), workflowId, {
-        ...workflow,
-        updatedAt: Timestamp.now(),
+      const res = await authFetch(`/api/workflows/${workflowId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflow: {
+            name: workflow.name,
+            description: workflow.description,
+            status: workflow.status,
+          },
+        }),
       });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!json.success) {
+        throw new Error(json.error ?? 'Failed to save workflow');
+      }
       router.push(`/workflows`);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       logger.error('Error saving workflow:', error, { file: 'page.tsx' });
-      toast.error('Failed to save workflow');
+      toast.error(error.message || 'Failed to save workflow');
     } finally {
       setSaving(false);
     }

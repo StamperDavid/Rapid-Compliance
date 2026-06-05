@@ -2,10 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getDealsCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { logger } from '@/lib/logger/logger';
 
 interface Deal {
   id: string;
@@ -17,13 +15,12 @@ interface Deal {
   stage?: string;
   expectedCloseDate?: string;
   notes?: string;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
 }
 
 export default function EditDealPage() {
   const params = useParams();
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const dealId = params.id as string;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,14 +29,17 @@ export default function EditDealPage() {
 
   const loadDeal = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(getDealsCollection(), dealId);
-      setDeal(data as Deal | null);
+      const res = await authFetch(`/api/deals/${dealId}`);
+      const json = (await res.json()) as { success?: boolean; deal?: Deal };
+      if (json.success && json.deal) {
+        setDeal(json.deal);
+      }
     } catch (error: unknown) {
       logger.error('Error loading deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [dealId]);
+  }, [authFetch, dealId]);
 
   useEffect(() => {
     void loadDeal();
@@ -53,7 +53,24 @@ export default function EditDealPage() {
     setErrorMessage(null);
     try {
       setSaving(true);
-      await FirestoreService.update(getDealsCollection(), dealId, { ...deal, updatedAt: Timestamp.now() });
+      const payload: Record<string, unknown> = {
+        name: deal.name,
+        company: deal.company,
+        value: deal.value,
+        probability: deal.probability,
+        stage: deal.stage,
+        notes: deal.notes,
+      };
+      if (deal.expectedCloseDate) { payload.expectedCloseDate = deal.expectedCloseDate; }
+      const res = await authFetch(`/api/deals/${dealId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to update deal');
+      }
       router.push(`/deals/${dealId}`);
     } catch (error: unknown) {
       logger.error('Error updating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
