@@ -6,13 +6,13 @@
  * after adding or removing an agent file. CI runs the same script with
  * `--check` and fails the build on drift.
  *
- * Total agents: 74
+ * Total agents: 72
  *   L1 (Master Orchestrator): 1
  *   L2 (Managers):            10
- *   L3 (Specialists):         59
+ *   L3 (Specialists):         57
  *   STANDALONE:               4
  *
- * Generated at: 2026-05-09T17:18:06.500Z
+ * Generated at: 2026-06-05T04:40:18.927Z
  *
  * @module lib/agents/agent-registry
  */
@@ -392,7 +392,7 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
   },
 
   // =========================================================================
-  // L3 - MARKETING SPECIALISTS (20)
+  // L3 - MARKETING SPECIALISTS (18)
   // =========================================================================
   {
     id: 'BLUESKY_EXPERT',
