@@ -55,18 +55,19 @@ function isErrorWithMessage(error: unknown): error is { message: string } {
 }
 
 const FIELD_TYPES = [
-  'text',
-  'longText',
-  'number',
-  'email',
-  'url',
-  'date',
-  'checkbox',
-  'singleSelect',
-  'multiSelect',
-  'currency',
-  'phoneNumber',
-  'lookup'
+  { value: 'text', label: 'text' },
+  { value: 'longText', label: 'longText' },
+  { value: 'number', label: 'number' },
+  { value: 'email', label: 'email' },
+  { value: 'url', label: 'url' },
+  { value: 'date', label: 'date' },
+  { value: 'checkbox', label: 'checkbox' },
+  { value: 'singleSelect', label: 'singleSelect' },
+  { value: 'multiSelect', label: 'multiSelect' },
+  { value: 'currency', label: 'currency' },
+  { value: 'phoneNumber', label: 'phoneNumber' },
+  { value: 'lookup', label: 'lookup' },
+  { value: 'user', label: 'Team Member' }
 ];
 
 export default function SchemaBuilderPage() {
@@ -521,7 +522,7 @@ export default function SchemaBuilderPage() {
                             style={{ padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                           >
                             {FIELD_TYPES.map(type => (
-                              <option key={type} value={type}>{type}</option>
+                              <option key={type.value} value={type.value}>{type.label}</option>
                             ))}
                           </select>
                           {field.type === 'lookup' && (
@@ -756,7 +757,7 @@ export default function SchemaBuilderPage() {
                           style={{ flex: 1, minWidth: '100px', padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                         >
                           {FIELD_TYPES.map(type => (
-                            <option key={type} value={type}>{type}</option>
+                            <option key={type.value} value={type.value}>{type.label}</option>
                           ))}
                         </select>
                         {field.type === 'lookup' && (
