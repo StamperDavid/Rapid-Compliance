@@ -169,7 +169,7 @@ export class SlackService {
   constructor(config: SlackServiceConfig) {
     this.config = config;
     
-    logger.info('SlackService initialized', {
+    logger.debug('SlackService initialized', {
       scopes: config.scopes,
       maxPerMinute: config.rateLimit.maxPerMinute,
       maxPerHour: config.rateLimit.maxPerHour,

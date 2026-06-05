@@ -73,7 +73,7 @@ if (!admin.apps.length) {
       ? process.env.FIREBASE_ADMIN_PROJECT_ID
       : 'NOT SET';
     if (process.env.NODE_ENV === 'development') {
-      logger.info('[Firebase Admin] Initialized successfully', { file: 'firebase-admin.ts' });
+      logger.debug('[Firebase Admin] Initialized successfully', { file: 'firebase-admin.ts' });
       logger.info(`[Firebase Admin] 🎯 PROJECT ID: ${projectId}`, { file: 'firebase-admin.ts' });
     }
   } catch (error) {

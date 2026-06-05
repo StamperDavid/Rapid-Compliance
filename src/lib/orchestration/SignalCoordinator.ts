@@ -159,7 +159,7 @@ export class SignalCoordinator {
       signalTTLDays: config?.signalTTLDays ?? 30,
     };
     
-    logger.info('🧠 SignalCoordinator initialized', {
+    logger.debug('🧠 SignalCoordinator initialized', {
       environment: process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV ?? 'unknown',
       circuitBreakerThreshold: this.config.circuitBreakerThreshold,
       circuitBreakerResetTimeout: this.config.circuitBreakerResetTimeout,

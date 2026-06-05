@@ -587,4 +587,4 @@ export function getFormEmbedCode(formId: string, options?: { width?: string; hei
   return `<iframe src="${url}" width="${width}" height="${height}" frameborder="0" allowfullscreen></iframe>`;
 }
 
-logger.info('Form service initialized');
+logger.debug('Form service initialized');

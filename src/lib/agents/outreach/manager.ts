@@ -2443,4 +2443,4 @@ export function getOutreachManager(): OutreachManager {
   return managerInstance;
 }
 
-logger.info('[OutreachManager] Module loaded - Omni-Channel Communication Commander ready');
+logger.debug('[OutreachManager] Module loaded - Omni-Channel Communication Commander ready');

@@ -4,6 +4,20 @@
 
 # 🎯 CURRENT SESSION — Per-agent knowledge bases DONE + penthouse-finish ground truth (June 4, 2026)
 
+## ✅ PENTHOUSE-FINISH PROGRESS (June 4–5) — START HERE on resume
+**DONE + committed + pushed to dev:**
+- Security: `/api/meetings/list` auth gate — was leaking all booking PII (`ab3a6283`).
+- Verified finish-map folded into this doc (`a528467d`): data-path burn-down (37 client-Firestore pages), 15 confirmed broken buttons, payments per-provider work-list, cut-platform delete map, CRM-unification + monster-file notes. All numbers hand-verified vs code.
+- **Cut-platform delete DONE** (`6395d07c`): Reddit/Telegram/Truth Social removed — 42 files, ~3,300 lines gone, WhatsApp preserved. tsc + eslint clean (independently verified). rapid-dev synced, localhost:3000 restarted healthy.
+
+**NEXT — pick up here (order):**
+1. Data-path Tier-1 browser-WRITE pages (start `leads/[id]` client-side deal creation + `settings/security`/`settings/lead-routing`). ~9 are pure re-wires to existing routes; ~14 need a new Admin-SDK route built first. See DATA-PATH BURN-DOWN below.
+2. High-impact broken buttons: Workforce Execute/Logs 404s, Companies + Invoices drill-down 404s, Playbook create flow. See BROKEN BUTTONS below.
+3. Payments vertical: fix `verify2Checkout` stub, add Razorpay/Braintree toggles, build subscription-processor selector. (Mostly needs live accounts + testing — owner-in-loop.)
+4. CRM unification + monster-file freeze. Then multi-tenant flip.
+
+Decisions locked: keep ALL payment processors (single active, switchable); WhatsApp kept. Standing order: Claude orchestrates, subagents do the work, Claude verifies every output before "done".
+
 ## Shipped + PROVEN this session (commits `583ff92b`, `40f6c5ce`, pushed to dev)
 **Per-agent isolated knowledge bases.** Every agent gets its OWN knowledge base — no cross-agent bleed, no bleed into the global Jasper/chat RAG. Pilot agent = **Copywriter (`COPYWRITER`)**.
 - `vector-search.ts`: `searchKnowledgeBase`/`storeEmbedding`/`indexKnowledgeBase` take an optional `agentId` (canonical registry id). Per-agent doc, `agentId`-tagged embeddings, stale-cleanup on re-index; global path filters OUT agent-tagged vectors. No agentId = legacy global (backward compatible).

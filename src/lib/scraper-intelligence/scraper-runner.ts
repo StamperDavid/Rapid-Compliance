@@ -77,7 +77,7 @@ export class ProductionScraperRunner implements ScraperRunner {
     this.progressTracker = createProgressTracker();
     this.errorHandler = createErrorHandler(this.config.retryStrategy);
 
-    logger.info('Scraper Runner initialized', {
+    logger.debug('Scraper Runner initialized', {
       maxConcurrent: this.config.maxConcurrent,
       cacheTtlMs: this.config.cacheTtlMs,
       enableCaching: this.config.enableCaching,

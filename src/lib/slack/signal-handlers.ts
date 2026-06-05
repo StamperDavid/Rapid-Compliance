@@ -723,7 +723,7 @@ export function initializeSlackHandlers(
 ): SlackSignalHandler {
   const handler = new SlackSignalHandler(slackService);
   
-  logger.info('Slack signal handlers initialized');
+  logger.debug('Slack signal handlers initialized');
   
   return handler;
 }

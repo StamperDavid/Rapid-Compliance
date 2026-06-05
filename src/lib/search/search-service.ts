@@ -257,5 +257,5 @@ export function unindexRecord(
  * Initialize search.
  */
 export function initializeSearch(): void {
-  logger.info('Search initialized (Firestore-based with server-side filtering)', { file: 'search-service.ts' });
+  logger.debug('Search initialized (Firestore-based with server-side filtering)', { file: 'search-service.ts' });
 }

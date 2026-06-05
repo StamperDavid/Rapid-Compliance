@@ -84,7 +84,7 @@ export class BaseAgentDAL {
     this.db = firestoreInstance as Firestore;
     this.envPrefix = this.calculateEnvPrefix();
     
-    logger.info('🏗️ BaseAgentDAL initialized', {
+    logger.debug('🏗️ BaseAgentDAL initialized', {
       environment:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       prefix: this.envPrefix || '(none - production)',
       isolated: !!this.envPrefix,

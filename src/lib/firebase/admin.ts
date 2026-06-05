@@ -55,7 +55,7 @@ function initializeAdmin() {
         // Vercel env vars encode literal \n — convert to real newlines
         privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
       } as admin.ServiceAccount;
-      logger.info('Using individual FIREBASE_ADMIN_* env vars', { file: 'admin.ts' });
+      logger.debug('Using individual FIREBASE_ADMIN_* env vars', { file: 'admin.ts' });
     }
 
     // Strategy 3: Local development — load from serviceAccountKey.json file
@@ -105,8 +105,8 @@ function initializeAdmin() {
     const db = admin.firestore(adminApp);
     db.settings({ ignoreUndefinedProperties: true });
 
-    logger.info('[Auth] Firebase Admin Handshake Successful - Jasper is Online.', { file: 'admin.ts' });
-    logger.info('🔥 Firebase Admin initialized', { file: 'admin.ts' });
+    logger.debug('[Auth] Firebase Admin Handshake Successful - Jasper is Online.', { file: 'admin.ts' });
+    logger.debug('🔥 Firebase Admin initialized', { file: 'admin.ts' });
     return adminApp;
   } catch (error: unknown) {
     interface FirebaseError {
@@ -127,13 +127,13 @@ function initializeAdmin() {
 // Initialize on import (server-side only)
 if (typeof window === 'undefined') {
   try {
-    logger.info('[Firebase Admin] Initializing...', {
+    logger.debug('[Firebase Admin] Initializing...', {
       serviceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY ? 'SET' : 'MISSING',
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'SET' : 'MISSING',
       file: 'admin.ts'
     });
     initializeAdmin();
-    logger.info('[Firebase Admin] ✅ Initialization complete', { 
+    logger.debug('[Firebase Admin] ✅ Initialization complete', {
       adminApp: adminApp ? 'INITIALIZED' : 'NULL',
       file: 'admin.ts' 
     });

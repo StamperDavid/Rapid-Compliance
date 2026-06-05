@@ -267,7 +267,7 @@ export const isDevMode = (): boolean => {
 export const logCollectionConfig = () => {
   if (typeof window === 'undefined') {
     import('@/lib/logger/logger').then(({ logger }) => {
-      logger.info('Collection configuration loaded', {
+      logger.debug('Collection configuration loaded', {
         appEnvironment: APP_ENV,
         productionMode: IS_PRODUCTION,
         testMode: IS_TEST,

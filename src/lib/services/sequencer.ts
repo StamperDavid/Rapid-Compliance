@@ -1144,7 +1144,7 @@ export async function initializeSequencerSignalObservers(
   const coordinator = getServerSignalCoordinator();
   const unsubscribers: Array<() => void> = [];
 
-  logger.info('Initializing sequencer signal observers');
+  logger.debug('Initializing sequencer signal observers');
 
   // Observer 1: Auto-enroll qualified leads
   const qualifiedSequenceId = autoEnrollConfig.qualifiedLeadSequenceId;
@@ -1309,7 +1309,7 @@ export async function initializeSequencerSignalObservers(
     unsubscribers.push(unsubscribe);
   }
 
-  logger.info('Sequencer signal observers initialized', {
+  logger.debug('Sequencer signal observers initialized', {
     observersCount: unsubscribers.length,
   });
 

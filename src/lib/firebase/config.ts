@@ -48,8 +48,8 @@ const isFirebaseConfigured = !!(
 
 // Log configuration status (only in server-side)
 if (typeof window === 'undefined') {
-  logger.info('[Firebase Config] Checking configuration...', { file: 'config.ts' });
-  logger.info('[Firebase Config] Configuration', { 
+  logger.debug('[Firebase Config] Checking configuration...', { file: 'config.ts' });
+  logger.debug('[Firebase Config] Configuration', {
     projectId: firebaseConfig.projectId || 'MISSING',
     authDomain: firebaseConfig.authDomain || 'MISSING',
     isConfigured: isFirebaseConfigured,

@@ -65,7 +65,7 @@ export function initializeNotificationHandlers(): void {
       }
     );
 
-    logger.info('Notification signal handlers initialized', {
+    logger.debug('Notification signal handlers initialized', {
       subscribedTypes: notificationSignalTypes.length,
       file: 'signal-handlers.ts',
     });

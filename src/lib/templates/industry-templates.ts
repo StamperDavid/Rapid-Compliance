@@ -1823,7 +1823,7 @@ export function getRecommendedTemplate(businessType: string): SalesIndustryTempl
   return null;
 }
 
-logger.info('Industry templates loaded', {
+logger.debug('Industry templates loaded', {
   count: Object.keys(SALES_INDUSTRY_TEMPLATES).length,
   templates: Object.keys(SALES_INDUSTRY_TEMPLATES)
 });

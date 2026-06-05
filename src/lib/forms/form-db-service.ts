@@ -1233,4 +1233,4 @@ function generateResumeToken(): string {
 }
 
 // Log service initialization
-logger.info('Form database service initialized');
+logger.debug('Form database service initialized');
