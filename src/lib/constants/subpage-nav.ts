@@ -183,9 +183,10 @@ export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'Living Ledger', href: '/living-ledger' },
 ];
 
-// ── Content Generator Hub (Studio + Video + Image + Editor + Library + Audio Lab) ─────
+// ── Content Generator Hub (Video + Image + Editor + Library + Audio Lab + Characters) ─────
+// Studio tab REMOVED Jun 5 2026 — its job becomes the cross-tab Content Assistant (see
+// CONTENT GENERATOR REDESIGN spec in CONTINUATION_PROMPT.md). Characters tab added when built.
 export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
-  { label: 'Studio', href: '/content/video/studio' },
   { label: 'Video', href: '/content/video' },
   { label: 'Image', href: '/content/image-generator' },
   { label: 'Editor', href: '/content/video/editor' },

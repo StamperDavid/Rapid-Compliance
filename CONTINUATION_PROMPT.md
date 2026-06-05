@@ -24,6 +24,31 @@
 
 Decisions locked: keep ALL payment processors (single active, switchable); WhatsApp kept; demo data kept for testing then purged; entity-table system is the canonical CRM. Standing order: Claude orchestrates, subagents do the work, Claude verifies every output (tsc + full build, real exit code) before "done".
 
+# 🎨 CONTENT GENERATOR REDESIGN — owner-designed spec (Jun 5 2026). BUILD TO THIS.
+Owner verdict: the 6 tabs feel like separate systems; capabilities exist, design/flow don't. Fix one tab at a time, finish + VERIFY each (owner-in-loop, looks + works) before the next.
+
+**Tabs:** Video · Image · Editor · Library · Audio Lab · **Characters (new)**. **STUDIO TAB REMOVED** — its job becomes a cross-tab Content Assistant.
+
+**CORE PRINCIPLE — context is everything** (quality marketing content needs rich context; don't make the client invent it). THREE context channels feed the SAME generation:
+1. **Structured fields** — prompt the client for what they'd never specify: location, time of day, lighting, mood, background noise/ambience, extras (characters), wardrobe, camera/shot, action, dialogue/VO, etc. (tailored per content type).
+2. **Conversation** — the Content Assistant PROPOSES field values from Brand DNA + campaign (smart defaults), then ASKS for the gaps. Fill fields manually OR talk — same rich result.
+3. **Uploaded references** — image / video / text. Reuses existing provider reference inputs (image-to-video, reference-to-video, start+end-frame, image-to-image) + per-agent KB for text.
+- **Per-field COPY-FORWARD between scenes** — carry location/lighting/extras/character forward, change only the delta → continuity + longer continuous scenes.
+
+**CONTENT ASSISTANT (replaces Studio tab):** slide-in chat panel on EVERY content tab (toolbar toggle). NOT Jasper — content-scoped. Powered by a **content-director agent = the Content Manager's conversational front-end, OWN Golden Master + Brand DNA baked in** (Standing Rule #1), grade-pipeline-governed (Rule #2). It converses to fill the context fields, then DELEGATES generation to existing content specialists (script writer, copywriter, image/video/music). Tab-aware: hands assembled context into the active tool.
+
+**TAB DESIGNS:**
+- **VIDEO** = storyboard pipeline: **Script** (AI writes → you approve) → **Storyboard/Plan** (scenes + context fields + refs + copy-forward) → **Generate** (each scene → Hedra clip) → **Review & Edit** (NEW explicit step — keep/regenerate per clip; today it's buried inside Generation) → **Assemble** (existing `/api/video/assemble`) → **Polish/Post-Prod** (LIGHT guided: brand color + audio level + logo; the Editor tab is the deep manual option) → **Publish**. REUSE: `script-generation-service.ts`, `/api/video/{decompose,generate-scenes,poll-scenes,regenerate-scene,assemble}`, `video_pipeline_projects` (Admin SDK). REMOVE the wrong "Studio/request" opening (`StudioModePanel`) → replace with the Script step. Wire drag-reorder (store action exists, UI not wired).
+- **IMAGE** = clean image generator/editor (describe + upload references + edit). STRIP the duplicated video/scene-queue overload.
+- **EDITOR** = manual timeline editor (already close to right) — deep video fine-tune.
+- **LIBRARY** = deep-filter media library (already close to right) — stores all assets + references + characters.
+- **AUDIO LAB** = Suno-style MUSIC first (styles + an AI music agent); voice/clone as secondary.
+- **CHARACTERS (new tab)** = create + manage reusable digital clones. Guided flow: record chroma-key video → Hedra avatar/clone; record the PROVEN inflection-capturing voice script (already exists in Audio Lab "Voice Clone Script") → voice clone; save as a named **Character**. Cast a Character into any video scene's extras/characters field (Hedra renders them speaking the line in their voice); copy-forward keeps them consistent across scenes. UNIFIES the currently-split avatar (`/api/video/avatar-profiles`, clone wizard) + voice (Audio Lab).
+
+**BUILD ORDER (finish + verify each before next):** (1) Studio removal + Content Assistant, (2) Video redesign (Script→Plan→Generate→Review→Assemble→Polish→Publish), (3) Image cleanup, (4) Audio Lab → music-first, (5) Characters tab, (6) Editor/Library polish. (Video infra fully mapped Jun 5 — see the mapping agent transcript; backend already supports the flow, mostly a frontend reshuffle.)
+
+---
+
 # 🧪 MASTER MANUAL TEST PLAN — front-end + back-end + AI orchestration (assembled Jun 5 2026)
 HOW TO USE: walk ONE test per turn on localhost:3000. Per test: operator clicks + reports; Claude watches the dev-server log (expect `GET/POST/PATCH /api/... 200`) and verifies the DB; mark **[P]ass / [F]ail / [B]locked-needs-human**. Doctrine: test EVERY feature via BOTH the manual UI AND the Jasper AI path where one exists. NOTE: still testing on demo/seed data (manifest = `scripts/inventory-demo-test-data.ts`); purge before production.
 
