@@ -5,15 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { fineTuningFormSchema, type FineTuningFormValues } from '@/lib/validation/fine-tuning-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
 export default function NewFineTuningPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const form = useForm<FineTuningFormValues>({
     resolver: zodResolver(fineTuningFormSchema),
     defaultValues: {
@@ -26,12 +25,15 @@ export default function NewFineTuningPage() {
   const onSubmit = async (data: FineTuningFormValues) => {
     try {
       const jobId = `finetune-${Date.now()}`;
-      await FirestoreService.set(
-        getSubCollection('fineTuningJobs'),
-        jobId,
-        { ...data, id: jobId, status: 'pending', createdAt: Timestamp.now() },
-        false
-      );
+      const res = await authFetch('/api/ai/fine-tuning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, id: jobId, status: 'pending' }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to create fine-tuning job');
+      }
       router.push('/ai/fine-tuning');
     } catch (error: unknown) {
       logger.error('Error creating job:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

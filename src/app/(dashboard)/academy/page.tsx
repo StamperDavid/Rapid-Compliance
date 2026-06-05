@@ -3,9 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
-import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
@@ -41,39 +39,37 @@ function formatDuration(seconds: number): string {
 
 export default function AcademyPage() {
   const { user: _user } = useAuth();
+  const authFetch = useAuthFetch();
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [selectedTutorial, setSelectedTutorial] = useState<Tutorial | null>(null);
 
   const fetchTutorials = useCallback(async () => {
-    if (!db) { return; }
     try {
-      const ref = collection(db, 'organizations', PLATFORM_ID, 'academy_tutorials');
-      const q = query(ref, orderBy('order', 'asc'));
-      const snapshot = await getDocs(q);
-      const items: Tutorial[] = snapshot.docs.map((doc) => {
-        const data = doc.data() as Record<string, unknown>;
-        return {
-          id: doc.id,
-          title: (data.title as string) ?? '',
-          description: (data.description as string) ?? '',
-          category: (data.category as string) ?? 'getting-started',
-          videoUrl: (data.videoUrl as string | null) ?? null,
-          thumbnailUrl: (data.thumbnailUrl as string | null) ?? null,
-          duration: (data.duration as number) ?? 0,
-          status: (data.status as 'published' | 'draft') ?? 'published',
-          order: (data.order as number) ?? 0,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-        };
-      });
+      const res = await authFetch('/api/academy');
+      const json = (await res.json()) as { success?: boolean; tutorials?: Record<string, unknown>[] };
+      const rawItems = json.success && json.tutorials ? json.tutorials : [];
+      const items: Tutorial[] = rawItems.map((data) => ({
+        id: (data.id as string) ?? '',
+        title: (data.title as string) ?? '',
+        description: (data.description as string) ?? '',
+        category: (data.category as string) ?? 'getting-started',
+        videoUrl: (data.videoUrl as string | null) ?? null,
+        thumbnailUrl: (data.thumbnailUrl as string | null) ?? null,
+        duration: (data.duration as number) ?? 0,
+        status: (data.status as 'published' | 'draft') ?? 'published',
+        order: (data.order as number) ?? 0,
+        createdAt: new Date(),
+      }));
+      items.sort((a, b) => a.order - b.order);
       setTutorials(items.filter((t) => t.status === 'published'));
     } catch (err) {
       logger.error('Failed to fetch tutorials', err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchTutorials();

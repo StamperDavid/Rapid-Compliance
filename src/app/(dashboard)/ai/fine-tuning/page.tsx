@@ -2,10 +2,8 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { usePagination } from '@/hooks/usePagination';
-import { orderBy, type QueryConstraint, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
 
 interface FineTuningJob {
   id: string;
@@ -17,29 +15,21 @@ interface FineTuningJob {
 
 export default function FineTuningPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
 
-  // Fetch function with pagination
-  const fetchJobs = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
+  // Fetch function — the API returns the full list in one page.
+  const fetchJobs = useCallback(async (): Promise<{
     data: FineTuningJob[];
-    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+    lastDoc: string | null;
     hasMore: boolean;
   }> => {
-    const constraints: QueryConstraint[] = [
-      orderBy('createdAt', 'desc')
-    ];
-
-    const result = await FirestoreService.getAllPaginated(
-      getSubCollection('fineTuningJobs'),
-      constraints,
-      50,
-      lastDoc
-    );
-    return {
-      data: result.data as FineTuningJob[],
-      lastDoc: result.lastDoc,
-      hasMore: result.hasMore,
-    };
-  }, []);
+    const res = await authFetch('/api/ai/fine-tuning');
+    const json = (await res.json()) as { success?: boolean; jobs?: FineTuningJob[]; error?: string };
+    if (!res.ok || !json.success) {
+      throw new Error(json.error ?? 'Failed to load fine-tuning jobs');
+    }
+    return { data: json.jobs ?? [], lastDoc: null, hasMore: false };
+  }, [authFetch]);
 
   const {
     data: jobs,
@@ -48,7 +38,7 @@ export default function FineTuningPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination<FineTuningJob, QueryDocumentSnapshot<DocumentData>>({ fetchFn: fetchJobs });
+  } = usePagination<FineTuningJob, string>({ fetchFn: fetchJobs });
 
   // Initial load
   useEffect(() => {

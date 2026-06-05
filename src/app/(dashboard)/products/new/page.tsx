@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { productFormSchema, type ProductFormValues } from '@/lib/validation/product-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { createProduct, CATALOG_ITEM_TYPES, CATALOG_TYPE_LABELS, type CatalogItemType } from '@/lib/ecommerce/product-service';
+import { CATALOG_ITEM_TYPES, CATALOG_TYPE_LABELS, type CatalogItemType } from '@/lib/ecommerce/product-service';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -17,6 +18,7 @@ export default function NewProductPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const typeParam = searchParams.get('type') ?? '';
   const defaultType: CatalogItemType = isValidCatalogType(typeParam) ? typeParam : 'product';
@@ -40,16 +42,24 @@ export default function NewProductPage() {
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
-      await createProduct({
-        name: data.name,
-        type: data.type,
-        description: data.description,
-        price: data.price,
-        category: data.category,
-        sku: data.sku,
-        inStock: data.inStock,
-        images: data.images,
+      const res = await authFetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          type: data.type,
+          description: data.description,
+          price: data.price,
+          category: data.category,
+          sku: data.sku,
+          inStock: data.inStock,
+          images: data.images,
+        }),
       });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to create item');
+      }
       const label = CATALOG_TYPE_LABELS[data.type];
       toast.success(`${label} created successfully`);
       router.push(data.type === 'service' ? '/products/services' : '/products');

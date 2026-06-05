@@ -1,11 +1,10 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useFeatureModules } from '@/hooks/useFeatureModules';
 import { logger } from '@/lib/logger/logger';
 
@@ -102,6 +101,7 @@ const DEFAULT_CONFIG: StorefrontConfig = {
 
 export default function StorefrontSettingsPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const { theme: crmTheme } = useOrgTheme(); // Get CRM theme automatically
   const { isModuleEnabled } = useFeatureModules();
   const storefrontEnabled = isModuleEnabled('storefront');
@@ -111,84 +111,50 @@ export default function StorefrontSettingsPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load saved config from Firestore
+  // Load saved config from the storefront settings API
+  const loadConfig = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/settings/storefront');
+      const json = (await res.json()) as { success?: boolean; config?: StorefrontConfig | null };
+
+      if (json.success && json.config) {
+        const loaded = json.config;
+        // Back-fill defaultProvider for records saved before this field existed
+        if (!loaded.paymentProcessing?.defaultProvider) {
+          loaded.paymentProcessing = {
+            ...loaded.paymentProcessing,
+            defaultProvider: 'stripe',
+          };
+        }
+        setConfig(loaded);
+      }
+    } catch (error: unknown) {
+      logger.error('Failed to load storefront config', error instanceof Error ? error : new Error(String(error)));
+    }
+  }, [authFetch]);
+
   useEffect(() => {
     if (!user) {return;}
-
-    const loadConfig = async () => {
-      try {
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const configData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/storefrontConfig`,
-          'default'
-        );
-
-        if (configData) {
-          const loaded = configData as StorefrontConfig;
-          // Back-fill defaultProvider for records saved before this field existed
-          if (!loaded.paymentProcessing?.defaultProvider) {
-            loaded.paymentProcessing = {
-              ...loaded.paymentProcessing,
-              defaultProvider: 'stripe',
-            };
-          }
-          setConfig(loaded);
-        }
-      } catch (error: unknown) {
-        logger.error('Failed to load storefront config', error instanceof Error ? error : new Error(String(error)));
-      }
-    };
-
     void loadConfig();
-  }, [user]);
+  }, [user, loadConfig]);
 
   const handleSave = async () => {
     if (!user) {return;}
 
     setIsSaving(true);
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/storefrontConfig`,
-        'default',
-        {
-          ...config,
-          updatedAt: new Date().toISOString(),
-        },
-        false
-      );
-
-      // Sync payment provider toggles → ecommerce/config (where processPayment() reads from)
-      const providerMap: Array<{ key: keyof typeof config.paymentProcessing; id: string }> = [
-        { key: 'stripeEnabled', id: 'stripe' },
-        { key: 'paypalEnabled', id: 'paypal' },
-        { key: 'squareEnabled', id: 'square' },
-        { key: 'authorizenetEnabled', id: 'authorizenet' },
-        { key: 'twocheckoutEnabled', id: '2checkout' },
-        { key: 'mollieEnabled', id: 'mollie' },
-        { key: 'paddleEnabled', id: 'paddle' },
-        { key: 'adyenEnabled', id: 'adyen' },
-        { key: 'hyperswitchEnabled', id: 'hyperswitch' },
-      ];
-      const providers = providerMap
-        .filter(({ key }) => Boolean(config.paymentProcessing[key]))
-        .map(({ id }) => ({
-          provider: id,
-          enabled: true,
-          isDefault: id === config.paymentProcessing.defaultProvider,
-        }));
-
-      const { getSubCollection } = await import('@/lib/firebase/collections');
-      await FirestoreService.set(
-        getSubCollection('ecommerce'),
-        'config',
-        {
-          payments: { providers },
-          updatedAt: new Date().toISOString(),
-        },
-        true
-      );
-
+      // The route writes BOTH the storefrontConfig/default doc AND the derived
+      // ecommerce/config payments.providers[] array (provider-toggle sync is
+      // handled server-side).
+      const res = await authFetch('/api/settings/storefront', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to save storefront config');
+      }
     } catch (error: unknown) {
       logger.error('Failed to save storefront config', error instanceof Error ? error : new Error(String(error)));
     } finally {

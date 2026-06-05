@@ -5,15 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { datasetFormSchema, type DatasetFormValues } from '@/lib/validation/dataset-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
 export default function NewDatasetPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const form = useForm<DatasetFormValues>({
     resolver: zodResolver(datasetFormSchema),
     defaultValues: {
@@ -26,17 +25,19 @@ export default function NewDatasetPage() {
   const onSubmit = async (data: DatasetFormValues) => {
     try {
       const datasetId = `dataset-${Date.now()}`;
-      await FirestoreService.set(
-        getSubCollection('trainingDatasets'),
-        datasetId,
-        {
+      const res = await authFetch('/api/ai/datasets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           ...data,
           id: datasetId,
           exampleCount: 0,
-          createdAt: Timestamp.now(),
-        },
-        false
-      );
+        }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to create dataset');
+      }
       toast.success('Dataset created successfully');
       router.push('/ai/datasets');
     } catch (error: unknown) {

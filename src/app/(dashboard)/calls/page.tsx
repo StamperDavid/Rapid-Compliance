@@ -15,13 +15,9 @@ import {
 } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import { Phone, Plus, Play, Clock, Calendar, User, PhoneCall, Download, CalendarPlus, X as XIcon, Trash2 } from 'lucide-react';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getCallsCollection } from '@/lib/firebase/collections';
-import { usePagination } from '@/hooks/usePagination';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { showErrorToast, showSuccessToast } from '@/components/ErrorToast';
 import { logger } from '@/lib/logger/logger';
-import { type QueryConstraint, type DocumentData, type QueryDocumentSnapshot, orderBy } from 'firebase/firestore';
 
 interface Call {
   id: string;
@@ -117,34 +113,34 @@ export default function CallLogPage(): JSX.Element {
 
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 
-  // ─── Call history (pagination) ─────────────────────────────────────────
-  const fetchCalls = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
-    data: Call[];
-    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
-    hasMore: boolean;
-  }> => {
-    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
-    const result = await FirestoreService.getAllPaginated(
-      getCallsCollection(),
-      constraints,
-      50,
-      lastDoc,
-    );
-    return {
-      data: result.data as Call[],
-      lastDoc: result.lastDoc,
-      hasMore: result.hasMore,
-    };
-  }, []);
+  // ─── Call history (single fetch via API route) ─────────────────────────
+  const [calls, setCalls] = useState<Call[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // The API returns the full ordered list in one read, so there is no
+  // additional page to load. `hasMore` stays false and `loadMore` is a no-op.
+  const hasMore = false;
+  const loadMore = useCallback(async (): Promise<void> => { /* single fetch — nothing more to load */ }, []);
 
-  const {
-    data: calls,
-    loading,
-    error,
-    hasMore,
-    loadMore,
-    refresh,
-  } = usePagination<Call, QueryDocumentSnapshot<DocumentData>>({ fetchFn: fetchCalls });
+  const refresh = useCallback(async (): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch('/api/calls');
+      const json = (await res.json()) as { success?: boolean; calls?: Call[]; error?: string };
+      if (res.ok && json.success && json.calls) {
+        setCalls(json.calls);
+      } else {
+        setCalls([]);
+        setError(json.error ?? 'Failed to load calls');
+      }
+    } catch (err) {
+      logger.error('Failed to load calls', err instanceof Error ? err : new Error(String(err)), { file: FILE });
+      setError('Failed to load calls');
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 

@@ -8,34 +8,38 @@
 
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProducts, deleteProduct, CATALOG_TYPE_LABELS } from '@/lib/ecommerce/product-service';
+import { CATALOG_TYPE_LABELS, type Product } from '@/lib/ecommerce/product-service';
 import { PageTitle } from '@/components/ui/typography';
-import { usePagination } from '@/hooks/usePagination'
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function ProductManagementPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Fetch function with pagination using service layer
-  const fetchProducts = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
-    return getProducts(
-      undefined,
-      { pageSize: 50, lastDoc }
-    );
-  }, []);
-
-  const {
-    data: products,
-    loading,
-    error,
-    hasMore,
-    loadMore,
-    refresh
-  } = usePagination({ fetchFn: fetchProducts });
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch('/api/products');
+      const json = (await res.json()) as { success?: boolean; products?: Product[]; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to load products');
+      }
+      setProducts(json.products ?? []);
+    } catch (err: unknown) {
+      logger.error('Error loading products:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+      setError('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
 
   // Initial load
   useEffect(() => {
@@ -53,11 +57,15 @@ export default function ProductManagementPage() {
 
     void (async () => {
       try {
-        await deleteProduct(deletingId);
+        const res = await authFetch(`/api/products/${deletingId}`, { method: 'DELETE' });
+        const json = (await res.json()) as { success?: boolean; error?: string };
+        if (!res.ok || !json.success) {
+          throw new Error(json.error ?? 'Failed to delete product');
+        }
         toast.success('Product deleted successfully');
-        await refresh(); // Refresh pagination after delete
-      } catch (error) {
-        logger.error('Error deleting product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+        await refresh();
+      } catch (err) {
+        logger.error('Error deleting product:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
         toast.error('Failed to delete product');
       } finally {
         setDeletingId(null);
@@ -131,16 +139,9 @@ export default function ProductManagementPage() {
           </table>
           </div>
 
-          {/* Pagination */}
-          {(hasMore || loading) && (
-            <div className="p-4 border-t border-border-light flex justify-center">
-              <button
-                onClick={() => void loadMore()}
-                disabled={loading || !hasMore}
-                className="px-6 py-2 bg-surface-elevated text-foreground rounded-lg hover:bg-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Loading...' : hasMore ? `Load More (Showing ${products.length})` : 'All loaded'}
-              </button>
+          {loading && (
+            <div className="p-4 border-t border-border-light flex justify-center text-muted-foreground">
+              Loading...
             </div>
           )}
         </div>
