@@ -51,16 +51,37 @@ const SaveProjectSchema = z.object({
     z.object({
       id: z.string(),
       sceneNumber: z.number(),
+      title: z.string().optional(),
+      visualDescription: z.string().optional(),
       scriptText: z.string(),
       screenshotUrl: z.string().nullable(),
       avatarId: z.string().nullable(),
+      avatarName: z.string().nullable().optional(),
       voiceId: z.string().nullable(),
       voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).nullable().default(null),
       duration: z.number(),
       engine: z.enum(['hedra']).nullable().default(null),
       backgroundPrompt: z.string().nullable().default(null),
       cinematicConfig: CinematicConfigSchema.optional(),
-      status: z.enum(['draft', 'approved', 'generating', 'completed', 'failed']),
+      // Structured context fields (plain-language scene builder)
+      location: z.string().optional(),
+      timeOfDay: z.string().optional(),
+      weather: z.string().optional(),
+      ambience: z.string().optional(),
+      musicCue: z.string().optional(),
+      wardrobe: z.string().optional(),
+      references: z
+        .array(
+          z.object({
+            id: z.string(),
+            type: z.enum(['image', 'video', 'audio', 'text']),
+            name: z.string(),
+            url: z.string(),
+            mediaId: z.string().optional(),
+          }),
+        )
+        .optional(),
+      status: z.enum(['draft', 'approved', 'generating', 'persisting', 'completed', 'failed']),
     })
   ),
   avatarId: z.string().nullable(),
