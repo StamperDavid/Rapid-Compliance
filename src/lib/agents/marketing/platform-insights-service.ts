@@ -112,7 +112,7 @@ function buildDiscoverySeoInstructions(platform: SocialPlatform): string {
   // Which guidance to include depends on the platform's discovery mechanics.
   const hashtagPlatforms = new Set<SocialPlatform>([
     'twitter', 'bluesky', 'mastodon', 'linkedin', 'threads',
-    'instagram', 'tiktok', 'pinterest', 'reddit',
+    'instagram', 'tiktok', 'pinterest',
   ]);
   const keywordPlatforms = new Set<SocialPlatform>([
     'linkedin', 'youtube', 'pinterest', 'google_business',
@@ -137,9 +137,6 @@ function buildDiscoverySeoInstructions(platform: SocialPlatform): string {
   }
   if (platform === 'youtube') {
     platformSpecificNotes.push('chapterGuidance: guidance on chapter-marker structure for a typical video in this niche');
-  }
-  if (platform === 'reddit') {
-    platformSpecificNotes.push('flairGuidance: recommended post flair for the target subreddit, if applicable');
   }
   if (platform === 'google_business') {
     platformSpecificNotes.push('callToActionType: recommended GBP CTA button type for this post (e.g. "Learn more", "Call now", "Book")');

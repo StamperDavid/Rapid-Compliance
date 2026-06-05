@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Pass content verbatim. Each per-platform handler in autonomous-posting-agent
     // reads metadata.title separately and decides how to combine title + body
-    // (e.g. Reddit's submitPost, Pinterest's createPin). Prepending the title
+    // (e.g. Pinterest's createPin). Prepending the title
     // here would cause it to appear both in the body AND in the platform's
     // native title field — visible duplication for readers.
     const result = await agent.publishNow(platform, content, {

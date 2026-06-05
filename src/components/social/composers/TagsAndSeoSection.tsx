@@ -12,7 +12,6 @@
  *       bluesky / instagram  → alt-text field for the attached image
  *       youtube / tiktok     → video-tags chip input
  *       pinterest            → board category
- *       reddit               → post flair (free text)
  *       all others           → nothing
  *
  * On mount, pre-fills from the per-platform saved-tags doc via GET
@@ -36,7 +35,7 @@ import type { SocialPlatform } from '@/types/social';
 export interface TagsAndSeoValue {
   hashtags: string[];
   keywords: string[];
-  /** Keyed by field name (e.g. altText, videoTags, boardCategory, flair, soundSuggestion). */
+  /** Keyed by field name (e.g. altText, videoTags, boardCategory, soundSuggestion). */
   platformSpecific: Record<string, string>;
 }
 
@@ -60,7 +59,7 @@ interface SavedTagsResponse {
 
 const HASHTAG_PLATFORMS = new Set<SocialPlatform>([
   'twitter', 'bluesky', 'mastodon', 'linkedin', 'threads',
-  'instagram', 'tiktok', 'pinterest', 'reddit',
+  'instagram', 'tiktok', 'pinterest',
 ]);
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
@@ -286,28 +285,6 @@ function PlatformSpecificFields({
     );
   }
 
-  if (platform === 'reddit') {
-    return (
-      <div>
-        <label
-          className="text-xs font-medium text-muted-foreground"
-          htmlFor="reddit-flair"
-        >
-          Post flair{' '}
-          <span className="font-normal">(if required by subreddit)</span>
-        </label>
-        <Input
-          id="reddit-flair"
-          value={value.flair ?? ''}
-          onChange={(e) => onChange('flair', e.target.value)}
-          placeholder="Discussion, News, Question…"
-          disabled={disabled}
-          className="mt-1 text-sm"
-        />
-      </div>
-    );
-  }
-
   return null;
 }
 
@@ -319,8 +296,7 @@ function hasPlatformSpecificFields(platform: SocialPlatform): boolean {
     platform === 'bluesky' ||
     platform === 'youtube' ||
     platform === 'tiktok' ||
-    platform === 'pinterest' ||
-    platform === 'reddit'
+    platform === 'pinterest'
   );
 }
 

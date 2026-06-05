@@ -44,7 +44,6 @@ import {
 // to future scope. Hiding them here keeps the cockpit focused on platforms
 // the operator can actually act on right now.
 const HIDDEN_FROM_GRID: ReadonlySet<SocialPlatform> = new Set([
-  'telegram',
   'whatsapp_business',
   'threads',
 ]);
@@ -633,7 +632,6 @@ const MARKETING_MISSION_HINTS = [
   'tiktok',
   'youtube',
   'pinterest',
-  'reddit',
   'threads',
   'post',
   'campaign',

@@ -54,15 +54,6 @@ export const SOCIAL_PLATFORM_CONFIGS: SocialPlatformConfig[] = [
     signupUrl: 'https://www.tiktok.com/signup',
   },
   {
-    id: 'reddit',
-    name: 'Reddit',
-    icon: '👽',
-    description: 'Post to subreddits and reply to comments',
-    color: '#FF4500',
-    connectMethod: 'oauth',
-    signupUrl: 'https://www.reddit.com/register',
-  },
-  {
     id: 'pinterest',
     name: 'Pinterest',
     icon: '📌',
@@ -83,34 +74,6 @@ export const SOCIAL_PLATFORM_CONFIGS: SocialPlatformConfig[] = [
     credentialFields: [
       { key: 'identifier', label: 'Handle', placeholder: 'yourname.bsky.social', type: 'text' },
       { key: 'password', label: 'App Password', placeholder: 'From Bluesky Settings > App Passwords', type: 'password' },
-    ],
-  },
-  {
-    id: 'telegram',
-    name: 'Telegram',
-    icon: '✈️',
-    description: 'Broadcast messages to a Telegram channel or group',
-    color: '#26A5E4',
-    connectMethod: 'credentials',
-    connectEndpoint: '/api/social/connect/telegram',
-    signupUrl: 'https://telegram.org/',
-    credentialFields: [
-      { key: 'botToken', label: 'Bot Token', placeholder: 'From @BotFather', type: 'password' },
-      { key: 'chatId', label: 'Chat ID', placeholder: 'Channel or group chat ID', type: 'text' },
-    ],
-  },
-  {
-    id: 'truth_social',
-    name: 'Truth Social',
-    icon: '🇺🇸',
-    description: 'Post to your Truth Social account via API token',
-    color: '#4C75A3',
-    connectMethod: 'credentials',
-    connectEndpoint: '/api/social/connect/truth_social',
-    signupUrl: 'https://truthsocial.com/',
-    credentialFields: [
-      { key: 'accessToken', label: 'Access Token', placeholder: 'From account settings', type: 'password' },
-      { key: 'instanceUrl', label: 'Instance URL', placeholder: 'https://truthsocial.com', type: 'text' },
     ],
   },
 ];

@@ -19,10 +19,7 @@ export { PinterestComposer } from './PinterestComposer';
 export { BlueskyComposer } from './BlueskyComposer';
 export { MastodonComposer } from './MastodonComposer';
 export { ThreadsComposer } from './ThreadsComposer';
-export { TelegramComposer } from './TelegramComposer';
-export { RedditComposer } from './RedditComposer';
 export { WhatsAppBusinessComposer } from './WhatsAppBusinessComposer';
 export { GoogleBusinessComposer } from './GoogleBusinessComposer';
-export { TruthSocialComposer } from './TruthSocialComposer';
 
 export { useCharCountdownColor, countHashtags, splitThread } from './_utils';

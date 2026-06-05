@@ -11,7 +11,7 @@
  *
  * Supported platforms:
  *   Big 6: Twitter/X, LinkedIn, Facebook, Instagram, YouTube, TikTok
- *   Tier 1: Bluesky, Threads, Truth Social, Telegram, Reddit, Pinterest,
+ *   Tier 1: Bluesky, Threads, Pinterest,
  *           WhatsApp Business, Google Business
  */
 
@@ -32,11 +32,6 @@ import { createTikTokService } from '@/lib/integrations/tiktok-service';
 import { createBlueskyService } from '@/lib/integrations/bluesky-service';
 import { createThreadsService } from '@/lib/integrations/threads-service';
 import { createMastodonService } from '@/lib/integrations/mastodon-service';
-// Truth Social posting parked (Apr 26 2026) — Cloudflare TLS wall blocks
-// Node fetch in production. See CONTINUATION_PROMPT integration matrix.
-// import { createTruthSocialService } from '@/lib/integrations/truth-social-service';
-import { createTelegramService } from '@/lib/integrations/telegram-service';
-import { createRedditService } from '@/lib/integrations/reddit-service';
 import { createPinterestService } from '@/lib/integrations/pinterest-service';
 import { createWhatsAppBusinessService } from '@/lib/integrations/whatsapp-business-service';
 import { createGoogleBusinessService } from '@/lib/integrations/google-business-service';
@@ -1118,59 +1113,6 @@ export class AutonomousPostingAgent {
                 visibility: 'public',
               });
           return { success: mastodonResult.success, platform, postId, platformPostId: mastodonResult.postId, error: mastodonResult.error };
-        }
-
-        case 'truth_social': {
-          // PARKED Apr 26 2026 — Truth Social fronts its API with Cloudflare
-          // bot management that fingerprints the TLS handshake; Node fetch
-          // 403s in production. No official API or partner program exists.
-          // Re-enable if Truth Social opens server-side access.
-          return {
-            success: false,
-            platform,
-            postId,
-            error: 'Truth Social posting is parked: platform blocks server-side API access (Cloudflare TLS fingerprinting). No official API exists. See CONTINUATION_PROMPT integration matrix.',
-          };
-        }
-
-        case 'telegram': {
-          const telegramService = await createTelegramService();
-          if (!telegramService) {
-            return { success: false, platform, postId, error: 'Telegram service not configured — add bot token and chat ID in Settings > API Keys' };
-          }
-          const telegramResult = await telegramService.sendMessage({ text: content });
-          return { success: telegramResult.success, platform, postId, platformPostId: telegramResult.messageId?.toString(), error: telegramResult.error };
-        }
-
-        case 'reddit': {
-          const redditService = await createRedditService();
-          if (!redditService) {
-            return { success: false, platform, postId, error: 'Reddit service not configured — add credentials in Settings > API Keys' };
-          }
-
-          // Reddit: hashtags and keywords from TagsAndSeoSection are intentionally
-          // skipped. Reddit does not use hashtags; subreddit + flair are the native
-          // discovery mechanisms and are already handled by the native metadata
-          // fields (subreddit, title, flair) that the RedditComposer collects.
-
-          // Use metadata for subreddit and title when provided; fall back to content parsing
-          const subreddit = metadata?.subreddit ?? 'u_me';
-          const redditTitle = metadata?.title ?? content.split('\n').filter(Boolean)[0]?.substring(0, 300) ?? 'New post';
-          const redditBody = metadata?.title
-            ? content  // When title comes from metadata, entire content is the body
-            : (content.split('\n').filter(Boolean).slice(1).join('\n') || content);
-
-          // Determine post kind: link if a URL is provided, otherwise self (text)
-          const redditKind = metadata?.url ? 'link' as const : 'self' as const;
-
-          const redditResult = await redditService.submitPost({
-            subreddit,
-            title: redditTitle,
-            text: redditKind === 'self' ? redditBody : undefined,
-            url: metadata?.url,
-            kind: redditKind,
-          });
-          return { success: redditResult.success, platform, postId, platformPostId: redditResult.postId, error: redditResult.error };
         }
 
         case 'pinterest': {

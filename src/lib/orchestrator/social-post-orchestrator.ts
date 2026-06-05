@@ -64,11 +64,9 @@ const SPECIALIST_BY_PLATFORM: Readonly<Record<string, string>> = {
   facebook: 'FACEBOOK_ADS_EXPERT',
   instagram: 'INSTAGRAM_EXPERT',
   pinterest: 'PINTEREST_EXPERT',
-  reddit: 'REDDIT_EXPERT',
   threads: 'THREADS_EXPERT',
   'google-business': 'GOOGLE_BUSINESS_EXPERT',
   google_business: 'GOOGLE_BUSINESS_EXPERT',
-  telegram: 'TELEGRAM_EXPERT',
   whatsapp: 'WHATSAPP_BUSINESS_EXPERT',
   whatsapp_business: 'WHATSAPP_BUSINESS_EXPERT',
   'whatsapp-business': 'WHATSAPP_BUSINESS_EXPERT',
@@ -194,10 +192,8 @@ async function runSpecialistGenerateBrief(
   const { getFacebookAdsExpert } = await import('@/lib/agents/marketing/facebook/specialist');
   const { getInstagramExpert } = await import('@/lib/agents/marketing/instagram/specialist');
   const { getPinterestExpert } = await import('@/lib/agents/marketing/pinterest/specialist');
-  const { getRedditExpert } = await import('@/lib/agents/marketing/reddit/specialist');
   const { getThreadsExpert } = await import('@/lib/agents/marketing/threads/specialist');
   const { getGoogleBusinessExpert } = await import('@/lib/agents/marketing/google-business/specialist');
-  const { getTelegramExpert } = await import('@/lib/agents/marketing/telegram/specialist');
   const { getWhatsAppBusinessExpert } = await import('@/lib/agents/marketing/whatsapp-business/specialist');
   const { getDiscordExpert } = await import('@/lib/agents/marketing/discord/specialist');
   const { getTwitchExpert } = await import('@/lib/agents/marketing/twitch/specialist');
@@ -212,10 +208,8 @@ async function runSpecialistGenerateBrief(
       case 'facebook': return getFacebookAdsExpert();
       case 'instagram': return getInstagramExpert();
       case 'pinterest': return getPinterestExpert();
-      case 'reddit': return getRedditExpert();
       case 'threads': return getThreadsExpert();
       case 'google_business': return getGoogleBusinessExpert();
-      case 'telegram': return getTelegramExpert();
       case 'whatsapp_business': return getWhatsAppBusinessExpert();
       case 'discord': return getDiscordExpert();
       case 'twitch': return getTwitchExpert();
