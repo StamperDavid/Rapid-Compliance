@@ -202,6 +202,18 @@ export async function POST(
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    // 4. Write the `members` subcollection record so the accepted user is
+    //    visible to leaderboard, lead-routing auto-assign, and @mention/task
+    //    notifications (all of which read getSubCollection('members')/{uid}).
+    const memberRef = adminDb.collection(getSubCollection('members')).doc(uid);
+    batch.set(memberRef, {
+      userId: uid,
+      email: invite.email,
+      name: displayName,
+      role: invite.role,
+      addedAt: FieldValue.serverTimestamp(),
+    });
+
     await batch.commit();
 
     // ---- Set Firebase Auth custom claims ----

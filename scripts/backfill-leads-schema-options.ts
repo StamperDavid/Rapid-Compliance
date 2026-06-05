@@ -77,6 +77,11 @@ async function main(): Promise<void> {
       changed++;
       console.log(`  + description on "${f.key ?? f.label}": ${DESCRIPTIONS[key]}`);
     }
+    if (key === 'assignedto' && f.type !== 'user') {
+      next.type = 'user';
+      changed++;
+      console.log(`  ~ type of "${f.key ?? f.label}" -> user (live team-member dropdown)`);
+    }
     return next;
   });
 

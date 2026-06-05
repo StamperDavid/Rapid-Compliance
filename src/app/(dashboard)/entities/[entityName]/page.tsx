@@ -48,6 +48,18 @@ interface SchemaResponse {
   schemas?: ApiSchema[];
 }
 
+interface TeamMember {
+  uid: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface TeamMembersResponse {
+  success: boolean;
+  members?: TeamMember[];
+}
+
 export default function EntityTablePage() {
   const params = useParams();
   const entityName = params.entityName as string;
@@ -68,6 +80,28 @@ export default function EntityTablePage() {
   });
 
   const [schemaList, setSchemaList] = useState<ApiSchema[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  // Load team members once on mount (for 'user' / Team Member fields)
+  useEffect(() => {
+    let isMounted = true;
+    void (async () => {
+      try {
+        const res = await authFetch('/api/team/members');
+        if (!res.ok) {throw new Error(`Failed to load team members (${res.status})`);}
+        const data = await res.json() as TeamMembersResponse;
+        if (isMounted && data.success) {
+          setTeamMembers(data.members ?? []);
+        }
+      } catch (err: unknown) {
+        // Tolerate failure — leave the team member list empty
+        logger.error('Error loading team members for entity page', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [authFetch]);
 
   // Load schemas from API
   useEffect(() => {
@@ -132,6 +166,9 @@ export default function EntityTablePage() {
           defaults[field.key] = '';
           break;
         case 'singleSelect':
+          defaults[field.key] = '';
+          break;
+        case 'user':
           defaults[field.key] = '';
           break;
         case 'multiSelect':
@@ -393,6 +430,28 @@ export default function EntityTablePage() {
             {options.map(opt => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
+          </select>
+        );
+      }
+
+      case 'user': {
+        const selectValue = value ?? '';
+        return (
+          <select
+            value={String(selectValue)}
+            onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+            style={{ ...baseInputStyle, cursor: 'pointer' }}
+          >
+            {teamMembers.length === 0 ? (
+              <option value="" disabled>No team members</option>
+            ) : (
+              <>
+                <option value="">— Unassigned —</option>
+                {teamMembers.map(m => (
+                  <option key={m.uid} value={m.uid}>{m.name} ({m.role})</option>
+                ))}
+              </>
+            )}
           </select>
         );
       }
