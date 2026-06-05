@@ -52,7 +52,7 @@ export class WorkflowService {
     this.dal = dalInstance;
     this.coordinator = new WorkflowCoordinator(dalInstance);
     
-    logger.info('WorkflowService initialized');
+    logger.debug('WorkflowService initialized');
   }
   
   /**

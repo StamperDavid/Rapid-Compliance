@@ -540,4 +540,4 @@ export function getForecastHistory(
   return [];
 }
 
-logger.info('Revenue Forecasting Engine initialized');
+logger.debug('Revenue Forecasting Engine initialized');

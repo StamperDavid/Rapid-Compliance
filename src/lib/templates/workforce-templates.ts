@@ -5685,7 +5685,7 @@ SOCIAL_MEDIA_INFLUENCER_TEMPLATE.agentManuals.meta_facebook = META_FACEBOOK_MANU
 SOCIAL_MEDIA_INFLUENCER_TEMPLATE.agentManuals.newsletter = NEWSLETTER_MANUAL;
 
 // Log successful manual loading
-logger.info('Technical Operations Agent Manuals loaded', {
+logger.debug('Technical Operations Agent Manuals loaded', {
   manuals: [
     'web_migrator (The Digital Architect)',
     'lead_hunter (The Lead Hunter)',
@@ -5771,7 +5771,7 @@ export function calculateWorkforceHealth(
   };
 }
 
-logger.info('Workforce templates loaded', {
+logger.debug('Workforce templates loaded', {
   count: Object.keys(WORKFORCE_TEMPLATES).length,
   templates: Object.keys(WORKFORCE_TEMPLATES),
 });

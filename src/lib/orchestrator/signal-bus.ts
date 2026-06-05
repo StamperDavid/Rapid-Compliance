@@ -81,7 +81,7 @@ export class SignalBus {
 
   constructor() {
     this.registry = this.createRegistry();
-    logger.info('[SignalBus] Initialized (penthouse flat bus)');
+    logger.debug('[SignalBus] Initialized (penthouse flat bus)');
   }
 
   private createRegistry(): Registry {

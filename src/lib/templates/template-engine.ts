@@ -499,4 +499,4 @@ export function cloneTemplate(
   };
 }
 
-logger.info('Template Engine initialized');
+logger.debug('Template Engine initialized');

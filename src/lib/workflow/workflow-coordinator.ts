@@ -88,7 +88,7 @@ export class WorkflowCoordinator {
       dryRun: config?.dryRun ?? false,
     };
     
-    logger.info('WorkflowCoordinator initialized', {
+    logger.debug('WorkflowCoordinator initialized', {
       maxConcurrentExecutions: this.config.maxConcurrentExecutions,
       executeForTestDeals: this.config.executeForTestDeals,
       dryRun: this.config.dryRun,

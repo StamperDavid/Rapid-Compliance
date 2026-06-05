@@ -123,7 +123,7 @@ export async function initializeProviders(): Promise<void> {
   ProviderFactory.register('anthropic', new AnthropicProvider());
   ProviderFactory.register('google', new GeminiProvider());
   
-  logger.info('[Model Providers] Initialized: OpenAI, Anthropic, Google', { file: 'model-provider.ts' });
+  logger.debug('[Model Providers] Initialized: OpenAI, Anthropic, Google', { file: 'model-provider.ts' });
 }
 
 

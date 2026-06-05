@@ -1792,4 +1792,4 @@ export function getIntelligenceManager(): IntelligenceManager {
   return managerInstance;
 }
 
-logger.info('[IntelligenceManager] Module loaded - Dynamic orchestration engine ready');
+logger.debug('[IntelligenceManager] Module loaded - Dynamic orchestration engine ready');

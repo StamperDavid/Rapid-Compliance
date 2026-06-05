@@ -124,7 +124,7 @@ export class WorkforceOrchestrator {
       metadata: Record<string, unknown>;
     }) => Promise<SignalEmissionResult>
   ) {
-    logger.info('WorkforceOrchestrator initialized');
+    logger.debug('WorkforceOrchestrator initialized');
   }
 
   // ==========================================================================
@@ -806,4 +806,4 @@ export function seedWebsiteBuilder(): {
   return seeds?.webSeeds ?? null;
 }
 
-logger.info('Workforce Orchestrator module loaded');
+logger.debug('Workforce Orchestrator module loaded');

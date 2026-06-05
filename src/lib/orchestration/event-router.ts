@@ -157,7 +157,7 @@ export class EventRouter {
 
   constructor() {
     this.registerDefaultRules();
-    logger.info('[EventRouter] Initialized with default rules', {
+    logger.debug('[EventRouter] Initialized with default rules', {
       ruleCount: this.rules.size,
     });
   }

@@ -229,7 +229,7 @@ export class MemoryVault {
   private pendingPersists: Map<string, Promise<void>> = new Map();
 
   private constructor() {
-    logger.info('[MemoryVault] Initialized - Cross-agent memory active');
+    logger.debug('[MemoryVault] Initialized - Cross-agent memory active');
     this.startHydration();
   }
 
@@ -1083,4 +1083,4 @@ export async function checkPendingSignals(
   return vault.getPendingSignals(agentId);
 }
 
-logger.info('[MemoryVault] Module loaded - Shared memory infrastructure ready');
+logger.debug('[MemoryVault] Module loaded - Shared memory infrastructure ready');

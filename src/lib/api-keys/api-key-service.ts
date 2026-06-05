@@ -79,7 +79,7 @@ class APIKeyService {
   private firestoreUnsubscribe: (() => void) | null = null;
 
   private constructor() {
-    logger.info('[APIKeyService] Initialized. Ready to fetch keys from Firestore.', { file: 'api-key-service.ts' });
+    logger.debug('[APIKeyService] Initialized. Ready to fetch keys from Firestore.', { file: 'api-key-service.ts' });
   }
 
   static getInstance(): APIKeyService {

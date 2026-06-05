@@ -779,4 +779,4 @@ export async function batchScoreDeals(
   };
 }
 
-logger.info('Deal Scoring Engine initialized');
+logger.debug('Deal Scoring Engine initialized');
