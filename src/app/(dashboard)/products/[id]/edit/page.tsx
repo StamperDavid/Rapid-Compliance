@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getProduct, updateProduct, CATALOG_ITEM_TYPES, CATALOG_TYPE_LABELS, type Product } from '@/lib/ecommerce/product-service';
+import { CATALOG_ITEM_TYPES, CATALOG_TYPE_LABELS, type Product } from '@/lib/ecommerce/product-service';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -10,6 +11,7 @@ export default function EditProductPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const productId = params.id as string;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,15 +19,20 @@ export default function EditProductPage() {
 
   const loadProduct = useCallback(async () => {
     try {
-      const data = await getProduct(productId);
-      setProduct(data);
+      const res = await authFetch(`/api/products/${productId}`);
+      const json = (await res.json()) as { success?: boolean; product?: Product; error?: string };
+      if (res.ok && json.success && json.product) {
+        setProduct(json.product);
+      } else {
+        setProduct(null);
+      }
     } catch (error) {
       logger.error('Error loading product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       toast.error('Failed to load product');
     } finally {
       setLoading(false);
     }
-  }, [productId, toast]);
+  }, [authFetch, productId, toast]);
 
   useEffect(() => {
     void loadProduct();
@@ -38,15 +45,23 @@ export default function EditProductPage() {
     }
     try {
       setSaving(true);
-      await updateProduct(productId, {
-        name: product.name,
-        type: product.type,
-        description: product.description,
-        price: product.price,
-        sku: product.sku,
-        category: product.category,
-        inStock: product.inStock,
+      const res = await authFetch(`/api/products/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: product.name,
+          type: product.type,
+          description: product.description,
+          price: product.price,
+          sku: product.sku,
+          category: product.category,
+          inStock: product.inStock,
+        }),
       });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to update product');
+      }
       toast.success('Product updated successfully');
       router.push('/products');
     } catch (error) {

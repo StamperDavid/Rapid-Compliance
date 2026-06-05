@@ -4,15 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ProposalTemplate, ProposalSection } from '@/lib/documents/proposal-generator';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SafeHtml from '@/components/SafeHtml';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
 
 type TemplateType = 'proposal' | 'quote' | 'contract' | 'invoice';
 
 export default function ProposalBuilderPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [template, setTemplate] = useState<Partial<ProposalTemplate>>({
     name: 'Untitled Proposal',
@@ -74,8 +74,8 @@ export default function ProposalBuilderPage() {
   const saveTemplate = async () => {
     try {
       const templateId = `proposal-${Date.now()}`;
-      const now = new Date();
-      const toSave: ProposalTemplate = {
+      const now = new Date().toISOString();
+      const toSave = {
         id: templateId,
         name: template.name ?? 'Untitled Proposal',
         type: (template.type as ProposalTemplate['type']) ?? 'proposal',
@@ -85,12 +85,15 @@ export default function ProposalBuilderPage() {
         createdAt: now,
         updatedAt: now,
       };
-      await FirestoreService.set(
-        getSubCollection('proposalTemplates'),
-        templateId,
-        toSave,
-        false
-      );
+      const res = await authFetch('/api/proposals/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toSave),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to save template');
+      }
       toast.success('Proposal template saved!');
       router.push('/proposals');
     } catch {

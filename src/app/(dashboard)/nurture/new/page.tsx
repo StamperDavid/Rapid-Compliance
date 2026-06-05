@@ -5,15 +5,14 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { nurtureFormSchema, type NurtureFormValues } from '@/lib/validation/nurture-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
 export default function NewNurtureCampaignPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const form = useForm<NurtureFormValues>({
     resolver: zodResolver(nurtureFormSchema),
@@ -35,20 +34,15 @@ export default function NewNurtureCampaignPage() {
 
   const onSubmit = async (data: NurtureFormValues) => {
     try {
-      const campaignId = `nurture-${Date.now()}`;
-      await FirestoreService.set(
-        getSubCollection('nurtureSequences'),
-        campaignId,
-        {
-          ...data,
-          id: campaignId,
-          status: 'draft',
-          enrolled: 0,
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-        },
-        false
-      );
+      const res = await authFetch('/api/nurture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, status: 'draft' }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to save campaign');
+      }
       router.push('/nurture');
     } catch (error: unknown) {
       logger.error('Error saving campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

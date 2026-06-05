@@ -10,35 +10,48 @@ import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Mail, Plus, Send, Eye, Trash2, Calendar, TrendingUp } from 'lucide-react';
-import { getCampaigns, deleteCampaign, type EmailCampaign } from '@/lib/email/campaign-service';
-import { usePagination } from '@/hooks/usePagination';
+import type { EmailCampaign } from '@/lib/email/campaign-service';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function EmailCampaignsPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-  // Fetch function with pagination using service layer
-  const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
-    return getCampaigns(
-      undefined,
-      { pageSize: 50, lastDoc }
-    );
-  }, []);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch('/api/email/campaigns');
+      const json = (await res.json()) as { success?: boolean; campaigns?: EmailCampaign[]; pagination?: { hasMore?: boolean }; error?: string };
+      if (json.success && json.campaigns) {
+        setCampaigns(json.campaigns);
+        setHasMore(json.pagination?.hasMore ?? false);
+      } else {
+        setError(json.error ?? 'Failed to load campaigns');
+      }
+    } catch (err) {
+      logger.error('Error loading campaigns:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+      setError('Failed to load campaigns');
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
 
-  const {
-    data: campaigns,
-    loading,
-    error,
-    hasMore,
-    loadMore,
-    refresh
-  } = usePagination<EmailCampaign, QueryDocumentSnapshot>({ fetchFn: fetchCampaigns });
+  // The API GET returns a single page (no Firestore cursor over the wire),
+  // so "load more" simply re-fetches the list.
+  const loadMore = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
 
   // Initial load
   useEffect(() => {
@@ -51,14 +64,18 @@ export default function EmailCampaignsPage() {
       onConfirm: () => {
         void (async () => {
           try {
-            await deleteCampaign(campaignId);
+            const res = await authFetch(`/api/email/campaigns/${campaignId}`, { method: 'DELETE' });
+            const json = (await res.json()) as { success?: boolean; error?: string };
+            if (!json.success) {
+              throw new Error(json.error ?? 'Failed to delete campaign');
+            }
             await refresh();
             setConfirmDialog(null);
             setNotification({ message: 'Campaign deleted successfully', type: 'success' });
           } catch (err: unknown) {
             logger.error('Error deleting campaign:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
             setConfirmDialog(null);
-            setNotification({ message: 'Failed to delete campaign', type: 'error' });
+            setNotification({ message: err instanceof Error ? err.message : 'Failed to delete campaign', type: 'error' });
           }
         })();
       },

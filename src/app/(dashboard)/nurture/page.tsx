@@ -16,20 +16,38 @@ import {
   Edit3,
   Layers
 } from 'lucide-react';
-import { getNurtureCampaigns, type NurtureCampaign } from '@/lib/outbound/nurture-service';
+import { type NurtureCampaign } from '@/lib/outbound/nurture-service';
 import { usePagination } from '@/hooks/usePagination';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 export default function NurtureCampaignsPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
 
-  // Fetch function with pagination using service layer
-  const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
-    return getNurtureCampaigns(
-      undefined,
-      { pageSize: 50, lastDoc }
-    );
-  }, []);
+  // Fetch function with cursor-based pagination via the nurture API
+  const fetchCampaigns = useCallback(async (cursor?: string) => {
+    const url = new URL('/api/nurture', window.location.origin);
+    url.searchParams.set('pageSize', '50');
+    if (cursor) {
+      url.searchParams.set('cursor', cursor);
+    }
+    const res = await authFetch(url.pathname + url.search);
+    const json = (await res.json()) as {
+      success?: boolean;
+      sequences?: NurtureCampaign[];
+      cursor?: string | null;
+      hasMore?: boolean;
+      error?: string;
+    };
+    if (!res.ok || !json.success) {
+      throw new Error(json.error ?? 'Failed to load nurture campaigns');
+    }
+    return {
+      data: json.sequences ?? [],
+      lastDoc: json.cursor ?? null,
+      hasMore: json.hasMore ?? false,
+    };
+  }, [authFetch]);
 
   const {
     data: campaigns,
@@ -38,7 +56,7 @@ export default function NurtureCampaignsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination<NurtureCampaign, QueryDocumentSnapshot>({ fetchFn: fetchCampaigns });
+  } = usePagination<NurtureCampaign, string>({ fetchFn: fetchCampaigns });
 
   // Initial load
   useEffect(() => {

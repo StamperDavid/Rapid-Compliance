@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { RoutingRule, RoutingCondition } from '@/lib/crm/lead-routing';
 
 type RoutingType = RoutingRule['routingType'];
@@ -64,6 +62,7 @@ const EMPTY_FORM: RuleFormData = {
 
 export default function LeadRoutingPage() {
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const [rules, setRules] = useState<RoutingRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -71,11 +70,14 @@ export default function LeadRoutingPage() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const collectionPath = getSubCollection('leadRoutingRules');
-
   const loadRules = useCallback(async () => {
     try {
-      const results = await FirestoreService.getAll<RoutingRule>(collectionPath);
+      const res = await authFetch('/api/settings/lead-routing');
+      const json = (await res.json()) as { success?: boolean; rules?: RoutingRule[]; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to load routing rules');
+      }
+      const results = json.rules ?? [];
       setRules(results.sort((a, b) => b.priority - a.priority));
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -83,7 +85,7 @@ export default function LeadRoutingPage() {
     } finally {
       setLoading(false);
     }
-  }, [collectionPath]);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadRules();
@@ -91,10 +93,15 @@ export default function LeadRoutingPage() {
 
   const toggleRule = async (ruleId: string, enabled: boolean) => {
     try {
-      await FirestoreService.update(collectionPath, ruleId, {
-        enabled,
-        updatedAt: Timestamp.now(),
+      const res = await authFetch(`/api/settings/lead-routing/${ruleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
       });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to update rule');
+      }
       setRules(rules.map(r => r.id === ruleId ? { ...r, enabled } : r));
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -106,7 +113,13 @@ export default function LeadRoutingPage() {
   const handleDelete = async (ruleId: string) => {
     setDeletingId(ruleId);
     try {
-      await FirestoreService.delete(collectionPath, ruleId);
+      const res = await authFetch(`/api/settings/lead-routing/${ruleId}`, {
+        method: 'DELETE',
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to delete rule');
+      }
       setRules(rules.filter(r => r.id !== ruleId));
       toast.success('Rule deleted');
     } catch (err) {
@@ -160,10 +173,24 @@ export default function LeadRoutingPage() {
         } : undefined,
         createdAt: new Date(),
       };
-      await FirestoreService.set(collectionPath, ruleId, {
-        ...newRule,
-        createdAt: Timestamp.now(),
-      }, false);
+      const res = await authFetch('/api/settings/lead-routing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: ruleId,
+          name: newRule.name,
+          enabled: newRule.enabled,
+          priority: newRule.priority,
+          routingType: newRule.routingType,
+          assignedUsers: newRule.assignedUsers,
+          conditions: newRule.conditions,
+          metadata: newRule.metadata,
+        }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to create rule');
+      }
       setRules([...rules, newRule].sort((a, b) => b.priority - a.priority));
       setFormData({ ...EMPTY_FORM });
       setShowForm(false);

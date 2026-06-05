@@ -3,41 +3,42 @@
 /**
  * Services Catalog
  *
- * Lists catalog items with category "service". Uses the same product service
- * and data model — services are products with category=service.
+ * Lists catalog items with type "service". Uses the same products API and data
+ * model — services are products with type=service.
  * Accessible via the Catalog hub's "Services" tab.
  */
 
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProducts, deleteProduct, type Product } from '@/lib/ecommerce/product-service';
-import { usePagination } from '@/hooks/usePagination';
+import { type Product } from '@/lib/ecommerce/product-service';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function ServicesCatalogPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
+  const [services, setServices] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchServices = useCallback(
-    async (lastDoc?: QueryDocumentSnapshot) => {
-      return getProducts(
-        { type: 'service' },
-        { pageSize: 50, lastDoc }
-      );
-    },
-    [],
-  );
-
-  const {
-    data: services,
-    loading,
-    hasMore,
-    loadMore,
-    refresh,
-  } = usePagination<Product, QueryDocumentSnapshot>({ fetchFn: fetchServices });
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await authFetch('/api/products?type=service');
+      const json = (await res.json()) as { success?: boolean; products?: Product[]; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to load services');
+      }
+      setServices(json.products ?? []);
+    } catch (error) {
+      logger.error('Failed to load services', error instanceof Error ? error : new Error(String(error)));
+      toast.error('Failed to load services');
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch, toast]);
 
   useEffect(() => {
     void refresh();
@@ -50,7 +51,11 @@ export default function ServicesCatalogPage() {
   const confirmDelete = async () => {
     if (!deletingId) { return; }
     try {
-      await deleteProduct(deletingId);
+      const res = await authFetch(`/api/products/${deletingId}`, { method: 'DELETE' });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to delete service');
+      }
       toast.success('Service deleted');
       void refresh();
     } catch (error) {
@@ -159,17 +164,6 @@ export default function ServicesCatalogPage() {
               </div>
             ))}
           </div>
-          {hasMore && (
-            <div className="text-center mt-6">
-              <button
-                onClick={() => void loadMore()}
-                className="px-4 py-2 rounded-lg text-sm font-medium border"
-                style={{ borderColor: 'var(--color-border-light)', color: 'var(--color-text-secondary)' }}
-              >
-                Load More
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

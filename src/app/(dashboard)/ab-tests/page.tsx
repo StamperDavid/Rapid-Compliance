@@ -3,10 +3,8 @@
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageTitle } from '@/components/ui/typography';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { usePagination } from '@/hooks/usePagination';
-import { orderBy, type QueryConstraint, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
 
 interface ABTest {
   id: string;
@@ -15,33 +13,31 @@ interface ABTest {
   status: 'draft' | 'running' | 'completed';
   variants?: Array<{ name: string }>;
   winner?: string;
+  createdAt?: unknown;
 }
 
 export default function ABTestsPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
 
-  // Fetch function with pagination
-  const fetchTests = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
+  // Fetch function — the API returns the full list in one page.
+  const fetchTests = useCallback(async (): Promise<{
     data: ABTest[];
-    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+    lastDoc: string | null;
     hasMore: boolean;
   }> => {
-    const constraints: QueryConstraint[] = [
-      orderBy('createdAt', 'desc')
-    ];
-
-    const result = await FirestoreService.getAllPaginated(
-      getSubCollection('abTests'),
-      constraints,
-      50,
-      lastDoc
-    );
-    return {
-      data: result.data as ABTest[],
-      lastDoc: result.lastDoc,
-      hasMore: result.hasMore,
-    };
-  }, []);
+    const res = await authFetch('/api/ab-tests');
+    const json = (await res.json()) as { success?: boolean; abTests?: ABTest[]; error?: string };
+    if (!res.ok || !json.success) {
+      throw new Error(json.error ?? 'Failed to load A/B tests');
+    }
+    const data = (json.abTests ?? []).slice().sort((a, b) => {
+      const aTime = typeof a.createdAt === 'string' ? a.createdAt : '';
+      const bTime = typeof b.createdAt === 'string' ? b.createdAt : '';
+      return bTime.localeCompare(aTime);
+    });
+    return { data, lastDoc: null, hasMore: false };
+  }, [authFetch]);
 
   const {
     data: tests,
@@ -50,7 +46,7 @@ export default function ABTestsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination<ABTest, QueryDocumentSnapshot<DocumentData>>({ fetchFn: fetchTests });
+  } = usePagination<ABTest, string>({ fetchFn: fetchTests });
 
   // Initial load
   useEffect(() => {

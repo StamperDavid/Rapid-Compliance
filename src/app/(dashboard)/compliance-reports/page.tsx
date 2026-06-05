@@ -3,13 +3,12 @@
 /**
  * Compliance Reports
  * Regulatory and compliance reporting dashboard.
- * Uses getSubCollection() for penthouse-model Firestore access.
+ * Reads via the GET /api/compliance-reports route (Admin SDK server-side).
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { ANALYTICS_TABS } from '@/lib/constants/subpage-nav';
@@ -34,28 +33,28 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
 
 export default function ComplianceReportsPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [reports, setReports] = useState<ComplianceReport[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchComplianceReports = async () => {
-      try {
-        setLoading(true);
-        const result = await FirestoreService.getAll<ComplianceReport>(
-          getSubCollection('complianceReports')
-        );
-        setReports(result);
-      } catch (error) {
-        logger.error('Failed to fetch compliance reports', error instanceof Error ? error : undefined);
-        setReports([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchComplianceReports = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await authFetch('/api/compliance-reports');
+      const json = (await res.json()) as { success?: boolean; reports?: ComplianceReport[] };
+      setReports(json.success && json.reports ? json.reports : []);
+    } catch (error) {
+      logger.error('Failed to fetch compliance reports', error instanceof Error ? error : undefined);
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
 
+  useEffect(() => {
     void fetchComplianceReports();
-  }, []);
+  }, [fetchComplianceReports]);
 
   const categories = ['all', ...Array.from(new Set(reports.map((r) => r.category)))];
 

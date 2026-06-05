@@ -2,43 +2,33 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { usePagination } from '@/hooks/usePagination';
-import { orderBy, type QueryConstraint, type DocumentData, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 
 interface Dataset {
   id: string;
   name: string;
   exampleCount?: number;
-  createdAt?: Timestamp;
+  createdAt?: unknown;
 }
 
 export default function DatasetsPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
 
-  // Fetch function with pagination
-  const fetchDatasets = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
+  // Fetch function — the API returns the full list in one page.
+  const fetchDatasets = useCallback(async (): Promise<{
     data: Dataset[];
-    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+    lastDoc: string | null;
     hasMore: boolean;
   }> => {
-    const constraints: QueryConstraint[] = [
-      orderBy('createdAt', 'desc')
-    ];
-
-    const result = await FirestoreService.getAllPaginated(
-      getSubCollection('trainingDatasets'),
-      constraints,
-      50,
-      lastDoc
-    );
-    return {
-      data: result.data as Dataset[],
-      lastDoc: result.lastDoc,
-      hasMore: result.hasMore,
-    };
-  }, []);
+    const res = await authFetch('/api/ai/datasets');
+    const json = (await res.json()) as { success?: boolean; datasets?: Dataset[]; error?: string };
+    if (!res.ok || !json.success) {
+      throw new Error(json.error ?? 'Failed to load datasets');
+    }
+    return { data: json.datasets ?? [], lastDoc: null, hasMore: false };
+  }, [authFetch]);
 
   const {
     data: datasets,
@@ -47,7 +37,7 @@ export default function DatasetsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination<Dataset, QueryDocumentSnapshot<DocumentData>>({ fetchFn: fetchDatasets });
+  } = usePagination<Dataset, string>({ fetchFn: fetchDatasets });
 
   // Initial load
   useEffect(() => {
@@ -76,8 +66,8 @@ export default function DatasetsPage() {
           <div className="grid gap-4">
             {datasets.map((dataset) => {
               const exampleCount = dataset.exampleCount ?? 0;
-              const createdDate = dataset.createdAt && 'toDate' in dataset.createdAt
-                ? new Date(dataset.createdAt.toDate()).toLocaleDateString()
+              const createdDate = typeof dataset.createdAt === 'string'
+                ? new Date(dataset.createdAt).toLocaleDateString()
                 : 'N/A';
 
               return (

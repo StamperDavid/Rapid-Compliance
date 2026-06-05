@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 interface NurtureCampaignStats {
@@ -18,20 +17,24 @@ interface NurtureCampaignStats {
 export default function NurtureCampaignStatsPage() {
   const params = useParams();
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const campaignId = params.id as string;
   const [campaign, setCampaign] = useState<NurtureCampaignStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadCampaign = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(getSubCollection('nurtureSequences'), campaignId);
-      setCampaign(data as NurtureCampaignStats);
+      const res = await authFetch(`/api/nurture/${campaignId}`);
+      const json = (await res.json()) as { success?: boolean; sequence?: NurtureCampaignStats };
+      if (json.success && json.sequence) {
+        setCampaign(json.sequence);
+      }
     } catch (error) {
       logger.error('Error loading campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [campaignId]);
+  }, [authFetch, campaignId]);
 
   useEffect(() => {
     void loadCampaign();

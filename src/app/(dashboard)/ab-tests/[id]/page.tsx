@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -92,6 +90,7 @@ export default function ABTestResultsPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const testId = params.id as string;
   const [test, setTest] = useState<ABTest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,14 +98,17 @@ export default function ABTestResultsPage() {
 
   const loadTest = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(getSubCollection('abTests'), testId);
-      setTest(data as ABTest);
+      const res = await authFetch(`/api/ab-tests/${testId}`);
+      const json = (await res.json()) as { success?: boolean; abTest?: ABTest };
+      if (json.success && json.abTest) {
+        setTest(json.abTest);
+      }
     } catch (error: unknown) {
       logger.error('Error loading test:', error instanceof Error ? error : new Error(String(error)), { file: 'ab-tests/[id]/page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [testId]);
+  }, [authFetch, testId]);
 
   useEffect(() => {
     void loadTest();
@@ -118,7 +120,7 @@ export default function ABTestResultsPage() {
     try {
       const updates: Record<string, unknown> = {
         status: newStatus,
-        updatedAt: Timestamp.now(),
+        updatedAt: new Date().toISOString(),
       };
       if (newStatus === 'running' && test.status === 'draft') {
         updates.startDate = new Date().toISOString();
@@ -130,7 +132,15 @@ export default function ABTestResultsPage() {
           updates.confidence = calculateConfidence(test.variants);
         }
       }
-      await FirestoreService.update(getSubCollection('abTests'), testId, updates);
+      const res = await authFetch(`/api/ab-tests/${testId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to update test');
+      }
       setTest({ ...test, ...updates } as ABTest);
       toast.success(`Test ${newStatus === 'running' ? 'started' : newStatus}`);
     } catch (error: unknown) {

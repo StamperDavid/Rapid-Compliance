@@ -6,8 +6,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSMS } from '@/lib/sms/sms-service';
 import { useToast } from '@/hooks/useToast';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface SmsTemplate {
   id: string;
@@ -17,10 +16,9 @@ interface SmsTemplate {
   isCustom?: boolean;
 }
 
-const smsTemplatesPath = getSubCollection('smsTemplates');
-
 export default function SmsMessagesPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useOrgTheme();
   const [smsTemplates, setSmsTemplates] = useState<SmsTemplate[]>([]);
@@ -35,14 +33,19 @@ export default function SmsMessagesPage() {
   // Load SMS templates from Firestore on mount
   const loadSmsTemplates = useCallback(async () => {
     try {
-      const saved = await FirestoreService.getAll<SmsTemplate>(smsTemplatesPath);
+      const res = await authFetch('/api/settings/sms-messages');
+      const json = (await res.json()) as { success?: boolean; templates?: SmsTemplate[]; error?: string };
+      if (!res.ok || !json.success) {
+        return;
+      }
+      const saved = json.templates ?? [];
       if (saved.length > 0) {
         setSmsTemplates(saved);
       }
     } catch {
       // Silent fail — templates just won't be pre-loaded
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     if (user) {
@@ -380,10 +383,19 @@ export default function SmsMessagesPage() {
                             updated.push({ id: selectedSmsTemplate, message: smsContent });
                           }
                           setSmsTemplates(updated);
-                          // Persist to Firestore
+                          // Persist via API (server-side Admin SDK)
                           const templateToSave = updated.find(t => t.id === selectedSmsTemplate);
                           if (templateToSave) {
-                            void FirestoreService.set(smsTemplatesPath, templateToSave.id, templateToSave, true).catch(() => {
+                            void authFetch('/api/settings/sms-messages', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ ...templateToSave, merge: true }),
+                            }).then(async (res) => {
+                              const json = (await res.json()) as { success?: boolean };
+                              if (!res.ok || !json.success) {
+                                toast.error('Failed to persist SMS template');
+                              }
+                            }).catch(() => {
                               toast.error('Failed to persist SMS template');
                             });
                           }
@@ -520,8 +532,17 @@ export default function SmsMessagesPage() {
                       message: ''
                     };
                     setSmsTemplates([...smsTemplates, newTrigger]);
-                    // Persist to Firestore
-                    void FirestoreService.set(smsTemplatesPath, newTrigger.id, newTrigger, false).catch(() => {
+                    // Persist via API (server-side Admin SDK)
+                    void authFetch('/api/settings/sms-messages', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ ...newTrigger, merge: false }),
+                    }).then(async (res) => {
+                      const json = (await res.json()) as { success?: boolean };
+                      if (!res.ok || !json.success) {
+                        toast.error('Failed to persist custom trigger');
+                      }
+                    }).catch(() => {
                       toast.error('Failed to persist custom trigger');
                     });
                     setSelectedSmsTemplate(newTrigger.id);

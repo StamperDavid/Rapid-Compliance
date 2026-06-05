@@ -1,10 +1,8 @@
 'use client';
 
-import { getSubCollection } from '@/lib/firebase/collections';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/config';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
@@ -100,6 +98,7 @@ interface FirestoreTimestamp {
 }
 
 interface DealData {
+  id?: string;
   stage?: string;
   status?: string;
   value?: number;
@@ -109,6 +108,7 @@ interface DealData {
 }
 
 interface LeadData {
+  id?: string;
   name?: string;
   firstName?: string;
   lastName?: string;
@@ -117,6 +117,7 @@ interface LeadData {
 }
 
 interface TaskData {
+  id?: string;
   title?: string;
   name?: string;
   priority?: string;
@@ -139,7 +140,18 @@ interface AgentStatusResponse {
 // MAIN COMPONENT
 // ============================================================================
 
+interface DashboardSummaryResponse {
+  success: boolean;
+  leads: LeadData[];
+  deals: DealData[];
+  conversations: ConversationData[];
+  tasks: TaskData[];
+  recentDeals: DealData[];
+  recentLeads: LeadData[];
+}
+
 export default function WorkspaceDashboardPage() {
+  const authFetch = useAuthFetch();
   const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0, activeDeals: 0, conversations: 0,
     pipelineValue: 0, wonDeals: 0, lostDeals: 0,
@@ -157,22 +169,19 @@ export default function WorkspaceDashboardPage() {
 
   useEffect(() => {
     async function fetchDashboardData() {
-      if (!db) { setLoading(false); return; }
-
       try {
-        // Fetch leads
-        const leadsQuery = query(
-          collection(db, getSubCollection('records')),
-          where('entityType', '==', 'leads')
-        );
-        const leadsSnapshot = await getDocs(leadsQuery);
+        const summaryRes = await authFetch('/api/dashboard/summary');
+        const summary = (await summaryRes.json()) as DashboardSummaryResponse;
+        if (!summary.success) {
+          throw new Error('Dashboard summary request failed');
+        }
 
-        // Fetch deals
-        const dealsQuery = query(
-          collection(db, getSubCollection('records')),
-          where('entityType', '==', 'deals')
-        );
-        const dealsSnapshot = await getDocs(dealsQuery);
+        const leadsList = summary.leads ?? [];
+        const dealsList = summary.deals ?? [];
+        const convoList = summary.conversations ?? [];
+        const tasksList = summary.tasks ?? [];
+        const recentDealsList = summary.recentDeals ?? [];
+        const recentLeadsList = summary.recentLeads ?? [];
 
         // Calculate pipeline metrics
         let pipelineValue = 0;
@@ -180,8 +189,7 @@ export default function WorkspaceDashboardPage() {
         let lostDeals = 0;
         const stageMap: Record<string, { count: number; value: number }> = {};
 
-        dealsSnapshot.forEach((doc) => {
-          const data = doc.data() as DealData;
+        dealsList.forEach((data) => {
           const stage = (data.stage !== '' && data.stage != null) ? data.stage : ((data.status !== '' && data.status != null) ? data.status : 'Unknown');
           const value = Number(data.value) || Number(data.amount) || 0;
 
@@ -211,19 +219,13 @@ export default function WorkspaceDashboardPage() {
           color: stageColors[stage] ?? 'var(--color-primary)',
         })));
 
-        // Fetch conversations with details
-        const convoQuery = query(
-          collection(db, getSubCollection('conversations')),
-          limit(200)
-        );
-        const convoSnapshot = await getDocs(convoQuery);
+        // Conversation stats
         let activeConvos = 0;
         let recentConvos = 0;
         let convertedConvos = 0;
         const oneDayAgo = Date.now() - 86400000;
 
-        convoSnapshot.forEach((doc) => {
-          const data = doc.data() as ConversationData;
+        convoList.forEach((data) => {
           const status = data.status ?? '';
           if (status === 'active' || status === 'open') { activeConvos++; }
           if (status === 'converted' || data.outcome === 'converted') { convertedConvos++; }
@@ -234,105 +236,66 @@ export default function WorkspaceDashboardPage() {
         setConvoStats({
           active: activeConvos,
           recent: recentConvos,
-          total: convoSnapshot.size,
+          total: convoList.length,
           converted: convertedConvos,
         });
 
-        // Fetch tasks from teamTasks collection
-        const tasksQuery = query(
-          collection(db, getSubCollection('teamTasks')),
-          where('status', 'in', ['todo', 'in_progress', 'blocked']),
-          limit(5)
-        );
-        let tasksData: TaskItem[] = [];
-        try {
-          const tasksSnapshot = await getDocs(tasksQuery);
-          tasksData = tasksSnapshot.docs.map((doc) => {
-            const data = doc.data() as TaskData;
-            return {
-              id: doc.id,
-              title: (data.title !== '' && data.title != null) ? data.title : 'Untitled Task',
-              priority: (data.priority !== '' && data.priority != null) ? data.priority : 'Normal',
-              dueDate: data.dueDate ? new Date(data.dueDate.seconds * 1000).toLocaleDateString() : 'No due date',
-              completed: data.status === 'completed',
-            };
-          });
-        } catch (_e) {
-          logger.info('No tasks found', { file: 'dashboard/page.tsx' });
-        }
+        // Tasks
+        const tasksData: TaskItem[] = tasksList.map((data) => ({
+          id: data.id ?? '',
+          title: (data.title !== '' && data.title != null) ? data.title : 'Untitled Task',
+          priority: (data.priority !== '' && data.priority != null) ? data.priority : 'Normal',
+          dueDate: data.dueDate ? new Date(data.dueDate.seconds * 1000).toLocaleDateString() : 'No due date',
+          completed: data.status === 'completed',
+        }));
         setTasks(tasksData);
 
         // Build activity feed from multiple sources
         const activityData: RecentActivity[] = [];
 
-        const recentDealsQuery = query(
-          collection(db, getSubCollection('records')),
-          where('entityType', '==', 'deals'),
-          orderBy('createdAt', 'desc'),
-          limit(3)
-        );
-        try {
-          const snap = await getDocs(recentDealsQuery);
-          snap.forEach((doc) => {
-            const data = doc.data() as DealData;
-            const ts = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now();
-            activityData.push({
-              id: doc.id, type: 'deal', action: 'New deal created',
-              detail: `${(data.name !== '' && data.name != null) ? data.name : 'Unnamed Deal'} — $${(data.value ?? 0).toLocaleString()}`,
-              time: getTimeAgo(new Date(ts)), timestamp: ts,
-            });
+        recentDealsList.forEach((data) => {
+          const ts = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now();
+          activityData.push({
+            id: data.id ?? '', type: 'deal', action: 'New deal created',
+            detail: `${(data.name !== '' && data.name != null) ? data.name : 'Unnamed Deal'} — $${(data.value ?? 0).toLocaleString()}`,
+            time: getTimeAgo(new Date(ts)), timestamp: ts,
           });
-        } catch (_e) { logger.info('Could not fetch recent deals', { file: 'dashboard/page.tsx' }); }
+        });
 
-        const recentLeadsQuery = query(
-          collection(db, getSubCollection('records')),
-          where('entityType', '==', 'leads'),
-          orderBy('createdAt', 'desc'),
-          limit(3)
-        );
-        try {
-          const snap = await getDocs(recentLeadsQuery);
-          snap.forEach((doc) => {
-            const data = doc.data() as LeadData;
-            const ts = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now();
-            const name = (data.name !== '' && data.name != null)
-              ? data.name
-              : `${(data.firstName !== '' && data.firstName != null) ? data.firstName : 'Unknown'} ${(data.lastName !== '' && data.lastName != null) ? data.lastName : ''}`.trim();
-            activityData.push({
-              id: doc.id, type: 'lead', action: 'New lead',
-              detail: `${name} — ${(data.company !== '' && data.company != null) ? data.company : 'No company'}`,
-              time: getTimeAgo(new Date(ts)), timestamp: ts,
-            });
+        recentLeadsList.forEach((data) => {
+          const ts = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now();
+          const name = (data.name !== '' && data.name != null)
+            ? data.name
+            : `${(data.firstName !== '' && data.firstName != null) ? data.firstName : 'Unknown'} ${(data.lastName !== '' && data.lastName != null) ? data.lastName : ''}`.trim();
+          activityData.push({
+            id: data.id ?? '', type: 'lead', action: 'New lead',
+            detail: `${name} — ${(data.company !== '' && data.company != null) ? data.company : 'No company'}`,
+            time: getTimeAgo(new Date(ts)), timestamp: ts,
           });
-        } catch (_e) { logger.info('Could not fetch recent leads', { file: 'dashboard/page.tsx' }); }
+        });
 
         activityData.sort((a, b) => b.timestamp - a.timestamp);
         setRecentActivity(activityData.slice(0, 5));
 
         setStats({
-          totalLeads: leadsSnapshot.size,
-          activeDeals: dealsSnapshot.size - wonDeals - lostDeals,
-          conversations: convoSnapshot.size,
+          totalLeads: leadsList.length,
+          activeDeals: dealsList.length - wonDeals - lostDeals,
+          conversations: convoList.length,
           pipelineValue, wonDeals, lostDeals,
         });
 
         // Fetch agent health
         try {
-          const token = await auth?.currentUser?.getIdToken();
-          if (token) {
-            const res = await fetch('/api/system/status', {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-              const data = await res.json() as AgentStatusResponse;
-              if (data.success) {
-                setAgentHealth({
-                  total: data.metrics.totalAgents,
-                  functional: data.metrics.functionalAgents,
-                  executing: data.metrics.executingAgents,
-                  health: data.overallHealth,
-                });
-              }
+          const res = await authFetch('/api/system/status');
+          if (res.ok) {
+            const data = await res.json() as AgentStatusResponse;
+            if (data.success) {
+              setAgentHealth({
+                total: data.metrics.totalAgents,
+                functional: data.metrics.functionalAgents,
+                executing: data.metrics.executingAgents,
+                health: data.overallHealth,
+              });
             }
           }
         } catch (_e) {
@@ -346,7 +309,7 @@ export default function WorkspaceDashboardPage() {
     }
 
     void fetchDashboardData();
-  }, []);
+  }, [authFetch]);
 
   const winRate = stats.wonDeals + stats.lostDeals > 0
     ? Math.round((stats.wonDeals / (stats.wonDeals + stats.lostDeals)) * 100)

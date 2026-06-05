@@ -4,9 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { orderBy } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface ProposalTemplateDoc {
   id: string;
@@ -24,11 +22,10 @@ const TYPE_CONFIG: Record<string, { label: string; color: string; icon: string }
   invoice: { label: 'Invoice', color: '#d97706', icon: '🧾' },
 };
 
-const proposalTemplatesPath = getSubCollection('proposalTemplates');
-
 export default function ProposalsPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [templates, setTemplates] = useState<ProposalTemplateDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,17 +34,28 @@ export default function ProposalsPage() {
   const loadTemplates = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await FirestoreService.getAll<ProposalTemplateDoc>(
-        proposalTemplatesPath,
-        [orderBy('createdAt', 'desc')]
-      );
+      const res = await authFetch('/api/proposals/templates');
+      const json = (await res.json()) as {
+        success?: boolean;
+        templates?: ProposalTemplateDoc[];
+        error?: string;
+      };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to load proposal templates');
+      }
+      const data = json.templates ?? [];
+      data.sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
       setTemplates(data);
     } catch {
       toast.error('Failed to load proposal templates');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [authFetch, toast]);
 
   useEffect(() => {
     if (user) {
@@ -58,7 +66,13 @@ export default function ProposalsPage() {
   const handleDelete = async (templateId: string) => {
     setDeletingId(templateId);
     try {
-      await FirestoreService.delete(proposalTemplatesPath, templateId);
+      const res = await authFetch(`/api/proposals/templates/${templateId}`, {
+        method: 'DELETE',
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to delete template');
+      }
       setTemplates((prev) => prev.filter((t) => t.id !== templateId));
       toast.success('Template deleted');
     } catch {
