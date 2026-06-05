@@ -15,7 +15,6 @@ import {
   exchangeMetaCode,
   exchangeGoogleSocialCode,
   exchangeTikTokCode,
-  exchangeRedditCode,
   exchangePinterestCode,
   exchangeDiscordCode,
   exchangeTwitchCode,
@@ -23,7 +22,6 @@ import {
   fetchYouTubeChannel,
   fetchGoogleProfile,
   fetchTikTokProfile,
-  fetchRedditProfile,
   fetchPinterestProfile,
   fetchDiscordProfile,
   fetchTwitchProfile,
@@ -36,7 +34,6 @@ import type {
   MetaCredentials,
   GoogleSocialCredentials,
   TikTokCredentials,
-  RedditCredentials,
   PinterestCredentials,
   DiscordCredentials,
   TwitchCredentials,
@@ -320,36 +317,6 @@ export async function GET(
         });
 
         return NextResponse.redirect(`${settingsUrl}?success=tiktok&category=social`);
-      }
-
-      case 'reddit': {
-        const { tokens } = await exchangeRedditCode(code, state);
-        const profile = await fetchRedditProfile(tokens.accessToken);
-        const encrypted = encryptCredentials(tokens);
-
-        const redditCreds: RedditCredentials = {
-          accessToken: encrypted.accessToken,
-          refreshToken: encrypted.refreshToken,
-          tokenExpiresAt: encrypted.tokenExpiresAt,
-          username: profile.name,
-        };
-
-        await SocialAccountService.addAccount({
-          platform: 'reddit',
-          accountName: profile.name,
-          handle: profile.name,
-          profileImageUrl: profile.iconUrl,
-          isDefault: true,
-          status: 'active',
-          credentials: redditCreds,
-        });
-
-        logger.info('Reddit account connected via OAuth', {
-          route: '/api/social/oauth/callback',
-          username: profile.name,
-        });
-
-        return NextResponse.redirect(`${settingsUrl}?success=reddit&category=social`);
       }
 
       case 'pinterest': {

@@ -26,14 +26,11 @@ export { PinterestPostPreview } from './PinterestPostPreview';
 export { BlueskyPostPreview } from './BlueskyPostPreview';
 export { MastodonPostPreview } from './MastodonPostPreview';
 
-// Batch C — Threads, Telegram, Reddit, WhatsApp Business, Google Business, Truth Social
+// Batch C — Threads, WhatsApp Business, Google Business
 // (owned by Batch C; do not edit from another batch)
 export { ThreadsPostPreview } from './ThreadsPostPreview';
-export { TelegramPostPreview } from './TelegramPostPreview';
-export { RedditPostPreview } from './RedditPostPreview';
 export { WhatsAppBusinessPostPreview } from './WhatsAppBusinessPostPreview';
 export { GoogleBusinessPostPreview } from './GoogleBusinessPostPreview';
-export { TruthSocialPostPreview } from './TruthSocialPostPreview';
 
 // Creator-track (Apr 28 2026) — Discord, Twitch
 export { DiscordPostPreview } from './DiscordPostPreview';

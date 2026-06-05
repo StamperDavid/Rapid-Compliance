@@ -16,7 +16,6 @@ import {
   generateMetaAuthUrl,
   generateGoogleSocialAuthUrl,
   generateTikTokAuthUrl,
-  generateRedditAuthUrl,
   generatePinterestAuthUrl,
   generateDiscordAuthUrl,
   generateTwitchAuthUrl,
@@ -45,7 +44,7 @@ export async function GET(
 
     // Validate provider against the OAuth-redirect whitelist. Excludes
     // X (Twitter) — manual OAuth 1.0a entry only — and the credential-
-    // only platforms (Bluesky, Mastodon, Truth Social, Telegram).
+    // only platforms (Bluesky, Mastodon).
     const providerValidation = oauthRedirectProviderSchema.safeParse(provider);
     if (!providerValidation.success) {
       if (provider === 'twitter') {
@@ -89,9 +88,6 @@ export async function GET(
         break;
       case 'tiktok':
         authUrl = await generateTikTokAuthUrl(userId);
-        break;
-      case 'reddit':
-        authUrl = await generateRedditAuthUrl(userId);
         break;
       case 'pinterest':
         authUrl = await generatePinterestAuthUrl(userId);

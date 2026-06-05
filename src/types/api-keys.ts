@@ -392,10 +392,7 @@ export type APIServiceName =
   | 'tiktok'           // TikTok Content Posting API
   | 'bluesky'          // Bluesky — AT Protocol
   | 'threads'          // Threads — Meta Threads API
-  | 'truth_social'     // Truth Social — Mastodon-compatible API (PARKED Apr 26 2026 — Cloudflare TLS wall)
   | 'mastodon'         // Mastodon — generic Mastodon-API integration (mastodon.social, hachyderm.io, etc.)
-  | 'telegram'         // Telegram Bot API
-  | 'reddit'           // Reddit API (OAuth 2.0)
   | 'pinterest'        // Pinterest API v5
   | 'whatsapp_business' // WhatsApp Business Cloud API
   | 'google_business'  // Google Business Profile API

@@ -19,7 +19,7 @@ export const socialProviderSchema = z.enum(SOCIAL_PLATFORMS);
  * Excludes platforms that don't have a hosted OAuth flow we can initiate:
  *   - `twitter` — uses OAuth 1.0a manual credential entry; OAuth 2.0 PKCE
  *     was removed because it doesn't cover free-tier write endpoints.
- *   - `bluesky`, `mastodon`, `truth_social`, `telegram` — credential-only.
+ *   - `bluesky`, `mastodon` — credential-only.
  *
  * The OAuth auth/callback routes use this stricter list so a stray
  * `/api/social/oauth/auth/twitter` returns 400 instead of an opaque
@@ -34,7 +34,6 @@ export const oauthRedirectProviderSchema = z.enum([
   'youtube',
   'google_business',
   'tiktok',
-  'reddit',
   'pinterest',
   'discord',
   'twitch',

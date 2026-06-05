@@ -759,7 +759,6 @@ export class SystemHealthService {
       tiktok: 'tiktok',
       instagram: 'instagram',
       x_twitter: 'twitter',
-      truth_social: 'truth',
       linkedin: 'linkedin',
       pinterest: 'pinterest',
       meta_facebook: 'facebook',

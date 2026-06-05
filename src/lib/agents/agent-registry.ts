@@ -483,28 +483,12 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
     capabilities: ['generate_content', 'compose_dm_reply'],
   },
   {
-    id: 'REDDIT_EXPERT',
-    name: "Reddit Expert",
-    role: "Reddit Expert",
-    tier: 'L3',
-    parentId: 'MARKETING_MANAGER',
-    capabilities: ['generate_content'],
-  },
-  {
     id: 'SEO_EXPERT',
     name: "SEO Expert",
     role: "SEO Expert",
     tier: 'L3',
     parentId: 'MARKETING_MANAGER',
     capabilities: ['keyword_research', 'domain_analysis'],
-  },
-  {
-    id: 'TELEGRAM_EXPERT',
-    name: "Telegram Expert",
-    role: "Telegram Expert",
-    tier: 'L3',
-    parentId: 'MARKETING_MANAGER',
-    capabilities: ['generate_content'],
   },
   {
     id: 'THREADS_EXPERT',

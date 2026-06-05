@@ -221,8 +221,8 @@ export const SOCIAL_PLATFORMS = [
   // Big 6 (original)
   'twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok',
   // Tier 1 expansion
-  'bluesky', 'threads', 'mastodon', 'truth_social', 'telegram',
-  'reddit', 'pinterest', 'whatsapp_business', 'google_business',
+  'bluesky', 'threads', 'mastodon',
+  'pinterest', 'whatsapp_business', 'google_business',
   // Creator-track (Apr 28 2026)
   'discord', 'twitch',
 ] as const;
@@ -490,14 +490,6 @@ export interface TikTokCredentials {
   openId?: string;
 }
 
-export interface RedditCredentials {
-  accessToken: string;
-  refreshToken?: string;
-  tokenExpiresAt?: string;
-  /** Reddit username */
-  username?: string;
-}
-
 export interface PinterestCredentials {
   accessToken: string;
   refreshToken?: string;
@@ -513,24 +505,6 @@ export interface BlueskyCredentials {
   accessJwt: string;
   /** AT Protocol refresh JWT */
   refreshJwt: string;
-}
-
-export interface TelegramCredentials {
-  /** Bot API token from @BotFather */
-  botToken: string;
-  /** Target chat/channel ID for posting */
-  chatId: string;
-  /** Bot username (without @) */
-  botUsername: string;
-}
-
-export interface TruthSocialCredentials {
-  /** Mastodon-compatible instance URL */
-  instanceUrl: string;
-  /** OAuth bearer access token */
-  accessToken: string;
-  /** Account username */
-  username: string;
 }
 
 export interface DiscordCredentials {
@@ -569,11 +543,8 @@ export type SocialCredentials =
   | MetaCredentials
   | GoogleSocialCredentials
   | TikTokCredentials
-  | RedditCredentials
   | PinterestCredentials
   | BlueskyCredentials
-  | TelegramCredentials
-  | TruthSocialCredentials
   | DiscordCredentials
   | TwitchCredentials;
 

@@ -1,7 +1,7 @@
 /**
  * Social OAuth Service
  * Handles OAuth flows for LinkedIn, Meta (Facebook/Instagram/Threads/WhatsApp),
- * Google (YouTube + Google Business Profile), TikTok, Reddit, Pinterest,
+ * Google (YouTube + Google Business Profile), TikTok, Pinterest,
  * Discord, and Twitch. Generates auth URLs, exchanges codes for tokens,
  * fetches profiles.
  *
@@ -743,119 +743,6 @@ export async function fetchTikTokProfile(accessToken: string): Promise<{
     openId: data.data.user.open_id,
     displayName: data.data.user.display_name,
     avatarUrl: data.data.user.avatar_url,
-  };
-}
-
-// ─── Reddit OAuth 2.0 ──────────────────────────────────────────────────────
-
-export async function generateRedditAuthUrl(userId: string): Promise<string> {
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  if (!clientId) {
-    throw new Error('REDDIT_CLIENT_ID environment variable is not configured');
-  }
-
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/reddit`;
-  const state = await storeOAuthState(userId, 'reddit');
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: 'code',
-    state,
-    redirect_uri: redirectUri,
-    duration: 'permanent',
-    scope: 'submit,identity',
-  });
-
-  return `https://www.reddit.com/api/v1/authorize?${params.toString()}`;
-}
-
-export async function exchangeRedditCode(
-  code: string,
-  stateToken: string
-): Promise<{ tokens: SocialOAuthTokenResult; stateData: SocialOAuthState }> {
-  const stateData = await retrieveAndDeleteOAuthState(stateToken, 'reddit');
-  if (!stateData) {
-    throw new Error('Invalid or expired OAuth state');
-  }
-
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error('Reddit OAuth credentials not configured');
-  }
-
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/callback/reddit`;
-
-  // Reddit requires HTTP Basic auth with client_id:client_secret
-  const response = await fetch('https://www.reddit.com/api/v1/access_token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-    },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: redirectUri,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('Reddit token exchange failed', new Error(errorText));
-    throw new Error('Failed to exchange Reddit authorization code');
-  }
-
-  const data = await response.json() as {
-    access_token: string;
-    refresh_token?: string;
-    expires_in?: number;
-    scope?: string;
-  };
-
-  const tokens: SocialOAuthTokenResult = {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    tokenExpiresAt: data.expires_in
-      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
-      : undefined,
-    scope: data.scope,
-  };
-
-  return { tokens, stateData };
-}
-
-/**
- * Fetch Reddit user identity (username).
- */
-export async function fetchRedditProfile(accessToken: string): Promise<{
-  id: string;
-  name: string;
-  iconUrl?: string;
-}> {
-  const response = await fetch('https://oauth.reddit.com/api/v1/me', {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'User-Agent': 'SalesVelocity/1.0',
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('Reddit profile fetch failed', new Error(errorText));
-    throw new Error('Failed to fetch Reddit profile');
-  }
-
-  const data = await response.json() as {
-    id: string;
-    name: string;
-    icon_img?: string;
-  };
-
-  return {
-    id: data.id,
-    name: data.name,
-    iconUrl: data.icon_img,
   };
 }
 

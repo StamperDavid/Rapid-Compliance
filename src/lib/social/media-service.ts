@@ -55,29 +55,11 @@ const PLATFORM_CONSTRAINTS: Record<string, PlatformConstraints> = {
     allowedImageTypes: ['image/jpeg', 'image/png'],
     allowedVideoTypes: ['video/mp4'],
   },
-  truth_social: {
-    maxImageSizeBytes: 8 * 1024 * 1024,        // 8MB (Mastodon default)
-    maxVideoSizeBytes: 40 * 1024 * 1024,       // 40MB
-    allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif'],
-    allowedVideoTypes: ['video/mp4'],
-  },
   mastodon: {
     maxImageSizeBytes: 8 * 1024 * 1024,        // 8MB (Mastodon default; some instances raise it)
     maxVideoSizeBytes: 40 * 1024 * 1024,       // 40MB (Mastodon default)
     allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     allowedVideoTypes: ['video/mp4', 'video/webm'],
-  },
-  telegram: {
-    maxImageSizeBytes: 10 * 1024 * 1024,       // 10MB
-    maxVideoSizeBytes: 50 * 1024 * 1024,       // 50MB
-    allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif'],
-    allowedVideoTypes: ['video/mp4'],
-  },
-  reddit: {
-    maxImageSizeBytes: 20 * 1024 * 1024,       // 20MB
-    maxVideoSizeBytes: 1024 * 1024 * 1024,     // 1GB
-    allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif'],
-    allowedVideoTypes: ['video/mp4'],
   },
   pinterest: {
     maxImageSizeBytes: 20 * 1024 * 1024,       // 20MB

@@ -381,11 +381,8 @@ type SocialPostPlatform =
   | 'tiktok'
   | 'youtube'
   | 'threads'
-  | 'reddit'
-  | 'telegram'
   | 'whatsapp_business'
-  | 'google_business'
-  | 'truth_social';
+  | 'google_business';
 
 interface SocialPostArgs {
   action: 'POST' | 'REPLY' | 'LIKE' | 'FOLLOW' | 'REPOST' | 'RECYCLE' | 'get_status';
@@ -399,8 +396,8 @@ interface SocialPostArgs {
 
 const VALID_SOCIAL_POST_PLATFORMS: readonly SocialPostPlatform[] = [
   'twitter', 'linkedin', 'facebook', 'instagram', 'pinterest',
-  'bluesky', 'mastodon', 'tiktok', 'youtube', 'threads', 'reddit',
-  'telegram', 'whatsapp_business', 'google_business', 'truth_social',
+  'bluesky', 'mastodon', 'tiktok', 'youtube', 'threads',
+  'whatsapp_business', 'google_business',
 ];
 
 /**
@@ -1284,7 +1281,6 @@ export const JASPER_TOOLS: ToolDefinition[] = [
               'tiktok',
               'instagram',
               'x_twitter',
-              'truth_social',
               'linkedin',
               'pinterest',
               'meta_facebook',
@@ -1645,7 +1641,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           platforms: {
             type: 'array',
-            description: 'Optional: explicit list of platforms to publish to. Each item must be one of: tiktok, twitter, x, facebook, linkedin, youtube, instagram, pinterest, bluesky, mastodon, reddit, threads, google-business, telegram, whatsapp-business, discord, twitch. Example: ["twitter", "bluesky", "linkedin"]. When provided alongside `topic`, Marketing Manager fans the post out to each platform — drafting + image + publish per platform. Use this when the operator names specific platforms. For "all my connected platforms", pass platform: "all" instead.',
+            description: 'Optional: explicit list of platforms to publish to. Each item must be one of: tiktok, twitter, x, facebook, linkedin, youtube, instagram, pinterest, bluesky, mastodon, threads, google-business, whatsapp-business, discord, twitch. Example: ["twitter", "bluesky", "linkedin"]. When provided alongside `topic`, Marketing Manager fans the post out to each platform — drafting + image + publish per platform. Use this when the operator names specific platforms. For "all my connected platforms", pass platform: "all" instead.',
             items: {
               type: 'string',
             },
@@ -2618,7 +2614,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           platform: {
             type: 'string',
             description: 'Target social media platform',
-            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'mastodon', 'truth_social', 'telegram', 'reddit', 'pinterest', 'whatsapp_business', 'google_business'],
+            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'mastodon', 'pinterest', 'whatsapp_business', 'google_business'],
           },
           content: {
             type: 'string',
@@ -3066,10 +3062,10 @@ async function routeThroughMarketing(
 
 /**
  * Route a delegate_to_agent call through the ContentManager for platforms
- * without dedicated specialist implementations (YouTube, Instagram, Pinterest, Truth Social).
+ * without dedicated specialist implementations (YouTube, Instagram, Pinterest).
  */
 async function routeThroughContent(
-  platform: 'youtube' | 'instagram' | 'mastodon' | 'truth_social' | 'pinterest',
+  platform: 'youtube' | 'instagram' | 'mastodon' | 'pinterest',
   action: string,
   params: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
@@ -3385,7 +3381,6 @@ async function routeToSpecialist(
     case 'youtube':
     case 'instagram':
     case 'mastodon':
-    case 'truth_social':
     case 'pinterest':
       return routeThroughContent(agentId, action, params);
 

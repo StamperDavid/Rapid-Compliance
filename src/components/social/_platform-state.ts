@@ -144,14 +144,6 @@ const PLATFORM_CONFIG: Record<SocialPlatform, PlatformConfig> = {
       'Threads piggybacks on the Meta gate (same as Facebook/Instagram). No specialist yet — public Threads API exposes posts only, no DM.',
     unblockAction: 'Resume Meta Developer App, then build THREADS_EXPERT',
   },
-  telegram: {
-    state: 'parked',
-    specialistId: null,
-    specialistName: null,
-    dmCapability: 'na',
-    blockReason:
-      'US SMB adoption < 10%. Marked for deletion (Apr 27 2026) — no commercial brand-account flow worth the surface area.',
-  },
   whatsapp_business: {
     state: 'coming_soon',
     specialistId: null,
@@ -169,22 +161,6 @@ const PLATFORM_CONFIG: Record<SocialPlatform, PlatformConfig> = {
     blockReason:
       'Google Business Profile verification + GCP OAuth approval required (days). Specialist is built; awaiting external approval.',
     unblockAction: 'Verify Google Business Profile and request GCP OAuth scope',
-  },
-  reddit: {
-    state: 'parked',
-    specialistId: null,
-    specialistName: null,
-    dmCapability: 'na',
-    blockReason:
-      'Reddit commercial API access is enterprise-only (~$10K+/mo). Per platform viability matrix (Apr 27 2026), Reddit is Tier 3 — no path forward without enterprise budget.',
-  },
-  truth_social: {
-    state: 'parked',
-    specialistId: null,
-    specialistName: null,
-    dmCapability: 'na',
-    blockReason:
-      'Cloudflare TLS-fingerprint wall blocks server-side posts. No path without browser-class TLS infra.',
   },
   // Creator-track additions (Apr 28 2026). Discord row added separately.
   // DM capability is `pending`: Discord allows bot DMs only when the user

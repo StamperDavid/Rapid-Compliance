@@ -15,7 +15,6 @@ export type SpecialistPlatform =
   | 'instagram'
   | 'x_twitter'
   | 'mastodon'
-  | 'truth_social'
   | 'linkedin'
   | 'pinterest'
   | 'meta_facebook'
@@ -145,23 +144,6 @@ export const SPECIALISTS: Specialist[] = [
     triggerPhrases: ['mastodon', 'fediverse', 'federated social'],
     requiresConnection: true,
     connectionLabel: 'Mastodon Account',
-  },
-  {
-    id: 'truth_social',
-    name: 'Real-Time Voice (Community)',
-    role: 'Truth Social Engagement Manager',
-    icon: '🗽',
-    color: '#5448EE',
-    category: 'social',
-    description: 'PARKED Apr 26 2026 — Truth Social blocks server-side API access at the Cloudflare TLS layer. No official API or partner program. Code preserved for future re-evaluation.',
-    capabilities: [
-      { id: 'ts_post', name: 'Create Post', description: 'Write platform-appropriate content', action: 'create_truth_post' },
-      { id: 'ts_engage', name: 'Community Engagement', description: 'Interact with followers', action: 'engage_truth_community' },
-      { id: 'ts_schedule', name: 'Schedule Content', description: 'Plan content calendar', action: 'schedule_truth_content' },
-    ],
-    triggerPhrases: ['truth social', 'truth', 'alternative platform'],
-    requiresConnection: true,
-    connectionLabel: 'Truth Social Account',
   },
   {
     id: 'linkedin',

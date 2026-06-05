@@ -41,11 +41,8 @@ import { PinterestComposer } from './PinterestComposer';
 import { BlueskyComposer } from './BlueskyComposer';
 import { MastodonComposer } from './MastodonComposer';
 import { ThreadsComposer } from './ThreadsComposer';
-import { TelegramComposer } from './TelegramComposer';
-import { RedditComposer } from './RedditComposer';
 import { WhatsAppBusinessComposer } from './WhatsAppBusinessComposer';
 import { GoogleBusinessComposer } from './GoogleBusinessComposer';
-import { TruthSocialComposer } from './TruthSocialComposer';
 import { DiscordComposer } from './DiscordComposer';
 import { TwitchComposer } from './TwitchComposer';
 
@@ -56,7 +53,7 @@ export interface ComposerFormState {
   content: string;
   /** Per-platform variant. e.g. 'post' | 'thread' | 'reel' | 'video' | 'short' | 'pin' | 'message' | 'article' | 'story' | 'carousel' | 'offer' | 'link'. */
   contentType: string;
-  /** Free-form key/value bag for platform-specific fields (title, hashtags, channel, subreddit, visibility, etc.). */
+  /** Free-form key/value bag for platform-specific fields (title, hashtags, channel, visibility, etc.). */
   metadata: Record<string, string>;
 }
 
@@ -97,10 +94,7 @@ const COMPOSER_BY_PLATFORM: Record<SocialPlatform, React.ComponentType<PlatformC
   tiktok: TikTokComposer,
   bluesky: BlueskyComposer,
   threads: ThreadsComposer,
-  truth_social: TruthSocialComposer,
   mastodon: MastodonComposer,
-  telegram: TelegramComposer,
-  reddit: RedditComposer,
   pinterest: PinterestComposer,
   whatsapp_business: WhatsAppBusinessComposer,
   google_business: GoogleBusinessComposer,
@@ -117,10 +111,7 @@ const DEFAULT_CONTENT_TYPE: Record<SocialPlatform, string> = {
   tiktok: 'video',
   bluesky: 'post',
   threads: 'post',
-  truth_social: 'post',
   mastodon: 'post',
-  telegram: 'message',
-  reddit: 'post',
   pinterest: 'pin',
   whatsapp_business: 'message',
   google_business: 'post',
@@ -142,7 +133,6 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
   const toast = useToast();
   const meta = PLATFORM_META[platform];
   const PerPlatformComposer = COMPOSER_BY_PLATFORM[platform];
-  const isParked = platform === 'truth_social';
 
   const [formState, setFormState] = useState<ComposerFormState>({
     content: '',
@@ -239,23 +229,16 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
     if (platform === 'pinterest') {
       if (!md.title?.trim()) {missing.push('Pin title');}
     }
-    if (platform === 'reddit') {
-      if (!md.subreddit?.trim()) {missing.push('Subreddit');}
-      if (!md.title?.trim()) {missing.push('Title');}
-      if (formState.contentType === 'link' && !md.url?.trim()) {missing.push('URL');}
-    }
     if (platform === 'linkedin' && formState.contentType === 'article' && !md.title?.trim()) {
       missing.push('Article title');
     }
     if (platform === 'google_business' && formState.contentType === 'offer' && !md.title?.trim()) {
       missing.push('Offer title');
     }
-    if (platform === 'telegram' && !md.channel?.trim()) {missing.push('Channel');}
     return missing;
   }, [formState, platform]);
 
   const postDisabled =
-    isParked ||
     posting ||
     connected === null ||
     connected === false ||
@@ -396,7 +379,7 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
     router.push('/social/calendar');
   }, [router]);
 
-  const inputsDisabled = posting || isParked || connected === null || connected === false;
+  const inputsDisabled = posting || connected === null || connected === false;
 
   return (
     <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-5 w-full h-full flex flex-col overflow-y-auto">
@@ -436,31 +419,27 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
         disabled={inputsDisabled}
       />
 
-      {/* ── Discovery & SEO (hidden for Truth Social) ──────────────────── */}
-      {!isParked && (
-        <TagsAndSeoSection
-          value={tagsValue}
-          onChange={setTagsValue}
-          platform={platform}
-          disabled={inputsDisabled}
-        />
-      )}
+      {/* ── Discovery & SEO ─────────────────────────────────────────────── */}
+      <TagsAndSeoSection
+        value={tagsValue}
+        onChange={setTagsValue}
+        platform={platform}
+        disabled={inputsDisabled}
+      />
 
-      {/* ── Media uploader (hidden for Truth Social) ────────────────────── */}
-      {!isParked && (
-        <div>
-          <label className="text-sm font-medium text-foreground">
-            Attach Media{requiresMedia && <span className="text-destructive ml-1">*</span>}
-          </label>
-          <div className="mt-1">
-            <MediaUploader
-              onUpload={(url) => setMediaUrls([url])}
-              onRemove={() => setMediaUrls([])}
-              disabled={inputsDisabled}
-            />
-          </div>
+      {/* ── Media uploader ──────────────────────────────────────────────── */}
+      <div>
+        <label className="text-sm font-medium text-foreground">
+          Attach Media{requiresMedia && <span className="text-destructive ml-1">*</span>}
+        </label>
+        <div className="mt-1">
+          <MediaUploader
+            onUpload={(url) => setMediaUrls([url])}
+            onRemove={() => setMediaUrls([])}
+            disabled={inputsDisabled}
+          />
         </div>
-      )}
+      </div>
 
       {/* ── Action row ──────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -481,14 +460,14 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
         >
           {posting ? 'Posting…' : `Post to ${meta.label}`}
         </Button>
-        <Button variant="outline" onClick={handleSchedule} disabled={posting || isParked}>
+        <Button variant="outline" onClick={handleSchedule} disabled={posting}>
           <CalendarIcon className="mr-1.5 h-4 w-4" />
           Schedule for later
         </Button>
         <Button
           variant="outline"
           onClick={openGeneratePopover}
-          disabled={posting || isParked}
+          disabled={posting}
         >
           <Sparkles className="mr-1.5 h-4 w-4" />
           AI Generate with {meta.label} Specialist

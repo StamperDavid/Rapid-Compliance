@@ -30,11 +30,8 @@ const ALL_SOCIAL_PLATFORMS: SocialPlatform[] = [
   'tiktok',
   'youtube',
   'threads',
-  'telegram',
   'whatsapp_business',
   'google_business',
-  'reddit',
-  'truth_social',
   'discord',
   'twitch',
 ];

@@ -22,8 +22,6 @@ const SOCIAL_PLATFORMS = new Set([
   'google_business', 'gbp',
   'discord',
   'twitch',
-  'reddit',
-  'telegram',
   'whatsapp', 'whatsapp_business',
 ]);
 
