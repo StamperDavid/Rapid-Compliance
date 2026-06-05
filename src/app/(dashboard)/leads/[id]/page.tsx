@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getLeadsCollection, getDealsCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore'
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import ActivityTimeline from '@/components/ActivityTimeline';
 import type { PredictiveScore } from '@/lib/crm/predictive-scoring';
@@ -30,6 +28,7 @@ interface ExtendedLead extends Lead {
 export default function LeadDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const leadId = params.id as string;
   const [lead, setLead] = useState<ExtendedLead | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,14 +39,14 @@ export default function LeadDetailPage() {
 
   const loadLead = useCallback(async (): Promise<void> => {
     try {
-      const data = await FirestoreService.get(getLeadsCollection(), leadId);
+      const res = await authFetch(`/api/leads/${leadId}`);
+      const json = (await res.json()) as { success?: boolean; lead?: ExtendedLead };
 
-      // Type guard for lead data
-      if (!data || typeof data !== 'object') {
+      if (!json.success || !json.lead) {
         throw new Error('Invalid lead data received');
       }
 
-      const leadData = data as ExtendedLead;
+      const leadData = json.lead;
       setLead(leadData);
 
       // Load intelligence features
@@ -57,7 +56,7 @@ export default function LeadDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [leadId]);
+  }, [authFetch, leadId]);
 
   useEffect(() => {
     void loadLead();
@@ -445,29 +444,28 @@ export default function LeadDetailPage() {
                     onConfirm: () => {
                       void (async () => {
                         try {
-                          const dealId = `deal-${Date.now()}`;
                           const companyName = getCompanyName();
-                          const displayName = getDisplayName();
 
-                          await FirestoreService.set(
-                            getDealsCollection(),
-                            dealId,
-                            {
-                              id: dealId,
+                          const res = await authFetch('/api/deals', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
                               name: `Deal - ${companyName}`,
                               company: companyName,
-                              contactName: displayName,
                               value: 0,
                               stage: 'qualification',
                               probability: 50,
-                              sourceLeadId: leadId,
-                              createdAt: Timestamp.now(),
-                            },
-                            false
-                          );
+                              notes: `Converted from lead ${leadId}`,
+                            }),
+                          });
+                          const json = (await res.json()) as { success?: boolean; deal?: { id: string }; error?: string };
+                          if (!res.ok || !json.success || !json.deal) {
+                            throw new Error(json.error ?? 'Failed to convert lead');
+                          }
+                          const newDealId = json.deal.id;
                           setConfirmDialog(null);
                           setNotification({ message: 'Lead converted to deal!', type: 'success' });
-                          setTimeout(() => router.push(`/deals/${dealId}`), 1500);
+                          setTimeout(() => router.push(`/deals/${newDealId}`), 1500);
                         } catch (error: unknown) {
                           logger.error('Error converting lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
                           setConfirmDialog(null);

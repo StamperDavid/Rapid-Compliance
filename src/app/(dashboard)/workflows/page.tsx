@@ -24,11 +24,9 @@ import {
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
-import { getWorkflows, setWorkflowStatus, deleteWorkflow } from '@/lib/workflows/workflow-service';
-import { usePagination } from '@/hooks/usePagination';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -54,25 +52,39 @@ const itemVariants = {
 
 export default function WorkflowsPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-  // Fetch function with pagination using service layer
-  const fetchWorkflows = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
-    return getWorkflows(
-      undefined,
-      { pageSize: 50, lastDoc }
-    );
-  }, []);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch('/api/workflows');
+      const json = (await res.json()) as { success?: boolean; workflows?: Workflow[]; hasMore?: boolean; error?: string };
+      if (json.success && json.workflows) {
+        setWorkflows(json.workflows);
+        setHasMore(json.hasMore ?? false);
+      } else {
+        setError(json.error ?? 'Failed to load workflows');
+      }
+    } catch (err) {
+      logger.error('Error loading workflows:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+      setError('Failed to load workflows');
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
 
-  const {
-    data: workflows,
-    loading,
-    error,
-    hasMore,
-    loadMore,
-    refresh
-  } = usePagination<Workflow, QueryDocumentSnapshot>({ fetchFn: fetchWorkflows });
+  // The API GET returns a single page (no Firestore cursor over the wire),
+  // so "load more" simply re-fetches the list.
+  const loadMore = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
 
   // Initial load
   useEffect(() => {
@@ -85,14 +97,18 @@ export default function WorkflowsPage() {
       onConfirm: () => {
         void (async () => {
           try {
-            await deleteWorkflow(workflowId);
+            const res = await authFetch(`/api/workflows/${workflowId}`, { method: 'DELETE' });
+            const json = (await res.json()) as { success?: boolean; error?: string };
+            if (!json.success) {
+              throw new Error(json.error ?? 'Failed to delete workflow');
+            }
             await refresh();
             setConfirmDialog(null);
             setNotification({ message: 'Workflow deleted successfully', type: 'success' });
           } catch (err) {
             logger.error('Error deleting workflow:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
             setConfirmDialog(null);
-            setNotification({ message: 'Failed to delete workflow', type: 'error' });
+            setNotification({ message: err instanceof Error ? err.message : 'Failed to delete workflow', type: 'error' });
           }
         })();
       },
@@ -103,12 +119,20 @@ export default function WorkflowsPage() {
     const newStatus: 'active' | 'paused' = currentStatus === 'active' ? 'paused' : 'active';
 
     try {
-      await setWorkflowStatus(workflowId, newStatus);
+      const res = await authFetch(`/api/workflows/${workflowId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!json.success) {
+        throw new Error(json.error ?? 'Failed to update workflow');
+      }
       await refresh();
       setNotification({ message: `Workflow ${newStatus === 'active' ? 'activated' : 'paused'} successfully`, type: 'success' });
     } catch (err) {
       logger.error('Error updating workflow:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-      setNotification({ message: 'Failed to update workflow', type: 'error' });
+      setNotification({ message: err instanceof Error ? err.message : 'Failed to update workflow', type: 'error' });
     }
   };
 

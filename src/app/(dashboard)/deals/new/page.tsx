@@ -5,15 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { dealFormSchema, type DealFormValues } from '@/lib/validation/deal-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getDealsCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
 export default function NewDealPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const form = useForm<DealFormValues>({
     resolver: zodResolver(dealFormSchema),
     defaultValues: {
@@ -29,13 +28,24 @@ export default function NewDealPage() {
 
   const onSubmit = async (data: DealFormValues) => {
     try {
-      const dealId = `deal-${Date.now()}`;
-      await FirestoreService.set(
-        getDealsCollection(),
-        dealId,
-        { ...data, id: dealId, createdAt: Timestamp.now() },
-        false
-      );
+      const payload: Record<string, unknown> = {
+        name: data.name,
+        company: data.company,
+        value: data.value,
+        probability: data.probability,
+        stage: data.stage,
+        notes: data.notes,
+      };
+      if (data.expectedCloseDate) { payload.expectedCloseDate = data.expectedCloseDate; }
+      const res = await authFetch('/api/deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? 'Failed to create deal');
+      }
       router.push('/deals');
     } catch (error: unknown) {
       logger.error('Error creating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
