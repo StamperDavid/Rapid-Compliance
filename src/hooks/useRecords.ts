@@ -1,17 +1,19 @@
 /**
  * useRecords Hook
- * Reusable hook for managing entity records with Firestore
- * Replaces all mock data usage across CRM pages
+ * Manages dynamic entity records through the secure, authenticated
+ * /api/entities/[entityName]/records routes (Admin SDK server-side).
+ * Reads + writes NO LONGER touch Firestore from the browser.
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { RecordService } from '@/lib/db/firestore-service';
-import { type QueryConstraint } from 'firebase/firestore'
+import { useState, useEffect, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 export interface UseRecordsOptions {
   entityName: string;
-  filters?: QueryConstraint[];
+  /** Accepted for API compatibility; filtering is applied client-side by callers. */
+  filters?: unknown[];
+  /** Accepted for API compatibility. Live streaming is replaced by refresh-after-change for security. */
   realTime?: boolean;
   pageSize?: number;
   enablePagination?: boolean;
@@ -35,23 +37,20 @@ export interface UseRecordsReturn<T = Record<string, unknown>> {
 }
 
 /**
- * Hook for managing records with Firestore
+ * Hook for managing records via the authenticated entity-records API.
  * @example
- * const { records, loading, create, update, remove } = useRecords({
- *   entityName: 'leads',
- *   realTime: true
- * });
+ * const { records, loading, create, update, remove } = useRecords({ entityName: 'leads' });
  */
 export function useRecords<T = Record<string, unknown>>(
   options: UseRecordsOptions
 ): UseRecordsReturn<T> {
   const {
     entityName,
-    filters = [],
-    realTime = false,
     pageSize: initialPageSize = 50,
     enablePagination = false,
   } = options;
+
+  const authFetch = useAuthFetch();
 
   const [records, setRecords] = useState<T[]>([]);
   const [allRecords, setAllRecords] = useState<T[]>([]);
@@ -63,13 +62,6 @@ export function useRecords<T = Record<string, unknown>>(
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Create stable reference for filters to avoid dependency issues
-  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
-
-  // Use ref to access current filters in callbacks without causing re-renders
-  const filtersRef = useRef<QueryConstraint[]>(filters);
-  filtersRef.current = filters;
-
   // Apply pagination to records
   const paginateRecords = useCallback((allRecs: T[]) => {
     if (!enablePagination) {
@@ -80,133 +72,106 @@ export function useRecords<T = Record<string, unknown>>(
 
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    const paginated = allRecs.slice(startIndex, endIndex);
-
-    setRecords(paginated);
+    setRecords(allRecs.slice(startIndex, endIndex));
     setTotalItems(allRecs.length);
   }, [currentPage, pageSize, enablePagination]);
 
-  // Load records from Firestore
+  // Load records via the secure API route
   const loadRecords = useCallback(async () => {
     if (!entityName) {
       setLoading(false);
       return;
     }
 
-    // Parse current filters from serialized key (ensures dependency is used)
-    const currentFilters: QueryConstraint[] = filtersKey ? filtersRef.current : [];
-
     try {
       setLoading(true);
       setError(null);
 
-      const data = await RecordService.getAll(
-        entityName,
-        currentFilters
-      );
+      const res = await authFetch(`/api/entities/${entityName}/records`);
+      const json = (await res.json()) as { success?: boolean; records?: T[]; error?: string };
+      if (!res.ok || !json.success) {
+        throw new Error(json.error ?? `Failed to load ${entityName} (${res.status})`);
+      }
 
-      setAllRecords(data as T[]);
-      paginateRecords(data as T[]);
+      const data = json.records ?? [];
+      setAllRecords(data);
+      paginateRecords(data);
     } catch (err) {
       logger.error('Error loading records:', err instanceof Error ? err : new Error(String(err)), { file: 'useRecords.ts' });
       setError(err as Error);
     } finally {
       setLoading(false);
     }
-  }, [entityName, filtersKey, paginateRecords]);
+  }, [authFetch, entityName, paginateRecords]);
 
   // Initial load
   useEffect(() => {
     void loadRecords();
   }, [loadRecords]);
 
-  // Real-time subscription (optional)
-  useEffect(() => {
-    if (!realTime || !entityName) {
-      return;
-    }
-
-    // Access current filters from ref (filtersKey in deps ensures re-subscription on filter change)
-    const currentFilters: QueryConstraint[] = filtersKey ? filtersRef.current : [];
-
-    const unsubscribe = RecordService.subscribe(
-      entityName,
-      currentFilters,
-      (data) => {
-        setAllRecords(data as T[]);
-        paginateRecords(data as T[]);
-        setLoading(false); // Set loading to false when data arrives
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [realTime, entityName, filtersKey, paginateRecords]);
-
   // Create new record
   const create = useCallback(
     async (data: Partial<T>) => {
       try {
-        const id = `${entityName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-        await RecordService.set(
-          entityName,
-          id,
-          {
-            ...data,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        );
-
-        // Refresh records
+        const id = `${entityName}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+        const res = await authFetch(`/api/entities/${entityName}/records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, record: data }),
+        });
+        const json = (await res.json()) as { success?: boolean; error?: string };
+        if (!res.ok || !json.success) {
+          throw new Error(json.error ?? 'Failed to create record');
+        }
         await loadRecords();
       } catch (err) {
         logger.error('Error creating record:', err instanceof Error ? err : new Error(String(err)), { file: 'useRecords.ts' });
         throw err;
       }
     },
-    [entityName, loadRecords]
+    [authFetch, entityName, loadRecords]
   );
 
   // Update existing record
   const update = useCallback(
     async (id: string, data: Partial<T>) => {
       try {
-        await RecordService.update(
-          entityName,
-          id,
-          data
-        );
-
-        // Refresh records
+        const res = await authFetch(`/api/entities/${entityName}/records/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ record: data }),
+        });
+        const json = (await res.json()) as { success?: boolean; error?: string };
+        if (!res.ok || !json.success) {
+          throw new Error(json.error ?? 'Failed to update record');
+        }
         await loadRecords();
       } catch (err) {
         logger.error('Error updating record:', err instanceof Error ? err : new Error(String(err)), { file: 'useRecords.ts' });
         throw err;
       }
     },
-    [entityName, loadRecords]
+    [authFetch, entityName, loadRecords]
   );
 
   // Delete record
   const remove = useCallback(
     async (id: string) => {
       try {
-        await RecordService.delete(
-          entityName,
-          id
-        );
-
-        // Refresh records
+        const res = await authFetch(`/api/entities/${entityName}/records/${id}`, {
+          method: 'DELETE',
+        });
+        const json = (await res.json()) as { success?: boolean; error?: string };
+        if (!res.ok || !json.success) {
+          throw new Error(json.error ?? 'Failed to delete record');
+        }
         await loadRecords();
       } catch (err) {
         logger.error('Error deleting record:', err instanceof Error ? err : new Error(String(err)), { file: 'useRecords.ts' });
         throw err;
       }
     },
-    [entityName, loadRecords]
+    [authFetch, entityName, loadRecords]
   );
 
   // Manual refresh
@@ -226,7 +191,7 @@ export function useRecords<T = Record<string, unknown>>(
 
   const updatePageSize = useCallback((size: number) => {
     setPageSize(size);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1);
   }, []);
 
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -239,7 +204,6 @@ export function useRecords<T = Record<string, unknown>>(
     update,
     remove,
     refresh,
-    // Pagination
     currentPage,
     totalPages,
     totalItems,
