@@ -18,7 +18,111 @@
 
 Decisions locked: keep ALL payment processors (single active, switchable); WhatsApp kept. Standing order: Claude orchestrates, subagents do the work, Claude verifies every output before "done".
 
-## MANUAL TEST PLAN — CRM vertical (the spine). Walk one step at a time, operator-in-loop, on localhost:3000. Mark PASS/FAIL as we go.
+# 🧪 MASTER MANUAL TEST PLAN — front-end + back-end + AI orchestration (assembled Jun 5 2026)
+HOW TO USE: walk ONE test per turn on localhost:3000. Per test: operator clicks + reports; Claude watches the dev-server log (expect `GET/POST/PATCH /api/... 200`) and verifies the DB; mark **[P]ass / [F]ail / [B]locked-needs-human**. Doctrine: test EVERY feature via BOTH the manual UI AND the Jasper AI path where one exists. NOTE: still testing on demo/seed data (manifest = `scripts/inventory-demo-test-data.ts`); purge before production.
+
+PROGRESS so far this session: Dashboard loads **[P]** (caveat: recent-activity feed empty — missing Firestore composite index on `records`/entityType+createdAt, logged). Leads list loads **[P]**. Entity-CRM data path secured + verified **[P]**. Schema options/help-text + team-member dropdown built + verified **[P]**.
+
+⚠️ KNOWN-BROKEN (catalogued — expected FAILs, don't re-debug from scratch): Companies detail 404 · Invoices detail 404 · Workforce Execute + Logs buttons 404 · Video Studio Text tool = stub (echoes prompt) · Playbook "generate" buttons unwired · Leads CSV import has no UI button (backend exists) · compliance-reports = permanently-empty shell · Risk page no deal picker (type ID by hand) · Workflow builder/new unconverted + schema mismatch (automations OFF) · ElevenLabs key invalid → voice/clone fails · Integrations connection-state inconsistent (3 sources).
+
+## A. CRM & REVENUE
+1. Leads list (`/leads`→`/entities/leads`) — M: loads, search/filters work. B: `GET /api/entities/leads/records 200` + `/api/schemas` + `/api/team/members`. AI: "show my newest leads" → read summary.
+2. Lead create — M: +Add Lead → fill → Add → row appears. B: `POST /api/entities/leads/records 201`. AI: "add lead Jane Doe jane@acme.com" → mission → approve → created.
+3. Lead edit — M: Edit → change Status → Update → reflects. B: `PATCH /api/entities/leads/records/[id] 200`. AI: "mark Jane Doe qualified" → mission.
+4. Lead delete — M: Delete → confirm. B: `DELETE /api/leads {ids:[id]} 200`. AI: n/a.
+5. Convert-to-deal (`/leads/[id]`) — M: Convert to Deal → confirm → redirect to deal. B: `POST /api/deals 200`. AI: "convert Jane Doe to a deal".
+6. Lead CSV import — ⚠️ no UI button found; backend `POST /api/leads/import` only. Flag/verify.
+7. Lead scoring (`/lead-scoring`) — M: cards render, create/toggle a rule. B: `GET/POST /api/lead-scoring/rules 200`. AI: "re-score my leads".
+8. Contacts (`/contacts`→`/entities/contacts`) — M: list/create/edit/delete. B: entity records routes; delete `DELETE /api/contacts/[id]`. AI: "add contact John Smith at Acme".
+9. Companies (`/companies`) — M: list + New Company create. B: `GET/POST /api/crm/companies 200`. AI: "add company Acme Corp".
+10. ⚠️ Company detail (`/companies/[id]`) — M: click row → **404 KNOWN-BROKEN**.
+11. Deals list (`/deals`) — M: pipeline/list toggle, value total. B: `GET /api/deals 200`. AI: "what's in my pipeline?".
+12. Deal create (`/deals/new`) — M: fill → save → card. B: `POST /api/deals 200`. AI: "create deal Acme Renewal $25k".
+13. Deal open/edit (`/deals/[id]`) — M: detail + edit value. B: `GET /api/deals/[id]` + `GET /api/crm/deals/[id]/health`; `PATCH /api/deals/[id]`. AI: "bump Acme Renewal to $30k".
+14. Deal stage Won/Lost — M: Mark Won / Mark Lost(+reason). B: `POST /api/deals/[id]/stage 200` (+PATCH lostReason). AI: "mark Acme Renewal won".
+15. ⚠️ Invoices (`/deals/invoices`) — M: list + create work; click row → detail **404 KNOWN-BROKEN**.
+16. Activities (`/activities`) — M: list + log activity. B: `GET /api/crm/activities 200`. AI: "log a call with John Smith".
+17. Tasks (`/tasks`) — M: list + Create Task + toggle status. B: `GET/POST /api/team/tasks 200`. AI: "create a task to follow up Acme Friday".
+18. Proposals (`/proposals`, `/proposals/builder`) — M: list templates; builder create/save. B: `GET/POST/DELETE /api/proposals/templates 200`. AI: "draft an onboarding proposal template".
+19. Products (`/products`) — M: list/create/delete. B: `GET /api/products 200`, `DELETE /api/products/[id]`. AI: "add product Pro Plan $99".
+20. Orders (`/orders`) — M: list + open drawer + update status. B: `GET /api/ecommerce/orders 200`, `PUT .../[id]`. AI: "mark order #1234 fulfilled".
+21. Coupons (`/coupons`) — M: create / pause-activate / delete; analytics on `/settings/promotions`. B: `GET/POST /api/coupons`, `PUT /api/coupons/[id]/status`, `/api/coupons/analytics`. AI: "create 20% coupon SAVE20".
+22. Campaigns (`/campaigns`) — M: New Campaign → template → routes to Mission Control (Jasper-orchestrated). B: `GET /api/campaigns 200`. AI (primary): "create a product-launch campaign".
+23. Sequences (`/sequences`→`/outbound/sequences`) — M: create sequence + enroll a lead. B: `/api/outbound/sequences` routes. AI: "enroll Jane Doe in cold-outreach".
+24. Nurture (`/nurture`) — M: create/edit/stats. B: `GET /api/nurture 200`. AI: "build a 3-step nurture for trial signups".
+25. Battlecards (`/battlecards`) — M: discover competitor → generate → export. B: `POST /api/battlecard/competitor/discover` + `/generate` + `/export 200`. AI: "battlecard vs hubspot.com".
+26. ⚠️ Playbook (`/playbook`) — M: generate buttons present but **unwired** — verify/flag. B: `GET /api/playbook/list`; `/[id]/metrics`. AI: "generate a playbook from my top calls".
+27. Storefront/payments config (`/settings/storefront`) — M: pick active processor → Save. B: `GET/PUT /api/settings/storefront 200` (writes storefrontConfig + ecommerce/config). AI: n/a.
+28. Record manual payment (`/deals/payments`) — M: Record Payment → fill. B: `GET/POST /api/crm/payments 200`. AI: "record $2000 bank transfer from Acme".
+29. ⚠️[B] Test checkout — NEEDS-HUMAN live Stripe key. `POST /api/checkout/initiate|complete`.
+30. ⚠️[B] Subscription checkout — NEEDS-HUMAN live Stripe. `POST /api/subscriptions/checkout`.
+
+## B. AI AGENTS & MISSION CONTROL (crown jewel — verify Jasper only DELEGATES; no GM change without a human grade)
+31. Jasper chat (floating launcher, any page) — M: type "create a lead for Acme" → reply drafts a PLAN + "review in Mission Control" link (NOT a finished lead). B: `POST /api/orchestrator/chat 200` → toolCall `propose_mission_plan` + mission doc `PLAN_PENDING_APPROVAL`.
+32. Mission Control plan pre-approval (`/mission-control`) — M: select mission → edit a step's args / reorder / delete → approve each step. B: `/plan/edit-step|reorder|delete-step|approve-step 200`; steps flip `operatorApproved:true`.
+33. Sequential execute + per-step gate — M: approve all → Run → steps run top-to-bottom. B: `/plan/approve 200`; with one step unapproved expect **409 + unapprovedStepIds**; status IN_PROGRESS→COMPLETED.
+34. Retry → halt — M: a step fails → auto-retry once → 2nd fail halts to AWAITING_APPROVAL w/ scrap+rerun. B: `finalStatus:AWAITING_APPROVAL`, step FAILED; rerun `/steps/[id]/rerun`.
+35. Downstream-changed flag — M: rerun an earlier step → downstream shows "upstream changed" → clear or rerun. B: `/steps/[id]/clear-upstream-flag 200`.
+36. Edit-output / scrap / rerun — M: Edit output directly (sets manuallyEdited), Cancel Mission (two-step). B: `/steps/[id]/edit-output`, `/cancel 200`.
+37. Step grading → Prompt Engineer → new GM version — M: Rate a step → reason → pick target → 3-box popup → approve. B: `/grade` + `POST /api/training/grade-specialist 200` (status EDIT_PROPOSED + feedbackId) → `/feedback/[id]/approve` → TrainingFeedback record + new GM version. (Standing Rule #2: no grade → no GM write.)
+38. Version history + rollback — M: "<specialist> — history" → rollback. B: `GET /api/training/grade-specialist/[id]/versions`, `POST .../rollback 200`.
+39. Workforce hub (`/workforce`) — M: agent grid/hierarchy + Refresh. B: system-status + `/api/orchestrator/system-health 200`.
+40. ⚠️ Workforce Execute button — M: click → `/workforce/execute` **404 KNOWN-BROKEN**.
+41. ⚠️ Workforce Logs button — M: click → `/admin/system/logs` **404 KNOWN-BROKEN**.
+42. Per-agent Knowledge (`/workforce/agents/[id]/knowledge`) — M: upload file/URL/FAQ, list, delete. B: `GET /api/agent/knowledge/[id] 200`, upload `POST /api/agent/knowledge/upload`. Verify isolation to that agentId.
+43. Intelligence/Discovery (`/intelligence/discovery`) — M: run discovery → results. B: 200, no console errors.
+44. Coaching (`/coaching`) — M: pick period → Generate coaching → cards. B: generate 200.
+45. Executive briefing (`/executive-briefing`) — M: dept summaries + pending approvals render. B: `GET /api/orchestrator/executive-briefing 200`.
+46. Performance (`/workforce/performance`) — M: per-specialist metrics + improvement analysis. B: `GET /api/swarm/performance 200`.
+47. Training Lab (`/settings/ai-agents/training`) — M: pick agent → GM Versions → Deploy a version. B: `GET /api/training/gm-versions`; `POST /api/training/deploy-golden-master 200`.
+
+## C. CONTENT & SOCIAL
+48. Studio image/music/video (`/content/video/studio`) — M: pick Image tool → prompt → generate → canvas + Recent rail. B: `POST /api/content/asset-generator/generate` + `POST /api/media 200`. AI: n/a (manual tool).
+49. ⚠️ Studio Text tool — M: generate → **STUB, echoes prompt** (no HTTP call). KNOWN-BROKEN.
+50. Image generator (`/content/image-generator`) — M: prompt → image → library. B: same generate+media.
+51. Recent generations sidebar — M: click recent → restores to canvas; drag image onto video tool. B: `GET /api/media 200`.
+52. Social hub (`/social`) — M: metrics row real (no random), platform pills Live/Coming-Soon. B: parallel 200s (`/api/social/accounts|metrics/overview|agent-status|activity`). Live = Bluesky/Mastodon/X only.
+53. ⚠️[B] Connect a platform — NEEDS-HUMAN OAuth; only Bluesky/Mastodon/X have a live path; rest coming_soon.
+54. Per-platform composer (`/social/platforms/bluesky`) — M: type → Post, or Generate with AI → edit → Post. B: `POST /api/social/post 200` (published doc); AI draft `POST /api/social/platforms/[p]/generate-post`. AI: "write+post a Bluesky update" → Marketing mgr → BLUESKY_EXPERT → Mission Control.
+55. Schedule post + queue — M: set future time → Schedule → appears in queue + `/social/calendar`. B: `POST /api/social/post {scheduledFor} 200`.
+56. Social approvals (`/social/approvals`) — M: review flagged drafts → edit (captures correction) → approve/bulk. B: `GET /api/social/approvals 200`.
+57. Social listening (`/social/listening`) — M: set keywords/competitors → save; filter mentions. B: `GET /api/social/listening 200`. AI: "reply to latest pricing mention" → approval gate.
+58. Social analytics (`/social/analytics`) — M: charts/tables from real data. B: `/api/social/metrics/* 200`.
+59. Conversations (`/conversations`) — M: active sessions live; open thread; Take Over; flag-for-training (History). B: Firestore subscription (ChatSessionService) — assert docs, not REST.
+60. Calls log (`/calls`) — M: History + Schedule a call. B: `GET /api/calls 200`; schedule `POST /api/voice/calls/schedule 200`. AI: "schedule a call to +1555 tomorrow 2pm".
+61. ⚠️[B] Make call (`/calls/make`) — NEEDS-HUMAN Twilio. `POST /api/voice/call`.
+
+## D. EMAIL, GROWTH & MEDIA
+62. Email Writer (`/email-writer`) — M: pick type + lead → Generate → subject+body + Recent row. B: email-writer generate 200. AI: "write a follow-up to [lead] about our demo" → delegate_to_content (COPYWRITER).
+63. Email campaign create (`/email/campaigns/new`) — M: fill → Create → list. B: `GET /api/email/campaigns 200`; create → emailCampaigns doc. AI: "set up a pricing-announcement campaign".
+64. ⚠️[B] Email send — NEEDS-HUMAN SendGrid/Gmail keys. `POST /api/email/send`; or Send-Test in templates.
+65. Email templates (`/settings/email-templates`) — M: Custom Templates → designer blocks → Save; delete (two-step). B: `GET/POST/DELETE /api/email/html-templates 200`.
+66. Marketing budget (`/marketing/budget`) — M: set budget + per-platform spend → Analyze → recommendations; Apply copies prompt. B: budget-strategist 200; "Pull from CRM" → `/api/contacts`. ⚠️ auto-apply to Google/Meta NOT wired. AI: "rebalance ad budget toward what's converting".
+67. SEO settings (`/website/seo`) — M: edit robots/llms, toggle AI bots → Save. B: `POST /api/website/settings 200`. ⚠️[B] GSC connect NEEDS-HUMAN. AI: "write an SEO landing page for [topic]" → delegate_to_builder.
+68. ⚠️[B] Voice/Audio lab (`/content/voice-lab`) — M: Designer/Music/Studio generate. B: `/api/voice/tts`, `/api/audio/music`. **NEEDS-HUMAN + ElevenLabs key INVALID → will fail.**
+69. Video library (`/content/video/library`) — M: filter/search/detail/two-step delete. B: media list 200. ⚠️[B] clone wizard needs ElevenLabs/avatar keys.
+70. Website pages (`/website/pages`) — M: AI Generate or Clone Website → new page → publish. B: `GET/POST /api/website/pages`, `POST /api/website/ai/generate 200`. AI: "build a pricing page" → delegate_to_builder.
+71. ⚠️[B] Website domains (`/website/domains`) — NEEDS-HUMAN DNS. `POST /api/website/domain`.
+72. Forms (`/forms`) — M: create → add fields + conditional rule → preview hide/show → Publish → submit public form. B: publish `POST /api/forms/[id]/publish`; submit `POST /api/public/forms/[id] 200` → **creates a lead** (verify `leads` doc). AI: n/a.
+73. ⚠️[B] Scraper (`/scraper`→`/leads/research`) — M: query/URL → Run → results → export. B: `/api/leads/research 200`. NEEDS-HUMAN live scrape. AI: "research top 5 competitors + pricing" → delegate_to_intelligence.
+74. Academy (`/academy`) — M: tutorials grid + category filter + player. B: `GET /api/academy 200` (published only).
+
+## E. PLATFORM, TEAM & INTEGRATIONS
+75. Team roster (`/settings/users`) — M: table + stats; change role inline; Edit; Remove (confirm). B: `GET /api/admin/users 200`; `PATCH/DELETE /api/admin/users`.
+76. Invite user — M: +Invite User → email + role → Send → Pending row. B: `POST /api/users/invite 201` → invites doc (7-day expiry); role-hierarchy enforced.
+77. Team-member dropdown (assignee) — M: open a lead → Assigned To lists REAL teammates by name → select persists. B: `GET /api/team/members 200` (excludes agents/removed). [verify it shows ONLY real team after demo purge]
+78. Onboarding (`/onboarding`) — M: website URL → auto-fill → walk 24 steps → Complete → redirect. B: `PATCH /api/onboarding/progress`; `POST /api/agent/process-onboarding 200`. ⚠️[B] Google connect step NEEDS-HUMAN.
+79. ⚠️ Integrations (`/settings/integrations`) — M: category pills, Connect a service (OAuth NEEDS-HUMAN). B: `/api/integrations/google|microsoft/status`, `/api/social/accounts`. **FLAG: state from 3 inconsistent sources.**
+80. Storefront/payments (`/settings/storefront`) — (see #27).
+81. Meetings (`/meetings`) — M: list loads (now auth-gated — verify no redirect loop); Cancel (two-step), Delete (two-step), Refresh; Schedule opens `/book`. B: `GET /api/meetings/list 200`; cancel/delete routes. ⚠️[B] calendar sync NEEDS-HUMAN Google.
+82. Workflows (`/workflows`) — M: list + Pause/Activate + Delete. B: `GET /api/workflows 200`, `PATCH/DELETE .../[id]`. ⚠️ builder/new KNOWN-BROKEN (unconverted + schema mismatch; automations OFF) — test list/toggle/delete only.
+83. Analytics (`/analytics` + subpages) — M: period selector; revenue/pipeline/ecommerce/workflows cards + each subpage loads. B: `/api/analytics/* 200`.
+84. System (`/system`) — M: as admin, health grid; as member, Access Denied. B: `GET /api/health 200`.
+85. ⚠️ Compliance-reports (`/compliance-reports`) — M: loads → empty state. **KNOWN-BROKEN permanently-empty shell** (nothing writes the collection).
+86. ⚠️ Risk (`/risk`) — M: type a Deal ID (or Load Demo Data) → Predict Risk → cards. **FLAG: no deal picker.** B: `POST /api/risk/predict 200`.
+
+---
+## MANUAL TEST PLAN — CRM vertical (the spine, original detail; now folded into section A above). Walk one step at a time, operator-in-loop, on localhost:3000. Mark PASS/FAIL as we go.
 Doctrine: test each capability via BOTH the manual UI AND the AI (Jasper) path. "Done" = watched it work with real data, not "code looks right".
 - **A. App loads** — open localhost:3000, land on dashboard logged in.
 - **B. Leads (manual UI):** (1) list loads with data · (2) create a lead via the form → appears in list · (3) open the lead → detail renders · (4) edit → change saves · (5) "Convert to deal" → deal created [NOTE: currently a client-side write — data-path Tier-1 item] · (6) CSV import → rows imported · (7) delete a test lead.
