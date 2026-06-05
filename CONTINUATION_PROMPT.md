@@ -5,18 +5,24 @@
 # 🎯 CURRENT SESSION — Per-agent knowledge bases DONE + penthouse-finish ground truth (June 4, 2026)
 
 ## ✅ PENTHOUSE-FINISH PROGRESS (June 4–5) — START HERE on resume
-**DONE + committed + pushed to dev:**
-- Security: `/api/meetings/list` auth gate — was leaking all booking PII (`ab3a6283`).
-- Verified finish-map folded into this doc (`a528467d`): data-path burn-down (37 client-Firestore pages), 15 confirmed broken buttons, payments per-provider work-list, cut-platform delete map, CRM-unification + monster-file notes. All numbers hand-verified vs code.
-- **Cut-platform delete DONE** (`6395d07c`): Reddit/Telegram/Truth Social removed — 42 files, ~3,300 lines gone, WhatsApp preserved. tsc + eslint clean (independently verified). rapid-dev synced, localhost:3000 restarted healthy.
+**DONE this session (all committed + pushed to dev):**
+- Security: `/api/meetings/list` auth gate (`ab3a6283`). Verified finish-map folded in (`a528467d`).
+- **Cut-platform delete** (`6395d07c`): Reddit/Telegram/Truth Social removed (~3,300 lines), WhatsApp kept.
+- **Vercel build fixed**: agent-registry regen (was failing last 2 deploys, `934ec38e`); startup log-noise demoted info→debug so build logs are readable (`46eb47b3`).
+- **DATA-PATH CONVERSION COMPLETE** (`9e0e7d10`,`e43a29d5`,`92a4b0fd`,`8aa9f316`): all ~37 browser→Firestore pages converted to auth-gated Admin-SDK API routes, INCLUDING the entity-table CRM (`useRecords` → new `/api/entities/[entityName]/records`) which is the real leads/contacts screen (`/leads`,`/contacts` redirect to it). tsc + build green each wave. ONLY deferred: `workflows/builder` + `workflows/new` (builder↔engine schema mismatch — priority-logged below).
+- **Schema feature** (`7a9a1683`): pick-list `options` + field `description` now persist + are configurable in the schema editor; entity form renders help-text + real multiSelect. Leads schema backfilled (`154592d9`).
+- **Team system** (`5bb92a92`): `GET /api/team/members`, invite-accept now writes the `members` subcollection (was a broken seam — invited users were invisible to leaderboard/routing/mentions), new `'user'` "Team Member" assignee field type (live dropdown), backfills. REAL team = David Stamper (you) + J David Stamper + YC Reviewer; everything else is demo.
+- **Demo/test data MANIFEST** (`scripts/inventory-demo-test-data.ts`, `25327b6c`): every collection's seed/test records catalogued. KEEP for now (test on it, no re-seeding), PURGE before production. Note: leads/contacts/deals/companies/team are ALL demo+test — zero real leads.
+- **MASTER MANUAL TEST PLAN** assembled (`ca3397e8`): 86 tests, manual + back-end + AI path, all 5 domains (below).
 
 **NEXT — pick up here (order):**
-1. Data-path Tier-1 browser-WRITE pages (start `leads/[id]` client-side deal creation + `settings/security`/`settings/lead-routing`). ~9 are pure re-wires to existing routes; ~14 need a new Admin-SDK route built first. See DATA-PATH BURN-DOWN below.
-2. High-impact broken buttons: Workforce Execute/Logs 404s, Companies + Invoices drill-down 404s, Playbook create flow. See BROKEN BUTTONS below.
-3. Payments vertical: fix `verify2Checkout` stub, add Razorpay/Braintree toggles, build subscription-processor selector. (Mostly needs live accounts + testing — owner-in-loop.)
-4. CRM unification + monster-file freeze. Then multi-tenant flip.
+1. ⚠️ **CONTENT GENERATOR REDESIGN — DO FIRST.** Owner (Jun 5): "the entire design is wrong on this." The content-generator section must be corrected/redesigned so it actually makes sense BEFORE walking the Section-C content tests — testing the current design is wasted effort. (Specifics to be captured with owner; pausing the test walk until this is sorted.)
+2. **Walk the MASTER MANUAL TEST PLAN** (below), Section A onward — manual first, then the Jasper AI path per vertical. Server on localhost:3000; Claude watches the dev log + verifies DB per step.
+3. Fix catalogued KNOWN-BROKEN as hit: Workforce Execute/Logs 404, Companies/Invoices detail 404, Video Studio text stub, Playbook buttons unwired, Risk no deal-picker, compliance-reports empty shell, leads CSV-import no UI button, workflow builder schema mismatch, ElevenLabs key invalid, integrations 3-source state.
+4. Payments vertical: owner opens merchant accounts; finish `verify2Checkout` stub + Razorpay/Braintree storefront toggles + subscription-processor-selector writer.
+5. Purge demo/test data (run the manifest as a delete) → then multi-tenant flip.
 
-Decisions locked: keep ALL payment processors (single active, switchable); WhatsApp kept. Standing order: Claude orchestrates, subagents do the work, Claude verifies every output before "done".
+Decisions locked: keep ALL payment processors (single active, switchable); WhatsApp kept; demo data kept for testing then purged; entity-table system is the canonical CRM. Standing order: Claude orchestrates, subagents do the work, Claude verifies every output (tsc + full build, real exit code) before "done".
 
 # 🧪 MASTER MANUAL TEST PLAN — front-end + back-end + AI orchestration (assembled Jun 5 2026)
 HOW TO USE: walk ONE test per turn on localhost:3000. Per test: operator clicks + reports; Claude watches the dev-server log (expect `GET/POST/PATCH /api/... 200`) and verifies the DB; mark **[P]ass / [F]ail / [B]locked-needs-human**. Doctrine: test EVERY feature via BOTH the manual UI AND the Jasper AI path where one exists. NOTE: still testing on demo/seed data (manifest = `scripts/inventory-demo-test-data.ts`); purge before production.
