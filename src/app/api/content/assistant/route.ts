@@ -25,6 +25,7 @@ import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { buildToolSystemPrompt } from '@/lib/brand/brand-dna-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import type { CinematicConfig } from '@/types/creative-studio';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,133 @@ const AssistantRequestSchema = z.object({
   /** The content-generator tab the operator is on, e.g. '/content/video'. */
   activeTab: z.string().trim().max(120).optional(),
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Storyboard actions — on the Video tab the assistant can BUILD storyboards,
+// not just talk. It emits a fenced ```storyboards JSON array which we parse,
+// validate, and hand back so the client drops them onto the canvas for review.
+// ────────────────────────────────────────────────────────────────────────────
+
+const EmittedStoryboardSchema = z.object({
+  title: z.string().trim().max(120).optional(),
+  action: z.string().trim().max(2000).optional(),
+  dialogue: z.string().trim().max(2000).optional(),
+  durationSeconds: z.number().min(1).max(120).optional(),
+  location: z.string().trim().max(300).optional(),
+  timeOfDay: z.string().trim().max(120).optional(),
+  weather: z.string().trim().max(200).optional(),
+  lighting: z.string().trim().max(200).optional(),
+  mood: z.string().trim().max(200).optional(),
+  style: z.string().trim().max(200).optional(),
+  shotType: z.string().trim().max(120).optional(),
+  cameraMovement: z.string().trim().max(120).optional(),
+  ambience: z.string().trim().max(300).optional(),
+  musicCue: z.string().trim().max(300).optional(),
+  wardrobe: z.string().trim().max(300).optional(),
+});
+
+type EmittedStoryboard = z.infer<typeof EmittedStoryboardSchema>;
+
+const EmittedStoryboardsSchema = z.array(EmittedStoryboardSchema).max(20);
+
+/** The storyboard shape the Video tab applies to its pipeline store. */
+export interface AssistantStoryboard {
+  title: string;
+  visualDescription: string;
+  scriptText: string;
+  duration: number;
+  location?: string;
+  timeOfDay?: string;
+  weather?: string;
+  ambience?: string;
+  musicCue?: string;
+  wardrobe?: string;
+  cinematicConfig?: Partial<CinematicConfig>;
+}
+
+function isVideoStoryboardTab(activeTab: string | undefined): boolean {
+  const tab = (activeTab ?? '').toLowerCase();
+  return (
+    tab.includes('/content/video') &&
+    !tab.includes('/editor') &&
+    !tab.includes('/library')
+  );
+}
+
+function toAssistantStoryboard(s: EmittedStoryboard): AssistantStoryboard {
+  const cinematicConfig: Partial<CinematicConfig> = {};
+  if (s.lighting) { cinematicConfig.lighting = s.lighting; }
+  if (s.mood) { cinematicConfig.atmosphere = s.mood; }
+  if (s.style) { cinematicConfig.movieLook = s.style; }
+  if (s.shotType) { cinematicConfig.shotType = s.shotType; }
+  if (s.cameraMovement) { cinematicConfig.camera = s.cameraMovement; }
+  return {
+    title: s.title ?? '',
+    visualDescription: s.action ?? '',
+    scriptText: s.dialogue ?? '',
+    duration: s.durationSeconds ?? 5,
+    ...(s.location ? { location: s.location } : {}),
+    ...(s.timeOfDay ? { timeOfDay: s.timeOfDay } : {}),
+    ...(s.weather ? { weather: s.weather } : {}),
+    ...(s.ambience ? { ambience: s.ambience } : {}),
+    ...(s.musicCue ? { musicCue: s.musicCue } : {}),
+    ...(s.wardrobe ? { wardrobe: s.wardrobe } : {}),
+    ...(Object.keys(cinematicConfig).length > 0 ? { cinematicConfig } : {}),
+  };
+}
+
+/**
+ * Pull a fenced ```storyboards (or ```json) array out of the reply, validate
+ * it, and return the parsed storyboards plus the reply with the block removed.
+ * Returns null when there's no valid block.
+ */
+function extractStoryboards(reply: string): { storyboards: AssistantStoryboard[]; cleanedReply: string } | null {
+  const fence = /```(?:storyboards|json)?\s*([\s\S]*?)```/i.exec(reply);
+  if (!fence) {
+    return null;
+  }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(fence[1].trim());
+  } catch {
+    return null;
+  }
+  const parsed = EmittedStoryboardsSchema.safeParse(raw);
+  if (!parsed.success || parsed.data.length === 0) {
+    return null;
+  }
+  return {
+    storyboards: parsed.data.map(toAssistantStoryboard),
+    cleanedReply: reply.replace(fence[0], '').trim(),
+  };
+}
+
+const VIDEO_ACTION_BLOCK = `
+
+## BUILDING STORYBOARDS — YOU CAN ACT HERE
+On the Video tab you don't just talk, you BUILD. When the operator asks you to create / make / fill / build the storyboards (or says "you do it", "just make it", "take it from here"), you MUST output the storyboards as data so they appear on their canvas for review — never describe them in prose alone.
+
+Output: ONE short human sentence, then a fenced code block tagged \`storyboards\` holding a JSON array — one object per storyboard, in order. Fields (all optional except action; omit what doesn't apply):
+- "title": short scene name
+- "action": what literally happens on screen, including who is in frame and their look — the most important field
+- "dialogue": the voiceover / spoken line for this scene
+- "durationSeconds": number
+- "location", "timeOfDay", "weather"
+- "lighting", "mood", "style"
+- "shotType", "cameraMovement"
+- "ambience", "musicCue", "wardrobe"
+
+Rules:
+- Keep characters CONSISTENT across scenes (same person, same wardrobe) unless told otherwise.
+- Split the requested total duration across the scenes.
+- Keep the human reply to ONE sentence — the detail lives in the JSON, which they'll see as filled-in fields and review.
+- Only emit the block when they actually want it built. While brainstorming, just talk (no block).
+
+Example reply:
+Here are your two storyboards — review and tweak anything.
+\`\`\`storyboards
+[{"title":"The Stress","action":"A solo entrepreneur, mid-30s, rumpled shirt, hands gripping his hair at a cluttered desk","dialogue":"Running a business shouldn't feel like this.","durationSeconds":7,"location":"cramped home office","lighting":"harsh cool overhead","mood":"tense, claustrophobic","shotType":"tight medium shot"}]
+\`\`\``;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Active-tab context — tells the director which modality is in front of the
@@ -103,18 +231,20 @@ You help the operator figure out exactly what they want to create — an image, 
 - When they're vague ("make me a video about our product"), pull on the thread: who's it for, where does it live, what's the one feeling it should leave behind.
 - Stay in the tenant's brand voice (below). The ideas you propose should sound like THIS brand, not a generic agency.
 
-## WHAT YOU DO NOT DO (v1)
-- You do NOT generate the final asset yourself, and you do NOT run any tools yet — this is a conversation. (Filling the creation form and handing off to the active tool comes later.)
-- Don't claim you've created or queued anything. You're helping them shape the brief.
+## WHAT YOU DO NOT DO
+- You do NOT render the final image/video/music yourself — that's the operator's job when they hit Generate. You shape the brief and, on the Video tab, you BUILD the storyboards for them to review (see below).
+- Don't claim a final asset is rendered or published. Building storyboards for review is fine and expected; rendering is not.
 - Keep replies tight and human. No bullet-point essays, no corporate filler.`;
 
   const tabBlock = `\n\n## CURRENT CONTEXT\n${describeActiveTab(activeTab)}`;
+
+  const actionBlock = isVideoStoryboardTab(activeTab) ? VIDEO_ACTION_BLOCK : '';
 
   const brandBlock = brandContext
     ? `\n\n## BRAND VOICE & IDENTITY (stay in this voice)\n${brandContext}`
     : '';
 
-  return `${role}${tabBlock}${brandBlock}`;
+  return `${role}${tabBlock}${actionBlock}${brandBlock}`;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -165,6 +295,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { success: false, error: 'The assistant did not return a response. Please try again.' },
         { status: 502 },
       );
+    }
+
+    // On the Video tab, pull any storyboard data the director built so the
+    // client can drop it onto the canvas for the operator to review + approve.
+    if (isVideoStoryboardTab(parsed.activeTab)) {
+      const extracted = extractStoryboards(reply);
+      if (extracted) {
+        return NextResponse.json({
+          success: true,
+          reply: extracted.cleanedReply || 'Here are your storyboards — review and tweak anything.',
+          storyboards: extracted.storyboards,
+        });
+      }
     }
 
     return NextResponse.json({ success: true, reply });
