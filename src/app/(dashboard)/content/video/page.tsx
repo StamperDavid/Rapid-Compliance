@@ -60,17 +60,15 @@ export default function VideoStudioPage() {
   // Subscribe to the reactive data that canAdvanceTo depends on
   const scenes = useVideoPipelineStore((s) => s.scenes);
   const generatedScenes = useVideoPipelineStore((s) => s.generatedScenes);
-  const brief = useVideoPipelineStore((s) => s.brief);
   const finalVideoUrl = useVideoPipelineStore((s) => s.finalVideoUrl);
   const postProductionVideoUrl = useVideoPipelineStore((s) => s.postProductionVideoUrl);
 
   // Compute which steps are reachable based on actual store data
   const reachableSteps = useMemo(() => {
     const reachable: PipelineStep[] = [];
-    // Check each step's prerequisites directly
-    if (brief.description.trim().length > 0) {
-      reachable.push('storyboard');
-    }
+    // Storyboard is manual-first — always reachable so you can build scenes
+    // directly without going through the Studio/brief funnel first.
+    reachable.push('storyboard');
     if (scenes.length > 0 && scenes.every((s) => s.scriptText.trim().length > 0)) {
       reachable.push('generation');
     }
@@ -88,7 +86,7 @@ export default function VideoStudioPage() {
       reachable.push('publish');
     }
     return reachable;
-  }, [brief, scenes, generatedScenes, finalVideoUrl, postProductionVideoUrl]);
+  }, [scenes, generatedScenes, finalVideoUrl, postProductionVideoUrl]);
 
   const completedSteps = useMemo(() => {
     // Steps before current are completed, plus all steps before any reachable step
