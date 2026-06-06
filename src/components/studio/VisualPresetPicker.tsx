@@ -29,17 +29,17 @@ interface VisualPresetPickerProps {
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
-function PresetCard({
-  preset,
-  isSelected,
-  onClick,
-  multiSelect,
-}: {
+const PresetCard = React.forwardRef<HTMLButtonElement, {
   preset: CinematicPreset;
   isSelected: boolean;
   onClick: () => void;
   multiSelect?: boolean;
-}) {
+}>(function PresetCard({
+  preset,
+  isSelected,
+  onClick,
+  multiSelect,
+}, ref) {
   const initials = preset.name
     .split(/[\s/]+/)
     .slice(0, 2)
@@ -49,6 +49,7 @@ function PresetCard({
 
   return (
     <motion.button
+      ref={ref}
       type="button"
       onClick={onClick}
       initial={{ opacity: 0, scale: 0.95 }}
@@ -96,7 +97,9 @@ function PresetCard({
       </div>
     </motion.button>
   );
-}
+});
+
+PresetCard.displayName = 'PresetCard';
 
 // ─── Main Component ────────────────────────────────────────────────
 
