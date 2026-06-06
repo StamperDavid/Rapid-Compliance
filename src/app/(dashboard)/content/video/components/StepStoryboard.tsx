@@ -566,10 +566,13 @@ function PreviewPanel({ scene, isGeneratingThumb, onGenerateThumb, onToggleReady
         </div>
         <CardContent className="p-3 flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock className="w-3.5 h-3.5" />{scene.duration}s clip</span>
-          <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={onGenerateThumb} disabled={isGeneratingThumb}>
-            {isGeneratingThumb ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-            {scene.screenshotUrl ? 'Regenerate' : 'Generate preview'}
-          </Button>
+          {isGeneratingThumb ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" />Generating preview…</span>
+          ) : scene.screenshotUrl ? (
+            <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-muted-foreground" onClick={onGenerateThumb}><Wand2 className="w-3.5 h-3.5" />Regenerate</Button>
+          ) : (
+            <span className="text-[11px] text-muted-foreground">Preview generates automatically</span>
+          )}
         </CardContent>
       </Card>
 
@@ -627,6 +630,7 @@ export function StepStoryboard() {
   const [characterPickerSceneId, setCharacterPickerSceneId] = useState<string | null>(null);
   const [defaultPicker, setDefaultPicker] = useState<'character' | 'voice' | null>(null);
   const dragIndexRef = useRef<number | null>(null);
+  const prevSelectedRef = useRef<string | null>(selectedSceneId);
 
   // Keep a storyboard selected — e.g. when the Content Assistant adds them, or
   // after the current one is deleted — so the editor always has something open.
@@ -774,15 +778,8 @@ export function StepStoryboard() {
 
   const handleAddScene = useCallback(
     (copyForward: boolean) => {
-      // Auto-generate the thumbnail for the storyboard being completed, so the
-      // operator sees it pinned the moment they move on to the next one.
-      const completingId = selectedSceneId;
-      if (completingId) {
-        const completing = useVideoPipelineStore.getState().scenes.find((s) => s.id === completingId);
-        if (completing && !completing.screenshotUrl && sceneHasDescription(completing)) {
-          void handleGenerateThumbnail(completingId);
-        }
-      }
+      // The storyboard being left auto-generates its preview via the
+      // selection-change effect below — no manual step needed.
       const last = scenes[scenes.length - 1];
       addScene(buildNewScene(copyForward ? last : undefined));
       const updated = useVideoPipelineStore.getState().scenes;
@@ -791,7 +788,37 @@ export function StepStoryboard() {
         setSelectedSceneId(newScene.id);
       }
     },
-    [scenes, addScene, buildNewScene, selectedSceneId, handleGenerateThumbnail],
+    [scenes, addScene, buildNewScene],
+  );
+
+  // Auto-generate a preview for the storyboard you just left — the "finished
+  // this one" moment. Previews appear automatically, no button required.
+  useEffect(() => {
+    const prevId = prevSelectedRef.current;
+    prevSelectedRef.current = selectedSceneId;
+    if (!prevId || prevId === selectedSceneId) {
+      return;
+    }
+    const prev = useVideoPipelineStore.getState().scenes.find((s) => s.id === prevId);
+    if (prev && !prev.screenshotUrl && sceneHasDescription(prev) && !generatingThumbs.has(prevId)) {
+      void handleGenerateThumbnail(prevId);
+    }
+  }, [selectedSceneId, generatingThumbs, handleGenerateThumbnail]);
+
+  // Marking a storyboard ready also generates its preview if it doesn't have one.
+  const handleToggleReady = useCallback(
+    (sceneId: string) => {
+      const scene = useVideoPipelineStore.getState().scenes.find((s) => s.id === sceneId);
+      if (!scene) {
+        return;
+      }
+      const nowReady = scene.status !== 'approved';
+      updateScene(sceneId, { status: nowReady ? 'approved' : 'draft' });
+      if (nowReady && !scene.screenshotUrl && sceneHasDescription(scene) && !generatingThumbs.has(sceneId)) {
+        void handleGenerateThumbnail(sceneId);
+      }
+    },
+    [updateScene, generatingThumbs, handleGenerateThumbnail],
   );
 
   // ── Upload reference material (image / video / audio / text) ───────────────
@@ -1046,7 +1073,7 @@ export function StepStoryboard() {
             scene={selectedScene}
             isGeneratingThumb={generatingThumbs.has(selectedScene.id)}
             onGenerateThumb={() => { void handleGenerateThumbnail(selectedScene.id); }}
-            onToggleReady={() => updateScene(selectedScene.id, { status: selectedScene.status === 'approved' ? 'draft' : 'approved' })}
+            onToggleReady={() => handleToggleReady(selectedScene.id)}
           />
         </div>
       ) : (
