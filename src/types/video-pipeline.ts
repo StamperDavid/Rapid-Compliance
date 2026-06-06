@@ -121,7 +121,24 @@ export interface SceneReference {
   name: string;
   url: string; // Media Library asset URL
   mediaId?: string; // Media Library asset id (for round-trip + reuse)
+  /** Standard purpose tag — how the AI should use this material (see REFERENCE_PURPOSES). */
+  purpose?: string;
+  /** Required free-text: the operator's explanation of how to use this reference. */
+  usage?: string;
 }
+
+/** Standard "how should the AI use this?" options for an uploaded reference. */
+export const REFERENCE_PURPOSES: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'style', label: 'Match this visual style / look' },
+  { value: 'character', label: 'This is the character / face' },
+  { value: 'product', label: 'Feature this product exactly' },
+  { value: 'location', label: 'Use as the background / location' },
+  { value: 'composition', label: 'Match this framing / composition' },
+  { value: 'brand', label: 'Brand / logo to include' },
+  { value: 'voice', label: 'Match this voice / tone' },
+  { value: 'script', label: 'Use as script / talking points' },
+  { value: 'other', label: 'Other (explain below)' },
+] as const;
 
 export interface PipelineScene {
   id: string;

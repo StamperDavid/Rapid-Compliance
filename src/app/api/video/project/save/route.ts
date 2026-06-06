@@ -78,6 +78,8 @@ const SaveProjectSchema = z.object({
             name: z.string(),
             url: z.string(),
             mediaId: z.string().optional(),
+            purpose: z.string().optional(),
+            usage: z.string().optional(),
           }),
         )
         .optional(),
