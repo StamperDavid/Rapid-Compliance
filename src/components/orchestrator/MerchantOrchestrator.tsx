@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { OrchestratorBase, type OrchestratorConfig } from './OrchestratorBase';
 import { FeedbackModal } from './FeedbackModal';
 import { useOrchestratorStore } from '@/lib/stores/orchestrator-store';
@@ -64,6 +65,7 @@ interface StoredPersona {
 }
 
 export function MerchantOrchestrator() {
+  const pathname = usePathname();
   const { user } = useAuth();
   const { setContext, hasSeenWelcome } = useOrchestratorStore();
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
@@ -301,6 +303,14 @@ When hiding features, use this exact response format:
       ownerName: ownerName,
     },
   };
+
+  // In the Content Generator the operator works with ONE agent — the
+  // content-scoped Content Assistant — so Jasper's launcher is hidden here.
+  // Jasper still orchestrates to the same content agent when the operator
+  // goes through him instead of coming directly to the content studio.
+  if (pathname?.startsWith('/content')) {
+    return null;
+  }
 
   return (
     <>

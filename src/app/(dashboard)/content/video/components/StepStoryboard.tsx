@@ -44,7 +44,6 @@ import {
   GripVertical,
   ImageIcon,
   Loader2,
-  ArrowLeft,
   ArrowRight,
   Sparkles,
   Users,
@@ -353,7 +352,10 @@ const StripItem = forwardRef<HTMLDivElement, StripItemProps>(function StripItem(
         <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-foreground text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{scene.duration}s</div>
       </div>
       <div className="p-2">
-        <p className="text-[11px] font-semibold text-white truncate">{sceneLabel(scene, index)}</p>
+        <p className="text-[11px] font-semibold text-white truncate flex items-center gap-1">
+          {scene.status === 'approved' && <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0" />}
+          {sceneLabel(scene, index)}
+        </p>
         <div className="flex items-center gap-1 mt-0.5">
           {scene.avatarId ? (
             <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-primary/20 text-primary-light"><Theater className="w-2 h-2 mr-0.5" />{scene.avatarName ?? 'Character'}</Badge>
@@ -532,14 +534,16 @@ function StoryboardControls({
 // Right column — live prompt + thumbnail preview
 // ============================================================================
 
-function PreviewPanel({ scene, isGeneratingThumb, onGenerateThumb }: {
+function PreviewPanel({ scene, isGeneratingThumb, onGenerateThumb, onToggleReady }: {
   scene: PipelineScene;
   isGeneratingThumb: boolean;
   onGenerateThumb: () => void;
+  onToggleReady: () => void;
 }) {
   const [imgBroken, setImgBroken] = useState(false);
   const usesCharacter = Boolean(scene.avatarId);
   const hedraModel = usesCharacter ? 'Hedra · Character-3' : 'Hedra · Kling O3';
+  const isReady = scene.status === 'approved';
 
   return (
     <div className="space-y-3 lg:sticky lg:top-4 self-start">
@@ -567,6 +571,17 @@ function PreviewPanel({ scene, isGeneratingThumb, onGenerateThumb }: {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Mark this storyboard ready — the "this one's done" beat */}
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onToggleReady}
+        className={`w-full gap-1.5 ${isReady ? 'border-green-600 text-green-400 bg-green-500/10' : ''}`}
+      >
+        <CheckCircle2 className={`w-4 h-4 ${isReady ? 'text-green-400' : ''}`} />
+        {isReady ? 'Ready — click to keep editing' : 'Mark this storyboard ready'}
+      </Button>
 
       {/* Live constructed prompt (RenderZero-style) */}
       <ConstructedPromptDisplay basePrompt={buildBasePrompt(scene)} config={scene.cinematicConfig ?? {}} />
@@ -710,19 +725,6 @@ export function StepStoryboard() {
     [scenes.length],
   );
 
-  const handleAddScene = useCallback(
-    (copyForward: boolean) => {
-      const last = scenes[scenes.length - 1];
-      addScene(buildNewScene(copyForward ? last : undefined));
-      const updated = useVideoPipelineStore.getState().scenes;
-      const newScene = updated[updated.length - 1];
-      if (newScene) {
-        setSelectedSceneId(newScene.id);
-      }
-    },
-    [scenes, addScene, buildNewScene],
-  );
-
   // ── Auto-thumbnail via /api/content/asset-generator/generate ───────────────
   const handleGenerateThumbnail = useCallback(
     async (sceneId: string): Promise<void> => {
@@ -770,6 +772,28 @@ export function StepStoryboard() {
       }
     },
     [authFetch, updateScene, projectId, brief.aspectRatio],
+  );
+
+  const handleAddScene = useCallback(
+    (copyForward: boolean) => {
+      // Auto-generate the thumbnail for the storyboard being completed, so the
+      // operator sees it pinned the moment they move on to the next one.
+      const completingId = selectedSceneId;
+      if (completingId) {
+        const completing = useVideoPipelineStore.getState().scenes.find((s) => s.id === completingId);
+        if (completing && !completing.screenshotUrl && sceneHasDescription(completing)) {
+          void handleGenerateThumbnail(completingId);
+        }
+      }
+      const last = scenes[scenes.length - 1];
+      addScene(buildNewScene(copyForward ? last : undefined));
+      const updated = useVideoPipelineStore.getState().scenes;
+      const newScene = updated[updated.length - 1];
+      if (newScene) {
+        setSelectedSceneId(newScene.id);
+      }
+    },
+    [scenes, addScene, buildNewScene, selectedSceneId, handleGenerateThumbnail],
   );
 
   // ── Upload reference material (image / video / audio / text) ───────────────
@@ -833,6 +857,8 @@ export function StepStoryboard() {
     missingRequirements.push('Every storyboard needs dialogue or voiceover');
   }
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
+  const readyCount = scenes.filter((s) => s.status === 'approved').length;
+  const draftCount = scenes.length - readyCount;
   const isReady = missingRequirements.length === 0;
 
   // ── Generate: thumbnail missing, compose context, save, advance to render ──
@@ -932,7 +958,8 @@ export function StepStoryboard() {
   // ════════════════════════════════════════════════════════════════════════
 
   return (
-    <div className="space-y-4">
+    // pb-28 keeps the footer / strip clear of the floating Content Assistant launcher.
+    <div className="space-y-4 pb-28">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
@@ -1010,6 +1037,7 @@ export function StepStoryboard() {
             scene={selectedScene}
             isGeneratingThumb={generatingThumbs.has(selectedScene.id)}
             onGenerateThumb={() => { void handleGenerateThumbnail(selectedScene.id); }}
+            onToggleReady={() => updateScene(selectedScene.id, { status: selectedScene.status === 'approved' ? 'draft' : 'approved' })}
           />
         </div>
       ) : (
@@ -1022,7 +1050,7 @@ export function StepStoryboard() {
       {scenes.length > 0 && (
         <div className="rounded-lg border border-border-strong bg-card/40 p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5"><Film className="w-3.5 h-3.5 text-primary" />Storyboards ({scenes.length})</span>
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5"><Film className="w-3.5 h-3.5 text-primary" />Storyboards · {readyCount}/{scenes.length} ready</span>
             <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2, '0')} total · drag to reorder</span>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1">
@@ -1065,7 +1093,13 @@ export function StepStoryboard() {
 
       {/* Footer */}
       <div className="flex justify-between items-center pt-2">
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setStep('request')}><ArrowLeft className="w-3.5 h-3.5" />Back</Button>
+        <div className="text-xs text-muted-foreground">
+          {scenes.length === 0
+            ? ''
+            : draftCount > 0
+              ? `${draftCount} storyboard${draftCount > 1 ? 's' : ''} still in draft — you can generate anyway`
+              : 'All storyboards marked ready'}
+        </div>
         <Button size="sm" className="gap-2 bg-primary hover:bg-primary-dark text-white" disabled={!isReady || isSaving} onClick={() => { void handleGenerateVideo(); }}>
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
           {isSaving ? 'Preparing…' : 'Generate Video'}

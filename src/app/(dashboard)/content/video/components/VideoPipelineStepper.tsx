@@ -36,12 +36,14 @@ export function VideoPipelineStepper({
   completedSteps,
   reachableSteps = [],
 }: VideoPipelineStepperProps) {
-  const currentIndex = PIPELINE_STEPS.indexOf(currentStep);
+  // The 'request'/Studio opening is retired — the storyboard is the entry step.
+  const visibleSteps: PipelineStep[] = PIPELINE_STEPS.filter((s) => s !== 'request');
+  const currentIndex = visibleSteps.indexOf(currentStep);
 
   return (
     <div className="w-full py-4">
       <div className="flex items-center justify-between">
-        {PIPELINE_STEPS.map((step, index) => {
+        {visibleSteps.map((step, index) => {
           const Icon = STEP_ICONS[step] ?? Layers;
           const isCompleted = completedSteps.includes(step);
           const isCurrent = step === currentStep;
@@ -92,7 +94,7 @@ export function VideoPipelineStepper({
               </button>
 
               {/* Connecting line */}
-              {index < PIPELINE_STEPS.length - 1 && (
+              {index < visibleSteps.length - 1 && (
                 <div className="flex-1 mx-2 mt-[-18px]">
                   <div
                     className={cn(
