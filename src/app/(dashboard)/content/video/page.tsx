@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VideoPipelineStepper } from './components/VideoPipelineStepper';
-import { StudioModePanel } from './components/StudioModePanel';
 import { StepStoryboard } from './components/StepStoryboard';
 import { StepGeneration } from './components/StepGeneration';
 import { StepAssembly } from './components/StepAssembly';
@@ -196,17 +195,18 @@ export default function VideoStudioPage() {
   // persistence is the source of truth. Full reload or Load Project modal can be
   // used to re-fetch from Firestore when needed.
 
-  // Step 1 (Studio) renders the full RenderZero cinematic UI.
-  // Steps 2-5 render the pipeline step components.
+  // Normalize any persisted legacy 'request'/Studio step onto the storyboard
+  // so the stepper highlights the right step after the Studio opening's removal.
+  useEffect(() => {
+    if (currentStep === 'request') {
+      setStep('storyboard');
+    }
+  }, [currentStep, setStep]);
+
+  // The Storyboard creator is the entry screen. The legacy 'request'/Studio
+  // opening is retired — it maps to the storyboard like the other legacy steps.
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case 'request':
-        return <StudioModePanel />;
-      case 'storyboard':
-      case 'decompose':
-      case 'pre-production':
-      case 'approval':
-        return <StepStoryboard />;
       case 'generation':
         return <StepGeneration />;
       case 'assembly':
@@ -215,14 +215,15 @@ export default function VideoStudioPage() {
         return <StepPostProduction />;
       case 'publish':
         return <StepPublish />;
+      case 'request':
+      case 'storyboard':
+      case 'decompose':
+      case 'pre-production':
+      case 'approval':
       default:
-        return <StudioModePanel />;
+        return <StepStoryboard />;
     }
   };
-
-  // The Studio step renders full-bleed (no padding wrapper).
-  // Pipeline steps get the standard padded container.
-  const isStudioStep = currentStep === 'request';
 
   return (
     <div className="bg-background">
@@ -302,13 +303,9 @@ export default function VideoStudioPage() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15 }}
           >
-            {isStudioStep ? (
-              renderCurrentStep()
-            ) : (
-              <div className="p-6 space-y-6">
-                {renderCurrentStep()}
-              </div>
-            )}
+            <div className="p-6 space-y-6">
+              {renderCurrentStep()}
+            </div>
           </motion.div>
         </AnimatePresence>
       )}

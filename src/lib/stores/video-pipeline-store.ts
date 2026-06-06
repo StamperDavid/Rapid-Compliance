@@ -114,7 +114,8 @@ export interface VideoPipelineState {
 const initialState = {
   projectId: null,
   projectName: '',
-  currentStep: 'request' as const,
+  // Storyboard is the entry screen — the old Studio/request opening is retired.
+  currentStep: 'storyboard' as const,
   brief: {
     description: '',
     videoType: 'tutorial' as VideoType,
