@@ -99,15 +99,23 @@ function isVideoStoryboardTab(activeTab: string | undefined): boolean {
 }
 
 function toAssistantStoryboard(s: EmittedStoryboard): AssistantStoryboard {
+  // The AI fills FREE-TEXT fields only. The curated visual presets (camera body,
+  // lens, focal length, film stock, shot type, lighting, photographer/movie
+  // look) are the operator's to pick from the example pickers — we never write
+  // the AI's free text into those fields. (That caused mislabeled values like a
+  // camera MOVEMENT showing up in the camera BODY field.) The AI's cinematic
+  // intent lives in the free-text `atmosphere` field + the action description,
+  // both of which still feed the Hedra prompt.
+  const atmosphere = [s.mood, s.lighting, s.style].filter(Boolean).join(', ');
+  const framing = [s.shotType, s.cameraMovement].filter(Boolean).join(', ');
+  const action = [s.action, framing ? `(${framing})` : ''].filter(Boolean).join(' ');
   const cinematicConfig: Partial<CinematicConfig> = {};
-  if (s.lighting) { cinematicConfig.lighting = s.lighting; }
-  if (s.mood) { cinematicConfig.atmosphere = s.mood; }
-  if (s.style) { cinematicConfig.movieLook = s.style; }
-  if (s.shotType) { cinematicConfig.shotType = s.shotType; }
-  if (s.cameraMovement) { cinematicConfig.camera = s.cameraMovement; }
+  if (atmosphere) {
+    cinematicConfig.atmosphere = atmosphere;
+  }
   return {
     title: s.title ?? '',
-    visualDescription: s.action ?? '',
+    visualDescription: action,
     scriptText: s.dialogue ?? '',
     duration: s.durationSeconds ?? 5,
     ...(s.location ? { location: s.location } : {}),
@@ -116,7 +124,7 @@ function toAssistantStoryboard(s: EmittedStoryboard): AssistantStoryboard {
     ...(s.ambience ? { ambience: s.ambience } : {}),
     ...(s.musicCue ? { musicCue: s.musicCue } : {}),
     ...(s.wardrobe ? { wardrobe: s.wardrobe } : {}),
-    ...(Object.keys(cinematicConfig).length > 0 ? { cinematicConfig } : {}),
+    ...(atmosphere ? { cinematicConfig } : {}),
   };
 }
 
@@ -162,7 +170,7 @@ Output: ONE short human sentence, then a fenced code block tagged \`storyboards\
 - "ambience", "musicCue", "wardrobe"
 
 Rules:
-- FILL IN AS MANY FIELDS AS YOU REASONABLY CAN, with concrete, specific values. Every field you fill — lighting, mood, style, shot type, camera movement, location, time of day, weather, wardrobe, ambience, music — is fed to the video model and makes the result better and more lifelike. Do NOT leave fields blank to play it safe; infer sensible, on-brand choices from the concept. Only omit a field when it genuinely does not apply.
+- FILL EVERY FIELD for EVERY storyboard with a concrete, specific value — title, action, dialogue, durationSeconds, location, timeOfDay, weather, lighting, mood, style, shotType, cameraMovement, ambience, musicCue, wardrobe. Do NOT leave any field blank. If something isn't obvious, INFER the most fitting on-brand choice rather than omitting it — every field feeds the video model and a complete brief produces a far better, more lifelike result. Your job is to deliver a fully-specified storyboard the operator can refine, never a skeleton.
 - Keep characters CONSISTENT across scenes (same person, same wardrobe) unless told otherwise.
 - Split the requested total duration across the scenes.
 - Keep the human reply to ONE sentence — the detail lives in the JSON, which they'll see as filled-in fields and review.

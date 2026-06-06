@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 import { Search, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -65,9 +66,13 @@ const PresetCard = React.forwardRef<HTMLButtonElement, {
       )}
       title={preset.promptFragment}
     >
-      {/* Thumbnail placeholder — initials on solid surface */}
-      <div className="flex h-20 w-full items-center justify-center rounded-md bg-surface-elevated border border-border-strong">
-        <span className="text-xl font-bold text-muted-foreground">{initials}</span>
+      {/* Example image when available, otherwise initials */}
+      <div className="relative flex h-20 w-full items-center justify-center overflow-hidden rounded-md bg-surface-elevated border border-border-strong">
+        {preset.thumbnail ? (
+          <Image src={preset.thumbnail} alt={preset.name} fill unoptimized className="object-cover" />
+        ) : (
+          <span className="text-xl font-bold text-muted-foreground">{initials}</span>
+        )}
       </div>
 
       {/* Name */}
