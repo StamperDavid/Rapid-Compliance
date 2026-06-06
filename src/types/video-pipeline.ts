@@ -108,23 +108,50 @@ export type SceneStatus =
 
 export type VoiceProviderId = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
 
+/**
+ * A piece of uploaded context/reference material attached to a scene.
+ * Backed by a Media Library asset (uploaded via POST /api/media). Supports
+ * image, video, audio, and text references so the operator can hand the
+ * generator rich context (the third context channel alongside structured
+ * fields + the Content Assistant conversation).
+ */
+export interface SceneReference {
+  id: string;
+  type: 'image' | 'video' | 'audio' | 'text';
+  name: string;
+  url: string; // Media Library asset URL
+  mediaId?: string; // Media Library asset id (for round-trip + reuse)
+}
+
 export interface PipelineScene {
   id: string;
   sceneNumber: number;
   title?: string; // "The Hook" / "Problem Statement" / "CTA"
-  visualDescription?: string; // "Modern office with sales dashboards on monitors"
+  visualDescription?: string; // Action — "Sarah turns to her laptop as the dashboard lights up"
   scriptText: string;
   screenshotUrl: string | null;
   avatarId: string | null; // Per-scene character override (null = use project default)
+  avatarName?: string | null; // Display name for the per-scene character (Cast group)
   voiceId: string | null; // Per-scene voice override (null = use project default)
   voiceProvider: VoiceProviderId | null; // Per-scene voice provider (null = use project default)
   duration: number; // seconds
   engine: VideoEngineId | null; // null = defaults to hedra
-  backgroundPrompt: string | null; // Prompt for AI video background generation
-  cinematicConfig?: CinematicConfig; // Cinematic presets from Creative Studio
+  backgroundPrompt: string | null; // Composed environment prompt fed to generation
+  cinematicConfig?: CinematicConfig; // Cinematic presets from Creative Studio (Look & Camera)
   status: SceneStatus;
   useGreenScreen?: boolean; // true = avatar on transparent BG + AI background compositing
   shotGroupId?: string | null;  // Links scenes that are part of the same continuous shot
+
+  // ── Structured context fields (plain-language scene builder) ──────────────
+  // These are surfaced as grouped, plain-language inputs in the Storyboard step
+  // and composed into backgroundPrompt + the auto-thumbnail prompt at generate time.
+  location?: string;   // Setting — "Modern open-plan office"
+  timeOfDay?: string;  // Setting — "Late afternoon"
+  weather?: string;    // Setting — "Clear, golden-hour sun through the windows"
+  ambience?: string;   // Sound — background noise/ambience, e.g. "quiet office hum, distant keyboards"
+  musicCue?: string;   // Sound — music direction, e.g. "uplifting corporate underscore building to CTA"
+  wardrobe?: string;   // Cast — "Smart-casual blazer, no tie"
+  references?: SceneReference[]; // References — uploaded context (image/video/audio/text)
 }
 
 export interface SceneGenerationResult {
