@@ -20,11 +20,33 @@ import { MessageSquarePlus, Send, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SectionTitle, SectionDescription, Caption } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import { cn } from '@/lib/utils';
+import type { CinematicConfig } from '@/types/creative-studio';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+/** Storyboard the assistant built, applied to the Video tab's pipeline store. */
+interface AssistantStoryboard {
+  title?: string;
+  visualDescription?: string;
+  scriptText?: string;
+  duration?: number;
+  location?: string;
+  timeOfDay?: string;
+  weather?: string;
+  ambience?: string;
+  musicCue?: string;
+  wardrobe?: string;
+  cinematicConfig?: CinematicConfig;
+}
+
+function isVideoStoryboardTab(pathname: string | null): boolean {
+  const p = (pathname ?? '').toLowerCase();
+  return p.includes('/content/video') && !p.includes('/editor') && !p.includes('/library');
 }
 
 const WELCOME: ChatMessage = {
@@ -74,13 +96,60 @@ export function ContentAssistant() {
         body: JSON.stringify({ messages: history, activeTab: pathname }),
       });
 
-      const data = (await res.json()) as { success: boolean; reply?: string; error?: string };
+      const data = (await res.json()) as {
+        success: boolean;
+        reply?: string;
+        storyboards?: AssistantStoryboard[];
+        error?: string;
+      };
 
       if (!res.ok || !data.success || !data.reply) {
         throw new Error(data.error ?? 'The assistant could not respond.');
       }
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply as string }]);
+      // If the director built storyboards and we're on the Video tab, drop them
+      // straight onto the canvas for the operator to review, tweak, and approve.
+      const storyboards = data.storyboards ?? [];
+      const applied = storyboards.length > 0 && isVideoStoryboardTab(pathname);
+      if (applied) {
+        const addScene = useVideoPipelineStore.getState().addScene;
+        for (const sb of storyboards) {
+          const len = useVideoPipelineStore.getState().scenes.length;
+          addScene({
+            sceneNumber: len + 1,
+            title: sb.title ?? '',
+            scriptText: sb.scriptText ?? '',
+            visualDescription: sb.visualDescription ?? '',
+            screenshotUrl: null,
+            avatarId: null,
+            avatarName: null,
+            voiceId: null,
+            voiceProvider: null,
+            duration: sb.duration ?? 5,
+            engine: 'hedra',
+            backgroundPrompt: null,
+            cinematicConfig: sb.cinematicConfig,
+            location: sb.location,
+            timeOfDay: sb.timeOfDay,
+            weather: sb.weather,
+            ambience: sb.ambience,
+            musicCue: sb.musicCue,
+            wardrobe: sb.wardrobe,
+            status: 'draft',
+          });
+        }
+      }
+
+      setMessages((prev) => {
+        const next: ChatMessage[] = [...prev, { role: 'assistant', content: data.reply as string }];
+        if (applied) {
+          next.push({
+            role: 'assistant',
+            content: `✓ Added ${storyboards.length} storyboard${storyboards.length > 1 ? 's' : ''} to your strip — review the fields, cast your character, and mark each ready.`,
+          });
+        }
+        return next;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -209,7 +278,7 @@ export function ContentAssistant() {
           </div>
           <Caption className="mt-2 flex items-center gap-1.5">
             <MessageSquarePlus className="h-3 w-3" />
-            v1 conversation only — idea shaping. Tool hand-off is coming.
+            On the Video tab I can build your storyboards — you review &amp; approve.
           </Caption>
         </div>
       </div>

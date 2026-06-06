@@ -28,6 +28,7 @@
 import {
   useState,
   useCallback,
+  useEffect,
   useRef,
   forwardRef,
   type SyntheticEvent,
@@ -626,6 +627,14 @@ export function StepStoryboard() {
   const [characterPickerSceneId, setCharacterPickerSceneId] = useState<string | null>(null);
   const [defaultPicker, setDefaultPicker] = useState<'character' | 'voice' | null>(null);
   const dragIndexRef = useRef<number | null>(null);
+
+  // Keep a storyboard selected — e.g. when the Content Assistant adds them, or
+  // after the current one is deleted — so the editor always has something open.
+  useEffect(() => {
+    if (!selectedSceneId && scenes.length > 0) {
+      setSelectedSceneId(scenes[0].id);
+    }
+  }, [scenes, selectedSceneId]);
 
   // ── AI assist: draft storyboards from the brief (manual-first — on click) ──
   const handleDecompose = useCallback(async () => {
