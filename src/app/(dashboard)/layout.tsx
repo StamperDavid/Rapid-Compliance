@@ -8,6 +8,7 @@ import { MerchantOrchestrator } from '@/components/orchestrator';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import { JasperOnLoginPopupHost } from '@/components/jasper/JasperOnLoginPopupHost';
+import { ClientLogBridge } from '@/components/dev/ClientLogBridge';
 import { ToastProvider } from '@/hooks/useToast';
 
 /**
@@ -95,6 +96,11 @@ export default function PenthouseDashboardLayout({
             are setup items or insights to surface. Replaces the old
             JasperTaskReminder banner that used to live on the dashboard page. */}
         <JasperOnLoginPopupHost />
+
+        {/* Dev-only: forward browser errors + route changes to the server log
+            so the live monitor sees both the operator's actions and the
+            system's responses. No-ops in production. */}
+        <ClientLogBridge />
       </div>
     </ToastProvider>
   );
