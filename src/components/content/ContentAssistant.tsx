@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { SectionTitle, SectionDescription, Caption } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
+import { requestStoryboardThumbnail, sceneHasDescription } from '@/lib/video/storyboard-thumbnail';
 import { cn } from '@/lib/utils';
 import type { CinematicConfig } from '@/types/creative-studio';
 
@@ -113,6 +114,7 @@ export function ContentAssistant() {
       const applied = storyboards.length > 0 && isVideoStoryboardTab(pathname);
       if (applied) {
         const addScene = useVideoPipelineStore.getState().addScene;
+        const createdIds: string[] = [];
         for (const sb of storyboards) {
           const len = useVideoPipelineStore.getState().scenes.length;
           addScene({
@@ -137,7 +139,27 @@ export function ContentAssistant() {
             wardrobe: sb.wardrobe,
             status: 'draft',
           });
+          const scenesNow = useVideoPipelineStore.getState().scenes;
+          const created = scenesNow[scenesNow.length - 1];
+          if (created) {
+            createdIds.push(created.id);
+          }
         }
+
+        // Auto-generate each new storyboard's thumbnail in the background so the
+        // previews appear right after creation (same as the manual flow).
+        void (async () => {
+          const aspectRatio = useVideoPipelineStore.getState().brief.aspectRatio;
+          for (const id of createdIds) {
+            const scene = useVideoPipelineStore.getState().scenes.find((s) => s.id === id);
+            if (scene && sceneHasDescription(scene)) {
+              const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio);
+              if ('url' in result) {
+                useVideoPipelineStore.getState().updateScene(id, { screenshotUrl: result.url });
+              }
+            }
+          }
+        })();
       }
 
       setMessages((prev) => {

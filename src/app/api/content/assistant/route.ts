@@ -162,6 +162,7 @@ Output: ONE short human sentence, then a fenced code block tagged \`storyboards\
 - "ambience", "musicCue", "wardrobe"
 
 Rules:
+- FILL IN AS MANY FIELDS AS YOU REASONABLY CAN, with concrete, specific values. Every field you fill — lighting, mood, style, shot type, camera movement, location, time of day, weather, wardrobe, ambience, music — is fed to the video model and makes the result better and more lifelike. Do NOT leave fields blank to play it safe; infer sensible, on-brand choices from the concept. Only omit a field when it genuinely does not apply.
 - Keep characters CONSISTENT across scenes (same person, same wardrobe) unless told otherwise.
 - Split the requested total duration across the scenes.
 - Keep the human reply to ONE sentence — the detail lives in the JSON, which they'll see as filled-in fields and review.

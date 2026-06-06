@@ -79,33 +79,17 @@ import { CinematicControlsPanel } from '@/components/studio/CinematicControlsPan
 import { ConstructedPromptDisplay } from '@/components/studio/ConstructedPromptDisplay';
 import { AvatarPicker } from './AvatarPicker';
 import { VoicePicker } from './VoicePicker';
-import type { PipelineScene, SceneReference } from '@/types/video-pipeline';
+import { REFERENCE_PURPOSES, type PipelineScene, type SceneReference } from '@/types/video-pipeline';
 import type { CinematicConfig } from '@/types/creative-studio';
+import {
+  sceneHasDescription,
+  hasText,
+  requestStoryboardThumbnail,
+} from '@/lib/video/storyboard-thumbnail';
 
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function hasText(value?: string | null): boolean {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-/** Summarize the cinematic config into a short prompt fragment (for thumbnails). */
-function cinematicSummary(config?: CinematicConfig): string {
-  if (!config) {
-    return '';
-  }
-  return Object.entries(config)
-    .filter(([key, val]) =>
-      val !== undefined &&
-      val !== null &&
-      val !== '' &&
-      key !== 'temperature' &&
-      key !== 'subjectUnawareOfCamera',
-    )
-    .map(([, val]) => (Array.isArray(val) ? val.join(', ') : String(val)))
-    .join(', ');
-}
 
 /** Base subject line for the live Constructed Prompt (presets get appended). */
 function buildBasePrompt(scene: PipelineScene): string {
@@ -132,28 +116,6 @@ function composeBackgroundPrompt(scene: PipelineScene): string | null {
     return scene.backgroundPrompt ?? null;
   }
   return parts.join(', ');
-}
-
-/** Build the auto-thumbnail prompt from the storyboard's plain-language fields. */
-function buildThumbnailPrompt(scene: PipelineScene): string {
-  const cine = cinematicSummary(scene.cinematicConfig);
-  const prompt = [
-    'Cinematic film still, photorealistic, professional color grade.',
-    hasText(scene.title) ? `Scene: ${scene.title}.` : '',
-    hasText(scene.visualDescription) ? `Action: ${scene.visualDescription}.` : '',
-    hasText(scene.location) ? `Location: ${scene.location}.` : '',
-    hasText(scene.timeOfDay) ? `Time of day: ${scene.timeOfDay}.` : '',
-    hasText(scene.weather) ? `Weather/light: ${scene.weather}.` : '',
-    hasText(scene.wardrobe) ? `Wardrobe: ${scene.wardrobe}.` : '',
-    cine ? `Style: ${cine}.` : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-  return prompt.length > 1000 ? `${prompt.slice(0, 997)}...` : prompt;
-}
-
-function sceneHasDescription(scene: PipelineScene): boolean {
-  return hasText(scene.title) || hasText(scene.visualDescription) || hasText(scene.location);
 }
 
 function sceneLabel(scene: PipelineScene, index: number): string {
@@ -373,11 +335,12 @@ const StripItem = forwardRef<HTMLDivElement, StripItemProps>(function StripItem(
 // References uploader
 // ============================================================================
 
-function ReferenceUploader({ references, isUploading, onUpload, onRemove }: {
+function ReferenceUploader({ references, isUploading, onUpload, onRemove, onUpdate }: {
   references: SceneReference[];
   isUploading: boolean;
   onUpload: (files: FileList) => void;
   onRemove: (refId: string) => void;
+  onUpdate: (refId: string, updates: Partial<SceneReference>) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -392,22 +355,57 @@ function ReferenceUploader({ references, isUploading, onUpload, onRemove }: {
         className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-3 py-5 cursor-pointer transition-colors ${dragActive ? 'border-primary bg-primary/5' : 'border-border-strong hover:border-primary/50'}`}
       >
         {isUploading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Upload className="w-5 h-5 text-muted-foreground" />}
-        <p className="text-xs text-muted-foreground text-center">Drop or click to upload context — image, video, audio, or text</p>
+        <p className="text-xs text-muted-foreground text-center">Drop or click to upload — image, video, audio, or text. Tell the AI how to use each one.</p>
         <input ref={inputRef} type="file" multiple accept="image/*,video/*,audio/*,.txt,.md,.pdf,.doc,.docx" className="hidden" onChange={(e) => { if (e.target.files && e.target.files.length > 0) { onUpload(e.target.files); e.target.value = ''; } }} />
       </div>
       {references.length > 0 && (
-        <div className="space-y-1.5">
-          {references.map((ref) => (
-            <div key={ref.id} className="flex items-center gap-2 rounded-md border border-border-strong bg-surface-elevated px-2.5 py-1.5">
-              {ref.type === 'image' ? (
-                <div className="relative w-9 h-9 rounded overflow-hidden bg-card flex-shrink-0"><Image src={ref.url} alt={ref.name} fill className="object-cover" unoptimized /></div>
-              ) : (
-                <span className="flex w-9 h-9 items-center justify-center rounded bg-card text-primary flex-shrink-0">{REFERENCE_ICON[ref.type]}</span>
-              )}
-              <div className="min-w-0 flex-1"><p className="text-xs text-foreground truncate">{ref.name}</p><p className="text-[10px] text-muted-foreground capitalize">{ref.type}</p></div>
-              <button type="button" onClick={() => onRemove(ref.id)} className="text-muted-foreground hover:text-destructive p-1" title="Remove reference"><X className="w-3.5 h-3.5" /></button>
-            </div>
-          ))}
+        <div className="space-y-2">
+          {references.map((ref) => {
+            const needsUsage = !hasText(ref.usage);
+            return (
+              <div key={ref.id} className="rounded-md border border-border-strong bg-surface-elevated p-2.5 space-y-2">
+                <div className="flex items-center gap-2">
+                  {ref.type === 'image' ? (
+                    <div className="relative w-9 h-9 rounded overflow-hidden bg-card flex-shrink-0"><Image src={ref.url} alt={ref.name} fill className="object-cover" unoptimized /></div>
+                  ) : (
+                    <span className="flex w-9 h-9 items-center justify-center rounded bg-card text-primary flex-shrink-0">{REFERENCE_ICON[ref.type]}</span>
+                  )}
+                  <div className="min-w-0 flex-1"><p className="text-xs text-foreground truncate">{ref.name}</p><p className="text-[10px] text-muted-foreground capitalize">{ref.type}</p></div>
+                  <button type="button" onClick={() => onRemove(ref.id)} className="text-muted-foreground hover:text-destructive p-1" title="Remove reference"><X className="w-3.5 h-3.5" /></button>
+                </div>
+
+                {/* Standard purpose */}
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-muted-foreground">How should the AI use this?</Label>
+                  <select
+                    value={ref.purpose ?? ''}
+                    onChange={(e) => onUpdate(ref.id, { purpose: e.target.value || undefined })}
+                    className="w-full bg-surface-elevated border border-border-strong rounded px-2 py-1.5 text-sm text-white focus:border-primary focus:outline-none"
+                  >
+                    <option value="">Select purpose…</option>
+                    {REFERENCE_PURPOSES.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Required free-text instruction */}
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    Notes for the AI <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    value={ref.usage ?? ''}
+                    onChange={(e) => onUpdate(ref.id, { usage: e.target.value || undefined })}
+                    rows={2}
+                    placeholder="Explain exactly how to use this — e.g. 'match this lighting and color grade', 'this is the founder's face for the avatar', 'feature this product label exactly'."
+                    className={`bg-surface-elevated text-white placeholder:text-muted-foreground text-sm resize-y ${needsUsage ? 'border-destructive/50' : 'border-border-strong'}`}
+                  />
+                  {needsUsage && <p className="text-[10px] text-destructive">Tell the AI how to use this material.</p>}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -427,6 +425,7 @@ interface StoryboardControlsProps {
   onOpenCharacterPicker: () => void;
   onUploadReference: (files: FileList) => void;
   onRemoveReference: (refId: string) => void;
+  onUpdateReference: (refId: string, updates: Partial<SceneReference>) => void;
 }
 
 function StoryboardControls({
@@ -438,6 +437,7 @@ function StoryboardControls({
   onOpenCharacterPicker,
   onUploadReference,
   onRemoveReference,
+  onUpdateReference,
 }: StoryboardControlsProps) {
   const config = scene.cinematicConfig ?? {};
   const handleConfigChange = useCallback((newConfig: CinematicConfig) => onUpdate({ cinematicConfig: newConfig }), [onUpdate]);
@@ -523,9 +523,9 @@ function StoryboardControls({
         <Field label="Music cue" value={scene.musicCue ?? ''} onChange={(v) => onUpdate({ musicCue: v || undefined })} placeholder="Uplifting corporate underscore building to the CTA" />
       </Group>
 
-      {/* ── References ── */}
-      <Group title="References" icon={<Upload className="w-4 h-4" />} defaultOpen={false}>
-        <ReferenceUploader references={scene.references ?? []} isUploading={isUploadingRef} onUpload={onUploadReference} onRemove={onRemoveReference} />
+      {/* ── Upload Reference Materials ── */}
+      <Group title="Upload Reference Materials" icon={<Upload className="w-4 h-4" />} defaultOpen={false}>
+        <ReferenceUploader references={scene.references ?? []} isUploading={isUploadingRef} onUpload={onUploadReference} onRemove={onRemoveReference} onUpdate={onUpdateReference} />
       </Group>
     </div>
   );
@@ -747,31 +747,20 @@ export function StepStoryboard() {
       }
       setGeneratingThumbs((prev) => new Set(prev).add(sceneId));
       try {
-        const response = await authFetch('/api/content/asset-generator/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: buildThumbnailPrompt(scene),
-            aspectRatio: brief.aspectRatio,
-            name: hasText(scene.title) ? `Storyboard ${scene.sceneNumber}: ${scene.title}` : `Storyboard ${scene.sceneNumber} thumbnail`,
-          }),
-        });
-        const data = (await response.json().catch(() => null)) as { success: boolean; url?: string; error?: string } | null;
-        if (!response.ok || !data?.success || !data.url) {
-          setThumbError(`Storyboard ${scene.sceneNumber}: ${data?.error ?? `thumbnail failed (${response.status})`}`);
+        const result = await requestStoryboardThumbnail(authFetch, scene, brief.aspectRatio);
+        if ('error' in result) {
+          setThumbError(`Storyboard ${scene.sceneNumber}: ${result.error}`);
           return;
         }
-        updateScene(sceneId, { screenshotUrl: data.url });
+        updateScene(sceneId, { screenshotUrl: result.url });
         setThumbError(null);
         if (projectId) {
           authFetch(`/api/video/project/${projectId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sceneId, updates: { screenshotUrl: data.url } }),
+            body: JSON.stringify({ sceneId, updates: { screenshotUrl: result.url } }),
           }).catch(() => { /* non-critical */ });
         }
-      } catch (err) {
-        setThumbError(`Storyboard ${scene.sceneNumber}: ${err instanceof Error ? err.message : 'thumbnail failed'}`);
       } finally {
         setGeneratingThumbs((prev) => {
           const next = new Set(prev);
@@ -841,6 +830,16 @@ export function StepStoryboard() {
     (sceneId: string, refId: string) => {
       const current = useVideoPipelineStore.getState().scenes.find((s) => s.id === sceneId);
       updateScene(sceneId, { references: (current?.references ?? []).filter((r) => r.id !== refId) });
+    },
+    [updateScene],
+  );
+
+  const handleUpdateReference = useCallback(
+    (sceneId: string, refId: string, updates: Partial<SceneReference>) => {
+      const current = useVideoPipelineStore.getState().scenes.find((s) => s.id === sceneId);
+      updateScene(sceneId, {
+        references: (current?.references ?? []).map((r) => (r.id === refId ? { ...r, ...updates } : r)),
+      });
     },
     [updateScene],
   );
@@ -1040,6 +1039,7 @@ export function StepStoryboard() {
               onOpenCharacterPicker={() => setCharacterPickerSceneId(selectedScene.id)}
               onUploadReference={(files) => { void handleUploadReference(selectedScene.id, files); }}
               onRemoveReference={(refId) => handleRemoveReference(selectedScene.id, refId)}
+              onUpdateReference={(refId, updates) => handleUpdateReference(selectedScene.id, refId, updates)}
             />
           </div>
           <PreviewPanel
