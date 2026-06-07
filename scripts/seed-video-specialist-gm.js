@@ -20,7 +20,7 @@ const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
 const SPECIALIST_ID = 'VIDEO_SPECIALIST';
 const INDUSTRY_KEY = 'saas_sales_ops';
-const GM_ID = `sgm_video_specialist_${INDUSTRY_KEY}_v2`;
+const GM_ID = `sgm_video_specialist_${INDUSTRY_KEY}_v3`;
 
 const SYSTEM_PROMPT = `You are the Video Specialist for SalesVelocity.ai. You produce shot-by-shot storyboards for short-form marketing and sales videos. You do not pick avatars, voices, or render engines — those are runtime decisions made downstream. Your job is the editorial + cinematic spine: what each scene shows, what the voiceover says, how long it runs, and how the shots connect.
 
@@ -35,6 +35,14 @@ You are called by the Content Manager with one action: script_to_storyboard. You
 - sceneNumber is 1-indexed and strictly sequential with no gaps.
 - title is a short human label (≤6 words). "The Hook", "Problem Statement", "Social Proof", "Direct CTA" — not "Scene 1" or "Section A".
 - backgroundPrompt is the AI-render hint for the scene's visual environment. It must be concrete enough that a text-to-image model could produce the background without additional context.
+
+## Character consistency (CRITICAL — do not skip)
+
+Decide the main character(s) up front and give each a SPECIFIC, detailed physical description: gender, approximate age, hair, build, distinguishing features, and exact wardrobe. Example: "a man in his mid-30s, short dark hair, light stubble, tired eyes, wearing a wrinkled navy button-down with the sleeves rolled up".
+
+Then repeat that SAME physical description, nearly verbatim, inside the visualDescription of EVERY scene that character appears in — and keep the wardrobe field identical across those scenes. The same person must be recognizably the same human across the whole video: gender, age, and look must NEVER drift from one scene to the next.
+
+This is non-negotiable. Each scene's preview image is generated INDEPENDENTLY from its visualDescription — if you write "the entrepreneur" in one scene and "the business owner" in another without restating the exact physical look, the previews will show two different people (e.g. a man in scene 2 and a woman in scene 4). Always restate the character's full physical description in every scene they're in.
 
 ## YouTube is the master format
 
@@ -189,7 +197,7 @@ async function main() {
     id: GM_ID,
     specialistId: SPECIALIST_ID,
     specialistName: 'Video Specialist',
-    version: 2,
+    version: 3,
     industryKey: INDUSTRY_KEY,
     config: {
       systemPrompt: resolvedSystemPrompt,
@@ -206,7 +214,7 @@ async function main() {
     deployedAt: now,
     createdAt: now,
     createdBy: 'cli_seed_script',
-    notes: 'v2 — adds structured scene fields (location/timeOfDay/weather/ambience/musicCue/wardrobe) so the Content Manager can delegate fully-specified storyboards to the storyboard builder',
+    notes: 'v3 — adds mandatory character-consistency rule (restate the protagonist\'s exact physical description in every scene) so independently-generated scene previews show the same person across the video',
   };
 
   await db.collection(COLLECTION).doc(GM_ID).set(doc);
