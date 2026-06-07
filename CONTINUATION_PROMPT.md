@@ -2,6 +2,39 @@
 
 ---
 
+# 🎬 RESUME HERE — Content Generator VIDEO tab (June 6–7, 2026)
+
+## THE VISION (owner, verbatim intent)
+The Video tab must produce **on-brand, cinematic, commercial-quality, photorealistic videos for social media** — so realistic people can't tell they're AI. The tenant's **Brand DNA must be fully expressed**: brand voice (text), brand **colors**, and the **real logo** (exact, not a generated lookalike). This is a REQUIREMENT, not a nice-to-have — every future customer expects the same. "Every field is filled by the AI agent" is a hard requirement (a human may skip fields manually, accepting a less-directed result).
+
+## ARCHITECTURE (built this session — all on dev, see commits)
+- The Video tab IS the **storyboard creator** (RenderZero layout, our design system): left = deep per-storyboard controls (Shot / Setting / Cast / Sound / References / **Camera & Look** = the 400-preset `CinematicControlsPanel`, advanced), right = live `ConstructedPromptDisplay` + auto-thumbnail + Hedra model badge; bottom = storyboards stack L→R (drag/dup/delete). Entry screen (old Studio opening retired). Unlimited storyboards → Generate renders each (Hedra) → stitch in order. Engine = **Hedra only**, 2 models (Kling O3 prompt / Character-3 avatar) — never "providers". Memory: `project_video_storyboard_renderzero_layout`.
+- **Content chat = the Content Manager's conversational front-end** (NOT a separate agent). It converses, then on "build it" DELEGATES to the real **Video Specialist** (`script_to_storyboard`, GM-governed, Brand DNA baked). `/api/content/assistant` → `VideoSpecialist.execute` → storyboards mapped onto the canvas. Jasper's launcher hidden on `/content/*` (one agent at a time).
+- **Video Specialist GM is at v4** (`scripts/seed-video-specialist-gm.js`, reseed with `node scripts/seed-video-specialist-gm.js --force`). v2 = structured fields, v3 = character consistency, v4 = fills `cinematicConfig` (camera/focalLength/lensType/lighting/filmStock/**videographerStyle**/movieLook/composition) from a curated menu. ALL scene fields are REQUIRED in the Zod schema → the AI must fill every field or the build fails.
+- **Hedra image fix**: model selection now prefers Flux/Sana (text-to-image, permissive) over GPT-Image (was picking an I2I model → every thumbnail 500'd). Body is top-level. `src/lib/video/hedra-service.ts`.
+- **Preset example images**: 390 generated once (`scripts/generate-preset-thumbnails.ts`, resumable) → `src/lib/ai/cinematic-preset-thumbnails.generated.ts` merged into the pickers. Per-medium: **Videographer Style** (18 cinematographers) on Video, Photographer Style on Image (`medium` prop on CinematicControlsPanel).
+- **Brand DNA in images**: brand COLORS injected into the image prompt; **real LOGO composited** onto generated images via `src/lib/video/logo-compositor.ts` (sharp, uses brand-kit url/position/opacity/scale) in the asset-generator route. `getBrandKit()` = `src/lib/video/brand-kit-service.ts`.
+- Auto-thumbnails fire proactively for any storyboard with content but no preview. Project **aspect-ratio** control in the header drives `brief.aspectRatio` (real output). **Scrap video** button + **delete saved projects** (two-step).
+
+## ⚠️ NEXT STEPS (do these; verify with owner)
+1. **Run the full prod build** — the logo-compositing commit (`1beeee30`) was committed on tsc+eslint+hook only (context ran out before `npm run build`). Run `npm run build`, confirm green.
+2. **Make sure the real logo is actually uploaded in the brand kit** (`organizations/{PLATFORM_ID}/settings/brand-kit`, logo.url must be an absolute https URL) — compositing no-ops without it. Walk the owner through uploading it if missing.
+3. **Test end-to-end with the owner**: scrap → re-run the Content Manager prompt → confirm every storyboard has ALL fields filled (incl Camera & Look), consistent character, brand colors, and the **real logo** on the thumbnails.
+4. **Logo on the brand-CARD/CTA scene specifically** (centerpiece, not just corner watermark) + **logo watermark on the FINAL rendered video** (assembly step) — the brand kit is designed for video output; verify/wire it into `/api/video/assemble` + generation.
+5. **Cinematic realism**: the headline goal is photoreal commercial quality. Evaluate the actual Hedra VIDEO output (not just thumbnails) for realism; tune prompts/models/Character-3 clone usage.
+6. Still open from the broader redesign: Generate → auto-stitch → land in the Editor for review; Image tab (own RenderZero-style screen); Audio Lab music-first; Characters tab.
+
+## WORKING RULES (owner is strict)
+- Dev server: `localhost:3000` from `D:\rapid-dev` (it logs to `D:\rapid-dev\dev-server.log`; I tail it via the Monitor tool to watch the owner's actions + system responses live — re-arm it). Owner walks features manually; watch the log + verify DB.
+- Verify EVERYTHING: full `npm run build`, check the REAL exit code (grep the log). tsc + eslint before commit.
+- Commit to `dev` with co-author "Claude Opus 4.8 (1M context)"; after push, `cd D:\rapid-dev && git merge origin/dev --no-edit` (NO `.next` clear while the server runs — it caused ChunkLoadError; hot-reload picks up merges).
+- Reuse existing code; Standing Rules #1 (Brand DNA baked into every GM) and #2 (no GM change without a human grade — but deliberate reseeds via seed scripts are allowed) apply.
+- A dev-only ClientLogBridge (`src/components/dev/ClientLogBridge.tsx`) forwards browser errors/route changes to the dev log so the monitor sees both sides.
+
+## Latest commit at handoff: `1beeee30` (dev = GitHub = rapid-dev synced).
+
+---
+
 # 🎯 CURRENT SESSION — Per-agent knowledge bases DONE + penthouse-finish ground truth (June 4, 2026)
 
 ## ✅ PENTHOUSE-FINISH PROGRESS (June 4–5) — START HERE on resume
