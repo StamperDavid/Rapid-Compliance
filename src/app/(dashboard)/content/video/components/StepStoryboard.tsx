@@ -609,6 +609,7 @@ export function StepStoryboard() {
     voiceId,
     voiceName,
     voiceProvider,
+    setBrief,
     setDecompositionPlan,
     setScenes,
     addScene,
@@ -1007,6 +1008,24 @@ export function StepStoryboard() {
           <p className="text-xs text-muted-foreground mt-0.5">Build your video one storyboard at a time. Each is a clip; on Generate they stitch in order.</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Project format / aspect ratio — drives both thumbnails and the rendered video */}
+          <div className="flex items-center gap-0.5 rounded-lg border border-border-strong bg-surface-elevated p-0.5" title="Video format (aspect ratio) — applies to the whole video">
+            {([
+              { ar: '16:9' as const, label: 'Landscape' },
+              { ar: '9:16' as const, label: 'Vertical' },
+              { ar: '1:1' as const, label: 'Square' },
+            ]).map(({ ar, label }) => (
+              <button
+                key={ar}
+                type="button"
+                onClick={() => setBrief({ aspectRatio: ar })}
+                title={`${label} (${ar})`}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${brief.aspectRatio === ar ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {ar}
+              </button>
+            ))}
+          </div>
           <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setDefaultPicker('character')} title="Default character for storyboards that don't set their own">
             <Users className="w-3.5 h-3.5" />{avatarName ?? 'Default character'}
           </Button>
