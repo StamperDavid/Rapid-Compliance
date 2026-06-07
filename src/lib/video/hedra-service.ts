@@ -502,13 +502,22 @@ async function getHedraImageModelId(apiKey: string): Promise<{ id: string; name:
     throw new Error('Hedra has no image generation models available');
   }
 
-  const selected = imageModels[0];
+  // Prefer a TEXT-to-image model. Many Hedra image models are image-to-image /
+  // editing models (Kontext, inpaint, upscale, etc.) that REQUIRE a source image
+  // and reject a pure text_prompt request — picking imageModels[0] grabbed one of
+  // those ("Flux Kontext Max I2I"), which is why text-to-image 422'd.
+  const isEditModel = (name: string): boolean =>
+    /i2i|kontext|edit|inpaint|outpaint|upscal|remove|restyle|relight|swap|reference/i.test(name);
+  const textToImage = imageModels.filter((m) => !isEditModel(m.name));
+  const selected = textToImage[0] ?? imageModels[0];
   setImageModelCache(selected.id);
 
   logger.info('Hedra image model discovered', {
     modelId: selected.id,
     modelName: selected.name,
+    textToImageCount: textToImage.length,
     totalImageModels: imageModels.length,
+    allImageModels: imageModels.map((m) => m.name).join(' | '),
     file: 'hedra-service.ts',
   });
 
@@ -621,11 +630,14 @@ export async function generateHedraImage(
     file: 'hedra-service.ts',
   });
 
-  // Build payload — same endpoint as video. The image inputs MUST be nested
-  // under `generated_image_inputs` (mirrors `generated_video_inputs`). Sending
-  // text_prompt/aspect_ratio at the top level makes Hedra accept the request
-  // but fail the generation with "Field required".
-  const imageInputs: Record<string, unknown> = {
+  // Build payload — image generation takes text_prompt/aspect_ratio/resolution
+  // at the TOP LEVEL (unlike video, which nests under generated_video_inputs).
+  // The earlier "Field required" failure was NOT this shape — it was the model:
+  // getHedraImageModelId was picking an image-to-image model that needs a source
+  // image. Selecting a text-to-image model (above) is the real fix.
+  const payload: Record<string, unknown> = {
+    type: 'image',
+    ai_model_id: model.id,
     text_prompt: prompt,
     aspect_ratio: options?.aspectRatio ?? '1:1',
   };
@@ -637,15 +649,9 @@ export async function generateHedraImage(
       ?? preferred.find((r) => model.resolutions?.includes(r))
       ?? model.resolutions?.[0];
     if (res) {
-      imageInputs.resolution = res;
+      payload.resolution = res;
     }
   }
-
-  const payload: Record<string, unknown> = {
-    type: 'image',
-    ai_model_id: model.id,
-    generated_image_inputs: imageInputs,
-  };
 
   // Submit generation
   const genResponse = await fetch(`${HEDRA_BASE_URL}/generations`, {

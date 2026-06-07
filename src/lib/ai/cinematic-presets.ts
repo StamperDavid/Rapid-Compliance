@@ -10,6 +10,7 @@
  */
 
 import type { CinematicConfig, CinematicPreset, PresetCategory, SceneGenerationConfig, GenrePreset } from '@/types/creative-studio';
+import { PRESET_THUMBNAILS } from './cinematic-preset-thumbnails.generated';
 
 // ─── Preset Data ──────────────────────────────────────────────────
 
@@ -432,7 +433,12 @@ const ALL_PRESETS: CinematicPreset[] = [
   ...FILTER_PRESETS,
   ...ART_STYLE_PRESETS,
   ...COMPOSITION_PRESETS,
-];
+].map((preset) => {
+  // Merge in the one-time-generated example image (if present) so the pickers
+  // show a visual instead of initials. See cinematic-preset-thumbnails.generated.ts.
+  const thumbnail = PRESET_THUMBNAILS[preset.id];
+  return thumbnail ? { ...preset, thumbnail } : preset;
+});
 
 const PRESET_BY_ID = new Map<string, CinematicPreset>(
   ALL_PRESETS.map((p) => [p.id, p]),
