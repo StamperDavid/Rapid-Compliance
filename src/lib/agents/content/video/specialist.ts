@@ -39,6 +39,7 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getCuratedPresetMenu } from '@/lib/ai/cinematic-presets';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -194,6 +195,19 @@ const StoryboardSceneSchema = z.object({
   ambience: z.string().min(1, 'ambience is required'),
   musicCue: z.string().min(1, 'musicCue is required'),
   wardrobe: z.string().min(1, 'wardrobe is required'),
+  // Cinematic look — REQUIRED. The AI picks an option (by name) for each from the
+  // menu in the user prompt; the route resolves these to preset ids so the
+  // Camera & Look pickers show them selected with example images.
+  cinematicConfig: z.object({
+    camera: z.string().min(1, 'camera is required'),
+    focalLength: z.string().min(1, 'focalLength is required'),
+    lensType: z.string().min(1, 'lensType is required'),
+    lighting: z.string().min(1, 'lighting is required'),
+    filmStock: z.string().min(1, 'filmStock is required'),
+    videographerStyle: z.string().min(1, 'videographerStyle is required'),
+    movieLook: z.string().min(1, 'movieLook is required'),
+    composition: z.string().min(1, 'composition is required'),
+  }),
 });
 
 const StoryboardResultSchema = z.object({
@@ -382,7 +396,10 @@ function buildScriptToStoryboardUserPrompt(req: ScriptToStoryboardRequest): stri
     '      "duration": <integer seconds, 3-15>,',
     `      "shotType": "one of ${SHOT_TYPES.join(' | ')}",`,
     `      "cameraMovement": "one of ${CAMERA_MOVEMENTS.join(' | ')}",`,
-    '      "onScreenText": "caption or lower-third, or \\"\\" if nothing on screen"',
+    '      "onScreenText": "caption or lower-third, or \\"\\" if nothing on screen",',
+    '      "location": "specific physical setting", "timeOfDay": "e.g. late afternoon", "weather": "light / weather / atmosphere",',
+    '      "ambience": "background sound", "musicCue": "music direction", "wardrobe": "what the on-screen person wears (or \\"n/a — no people\\")",',
+    '      "cinematicConfig": { "camera": "...", "focalLength": "...", "lensType": "...", "lighting": "...", "filmStock": "...", "videographerStyle": "...", "movieLook": "...", "composition": "..." }',
     '    }',
     '  ],',
     '  "productionNotes": ["3-6 director notes, each a non-empty string"],',
@@ -399,6 +416,10 @@ function buildScriptToStoryboardUserPrompt(req: ScriptToStoryboardRequest): stri
     '- Do NOT use any phrase from the avoid list in the Brand DNA injection.',
     '- Do NOT fabricate statistics, percentages, testimonials, client names, or dollar figures.',
     '- Do NOT produce placeholder content like "[insert value prop]" or "TBD".',
+    '- Every scene MUST include cinematicConfig with a value for ALL of: camera, focalLength, lensType, lighting, filmStock, videographerStyle, movieLook, composition. Choose the option that best fits the scene, by EXACT name, from this menu:',
+    getCuratedPresetMenu(),
+    '- videographerStyle must be a cinematographer (from the list) — never a still photographer; this is video.',
+    '- location, timeOfDay, weather, ambience, musicCue, wardrobe are all REQUIRED on every scene (use "n/a"/"none" only when truly inapplicable, never blank).',
     '- Output ONLY the JSON object. No prose outside it. No markdown fences.',
   ].join('\n');
 }

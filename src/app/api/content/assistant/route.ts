@@ -24,6 +24,7 @@ import { buildToolSystemPrompt } from '@/lib/brand/brand-dna-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { VideoSpecialist, type StoryboardResult, type StoryboardScene } from '@/lib/agents/content/video/specialist';
+import { resolvePresetId } from '@/lib/ai/cinematic-presets';
 import type { AgentMessage } from '@/lib/agents/types';
 import type { CinematicConfig } from '@/types/creative-studio';
 
@@ -112,18 +113,33 @@ function humanizeEnum(value: string): string {
 
 /** Map one Video Specialist scene onto the storyboard canvas shape. */
 function mapSpecialistScene(scene: StoryboardScene): AssistantStoryboard {
-  // Fold shot type + camera movement into the action text (they are real
-  // cinematic directions, but the curated preset pickers are the operator's to
-  // choose — we never write free text into those fields).
-  const framing = [humanizeEnum(scene.shotType), humanizeEnum(scene.cameraMovement)]
-    .filter((p) => p.length > 0)
-    .join(', ');
-  const action = [scene.visualDescription, framing ? `(${framing})` : ''].filter(Boolean).join(' ');
+  // Camera movement has no preset category, so keep it in the action text.
+  // Shot type now populates the cinematic panel below, so it's not doubled here.
+  const action = [scene.visualDescription, scene.cameraMovement ? `(${humanizeEnum(scene.cameraMovement)})` : '']
+    .filter(Boolean)
+    .join(' ');
+
+  // The AI chose cinematic options by name — resolve each to a real preset id so
+  // the Camera & Look pickers show them selected (with example images).
+  const cc = scene.cinematicConfig;
+  const cinematicConfig: Partial<CinematicConfig> = {
+    shotType: resolvePresetId('shotType', humanizeEnum(scene.shotType)),
+    camera: resolvePresetId('camera', cc.camera),
+    focalLength: resolvePresetId('focalLength', cc.focalLength),
+    lensType: resolvePresetId('lensType', cc.lensType),
+    lighting: resolvePresetId('lighting', cc.lighting),
+    filmStock: resolvePresetId('filmStock', cc.filmStock),
+    videographerStyle: resolvePresetId('videographerStyle', cc.videographerStyle),
+    movieLook: resolvePresetId('movieLook', cc.movieLook),
+    composition: resolvePresetId('composition', cc.composition),
+  };
+
   return {
     title: scene.title,
     visualDescription: action,
     scriptText: scene.scriptText,
     duration: scene.duration,
+    cinematicConfig,
     ...(scene.location ? { location: scene.location } : {}),
     ...(scene.timeOfDay ? { timeOfDay: scene.timeOfDay } : {}),
     ...(scene.weather ? { weather: scene.weather } : {}),
