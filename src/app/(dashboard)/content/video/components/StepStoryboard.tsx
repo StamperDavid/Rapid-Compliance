@@ -630,7 +630,6 @@ export function StepStoryboard() {
   const [characterPickerSceneId, setCharacterPickerSceneId] = useState<string | null>(null);
   const [defaultPicker, setDefaultPicker] = useState<'character' | 'voice' | null>(null);
   const dragIndexRef = useRef<number | null>(null);
-  const prevSelectedRef = useRef<string | null>(selectedSceneId);
 
   // Keep a storyboard selected — e.g. when the Content Assistant adds them, or
   // after the current one is deleted — so the editor always has something open.
@@ -791,19 +790,25 @@ export function StepStoryboard() {
     [scenes, addScene, buildNewScene],
   );
 
-  // Auto-generate a preview for the storyboard you just left — the "finished
-  // this one" moment. Previews appear automatically, no button required.
+  // Auto-generate previews for any storyboard that has content but no preview —
+  // proactively, so thumbnails just appear without a manual button. We skip the
+  // one currently being edited (so we don't render from half-typed fields) and
+  // attempt each storyboard at most once per session.
+  const attemptedThumbsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const prevId = prevSelectedRef.current;
-    prevSelectedRef.current = selectedSceneId;
-    if (!prevId || prevId === selectedSceneId) {
-      return;
+    for (const s of scenes) {
+      if (
+        s.id !== selectedSceneId &&
+        !s.screenshotUrl &&
+        !attemptedThumbsRef.current.has(s.id) &&
+        !generatingThumbs.has(s.id) &&
+        sceneHasDescription(s)
+      ) {
+        attemptedThumbsRef.current.add(s.id);
+        void handleGenerateThumbnail(s.id);
+      }
     }
-    const prev = useVideoPipelineStore.getState().scenes.find((s) => s.id === prevId);
-    if (prev && !prev.screenshotUrl && sceneHasDescription(prev) && !generatingThumbs.has(prevId)) {
-      void handleGenerateThumbnail(prevId);
-    }
-  }, [selectedSceneId, generatingThumbs, handleGenerateThumbnail]);
+  }, [scenes, selectedSceneId, generatingThumbs, handleGenerateThumbnail]);
 
   // Marking a storyboard ready also generates its preview if it doesn't have one.
   const handleToggleReady = useCallback(
