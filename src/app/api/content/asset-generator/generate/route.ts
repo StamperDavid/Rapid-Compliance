@@ -26,7 +26,8 @@ import { randomUUID } from 'crypto';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { generateHedraImage } from '@/lib/video/hedra-service';
 import { getBrandKit } from '@/lib/video/brand-kit-service';
-import { persistUrlToStorage } from '@/lib/firebase/storage-utils';
+import { persistUrlToStorage, persistBufferToStorage } from '@/lib/firebase/storage-utils';
+import { compositeBrandLogo } from '@/lib/video/logo-compositor';
 import { adminStorage } from '@/lib/firebase/admin';
 import AdminFirestoreService from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -146,18 +147,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
     const body = parsed.data;
 
-    // 3. Apply Brand DNA: weave the brand color palette into the image prompt so
-    //    generations are on-brand — the same brand colors the website builder uses.
+    // 3. Apply Brand DNA: brand colors go into the prompt; the real logo is
+    //    composited onto the generated image afterward (generation can't draw it).
     let imagePrompt = body.prompt;
+    let brandKit: Awaited<ReturnType<typeof getBrandKit>> | null = null;
     if (body.brandDnaApplied) {
       try {
-        const brandKit = await getBrandKit();
+        brandKit = await getBrandKit();
         if (brandKit.enabled && brandKit.colors) {
           const { primary, secondary, accent } = brandKit.colors;
           imagePrompt = `${body.prompt} Brand color palette — use these brand colors cohesively and prominently throughout: primary ${primary}, secondary ${secondary}, accent ${accent}.`;
         }
       } catch (brandErr) {
-        logger.warn('[asset-generator-generate] Brand kit load failed; generating without brand colors', {
+        logger.warn('[asset-generator-generate] Brand kit load failed; generating without brand', {
           error: brandErr instanceof Error ? brandErr.message : String(brandErr),
           file: FILE,
         });
@@ -171,13 +173,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       resolution: isResolutionValue(body.resolution) ? body.resolution : '1080p',
     });
 
-    // 4. Persist to Firebase Storage so the URL outlives Hedra's CDN.
+    // 5. Composite the REAL brand logo onto the image (if one is configured) so
+    //    the output carries the actual logo, not a generated lookalike.
+    let compositedBuffer: Buffer | null = null;
+    if (brandKit?.enabled && brandKit.logo?.url && /^https?:\/\//i.test(brandKit.logo.url)) {
+      compositedBuffer = await compositeBrandLogo(generation.url, brandKit.logo);
+    }
+
+    // 6. Persist to Firebase Storage so the URL outlives Hedra's CDN.
     const assetId = randomUUID();
     const storagePath = imageStoragePath(assetId);
     let permanentUrl = generation.url;
     let fileSize = 0;
     try {
-      permanentUrl = await persistUrlToStorage(generation.url, storagePath, 'image/png');
+      if (compositedBuffer) {
+        permanentUrl =
+          (await persistBufferToStorage(compositedBuffer, storagePath, 'image/png'))
+          ?? (await persistUrlToStorage(generation.url, storagePath, 'image/png'));
+      } else {
+        permanentUrl = await persistUrlToStorage(generation.url, storagePath, 'image/png');
+      }
       // Best-effort size lookup; non-fatal if unavailable.
       if (adminStorage) {
         try {
