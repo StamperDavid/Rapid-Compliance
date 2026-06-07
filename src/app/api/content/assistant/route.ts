@@ -1,30 +1,30 @@
 /**
- * Content Assistant API
+ * Content Manager — conversational front-end.
  * POST /api/content/assistant
  *
- * A content-creation director (NOT the global Jasper assistant). It helps the
- * operator articulate what they want to create — image, video, music, or text —
- * by talking it through: proposing ideas and asking the clarifying questions a
- * client wouldn't think of (location, lighting, mood, extras, framing, etc.),
- * all in the tenant's brand voice.
+ * This is NOT a separate "assistant" agent. It is the conversational front-end
+ * of the Content Manager: it talks the operator through what they want, then
+ * DELEGATES the actual build to the right specialist — exactly what the Content
+ * Manager already does. On the Video tab the build is delegated to the real,
+ * Golden-Master-governed Video Specialist (script_to_storyboard); its
+ * shot-by-shot storyboard is mapped onto the canvas for the operator to review.
  *
- * v1 is conversation only. Structured-field filling and hand-off to the active
- * tool come in later increments.
- *
- * Standing Rule #1 — Brand DNA: the system prompt bakes in the tenant's brand
- * voice via the SAME `buildToolSystemPrompt('voice')` pattern the video script
- * generation service uses (see script-generation-service.ts `loadBrandContext`).
- * The LLM client is the existing `OpenRouterProvider` — no new client invented.
+ * Standing Rule #1 — Brand DNA: brand voice is baked into the conversation via
+ * buildToolSystemPrompt('voice'); the delegated specialist loads its own GM with
+ * Brand DNA baked in. No runtime Brand DNA merge in this route's output.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 
 import { requireAuth } from '@/lib/auth/api-auth';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { buildToolSystemPrompt } from '@/lib/brand/brand-dna-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import { VideoSpecialist, type StoryboardResult, type StoryboardScene } from '@/lib/agents/content/video/specialist';
+import type { AgentMessage } from '@/lib/agents/types';
 import type { CinematicConfig } from '@/types/creative-studio';
 
 export const dynamic = 'force-dynamic';
@@ -47,34 +47,9 @@ const AssistantRequestSchema = z.object({
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// Storyboard actions — on the Video tab the assistant can BUILD storyboards,
-// not just talk. It emits a fenced ```storyboards JSON array which we parse,
-// validate, and hand back so the client drops them onto the canvas for review.
+// Storyboard shape the Video tab applies to its pipeline store.
 // ────────────────────────────────────────────────────────────────────────────
 
-const EmittedStoryboardSchema = z.object({
-  title: z.string().trim().max(120).optional(),
-  action: z.string().trim().max(2000).optional(),
-  dialogue: z.string().trim().max(2000).optional(),
-  durationSeconds: z.number().min(1).max(120).optional(),
-  location: z.string().trim().max(300).optional(),
-  timeOfDay: z.string().trim().max(120).optional(),
-  weather: z.string().trim().max(200).optional(),
-  lighting: z.string().trim().max(200).optional(),
-  mood: z.string().trim().max(200).optional(),
-  style: z.string().trim().max(200).optional(),
-  shotType: z.string().trim().max(120).optional(),
-  cameraMovement: z.string().trim().max(120).optional(),
-  ambience: z.string().trim().max(300).optional(),
-  musicCue: z.string().trim().max(300).optional(),
-  wardrobe: z.string().trim().max(300).optional(),
-});
-
-type EmittedStoryboard = z.infer<typeof EmittedStoryboardSchema>;
-
-const EmittedStoryboardsSchema = z.array(EmittedStoryboardSchema).max(20);
-
-/** The storyboard shape the Video tab applies to its pipeline store. */
 export interface AssistantStoryboard {
   title: string;
   visualDescription: string;
@@ -86,55 +61,35 @@ export interface AssistantStoryboard {
   ambience?: string;
   musicCue?: string;
   wardrobe?: string;
+  backgroundPrompt?: string;
   cinematicConfig?: Partial<CinematicConfig>;
 }
 
 function isVideoStoryboardTab(activeTab: string | undefined): boolean {
   const tab = (activeTab ?? '').toLowerCase();
-  return (
-    tab.includes('/content/video') &&
-    !tab.includes('/editor') &&
-    !tab.includes('/library')
-  );
+  return tab.includes('/content/video') && !tab.includes('/editor') && !tab.includes('/library');
 }
 
-function toAssistantStoryboard(s: EmittedStoryboard): AssistantStoryboard {
-  // The AI fills FREE-TEXT fields only. The curated visual presets (camera body,
-  // lens, focal length, film stock, shot type, lighting, photographer/movie
-  // look) are the operator's to pick from the example pickers — we never write
-  // the AI's free text into those fields. (That caused mislabeled values like a
-  // camera MOVEMENT showing up in the camera BODY field.) The AI's cinematic
-  // intent lives in the free-text `atmosphere` field + the action description,
-  // both of which still feed the Hedra prompt.
-  const atmosphere = [s.mood, s.lighting, s.style].filter(Boolean).join(', ');
-  const framing = [s.shotType, s.cameraMovement].filter(Boolean).join(', ');
-  const action = [s.action, framing ? `(${framing})` : ''].filter(Boolean).join(' ');
-  const cinematicConfig: Partial<CinematicConfig> = {};
-  if (atmosphere) {
-    cinematicConfig.atmosphere = atmosphere;
-  }
-  return {
-    title: s.title ?? '',
-    visualDescription: action,
-    scriptText: s.dialogue ?? '',
-    duration: s.durationSeconds ?? 5,
-    ...(s.location ? { location: s.location } : {}),
-    ...(s.timeOfDay ? { timeOfDay: s.timeOfDay } : {}),
-    ...(s.weather ? { weather: s.weather } : {}),
-    ...(s.ambience ? { ambience: s.ambience } : {}),
-    ...(s.musicCue ? { musicCue: s.musicCue } : {}),
-    ...(s.wardrobe ? { wardrobe: s.wardrobe } : {}),
-    ...(atmosphere ? { cinematicConfig } : {}),
-  };
-}
+// ────────────────────────────────────────────────────────────────────────────
+// Delegation directive — the Content Manager hands the build to a specialist.
+// ────────────────────────────────────────────────────────────────────────────
 
-/**
- * Pull a fenced ```storyboards (or ```json) array out of the reply, validate
- * it, and return the parsed storyboards plus the reply with the block removed.
- * Returns null when there's no valid block.
- */
-function extractStoryboards(reply: string): { storyboards: AssistantStoryboard[]; cleanedReply: string } | null {
-  const fence = /```(?:storyboards|json)?\s*([\s\S]*?)```/i.exec(reply);
+const DelegateDirectiveSchema = z.object({
+  specialist: z.literal('VIDEO_SPECIALIST'),
+  brief: z.string().trim().min(1).max(4000),
+  platform: z.enum(['youtube', 'tiktok', 'instagram_reels', 'shorts', 'linkedin', 'generic']).default('youtube'),
+  style: z.enum(['talking_head', 'documentary', 'energetic', 'cinematic']).default('cinematic'),
+  targetDuration: z.number().int().min(15).max(150).default(30),
+  targetAudience: z.string().trim().max(500).optional(),
+  callToAction: z.string().trim().max(500).optional(),
+  tone: z.string().trim().max(300).optional(),
+});
+
+type DelegateDirective = z.infer<typeof DelegateDirectiveSchema>;
+
+/** Pull a fenced ```delegate (or ```json) directive out of the reply. */
+function extractDelegateDirective(reply: string): { directive: DelegateDirective; cleanedReply: string } | null {
+  const fence = /```(?:delegate|json)?\s*([\s\S]*?)```/i.exec(reply);
   if (!fence) {
     return null;
   }
@@ -144,116 +99,143 @@ function extractStoryboards(reply: string): { storyboards: AssistantStoryboard[]
   } catch {
     return null;
   }
-  const parsed = EmittedStoryboardsSchema.safeParse(raw);
-  if (!parsed.success || parsed.data.length === 0) {
+  const parsed = DelegateDirectiveSchema.safeParse(raw);
+  if (!parsed.success) {
     return null;
   }
+  return { directive: parsed.data, cleanedReply: reply.replace(fence[0], '').trim() };
+}
+
+function humanizeEnum(value: string): string {
+  return value.replace(/_/g, ' ').trim();
+}
+
+/** Map one Video Specialist scene onto the storyboard canvas shape. */
+function mapSpecialistScene(scene: StoryboardScene): AssistantStoryboard {
+  // Fold shot type + camera movement into the action text (they are real
+  // cinematic directions, but the curated preset pickers are the operator's to
+  // choose — we never write free text into those fields).
+  const framing = [humanizeEnum(scene.shotType), humanizeEnum(scene.cameraMovement)]
+    .filter((p) => p.length > 0)
+    .join(', ');
+  const action = [scene.visualDescription, framing ? `(${framing})` : ''].filter(Boolean).join(' ');
   return {
-    storyboards: parsed.data.map(toAssistantStoryboard),
-    cleanedReply: reply.replace(fence[0], '').trim(),
+    title: scene.title,
+    visualDescription: action,
+    scriptText: scene.scriptText,
+    duration: scene.duration,
+    ...(scene.location ? { location: scene.location } : {}),
+    ...(scene.timeOfDay ? { timeOfDay: scene.timeOfDay } : {}),
+    ...(scene.weather ? { weather: scene.weather } : {}),
+    ...(scene.ambience ? { ambience: scene.ambience } : {}),
+    ...(scene.musicCue ? { musicCue: scene.musicCue } : {}),
+    ...(scene.wardrobe ? { wardrobe: scene.wardrobe } : {}),
+    ...(scene.backgroundPrompt ? { backgroundPrompt: scene.backgroundPrompt } : {}),
   };
 }
 
-const VIDEO_ACTION_BLOCK = `
+/** Delegate the actual storyboard build to the real Video Specialist. */
+async function buildStoryboardsViaSpecialist(
+  directive: DelegateDirective,
+): Promise<{ storyboards: AssistantStoryboard[] } | { error: string }> {
+  const specialist = new VideoSpecialist();
+  const message: AgentMessage = {
+    id: `content-mgr-delegate-${randomUUID()}`,
+    timestamp: new Date(),
+    from: 'CONTENT_MANAGER',
+    to: 'VIDEO_SPECIALIST',
+    type: 'COMMAND',
+    priority: 'NORMAL',
+    payload: {
+      action: 'script_to_storyboard',
+      brief: directive.brief,
+      platform: directive.platform,
+      style: directive.style,
+      targetDuration: directive.targetDuration,
+      ...(directive.targetAudience ? { targetAudience: directive.targetAudience } : {}),
+      ...(directive.callToAction ? { callToAction: directive.callToAction } : {}),
+      ...(directive.tone ? { tone: directive.tone } : {}),
+    },
+    requiresResponse: true,
+    traceId: `content-mgr-${randomUUID()}`,
+  };
 
-## BUILDING STORYBOARDS — YOU CAN ACT HERE
-On the Video tab you don't just talk, you BUILD. When the operator asks you to create / make / fill / build the storyboards (or says "you do it", "just make it", "take it from here"), you MUST output the storyboards as data so they appear on their canvas for review — never describe them in prose alone.
-
-Output: ONE short human sentence, then a fenced code block tagged \`storyboards\` holding a JSON array — one object per storyboard, in order. Fields (all optional except action; omit what doesn't apply):
-- "title": short scene name
-- "action": what literally happens on screen, including who is in frame and their look — the most important field
-- "dialogue": the voiceover / spoken line for this scene
-- "durationSeconds": number
-- "location", "timeOfDay", "weather"
-- "lighting", "mood", "style"
-- "shotType", "cameraMovement"
-- "ambience", "musicCue", "wardrobe"
-
-Rules:
-- FILL EVERY FIELD for EVERY storyboard with a concrete, specific value — title, action, dialogue, durationSeconds, location, timeOfDay, weather, lighting, mood, style, shotType, cameraMovement, ambience, musicCue, wardrobe. Do NOT leave any field blank. If something isn't obvious, INFER the most fitting on-brand choice rather than omitting it — every field feeds the video model and a complete brief produces a far better, more lifelike result. Your job is to deliver a fully-specified storyboard the operator can refine, never a skeleton.
-- Keep characters CONSISTENT across scenes (same person, same wardrobe) unless told otherwise.
-- Split the requested total duration across the scenes.
-- Keep the human reply to ONE sentence — the detail lives in the JSON, which they'll see as filled-in fields and review.
-- Only emit the block when they actually want it built. While brainstorming, just talk (no block).
-
-Example reply:
-Here are your two storyboards — review and tweak anything.
-\`\`\`storyboards
-[{"title":"The Stress","action":"A solo entrepreneur, mid-30s, rumpled shirt, hands gripping his hair at a cluttered desk","dialogue":"Running a business shouldn't feel like this.","durationSeconds":7,"location":"cramped home office","lighting":"harsh cool overhead","mood":"tense, claustrophobic","shotType":"tight medium shot"}]
-\`\`\``;
+  const report = await specialist.execute(message);
+  if (report.status !== 'COMPLETED' || !report.data) {
+    const reason = report.errors?.[0] ?? 'The Video Specialist could not build the storyboards.';
+    return { error: reason };
+  }
+  const result = report.data as StoryboardResult;
+  return { storyboards: result.scenes.map(mapSpecialistScene) };
+}
 
 // ────────────────────────────────────────────────────────────────────────────
-// Active-tab context — tells the director which modality is in front of the
-// operator so it asks the right clarifying questions.
+// Active-tab context
 // ────────────────────────────────────────────────────────────────────────────
 
 function describeActiveTab(activeTab: string | undefined): string {
   const tab = (activeTab ?? '').toLowerCase();
-
   if (tab.includes('/content/image')) {
-    return `The operator is on the **Image** generator. Focus the conversation on still imagery: subject, composition, location/setting, lighting (golden hour, studio softbox, moody low-key, etc.), color palette, mood, camera angle and lens feel, styling/wardrobe, props and extras, and aspect ratio / where the image will be used.`;
+    return `The operator is on the **Image** generator. Focus on still imagery: subject, composition, location/setting, lighting, color palette, mood, camera angle, styling/wardrobe, props, and where the image will be used. (Delegation to the Asset Generator from here is coming — for now, shape the brief with them.)`;
   }
   if (tab.includes('/content/voice-lab') || tab.includes('/content/audio') || tab.includes('music')) {
-    return `The operator is on the **Audio Lab** (voice + music). Focus on audio: genre/style, mood and energy, tempo, instrumentation, vocal vs instrumental, reference artists or tracks, length, and where the audio will be used (ad, background, intro/outro).`;
+    return `The operator is in the **Audio Lab**. Focus on audio: genre/style, mood, tempo, instrumentation, vocal vs instrumental, references, length, and where it will be used. (Delegation to the Music Planner from here is coming.)`;
   }
   if (tab.includes('/content/video/editor')) {
-    return `The operator is in the **Video Editor**. Focus on edit-level decisions: pacing, cuts, text overlays, captions, music bed, transitions, B-roll, and the story beat each clip serves.`;
+    return `The operator is in the **Video Editor**. Focus on edit-level decisions: pacing, cuts, captions, music bed, transitions, B-roll.`;
   }
   if (tab.includes('/content/video/library')) {
-    return `The operator is in the **Video Library** browsing existing renders. Help them decide what to make next, repurpose, or remix from what they already have.`;
+    return `The operator is in the **Video Library**. Help them decide what to make next or repurpose.`;
   }
   if (tab.includes('/content/video')) {
-    return `The operator is on the **Video** generator. Focus on the film: the core concept and hook, characters (age, look, wardrobe — kept consistent), location/setting, lighting and color temperature, mood and emotional arc, shot framing, pacing, voiceover vs dialogue, and the call to action.`;
+    return `The operator is on the **Video** tab — the storyboard builder. Shape the concept (hook, characters, location, mood, arc, voiceover, CTA), then delegate the build to the Video Specialist.`;
   }
-
-  return `The operator is in the Content Generator. Help them decide what to create (image, video, music, or text) and then dig into the creative specifics for that modality.`;
+  return `The operator is in the Content Generator. Help them decide what to create, then delegate to the right specialist.`;
 }
 
+const VIDEO_DELEGATION_PROTOCOL = `
+
+## DELEGATING THE BUILD (Video tab)
+You do NOT build storyboards yourself — you delegate to your Video Specialist, the expert. Converse to pin down the concept (who's on screen, the emotional arc, the message, platform, length, tone). When the operator clearly wants it built ("make it", "build the storyboards", "take it from here"), reply with ONE short sentence, then a fenced \`delegate\` block:
+
+\`\`\`delegate
+{"specialist":"VIDEO_SPECIALIST","brief":"<a rich creative brief in your words: the concept, who is on screen and their look, the emotional arc, the message, the CTA>","platform":"youtube|tiktok|instagram_reels|shorts|linkedin|generic","style":"talking_head|documentary|energetic|cinematic","targetDuration":<seconds, 15-150>,"targetAudience":"<who it's for>","callToAction":"<what they should do>","tone":"<editorial tone>"}
+\`\`\`
+
+Write a RICH brief — the specialist turns it into a fully-specified, shot-by-shot storyboard (every field filled) for the operator to review and approve. Pick the platform/style/duration that fit what they asked for. Only emit the block when they actually want it built; while brainstorming, just talk (no block).`;
+
 // ────────────────────────────────────────────────────────────────────────────
-// System prompt — content-director role + baked-in Brand DNA + tab context
+// System prompt — the Content Manager's conversational identity
 // ────────────────────────────────────────────────────────────────────────────
 
 async function buildSystemPrompt(activeTab: string | undefined): Promise<string> {
-  // Standing Rule #1: bake the tenant's brand voice into the prompt via the
-  // same helper the script generator uses. If brand context can't load, the
-  // director still works — it just loses the brand-voice layer.
   let brandContext = '';
   try {
     brandContext = await buildToolSystemPrompt('voice');
   } catch (error) {
-    logger.warn('[ContentAssistant] Failed to load brand context — continuing without', {
+    logger.warn('[ContentManager] Failed to load brand context — continuing without', {
       file: FILE,
       error: error instanceof Error ? error.message : String(error),
     });
   }
 
-  const role = `You are the Content Assistant — a creative director for the SalesVelocity.ai content studio.
-
-## YOUR JOB
-You help the operator figure out exactly what they want to create — an image, a video, a piece of music, or text — by TALKING IT THROUGH with them. You are a collaborator in a brainstorming chair, not a form to fill out.
+  const role = `You are the Content Manager for SalesVelocity.ai — the content director who turns a request into finished content by DELEGATING to your team of specialists. You do not do the production yourself; you understand what the operator wants and hand it to the right specialist:
+- **Video Specialist** — shot-by-shot storyboards (Video tab)
+- **Copywriter** — headlines, ad copy, scripts, email copy
+- **Asset Generator** — images
+- **Music Planner** — music & soundtrack
 
 ## HOW YOU WORK
-- Propose concrete creative ideas, not generic options. Bring a point of view.
-- Ask the clarifying questions a client wouldn't think to answer on their own: location/setting, time of day, lighting, mood, color, framing, wardrobe, props, extras, pacing, music, the feeling they want the viewer to walk away with.
-- Ask ONE or TWO sharp questions at a time — never a wall of questions. Keep it conversational, like you're on a call with them.
-- Build on what they've already said. Reference their earlier answers so it feels like a real conversation.
-- When they're vague ("make me a video about our product"), pull on the thread: who's it for, where does it live, what's the one feeling it should leave behind.
-- Stay in the tenant's brand voice (below). The ideas you propose should sound like THIS brand, not a generic agency.
-
-## WHAT YOU DO NOT DO
-- You do NOT render the final image/video/music yourself — that's the operator's job when they hit Generate. You shape the brief and, on the Video tab, you BUILD the storyboards for them to review (see below).
-- Don't claim a final asset is rendered or published. Building storyboards for review is fine and expected; rendering is not.
-- Keep replies tight and human. No bullet-point essays, no corporate filler.`;
+- Talk like a creative director: bring a point of view, propose concrete ideas, ask the ONE or TWO sharp clarifying questions a client wouldn't think of (who it's for, where it lives, the one feeling it should leave behind).
+- Build on what they've said; keep it tight and human — no bullet-point essays, no corporate filler.
+- Stay in the tenant's brand voice (below).
+- You shape the brief, then DELEGATE the build. Don't hand-write the final asset yourself.`;
 
   const tabBlock = `\n\n## CURRENT CONTEXT\n${describeActiveTab(activeTab)}`;
+  const protocolBlock = isVideoStoryboardTab(activeTab) ? VIDEO_DELEGATION_PROTOCOL : '';
+  const brandBlock = brandContext ? `\n\n## BRAND VOICE & IDENTITY (stay in this voice)\n${brandContext}` : '';
 
-  const actionBlock = isVideoStoryboardTab(activeTab) ? VIDEO_ACTION_BLOCK : '';
-
-  const brandBlock = brandContext
-    ? `\n\n## BRAND VOICE & IDENTITY (stay in this voice)\n${brandContext}`
-    : '';
-
-  return `${role}${tabBlock}${actionBlock}${brandBlock}`;
+  return `${role}${tabBlock}${protocolBlock}${brandBlock}`;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -272,15 +254,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     parsed = AssistantRequestSchema.parse(body);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid request', details: error.issues },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: 'Invalid request', details: error.issues }, { status: 400 });
     }
-    return NextResponse.json(
-      { success: false, error: 'Invalid JSON body' },
-      { status: 400 },
-    );
+    return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
   }
 
   try {
@@ -294,27 +270,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ...parsed.messages.map((m) => ({ role: m.role, content: m.content })),
       ],
       temperature: 0.8,
-      maxTokens: 1200,
+      maxTokens: 1500,
     });
 
     const reply = response.content?.trim();
     if (!reply) {
-      logger.warn('[ContentAssistant] LLM returned empty reply', { file: FILE });
+      logger.warn('[ContentManager] LLM returned empty reply', { file: FILE });
       return NextResponse.json(
-        { success: false, error: 'The assistant did not return a response. Please try again.' },
+        { success: false, error: 'The content manager did not return a response. Please try again.' },
         { status: 502 },
       );
     }
 
-    // On the Video tab, pull any storyboard data the director built so the
-    // client can drop it onto the canvas for the operator to review + approve.
+    // On the Video tab, if the Content Manager decided to build, delegate to the
+    // Video Specialist and return the storyboards for the canvas.
     if (isVideoStoryboardTab(parsed.activeTab)) {
-      const extracted = extractStoryboards(reply);
-      if (extracted) {
+      const delegation = extractDelegateDirective(reply);
+      if (delegation?.directive.specialist === 'VIDEO_SPECIALIST') {
+        const built = await buildStoryboardsViaSpecialist(delegation.directive);
+        if ('error' in built) {
+          logger.warn('[ContentManager] Video Specialist delegation failed', { file: FILE, error: built.error });
+          return NextResponse.json({
+            success: true,
+            reply: `${delegation.cleanedReply || 'I tried to build that,'} but the Video Specialist hit a problem: ${built.error}`,
+          });
+        }
         return NextResponse.json({
           success: true,
-          reply: extracted.cleanedReply || 'Here are your storyboards — review and tweak anything.',
-          storyboards: extracted.storyboards,
+          reply: delegation.cleanedReply || 'Here are your storyboards — review and tweak anything.',
+          storyboards: built.storyboards,
         });
       }
     }
@@ -322,12 +306,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ success: true, reply });
   } catch (error) {
     logger.error(
-      '[ContentAssistant] Failed to generate reply',
+      '[ContentManager] Failed to generate reply',
       error instanceof Error ? error : new Error(String(error)),
       { file: FILE, activeTab: parsed.activeTab },
     );
     return NextResponse.json(
-      { success: false, error: 'The content assistant is unavailable right now. Please try again.' },
+      { success: false, error: 'The content manager is unavailable right now. Please try again.' },
       { status: 500 },
     );
   }
