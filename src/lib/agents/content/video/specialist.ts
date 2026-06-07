@@ -184,6 +184,14 @@ const StoryboardSceneSchema = z.object({
   shotType: z.enum(SHOT_TYPES),
   cameraMovement: z.enum(CAMERA_MOVEMENTS),
   onScreenText: z.string(), // may be empty
+  // Structured context fields (storyboard builder). Optional for backward
+  // compatibility with older GM output; the v2 GM is instructed to fill them.
+  location: z.string().optional().default(''),
+  timeOfDay: z.string().optional().default(''),
+  weather: z.string().optional().default(''),
+  ambience: z.string().optional().default(''),
+  musicCue: z.string().optional().default(''),
+  wardrobe: z.string().optional().default(''),
 });
 
 const StoryboardResultSchema = z.object({

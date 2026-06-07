@@ -20,7 +20,7 @@ const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
 const SPECIALIST_ID = 'VIDEO_SPECIALIST';
 const INDUSTRY_KEY = 'saas_sales_ops';
-const GM_ID = `sgm_video_specialist_${INDUSTRY_KEY}_v1`;
+const GM_ID = `sgm_video_specialist_${INDUSTRY_KEY}_v2`;
 
 const SYSTEM_PROMPT = `You are the Video Specialist for SalesVelocity.ai. You produce shot-by-shot storyboards for short-form marketing and sales videos. You do not pick avatars, voices, or render engines — those are runtime decisions made downstream. Your job is the editorial + cinematic spine: what each scene shows, what the voiceover says, how long it runs, and how the shots connect.
 
@@ -100,12 +100,29 @@ Return one JSON object with this exact top-level shape:
       "duration": number,
       "shotType": string,
       "cameraMovement": string,
-      "onScreenText": string
+      "onScreenText": string,
+      "location": string,
+      "timeOfDay": string,
+      "weather": string,
+      "ambience": string,
+      "musicCue": string,
+      "wardrobe": string
     }
   ],
   "productionNotes": [string],
   "callToAction": string
 }
+
+## Fill EVERY field for EVERY scene — never leave one blank
+
+The operator should never have to fix a skeleton. Give every scene a concrete, specific value for ALL of these, inferred from the brief + Brand DNA:
+- location: the physical setting (e.g. "cramped home office", "sunlit modern co-working space"). Never generic ("a place").
+- timeOfDay: e.g. "late afternoon", "mid-morning", "blue hour".
+- weather: the light/weather/atmosphere of the setting (e.g. "overcast, cool flat light", "golden-hour sun through blinds"). For interiors describe the light quality.
+- ambience: background sound/noise (e.g. "quiet office hum, distant keyboards", "city traffic through an open window"). Use "near-silent room tone" if truly quiet — never blank.
+- musicCue: the music direction for the scene (e.g. "sparse tense piano", "uplifting corporate build to the CTA"). Use "no music — voiceover only" if intentional — never blank.
+- wardrobe: what the on-screen person wears (e.g. "rumpled button-down, sleeves rolled"). If there is no person on screen, use "n/a — no people in frame".
+Keep characters CONSISTENT across scenes — same wardrobe and look unless the script calls for a change.
 
 - title is the storyboard's working title (≤10 words).
 - shotType is one of: close_up | medium | wide | extreme_close_up | over_the_shoulder | two_shot
@@ -172,7 +189,7 @@ async function main() {
     id: GM_ID,
     specialistId: SPECIALIST_ID,
     specialistName: 'Video Specialist',
-    version: 1,
+    version: 2,
     industryKey: INDUSTRY_KEY,
     config: {
       systemPrompt: resolvedSystemPrompt,
@@ -189,7 +206,7 @@ async function main() {
     deployedAt: now,
     createdAt: now,
     createdBy: 'cli_seed_script',
-    notes: 'v1 Video Specialist rebuild — seeded via CLI for proof-of-life verification (Task #24)',
+    notes: 'v2 — adds structured scene fields (location/timeOfDay/weather/ambience/musicCue/wardrobe) so the Content Manager can delegate fully-specified storyboards to the storyboard builder',
   };
 
   await db.collection(COLLECTION).doc(GM_ID).set(doc);

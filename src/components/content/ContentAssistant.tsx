@@ -42,6 +42,7 @@ interface AssistantStoryboard {
   ambience?: string;
   musicCue?: string;
   wardrobe?: string;
+  backgroundPrompt?: string;
   cinematicConfig?: CinematicConfig;
 }
 
@@ -129,7 +130,7 @@ export function ContentAssistant() {
             voiceProvider: null,
             duration: sb.duration ?? 5,
             engine: 'hedra',
-            backgroundPrompt: null,
+            backgroundPrompt: sb.backgroundPrompt ?? null,
             cinematicConfig: sb.cinematicConfig,
             location: sb.location,
             timeOfDay: sb.timeOfDay,
