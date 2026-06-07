@@ -621,10 +621,11 @@ export async function generateHedraImage(
     file: 'hedra-service.ts',
   });
 
-  // Build payload — same endpoint as video, different type
-  const payload: Record<string, unknown> = {
-    type: 'image',
-    ai_model_id: model.id,
+  // Build payload — same endpoint as video. The image inputs MUST be nested
+  // under `generated_image_inputs` (mirrors `generated_video_inputs`). Sending
+  // text_prompt/aspect_ratio at the top level makes Hedra accept the request
+  // but fail the generation with "Field required".
+  const imageInputs: Record<string, unknown> = {
     text_prompt: prompt,
     aspect_ratio: options?.aspectRatio ?? '1:1',
   };
@@ -636,9 +637,15 @@ export async function generateHedraImage(
       ?? preferred.find((r) => model.resolutions?.includes(r))
       ?? model.resolutions?.[0];
     if (res) {
-      payload.resolution = res;
+      imageInputs.resolution = res;
     }
   }
+
+  const payload: Record<string, unknown> = {
+    type: 'image',
+    ai_model_id: model.id,
+    generated_image_inputs: imageInputs,
+  };
 
   // Submit generation
   const genResponse = await fetch(`${HEDRA_BASE_URL}/generations`, {
