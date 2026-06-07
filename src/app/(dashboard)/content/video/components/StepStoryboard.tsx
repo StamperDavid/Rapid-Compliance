@@ -619,6 +619,7 @@ export function StepStoryboard() {
     setAvatar,
     setVoice,
     setStep,
+    reset,
   } = useVideoPipelineStore();
 
   const [isDecomposing, setIsDecomposing] = useState(false);
@@ -630,7 +631,24 @@ export function StepStoryboard() {
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(scenes[0]?.id ?? null);
   const [characterPickerSceneId, setCharacterPickerSceneId] = useState<string | null>(null);
   const [defaultPicker, setDefaultPicker] = useState<'character' | 'voice' | null>(null);
+  const [scrapArmed, setScrapArmed] = useState(false);
   const dragIndexRef = useRef<number | null>(null);
+
+  // Scrap the whole video — delete the saved project (if any) and clear the
+  // strip. Two-step confirm (arm, then fire) per the destructive-action rule.
+  const handleScrap = useCallback(() => {
+    if (!scrapArmed) {
+      setScrapArmed(true);
+      setTimeout(() => setScrapArmed(false), 4000);
+      return;
+    }
+    setScrapArmed(false);
+    if (projectId) {
+      authFetch(`/api/video/project/${projectId}`, { method: 'DELETE' }).catch(() => { /* best-effort */ });
+    }
+    reset();
+    setSelectedSceneId(null);
+  }, [scrapArmed, projectId, authFetch, reset]);
 
   // Keep a storyboard selected — e.g. when the Content Assistant adds them, or
   // after the current one is deleted — so the editor always has something open.
@@ -1153,12 +1171,24 @@ export function StepStoryboard() {
 
       {/* Footer */}
       <div className="flex justify-between items-center pt-2">
-        <div className="text-xs text-muted-foreground">
-          {scenes.length === 0
-            ? ''
-            : draftCount > 0
-              ? `${draftCount} storyboard${draftCount > 1 ? 's' : ''} still in draft — you can generate anyway`
-              : 'All storyboards marked ready'}
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant={scrapArmed ? 'destructive' : 'outline'}
+            className="gap-1.5 text-xs"
+            onClick={handleScrap}
+            title="Delete this video and clear the strip"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {scrapArmed ? 'Click again to scrap' : 'Scrap video'}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {scenes.length === 0
+              ? ''
+              : draftCount > 0
+                ? `${draftCount} storyboard${draftCount > 1 ? 's' : ''} still in draft — you can generate anyway`
+                : 'All storyboards marked ready'}
+          </span>
         </div>
         <Button size="sm" className="gap-2 bg-primary hover:bg-primary-dark text-white" disabled={!isReady || isSaving} onClick={() => { void handleGenerateVideo(); }}>
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
