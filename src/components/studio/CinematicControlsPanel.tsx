@@ -526,27 +526,30 @@ export function CinematicControlsPanel({
                     onOpen={() => openPicker('filmStock')}
                   />
                 </div>
-                {/* Aspect Ratio */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Aspect Ratio</Label>
-                  <Select
-                    value={config.aspectRatio ?? ''}
-                    onValueChange={(val) =>
-                      updateConfig('aspectRatio', (val || undefined) as AspectRatio | undefined)
-                    }
-                  >
-                    <SelectTrigger className="bg-surface-elevated border-border-strong text-white">
-                      <SelectValue placeholder="Select ratio..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-surface-elevated border-border-strong">
-                      {ASPECT_RATIOS.map((ratio) => (
-                        <SelectItem key={ratio} value={ratio} className="text-foreground">
-                          {ratio}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Aspect Ratio — image only. For video the whole-project format
+                    control (in the storyboard header) governs the output ratio. */}
+                {medium === 'image' && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Aspect Ratio</Label>
+                    <Select
+                      value={config.aspectRatio ?? ''}
+                      onValueChange={(val) =>
+                        updateConfig('aspectRatio', (val || undefined) as AspectRatio | undefined)
+                      }
+                    >
+                      <SelectTrigger className="bg-surface-elevated border-border-strong text-white">
+                        <SelectValue placeholder="Select ratio..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-surface-elevated border-border-strong">
+                        {ASPECT_RATIOS.map((ratio) => (
+                          <SelectItem key={ratio} value={ratio} className="text-foreground">
+                            {ratio}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
