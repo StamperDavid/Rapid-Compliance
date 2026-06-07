@@ -25,6 +25,7 @@ import { randomUUID } from 'crypto';
 
 import { requireAuth } from '@/lib/auth/api-auth';
 import { generateHedraImage } from '@/lib/video/hedra-service';
+import { getBrandKit } from '@/lib/video/brand-kit-service';
 import { persistUrlToStorage } from '@/lib/firebase/storage-utils';
 import { adminStorage } from '@/lib/firebase/admin';
 import AdminFirestoreService from '@/lib/db/admin-firestore-service';
@@ -145,9 +146,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
     const body = parsed.data;
 
-    // 3. Generate via Hedra (auto-discovers the active image model and polls
+    // 3. Apply Brand DNA: weave the brand color palette into the image prompt so
+    //    generations are on-brand — the same brand colors the website builder uses.
+    let imagePrompt = body.prompt;
+    if (body.brandDnaApplied) {
+      try {
+        const brandKit = await getBrandKit();
+        if (brandKit.enabled && brandKit.colors) {
+          const { primary, secondary, accent } = brandKit.colors;
+          imagePrompt = `${body.prompt} Brand color palette — use these brand colors cohesively and prominently throughout: primary ${primary}, secondary ${secondary}, accent ${accent}.`;
+        }
+      } catch (brandErr) {
+        logger.warn('[asset-generator-generate] Brand kit load failed; generating without brand colors', {
+          error: brandErr instanceof Error ? brandErr.message : String(brandErr),
+          file: FILE,
+        });
+      }
+    }
+
+    // 4. Generate via Hedra (auto-discovers the active image model and polls
     //    until the asset URL is available — typical 5-30s).
-    const generation = await generateHedraImage(body.prompt, {
+    const generation = await generateHedraImage(imagePrompt, {
       aspectRatio: body.aspectRatio,
       resolution: isResolutionValue(body.resolution) ? body.resolution : '1080p',
     });
