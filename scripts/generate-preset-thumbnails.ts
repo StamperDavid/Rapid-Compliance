@@ -41,7 +41,7 @@ const CATEGORIES = [
   'composition',
 ] as const;
 
-const CONCURRENCY = 4;
+const CONCURRENCY = 5;
 
 interface PresetLike {
   id: string;
