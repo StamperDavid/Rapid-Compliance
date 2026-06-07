@@ -6,7 +6,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate } from 'lucide-react';
+import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VideoPipelineStepper } from './components/VideoPipelineStepper';
 import { StepStoryboard } from './components/StepStoryboard';
@@ -54,6 +54,8 @@ export default function VideoStudioPage() {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [autoLoading, setAutoLoading] = useState(false);
 
   // Subscribe to the reactive data that canAdvanceTo depends on
@@ -163,6 +165,22 @@ export default function VideoStudioPage() {
       setLoadingProjectId(null);
     }
   }, [loadProject, authFetch]);
+
+  // Delete a saved project (two-step confirm via confirmDeleteId).
+  const handleDeleteProject = useCallback(async (id: string) => {
+    setConfirmDeleteId(null);
+    setDeletingProjectId(id);
+    try {
+      const response = await authFetch(`/api/video/project/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+      }
+    } catch {
+      // ignore — row stays
+    } finally {
+      setDeletingProjectId(null);
+    }
+  }, [authFetch]);
 
   // Auto-load project from ?load={projectId} URL parameter
   useEffect(() => {
@@ -353,40 +371,65 @@ export default function VideoStudioPage() {
               ) : (
                 <div className="space-y-2">
                   {projects.map((project) => (
-                    <button
+                    <div
                       key={project.id}
-                      onClick={() => { void handleLoadProject(project.id); }}
-                      disabled={loadingProjectId === project.id}
-                      className="w-full text-left p-3 rounded-lg border border-border-strong hover:border-primary/50 hover:bg-surface-elevated/50 transition-colors group disabled:opacity-50"
+                      className="w-full p-3 rounded-lg border border-border-strong hover:border-primary/50 hover:bg-surface-elevated/50 transition-colors group flex items-start justify-between gap-2"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-medium text-white truncate group-hover:text-primary-light transition-colors">
-                            {project.name}
-                          </h3>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Film className="w-3 h-3" />
-                              {project.sceneCount} scene{project.sceneCount !== 1 ? 's' : ''}
-                            </span>
-                            <span className={
-                              project.status === 'completed' ? 'text-green-400' :
-                              project.status === 'generating' ? 'text-primary-light' :
-                              'text-muted-foreground'
-                            }>
-                              {project.status}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {new Date(project.updatedAt).toLocaleDateString()}
-                            </span>
-                          </div>
+                      <button
+                        onClick={() => { void handleLoadProject(project.id); }}
+                        disabled={loadingProjectId === project.id}
+                        className="flex-1 text-left min-w-0 disabled:opacity-50"
+                      >
+                        <h3 className="text-sm font-medium text-white truncate group-hover:text-primary-light transition-colors">
+                          {project.name}
+                        </h3>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Film className="w-3 h-3" />
+                            {project.sceneCount} scene{project.sceneCount !== 1 ? 's' : ''}
+                          </span>
+                          <span className={
+                            project.status === 'completed' ? 'text-green-400' :
+                            project.status === 'generating' ? 'text-primary-light' :
+                            'text-muted-foreground'
+                          }>
+                            {project.status}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(project.updatedAt).toLocaleDateString()}
+                          </span>
                         </div>
-                        {loadingProjectId === project.id && (
-                          <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0 ml-2" />
+                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {loadingProjectId === project.id || deletingProjectId === project.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        ) : confirmDeleteId === project.id ? (
+                          <>
+                            <button
+                              onClick={() => { void handleDeleteProject(project.id); }}
+                              className="px-2 py-1 rounded text-xs bg-destructive text-white"
+                            >
+                              Delete
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteId(project.id)}
+                            title="Delete project"
+                            className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
