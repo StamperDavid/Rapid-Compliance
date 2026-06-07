@@ -168,7 +168,6 @@ const LIGHTING_PRESETS: CinematicPreset[] = [
   { id: 'light-short', name: 'Short Lighting', category: 'lighting', promptFragment: 'short lighting with shadowed side toward camera, slimming dramatic', tags: ['dramatic', 'slimming', 'portrait'] },
   { id: 'light-silhouette', name: 'Silhouette', category: 'lighting', promptFragment: 'silhouette backlighting, subject as dark shape against bright background', tags: ['silhouette', 'dramatic', 'artistic'] },
   { id: 'light-softbox', name: 'Softbox Key', category: 'lighting', promptFragment: 'softbox key lighting, large soft diffused main light, studio quality', tags: ['studio', 'soft', 'controlled'] },
-  { id: 'light-split', name: 'Split Lighting', category: 'lighting', promptFragment: 'split lighting with exactly half the face lit, half in shadow', tags: ['dramatic', 'noir', 'bold'] },
   { id: 'light-stage-spotlight', name: 'Stage Spotlight', category: 'lighting', promptFragment: 'stage spotlight, pool of light in darkness, theatrical performance', tags: ['stage', 'theatrical', 'performance'] },
   { id: 'light-flat', name: 'Studio Flat', category: 'lighting', promptFragment: 'flat studio lighting, minimal shadows, even illumination, catalog style', tags: ['flat', 'even', 'commercial'] },
   { id: 'light-sunrise', name: 'Sunrise', category: 'lighting', promptFragment: 'sunrise lighting, warm orange and pink rays, long morning shadows', tags: ['sunrise', 'warm', 'morning'] },
