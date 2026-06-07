@@ -57,6 +57,33 @@ export async function persistUrlToStorage(
 }
 
 /**
+ * Persist an in-memory image buffer to Firebase Storage and return a signed URL.
+ * Used when we modify an image (e.g. compositing the brand logo) before saving.
+ */
+export async function persistBufferToStorage(
+  buffer: Buffer,
+  storagePath: string,
+  contentType = 'image/png',
+): Promise<string | null> {
+  if (!adminStorage) {
+    return null;
+  }
+  const bucket = adminStorage.bucket();
+  const file = bucket.file(storagePath);
+  await file.save(buffer, {
+    metadata: {
+      contentType,
+      metadata: { persistedAt: new Date().toISOString(), source: 'studio-generation-composited' },
+    },
+  });
+  const [signedUrl] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
+  });
+  return signedUrl;
+}
+
+/**
  * Build a deterministic storage path for a studio generation image.
  */
 export function studioImagePath(generationId: string): string {
