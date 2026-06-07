@@ -183,15 +183,17 @@ const StoryboardSceneSchema = z.object({
   duration: z.number().int().min(3).max(15),
   shotType: z.enum(SHOT_TYPES),
   cameraMovement: z.enum(CAMERA_MOVEMENTS),
-  onScreenText: z.string(), // may be empty
-  // Structured context fields (storyboard builder). Optional for backward
-  // compatibility with older GM output; the v2 GM is instructed to fill them.
-  location: z.string().optional().default(''),
-  timeOfDay: z.string().optional().default(''),
-  weather: z.string().optional().default(''),
-  ambience: z.string().optional().default(''),
-  musicCue: z.string().optional().default(''),
-  wardrobe: z.string().optional().default(''),
+  onScreenText: z.string(), // may be empty (caption is genuinely optional)
+  // Structured context fields (storyboard builder) — REQUIRED of the AI. Every
+  // field must carry a concrete value (the v2 GM uses "n/a"/"none" only when a
+  // field is truly inapplicable, never blank). If the model omits any, the
+  // generation fails rather than handing back a half-filled storyboard.
+  location: z.string().min(1, 'location is required'),
+  timeOfDay: z.string().min(1, 'timeOfDay is required'),
+  weather: z.string().min(1, 'weather is required'),
+  ambience: z.string().min(1, 'ambience is required'),
+  musicCue: z.string().min(1, 'musicCue is required'),
+  wardrobe: z.string().min(1, 'wardrobe is required'),
 });
 
 const StoryboardResultSchema = z.object({
