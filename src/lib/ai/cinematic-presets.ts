@@ -504,6 +504,58 @@ export function getPresetById(id: string): CinematicPreset | undefined {
   return PRESET_BY_ID.get(id);
 }
 
+/** Cinematic categories the Video Specialist picks for every scene. */
+export const AI_FILLED_CINEMATIC_CATEGORIES: PresetCategory[] = [
+  'camera',
+  'focalLength',
+  'lensType',
+  'lighting',
+  'filmStock',
+  'videographerStyle',
+  'movieLook',
+  'composition',
+];
+
+/**
+ * Resolve an AI-provided preset name (or id) to a valid preset id for a
+ * category. Tries exact id, exact name, then a contains-match. Falls back to the
+ * original value so the field is still populated (the picker shows the humanized
+ * text even if it didn't match a built-in preset).
+ */
+export function resolvePresetId(category: PresetCategory, value: string): string {
+  const v = value.trim().toLowerCase();
+  if (!v) {
+    return value;
+  }
+  const presets = getPresetsByCategory(category);
+  const byId = presets.find((p) => p.id.toLowerCase() === v);
+  if (byId) {
+    return byId.id;
+  }
+  const byName = presets.find((p) => p.name.toLowerCase() === v);
+  if (byName) {
+    return byName.id;
+  }
+  const byContains = presets.find(
+    (p) => p.name.toLowerCase().includes(v) || v.includes(p.name.toLowerCase()),
+  );
+  if (byContains) {
+    return byContains.id;
+  }
+  return value;
+}
+
+/**
+ * A compact menu of preset option names per AI-filled category, used to ground
+ * the Video Specialist so it chooses real, on-brand cinematic presets.
+ */
+export function getCuratedPresetMenu(perCategory = 14): string {
+  return AI_FILLED_CINEMATIC_CATEGORIES.map((cat) => {
+    const names = getPresetsByCategory(cat).slice(0, perCategory).map((p) => p.name);
+    return `${getCategoryLabel(cat)} (field "${cat}"): ${names.join(', ')}`;
+  }).join('\n');
+}
+
 /** Human-readable label for a preset category. */
 export function getCategoryLabel(category: PresetCategory): string {
   const labels: Record<PresetCategory, string> = {

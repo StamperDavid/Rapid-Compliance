@@ -20,7 +20,7 @@ const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
 const SPECIALIST_ID = 'VIDEO_SPECIALIST';
 const INDUSTRY_KEY = 'saas_sales_ops';
-const GM_ID = `sgm_video_specialist_${INDUSTRY_KEY}_v3`;
+const GM_ID = `sgm_video_specialist_${INDUSTRY_KEY}_v4`;
 
 const SYSTEM_PROMPT = `You are the Video Specialist for SalesVelocity.ai. You produce shot-by-shot storyboards for short-form marketing and sales videos. You do not pick avatars, voices, or render engines — those are runtime decisions made downstream. Your job is the editorial + cinematic spine: what each scene shows, what the voiceover says, how long it runs, and how the shots connect.
 
@@ -114,7 +114,8 @@ Return one JSON object with this exact top-level shape:
       "weather": string,
       "ambience": string,
       "musicCue": string,
-      "wardrobe": string
+      "wardrobe": string,
+      "cinematicConfig": { "camera": string, "focalLength": string, "lensType": string, "lighting": string, "filmStock": string, "videographerStyle": string, "movieLook": string, "composition": string }
     }
   ],
   "productionNotes": [string],
@@ -131,6 +132,10 @@ The operator should never have to fix a skeleton. Give every scene a concrete, s
 - musicCue: the music direction for the scene (e.g. "sparse tense piano", "uplifting corporate build to the CTA"). Use "no music — voiceover only" if intentional — never blank.
 - wardrobe: what the on-screen person wears (e.g. "rumpled button-down, sleeves rolled"). If there is no person on screen, use "n/a — no people in frame".
 Keep characters CONSISTENT across scenes — same wardrobe and look unless the script calls for a change.
+
+## Cinematic look (cinematicConfig) — REQUIRED on every scene
+
+Every scene must include a cinematicConfig object with a value for ALL of: camera, focalLength, lensType, lighting, filmStock, videographerStyle, movieLook, composition. Choose the option that best fits the scene by EXACT name from the menu provided in the user message. videographerStyle must be a cinematographer (from the list) — never a still photographer; this is video. Keep the look coherent across the video (consistent film stock / videographer style / movie look unless the story calls for a shift).
 
 - title is the storyboard's working title (≤10 words).
 - shotType is one of: close_up | medium | wide | extreme_close_up | over_the_shoulder | two_shot
@@ -197,7 +202,7 @@ async function main() {
     id: GM_ID,
     specialistId: SPECIALIST_ID,
     specialistName: 'Video Specialist',
-    version: 3,
+    version: 4,
     industryKey: INDUSTRY_KEY,
     config: {
       systemPrompt: resolvedSystemPrompt,
@@ -214,7 +219,7 @@ async function main() {
     deployedAt: now,
     createdAt: now,
     createdBy: 'cli_seed_script',
-    notes: 'v3 — adds mandatory character-consistency rule (restate the protagonist\'s exact physical description in every scene) so independently-generated scene previews show the same person across the video',
+    notes: 'v4 — requires a full cinematicConfig (camera/focalLength/lensType/lighting/filmStock/videographerStyle/movieLook/composition) per scene, chosen by name from the preset menu, so the AI fills the Camera & Look fields too',
   };
 
   await db.collection(COLLECTION).doc(GM_ID).set(doc);
