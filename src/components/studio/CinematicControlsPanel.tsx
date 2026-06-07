@@ -61,6 +61,8 @@ interface CinematicControlsPanelProps {
   studioMode?: StudioMode;
   /** Called when the user toggles between simple and advanced mode */
   onStudioModeChange?: (mode: StudioMode) => void;
+  /** 'video' surfaces Videographer Style (cinematographers); 'image' surfaces Photographer Style. */
+  medium?: 'video' | 'image';
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -184,6 +186,7 @@ export function CinematicControlsPanel({
   renderElements,
   studioMode: controlledMode,
   onStudioModeChange,
+  medium = 'video',
 }: CinematicControlsPanelProps) {
   // Internal mode state (used when not controlled externally)
   const [internalMode, setInternalMode] = useState<StudioMode>(getPersistedStudioMode);
@@ -246,6 +249,7 @@ export function CinematicControlsPanel({
         lighting: 'lighting',
         filmStock: 'filmStock',
         photographerStyle: 'photographerStyle',
+        videographerStyle: 'videographerStyle',
         movieLook: 'movieLook',
         filter: 'filters',
         artStyle: 'artStyle',
@@ -283,6 +287,7 @@ export function CinematicControlsPanel({
       lighting: 'lighting',
       filmStock: 'filmStock',
       photographerStyle: 'photographerStyle',
+      videographerStyle: 'videographerStyle',
       movieLook: 'movieLook',
       filter: 'filters',
       artStyle: 'artStyle',
@@ -598,12 +603,21 @@ export function CinematicControlsPanel({
                     category="artStyle"
                     onOpen={() => openPicker('artStyle')}
                   />
-                  <PresetSelector
-                    label="Photographer Style"
-                    presetId={config.photographerStyle}
-                    category="photographerStyle"
-                    onOpen={() => openPicker('photographerStyle')}
-                  />
+                  {medium === 'image' ? (
+                    <PresetSelector
+                      label="Photographer Style"
+                      presetId={config.photographerStyle}
+                      category="photographerStyle"
+                      onOpen={() => openPicker('photographerStyle')}
+                    />
+                  ) : (
+                    <PresetSelector
+                      label="Videographer Style"
+                      presetId={config.videographerStyle}
+                      category="videographerStyle"
+                      onOpen={() => openPicker('videographerStyle')}
+                    />
+                  )}
                 </div>
 
                 <PresetSelector

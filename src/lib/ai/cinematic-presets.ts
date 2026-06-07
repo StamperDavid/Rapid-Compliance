@@ -419,6 +419,32 @@ const COMPOSITION_PRESETS: CinematicPreset[] = [
   { id: 'comp-layered', name: 'Layered Depth', category: 'composition', promptFragment: 'layered depth composition with distinct foreground midground background planes', tags: ['layered', 'depth', 'planes'] },
 ];
 
+// ─── Videographer / Cinematographer Styles (Video tab) ─────────────
+// The video-tab equivalent of photographer styles: famous cinematographers (DPs)
+// whose visual signatures models recognize. Photographer styles stay on the
+// Image tab; these surface on the Video tab.
+
+const VIDEOGRAPHER_STYLE_PRESETS: CinematicPreset[] = [
+  { id: 'cine-deakins', name: 'Roger Deakins', category: 'videographerStyle', promptFragment: 'cinematography in the style of Roger Deakins: naturalistic motivated lighting, restrained elegant framing, deep focus, controlled contrast', tags: ['naturalistic', 'elegant', 'motivated-light'] },
+  { id: 'cine-lubezki', name: 'Emmanuel Lubezki', category: 'videographerStyle', promptFragment: 'cinematography in the style of Emmanuel Lubezki: natural available light, immersive wide-angle, flowing long-take energy, luminous skies', tags: ['natural-light', 'immersive', 'wide'] },
+  { id: 'cine-hoytema', name: 'Hoyte van Hoytema', category: 'videographerStyle', promptFragment: 'cinematography in the style of Hoyte van Hoytema: large-format IMAX clarity, cool restrained palette, practical light sources, epic scale', tags: ['imax', 'cool', 'epic'] },
+  { id: 'cine-fraser', name: 'Greig Fraser', category: 'videographerStyle', promptFragment: 'cinematography in the style of Greig Fraser: soft naturalism, warm desaturated palettes, intimate texture, gentle highlight roll-off', tags: ['soft', 'intimate', 'textured'] },
+  { id: 'cine-kaminski', name: 'Janusz Kaminski', category: 'videographerStyle', promptFragment: 'cinematography in the style of Janusz Kaminski: high contrast, diffused blown highlights, gritty desaturation, raw emotional tone', tags: ['high-contrast', 'gritty', 'diffused'] },
+  { id: 'cine-richardson', name: 'Robert Richardson', category: 'videographerStyle', promptFragment: 'cinematography in the style of Robert Richardson: hard top light, hot white highlights, theatrical pools of light, bold contrast', tags: ['top-light', 'theatrical', 'bold'] },
+  { id: 'cine-storaro', name: 'Vittorio Storaro', category: 'videographerStyle', promptFragment: 'cinematography in the style of Vittorio Storaro: bold color theory, saturated painterly palettes, expressive color symbolism', tags: ['color', 'painterly', 'saturated'] },
+  { id: 'cine-willis', name: 'Gordon Willis', category: 'videographerStyle', promptFragment: 'cinematography in the style of Gordon Willis: low-key underexposed shadows, amber warmth, overhead light, prince-of-darkness mood', tags: ['low-key', 'shadow', 'amber'] },
+  { id: 'cine-doyle', name: 'Christopher Doyle', category: 'videographerStyle', promptFragment: 'cinematography in the style of Christopher Doyle: saturated neon, handheld intimacy, dreamy step-printed motion, lush color', tags: ['neon', 'handheld', 'dreamy'] },
+  { id: 'cine-delbonnel', name: 'Bruno Delbonnel', category: 'videographerStyle', promptFragment: 'cinematography in the style of Bruno Delbonnel: painterly warm amber glow, stylized storybook light, soft vignette', tags: ['painterly', 'warm', 'stylized'] },
+  { id: 'cine-khondji', name: 'Darius Khondji', category: 'videographerStyle', promptFragment: 'cinematography in the style of Darius Khondji: moody chiaroscuro, rich inky blacks, textured low light, ominous atmosphere', tags: ['moody', 'chiaroscuro', 'rich-blacks'] },
+  { id: 'cine-morrison', name: 'Rachel Morrison', category: 'videographerStyle', promptFragment: 'cinematography in the style of Rachel Morrison: warm naturalism, intimate authentic skin tones, grounded handheld realism', tags: ['warm', 'intimate', 'naturalistic'] },
+  { id: 'cine-young', name: 'Bradford Young', category: 'videographerStyle', promptFragment: 'cinematography in the style of Bradford Young: low-light richness, deep soft shadow, painterly underexposure, soulful mood', tags: ['low-light', 'soft', 'painterly'] },
+  { id: 'cine-libatique', name: 'Matthew Libatique', category: 'videographerStyle', promptFragment: 'cinematography in the style of Matthew Libatique: kinetic energy, saturated expressive color, dynamic camera, bold contrast', tags: ['kinetic', 'saturated', 'dynamic'] },
+  { id: 'cine-sandgren', name: 'Linus Sandgren', category: 'videographerStyle', promptFragment: 'cinematography in the style of Linus Sandgren: vibrant nostalgic film stock, bold romantic color, glowing highlights', tags: ['vibrant', 'nostalgic', 'romantic'] },
+  { id: 'cine-prieto', name: 'Rodrigo Prieto', category: 'videographerStyle', promptFragment: 'cinematography in the style of Rodrigo Prieto: textured emotional realism, versatile period palettes, expressive contrast', tags: ['textured', 'emotional', 'versatile'] },
+  { id: 'cine-pfister', name: 'Wally Pfister', category: 'videographerStyle', promptFragment: 'cinematography in the style of Wally Pfister: sleek high-contrast IMAX, cool steely palette, crisp practical light', tags: ['sleek', 'high-contrast', 'imax'] },
+  { id: 'cine-bobbitt', name: 'Sean Bobbitt', category: 'videographerStyle', promptFragment: 'cinematography in the style of Sean Bobbitt: immersive handheld, naturalistic unbroken takes, raw intimate presence', tags: ['handheld', 'immersive', 'raw'] },
+];
+
 // ─── Preset Lookups ───────────────────────────────────────────────
 
 const ALL_PRESETS: CinematicPreset[] = [
@@ -429,6 +455,7 @@ const ALL_PRESETS: CinematicPreset[] = [
   ...LIGHTING_PRESETS,
   ...FILM_STOCK_PRESETS,
   ...PHOTOGRAPHER_STYLE_PRESETS,
+  ...VIDEOGRAPHER_STYLE_PRESETS,
   ...MOVIE_LOOK_PRESETS,
   ...FILTER_PRESETS,
   ...ART_STYLE_PRESETS,
@@ -487,6 +514,7 @@ export function getCategoryLabel(category: PresetCategory): string {
     lighting: 'Lighting Setup',
     filmStock: 'Film Stock',
     photographerStyle: 'Photographer Style',
+    videographerStyle: 'Videographer Style',
     movieLook: 'Movie Look',
     filter: 'Filters',
     artStyle: 'Art Style',
@@ -592,6 +620,10 @@ function filmStockFragment(filmStock: string): string {
 
 function photographerFragment(photographer: string): string {
   return `in the style of ${photographer}`;
+}
+
+function videographerFragment(videographer: string): string {
+  return getPresetById(videographer)?.promptFragment ?? `in the cinematography style of ${videographer}`;
 }
 
 function movieLookFragment(movieLook: string): string {
@@ -746,9 +778,12 @@ export function buildPromptFromPresets(
     fragments.push(filmStockFragment(presets.filmStock));
   }
 
-  // 12. Photographer style
+  // 12. Photographer style (Image) / Videographer style (Video)
   if (presets.photographerStyle) {
     fragments.push(photographerFragment(presets.photographerStyle));
+  }
+  if (presets.videographerStyle) {
+    fragments.push(videographerFragment(presets.videographerStyle));
   }
 
   // 13. Movie look

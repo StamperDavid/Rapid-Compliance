@@ -36,6 +36,7 @@ const CATEGORIES = [
   'filmStock',
   'artStyle',
   'photographerStyle',
+  'videographerStyle',
   'movieLook',
   'filter',
   'composition',
@@ -55,6 +56,8 @@ function buildPrompt(preset: PresetLike): string {
   switch (preset.category) {
     case 'photographerStyle':
       return `A striking professional photograph in the style of ${preset.name}: ${frag}. A single clear human subject, magazine quality.`;
+    case 'videographerStyle':
+      return `A cinematic film still — ${frag}. A single clear subject, atmospheric, professional.`;
     case 'movieLook':
       return `A cinematic film still with the look and color grade of ${preset.name}: ${frag}. A single clear subject, atmospheric.`;
     case 'lighting':
