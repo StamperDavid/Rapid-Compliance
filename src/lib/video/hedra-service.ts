@@ -509,7 +509,20 @@ async function getHedraImageModelId(apiKey: string): Promise<{ id: string; name:
   const isEditModel = (name: string): boolean =>
     /i2i|kontext|edit|inpaint|outpaint|upscal|remove|restyle|relight|swap|reference/i.test(name);
   const textToImage = imageModels.filter((m) => !isEditModel(m.name));
-  const selected = textToImage[0] ?? imageModels[0];
+  // Prefer fast, permissive open models (Flux / Sana / Imagen) over GPT-Image,
+  // which is slower and refuses named-artist / copyrighted-style prompts on
+  // content policy (it blocked the photographer / movie-look / cinematographer
+  // example renders). Lower rank = preferred.
+  const rank = (name: string): number => {
+    const n = name.toLowerCase();
+    if (n.includes('flux') && n.includes('dev')) { return 0; }
+    if (n === 'sana') { return 1; }
+    if (n.includes('flux') && !n.includes('kontext')) { return 2; }
+    if (n.includes('imagen')) { return 3; }
+    if (n.includes('gpt image')) { return 9; }
+    return 5;
+  };
+  const selected = [...textToImage].sort((a, b) => rank(a.name) - rank(b.name))[0] ?? imageModels[0];
   setImageModelCache(selected.id);
 
   logger.info('Hedra image model discovered', {

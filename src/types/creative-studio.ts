@@ -17,6 +17,7 @@ export const PRESET_CATEGORIES = [
   'lighting',
   'filmStock',
   'photographerStyle',
+  'videographerStyle',
   'movieLook',
   'filter',
   'artStyle',
@@ -89,6 +90,8 @@ export interface CinematicConfig {
   aspectRatio?: AspectRatio;
   temperature?: number;
   photographerStyle?: string;
+  /** Cinematographer/videographer style — the Video-tab equivalent of photographerStyle. */
+  videographerStyle?: string;
   movieLook?: string;
   filters?: string[];
   artStyle?: string;
