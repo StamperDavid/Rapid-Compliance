@@ -16,17 +16,16 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { randomUUID } from 'crypto';
 
 import { requireAuth } from '@/lib/auth/api-auth';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { buildToolSystemPrompt } from '@/lib/brand/brand-dna-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
-import { VideoSpecialist, type StoryboardResult, type StoryboardScene } from '@/lib/agents/content/video/specialist';
-import { resolvePresetId } from '@/lib/ai/cinematic-presets';
-import type { AgentMessage } from '@/lib/agents/types';
-import type { CinematicConfig } from '@/types/creative-studio';
+import { buildStoryboardFromBrief } from '@/lib/video/storyboard-build-service';
+
+// Re-exported for back-compat: the storyboard shape now lives in the shared service.
+export type { AssistantStoryboard } from '@/lib/video/storyboard-build-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,25 +46,6 @@ const AssistantRequestSchema = z.object({
   activeTab: z.string().trim().max(120).optional(),
 });
 
-// ────────────────────────────────────────────────────────────────────────────
-// Storyboard shape the Video tab applies to its pipeline store.
-// ────────────────────────────────────────────────────────────────────────────
-
-export interface AssistantStoryboard {
-  title: string;
-  visualDescription: string;
-  scriptText: string;
-  duration: number;
-  location?: string;
-  timeOfDay?: string;
-  weather?: string;
-  ambience?: string;
-  musicCue?: string;
-  wardrobe?: string;
-  backgroundPrompt?: string;
-  cinematicConfig?: Partial<CinematicConfig>;
-}
-
 function isVideoStoryboardTab(activeTab: string | undefined): boolean {
   const tab = (activeTab ?? '').toLowerCase();
   return tab.includes('/content/video') && !tab.includes('/editor') && !tab.includes('/library');
@@ -84,6 +64,8 @@ const DelegateDirectiveSchema = z.object({
   targetAudience: z.string().trim().max(500).optional(),
   callToAction: z.string().trim().max(500).optional(),
   tone: z.string().trim().max(300).optional(),
+  /** When reworking ONE existing storyboard, the 1-based number to replace. Omit for a fresh full build. */
+  targetSceneNumber: z.number().int().min(1).max(50).optional(),
 });
 
 type DelegateDirective = z.infer<typeof DelegateDirectiveSchema>;
@@ -105,84 +87,6 @@ function extractDelegateDirective(reply: string): { directive: DelegateDirective
     return null;
   }
   return { directive: parsed.data, cleanedReply: reply.replace(fence[0], '').trim() };
-}
-
-function humanizeEnum(value: string): string {
-  return value.replace(/_/g, ' ').trim();
-}
-
-/** Map one Video Specialist scene onto the storyboard canvas shape. */
-function mapSpecialistScene(scene: StoryboardScene): AssistantStoryboard {
-  // Camera movement has no preset category, so keep it in the action text.
-  // Shot type now populates the cinematic panel below, so it's not doubled here.
-  const action = [scene.visualDescription, scene.cameraMovement ? `(${humanizeEnum(scene.cameraMovement)})` : '']
-    .filter(Boolean)
-    .join(' ');
-
-  // The AI chose cinematic options by name — resolve each to a real preset id so
-  // the Camera & Look pickers show them selected (with example images).
-  const cc = scene.cinematicConfig;
-  const cinematicConfig: Partial<CinematicConfig> = {
-    shotType: resolvePresetId('shotType', humanizeEnum(scene.shotType)),
-    camera: resolvePresetId('camera', cc.camera),
-    focalLength: resolvePresetId('focalLength', cc.focalLength),
-    lensType: resolvePresetId('lensType', cc.lensType),
-    lighting: resolvePresetId('lighting', cc.lighting),
-    filmStock: resolvePresetId('filmStock', cc.filmStock),
-    videographerStyle: resolvePresetId('videographerStyle', cc.videographerStyle),
-    movieLook: resolvePresetId('movieLook', cc.movieLook),
-    composition: resolvePresetId('composition', cc.composition),
-  };
-
-  return {
-    title: scene.title,
-    visualDescription: action,
-    scriptText: scene.scriptText,
-    duration: scene.duration,
-    cinematicConfig,
-    ...(scene.location ? { location: scene.location } : {}),
-    ...(scene.timeOfDay ? { timeOfDay: scene.timeOfDay } : {}),
-    ...(scene.weather ? { weather: scene.weather } : {}),
-    ...(scene.ambience ? { ambience: scene.ambience } : {}),
-    ...(scene.musicCue ? { musicCue: scene.musicCue } : {}),
-    ...(scene.wardrobe ? { wardrobe: scene.wardrobe } : {}),
-    ...(scene.backgroundPrompt ? { backgroundPrompt: scene.backgroundPrompt } : {}),
-  };
-}
-
-/** Delegate the actual storyboard build to the real Video Specialist. */
-async function buildStoryboardsViaSpecialist(
-  directive: DelegateDirective,
-): Promise<{ storyboards: AssistantStoryboard[] } | { error: string }> {
-  const specialist = new VideoSpecialist();
-  const message: AgentMessage = {
-    id: `content-mgr-delegate-${randomUUID()}`,
-    timestamp: new Date(),
-    from: 'CONTENT_MANAGER',
-    to: 'VIDEO_SPECIALIST',
-    type: 'COMMAND',
-    priority: 'NORMAL',
-    payload: {
-      action: 'script_to_storyboard',
-      brief: directive.brief,
-      platform: directive.platform,
-      style: directive.style,
-      targetDuration: directive.targetDuration,
-      ...(directive.targetAudience ? { targetAudience: directive.targetAudience } : {}),
-      ...(directive.callToAction ? { callToAction: directive.callToAction } : {}),
-      ...(directive.tone ? { tone: directive.tone } : {}),
-    },
-    requiresResponse: true,
-    traceId: `content-mgr-${randomUUID()}`,
-  };
-
-  const report = await specialist.execute(message);
-  if (report.status !== 'COMPLETED' || !report.data) {
-    const reason = report.errors?.[0] ?? 'The Video Specialist could not build the storyboards.';
-    return { error: reason };
-  }
-  const result = report.data as StoryboardResult;
-  return { storyboards: result.scenes.map(mapSpecialistScene) };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -215,10 +119,12 @@ const VIDEO_DELEGATION_PROTOCOL = `
 You do NOT build storyboards yourself — you delegate to your Video Specialist, the expert. Converse to pin down the concept (who's on screen, the emotional arc, the message, platform, length, tone). When the operator clearly wants it built ("make it", "build the storyboards", "take it from here"), reply with ONE short sentence, then a fenced \`delegate\` block:
 
 \`\`\`delegate
-{"specialist":"VIDEO_SPECIALIST","brief":"<a rich creative brief in your words: the concept, who is on screen and their look, the emotional arc, the message, the CTA>","platform":"youtube|tiktok|instagram_reels|shorts|linkedin|generic","style":"talking_head|documentary|energetic|cinematic","targetDuration":<seconds, 15-150>,"targetAudience":"<who it's for>","callToAction":"<what they should do>","tone":"<editorial tone>"}
+{"specialist":"VIDEO_SPECIALIST","brief":"<a rich creative brief in your words: the concept, who is on screen and their look, the emotional arc, the message, the CTA>","platform":"youtube|tiktok|instagram_reels|shorts|linkedin|generic","style":"talking_head|documentary|energetic|cinematic","targetDuration":<seconds, 15-150>,"targetAudience":"<who it's for>","callToAction":"<what they should do>","tone":"<editorial tone>","targetSceneNumber":<optional 1-based storyboard number, only when reworking ONE existing storyboard>}
 \`\`\`
 
-Write a RICH brief — the specialist turns it into a fully-specified, shot-by-shot storyboard (every field filled) for the operator to review and approve. Pick the platform/style/duration that fit what they asked for. Only emit the block when they actually want it built; while brainstorming, just talk (no block).`;
+Write a RICH brief — the specialist turns it into a fully-specified, shot-by-shot storyboard (every field filled) for the operator to review and approve. Pick the platform/style/duration that fit what they asked for. Only emit the block when they actually want it built; while brainstorming, just talk (no block).
+
+When the operator asks to rebuild / rework / fix / redo / change a SPECIFIC existing storyboard (e.g. "rebuild storyboard 5", "fix SB3", "redo the closing shot"), include \`"targetSceneNumber": N\` (the 1-based storyboard number) in the delegate block, and write \`brief\` as a SINGLE-shot description of just that one storyboard. When building a fresh full video, OMIT targetSceneNumber.`;
 
 // ────────────────────────────────────────────────────────────────────────────
 // System prompt — the Content Manager's conversational identity
@@ -303,7 +209,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (isVideoStoryboardTab(parsed.activeTab)) {
       const delegation = extractDelegateDirective(reply);
       if (delegation?.directive.specialist === 'VIDEO_SPECIALIST') {
-        const built = await buildStoryboardsViaSpecialist(delegation.directive);
+        const { directive } = delegation;
+        const built = await buildStoryboardFromBrief({
+          brief: directive.brief,
+          platform: directive.platform,
+          style: directive.style,
+          targetDuration: directive.targetDuration,
+          ...(directive.targetAudience ? { targetAudience: directive.targetAudience } : {}),
+          ...(directive.callToAction ? { callToAction: directive.callToAction } : {}),
+          ...(directive.tone ? { tone: directive.tone } : {}),
+        });
         if ('error' in built) {
           logger.warn('[ContentManager] Video Specialist delegation failed', { file: FILE, error: built.error });
           return NextResponse.json({
@@ -315,6 +230,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           success: true,
           reply: delegation.cleanedReply || 'Here are your storyboards — review and tweak anything.',
           storyboards: built.storyboards,
+          ...(directive.targetSceneNumber ? { targetSceneNumber: directive.targetSceneNumber } : {}),
         });
       }
     }

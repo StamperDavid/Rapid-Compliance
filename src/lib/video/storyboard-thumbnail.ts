@@ -37,22 +37,60 @@ export function sceneHasDescription(scene: PipelineScene): boolean {
   return hasText(scene.title) || hasText(scene.visualDescription) || hasText(scene.location);
 }
 
+/**
+ * Hard rule appended to every storyboard image prompt: the image model must NEVER
+ * invent branding. The REAL brand logo is composited onto the still afterward, so
+ * the generated scene itself must contain zero text and zero logos — otherwise the
+ * model paints a fake logo / title card (e.g. a made-up logo + "Free Trial").
+ */
+const NO_FAKE_BRANDING =
+  'Absolute rule: render NO text, letters, words, captions, titles, logos, brand marks, ' +
+  'watermarks, company names, or signage anywhere in the image. Zero on-screen lettering ' +
+  'of any kind. Do not invent or depict any logo — the real brand logo is added separately.';
+
+/**
+ * Phrases that, in a scene description, instruct the model to PAINT branding/on-screen
+ * text — which produces a fake logo + garbled lettering. The real logo is composited
+ * as a watermark and any tagline/CTA is a clean post-production text overlay, so the
+ * image model must only paint the visual scene. We strip these clauses (and the brand
+ * name + any quoted on-screen text) before the prompt reaches the model — otherwise a
+ * "show the logo and tagline" instruction fights, and beats, the NO_FAKE_BRANDING rule.
+ */
+const BRANDING_CLAUSE =
+  /\b(logos?|wordmarks?|word marks?|brand ?marks?|taglines?|title cards?|text overlays?|on[-\s]?screen text|lower thirds?|captions?|signage|cta text|text reads?|displayed text|watermarks?)\b/i;
+const BRAND_NAME = /\bsales\s*velocity(?:\.ai|\.com)?\b/gi;
+
+/** Remove any "draw the logo / tagline / on-screen text" language from an image prompt. */
+function stripBrandingLanguage(text: string): string {
+  const clauses = text.split(/(?<=[.;,:])\s+|\s+—\s+/);
+  let out = clauses.filter((clause) => !BRANDING_CLAUSE.test(clause)).join(' ');
+  // Drop quoted on-screen text (e.g. a tagline) and any lingering brand name.
+  out = out.replace(/"[^"]*"/g, '').replace(BRAND_NAME, '');
+  return out.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:])/g, '$1').trim();
+}
+
 /** Build the auto-thumbnail prompt from the storyboard's plain-language fields. */
 export function buildThumbnailPrompt(scene: PipelineScene): string {
   const cine = cinematicSummary(scene.cinematicConfig);
-  const prompt = [
-    'Cinematic film still, photorealistic, professional color grade.',
-    hasText(scene.title) ? `Scene: ${scene.title}.` : '',
-    hasText(scene.visualDescription) ? `Action: ${scene.visualDescription}.` : '',
-    hasText(scene.location) ? `Location: ${scene.location}.` : '',
-    hasText(scene.timeOfDay) ? `Time of day: ${scene.timeOfDay}.` : '',
-    hasText(scene.weather) ? `Weather/light: ${scene.weather}.` : '',
-    hasText(scene.wardrobe) ? `Wardrobe: ${scene.wardrobe}.` : '',
-    cine ? `Style: ${cine}.` : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-  return prompt.length > 1000 ? `${prompt.slice(0, 997)}...` : prompt;
+  const descriptive = stripBrandingLanguage(
+    [
+      'Cinematic film still, photorealistic, professional color grade.',
+      hasText(scene.title) ? `Scene: ${scene.title}.` : '',
+      hasText(scene.visualDescription) ? `Action: ${scene.visualDescription}.` : '',
+      hasText(scene.location) ? `Location: ${scene.location}.` : '',
+      hasText(scene.timeOfDay) ? `Time of day: ${scene.timeOfDay}.` : '',
+      hasText(scene.weather) ? `Weather/light: ${scene.weather}.` : '',
+      hasText(scene.wardrobe) ? `Wardrobe: ${scene.wardrobe}.` : '',
+      cine ? `Style: ${cine}.` : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
+  );
+
+  // Trim the descriptive part so the no-branding rule ALWAYS survives the length cap.
+  const maxDescLen = 1000 - NO_FAKE_BRANDING.length - 1;
+  const trimmed = descriptive.length > maxDescLen ? `${descriptive.slice(0, maxDescLen - 3)}...` : descriptive;
+  return `${trimmed} ${NO_FAKE_BRANDING}`;
 }
 
 type AuthFetch = (url: string, options?: RequestInit) => Promise<Response>;

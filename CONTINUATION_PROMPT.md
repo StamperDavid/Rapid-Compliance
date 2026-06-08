@@ -2,6 +2,55 @@
 
 ---
 
+# 🏷️ RESUME HERE — BRAND IDENTITY UNIFICATION (June 7–8, 2026) ← CURRENT PRIORITY
+
+## THE DECISION (owner, this session)
+Brand identity is fragmented across 5+ stores with **no single source of truth** and silent save-failures (the owner's logo was never actually stored anywhere editable — it's a static `public/logo.png`; image gen was hallucinating a FAKE logo because nothing real was wired in). FIX: build ONE comprehensive **Brand/Identity page** that is the editable source of truth for the tenant's whole brand — voice (Brand DNA), logo, colors, fonts, AND example assets (prior social posts, on-brand ads, brand imagery). Critical for rebrands AND multi-tenant (every tenant = own brand).
+
+## LOCKED ARCHITECTURE (owner + Claude, agreed this session)
+- The **Brand/Identity page is the canonical source of truth.** Onboarding DISCOVERS the brand and POPULATES the page (it already writes brand DNA today — extend it).
+- **Baking into agent Golden Masters STAYS** (Standing Rule #1 — it keeps agents fast, versioned, drift-proof). The page is the SOURCE the bake reads from; it does NOT replace baking.
+- **Editing the page's VOICE auto-triggers a re-bake** of the brand-DNA portion into every agent/specialist GM. Editing VISUALS (logo/colors/fonts) applies LIVE at generation time (no rebake).
+- **Example assets → each agent's KNOWLEDGE BASE** (the proven per-agent KB channel) so agents can SEE real examples of on-brand work in their space. Separate channel from the baked voice; complementary.
+- Multi-tenant: one Brand/Identity page per tenant + re-bake per tenant. This IS the multi-tenant brand architecture.
+
+## ⚠️ HARD REQUIREMENTS / TRAPS (do NOT repeat past setbacks)
+1. **Auto-rebake must NOT clobber training-loop edits (Standing Rule #2).** Re-baking brand DNA must update ONLY the brand-DNA portion of each GM systemPrompt, preserving any human-graded prompt improvements. A naive full reseed WIPES them. THIS IS THE #1 TRAP.
+2. **Auto-rebake runs ASYNC + observable** — reseeding 50+ agents is heavy; never block the save or churn silently. Voice change → tracked background job. Visual-only change → no rebake.
+3. Standing Rule #1 preserved: runtime agents still read their baked GM, no runtime `getBrandDNA()` (CI guard `check-no-runtime-brand-dna.js` must stay green).
+4. **SUBAGENT DISCIPLINE** (owner, emphatic — YC rejection traced to subagent setbacks): subagents do the brunt; Claude RE-RUNS tsc+lint, reads diffs, traces logic on EVERY output before "done". Riskiest pieces (onboarding, rebake) get reviewed SPECS before any live code.
+
+## ✅ DONE (June 7–8, 2026) — all tsc+lint clean, committed + pushed to dev
+**BRAND ENGINE — built, PROVEN, and LIVE:**
+- **Canonical store**: `src/types/brand-identity.ts` (`BrandIdentity` = voice + companyName/tagline + logo + 11-color palette + fonts + typography + introOutro + exampleAssets) + `src/lib/brand/brand-identity-service.ts` (`getBrandIdentity`/`saveBrandIdentity`, with logo bridge → website → `/logo.png` AND voice bridge → Brand DNA until migrated). Migration `scripts/migrate-to-brand-identity.ts` (dry-run verified; NOT yet `--apply`ed).
+- **Surgical re-bake** (`src/lib/brand/rebake-brand-dna.ts`): `swapBrandDNABlock` swaps ONLY the trailing Brand DNA block (marker `## Brand DNA (baked...`), preserving base body + training edits (Standing Rule #2). `createIndustryGMVersionFromBrandRebake` (+ manager mirror) added to the GM services. Unit-proven (`scripts/verify-brand-rebake-swap.ts`) AND live-proven on COPYWRITER with rollback (`scripts/verify-brand-rebake-live.ts`).
+- **TAGLINE LIVE across all 67 LLM agents**: "Accelerate your growth" + never-invent-a-tagline rule. Set in Brand DNA (`scripts/set-brand-tagline.ts`), mass-applied surgically (`scripts/rebake-all-gms-brand-dna.ts --apply` → 66 specialists/managers, 0 failed) + Jasper reseed (`seed-jasper-orchestrator-gm.ts --force`). Verified (`scripts/verify-tagline-live.ts`: 67/67; the 6 NOT covered are confirmed-DEAD legacy `gm_*` docs unread by the runtime swarm). Coverage audit (`scripts/audit-gm-coverage.ts`): the "4 missing specialists" (CATALOG/PAYMENT/PRICING/VOICE) are DETERMINISTIC dispatchers (no LLM) → correctly GM-less; MASTER_ORCHESTRATOR same; Jasper runs live on `gm_orchestrator_v1` (healthy, loaded by `agentType=='orchestrator' && isActive`).
+- **Brand page** (`/settings/brand`, nav under Settings→Customization): `src/app/(dashboard)/settings/brand/page.tsx` + API `src/app/api/settings/brand-identity/route.ts` (GET requireAuth, PUT requirePermission canManageTheme + Zod). Sections: Company · Voice (+ chip editors for key/avoid phrases & competitors) · Logo (upload persists immediately) · Colors (11) · Fonts. Shows the REAL voice via the bridge. (Caught+fixed in review: logo-url Zod rejected `/logo.png` → fixed; empty-voice → voice bridge.) exampleAssets uploads deferred.
+
+**VIDEO-GEN fixes:**
+- Both storyboard paths → ONE Video Specialist (`storyboard-build-service.ts`); fill-every-field + continuity (`storyboard-completeness.ts`, incl. `filters`); script (VO) on each storyboard card.
+- NO-FAKE-LOGO: prompt forbids AND strips logo/text/tagline language (`storyboard-thumbnail.ts`); REAL logo composites from `public/logo.png` (disk), now OPT-IN (`applyBrandLogo`, default OFF → only the closing/brand shot, not every scene); fixed on thumbnails + `/api/video/assemble`.
+- Content Assistant can REWORK a specific storyboard (`targetSceneNumber` → REPLACE in place, not append) — `ContentAssistant.tsx` + assistant route. Brand-kit logo persists on upload.
+
+## ⬜ WHAT'S LEFT (ordered — START HERE next session)
+1. **Wire publish / auto-trigger** — the Brand page edits the canonical store but NOTHING reads it yet. Need: (a) "Publish voice to agents" button → API route running the rebake (extract `rebake-all-gms-brand-dna` logic into `/api/training/rebake-brand-dna` + Jasper); (b) on voice save, write voice back to org `brandDNA` (the source the bake STILL reads) + fire the rebake async (enqueue in `updateBrandDNA` + identity route; job doc + status route; idempotent; partial-failure tolerant). [Spec C: HhTML sentinels optional — marker-to-EOF already works.]
+2. **Surgical Jasper rebake** — Jasper has only the blunt base reseed. Add `createJasperGMVersionFromBrandRebake` to `jasper-golden-master-service.ts` (mirror the specialist one, swap the block) so future brand changes don't reseed Jasper bluntly. ~40 lines.
+3. **Re-point readers to the canonical store** — content/video read `getBrandKit` (visual); the GM bake reads org `brandDNA` (voice). Re-point via the two chokepoints (`getBrandKit`, `getBrandDNA`) so Brand-page edits actually change generation output. Then run `migrate-to-brand-identity --apply` (FIX it first: it would clobber the already-set `tagline` field with the empty website value).
+4. **Example assets** on the Brand page — multi-file upload (posts/ads/imagery) → media library → into each agent's KB (proven per-agent KB channel). Use a new `/api/onboarding/brand-asset`-style Storage route (the `/api/media` multipart path returns base64, not a Storage URL).
+5. **Onboarding capture** (spec ready) — add logo/colors/fonts/example-asset uploads; wire the DORMANT `initializeBrandDNAFromOnboarding` (exists, never called). onboarding/page.tsx is a 2,674-line monster → APPEND steps 25/26, extract step components, upload-on-select so the JSON submit stays unchanged.
+6. **Retire duplication** — old `/settings/brand-kit` + `/settings/brand-dna` → redirect to `/settings/brand`; optionally delete the 6 dead legacy `gm_*` docs (confirm Training-Lab UI doesn't display them first).
+
+**STILL UNTESTED by owner (video-gen):** "rebuild storyboard 5" rework (built, verified, not browser-tested); closing-shot logo preview (open Q: should the closing scene's thumbnail show the real logo + tagline?).
+
+## KEY FILES
+- Canonical store: `src/types/brand-identity.ts`, `src/lib/brand/brand-identity-service.ts`, `src/app/api/settings/brand-identity/route.ts`, `src/app/(dashboard)/settings/brand/page.tsx`.
+- Re-bake: `src/lib/brand/rebake-brand-dna.ts`, `createIndustryGMVersionFromBrandRebake` in `src/lib/training/specialist-golden-master-service.ts` (+ manager mirror). Scripts: `rebake-all-gms-brand-dna.ts`, `verify-brand-rebake-{swap,live}.ts`, `audit-gm-coverage.ts`, `verify-tagline-live.ts`, `set-brand-tagline.ts`, `migrate-to-brand-identity.ts`.
+- Voice/Brand DNA (the bake source): `src/lib/brand/brand-dna-service.ts` (org root doc field `brandDNA`, NOT a subdoc), baked via `scripts/lib/brand-dna-helper.js`, blunt reseed `scripts/reseed-all-gms.js`. Jasper: `src/lib/orchestrator/jasper-golden-master.ts` (loader) + `scripts/seed-jasper-orchestrator-gm.ts` + `src/lib/training/jasper-golden-master-service.ts`.
+- Visual (current readers to re-point): `src/lib/video/brand-kit-service.ts` (`settings/brand-kit`), `src/lib/video/logo-compositor.ts`, `src/app/api/content/asset-generator/generate/route.ts`, `src/app/api/video/assemble/route.ts`.
+- Onboarding: `src/app/api/agent/process-onboarding/route.ts`, `src/app/(dashboard)/onboarding/page.tsx`. Per-agent KB: `src/lib/ai/vector-search.ts`, `/api/agent/knowledge/[agentId]`.
+
+---
+
 # 🎬 RESUME HERE — Content Generator VIDEO tab (June 6–7, 2026)
 
 ## THE VISION (owner, verbatim intent)

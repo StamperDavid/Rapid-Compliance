@@ -26,6 +26,7 @@ import { randomUUID } from 'crypto';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { generateHedraImage } from '@/lib/video/hedra-service';
 import { getBrandKit } from '@/lib/video/brand-kit-service';
+import { DEFAULT_BRAND_KIT } from '@/types/brand-kit';
 import { persistUrlToStorage, persistBufferToStorage } from '@/lib/firebase/storage-utils';
 import { compositeBrandLogo } from '@/lib/video/logo-compositor';
 import { adminStorage } from '@/lib/firebase/admin';
@@ -62,6 +63,12 @@ const GenerateImageSchema = z.object({
     .optional()
     .default('1080p'),
   brandDnaApplied: z.boolean().optional().default(true),
+  /**
+   * Composite the REAL brand logo onto the result. OFF by default — the logo
+   * belongs only on the closing/brand shot, NOT on every scene preview. Callers
+   * set this true only for the deliberate brand frame (e.g. the closing shot).
+   */
+  applyBrandLogo: z.boolean().optional().default(false),
   /** Optional human-readable name for the saved asset; defaults to prompt. */
   name: z.string().trim().max(120).optional(),
 });
@@ -156,7 +163,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         brandKit = await getBrandKit();
         if (brandKit.enabled && brandKit.colors) {
           const { primary, secondary, accent } = brandKit.colors;
-          imagePrompt = `${body.prompt} Brand color palette — use these brand colors cohesively and prominently throughout: primary ${primary}, secondary ${secondary}, accent ${accent}.`;
+          // Don't inject the placeholder default palette — it would tint generations
+          // a brand-incorrect amber. Only inject colors the tenant actually set.
+          const isPlaceholderPalette =
+            primary === DEFAULT_BRAND_KIT.colors.primary &&
+            secondary === DEFAULT_BRAND_KIT.colors.secondary &&
+            accent === DEFAULT_BRAND_KIT.colors.accent;
+          if (!isPlaceholderPalette) {
+            imagePrompt = `${body.prompt} Brand color palette — use these brand colors cohesively and prominently throughout: primary ${primary}, secondary ${secondary}, accent ${accent}.`;
+          }
         }
       } catch (brandErr) {
         logger.warn('[asset-generator-generate] Brand kit load failed; generating without brand', {
@@ -176,8 +191,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 5. Composite the REAL brand logo onto the image (if one is configured) so
     //    the output carries the actual logo, not a generated lookalike.
     let compositedBuffer: Buffer | null = null;
-    if (brandKit?.enabled && brandKit.logo?.url && /^https?:\/\//i.test(brandKit.logo.url)) {
-      compositedBuffer = await compositeBrandLogo(generation.url, brandKit.logo);
+    if (body.applyBrandLogo && brandKit?.enabled && brandKit.logo?.url) {
+      const logoUrl = brandKit.logo.url;
+      // Accept an absolute http(s) URL OR a local static path like '/logo.png'
+      // (the compositor reads local paths from the public/ folder).
+      if (/^https?:\/\//i.test(logoUrl) || (logoUrl.startsWith('/') && !logoUrl.startsWith('//'))) {
+        compositedBuffer = await compositeBrandLogo(generation.url, brandKit.logo);
+      }
     }
 
     // 6. Persist to Firebase Storage so the URL outlives Hedra's CDN.

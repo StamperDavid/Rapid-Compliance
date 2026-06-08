@@ -20,6 +20,8 @@
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { buildBrandDNABlock, swapBrandDNABlock } from '@/lib/brand/rebake-brand-dna';
+import type { BrandDNA } from '@/lib/brand/brand-dna-service';
 import type { ManagerGoldenMaster } from '@/types/training';
 
 // ============================================================================
@@ -363,6 +365,105 @@ export async function createManagerGMVersionFromModelChange(
 
   logger.info(
     `[ManagerGMService] Created v${newVersion} for ${managerId}:${industryKey} (model ${previousModel} -> ${newModel})`,
+    { managerId, industryKey, version: newVersion, newDocId },
+  );
+
+  return newGM;
+}
+
+/**
+ * Create a new MANAGER GM version that refreshes ONLY the baked Brand DNA block,
+ * leaving the department charter base body AND any human training edits intact.
+ *
+ * Operator-initiated (Brand voice refresh from Brand settings) — exempt from the
+ * grade-gated prompt pipeline (Standing Rule #2 guards prompt-body drift, not the
+ * Brand DNA block Settings owns), but versioned + rollbackable via
+ * deployManagerGMVersion. Created inactive; deploy it to activate.
+ *
+ * Swaps only the trailing Brand DNA block (Standing Rule #1) via
+ * `swapBrandDNABlock`. If the active GM has no Brand DNA marker, this is a
+ * seed-time anomaly — we log and return null rather than append a second block.
+ * Keeps `brandDNASnapshot` in lock-step with the freshly baked block.
+ */
+export async function createManagerGMVersionFromBrandRebake(
+  managerId: string,
+  industryKey: string,
+  newBrandDNA: BrandDNA,
+  createdBy: string,
+): Promise<ManagerGoldenMaster | null> {
+  if (!adminDb) { return null; }
+
+  const activeGM = await getActiveManagerGMByIndustry(managerId, industryKey);
+  if (!activeGM) {
+    logger.error(
+      '[ManagerGMService] No active manager GM found — cannot re-bake Brand DNA',
+      undefined,
+      { managerId, industryKey },
+    );
+    return null;
+  }
+
+  const rawSystemPrompt = activeGM.config.systemPrompt;
+  const currentPrompt = typeof rawSystemPrompt === 'string'
+    ? rawSystemPrompt
+    : activeGM.systemPromptSnapshot ?? '';
+  if (!currentPrompt) {
+    logger.error(
+      '[ManagerGMService] Active manager GM has no systemPrompt — cannot re-bake Brand DNA',
+      undefined,
+      { managerId, industryKey, gmId: activeGM.id },
+    );
+    return null;
+  }
+
+  const { newPrompt, replaced } = swapBrandDNABlock(currentPrompt, buildBrandDNABlock(newBrandDNA));
+  if (!replaced) {
+    logger.error(
+      '[ManagerGMService] Active manager GM has no Brand DNA marker — refusing to re-bake (would double-bake)',
+      undefined,
+      { managerId, industryKey, gmId: activeGM.id },
+    );
+    return null;
+  }
+
+  const newVersion = activeGM.version + 1;
+  const newDocId = buildManagerGMDocId(managerId, industryKey, newVersion);
+  const now = new Date().toISOString();
+  const newConfig = {
+    ...activeGM.config,
+    systemPrompt: newPrompt,
+  };
+
+  const newGM: ManagerGoldenMaster = {
+    ...activeGM,
+    id: newDocId,
+    managerId,
+    industryKey,
+    version: newVersion,
+    config: newConfig,
+    systemPromptSnapshot: newPrompt,
+    brandDNASnapshot: newBrandDNA,
+    sourceImprovementRequestId: `brand-rebake-${now}`,
+    changesApplied: [
+      {
+        field: 'brandDNA',
+        currentValue: activeGM.brandDNASnapshot ?? null,
+        proposedValue: newBrandDNA,
+        reason: 'Brand voice refresh from Brand settings',
+        confidence: 1,
+      },
+    ],
+    isActive: false,
+    createdAt: now,
+    createdBy,
+    notes: 'Brand DNA re-bake from Brand settings. Not yet deployed.',
+    previousVersion: activeGM.version,
+  };
+
+  await adminDb.collection(getGMCollectionPath()).doc(newDocId).set(newGM);
+
+  logger.info(
+    `[ManagerGMService] Created v${newVersion} for ${managerId}:${industryKey} from Brand DNA re-bake`,
     { managerId, industryKey, version: newVersion, newDocId },
   );
 

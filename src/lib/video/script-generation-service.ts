@@ -14,6 +14,8 @@ import { logger } from '@/lib/logger/logger';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getMemoryVault, shareInsight } from '@/lib/agents/shared';
+import { getCuratedPresetMenu, getPresetsByCategory, resolvePresetId } from '@/lib/ai/cinematic-presets';
+import type { CinematicConfig } from '@/types/creative-studio';
 
 // ============================================================================
 // Types
@@ -31,6 +33,15 @@ export interface ScriptScene {
   engine: ScriptEngine | null;
   backgroundPrompt: string | null;
   shotGroupId: string | null;
+  // ── Structured storyboard fields — the AI MUST fill every one of these.
+  // A blank here is a bug: see "fill every field" guarantee in ensureSceneCompleteness().
+  location: string;    // Setting
+  timeOfDay: string;   // Setting
+  weather: string;     // Setting — weather / light quality
+  wardrobe: string;    // Cast
+  ambience: string;    // Sound — background ambience
+  musicCue: string;    // Sound — music direction
+  cinematicConfig: CinematicConfig; // Camera & Look (camera, lens, lighting, film stock, look, …)
 }
 
 export interface ScriptGenerationResult {
@@ -74,6 +85,21 @@ export interface ScriptGenerationParams {
 // Zod Schema for AI Response Validation
 // ============================================================================
 
+// The 10 Camera & Look fields the AI chooses per scene. Names from the curated
+// preset menu; resolved to real preset ids in ensureSceneCompleteness().
+const AICinematicConfigSchema = z.object({
+  shotType: z.string().optional(),
+  camera: z.string().optional(),
+  focalLength: z.string().optional(),
+  lensType: z.string().optional(),
+  lighting: z.string().optional(),
+  filmStock: z.string().optional(),
+  videographerStyle: z.string().optional(),
+  movieLook: z.string().optional(),
+  composition: z.string().optional(),
+  artStyle: z.string().optional(),
+}).optional();
+
 const AISceneSchema = z.object({
   sceneNumber: z.number(),
   title: z.string(),
@@ -84,6 +110,16 @@ const AISceneSchema = z.object({
   engine: z.string().nullable().transform(() => 'hedra' as const),
   backgroundPrompt: z.string().nullable(),
   shotGroupId: z.string().nullable().default(null),
+  // Structured storyboard fields — optional at parse time, GUARANTEED non-blank
+  // by ensureSceneCompleteness() (inherits from the previous scene for continuity,
+  // falls back to a brief-derived default). The AI is instructed to fill them all.
+  location: z.string().optional(),
+  timeOfDay: z.string().optional(),
+  weather: z.string().optional(),
+  wardrobe: z.string().optional(),
+  ambience: z.string().optional(),
+  musicCue: z.string().optional(),
+  cinematicConfig: AICinematicConfigSchema,
 });
 
 const AIResponseSchema = z.object({
@@ -276,21 +312,67 @@ The default avatar for this video is **"${avatarContext.name}"**.`;
     prompt += `\n\n## PRODUCTS & SERVICES\nReference these real offerings in scripts where relevant:\n${productContext}`;
   }
 
-  prompt += `\n\n## RESPONSE FORMAT
-Return ONLY valid JSON (no markdown, no code fences) matching this structure:
+  const cinematicMenu = [
+    getCuratedPresetMenu(14),
+    `Shot Type (field "shotType"): ${getPresetsByCategory('shotType').slice(0, 12).map((p) => p.name).join(', ')}`,
+    `Art Style (field "artStyle"): ${getPresetsByCategory('artStyle').slice(0, 12).map((p) => p.name).join(', ')}`,
+  ].join('\n');
+
+  prompt += `\n\n## FILL EVERY FIELD — MANDATORY (hard rule, not a suggestion)
+You are a director writing a COMPLETE shot list. EVERY scene MUST have EVERY field below filled with a real, specific value. A human may leave fields blank; YOU never may. Never output an empty string, "N/A", "none", or a placeholder. If the brief is thin, make a confident professional choice that fits the story.
+
+Per scene you MUST provide, in addition to the script fields:
+- **location** — where the scene takes place (Setting)
+- **timeOfDay** — e.g. "Late afternoon, golden hour"
+- **weather** — weather / light quality, e.g. "Clear, warm side-light through windows"
+- **wardrobe** — what the on-screen person wears (Cast)
+- **ambience** — background sound bed (Sound), e.g. "quiet office hum, distant keyboards"
+- **musicCue** — music direction (Sound), e.g. "warm underscore building to the CTA"
+- **cinematicConfig** — the Camera & Look. Fill ALL of: shotType, camera, focalLength, lensType, lighting, filmStock, videographerStyle, movieLook, composition, artStyle.
+
+### Choose Camera & Look values from these options (use the option NAME exactly as written):
+${cinematicMenu}
+
+### CONTINUITY — make the clips feel like ONE film (CRITICAL)
+The scenes are stitched back-to-back, so they must look like the same production shot by the same crew:
+- Pick ONE camera, ONE film stock, ONE videographer style, ONE movie look, ONE art style, and ONE lighting family up front, then REPEAT THOSE SAME VALUES in every scene that shares the world. Same world → same location string, same color temperature, same look.
+- What SHOULD change scene-to-scene is the **shotType** (and sometimes focalLength / composition) — vary the framing (wide establishing → medium → close-up) while keeping the look identical. That is how a real film covers a scene.
+- Only change location, lighting family, or film stock for a DELIBERATE narrative reason (a flashback, a hard before/after contrast, a location jump). When you do, it should read as an intentional beat, not drift.
+- wardrobe stays the SAME for the same character across scenes unless the story explicitly changes their outfit.
+
+## RESPONSE FORMAT
+Return ONLY valid JSON (no markdown, no code fences). EVERY field present on EVERY scene:
 {
   "targetAudience": "string describing the ideal viewer",
   "keyMessages": ["3 key takeaways"],
   "scenes": [
     {
       "sceneNumber": 1,
-      "title": "Scene Title — also conveys the emotional beat (e.g. 'The Wake-Up Call', 'The Breakthrough')",
-      "scriptText": "Natural spoken script with emotional direction. Write EXACTLY what the avatar says — conversational, specific, compelling. 15-25 words per 5 seconds of duration.",
-      "visualDescription": "Full scene description: character appearance (age, gender, clothing, grooming), their demeanor (leaning in, gesturing, serious gaze), shot framing (close-up, medium), mood (warm, tense, excited). Keep character appearance CONSISTENT across all scenes.",
+      "title": "Scene Title — also conveys the emotional beat (e.g. 'The Wake-Up Call')",
+      "scriptText": "Natural spoken script with emotional direction. Conversational, specific, compelling. 15-25 words per 5 seconds.",
+      "visualDescription": "Full scene description: character appearance (age, gender, clothing, grooming), demeanor, framing, mood. Keep character appearance CONSISTENT across all scenes.",
       "suggestedDuration": 12,
       "engine": "hedra",
       "backgroundPrompt": "Cinematic background: setting + lighting + color palette + atmosphere. Must match the script's emotional tone.",
-      "shotGroupId": null
+      "shotGroupId": null,
+      "location": "Modern open-plan office, glass-walled, city skyline beyond",
+      "timeOfDay": "Late afternoon, golden hour",
+      "weather": "Clear, warm low sun raking through the windows",
+      "wardrobe": "Charcoal tailored blazer over a white tee",
+      "ambience": "Quiet office hum, distant keyboards, low chatter",
+      "musicCue": "Warm corporate underscore, building to the CTA",
+      "cinematicConfig": {
+        "shotType": "Wide",
+        "camera": "ARRI ALEXA 65",
+        "focalLength": "35mm",
+        "lensType": "Anamorphic",
+        "lighting": "Golden Hour",
+        "filmStock": "Kodak Portra 400",
+        "videographerStyle": "Roger Deakins",
+        "movieLook": "Her",
+        "composition": "Rule of Thirds",
+        "artStyle": "Photorealistic"
+      }
     }
   ]
 }
@@ -299,9 +381,11 @@ QUALITY CHECK — Before returning, verify:
 1. Does the opening scene hook within 3 seconds?
 2. Does each scene end with a reason to keep watching?
 3. Do the emotional tones VARY across scenes (not all the same energy)?
-4. Are the background prompts visually consistent (same color temperature, lighting style)?
-5. Are scripts specific and concrete (no generic claims)?
-6. Would you want to watch this? If not, rewrite it.`;
+4. Is EVERY field filled on EVERY scene — no blanks, no "N/A", no placeholders?
+5. Do camera, film stock, videographer style, movie look, art style and lighting REPEAT across scenes that share the world (continuity)?
+6. Does only the framing (shotType) vary within the same world, not the whole look?
+7. Are scripts specific and concrete (no generic claims)?
+8. Would you want to watch this? If not, rewrite it.`;
 
   return prompt;
 }
@@ -565,7 +649,10 @@ async function generateAIScripts(
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.7,
-      maxTokens: 6000,
+      // Each scene now carries the full storyboard (script + Setting/Cast/Sound +
+      // the 10 Camera & Look fields), so the JSON is ~2x larger — raised to avoid
+      // truncation dropping us to the template fallback on longer videos.
+      maxTokens: 10000,
     });
   } catch (aiError) {
     logger.error('OpenRouter API call failed for script generation',
@@ -614,7 +701,7 @@ async function generateAIScripts(
     return null;
   }
 
-  let validated: { targetAudience: string; keyMessages: string[]; scenes: Array<{ sceneNumber: number; title: string; scriptText: string; visualDescription: string; suggestedDuration: number; engine: 'hedra'; backgroundPrompt: string | null; shotGroupId: string | null }> };
+  let validated: z.infer<typeof AIResponseSchema>;
   try {
     validated = AIResponseSchema.parse(parsed);
   } catch (zodError) {
@@ -629,17 +716,17 @@ async function generateAIScripts(
     return null;
   }
 
-  const totalDuration = validated.scenes.reduce((sum, s) => sum + s.suggestedDuration, 0);
+  // RULE: when the AI drafts a storyboard, every field is filled. Resolve Camera &
+  // Look choices to real preset ids, carry shared values forward for continuity, and
+  // backfill anything still blank so a storyboard never lands with an empty field.
+  const completeScenes = ensureSceneCompleteness(validated.scenes, params);
+  const totalDuration = completeScenes.reduce((sum, s) => sum + s.suggestedDuration, 0);
 
   const result: ScriptGenerationResult = {
     videoType: params.videoType,
     targetAudience: validated.targetAudience,
     keyMessages: validated.keyMessages,
-    scenes: validated.scenes.map((s) => ({
-      ...s,
-      engine: s.engine,
-      backgroundPrompt: s.backgroundPrompt,
-    })),
+    scenes: completeScenes,
     assetsNeeded: determineAssetsNeeded(params.videoType, params.platform),
     avatarRecommendation: null,
     estimatedTotalDuration: totalDuration,
@@ -681,7 +768,10 @@ function generateFallbackScripts(
   params: ScriptGenerationParams,
   sceneCount: number,
 ): ScriptGenerationResult {
-  const scenes: ScriptScene[] = [];
+  // Base scenes carry the narrative fields; ensureSceneCompleteness() fills the
+  // Setting / Cast / Camera & Look / Sound fields so the template path obeys the
+  // same "every field filled" rule as the AI path.
+  const scenes: AIScene[] = [];
   const durationPerScene = Math.floor(params.duration / sceneCount);
   const topic = params.description.substring(0, 120);
 
@@ -890,14 +980,16 @@ function generateFallbackScripts(
     }
   }
 
+  const completeScenes = ensureSceneCompleteness(scenes, params);
+
   return {
     videoType: params.videoType,
     targetAudience: params.targetAudience ?? 'Business professionals and teams',
     keyMessages: extractKeyMessages(params.description, params.videoType),
-    scenes,
+    scenes: completeScenes,
     assetsNeeded: determineAssetsNeeded(params.videoType, params.platform),
     avatarRecommendation: null,
-    estimatedTotalDuration: scenes.reduce((sum, s) => sum + s.suggestedDuration, 0),
+    estimatedTotalDuration: completeScenes.reduce((sum, s) => sum + s.suggestedDuration, 0),
     generatedBy: 'template',
   };
 }
@@ -947,6 +1039,119 @@ function determineAssetsNeeded(videoType: ScriptVideoType, _platform: string): s
   }
 
   return baseAssets;
+}
+
+// ============================================================================
+// "Fill every field" guarantee + cross-scene continuity
+// ============================================================================
+
+/** Parsed-but-not-yet-completed scene shape (new fields optional at parse time). */
+type AIScene = z.infer<typeof AISceneSchema>;
+
+/**
+ * The 10 Camera & Look fields the AI fills per scene. Every one is both a key of
+ * CinematicConfig (string-valued) and a valid PresetCategory, so they can be fed
+ * straight to resolvePresetId / getPresetsByCategory.
+ */
+type CinematicField =
+  | 'shotType' | 'camera' | 'focalLength' | 'lensType' | 'lighting'
+  | 'filmStock' | 'videographerStyle' | 'movieLook' | 'composition' | 'artStyle';
+
+const CINEMATIC_FIELDS: readonly CinematicField[] = [
+  'shotType', 'camera', 'focalLength', 'lensType', 'lighting',
+  'filmStock', 'videographerStyle', 'movieLook', 'composition', 'artStyle',
+];
+
+/** First curated preset id for a category — the deterministic last-resort default. */
+function defaultPresetId(category: CinematicField): string {
+  return getPresetsByCategory(category)[0]?.id ?? '';
+}
+
+/** First value that is a non-empty string (after trim); '' if none qualify. */
+function firstFilled(...values: Array<string | undefined>): string {
+  for (const v of values) {
+    if (v !== undefined && v.trim() !== '') { return v; }
+  }
+  return '';
+}
+
+/** Brief-derived defaults for the plain-language Setting / Cast / Sound fields. */
+function structuredFieldDefaults(params: ScriptGenerationParams): {
+  location: string; timeOfDay: string; weather: string;
+  wardrobe: string; ambience: string; musicCue: string;
+} {
+  const vibe = params.vibe?.trim();
+  const energetic = params.tone === 'energetic';
+  return {
+    location: vibe
+      ? `${vibe} — one consistent location across the video`
+      : 'Modern open-plan tech office with floor-to-ceiling windows',
+    timeOfDay: 'Late afternoon',
+    weather: 'Clear, soft natural daylight',
+    wardrobe: 'Smart-casual — a tailored blazer over a plain tee',
+    ambience: 'Soft office ambience — distant keyboards, low chatter',
+    musicCue: energetic
+      ? 'Driving electronic beat, building energy into the CTA'
+      : 'Warm corporate underscore, building to the CTA',
+  };
+}
+
+/**
+ * Enforce the product rule: when the AI drafts a storyboard, EVERY field is filled.
+ * A human may leave fields blank; the AI never may.
+ *
+ * Two jobs, applied scene-by-scene in order:
+ *  1. CONTINUITY — most scenes share one world, so any field the AI left blank
+ *     INHERITS from the previous scene (same location, lighting, film stock, look…).
+ *     This is what makes the clips stitch into one cohesive film. The system prompt
+ *     asks the AI to carry values forward deliberately; this is the backstop.
+ *  2. NON-BLANK GUARANTEE — anything still empty after inheritance falls back to a
+ *     brief-derived default (Setting/Cast/Sound) or the first curated preset (Camera &
+ *     Look). Every Camera & Look value is resolved to a real preset id so the pickers
+ *     render the selection instead of raw text.
+ */
+function ensureSceneCompleteness(
+  scenes: AIScene[],
+  params: ScriptGenerationParams,
+): ScriptScene[] {
+  const defaults = structuredFieldDefaults(params);
+  let prev: ScriptScene | null = null;
+
+  return scenes.map((scene) => {
+    const rawCfg = scene.cinematicConfig ?? {};
+
+    // Camera & Look: AI choice → resolved preset id → inherit previous → curated default.
+    const cinematicConfig: CinematicConfig = {};
+    for (const field of CINEMATIC_FIELDS) {
+      const aiValue = rawCfg[field]?.trim();
+      const resolved = aiValue ? resolvePresetId(field, aiValue) : undefined;
+      cinematicConfig[field] = firstFilled(resolved, prev?.cinematicConfig?.[field], defaultPresetId(field));
+    }
+
+    // Setting / Cast / Sound: AI value → inherit previous → brief-derived default.
+    const pick = (aiValue: string | undefined, key: keyof typeof defaults): string =>
+      firstFilled(aiValue, prev?.[key], defaults[key]);
+
+    const complete: ScriptScene = {
+      sceneNumber: scene.sceneNumber,
+      title: scene.title,
+      scriptText: scene.scriptText,
+      visualDescription: scene.visualDescription,
+      suggestedDuration: scene.suggestedDuration,
+      engine: scene.engine,
+      backgroundPrompt: scene.backgroundPrompt,
+      shotGroupId: scene.shotGroupId,
+      location: pick(scene.location, 'location'),
+      timeOfDay: pick(scene.timeOfDay, 'timeOfDay'),
+      weather: pick(scene.weather, 'weather'),
+      wardrobe: pick(scene.wardrobe, 'wardrobe'),
+      ambience: pick(scene.ambience, 'ambience'),
+      musicCue: pick(scene.musicCue, 'musicCue'),
+      cinematicConfig,
+    };
+    prev = complete;
+    return complete;
+  });
 }
 
 // ============================================================================

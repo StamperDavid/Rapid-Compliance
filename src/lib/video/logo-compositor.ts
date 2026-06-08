@@ -34,21 +34,42 @@ function gravityOffset(
 }
 
 /**
- * Download a base image + the brand logo and composite the logo onto the base at
- * the configured corner, scale, and opacity. Returns the composited PNG buffer,
+ * Load the logo bytes. Supports a remote URL (fetch) OR a local static asset path
+ * like '/logo.png' (read from the app's public/ folder on disk) — the tenant's real
+ * logo currently ships as a static asset rather than an uploaded URL.
+ */
+async function loadLogoBuffer(url: string): Promise<Buffer | null> {
+  try {
+    if (url.startsWith('/') && !url.startsWith('//')) {
+      const fsMod = await import('node:fs/promises');
+      const pathMod = await import('node:path');
+      return await fsMod.readFile(pathMod.join(process.cwd(), 'public', url));
+    }
+    const res = await fetch(url, { redirect: 'follow' });
+    if (!res.ok) {
+      return null;
+    }
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Download a base image + load the brand logo and composite the logo onto the base
+ * at the configured corner, scale, and opacity. Returns the composited PNG buffer,
  * or null if anything goes wrong (caller falls back to the un-composited image).
  */
 export async function compositeBrandLogo(baseImageUrl: string, logo: BrandLogo): Promise<Buffer | null> {
   try {
-    const [baseRes, logoRes] = await Promise.all([
+    const [baseRes, logoBuf] = await Promise.all([
       fetch(baseImageUrl, { redirect: 'follow' }),
-      fetch(logo.url, { redirect: 'follow' }),
+      loadLogoBuffer(logo.url),
     ]);
-    if (!baseRes.ok || !logoRes.ok) {
+    if (!baseRes.ok || !logoBuf) {
       return null;
     }
     const baseBuf = Buffer.from(await baseRes.arrayBuffer());
-    const logoBuf = Buffer.from(await logoRes.arrayBuffer());
 
     const base = sharp(baseBuf);
     const baseMeta = await base.metadata();

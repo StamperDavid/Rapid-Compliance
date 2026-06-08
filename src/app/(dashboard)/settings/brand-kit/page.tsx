@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import {
@@ -43,6 +43,9 @@ export default function BrandKitPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -63,23 +66,34 @@ export default function BrandKitPage() {
     })();
   }, [authFetch]);
 
+  // ── Persist ─────────────────────────────────────────────────────────────────
+  // Single writer for the brand-kit doc. Used by the explicit Save button AND the
+  // logo upload, so an uploaded logo persists immediately — no silent "forgot to
+  // Save" trap that leaves generated images without the real logo.
+  const persistKit = useCallback(
+    async (kit: BrandKit): Promise<boolean> => {
+      const res = await authFetch('/api/settings/brand-kit', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: kit.enabled,
+          logo: kit.logo,
+          colors: kit.colors,
+          typography: kit.typography,
+          introOutro: kit.introOutro,
+        }),
+      });
+      return res.ok;
+    },
+    [authFetch],
+  );
+
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     setSaving(true);
     setSaved(false);
     try {
-      const res = await authFetch('/api/settings/brand-kit', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enabled: brandKit.enabled,
-          logo: brandKit.logo,
-          colors: brandKit.colors,
-          typography: brandKit.typography,
-          introOutro: brandKit.introOutro,
-        }),
-      });
-      if (res.ok) {
+      if (await persistKit(brandKit)) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       }
@@ -88,7 +102,51 @@ export default function BrandKitPage() {
     } finally {
       setSaving(false);
     }
-  }, [authFetch, brandKit]);
+  }, [persistKit, brandKit]);
+
+  // ── Logo upload ─────────────────────────────────────────────────────────────
+  const handleLogoFile = useCallback(
+    async (file: File) => {
+      setLogoError(null);
+      setUploadingLogo(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await authFetch('/api/settings/brand-kit/logo', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = (await res.json()) as { success: boolean; url?: string; error?: string };
+        if (!res.ok || !data.success || !data.url) {
+          setLogoError(data.error ?? 'Upload failed. Please try again.');
+          return;
+        }
+        // Set the permanent URL and enable the kit so the logo actually composites,
+        // then PERSIST immediately — uploading a logo now saves it on its own, so it
+        // can't silently fail to stick and leave generated images without the logo.
+        const updated: BrandKit = {
+          ...brandKit,
+          enabled: true,
+          logo: {
+            url: data.url,
+            position: brandKit.logo?.position ?? 'bottom-right',
+            opacity: brandKit.logo?.opacity ?? 0.85,
+            scale: brandKit.logo?.scale ?? 0.1,
+          },
+        };
+        setBrandKit(updated);
+        if (await persistKit(updated)) {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 3000);
+        }
+      } catch {
+        setLogoError('Upload failed. Please check your connection and try again.');
+      } finally {
+        setUploadingLogo(false);
+      }
+    },
+    [authFetch, brandKit, persistKit],
+  );
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const updateColors = (field: string, value: string) => {
@@ -181,40 +239,67 @@ export default function BrandKitPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Logo URL Input */}
+          {/* Upload logo file (primary) */}
           <div>
-            <label className="text-sm text-zinc-300 block mb-1">Logo URL</label>
+            <input
+              ref={logoFileInputRef}
+              type="file"
+              accept="image/png,image/svg+xml,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { void handleLogoFile(file); }
+                // Allow re-selecting the same file again
+                e.target.value = '';
+              }}
+            />
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={brandKit.logo?.url ?? ''}
-                onChange={(e) =>
-                  setBrandKit((prev) => ({
-                    ...prev,
-                    logo: {
-                      url: e.target.value,
-                      position: prev.logo?.position ?? 'bottom-right',
-                      opacity: prev.logo?.opacity ?? 0.7,
-                      scale: prev.logo?.scale ?? 0.1,
-                    },
-                  }))
-                }
-                placeholder="https://... (paste logo URL)"
-                className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
-              />
               <Button
-                variant="outline"
                 size="sm"
-                className="gap-1.5"
-                onClick={() => {
-                  // Clear logo
-                  setBrandKit((prev) => ({ ...prev, logo: null }));
-                }}
+                className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+                disabled={uploadingLogo}
+                onClick={() => logoFileInputRef.current?.click()}
               >
-                <Upload className="w-3.5 h-3.5" />
-                Clear
+                {uploadingLogo ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                {uploadingLogo ? 'Uploading…' : 'Upload Logo'}
               </Button>
+              {brandKit.logo?.url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBrandKit((prev) => ({ ...prev, logo: null }))}
+                >
+                  Remove
+                </Button>
+              )}
             </div>
+            {logoError && <p className="text-xs text-red-400 mt-2">{logoError}</p>}
+          </div>
+
+          {/* Or paste a logo URL */}
+          <div>
+            <label className="text-sm text-zinc-300 block mb-1">…or paste a logo URL</label>
+            <input
+              type="text"
+              value={brandKit.logo?.url ?? ''}
+              onChange={(e) =>
+                setBrandKit((prev) => ({
+                  ...prev,
+                  logo: {
+                    url: e.target.value,
+                    position: prev.logo?.position ?? 'bottom-right',
+                    opacity: prev.logo?.opacity ?? 0.85,
+                    scale: prev.logo?.scale ?? 0.1,
+                  },
+                }))
+              }
+              placeholder="https://... (paste a public logo URL)"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+            />
           </div>
 
           {/* Logo Preview */}
