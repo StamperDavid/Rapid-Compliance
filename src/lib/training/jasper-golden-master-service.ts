@@ -34,6 +34,8 @@ import {
   getActiveJasperGoldenMaster,
   invalidateJasperGMCache as invalidateJasperGMCacheFromLoader,
 } from '@/lib/orchestrator/jasper-golden-master';
+import { buildBrandDNABlock, swapBrandDNABlock } from '@/lib/brand/rebake-brand-dna';
+import type { BrandDNA } from '@/lib/brand/brand-dna-service';
 
 // ============================================================================
 // CONSTANTS + INTERNAL HELPERS
@@ -345,6 +347,132 @@ export async function createJasperGMVersionFromEdit(
       previousVersion: activeVersionNumber,
       sourceFeedbackId: edit.sourceFeedbackId,
       promptLength: newSystemPrompt.length,
+    },
+  );
+
+  return newRecord;
+}
+
+/**
+ * Create a new versioned Jasper GM that refreshes ONLY the baked Brand DNA
+ * block of the active Jasper GM's `systemPrompt`, leaving the orchestrator base
+ * body AND any human training edits untouched.
+ *
+ * This is operator-initiated (Brand voice refresh from Brand settings) — NOT an
+ * agent editing its own prompt — so it is exempt from the grade-gated prompt
+ * pipeline (Standing Rule #2 guards prompt-body drift, not the trailing Brand
+ * DNA block that Settings owns). It mirrors the specialist/manager
+ * `create*FromBrandRebake` functions and, like them, carries no feedback id.
+ * The surgical swap replaces ONLY the trailing Brand DNA block (Standing
+ * Rule #1) via `swapBrandDNABlock` and never touches the body above the marker.
+ *
+ * The new doc lands with `isActive: false`. The caller must call
+ * `deployJasperGMVersion` after the re-bake to activate it.
+ *
+ * Returns the new record, or null if no active Jasper GM exists, the active GM
+ * has no systemPrompt, or the active GM has no Brand DNA marker (a seed-time
+ * anomaly — we refuse to append a second block).
+ */
+export async function createJasperGMVersionFromBrandRebake(
+  newBrandDNA: BrandDNA,
+  createdBy: string,
+): Promise<JasperGoldenMasterVersion | null> {
+  if (!adminDb) { return null; }
+
+  const activeGM = await getActiveJasperGoldenMaster();
+  if (!activeGM) {
+    logger.error(
+      '[JasperGMService] No active Jasper GM found — cannot re-bake Brand DNA',
+    );
+    return null;
+  }
+
+  const currentPrompt = activeGM.systemPrompt;
+  if (!currentPrompt) {
+    logger.error(
+      '[JasperGMService] Active Jasper GM has no systemPrompt — cannot re-bake Brand DNA',
+      undefined,
+      { gmId: activeGM.id },
+    );
+    return null;
+  }
+
+  const { newPrompt, replaced } = swapBrandDNABlock(currentPrompt, buildBrandDNABlock(newBrandDNA));
+  if (!replaced) {
+    logger.error(
+      '[JasperGMService] Active Jasper GM has no Brand DNA marker — refusing to re-bake (would double-bake)',
+      undefined,
+      { gmId: activeGM.id },
+    );
+    return null;
+  }
+
+  // Scan all existing versions and pick max + 1 (same as createJasperGMVersionFromEdit).
+  const existingVersions = await listJasperGMVersions();
+  const activeVersionNumber = existingVersions.find((v) => v.isActive)?.versionNumber
+    ?? parseLegacyVersionString(activeGM.version, 1);
+  const highestVersionNumber = existingVersions.length > 0
+    ? Math.max(...existingVersions.map((v) => v.versionNumber))
+    : activeVersionNumber;
+  const newVersionNumber = highestVersionNumber + 1;
+  const newDocId = buildJasperGMDocId(newVersionNumber);
+  const now = new Date().toISOString();
+
+  const newRecord: JasperGoldenMasterVersion = {
+    id: newDocId,
+    agentType: JASPER_AGENT_TYPE,
+    versionNumber: newVersionNumber,
+    version: buildVersionLabel(newVersionNumber),
+    systemPrompt: newPrompt,
+    systemPromptSnapshot: newPrompt,
+    agentPersona: activeGM.agentPersona,
+    behaviorConfig: activeGM.behaviorConfig,
+    knowledgeBase: activeGM.knowledgeBase,
+    isActive: false,
+    previousVersion: activeVersionNumber,
+    sourceFeedbackId: null,
+    changesApplied: [
+      {
+        field: 'brandDNA',
+        currentValue: '(previous brand voice)',
+        proposedValue: '(updated brand voice)',
+        reason: 'Brand voice refresh from Brand settings',
+      },
+    ],
+    createdAt: now,
+    createdBy,
+    notes: 'Brand DNA re-bake from Brand settings. Not yet deployed.',
+  };
+
+  // Build the Firestore payload. We explicitly list every field so Firestore
+  // doesn't serialize any undefined properties (it rejects undefined at write).
+  const firestorePayload: Record<string, unknown> = {
+    agentType: newRecord.agentType,
+    versionNumber: newRecord.versionNumber,
+    version: newRecord.version,
+    systemPrompt: newRecord.systemPrompt,
+    systemPromptSnapshot: newRecord.systemPromptSnapshot,
+    isActive: newRecord.isActive,
+    previousVersion: newRecord.previousVersion,
+    sourceFeedbackId: newRecord.sourceFeedbackId,
+    changesApplied: newRecord.changesApplied,
+    createdAt: newRecord.createdAt,
+    createdBy: newRecord.createdBy,
+    notes: newRecord.notes,
+  };
+  if (newRecord.agentPersona !== undefined) { firestorePayload.agentPersona = newRecord.agentPersona; }
+  if (newRecord.behaviorConfig !== undefined) { firestorePayload.behaviorConfig = newRecord.behaviorConfig; }
+  if (newRecord.knowledgeBase !== undefined) { firestorePayload.knowledgeBase = newRecord.knowledgeBase; }
+
+  await adminDb.collection(getGMCollectionPath()).doc(newDocId).set(firestorePayload);
+
+  logger.info(
+    `[JasperGMService] Created Jasper GM v${newVersionNumber} from Brand DNA re-bake`,
+    {
+      newDocId,
+      versionNumber: newVersionNumber,
+      previousVersion: activeVersionNumber,
+      promptLength: newPrompt.length,
     },
   );
 

@@ -10,6 +10,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth, requirePermission } from '@/lib/auth/api-auth';
 import { getBrandIdentity, saveBrandIdentity } from '@/lib/brand/brand-identity-service';
+import { updateBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -146,6 +147,25 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     }
 
     const brandIdentity = await saveBrandIdentity(parsed.data, permResult.user.uid);
+
+    // Write the saved voice back to the org's `brandDNA` field — the source the
+    // Golden-Master bake reads. Without this, the Brand page would edit the
+    // canonical identity doc but the "Publish to Agents" re-bake (which reads
+    // `getBrandDNA()`) would keep baking the STALE voice. This is the bridge that
+    // makes the page the real source of truth. We do NOT trigger the re-bake here —
+    // publishing to agents is a deliberate, operator-pressed button (so a 67-agent
+    // update never fires by surprise). Failure to mirror must not fail the save
+    // itself (the identity doc is already persisted), so it's isolated here.
+    try {
+      await updateBrandDNA(parsed.data.voice, permResult.user.uid);
+    } catch (mirrorError) {
+      logger.error(
+        'Saved brand identity but failed to mirror voice into org brandDNA',
+        mirrorError instanceof Error ? mirrorError : new Error(String(mirrorError)),
+        { file: FILE },
+      );
+    }
+
     return NextResponse.json({ success: true, brandIdentity });
   } catch (error) {
     logger.error(

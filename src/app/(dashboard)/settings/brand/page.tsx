@@ -13,6 +13,8 @@ import {
   Save,
   Loader2,
   CheckCircle,
+  Megaphone,
+  AlertTriangle,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +29,37 @@ import {
   type BrandVoice,
   type BrandPalette,
 } from '@/types/brand-identity';
+
+// ── Publish-to-Agents job types (mirrors /api/training/rebake-brand-dna) ─────
+
+interface RebakeJob {
+  id: string;
+  status: 'running' | 'completed' | 'failed';
+  trigger: 'manual-publish' | 'voice-save';
+  triggeredBy: string;
+  total: number;
+  done: number;
+  rebaked: number;
+  skipped: number;
+  failed: number;
+  failures: Array<{ id: string; error: string }>;
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
+}
+
+interface StartRebakeResponse {
+  success: boolean;
+  jobId?: string;
+  error?: string;
+}
+
+interface RebakeJobResponse {
+  success: boolean;
+  job?: RebakeJob | null;
+}
+
+const POLL_INTERVAL_MS = 1500;
 
 // ── Logo Position Labels ────────────────────────────────────────────────────
 
@@ -133,6 +166,78 @@ export default function BrandIdentityPage() {
   const [logoError, setLogoError] = useState<string | null>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Publish-to-Agents state ─────────────────────────────────────────────────
+  const [publishJob, setPublishJob] = useState<RebakeJob | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current !== null) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  // Begin polling a specific job until it leaves the `running` state.
+  const beginPolling = useCallback(
+    (jobId: string) => {
+      stopPolling();
+      pollRef.current = setInterval(() => {
+        void (async () => {
+          try {
+            const res = await authFetch(`/api/training/rebake-brand-dna/${jobId}`);
+            if (!res.ok) {
+              return;
+            }
+            const data = (await res.json()) as RebakeJobResponse;
+            if (data.success && data.job) {
+              setPublishJob(data.job);
+              if (data.job.status !== 'running') {
+                stopPolling();
+              }
+            }
+          } catch {
+            // Transient network error — keep polling; unmount/completion clears it.
+          }
+        })();
+      }, POLL_INTERVAL_MS);
+    },
+    [authFetch, stopPolling],
+  );
+
+  // Clear any live interval when the component unmounts.
+  useEffect(() => stopPolling, [stopPolling]);
+
+  // ── Publish: start the rebake job, then poll to completion ──────────────────
+  const handlePublish = useCallback(async () => {
+    setPublishError(null);
+    try {
+      const res = await authFetch('/api/training/rebake-brand-dna', { method: 'POST' });
+      const data = (await res.json()) as StartRebakeResponse;
+      if (!res.ok || !data.success || !data.jobId) {
+        setPublishError(data.error ?? 'Could not start publishing. Please try again.');
+        return;
+      }
+      // Optimistic running state so the UI updates before the first poll lands.
+      setPublishJob({
+        id: data.jobId,
+        status: 'running',
+        trigger: 'manual-publish',
+        triggeredBy: '',
+        total: 0,
+        done: 0,
+        rebaked: 0,
+        skipped: 0,
+        failed: 0,
+        failures: [],
+        startedAt: new Date().toISOString(),
+      });
+      beginPolling(data.jobId);
+    } catch {
+      setPublishError('Could not start publishing. Please check your connection and try again.');
+    }
+  }, [authFetch, beginPolling]);
+
   // ── Fetch ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     void (async () => {
@@ -151,6 +256,27 @@ export default function BrandIdentityPage() {
       }
     })();
   }, [authFetch]);
+
+  // ── Load most-recent publish job (for last-published status + resume) ───────
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await authFetch('/api/training/rebake-brand-dna');
+        if (!res.ok) {
+          return;
+        }
+        const data = (await res.json()) as RebakeJobResponse;
+        if (data.success && data.job) {
+          setPublishJob(data.job);
+          if (data.job.status === 'running') {
+            beginPolling(data.job.id);
+          }
+        }
+      } catch {
+        // No prior job / network issue — nothing to show.
+      }
+    })();
+  }, [authFetch, beginPolling]);
 
   // ── Persist ─────────────────────────────────────────────────────────────────
   // Single writer for the brand-identity doc. Used by the explicit Save button AND
@@ -268,6 +394,17 @@ export default function BrandIdentityPage() {
     setIdentity((prev) => ({ ...prev, fonts: { ...prev.fonts, [field]: value } }));
   };
 
+  // ── Derived publish UI values ───────────────────────────────────────────────
+  const publishing = publishJob?.status === 'running';
+  const progressPct =
+    publishJob && publishJob.total > 0
+      ? Math.min(100, Math.round((publishJob.done / publishJob.total) * 100))
+      : 0;
+  const lastPublishedAt =
+    publishJob?.status !== 'running' && publishJob?.finishedAt
+      ? new Date(publishJob.finishedAt).toLocaleString()
+      : null;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-16">
@@ -341,8 +478,8 @@ export default function BrandIdentityPage() {
             Brand Voice
           </CardTitle>
           <CardDescription>
-            Voice changes save here; publishing them to your AI agents is a separate step (coming
-            next).
+            Voice changes save here; once saved, use the Publish to Agents button below to push them
+            to your AI agents.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -417,6 +554,95 @@ export default function BrandIdentityPage() {
             onAdd={(v) => addToVoiceList('competitors', v)}
             onRemove={(i) => removeFromVoiceList('competitors', i)}
           />
+        </CardContent>
+      </Card>
+
+      {/* ── Publish to Agents ───────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Megaphone className="w-5 h-5 text-primary" />
+            Publish to Agents
+          </CardTitle>
+          <CardDescription>
+            Pushes your current saved brand voice out to every one of your AI agents so they all
+            speak in the updated voice. This only updates the brand voice part of each agent — it
+            never erases an agent&apos;s training, and it&apos;s safe and reversible. Save your
+            changes first, then publish.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => {
+                void handlePublish();
+              }}
+              disabled={publishing}
+              className="gap-2"
+            >
+              {publishing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Megaphone className="w-4 h-4" />
+              )}
+              {publishing ? 'Publishing…' : 'Publish to Agents'}
+            </Button>
+            {lastPublishedAt && !publishing && (
+              <span className="text-xs text-muted-foreground">Last published: {lastPublishedAt}</span>
+            )}
+          </div>
+
+          {publishError && <p className="text-sm text-destructive">{publishError}</p>}
+
+          {/* Live progress while running */}
+          {publishing && (
+            <div className="space-y-2">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-surface-elevated">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Updating your agents…{' '}
+                {publishJob ? `${publishJob.done} of ${publishJob.total}` : 'starting'}
+              </p>
+            </div>
+          )}
+
+          {/* Completion (succeeded job) */}
+          {publishJob?.status === 'completed' && (
+            <div className="space-y-2">
+              <p className="flex items-center gap-2 text-sm text-foreground">
+                <CheckCircle className="w-4 h-4 text-primary shrink-0" />
+                Your agents are now using the updated brand voice — {publishJob.rebaked} updated,{' '}
+                {publishJob.skipped} already current.
+              </p>
+              {publishJob.failed > 0 && (
+                <div className="space-y-1">
+                  <p className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    {publishJob.failed} agent(s) had a problem.
+                  </p>
+                  <ul className="space-y-0.5 pl-6 text-xs text-muted-foreground">
+                    {publishJob.failures.map((f) => (
+                      <li key={f.id}>
+                        <span className="font-mono">{f.id}</span> — {f.error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Fatal job failure */}
+          {publishJob?.status === 'failed' && (
+            <p className="flex items-center gap-2 text-sm text-destructive">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {publishJob.error ?? 'Publishing failed. Please try again.'}
+            </p>
+          )}
         </CardContent>
       </Card>
 
