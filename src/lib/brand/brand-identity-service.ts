@@ -12,6 +12,7 @@
 
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { getBrandDNA } from './brand-dna-service';
 import {
   DEFAULT_BRAND_IDENTITY,
   type BrandIdentity,
@@ -84,6 +85,27 @@ export async function getBrandIdentity(): Promise<BrandIdentity> {
     updatedAt: data.updatedAt ?? DEFAULT_BRAND_IDENTITY.updatedAt,
     updatedBy: data.updatedBy ?? DEFAULT_BRAND_IDENTITY.updatedBy,
   };
+
+  // Voice bridge: until this doc's `voice` is populated (migration), pull the real
+  // voice from Brand DNA (the source the agents still bake from) so the Brand page
+  // shows the tenant's ACTUAL voice — company description, key phrases incl. the
+  // tagline — instead of empty defaults.
+  if (!data.voice) {
+    const dna = await getBrandDNA();
+    if (dna) {
+      identity.voice = {
+        companyDescription: dna.companyDescription ?? '',
+        uniqueValue: dna.uniqueValue ?? '',
+        targetAudience: dna.targetAudience ?? '',
+        toneOfVoice: dna.toneOfVoice ?? '',
+        communicationStyle: dna.communicationStyle ?? '',
+        keyPhrases: Array.isArray(dna.keyPhrases) ? dna.keyPhrases : [],
+        avoidPhrases: Array.isArray(dna.avoidPhrases) ? dna.avoidPhrases : [],
+        industry: dna.industry ?? '',
+        competitors: Array.isArray(dna.competitors) ? dna.competitors : [],
+      };
+    }
+  }
 
   // No own logo set → borrow the real one (and palette) from the website editor,
   // and failing that, fall back to the static logo the app ships with.
