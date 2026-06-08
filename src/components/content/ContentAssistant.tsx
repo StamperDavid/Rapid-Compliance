@@ -102,6 +102,7 @@ export function ContentAssistant() {
         success: boolean;
         reply?: string;
         storyboards?: AssistantStoryboard[];
+        targetSceneNumber?: number;
         error?: string;
       };
 
@@ -112,7 +113,59 @@ export function ContentAssistant() {
       // If the director built storyboards and we're on the Video tab, drop them
       // straight onto the canvas for the operator to review, tweak, and approve.
       const storyboards = data.storyboards ?? [];
-      const applied = storyboards.length > 0 && isVideoStoryboardTab(pathname);
+      const onVideoTab = isVideoStoryboardTab(pathname);
+
+      // Rework path: the operator asked to rebuild ONE existing storyboard. Replace
+      // that scene in place (keep its position/number) instead of appending a new one.
+      const targetIdx =
+        data.targetSceneNumber !== undefined ? data.targetSceneNumber - 1 : -1;
+      const reworkTarget =
+        onVideoTab && storyboards.length >= 1 && targetIdx >= 0
+          ? useVideoPipelineStore.getState().scenes[targetIdx]
+          : undefined;
+      const reworked = reworkTarget !== undefined;
+
+      if (reworked && reworkTarget) {
+        const sb = storyboards[0];
+        const targetId = reworkTarget.id;
+        useVideoPipelineStore.getState().updateScene(targetId, {
+          // Keep the scene's existing sceneNumber — do NOT overwrite its position.
+          title: sb.title ?? '',
+          scriptText: sb.scriptText ?? '',
+          visualDescription: sb.visualDescription ?? '',
+          screenshotUrl: null,
+          avatarId: null,
+          avatarName: null,
+          voiceId: null,
+          voiceProvider: null,
+          duration: sb.duration ?? 5,
+          engine: 'hedra',
+          backgroundPrompt: sb.backgroundPrompt ?? null,
+          cinematicConfig: sb.cinematicConfig,
+          location: sb.location,
+          timeOfDay: sb.timeOfDay,
+          weather: sb.weather,
+          ambience: sb.ambience,
+          musicCue: sb.musicCue,
+          wardrobe: sb.wardrobe,
+          status: 'draft',
+        });
+
+        // Regenerate the reworked scene's thumbnail in the background.
+        void (async () => {
+          const aspectRatio = useVideoPipelineStore.getState().brief.aspectRatio;
+          const scene = useVideoPipelineStore.getState().scenes.find((s) => s.id === targetId);
+          if (scene && sceneHasDescription(scene)) {
+            const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio);
+            if ('url' in result) {
+              useVideoPipelineStore.getState().updateScene(targetId, { screenshotUrl: result.url });
+            }
+          }
+        })();
+      }
+
+      // Append path: a fresh build (no target), or a target that's out of range.
+      const applied = !reworked && storyboards.length > 0 && onVideoTab;
       if (applied) {
         const addScene = useVideoPipelineStore.getState().addScene;
         const createdIds: string[] = [];
@@ -165,7 +218,12 @@ export function ContentAssistant() {
 
       setMessages((prev) => {
         const next: ChatMessage[] = [...prev, { role: 'assistant', content: data.reply as string }];
-        if (applied) {
+        if (reworked) {
+          next.push({
+            role: 'assistant',
+            content: `✓ Reworked storyboard ${data.targetSceneNumber} — review the updated fields.`,
+          });
+        } else if (applied) {
           next.push({
             role: 'assistant',
             content: `✓ Added ${storyboards.length} storyboard${storyboards.length > 1 ? 's' : ''} to your strip — review the fields, cast your character, and mark each ready.`,

@@ -17,6 +17,8 @@
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { buildBrandDNABlock, swapBrandDNABlock } from '@/lib/brand/rebake-brand-dna';
+import type { BrandDNA } from '@/lib/brand/brand-dna-service';
 import type { SpecialistGoldenMaster, SpecialistImprovementRequest } from '@/types/training';
 
 // ============================================================================
@@ -613,6 +615,107 @@ export async function createIndustryGMVersionFromModelChange(
 
   logger.info(
     `[SpecialistGMService] Created industry-scoped v${newVersion} for ${specialistId}:${industryKey} (model ${previousModel} -> ${newModel})`,
+    { specialistId, industryKey, version: newVersion, newDocId },
+  );
+
+  return newGM;
+}
+
+/**
+ * Create a new GM version that refreshes ONLY the baked Brand DNA block,
+ * leaving the industry base body AND any human training edits untouched.
+ *
+ * This is operator-initiated (Brand voice refresh from Brand settings) — NOT an
+ * agent editing its own prompt — so it is exempt from the grade-gated prompt
+ * pipeline (Standing Rule #2 guards prompt-body drift, not the Brand DNA block
+ * that Settings owns). It IS versioned and rollbackable via
+ * deployIndustryGMVersion, and created inactive; deploy it to activate.
+ *
+ * Swaps only the trailing Brand DNA block (Standing Rule #1) via
+ * `swapBrandDNABlock`. If the active GM has no Brand DNA marker, this is a
+ * seed-time anomaly — we log and return null rather than append a second block.
+ * The new doc keeps `brandDNASnapshot` in lock-step with the freshly baked block.
+ */
+export async function createIndustryGMVersionFromBrandRebake(
+  rawSpecialistId: string,
+  industryKey: string,
+  newBrandDNA: BrandDNA,
+  createdBy: string,
+): Promise<SpecialistGoldenMaster | null> {
+  if (!adminDb) { return null; }
+
+  const specialistId = resolveSpecialistIdAlias(rawSpecialistId);
+  const activeGM = await getActiveSpecialistGMByIndustry(specialistId, industryKey);
+  if (!activeGM) {
+    logger.error(
+      '[SpecialistGMService] No active industry GM found — cannot re-bake Brand DNA',
+      undefined,
+      { specialistId, industryKey },
+    );
+    return null;
+  }
+
+  const rawSystemPrompt = activeGM.config.systemPrompt;
+  const currentPrompt = typeof rawSystemPrompt === 'string'
+    ? rawSystemPrompt
+    : activeGM.systemPromptSnapshot ?? '';
+  if (!currentPrompt) {
+    logger.error(
+      '[SpecialistGMService] Active GM has no systemPrompt — cannot re-bake Brand DNA',
+      undefined,
+      { specialistId, industryKey, gmId: activeGM.id },
+    );
+    return null;
+  }
+
+  const { newPrompt, replaced } = swapBrandDNABlock(currentPrompt, buildBrandDNABlock(newBrandDNA));
+  if (!replaced) {
+    logger.error(
+      '[SpecialistGMService] Active GM has no Brand DNA marker — refusing to re-bake (would double-bake)',
+      undefined,
+      { specialistId, industryKey, gmId: activeGM.id },
+    );
+    return null;
+  }
+
+  const newVersion = activeGM.version + 1;
+  const newDocId = buildIndustryGMDocId(specialistId, industryKey, newVersion);
+  const now = new Date().toISOString();
+  const newConfig: Record<string, unknown> = {
+    ...activeGM.config,
+    systemPrompt: newPrompt,
+  };
+
+  const newGM: SpecialistGoldenMaster = {
+    id: newDocId,
+    specialistId: activeGM.specialistId,
+    specialistName: activeGM.specialistName,
+    version: newVersion,
+    industryKey,
+    config: newConfig,
+    systemPromptSnapshot: newPrompt,
+    brandDNASnapshot: newBrandDNA,
+    sourceImprovementRequestId: `brand-rebake-${now}`,
+    changesApplied: [
+      {
+        field: 'brandDNA',
+        currentValue: activeGM.brandDNASnapshot ?? null,
+        proposedValue: newBrandDNA,
+        reason: 'Brand voice refresh from Brand settings',
+        confidence: 1,
+      },
+    ],
+    isActive: false,
+    createdAt: now,
+    createdBy,
+    notes: 'Brand DNA re-bake from Brand settings. Not yet deployed.',
+    previousVersion: activeGM.version,
+  };
+
+  await adminDb.collection(getGMCollectionPath()).doc(newDocId).set(newGM);
+
+  logger.info(
+    `[SpecialistGMService] Created industry-scoped v${newVersion} for ${specialistId}:${industryKey} from Brand DNA re-bake`,
     { specialistId, industryKey, version: newVersion, newDocId },
   );
 

@@ -326,6 +326,9 @@ const StripItem = forwardRef<HTMLDivElement, StripItemProps>(function StripItem(
             <span className="text-[9px] text-muted-foreground">Prompt-only</span>
           )}
         </div>
+        {scene.scriptText?.trim() ? (
+          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2 leading-snug" title={scene.scriptText}>{scene.scriptText}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -688,7 +691,14 @@ export function StepStoryboard() {
       const data = (await response.json()) as {
         success: boolean;
         plan: {
-          scenes: { sceneNumber: number; title: string; scriptText: string; visualDescription: string; suggestedDuration: number; engine: string | null; backgroundPrompt: string | null }[];
+          scenes: {
+            sceneNumber: number; title: string; scriptText: string; visualDescription: string;
+            suggestedDuration: number; engine: string | null; backgroundPrompt: string | null;
+            // Structured storyboard fields the AI now fills for every scene.
+            location?: string; timeOfDay?: string; weather?: string;
+            wardrobe?: string; ambience?: string; musicCue?: string;
+            cinematicConfig?: CinematicConfig;
+          }[];
           [key: string]: unknown;
         };
       };
@@ -718,6 +728,14 @@ export function StepStoryboard() {
           engine: 'hedra',
           backgroundPrompt: scene.backgroundPrompt,
           status: 'draft' as const,
+          // AI-filled storyboard fields (Setting / Cast / Sound / Camera & Look).
+          location: scene.location,
+          timeOfDay: scene.timeOfDay,
+          weather: scene.weather,
+          wardrobe: scene.wardrobe,
+          ambience: scene.ambience,
+          musicCue: scene.musicCue,
+          cinematicConfig: scene.cinematicConfig,
         }));
         setScenes(pipelineScenes);
         setSelectedSceneId(pipelineScenes[0]?.id ?? null);

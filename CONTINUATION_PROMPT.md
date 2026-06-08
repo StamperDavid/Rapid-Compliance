@@ -2,6 +2,48 @@
 
 ---
 
+# 🏷️ RESUME HERE — BRAND IDENTITY UNIFICATION (June 7, 2026) ← CURRENT PRIORITY
+
+## THE DECISION (owner, this session)
+Brand identity is fragmented across 5+ stores with **no single source of truth** and silent save-failures (the owner's logo was never actually stored anywhere editable — it's a static `public/logo.png`; image gen was hallucinating a FAKE logo because nothing real was wired in). FIX: build ONE comprehensive **Brand/Identity page** that is the editable source of truth for the tenant's whole brand — voice (Brand DNA), logo, colors, fonts, AND example assets (prior social posts, on-brand ads, brand imagery). Critical for rebrands AND multi-tenant (every tenant = own brand).
+
+## LOCKED ARCHITECTURE (owner + Claude, agreed this session)
+- The **Brand/Identity page is the canonical source of truth.** Onboarding DISCOVERS the brand and POPULATES the page (it already writes brand DNA today — extend it).
+- **Baking into agent Golden Masters STAYS** (Standing Rule #1 — it keeps agents fast, versioned, drift-proof). The page is the SOURCE the bake reads from; it does NOT replace baking.
+- **Editing the page's VOICE auto-triggers a re-bake** of the brand-DNA portion into every agent/specialist GM. Editing VISUALS (logo/colors/fonts) applies LIVE at generation time (no rebake).
+- **Example assets → each agent's KNOWLEDGE BASE** (the proven per-agent KB channel) so agents can SEE real examples of on-brand work in their space. Separate channel from the baked voice; complementary.
+- Multi-tenant: one Brand/Identity page per tenant + re-bake per tenant. This IS the multi-tenant brand architecture.
+
+## ⚠️ HARD REQUIREMENTS / TRAPS (do NOT repeat past setbacks)
+1. **Auto-rebake must NOT clobber training-loop edits (Standing Rule #2).** Re-baking brand DNA must update ONLY the brand-DNA portion of each GM systemPrompt, preserving any human-graded prompt improvements. A naive full reseed WIPES them. THIS IS THE #1 TRAP.
+2. **Auto-rebake runs ASYNC + observable** — reseeding 50+ agents is heavy; never block the save or churn silently. Voice change → tracked background job. Visual-only change → no rebake.
+3. Standing Rule #1 preserved: runtime agents still read their baked GM, no runtime `getBrandDNA()` (CI guard `check-no-runtime-brand-dna.js` must stay green).
+4. **SUBAGENT DISCIPLINE** (owner, emphatic — YC rejection traced to subagent setbacks): subagents do the brunt; Claude RE-RUNS tsc+lint, reads diffs, traces logic on EVERY output before "done". Riskiest pieces (onboarding, rebake) get reviewed SPECS before any live code.
+
+## ✅ DONE THIS SESSION (bridge fixes — keep working while we build the real thing; all tsc+lint clean)
+- Unified BOTH storyboard paths onto the ONE Video Specialist (chat + Draft-with-AI button → `buildStoryboardFromBrief` → VideoSpecialist; raw `generateVideoScripts` demoted to fallback). New `src/lib/video/storyboard-build-service.ts`.
+- "Fill every field" guarantee + cross-scene continuity in `src/lib/video/storyboard-completeness.ts` (incl. the previously-missing `filters` field).
+- NO-FAKE-LOGO: image prompt forbids the model drawing any text/logo (`storyboard-thumbnail.ts`); the REAL logo composites from `public/logo.png` (read from disk) via `logo-compositor.ts` + `getBrandKit()` fallback chain (brand-kit → website-editor → static `/logo.png`). Fixed on BOTH thumbnails AND `/api/video/assemble`. Placeholder amber colors no longer injected.
+- Brand-kit logo upload now PERSISTS on upload (no silent "forgot to Save"). Script (VO) now visible on every storyboard card.
+- Diagnostics: `scripts/check-brand-logo-sources.ts`, `scripts/find-brand-logo.ts`.
+
+## BUILD PLAN (phased; finish + VERIFY each before next)
+0. **Investigate/spec the 3 hard pieces** (subagents, Claude reviews before any live code): canonical data model · onboarding extension · auto-rebake-WITHOUT-clobber. ← LAUNCHED.
+1. **Canonical Brand/Identity store** — `BrandIdentity` type + `brand-identity-service` unifying voice + logo + colors + fonts + example assets. Migrate existing brand-dna + the static logo into it.
+2. **Brand/Identity page** (`/settings/brand`) — sections: Voice · Logo & Visuals · Colors · Fonts · Example Assets (uploads) + live previews. Visual saves instant; voice save → async rebake.
+3. **Auto-rebake service** — on voice edit, re-bake ONLY the brand-DNA portion into all GMs (PRESERVE training edits), async + observable ("Publish voice to agents" status).
+4. **Onboarding update** — extend questions + add upload abilities (logo, example posts/ads/imagery, fonts) → write to the canonical store. (`onboarding/page.tsx` is a 2,674-line monster — handle carefully.)
+5. **Re-point readers + retire duplication** — content gen, video, website, email, social read the canonical store; example assets → agent KBs; retire scattered stores.
+
+## KEY FILES (from the brand-store inventory, this session)
+- Voice/Brand DNA: `src/lib/brand/brand-dna-service.ts` (org `settings/brand-dna`), baked via `scripts/lib/brand-dna-helper.js`, reseed `scripts/reseed-all-gms.js`.
+- Visual: `src/lib/video/brand-kit-service.ts` (`settings/brand-kit`), `src/types/brand-kit.ts`, `src/lib/video/logo-compositor.ts`.
+- Website branding: `platform/website-editor-config` (branding.logoUrl/colors — currently EMPTY); `src/types/website-editor.ts`. Theme: `themes/{id}` (`src/types/theme.ts`).
+- Onboarding: `src/app/api/agent/process-onboarding/route.ts`, `src/app/(dashboard)/onboarding/page.tsx`.
+- Per-agent KB (for examples): `src/lib/ai/vector-search.ts`, `rag-service.getAgentKnowledgeContext`, `/api/agent/knowledge/[agentId]`.
+
+---
+
 # 🎬 RESUME HERE — Content Generator VIDEO tab (June 6–7, 2026)
 
 ## THE VISION (owner, verbatim intent)

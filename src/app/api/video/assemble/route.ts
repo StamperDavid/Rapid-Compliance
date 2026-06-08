@@ -275,7 +275,15 @@ export async function POST(request: NextRequest) {
         });
 
         const logoPath = join(workDir, 'brand_logo.png');
-        await downloadVideo(brandKit.logo.url, logoPath);
+        const logoUrl = brandKit.logo.url;
+        if (logoUrl.startsWith('/') && !logoUrl.startsWith('//')) {
+          // Local static asset (e.g. '/logo.png') — copy from the public/ folder
+          // rather than downloading (downloadVideo can't fetch a relative path).
+          const { copyFile } = await import('node:fs/promises');
+          await copyFile(join(process.cwd(), 'public', logoUrl), logoPath);
+        } else {
+          await downloadVideo(logoUrl, logoPath);
+        }
 
         const brandedPath = join(workDir, 'assembled_branded.mp4');
         await addWatermark(
