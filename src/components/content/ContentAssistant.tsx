@@ -78,6 +78,8 @@ interface Attachment {
   analyzing?: boolean;
   /** The AI's read of the file's content (vision for images, transcript for A/V, text for docs). */
   aiSummary?: string;
+  /** Media-library record id for this upload — target for the operator's name/description/use. */
+  libraryAssetId?: string;
 }
 
 /** Coarse medium for picking the chip icon — derived from kind + MIME type. */
@@ -196,6 +198,13 @@ export function ContentAssistant() {
   /** How many files are currently uploading (lets us show "Uploading N…"). */
   const [uploadingCount, setUploadingCount] = useState(0);
   const [dragActive, setDragActive] = useState(false);
+  // Labeling flow: after fresh uploads finish, the assistant asks the operator for
+  // a name / description / intended use; until they answer, the next send is routed
+  // to the label-apply endpoint instead of the creative flow.
+  const [awaitingLabels, setAwaitingLabels] = useState(false);
+  const pendingLabelRef = useRef<Array<{ id: string; fileName: string }>>([]);
+  const freshUploadsRef = useRef<Array<{ id: string; fileName: string }>>([]);
+  const prevUploadingRef = useRef(0);
 
   const threadRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -232,6 +241,30 @@ export function ContentAssistant() {
   useEffect(() => {
     attachmentsRef.current = attachments;
   }, [attachments]);
+
+  // When a batch of fresh uploads finishes, ask the operator to label them before
+  // saving to the library. Library-picked attachments are already labeled, so they
+  // never enter freshUploadsRef and never trigger this.
+  useEffect(() => {
+    if (
+      prevUploadingRef.current > 0 &&
+      uploadingCount === 0 &&
+      freshUploadsRef.current.length > 0 &&
+      !awaitingLabels
+    ) {
+      const pending = freshUploadsRef.current.slice();
+      freshUploadsRef.current = [];
+      pendingLabelRef.current = pending;
+      setAwaitingLabels(true);
+      const count = pending.length;
+      const ask =
+        count > 1
+          ? `I've added ${count} files. Before I save them to your library, tell me a name, a brief description, and their intended use — I'll apply your answer to all ${count}, numbered (e.g. "Name 1", "Name 2"…).`
+          : `I've added "${pending[0]?.fileName ?? 'your file'}". Before I save it to your library, tell me a name, a brief description, and its intended use.`;
+      setMessages((prev) => [...prev, { role: 'assistant', content: ask }]);
+    }
+    prevUploadingRef.current = uploadingCount;
+  }, [uploadingCount, awaitingLabels]);
 
   // Revoke every outstanding preview object URL when the component unmounts.
   useEffect(() => {
@@ -334,6 +367,7 @@ export function ContentAssistant() {
           fileName?: string;
           contentType?: string;
           kind?: Attachment['kind'];
+          libraryAssetId?: string;
           error?: string;
         };
         if (!res.ok || !data.success || !data.url) {
@@ -346,9 +380,15 @@ export function ContentAssistant() {
           contentType: data.contentType ?? file.type,
           kind: data.kind ?? (isVideo ? 'video' : isImage ? 'image' : 'other'),
           analyzing: true,
+          ...(data.libraryAssetId ? { libraryAssetId: data.libraryAssetId } : {}),
           ...(previewUrl ? { previewUrl } : {}),
         };
         setAttachments((prev) => [...prev, attachment]);
+        // Track this fresh upload so we can prompt for its name/description/use
+        // once the whole batch finishes uploading.
+        if (data.libraryAssetId) {
+          freshUploadsRef.current.push({ id: data.libraryAssetId, fileName: attachment.fileName });
+        }
 
         // Kick off the AI read of this file in the background. `send` awaits any
         // in-flight analysis so the server always has the understanding.
@@ -400,6 +440,59 @@ export function ContentAssistant() {
       }
     },
     [analyzeAttachment],
+  );
+
+  /** Apply the operator's typed answer (name / description / use) to pending uploads. */
+  const submitLabels = useCallback(
+    async (reply: string) => {
+      const pending = pendingLabelRef.current;
+      const text = reply.trim();
+      if (pending.length === 0 || text.length === 0) {
+        setAwaitingLabels(false);
+        return;
+      }
+      pendingLabelRef.current = [];
+      setMessages((prev) => [...prev, { role: 'user', content: text }]);
+      setInput('');
+      setLoading(true);
+      try {
+        const res = await authFetch('/api/content/assistant/label-uploads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assets: pending, reply: text }),
+        });
+        const data = (await res.json()) as {
+          success?: boolean;
+          applied?: Array<{ name: string }>;
+          error?: string;
+        };
+        if (res.ok && data.success) {
+          const names = (data.applied ?? []).map((a) => a.name).join(', ');
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: `Saved to your library: ${names || 'done'}. You can pull these up anytime with "Search library".`,
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            { role: 'assistant', content: `I couldn't save those: ${data.error ?? 'unknown error'}. Want to try again?` },
+          ]);
+        }
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'I couldn\'t save those right now — try again in a moment.' },
+        ]);
+      } finally {
+        setAwaitingLabels(false);
+        clearAttachments();
+        setLoading(false);
+      }
+    },
+    [authFetch, clearAttachments],
   );
 
   /** Upload every picked/dropped file concurrently, appending each result. */
@@ -479,6 +572,12 @@ export function ContentAssistant() {
   }, [messages, open, loading]);
 
   const send = useCallback(async () => {
+    // If we're waiting on the operator to label fresh uploads, this turn IS their
+    // answer — route it to the label-apply step instead of the creative flow.
+    if (awaitingLabels) {
+      await submitLabels(input);
+      return;
+    }
     const text = input.trim();
     const sentAttachments = attachments;
     const uploading = uploadingCount > 0;
@@ -658,7 +757,7 @@ export function ContentAssistant() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, uploadingCount, attachments, clearAttachments, messages, authFetch, pathname]);
+  }, [input, loading, uploadingCount, attachments, clearAttachments, messages, authFetch, pathname, awaitingLabels, submitLabels]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
