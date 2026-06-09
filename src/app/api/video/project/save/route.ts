@@ -23,7 +23,9 @@ const SaveProjectSchema = z.object({
   batchIndex: z.number().int().min(0).optional(),
   name: z.string().min(1, 'Project name required'),
   brief: z.object({
-    description: z.string().min(1),
+    // Drafts get auto-saved before the brief has any prose — an empty description
+    // must NOT block a save (this was silently 400-ing every auto-save).
+    description: z.string().default(''),
     videoType: z.enum([
       'tutorial',
       'explainer',
@@ -33,7 +35,8 @@ const SaveProjectSchema = z.object({
       'social-ad',
     ]),
     platform: z.enum(['youtube', 'tiktok', 'instagram', 'linkedin', 'website', 'generic']),
-    duration: z.number().min(10).max(600),
+    // Single-scene drafts can be a few seconds — don't reject short durations.
+    duration: z.number().min(1).max(600),
     aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']),
     resolution: z.enum(['720p', '1080p', '4k']),
   }),
