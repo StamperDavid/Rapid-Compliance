@@ -203,6 +203,31 @@ function ChipListEditor({
   );
 }
 
+// ── Folder-upload helpers ────────────────────────────────────────────────────
+
+/** Max files we accept from a single folder pick — protects the upload queue. */
+const FOLDER_FILE_CAP = 30;
+
+/**
+ * Keep only real, uploadable files from a folder's flat FileList: drop dotfiles
+ * (names starting with '.'), macOS resource forks (`__MACOSX`), and zero-byte
+ * files. `webkitRelativePath` carries the in-folder path, so we test both the
+ * file name and every path segment for the junk markers.
+ */
+function keepRealFolderFiles(files: FileList): File[] {
+  return Array.from(files).filter((file) => {
+    if (file.size === 0) {
+      return false;
+    }
+    const relative = file.webkitRelativePath || file.name;
+    const segments = relative.split('/');
+    if (segments.some((seg) => seg.startsWith('.') || seg === '__MACOSX')) {
+      return false;
+    }
+    return !file.name.startsWith('.');
+  });
+}
+
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function BrandIdentityPage() {
@@ -222,6 +247,7 @@ export default function BrandIdentityPage() {
   // Which assets are mid-analysis (AI reading their contents). Set of asset ids.
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const assetFileInputRef = useRef<HTMLInputElement>(null);
+  const assetFolderInputRef = useRef<HTMLInputElement>(null);
   const armDisarmRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Advanced dashboard-theme section is collapsed by default — most users never open it.
@@ -279,6 +305,17 @@ export default function BrandIdentityPage() {
     },
     [],
   );
+
+  // The folder picker needs `webkitdirectory`/`directory`, which aren't typed on
+  // React's input props — set them imperatively so the input selects a whole
+  // folder while the single-file picker stays as-is.
+  useEffect(() => {
+    const el = assetFolderInputRef.current;
+    if (el) {
+      el.setAttribute('webkitdirectory', '');
+      el.setAttribute('directory', '');
+    }
+  }, []);
 
   // ── Publish: start the rebake job, then poll to completion ──────────────────
   const handlePublish = useCallback(async () => {
@@ -543,6 +580,37 @@ export default function BrandIdentityPage() {
       }
     },
     [authFetch, identity, persistIdentity, analyzeAsset],
+  );
+
+  // ── Reference Materials folder upload ───────────────────────────────────────
+  // Reuses handleAssetFile per kept file — same upload/append/analyze path as the
+  // single picker, just fanned out across a whole folder.
+  const handleAssetFolder = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const picked = e.target.files;
+      // Reset so re-picking the same folder fires onChange again.
+      e.target.value = '';
+      if (!picked || picked.length === 0) {
+        return;
+      }
+      setAssetError(null);
+      const kept = keepRealFolderFiles(picked);
+      if (kept.length === 0) {
+        setAssetError('That folder had no uploadable files.');
+        return;
+      }
+      let toUpload = kept;
+      if (kept.length > FOLDER_FILE_CAP) {
+        toUpload = kept.slice(0, FOLDER_FILE_CAP);
+        setAssetError(
+          `Folder has ${kept.length} files — uploading the first ${FOLDER_FILE_CAP}.`,
+        );
+      }
+      for (const file of toUpload) {
+        void handleAssetFile(file);
+      }
+    },
+    [handleAssetFile],
   );
 
   // Immutable per-field update of a single asset by id (state only — persisted on blur).
@@ -1237,19 +1305,40 @@ export default function BrandIdentityPage() {
                 e.target.value = '';
               }}
             />
-            <Button
-              size="sm"
-              className="gap-1.5"
-              disabled={uploadingAsset}
-              onClick={() => assetFileInputRef.current?.click()}
-            >
-              {uploadingAsset ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Upload className="w-3.5 h-3.5" />
-              )}
-              {uploadingAsset ? 'Uploading…' : 'Upload Reference'}
-            </Button>
+            {/* Folder picker — `webkitdirectory`/`directory` set imperatively above. */}
+            <input
+              ref={assetFolderInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleAssetFolder}
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={uploadingAsset}
+                onClick={() => assetFileInputRef.current?.click()}
+              >
+                {uploadingAsset ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                {uploadingAsset ? 'Uploading…' : 'Upload Reference'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                disabled={uploadingAsset}
+                onClick={() => assetFolderInputRef.current?.click()}
+                title="Upload a whole folder"
+              >
+                <FolderUp className="w-3.5 h-3.5" />
+                Upload folder
+              </Button>
+            </div>
             {assetError && <p className="text-xs text-destructive mt-2">{assetError}</p>}
           </div>
 

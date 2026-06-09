@@ -19,6 +19,7 @@ import {
   File as FileIcon,
   FileText,
   FileVideo,
+  FolderUp,
   Loader2,
   MessageSquarePlus,
   Music,
@@ -115,6 +116,29 @@ function attachmentMedium(att: Pick<Attachment, 'kind' | 'contentType'>): Attach
   return 'other';
 }
 
+/** Max files we accept from a single folder pick — protects the upload queue. */
+const FOLDER_FILE_CAP = 30;
+
+/**
+ * Keep only real, uploadable files from a folder's flat FileList: drop dotfiles
+ * (names starting with '.'), macOS resource forks (`__MACOSX`), and zero-byte
+ * files. `webkitRelativePath` carries the in-folder path, so we test both the
+ * file name and every path segment for the junk markers.
+ */
+function keepRealFolderFiles(files: FileList): File[] {
+  return Array.from(files).filter((file) => {
+    if (file.size === 0) {
+      return false;
+    }
+    const relative = file.webkitRelativePath || file.name;
+    const segments = relative.split('/');
+    if (segments.some((seg) => seg.startsWith('.') || seg === '__MACOSX')) {
+      return false;
+    }
+    return !file.name.startsWith('.');
+  });
+}
+
 function isVideoStoryboardTab(pathname: string | null): boolean {
   const p = (pathname ?? '').toLowerCase();
   return p.includes('/content/video') && !p.includes('/editor') && !p.includes('/library');
@@ -172,6 +196,7 @@ export function ContentAssistant() {
 
   const threadRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   // Map of attachment id → its live object URL so we can revoke each one exactly
   // once on remove/clear/send/unmount (no leaks).
   const previewUrlsRef = useRef<Map<string, string>>(new Map());
@@ -208,6 +233,17 @@ export function ContentAssistant() {
       revokeAllPreviews();
     };
   }, [revokeAllPreviews]);
+
+  // The folder picker needs `webkitdirectory`/`directory`, which aren't typed on
+  // React's input props — set them imperatively so the input selects a whole
+  // folder while the regular file picker stays single/multi-file.
+  useEffect(() => {
+    const el = folderInputRef.current;
+    if (el) {
+      el.setAttribute('webkitdirectory', '');
+      el.setAttribute('directory', '');
+    }
+  }, []);
 
   const removeAttachment = useCallback(
     (id: string) => {
@@ -355,6 +391,34 @@ export function ContentAssistant() {
       }
     },
     [uploadFiles],
+  );
+
+  const onFolderSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const picked = e.target.files;
+      // Reset so re-picking the same folder fires onChange again.
+      e.target.value = '';
+      if (!picked || picked.length === 0) {
+        return;
+      }
+      setError(null);
+      const kept = keepRealFolderFiles(picked);
+      if (kept.length === 0) {
+        setError('That folder had no uploadable files.');
+        return;
+      }
+      let toUpload = kept;
+      if (kept.length > FOLDER_FILE_CAP) {
+        toUpload = kept.slice(0, FOLDER_FILE_CAP);
+        setError(
+          `Folder has ${kept.length} files — uploading the first ${FOLDER_FILE_CAP}.`,
+        );
+      }
+      for (const file of toUpload) {
+        void uploadOne(file);
+      }
+    },
+    [uploadOne],
   );
 
   const onDrop = useCallback(
@@ -744,6 +808,14 @@ export function ContentAssistant() {
               className="hidden"
               onChange={onFileSelected}
             />
+            {/* Folder picker — `webkitdirectory`/`directory` set imperatively above. */}
+            <input
+              ref={folderInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={onFolderSelected}
+            />
             <Button
               type="button"
               variant="outline"
@@ -754,6 +826,18 @@ export function ContentAssistant() {
               className="h-10 w-10 shrink-0"
             >
               <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => folderInputRef.current?.click()}
+              disabled={loading}
+              aria-label="Upload a whole folder"
+              title="Upload a whole folder"
+              className="h-10 w-10 shrink-0"
+            >
+              <FolderUp className="h-4 w-4" />
             </Button>
             <textarea
               value={input}
