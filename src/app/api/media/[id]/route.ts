@@ -71,6 +71,8 @@ const PatchSchema = z
     type: z.enum(['image', 'video', 'audio', 'document']).optional(),
     category: z.string().optional(),
     name: z.string().min(1).optional(),
+    description: z.string().optional(),
+    intendedUse: z.string().optional(),
     url: z.string().url().optional(),
     thumbnailUrl: z.string().url().optional(),
     mimeType: z.string().optional(),
