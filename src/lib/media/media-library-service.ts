@@ -63,6 +63,8 @@ interface MediaDocData {
   category?: MediaAssetCategory;
   tags?: string[];
   name?: string;
+  description?: string;
+  intendedUse?: string;
   url?: string;
   thumbnailUrl?: string | null;
   mimeType?: string;
@@ -99,6 +101,8 @@ function rowToAsset(id: string, data: MediaDocData): UnifiedMediaAsset {
     category: data.category ?? 'other',
     tags: Array.isArray(data.tags) ? data.tags : [],
     name: data.name ?? '',
+    ...(data.description ? { description: data.description } : {}),
+    ...(data.intendedUse ? { intendedUse: data.intendedUse } : {}),
     url: data.url ?? '',
     ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
     mimeType: data.mimeType ?? 'application/octet-stream',
@@ -136,6 +140,8 @@ function applyClientSideFilters(
     result = result.filter(
       (a) =>
         a.name.toLowerCase().includes(q) ||
+        (a.description?.toLowerCase().includes(q) ?? false) ||
+        (a.intendedUse?.toLowerCase().includes(q) ?? false) ||
         a.tags.some((t) => t.toLowerCase().includes(q)) ||
         (a.aiPrompt?.toLowerCase().includes(q) ?? false),
     );
@@ -238,6 +244,8 @@ export async function createAsset(
     category: input.category,
     tags: input.tags ?? [],
     name: input.name,
+    ...(input.description ? { description: input.description } : {}),
+    ...(input.intendedUse ? { intendedUse: input.intendedUse } : {}),
     url: input.url,
     ...(input.thumbnailUrl ? { thumbnailUrl: input.thumbnailUrl } : {}),
     mimeType: input.mimeType,

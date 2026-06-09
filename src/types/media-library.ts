@@ -73,6 +73,10 @@ export interface UnifiedMediaAsset {
   category: MediaAssetCategory;
   tags: string[];
   name: string;
+  /** Human-authored description of what this asset is. NEVER AI-generated. */
+  description?: string;
+  /** Human-authored note on how this asset is meant to be used. NEVER AI-generated. */
+  intendedUse?: string;
   /** Firebase Storage public URL (or persisted CDN URL). */
   url: string;
   thumbnailUrl?: string;
@@ -141,6 +145,8 @@ export interface MediaCreateInput {
   type: MediaAssetType;
   category: MediaAssetCategory;
   name: string;
+  description?: string;
+  intendedUse?: string;
   url: string;
   mimeType: string;
   fileSize: number;
