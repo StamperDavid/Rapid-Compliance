@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { ImageIcon, MessageSquarePlus, Paperclip, Send, Sparkles, X } from 'lucide-react';
 
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { SectionTitle, SectionDescription, Caption } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
@@ -462,13 +463,15 @@ export function ContentAssistant() {
           {/* Attachment chip — shown above the input once an image is attached/uploading. */}
           {(attachment !== null || uploading) && (
             <div className="mb-2 flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-2 py-1.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
                 {attachment ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- local object-URL preview, not a remote asset
-                  <img
+                  <Image
                     src={attachment.previewUrl}
                     alt={attachment.fileName}
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <ImageIcon className="h-4 w-4 text-muted-foreground" />
