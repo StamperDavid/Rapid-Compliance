@@ -34,6 +34,7 @@
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { transcribeAudioBuffer } from '@/lib/video/transcription-service';
 import { parsePDF } from '@/lib/agent/parsers/pdf-parser';
+import { parseOfficeDocument } from '@/lib/agent/parsers/office-parser';
 import { parseExcel } from '@/lib/agent/parsers/excel-parser';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -263,6 +264,23 @@ async function summarizeSpreadsheet(url: string): Promise<string> {
 }
 
 /**
+ * Extract the text from a Word (.docx) or PowerPoint (.pptx) document and
+ * summarize it. Uses the tiny fflate-based OOXML reader (no heavy OCR library).
+ * Legacy binary .doc/.ppt resolve to '' inside parseOfficeDocument. Never throws.
+ */
+async function summarizeOffice(url: string, contentType: string): Promise<string> {
+  const buf = await fetchBytes(url);
+  if (buf === null) {
+    return '';
+  }
+  const text = parseOfficeDocument(buf, contentType);
+  if (text.trim().length === 0) {
+    return '';
+  }
+  return summarize(text, 'document');
+}
+
+/**
  * Produce a short, concrete summary of one uploaded brand reference asset so
  * agents can actually understand it. BEST-EFFORT: never throws — returns '' on
  * any failure, missing key, timeout, or unsupported kind.
@@ -307,10 +325,10 @@ export async function extractAssetSummary(input: {
       ct.includes('presentationml') ||
       ct === 'application/vnd.ms-powerpoint'
     ) {
-      // docx / doc / pptx / ppt deep-parse is DEFERRED pending a parser (no
-      // mammoth/officeparser/pptx extractor in the repo). The file still
-      // uploads and attaches; we just don't read its body yet.
-      return '';
+      // .docx / .pptx → unzip the OOXML + read the text runs → summarize. Legacy
+      // binary .doc / .ppt aren't OOXML (not zip), so parseOfficeDocument returns
+      // '' and they degrade gracefully (deep-read deferred for those only).
+      return await summarizeOffice(url, ct);
     }
 
     // Fallback: contentType missing or unrecognized — use the coarse `kind`.
