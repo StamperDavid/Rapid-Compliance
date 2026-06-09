@@ -178,25 +178,24 @@ export const DEFAULT_BRAND_IDENTITY: BrandIdentity = {
   companyName: '',
   tagline: '',
   logo: null,
-  // The REAL SalesVelocity.ai brand palette — mirrors the website builder's
-  // GlobalBranding (src/lib/website-builder/default-config.ts DEFAULT_BRANDING),
-  // which is the actual site's color scheme. The old amber/slate values here were
-  // unrelated placeholders that made the Brand page's Colors look wrong vs. the
-  // site. The two rgba website values (textMuted rgba(255,255,255,0.6), border
-  // rgba(255,255,255,0.1)) are expressed as their nearest #RRGGBB so the color
-  // pickers + the hex-only brand ColorsSchema accept them.
+  // The REAL SalesVelocity.ai brand palette — taken from the LIVE design-system
+  // tokens the product actually renders: src/app/globals.css (--color-*) and the
+  // DEFAULT_THEME in src/hooks/useOrgTheme.ts (applied as CSS vars). NOTE: accent
+  // is PINK (#EC4899), not green — green (#10B981) is the SUCCESS color. (An
+  // earlier value pulled accent from the stale website-builder default-config and
+  // got it wrong.) Values map theme `*.main` shades onto the flat 11-color palette.
   colors: {
-    primary: '#6366F1', // indigo
-    secondary: '#8B5CF6', // violet
-    accent: '#10B981', // emerald
-    background: '#000000', // dark brand background
-    surface: '#0A0A0A',
-    text: '#FFFFFF',
-    textMuted: '#9CA3AF', // ≈ rgba(255,255,255,0.6)
-    border: '#1F2937', // ≈ rgba(255,255,255,0.1) on dark
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
+    primary: '#6366F1', // indigo  (--color-primary)
+    secondary: '#8B5CF6', // violet  (--color-secondary)
+    accent: '#EC4899', // pink/magenta  (--color-accent) — NOT green
+    background: '#000000', // dark brand background (background.main)
+    surface: '#0A0A0A', // background.paper
+    text: '#FFFFFF', // text.primary
+    textMuted: '#9CA3AF', // text.secondary
+    border: '#1F2937', // border.main
+    success: '#10B981', // green — success.main (this is where green belongs)
+    warning: '#F59E0B', // warning.main
+    error: '#EF4444', // error.main
   },
   fonts: {
     heading: 'Inter',
