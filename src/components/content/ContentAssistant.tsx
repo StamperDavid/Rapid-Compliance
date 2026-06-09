@@ -18,8 +18,10 @@ import { usePathname } from 'next/navigation';
 import {
   File as FileIcon,
   FileText,
+  FileUp,
   FileVideo,
   FolderUp,
+  LibraryBig,
   Loader2,
   MessageSquarePlus,
   Music,
@@ -38,6 +40,7 @@ import { requestStoryboardThumbnail, sceneHasDescription } from '@/lib/video/sto
 import { cn } from '@/lib/utils';
 import type { CinematicConfig } from '@/types/creative-studio';
 import type { PipelineScene, SceneReference } from '@/types/video-pipeline';
+import { MediaLibraryPicker, type LibraryAsset } from './MediaLibraryPicker';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -197,6 +200,9 @@ export function ContentAssistant() {
   const threadRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  // Hover dropdown of attach options (files / folder / library) + the library picker.
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   // Map of attachment id → its live object URL so we can revoke each one exactly
   // once on remove/clear/send/unmount (no leaks).
   const previewUrlsRef = useRef<Map<string, string>>(new Map());
@@ -364,6 +370,36 @@ export function ContentAssistant() {
       }
     },
     [authFetch, revokePreview, analyzeAttachment],
+  );
+
+  /** Attach assets the operator picked from the existing media library. */
+  const addFromLibrary = useCallback(
+    (picked: LibraryAsset[]) => {
+      for (const asset of picked) {
+        const id = crypto.randomUUID();
+        const kind: Attachment['kind'] =
+          asset.type === 'image' ? 'image'
+            : asset.type === 'video' ? 'video'
+              : asset.type === 'document' ? 'document'
+                : 'other';
+        const attachment: Attachment = {
+          id,
+          url: asset.url,
+          fileName: asset.name,
+          contentType: asset.mimeType,
+          kind,
+          analyzing: true,
+          ...(asset.type === 'image' ? { previewUrl: asset.url } : {}),
+        };
+        setAttachments((prev) => [...prev, attachment]);
+        // Have the agent read/understand it, exactly like an upload — but no
+        // re-upload, since the asset is already stored in the library.
+        const analysis = analyzeAttachment({ id, url: asset.url, contentType: asset.mimeType, kind });
+        analysisPromisesRef.current.set(id, analysis);
+        void analysis;
+      }
+    },
+    [analyzeAttachment],
   );
 
   /** Upload every picked/dropped file concurrently, appending each result. */
@@ -819,29 +855,49 @@ export function ContentAssistant() {
               className="hidden"
               onChange={onFolderSelected}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
-              aria-label="Attach a file"
-              className="h-10 w-10 shrink-0"
+            <div
+              className="relative shrink-0"
+              onMouseEnter={() => setAttachMenuOpen(true)}
+              onMouseLeave={() => setAttachMenuOpen(false)}
             >
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => folderInputRef.current?.click()}
-              disabled={loading}
-              aria-label="Upload a whole folder"
-              title="Upload a whole folder"
-              className="h-10 w-10 shrink-0"
-            >
-              <FolderUp className="h-4 w-4" />
-            </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setAttachMenuOpen((o) => !o)}
+                disabled={loading}
+                aria-label="Add reference materials"
+                title="Add reference materials"
+                className="h-10 w-10"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              {attachMenuOpen && (
+                <div className="absolute bottom-full left-0 z-20 mb-2 w-52 rounded-xl border border-border-strong bg-card p-1 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => { setAttachMenuOpen(false); fileInputRef.current?.click(); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground hover:bg-surface-elevated"
+                  >
+                    <FileUp className="h-4 w-4 shrink-0" /> Upload files
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAttachMenuOpen(false); folderInputRef.current?.click(); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground hover:bg-surface-elevated"
+                  >
+                    <FolderUp className="h-4 w-4 shrink-0" /> Upload a folder
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAttachMenuOpen(false); setLibraryOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground hover:bg-surface-elevated"
+                  >
+                    <LibraryBig className="h-4 w-4 shrink-0" /> Search library
+                  </button>
+                </div>
+              )}
+            </div>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -870,6 +926,12 @@ export function ContentAssistant() {
           </Caption>
         </div>
       </div>
+      <MediaLibraryPicker
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        onSelect={addFromLibrary}
+        authFetch={authFetch}
+      />
     </>
   );
 }
