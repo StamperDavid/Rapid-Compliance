@@ -24,6 +24,8 @@ import { requirePermission } from '@/lib/auth/api-auth';
 import { adminStorage } from '@/lib/firebase/admin';
 import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { createAsset } from '@/lib/media/media-library-service';
+import type { MediaAssetType, MediaAssetCategory } from '@/types/media-library';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -98,6 +100,15 @@ function deriveKind(mimeType: string): AssetKind {
     return 'document';
   }
   return 'other';
+}
+
+/** Map a MIME type to the media-library type + a sensible category. */
+function deriveLibraryType(mimeType: string): { type: MediaAssetType; category: MediaAssetCategory } {
+  const mime = mimeType.toLowerCase();
+  if (mime.startsWith('image/')) { return { type: 'image', category: 'graphic' }; }
+  if (mime.startsWith('video/')) { return { type: 'video', category: 'video-clip' }; }
+  if (mime.startsWith('audio/')) { return { type: 'audio', category: 'sound' }; }
+  return { type: 'document', category: 'other' };
 }
 
 /** Strip unsafe characters from the original filename, preserving its extension. */
@@ -186,12 +197,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       file: FILE,
     });
 
+    // Also register it in the media library so it shows up on the Library page and
+    // is reusable everywhere — not just a raw storage file. A library-write failure
+    // must NOT fail the upload (the file is already saved), so this is best-effort.
+    let libraryAssetId: string | undefined;
+    try {
+      const { type: mediaType, category } = deriveLibraryType(mimeType);
+      const libraryAsset = await createAsset({
+        type: mediaType,
+        category,
+        name: originalName,
+        url,
+        mimeType,
+        fileSize: buffer.length,
+        source: 'user-upload',
+        createdBy: permResult.user.uid,
+        tags: ['reference-material'],
+        brandDnaApplied: false,
+      });
+      libraryAssetId = libraryAsset.id;
+    } catch (libErr) {
+      logger.warn('[brand-identity-asset] media library record write failed (upload still succeeded)', {
+        error: libErr instanceof Error ? libErr.message : String(libErr),
+        file: FILE,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       url,
       fileName: originalName,
       contentType: mimeType,
       kind,
+      libraryAssetId,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Asset upload failed';
