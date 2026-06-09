@@ -125,7 +125,7 @@ const FOLDER_FILE_CAP = 30;
  * files. `webkitRelativePath` carries the in-folder path, so we test both the
  * file name and every path segment for the junk markers.
  */
-function keepRealFolderFiles(files: FileList): File[] {
+function keepRealFolderFiles(files: FileList | File[]): File[] {
   return Array.from(files).filter((file) => {
     if (file.size === 0) {
       return false;
@@ -383,11 +383,14 @@ export function ContentAssistant() {
 
   const onFileSelected = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      // Reset the input so picking the same file(s) again still fires onChange.
+      // Snapshot into a stable array BEFORE resetting the input. `e.target.files`
+      // is a LIVE FileList — `value = ''` empties it, so reading length/items after
+      // the reset returns nothing. (This is the bug that made attaching a silent
+      // no-op: file picked, nothing uploaded, no chip, no error.)
+      const list = Array.from(e.target.files ?? []);
       e.target.value = '';
-      if (files && files.length > 0) {
-        uploadFiles(files);
+      if (list.length > 0) {
+        uploadFiles(list);
       }
     },
     [uploadFiles],
@@ -395,10 +398,10 @@ export function ContentAssistant() {
 
   const onFolderSelected = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const picked = e.target.files;
-      // Reset so re-picking the same folder fires onChange again.
+      // Snapshot before reset — `value = ''` empties the live FileList (see onFileSelected).
+      const picked = Array.from(e.target.files ?? []);
       e.target.value = '';
-      if (!picked || picked.length === 0) {
+      if (picked.length === 0) {
         return;
       }
       setError(null);
