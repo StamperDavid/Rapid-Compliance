@@ -49,10 +49,15 @@ export interface AssistantStoryboard {
   references?: SceneReference[];
 }
 
-/** A reference image the operator attached in the Content Assistant chat. */
-export interface BriefReferenceImage {
+/** A reference file the operator attached in the Content Assistant chat. */
+export interface BriefAttachment {
   url: string;
   fileName?: string;
+  contentType?: string;
+  /** Coarse asset kind from the upload route; image/video get distinct handling. */
+  kind?: 'image' | 'video' | 'document' | 'other';
+  /** The AI's read of the file (vision for images, transcript for A/V, text for docs). */
+  aiSummary?: string;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -69,11 +74,14 @@ export interface BuildStoryboardInput {
   tone?: string;
   script?: string;
   /**
-   * An image the operator attached in the chat (permanent Storage URL). It is
-   * mentioned in the brief the specialist sees AND seeded onto the first
-   * storyboard's `references` so it reaches the canvas as a real scene reference.
+   * Files the operator attached in the chat (permanent Storage URLs), images
+   * and/or videos. All are mentioned in the brief the specialist sees; the IMAGE
+   * attachments are also seeded onto the first storyboard's `references` so they
+   * reach the canvas as real scene references. (Video-to-video deep wiring is
+   * deferred — videos are threaded into the brief prose and, where applicable,
+   * attached as `video` references, but no clip is decomposed into scenes.)
    */
-  referenceImage?: BriefReferenceImage;
+  attachments?: BriefAttachment[];
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -150,13 +158,52 @@ export async function buildStoryboardFromBrief(
 ): Promise<{ storyboards: AssistantStoryboard[] } | { error: string }> {
   const specialist = new VideoSpecialist();
 
-  // If the operator attached a reference image, make the specialist aware of it
-  // in the brief text. (The specialist's LLM contract has no structured image
-  // input, so the reference is communicated in prose AND seeded onto scene 1's
-  // references below for the operator to use on the canvas.)
-  const briefWithReference = input.referenceImage
-    ? `${input.brief}\n\nThe operator attached a reference image (${input.referenceImage.fileName ?? 'photo'}: ${input.referenceImage.url}). Treat it as the primary visual reference — match its subject, look, and styling across the storyboard, and feature it prominently in the opening scene.`
-    : input.brief;
+  // Split the operator's attachments by medium. Images anchor the visual look;
+  // videos are reference clips (vibe / motion); audio + documents + other files
+  // carry substance (script, transcript, copy, data) the storyboard builds from.
+  const attachments = input.attachments ?? [];
+  const imageAttachments = attachments.filter((a) => a.kind === 'image');
+  const videoAttachments = attachments.filter((a) => a.kind === 'video');
+  const isAudio = (a: BriefAttachment): boolean =>
+    (a.contentType ?? '').toLowerCase().startsWith('audio/');
+  const substanceAttachments = attachments.filter(
+    (a) => a.kind !== 'image' && a.kind !== 'video',
+  );
+
+  // Append each attachment's AI summary (the read of its actual contents) when present.
+  const withSummary = (a: BriefAttachment, fallbackLabel: string): string => {
+    const head = `- ${a.fileName ?? fallbackLabel}: ${a.url}`;
+    return a.aiSummary ? `${head}\n  What it contains: ${a.aiSummary}` : head;
+  };
+
+  // Make the specialist aware of every attachment in the brief text, INCLUDING
+  // the AI's read of each file so it builds from the real content. (The
+  // specialist's LLM contract has no structured media input, so references are
+  // communicated in prose AND — for images, plus videos where a slot fits —
+  // seeded onto scene 1's references below for the operator to use on the canvas.)
+  const refLines: string[] = [];
+  if (imageAttachments.length > 0) {
+    const list = imageAttachments.map((a) => withSummary(a, 'image')).join('\n');
+    refLines.push(
+      `Reference image(s) the operator attached:\n${list}\nTreat the image(s) as the primary visual reference — match their subject, look, and styling across the storyboard, and feature them prominently in the opening scenes.`,
+    );
+  }
+  if (videoAttachments.length > 0) {
+    const list = videoAttachments.map((a) => withSummary(a, 'video')).join('\n');
+    refLines.push(
+      `Reference video clip(s) the operator attached:\n${list}\nUse them as motion / pacing / vibe references for the storyboard — match their energy and visual language.`,
+    );
+  }
+  if (substanceAttachments.length > 0) {
+    const list = substanceAttachments
+      .map((a) => withSummary(a, isAudio(a) ? 'audio' : 'document'))
+      .join('\n');
+    refLines.push(
+      `Reference audio / document(s) the operator attached:\n${list}\nThese carry substance — script, transcript, copy, or data. Build the storyboard's narrative, voiceover, and on-screen message FROM this content where it fits.`,
+    );
+  }
+  const briefWithReference =
+    refLines.length > 0 ? `${input.brief}\n\n${refLines.join('\n\n')}` : input.brief;
 
   const message: AgentMessage = {
     id: `content-mgr-delegate-${randomUUID()}`,
@@ -199,19 +246,38 @@ export async function buildStoryboardFromBrief(
     prev = mapped;
   }
 
-  // Seed the operator's attached image onto the first storyboard as a real
-  // scene reference so it reaches the canvas (third context channel alongside
-  // structured fields + the chat conversation).
-  if (input.referenceImage && storyboards.length > 0) {
-    const reference: SceneReference = {
-      id: randomUUID(),
-      type: 'image',
-      name: input.referenceImage.fileName ?? 'Attached photo',
-      url: input.referenceImage.url,
-      purpose: 'style',
-      usage: 'Operator attached this photo in the Content Assistant chat as the primary visual reference for the video.',
-    };
-    storyboards[0] = { ...storyboards[0], references: [reference] };
+  // Seed the operator's attached images (and reference videos) onto the first
+  // storyboard as real scene references so they reach the canvas (third context
+  // channel alongside structured fields + the chat conversation). Images are the
+  // primary visual reference; videos ride along as `video` references the
+  // operator can reuse — deep video-to-video decomposition is deferred.
+  if (storyboards.length > 0) {
+    const references: SceneReference[] = [];
+    for (const img of imageAttachments) {
+      references.push({
+        id: randomUUID(),
+        type: 'image',
+        name: img.fileName ?? 'Attached photo',
+        url: img.url,
+        purpose: 'style',
+        usage:
+          'Operator attached this image in the Content Assistant chat as a primary visual reference for the video.',
+      });
+    }
+    for (const vid of videoAttachments) {
+      references.push({
+        id: randomUUID(),
+        type: 'video',
+        name: vid.fileName ?? 'Attached clip',
+        url: vid.url,
+        purpose: 'style',
+        usage:
+          'Operator attached this clip in the Content Assistant chat as a motion / pacing / vibe reference for the video.',
+      });
+    }
+    if (references.length > 0) {
+      storyboards[0] = { ...storyboards[0], references };
+    }
   }
 
   return { storyboards };

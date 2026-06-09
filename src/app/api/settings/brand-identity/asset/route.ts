@@ -7,8 +7,11 @@
  * materials are surfaced on the Brand Identity page indefinitely).
  *
  * Accepts multipart/form-data with:
- *   - file: image (png/jpeg/webp/svg/gif), video (mp4/webm/quicktime),
- *           or PDF (application/pdf)
+ *   - file: any common marketing/imaging/doc/AV/text asset —
+ *       images (png/jpeg/webp/gif/svg/heic/heif/tiff/bmp),
+ *       video (mp4/mov/webm/avi/mkv),
+ *       audio (mp3/wav/m4a/ogg/aac/flac),
+ *       docs (pdf/doc/docx/ppt/pptx/xls/xlsx/csv/txt/md/rtf)
  *
  * Returns: { success: true, url, fileName, contentType, kind }
  *
@@ -33,27 +36,63 @@ const ALLOWED_TYPES: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
-  'image/svg+xml': 'svg',
   'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+  'image/tiff': 'tiff',
+  'image/bmp': 'bmp',
   // video
   'video/mp4': 'mp4',
-  'video/webm': 'webm',
   'video/quicktime': 'mov',
+  'video/webm': 'webm',
+  'video/x-msvideo': 'avi',
+  'video/x-matroska': 'mkv',
+  // audio
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/ogg': 'ogg',
+  'audio/aac': 'aac',
+  'audio/flac': 'flac',
   // documents
   'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  // text
+  'text/csv': 'csv',
+  'text/plain': 'txt',
+  'text/markdown': 'md',
+  'application/rtf': 'rtf',
 };
 
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB — videos are bigger
 
 /** Map a MIME type to the coarse asset `kind` stored on BrandExampleAsset. */
 function deriveKind(mimeType: string): AssetKind {
-  if (mimeType.startsWith('image/')) {
+  const mime = mimeType.toLowerCase();
+  if (mime.startsWith('image/')) {
     return 'image';
   }
-  if (mimeType.startsWith('video/')) {
+  if (mime.startsWith('video/')) {
     return 'video';
   }
-  if (mimeType === 'application/pdf') {
+  if (mime.startsWith('audio/')) {
+    // The 4-value kind enum has no 'audio' — extraction branches on contentType,
+    // so audio maps to the coarse 'other' bucket here without losing comprehension.
+    return 'other';
+  }
+  if (mime.startsWith('text/') || mime === 'application/pdf' || mime === 'application/rtf') {
+    return 'document';
+  }
+  if (mime.startsWith('application/')) {
+    // Office docs (word/powerpoint/excel) — all coarse-classified as documents.
     return 'document';
   }
   return 'other';
@@ -95,7 +134,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(
         {
           success: false,
-          error: `Unsupported file type: ${mimeType || 'unknown'}. Use an image (PNG, JPEG, WEBP, SVG, GIF), video (MP4, WEBM, MOV), or PDF.`,
+          error: `Unsupported file type: ${mimeType || 'unknown'}. Use an image (PNG, JPEG, WEBP, GIF, SVG, HEIC, TIFF, BMP), video (MP4, MOV, WEBM, AVI, MKV), audio (MP3, WAV, M4A, OGG, AAC, FLAC), or document (PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, CSV, TXT, MD, RTF).`,
         },
         { status: 400 },
       );

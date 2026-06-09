@@ -41,21 +41,26 @@ const MessageSchema = z.object({
 });
 
 /**
- * An image the operator attached in the chat composer (uploaded to Storage,
- * permanent URL). Threaded into the Video Specialist brief as a reference and
- * seeded onto the first storyboard's references so it reaches the canvas.
+ * A file the operator attached in the chat composer (uploaded to Storage,
+ * permanent URL), an image or a video. Threaded into the Video Specialist brief
+ * as a reference and (for images, plus videos where a slot fits) seeded onto the
+ * first storyboard's references so it reaches the canvas.
  */
-const ReferenceImageSchema = z.object({
-  url: z.string().trim().url().max(2000),
+const AttachmentSchema = z.object({
+  url: z.string().min(1).max(2000),
   fileName: z.string().trim().max(300).optional(),
+  contentType: z.string().trim().max(200).optional(),
+  kind: z.enum(['image', 'video', 'document', 'other']).optional(),
+  /** The AI's read of the file's content (vision for images, transcript for A/V, text for docs). */
+  aiSummary: z.string().trim().max(8000).optional(),
 });
 
 const AssistantRequestSchema = z.object({
   messages: z.array(MessageSchema).min(1).max(40),
   /** The content-generator tab the operator is on, e.g. '/content/video'. */
   activeTab: z.string().trim().max(120).optional(),
-  /** Optional reference image the operator attached to this message. */
-  referenceImage: ReferenceImageSchema.optional(),
+  /** Optional reference files (images and/or videos) the operator attached. */
+  attachments: z.array(AttachmentSchema).max(20).optional(),
 });
 
 function isVideoStoryboardTab(activeTab: string | undefined): boolean {
@@ -142,9 +147,11 @@ When the operator asks to rebuild / rework / fix / redo / change a SPECIFIC exis
 // System prompt — the Content Manager's conversational identity
 // ────────────────────────────────────────────────────────────────────────────
 
+type Attachment = z.infer<typeof AttachmentSchema>;
+
 async function buildSystemPrompt(
   activeTab: string | undefined,
-  hasReferenceImage: boolean,
+  attachments: Attachment[],
 ): Promise<string> {
   let brandContext = '';
   try {
@@ -170,9 +177,31 @@ async function buildSystemPrompt(
 
   const tabBlock = `\n\n## CURRENT CONTEXT\n${describeActiveTab(activeTab)}`;
   const protocolBlock = isVideoStoryboardTab(activeTab) ? VIDEO_DELEGATION_PROTOCOL : '';
-  const referenceBlock = hasReferenceImage
-    ? `\n\n## ATTACHED REFERENCE IMAGE\nThe operator attached an image to this message. Treat it as the primary visual reference for what they want to make — its subject, look, and styling should anchor the concept. When you delegate the build, weave the reference into the brief (e.g. "build around the attached photo") so the specialist features it.`
-    : '';
+
+  let referenceBlock = '';
+  if (attachments.length > 0) {
+    const list = attachments
+      .map((a) => {
+        const label =
+          a.kind === 'video'
+            ? 'video'
+            : a.kind === 'document'
+              ? 'document'
+              : a.kind === 'image'
+                ? 'image'
+                : (a.contentType ?? '').toLowerCase().startsWith('audio/')
+                  ? 'audio'
+                  : 'file';
+        const name = a.fileName ?? a.url;
+        // The AI has already READ each file — include its understanding so you can
+        // reason about the actual contents, not just that a file was attached.
+        return a.aiSummary
+          ? `- ${name} (${label}): ${a.aiSummary}`
+          : `- ${name} (${label})`;
+      })
+      .join('\n');
+    referenceBlock = `\n\n## ATTACHED REFERENCE MATERIALS\nThe operator attached these files, and here is what each one actually contains (the AI's read of it):\n${list}\nUse this understanding directly — build the concept FROM what's in these files, not just the fact that they exist. Treat image(s) as the primary visual reference (their subject, look, and styling should anchor the concept), video(s) as motion / pacing / vibe references, and audio / documents as substance to incorporate (script, transcript, copy, data). When you delegate the build, weave the actual content into the brief (e.g. "build around the attached photo of …" / "use the script from the attached doc") so the specialist works from the real material.`;
+  }
   const brandBlock = brandContext ? `\n\n## BRAND VOICE & IDENTITY (stay in this voice)\n${brandContext}` : '';
 
   return `${role}${tabBlock}${protocolBlock}${referenceBlock}${brandBlock}`;
@@ -199,8 +228,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
   }
 
+  const attachments = parsed.attachments ?? [];
+
   try {
-    const systemPrompt = await buildSystemPrompt(parsed.activeTab, parsed.referenceImage !== undefined);
+    const systemPrompt = await buildSystemPrompt(parsed.activeTab, attachments);
 
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
@@ -236,12 +267,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ...(directive.targetAudience ? { targetAudience: directive.targetAudience } : {}),
           ...(directive.callToAction ? { callToAction: directive.callToAction } : {}),
           ...(directive.tone ? { tone: directive.tone } : {}),
-          ...(parsed.referenceImage
+          ...(attachments.length > 0
             ? {
-                referenceImage: {
-                  url: parsed.referenceImage.url,
-                  ...(parsed.referenceImage.fileName ? { fileName: parsed.referenceImage.fileName } : {}),
-                },
+                attachments: attachments.map((a) => ({
+                  url: a.url,
+                  ...(a.fileName ? { fileName: a.fileName } : {}),
+                  ...(a.contentType ? { contentType: a.contentType } : {}),
+                  ...(a.kind ? { kind: a.kind } : {}),
+                  ...(a.aiSummary ? { aiSummary: a.aiSummary } : {}),
+                })),
               }
             : {}),
         });
