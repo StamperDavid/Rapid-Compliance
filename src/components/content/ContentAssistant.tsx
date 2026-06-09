@@ -257,10 +257,11 @@ export function ContentAssistant() {
       pendingLabelRef.current = pending;
       setAwaitingLabels(true);
       const count = pending.length;
+      const firstName = (pending[0]?.fileName ?? 'your file').split(/[\\/]/).pop();
       const ask =
         count > 1
-          ? `I've added ${count} files. Before I save them to your library, tell me a name, a brief description, and their intended use — I'll apply your answer to all ${count}, numbered (e.g. "Name 1", "Name 2"…).`
-          : `I've added "${pending[0]?.fileName ?? 'your file'}". Before I save it to your library, tell me a name, a brief description, and its intended use.`;
+          ? `I've added ${count} files. To file them in your library so you can find them later, tell me three things — the project they belong to, a brief description of what they are, and what they're used for. I'll tag all ${count} with the project.`
+          : `I've added "${firstName}". To file it in your library, tell me three things — the project it belongs to, a brief description, and what it's used for.`;
       setMessages((prev) => [...prev, { role: 'assistant', content: ask }]);
     }
     prevUploadingRef.current = uploadingCount;
@@ -463,18 +464,16 @@ export function ContentAssistant() {
         });
         const data = (await res.json()) as {
           success?: boolean;
+          project?: string;
           applied?: Array<{ name: string }>;
           error?: string;
         };
         if (res.ok && data.success) {
-          const names = (data.applied ?? []).map((a) => a.name).join(', ');
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: 'assistant',
-              content: `Saved to your library: ${names || 'done'}. You can pull these up anytime with "Search library".`,
-            },
-          ]);
+          const count = (data.applied ?? []).length;
+          const content = data.project
+            ? `Saved ${count} item${count === 1 ? '' : 's'} to your library under project "${data.project}". Search that project name anytime to pull them all back up.`
+            : `Saved ${count} item${count === 1 ? '' : 's'} to your library.`;
+          setMessages((prev) => [...prev, { role: 'assistant', content }]);
         } else {
           setMessages((prev) => [
             ...prev,
@@ -859,7 +858,7 @@ export function ContentAssistant() {
         <div className="border-t border-border px-5 py-4">
           {/* Attachment chips — one per attached file; image → thumbnail, video → icon tile. */}
           {(attachments.length > 0 || uploadingCount > 0) && (
-            <div className="mb-2 space-y-1.5">
+            <div className="mb-2 max-h-40 space-y-1.5 overflow-y-auto pr-1">
               {attachments.map((att) => {
                 const medium = attachmentMedium(att);
                 return (
