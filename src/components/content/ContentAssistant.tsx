@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { MessageSquarePlus, Send, Sparkles, X } from 'lucide-react';
+import { ImageIcon, MessageSquarePlus, Paperclip, Send, Sparkles, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { SectionTitle, SectionDescription, Caption } from '@/components/ui/typography';
@@ -24,6 +24,7 @@ import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import { requestStoryboardThumbnail, sceneHasDescription } from '@/lib/video/storyboard-thumbnail';
 import { cn } from '@/lib/utils';
 import type { CinematicConfig } from '@/types/creative-studio';
+import type { PipelineScene, SceneReference } from '@/types/video-pipeline';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -44,11 +45,50 @@ interface AssistantStoryboard {
   wardrobe?: string;
   backgroundPrompt?: string;
   cinematicConfig?: CinematicConfig;
+  references?: SceneReference[];
+}
+
+/** An image the operator attached in the composer (uploaded → permanent URL). */
+interface AttachedImage {
+  url: string;
+  fileName: string;
+  /** Object URL for the local preview thumbnail; revoked on remove/replace. */
+  previewUrl: string;
 }
 
 function isVideoStoryboardTab(pathname: string | null): boolean {
   const p = (pathname ?? '').toLowerCase();
   return p.includes('/content/video') && !p.includes('/editor') && !p.includes('/library');
+}
+
+/**
+ * Map an assistant-built storyboard onto a pipeline scene (without an id — the
+ * store assigns one). Used for a fresh full build that REPLACES the scenes array.
+ */
+function storyboardToScene(sb: AssistantStoryboard, sceneNumber: number): Omit<PipelineScene, 'id'> {
+  return {
+    sceneNumber,
+    title: sb.title ?? '',
+    scriptText: sb.scriptText ?? '',
+    visualDescription: sb.visualDescription ?? '',
+    screenshotUrl: null,
+    avatarId: null,
+    avatarName: null,
+    voiceId: null,
+    voiceProvider: null,
+    duration: sb.duration ?? 5,
+    engine: 'hedra',
+    backgroundPrompt: sb.backgroundPrompt ?? null,
+    cinematicConfig: sb.cinematicConfig,
+    location: sb.location,
+    timeOfDay: sb.timeOfDay,
+    weather: sb.weather,
+    ambience: sb.ambience,
+    musicCue: sb.musicCue,
+    wardrobe: sb.wardrobe,
+    ...(sb.references ? { references: sb.references } : {}),
+    status: 'draft',
+  };
 }
 
 const WELCOME: ChatMessage = {
@@ -66,8 +106,102 @@ export function ContentAssistant() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<AttachedImage | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   const threadRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Track the live object URL so we always revoke the previous one on replace/remove.
+  const previewUrlRef = useRef<string | null>(null);
+
+  // Revoke any outstanding preview object URL when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  const clearAttachment = useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setAttachment(null);
+  }, []);
+
+  const uploadImage = useCallback(
+    async (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        setError('Please attach an image file.');
+        return;
+      }
+      setError(null);
+      setUploading(true);
+
+      // Show an instant local preview while the upload runs.
+      const previewUrl = URL.createObjectURL(file);
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+      previewUrlRef.current = previewUrl;
+
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await authFetch('/api/settings/brand-identity/asset', {
+          method: 'POST',
+          body: form,
+        });
+        const data = (await res.json()) as {
+          success: boolean;
+          url?: string;
+          fileName?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.success || !data.url) {
+          throw new Error(data.error ?? 'The image could not be uploaded.');
+        }
+        setAttachment({ url: data.url, fileName: data.fileName ?? file.name, previewUrl });
+      } catch (err) {
+        if (previewUrlRef.current === previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+          previewUrlRef.current = null;
+        }
+        setError(err instanceof Error ? err.message : 'The image could not be uploaded.');
+      } finally {
+        setUploading(false);
+      }
+    },
+    [authFetch],
+  );
+
+  const onFileSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      // Reset the input so selecting the same file again still fires onChange.
+      e.target.value = '';
+      if (file) {
+        void uploadImage(file);
+      }
+    },
+    [uploadImage],
+  );
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragActive(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file) {
+        void uploadImage(file);
+      }
+    },
+    [uploadImage],
+  );
 
   // Keep the thread scrolled to the newest message.
   useEffect(() => {
@@ -78,13 +212,20 @@ export function ContentAssistant() {
 
   const send = useCallback(async () => {
     const text = input.trim();
-    if (!text || loading) {
+    const sentAttachment = attachment;
+    if ((!text && !sentAttachment) || loading || uploading) {
       return;
     }
 
-    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: text }];
+    // If there's an attachment but no typed text, give the message a body so the
+    // conversation history (which requires non-empty content) stays valid.
+    const messageText =
+      text.length > 0 ? text : `Here's a reference image (${sentAttachment?.fileName ?? 'photo'}).`;
+
+    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: messageText }];
     setMessages(nextMessages);
     setInput('');
+    clearAttachment();
     setError(null);
     setLoading(true);
 
@@ -95,7 +236,13 @@ export function ContentAssistant() {
       const res = await authFetch('/api/content/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, activeTab: pathname }),
+        body: JSON.stringify({
+          messages: history,
+          activeTab: pathname,
+          ...(sentAttachment
+            ? { referenceImage: { url: sentAttachment.url, fileName: sentAttachment.fileName } }
+            : {}),
+        }),
       });
 
       const data = (await res.json()) as {
@@ -164,44 +311,20 @@ export function ContentAssistant() {
         })();
       }
 
-      // Append path: a fresh build (no target), or a target that's out of range.
+      // Fresh-build path: a full multi-scene storyboard (no rework target). REPLACE
+      // the entire scenes array so the first storyboard IS scene 1 — appending onto
+      // the default empty "Storyboard 1" left scene 1 blank (no preview, never ready).
       const applied = !reworked && storyboards.length > 0 && onVideoTab;
       if (applied) {
-        const addScene = useVideoPipelineStore.getState().addScene;
-        const createdIds: string[] = [];
-        for (const sb of storyboards) {
-          const len = useVideoPipelineStore.getState().scenes.length;
-          addScene({
-            sceneNumber: len + 1,
-            title: sb.title ?? '',
-            scriptText: sb.scriptText ?? '',
-            visualDescription: sb.visualDescription ?? '',
-            screenshotUrl: null,
-            avatarId: null,
-            avatarName: null,
-            voiceId: null,
-            voiceProvider: null,
-            duration: sb.duration ?? 5,
-            engine: 'hedra',
-            backgroundPrompt: sb.backgroundPrompt ?? null,
-            cinematicConfig: sb.cinematicConfig,
-            location: sb.location,
-            timeOfDay: sb.timeOfDay,
-            weather: sb.weather,
-            ambience: sb.ambience,
-            musicCue: sb.musicCue,
-            wardrobe: sb.wardrobe,
-            status: 'draft',
-          });
-          const scenesNow = useVideoPipelineStore.getState().scenes;
-          const created = scenesNow[scenesNow.length - 1];
-          if (created) {
-            createdIds.push(created.id);
-          }
-        }
+        const newScenes: PipelineScene[] = storyboards.map((sb, idx) => ({
+          ...storyboardToScene(sb, idx + 1),
+          id: crypto.randomUUID(),
+        }));
+        useVideoPipelineStore.getState().setScenes(newScenes);
+        const createdIds = newScenes.map((s) => s.id);
 
-        // Auto-generate each new storyboard's thumbnail in the background so the
-        // previews appear right after creation (same as the manual flow).
+        // Auto-generate EVERY scene's thumbnail in the background (including scene 1)
+        // so the previews appear right after creation (same as the manual flow).
         void (async () => {
           const aspectRatio = useVideoPipelineStore.getState().brief.aspectRatio;
           for (const id of createdIds) {
@@ -236,7 +359,7 @@ export function ContentAssistant() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, authFetch, pathname]);
+  }, [input, loading, uploading, attachment, clearAttachment, messages, authFetch, pathname]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -336,7 +459,69 @@ export function ContentAssistant() {
 
         {/* Composer */}
         <div className="border-t border-border px-5 py-4">
-          <div className="flex items-end gap-2">
+          {/* Attachment chip — shown above the input once an image is attached/uploading. */}
+          {(attachment !== null || uploading) && (
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-2 py-1.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
+                {attachment ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- local object-URL preview, not a remote asset
+                  <img
+                    src={attachment.previewUrl}
+                    alt={attachment.fileName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+              <span className="flex-1 truncate text-xs text-foreground">
+                {uploading ? 'Uploading image…' : attachment?.fileName}
+              </span>
+              {attachment && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={clearAttachment}
+                  aria-label="Remove attached image"
+                  className="h-7 w-7 shrink-0"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div
+            className={cn(
+              'flex items-end gap-2 rounded-xl',
+              dragActive && 'ring-2 ring-ring ring-offset-2 ring-offset-card',
+            )}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={onDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onFileSelected}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading || uploading}
+              aria-label="Attach an image"
+              className="h-10 w-10 shrink-0"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -350,7 +535,7 @@ export function ContentAssistant() {
               type="button"
               size="icon"
               onClick={() => void send()}
-              disabled={loading || input.trim().length === 0}
+              disabled={loading || uploading || (input.trim().length === 0 && !attachment)}
               aria-label="Send message"
               className="h-10 w-10 shrink-0"
             >
@@ -359,7 +544,7 @@ export function ContentAssistant() {
           </div>
           <Caption className="mt-2 flex items-center gap-1.5">
             <MessageSquarePlus className="h-3 w-3" />
-            On the Video tab I can build your storyboards — you review &amp; approve.
+            On the Video tab I can build your storyboards — attach a photo to build around it.
           </Caption>
         </div>
       </div>
