@@ -30,7 +30,8 @@ const BodySchema = z.object({
 });
 
 const LabelSchema = z.object({
-  name: z.string().default(''),
+  /** The project these assets belong to — the grouping key the operator searches by. */
+  projectName: z.string().default(''),
   description: z.string().default(''),
   intendedUse: z.string().default(''),
 });
@@ -64,11 +65,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         {
           role: 'system',
           content:
-            'You extract three fields from what a human typed about a file (or set of files) they uploaded: ' +
-            'name, description, intendedUse. Use ONLY the human\'s words — never invent, embellish, or guess. ' +
-            'If the human did not give one of the fields, return an empty string for it. For a name covering a ' +
-            'batch, return the BASE name with no number (numbering is added later). Respond with ONLY a JSON ' +
-            'object: {"name": string, "description": string, "intendedUse": string}. No prose, no fences.',
+            'You extract three fields from what a human typed about file(s) they uploaded for a project: ' +
+            'projectName (the project these assets belong to), description (what they are), and intendedUse ' +
+            '(what they are used for). Use ONLY the human\'s words — never invent, embellish, or guess. If the ' +
+            'human did not give one of the fields, return an empty string for it. Respond with ONLY a JSON ' +
+            'object: {"projectName": string, "description": string, "intendedUse": string}. No prose, no fences.',
         },
         {
           role: 'user',
@@ -87,27 +88,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       label = LabelSchema.parse(JSON.parse(stripJsonFences(response.content ?? '')));
     } catch {
       // Fall back to using the raw reply as the description so nothing is lost.
-      label = { name: '', description: reply.trim(), intendedUse: '' };
+      label = { projectName: '', description: reply.trim(), intendedUse: '' };
     }
 
-    const isBatch = assets.length > 1;
-    const applied: Array<{ id: string; name: string; description: string; intendedUse: string }> = [];
+    const project = label.projectName.trim();
+    const applied: Array<{ id: string; name: string; project: string }> = [];
 
-    for (let i = 0; i < assets.length; i++) {
-      const asset = assets[i];
-      if (!asset) { continue; }
-      const baseName = label.name.trim().length > 0 ? label.name.trim() : (asset.fileName || 'Untitled');
-      const name = isBatch ? `${baseName} ${i + 1}` : baseName;
+    for (const asset of assets) {
+      // Use the file's real basename (strip any folder path from a folder upload).
+      const base = asset.fileName.split(/[\\/]/).pop() ?? asset.fileName;
+      const name = base.length > 0 ? base : 'Untitled';
       await updateAsset(asset.id, {
         name,
+        // Project name is stored as a tag so the operator can filter the whole
+        // library down to one project by searching its name.
+        tags: ['reference-material', ...(project ? [project] : [])],
         ...(label.description.trim() ? { description: label.description.trim() } : {}),
         ...(label.intendedUse.trim() ? { intendedUse: label.intendedUse.trim() } : {}),
       });
-      applied.push({ id: asset.id, name, description: label.description.trim(), intendedUse: label.intendedUse.trim() });
+      applied.push({ id: asset.id, name, project });
     }
 
-    logger.info('[label-uploads] applied operator labels', { count: applied.length, batch: isBatch, file: FILE });
-    return NextResponse.json({ success: true, applied });
+    logger.info('[label-uploads] applied operator labels', { count: applied.length, project, file: FILE });
+    return NextResponse.json({ success: true, project, applied });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to label uploads';
     logger.error('[label-uploads] failed', error instanceof Error ? error : new Error(message), { file: FILE });
