@@ -873,7 +873,8 @@ export function ContentAssistant() {
                 <Paperclip className="h-4 w-4" />
               </Button>
               {attachMenuOpen && (
-                <div className="absolute bottom-full left-0 z-20 mb-2 w-52 rounded-xl border border-border-strong bg-card p-1 shadow-lg">
+                <div className="absolute bottom-full left-0 z-20 pb-2">
+                  <div className="w-52 rounded-xl border border-border-strong bg-card p-1 shadow-lg">
                   <button
                     type="button"
                     onClick={() => { setAttachMenuOpen(false); fileInputRef.current?.click(); }}
@@ -895,6 +896,7 @@ export function ContentAssistant() {
                   >
                     <LibraryBig className="h-4 w-4 shrink-0" /> Search library
                   </button>
+                  </div>
                 </div>
               )}
             </div>
