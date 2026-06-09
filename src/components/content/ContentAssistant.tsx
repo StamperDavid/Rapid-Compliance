@@ -204,7 +204,6 @@ export function ContentAssistant() {
   const [awaitingLabels, setAwaitingLabels] = useState(false);
   const pendingLabelRef = useRef<Array<{ id: string; fileName: string }>>([]);
   const freshUploadsRef = useRef<Array<{ id: string; fileName: string }>>([]);
-  const prevUploadingRef = useRef(0);
 
   const threadRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -241,31 +240,6 @@ export function ContentAssistant() {
   useEffect(() => {
     attachmentsRef.current = attachments;
   }, [attachments]);
-
-  // When a batch of fresh uploads finishes, ask the operator to label them before
-  // saving to the library. Library-picked attachments are already labeled, so they
-  // never enter freshUploadsRef and never trigger this.
-  useEffect(() => {
-    if (
-      prevUploadingRef.current > 0 &&
-      uploadingCount === 0 &&
-      freshUploadsRef.current.length > 0 &&
-      !awaitingLabels
-    ) {
-      const pending = freshUploadsRef.current.slice();
-      freshUploadsRef.current = [];
-      pendingLabelRef.current = pending;
-      setAwaitingLabels(true);
-      const count = pending.length;
-      const firstName = (pending[0]?.fileName ?? 'your file').split(/[\\/]/).pop();
-      const ask =
-        count > 1
-          ? `I've added ${count} files. To file them in your library so you can find them later, tell me three things — the project they belong to, a brief description of what they are, and what they're used for. I'll tag all ${count} with the project.`
-          : `I've added "${firstName}". To file it in your library, tell me three things — the project it belongs to, a brief description, and what it's used for.`;
-      setMessages((prev) => [...prev, { role: 'assistant', content: ask }]);
-    }
-    prevUploadingRef.current = uploadingCount;
-  }, [uploadingCount, awaitingLabels]);
 
   // Revoke every outstanding preview object URL when the component unmounts.
   useEffect(() => {
@@ -581,6 +555,25 @@ export function ContentAssistant() {
     const sentAttachments = attachments;
     const uploading = uploadingCount > 0;
     if ((!text && sentAttachments.length === 0) || loading || uploading) {
+      return;
+    }
+
+    // First explicit submit after fresh uploads → start the library-labeling
+    // exchange. Uploading never advances the conversation on its own; only this
+    // submit does. (Library-picked attachments are already labeled and skip this.)
+    if (freshUploadsRef.current.length > 0) {
+      const pending = freshUploadsRef.current.slice();
+      freshUploadsRef.current = [];
+      pendingLabelRef.current = pending;
+      setAwaitingLabels(true);
+      const count = pending.length;
+      const firstName = (pending[0]?.fileName ?? 'your file').split(/[\\/]/).pop();
+      const ask =
+        count > 1
+          ? `I've added ${count} files. To file them in your library so you can find them later, tell me three things — the project they belong to, a brief description of what they are, and what they're used for. I'll tag all ${count} with the project.`
+          : `I've added "${firstName}". To file it in your library, tell me three things — the project it belongs to, a brief description, and what it's used for.`;
+      setInput('');
+      setMessages((prev) => [...prev, { role: 'assistant', content: ask }]);
       return;
     }
 
