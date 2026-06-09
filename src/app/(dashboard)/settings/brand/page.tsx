@@ -16,6 +16,13 @@ import {
   Megaphone,
   AlertTriangle,
   X,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronRight,
+  FolderUp,
+  FileVideo,
+  FileText,
+  File as FileIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +35,8 @@ import {
   type BrandIdentity,
   type BrandVoice,
   type BrandPalette,
+  type BrandExampleAsset,
+  type DashboardTheme,
 } from '@/types/brand-identity';
 
 // ── Publish-to-Agents job types (mirrors /api/training/rebake-brand-dna) ─────
@@ -85,6 +94,46 @@ const PALETTE_FIELDS: { key: keyof BrandPalette; label: string }[] = [
   { key: 'warning', label: 'Warning' },
   { key: 'error', label: 'Error' },
 ];
+
+// ── Dashboard-theme group labels (object groups rendered by Object.entries) ──
+// The grids map over `Object.entries(identity.dashboardTheme[group])`, so any
+// sub-key that exists at runtime is rendered; these labels just prettify the
+// known keys and fall back to the raw key for anything unmapped.
+
+const THEME_GROUPS: {
+  group: 'borderRadius' | 'spacing' | 'shadow' | 'fontSize' | 'fontWeight';
+  title: string;
+  numeric?: boolean;
+}[] = [
+  { group: 'borderRadius', title: 'Corner Radius' },
+  { group: 'spacing', title: 'Spacing' },
+  { group: 'shadow', title: 'Shadows' },
+  { group: 'fontSize', title: 'Font Sizes' },
+  { group: 'fontWeight', title: 'Font Weights', numeric: true },
+];
+
+const THEME_KEY_LABELS: Record<string, string> = {
+  sm: 'Small',
+  md: 'Medium',
+  lg: 'Large',
+  xl: 'X-Large',
+  full: 'Full',
+  card: 'Card',
+  button: 'Button',
+  input: 'Input',
+  xs: 'X-Small',
+  base: 'Base',
+  '2xl': '2X-Large',
+  '3xl': '3X-Large',
+  glow: 'Glow',
+  light: 'Light',
+  normal: 'Normal',
+  medium: 'Medium',
+  semibold: 'Semibold',
+  bold: 'Bold',
+};
+
+const themeKeyLabel = (key: string): string => THEME_KEY_LABELS[key] ?? key;
 
 // ── Chip-list editor (keyPhrases / avoidPhrases / competitors) ───────────────
 
@@ -166,6 +215,16 @@ export default function BrandIdentityPage() {
   const [logoError, setLogoError] = useState<string | null>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Reference Materials (exampleAssets) state ───────────────────────────────
+  const [uploadingAsset, setUploadingAsset] = useState(false);
+  const [assetError, setAssetError] = useState<string | null>(null);
+  const [armedRemoveId, setArmedRemoveId] = useState<string | null>(null);
+  const assetFileInputRef = useRef<HTMLInputElement>(null);
+  const armDisarmRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Advanced dashboard-theme section is collapsed by default — most users never open it.
+  const [themeOpen, setThemeOpen] = useState(false);
+
   // ── Publish-to-Agents state ─────────────────────────────────────────────────
   const [publishJob, setPublishJob] = useState<RebakeJob | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -207,6 +266,17 @@ export default function BrandIdentityPage() {
 
   // Clear any live interval when the component unmounts.
   useEffect(() => stopPolling, [stopPolling]);
+
+  // Clear any pending remove-arm timeout when the component unmounts.
+  useEffect(
+    () => () => {
+      if (armDisarmRef.current !== null) {
+        clearTimeout(armDisarmRef.current);
+        armDisarmRef.current = null;
+      }
+    },
+    [],
+  );
 
   // ── Publish: start the rebake job, then poll to completion ──────────────────
   const handlePublish = useCallback(async () => {
@@ -297,6 +367,7 @@ export default function BrandIdentityPage() {
           typography: next.typography,
           introOutro: next.introOutro,
           exampleAssets: next.exampleAssets,
+          dashboardTheme: next.dashboardTheme,
         }),
       });
       return res.ok;
@@ -360,6 +431,98 @@ export default function BrandIdentityPage() {
     [authFetch, identity, persistIdentity],
   );
 
+  // ── Reference Materials upload (POST /api/settings/brand-identity/asset) ────
+  // Mirrors handleLogoFile: upload one file, append the new asset, persist
+  // immediately so the upload isn't lost behind an un-clicked Save.
+  const handleAssetFile = useCallback(
+    async (file: File) => {
+      setAssetError(null);
+      setUploadingAsset(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await authFetch('/api/settings/brand-identity/asset', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = (await res.json()) as {
+          success: boolean;
+          url?: string;
+          fileName?: string;
+          contentType?: string;
+          kind?: BrandExampleAsset['kind'];
+          error?: string;
+        };
+        if (!res.ok || !data.success || !data.url) {
+          setAssetError(data.error ?? 'Upload failed. Please try again.');
+          return;
+        }
+        const newAsset: BrandExampleAsset = {
+          id: crypto.randomUUID(),
+          url: data.url,
+          fileName: data.fileName ?? file.name,
+          contentType: data.contentType ?? file.type,
+          kind: data.kind ?? 'other',
+          description: '',
+          purpose: '',
+          uploadedAt: new Date().toISOString(),
+        };
+        const updated: BrandIdentity = {
+          ...identity,
+          exampleAssets: [...identity.exampleAssets, newAsset],
+        };
+        setIdentity(updated);
+        if (await persistIdentity(updated)) {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 3000);
+        }
+      } catch {
+        setAssetError('Upload failed. Please check your connection and try again.');
+      } finally {
+        setUploadingAsset(false);
+      }
+    },
+    [authFetch, identity, persistIdentity],
+  );
+
+  // Immutable per-field update of a single asset by id (state only — persisted on blur).
+  const updateAsset = (id: string, field: 'description' | 'purpose', value: string) => {
+    setIdentity((prev) => ({
+      ...prev,
+      exampleAssets: prev.exampleAssets.map((a) =>
+        a.id === id ? { ...a, [field]: value } : a,
+      ),
+    }));
+  };
+
+  // Persist the current identity on field blur so typed text isn't lost on navigate-away.
+  const persistAssetsOnBlur = useCallback(() => {
+    setIdentity((current) => {
+      void persistIdentity(current);
+      return current;
+    });
+  }, [persistIdentity]);
+
+  // Two-step remove: first click arms (auto-disarms after 5s), second click removes.
+  const handleRemoveAsset = (id: string) => {
+    if (armDisarmRef.current !== null) {
+      clearTimeout(armDisarmRef.current);
+      armDisarmRef.current = null;
+    }
+    if (armedRemoveId !== id) {
+      setArmedRemoveId(id);
+      armDisarmRef.current = setTimeout(() => setArmedRemoveId(null), 5000);
+      return;
+    }
+    setArmedRemoveId(null);
+    const updated: BrandIdentity = {
+      ...identity,
+      exampleAssets: identity.exampleAssets.filter((a) => a.id !== id),
+    };
+    setIdentity(updated);
+    void persistIdentity(updated);
+  };
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   const updateCompany = (field: 'companyName' | 'tagline', value: string) => {
     setIdentity((prev) => ({ ...prev, [field]: value }));
@@ -393,6 +556,32 @@ export default function BrandIdentityPage() {
   const updateFont = (field: 'heading' | 'body', value: string) => {
     setIdentity((prev) => ({ ...prev, fonts: { ...prev.fonts, [field]: value } }));
   };
+
+  // ── Dashboard-theme setters ─────────────────────────────────────────────────
+  // Top-level scalar fields (favicon / showPoweredBy / monoFont).
+  const updateThemeField = <K extends keyof DashboardTheme>(field: K, value: DashboardTheme[K]) =>
+    setIdentity((prev) => ({
+      ...prev,
+      dashboardTheme: { ...prev.dashboardTheme, [field]: value },
+    }));
+
+  // Nested object-group fields (borderRadius / spacing / shadow / fontSize / fontWeight).
+  const updateThemeGroup = <G extends 'borderRadius' | 'spacing' | 'shadow' | 'fontSize' | 'fontWeight'>(
+    group: G,
+    key: keyof DashboardTheme[G],
+    value: DashboardTheme[G][keyof DashboardTheme[G]],
+  ) =>
+    setIdentity((prev) => ({
+      ...prev,
+      dashboardTheme: {
+        ...prev.dashboardTheme,
+        [group]: { ...prev.dashboardTheme[group], [key]: value },
+      },
+    }));
+
+  // The theme object is present from defaults; guard only for the brief window
+  // before a freshly-fetched identity has been normalised upstream.
+  const theme = identity.dashboardTheme;
 
   // ── Derived publish UI values ───────────────────────────────────────────────
   const publishing = publishJob?.status === 'running';
@@ -864,11 +1053,234 @@ export default function BrandIdentityPage() {
         </CardContent>
       </Card>
 
-      {/*
-        DEFERRED (do NOT build here): exampleAssets uploads — reference assets that
-        exemplify the brand (social posts / ads / images). The store + API already carry
-        `exampleAssets`; the upload UI is intentionally out of scope for this page.
-      */}
+      {/* ── Section 6: Advanced — Dashboard Theme (collapsible, collapsed by default) ── */}
+      <Card>
+        <button
+          type="button"
+          onClick={() => setThemeOpen((o) => !o)}
+          aria-expanded={themeOpen}
+          className="w-full text-left"
+        >
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <SlidersHorizontal className="w-5 h-5 text-primary" />
+                Advanced — Dashboard Theme
+              </CardTitle>
+              <CardDescription>
+                Fine-tune how your dashboard looks. Most people never need these.
+              </CardDescription>
+            </div>
+            {themeOpen ? (
+              <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+            )}
+          </CardHeader>
+        </button>
+
+        {themeOpen && theme && (
+          <CardContent className="space-y-6">
+            {/* Branding */}
+            <div className="space-y-4">
+              <label className="text-sm font-medium text-foreground block">Branding</label>
+              <div>
+                <label className="text-sm text-foreground block mb-1.5">Favicon URL</label>
+                <Input
+                  value={theme.favicon}
+                  onChange={(e) => updateThemeField('favicon', e.target.value)}
+                  placeholder="https://…/favicon.ico"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-foreground block mb-1.5">
+                  &ldquo;Powered by&rdquo; badge
+                </label>
+                <Button
+                  type="button"
+                  variant={theme.showPoweredBy ? 'default' : 'outline'}
+                  onClick={() => updateThemeField('showPoweredBy', !theme.showPoweredBy)}
+                >
+                  {theme.showPoweredBy ? 'Showing' : 'Hidden'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Object-group grids: Corner Radius / Spacing / Shadows / Font Sizes / Font Weights */}
+            {THEME_GROUPS.map(({ group, title, numeric }) => (
+              <div key={group} className="space-y-3">
+                <label className="text-sm font-medium text-foreground block">{title}</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {Object.entries(theme[group]).map(([key, value]) => (
+                    <div key={key}>
+                      <label className="text-xs text-muted-foreground block mb-1">
+                        {themeKeyLabel(key)}
+                      </label>
+                      <Input
+                        type={numeric ? 'number' : 'text'}
+                        value={String(value)}
+                        onChange={(e) =>
+                          updateThemeGroup(
+                            group,
+                            key as keyof DashboardTheme[typeof group],
+                            (numeric
+                              ? Number(e.target.value)
+                              : e.target.value) as DashboardTheme[typeof group][keyof DashboardTheme[typeof group]],
+                          )
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Mono Font */}
+            <div>
+              <label className="text-sm text-foreground block mb-1.5">Monospace Font</label>
+              <Input
+                value={theme.monoFont}
+                onChange={(e) => updateThemeField('monoFont', e.target.value)}
+                placeholder="e.g., JetBrains Mono"
+              />
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ── Section 7: Reference Materials (exampleAssets) ──────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FolderUp className="w-5 h-5 text-primary" />
+            Reference Materials
+          </CardTitle>
+          <CardDescription>
+            Upload examples of your brand — past marketing, ads, imagery, your logo, brand
+            guidelines — and tell your AI agents what each one is and why it matters.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Upload control */}
+          <div>
+            <input
+              ref={assetFileInputRef}
+              type="file"
+              accept="image/*,video/*,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  void handleAssetFile(file);
+                }
+                e.target.value = '';
+              }}
+            />
+            <Button
+              size="sm"
+              className="gap-1.5"
+              disabled={uploadingAsset}
+              onClick={() => assetFileInputRef.current?.click()}
+            >
+              {uploadingAsset ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Upload className="w-3.5 h-3.5" />
+              )}
+              {uploadingAsset ? 'Uploading…' : 'Upload Reference'}
+            </Button>
+            {assetError && <p className="text-xs text-destructive mt-2">{assetError}</p>}
+          </div>
+
+          {/* List of uploaded assets */}
+          {identity.exampleAssets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No reference materials yet. Upload your first example above.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {identity.exampleAssets.map((asset) => (
+                <div
+                  key={asset.id}
+                  className="bg-surface-elevated border border-border-light rounded-lg p-4 space-y-4"
+                >
+                  {/* Preview */}
+                  <div className="flex items-center gap-3">
+                    {asset.kind === 'image' ? (
+                      <div className="w-16 h-16 bg-background rounded-lg flex items-center justify-center border border-border-light overflow-hidden relative shrink-0">
+                        <Image
+                          src={asset.url}
+                          alt={asset.fileName}
+                          fill
+                          className="object-contain"
+                          unoptimized
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 bg-background rounded-lg flex items-center justify-center border border-border-light shrink-0">
+                        {asset.kind === 'video' ? (
+                          <FileVideo className="w-7 h-7 text-muted-foreground" />
+                        ) : asset.kind === 'document' ? (
+                          <FileText className="w-7 h-7 text-muted-foreground" />
+                        ) : (
+                          <FileIcon className="w-7 h-7 text-muted-foreground" />
+                        )}
+                      </div>
+                    )}
+                    <p className="text-sm text-foreground break-all">{asset.fileName}</p>
+                  </div>
+
+                  {/* Labeled fields */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm text-foreground block mb-1.5">What is this?</label>
+                      <Input
+                        value={asset.description}
+                        onChange={(e) => updateAsset(asset.id, 'description', e.target.value)}
+                        onBlur={persistAssetsOnBlur}
+                        placeholder="e.g. Our 2025 product launch ad"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-foreground block mb-1.5">
+                        Why are you sharing it?
+                      </label>
+                      <Input
+                        value={asset.purpose}
+                        onChange={(e) => updateAsset(asset.id, 'purpose', e.target.value)}
+                        onBlur={persistAssetsOnBlur}
+                        placeholder="e.g. example of prior marketing / our new logo / tone we want to match"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Two-step remove */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={armedRemoveId === asset.id ? 'destructive' : 'outline'}
+                      size="sm"
+                      onClick={() => handleRemoveAsset(asset.id)}
+                    >
+                      {armedRemoveId === asset.id ? 'Click again to remove' : 'Remove'}
+                    </Button>
+                    {armedRemoveId === asset.id && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setArmedRemoveId(null)}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

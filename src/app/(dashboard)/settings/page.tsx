@@ -72,10 +72,7 @@ export default function SettingsPage() {
     {
       title: 'Customization',
       items: [
-        { icon: '🎨', label: 'CRM Theme & Branding', description: 'White-label your CRM platform with custom colors and logo', href: `/settings/theme`, permission: canManageTheme },
-        { icon: '🧬', label: 'Brand DNA', description: 'Define your brand identity for AI-powered email, social, and content generation', href: `/settings/brand-dna`, permission: canManageTheme },
-        { icon: '🎬', label: 'Brand Kit', description: 'Logo watermark, brand colors, caption typography, and intro/outro for video', href: `/settings/brand-kit`, permission: canManageTheme },
-        { icon: '🪪', label: 'Brand Identity', description: 'Unified brand voice, logo, colors, and fonts used across every AI feature', href: `/settings/brand`, permission: canManageTheme },
+        { icon: '🪪', label: 'Brand Identity', description: 'Your brand voice, logo, colors, and fonts — one place that updates your AI agents, your video kit, and your dashboard theme', href: `/settings/brand`, permission: canManageTheme },
         { icon: '🎵', label: 'Music Library', description: 'Upload and manage royalty-free background music tracks for video production', href: `/settings/music-library`, permission: canManageOrganization },
       ]
     },

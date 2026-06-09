@@ -17,11 +17,86 @@ import {
   DEFAULT_BRAND_IDENTITY,
   type BrandIdentity,
   type BrandPalette,
+  type DashboardTheme,
 } from '@/types/brand-identity';
 
 const BRAND_IDENTITY_DOC_PATH = `${getSubCollection('settings')}/brand-identity`;
 /** The website editor doc, where the tenant's real logo + colors already live. */
 const WEBSITE_CONFIG_DOC_PATH = `${getSubCollection('platform')}/website-editor-config`;
+/** The live CRM theme doc — read by `useOrgTheme` → CSS vars. */
+const THEME_DOC_PATH = 'platform_settings/theme';
+
+/**
+ * Deep-merge a (possibly partial) saved `dashboardTheme` over the defaults so every
+ * nested key is always present even on older / partial saves. No `any`: each branch
+ * is spread over its typed default.
+ */
+function mergeDashboardTheme(
+  saved: Partial<DashboardTheme> | undefined,
+): DashboardTheme {
+  const d = DEFAULT_BRAND_IDENTITY.dashboardTheme;
+  return {
+    favicon: saved?.favicon ?? d.favicon,
+    showPoweredBy: saved?.showPoweredBy ?? d.showPoweredBy,
+    borderRadius: { ...d.borderRadius, ...saved?.borderRadius },
+    spacing: { ...d.spacing, ...saved?.spacing },
+    shadow: { ...d.shadow, ...saved?.shadow },
+    fontSize: { ...d.fontSize, ...saved?.fontSize },
+    fontWeight: { ...d.fontWeight, ...saved?.fontWeight },
+    monoFont: saved?.monoFont ?? d.monoFont,
+  };
+}
+
+/**
+ * Structured (partial) view of the live theme doc's branches this read-bridge reads.
+ * Typed so no `any` is needed; every access is guarded with a per-field fallback.
+ */
+interface LiveThemePartial {
+  branding?: { favicon?: string; showPoweredBy?: boolean };
+  layout?: {
+    borderRadius?: Partial<DashboardTheme['borderRadius']>;
+    spacing?: Partial<DashboardTheme['spacing']>;
+    shadow?: Partial<DashboardTheme['shadow']>;
+  };
+  typography?: {
+    fontSize?: Partial<DashboardTheme['fontSize']>;
+    fontWeight?: Partial<DashboardTheme['fontWeight']>;
+    fontFamily?: { mono?: string };
+  };
+}
+
+/**
+ * Read-bridge: when the brand-identity doc has no `dashboardTheme` yet (not migrated),
+ * populate it FROM the operator's ACTUAL live theme doc so the page shows real values,
+ * not defaults — otherwise the first save would overwrite their live theme. Maps
+ * theme→dashboardTheme 1:1; every access is guarded and falls back per-field to the
+ * default value.
+ */
+async function getDashboardThemeFromLiveTheme(): Promise<DashboardTheme> {
+  const d = DEFAULT_BRAND_IDENTITY.dashboardTheme;
+  if (!adminDb) {
+    return { ...d };
+  }
+  try {
+    const doc = await adminDb.doc(THEME_DOC_PATH).get();
+    if (!doc.exists) {
+      return { ...d };
+    }
+    const t = (doc.data() ?? {}) as LiveThemePartial;
+    return {
+      favicon: t.branding?.favicon ?? d.favicon,
+      showPoweredBy: t.branding?.showPoweredBy ?? d.showPoweredBy,
+      borderRadius: { ...d.borderRadius, ...t.layout?.borderRadius },
+      spacing: { ...d.spacing, ...t.layout?.spacing },
+      shadow: { ...d.shadow, ...t.layout?.shadow },
+      fontSize: { ...d.fontSize, ...t.typography?.fontSize },
+      fontWeight: { ...d.fontWeight, ...t.typography?.fontWeight },
+      monoFont: t.typography?.fontFamily?.mono ?? d.monoFont,
+    };
+  } catch {
+    return { ...d };
+  }
+}
 
 /**
  * Borrow the real brand logo + palette from the website editor (where the tenant
@@ -82,6 +157,7 @@ export async function getBrandIdentity(): Promise<BrandIdentity> {
     typography: { ...DEFAULT_BRAND_IDENTITY.typography, ...data.typography },
     introOutro: { ...DEFAULT_BRAND_IDENTITY.introOutro, ...data.introOutro },
     exampleAssets: data.exampleAssets ?? DEFAULT_BRAND_IDENTITY.exampleAssets,
+    dashboardTheme: mergeDashboardTheme(data.dashboardTheme),
     updatedAt: data.updatedAt ?? DEFAULT_BRAND_IDENTITY.updatedAt,
     updatedBy: data.updatedBy ?? DEFAULT_BRAND_IDENTITY.updatedBy,
   };
@@ -105,6 +181,14 @@ export async function getBrandIdentity(): Promise<BrandIdentity> {
         competitors: Array.isArray(dna.competitors) ? dna.competitors : [],
       };
     }
+  }
+
+  // Dashboard-theme bridge: until this doc's `dashboardTheme` is populated
+  // (migration), pull the real radius/spacing/shadow/font-size/weight/mono/favicon/
+  // powered-by from the LIVE theme doc so the page shows the operator's ACTUAL theme.
+  // Without this the first save would overwrite their live theme with defaults.
+  if (!data.dashboardTheme) {
+    identity.dashboardTheme = await getDashboardThemeFromLiveTheme();
   }
 
   // No own logo set → borrow the real one (and palette) from the website editor,

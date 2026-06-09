@@ -51,10 +51,67 @@ export interface BrandVoice {
 // ============================================================================
 
 export interface BrandExampleAsset {
-  type: 'social-post' | 'ad' | 'image';
-  mediaId?: string;
-  url?: string;
-  note?: string;
+  id: string; // stable client-generated id
+  url: string; // permanent public Storage URL
+  fileName: string;
+  contentType: string; // mime type
+  kind: 'image' | 'video' | 'document' | 'other';
+  description: string; // "What is this?" — what the upload is
+  purpose: string; // "Why are you sharing it?" — e.g. prior marketing, brand example, logo change
+  uploadedAt: string; // ISO
+}
+
+// ============================================================================
+// Dashboard Theme — the non-color CRM-theme controls (radius / spacing /
+// shadow / font sizes & weights / mono font / favicon / powered-by).
+// ============================================================================
+
+/**
+ * The remaining (non-color, non-heading/body-font, non-voice) CRM-theme controls
+ * editable on the canonical Brand page. Keys map 1:1 to the live theme doc
+ * (`platform_settings/theme`, `ThemeConfig` in `src/hooks/useOrgTheme.ts`):
+ *   favicon       ← branding.favicon
+ *   showPoweredBy ← branding.showPoweredBy
+ *   borderRadius  ← layout.borderRadius
+ *   spacing       ← layout.spacing
+ *   shadow        ← layout.shadow
+ *   fontSize      ← typography.fontSize
+ *   fontWeight    ← typography.fontWeight
+ *   monoFont      ← typography.fontFamily.mono
+ */
+export interface DashboardTheme {
+  /** Absolute https URL, or '' (none). */
+  favicon: string;
+  showPoweredBy: boolean;
+  borderRadius: {
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    full: string;
+    card: string;
+    button: string;
+    input: string;
+  };
+  spacing: { xs: string; sm: string; md: string; lg: string; xl: string };
+  shadow: { sm: string; md: string; lg: string; xl: string; glow: string };
+  fontSize: {
+    xs: string;
+    sm: string;
+    base: string;
+    lg: string;
+    xl: string;
+    '2xl': string;
+    '3xl': string;
+  };
+  fontWeight: {
+    light: number;
+    normal: number;
+    medium: number;
+    semibold: number;
+    bold: number;
+  };
+  monoFont: string;
 }
 
 // ============================================================================
@@ -80,6 +137,8 @@ export interface BrandIdentity {
   introOutro: BrandIntroOutro;
   /** Example reference assets that exemplify the brand. */
   exampleAssets: BrandExampleAsset[];
+  /** Non-color CRM-theme controls (radius/spacing/shadow/font-size/weight/mono/favicon). */
+  dashboardTheme: DashboardTheme;
   /** Last update metadata. */
   updatedAt: string;
   updatedBy: string;
@@ -143,6 +202,41 @@ export const DEFAULT_BRAND_IDENTITY: BrandIdentity = {
     outroCta: '',
   },
   exampleAssets: [],
+  // Values copied verbatim from the live theme's DEFAULT_THEME
+  // (`src/hooks/useOrgTheme.ts`) so an unmigrated first-save can't drift the theme.
+  dashboardTheme: {
+    favicon: '',
+    showPoweredBy: true,
+    borderRadius: {
+      sm: '0.25rem',
+      md: '0.375rem',
+      lg: '0.5rem',
+      xl: '0.75rem',
+      full: '9999px',
+      card: '0.75rem',
+      button: '0.5rem',
+      input: '0.375rem',
+    },
+    spacing: { xs: '0.5rem', sm: '1rem', md: '1.5rem', lg: '2rem', xl: '3rem' },
+    shadow: {
+      sm: '0 1px 2px 0 rgba(0,0,0,0.05)',
+      md: '0 4px 6px -1px rgba(0,0,0,0.1)',
+      lg: '0 10px 15px -3px rgba(0,0,0,0.1)',
+      xl: '0 20px 25px -5px rgba(0,0,0,0.1)',
+      glow: '0 0 20px rgba(99,102,241,0.5)',
+    },
+    fontSize: {
+      xs: '0.75rem',
+      sm: '0.875rem',
+      base: '1rem',
+      lg: '1.125rem',
+      xl: '1.25rem',
+      '2xl': '1.5rem',
+      '3xl': '1.875rem',
+    },
+    fontWeight: { light: 300, normal: 400, medium: 500, semibold: 600, bold: 700 },
+    monoFont: 'Fira Code, monospace',
+  },
   updatedAt: new Date().toISOString(),
   updatedBy: '',
 };

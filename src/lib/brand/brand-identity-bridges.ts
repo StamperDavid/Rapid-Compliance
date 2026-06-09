@@ -1,0 +1,305 @@
+/**
+ * Brand Identity Bridges
+ *
+ * The canonical Brand Identity page (`/settings/brand`) is the single source of
+ * truth the operator edits. This module fans a saved `BrandIdentity` out to the
+ * three legacy stores the rest of the app already reads, so the operator only
+ * ever edits ONE page:
+ *
+ *   1. VOICE     → org `brandDNA` field        (read by `getBrandDNA()` at GM bake)
+ *   2. BRAND KIT → `settings/brand-kit` doc    (read by `getBrandKit()` for video)
+ *   3. THEME     → `platform_settings/theme`   (read by `useOrgTheme` → CSS vars)
+ *
+ * This module ONLY writes — it never re-points or modifies the readers. The
+ * agent re-bake stays a deliberate operator button and is NOT triggered here.
+ *
+ * The transforms are exported pure functions so they can be unit-tested in
+ * isolation; `syncBrandIdentityToLegacyStores` is the orchestrator the PUT route
+ * calls.
+ */
+
+import { adminDb } from '@/lib/firebase/admin';
+import { logger } from '@/lib/logger/logger';
+import { updateBrandDNA } from '@/lib/brand/brand-dna-service';
+import { getBrandKit, saveBrandKit } from '@/lib/video/brand-kit-service';
+import type { BrandIdentity } from '@/types/brand-identity';
+import type { BrandKit } from '@/types/brand-kit';
+
+const FILE = 'brand-identity-bridges.ts';
+
+// ============================================================================
+// Color helpers (ported from settings/theme/page.tsx — pure)
+// ============================================================================
+
+/**
+ * Lighten (positive percent) or darken (negative percent) a #RRGGBB hex color.
+ * Ported verbatim from `settings/theme/page.tsx` so the theme overlay produces
+ * the SAME light/dark shades the theme editor would.
+ */
+export function adjustColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = (num >> 16) + amt;
+  const G = ((num >> 8) & 0x00ff) + amt;
+  const B = (num & 0x0000ff) + amt;
+  return `#${(
+    0x1000000 +
+    (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+    (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+    (B < 255 ? (B < 1 ? 0 : B) : 255)
+  )
+    .toString(16)
+    .slice(1)}`;
+}
+
+/**
+ * Pick a readable contrast color (#000000 or #ffffff) for a given background hex
+ * using relative luminance. Used to fill the theme's `contrast` slot.
+ */
+export function contrastFor(hex: string): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = ((num >> 16) & 0xff) / 255;
+  const g = ((num >> 8) & 0xff) / 255;
+  const b = (num & 0xff) / 255;
+  // Perceptual luminance (sRGB coefficients).
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
+/** A semantic theme color slot with a four-shade variant. */
+interface ThemeColorScale {
+  main: string;
+  light: string;
+  dark: string;
+  contrast: string;
+}
+
+/** Build a full {main,light,dark,contrast} scale from a single brand hex. */
+function scaleFromHex(hex: string): ThemeColorScale {
+  return {
+    main: hex,
+    light: adjustColor(hex, 20),
+    dark: adjustColor(hex, -20),
+    contrast: contrastFor(hex),
+  };
+}
+
+// ============================================================================
+// Brand Kit bridge
+// ============================================================================
+
+/**
+ * Build a `BrandKit` (minus updatedAt/updatedBy) from the canonical identity,
+ * overlaying onto the existing kit so `enabled` is preserved.
+ */
+export function brandKitFromIdentity(
+  identity: BrandIdentity,
+  existingBrandKit: BrandKit,
+): Omit<BrandKit, 'updatedAt' | 'updatedBy'> {
+  return {
+    enabled: existingBrandKit.enabled,
+    logo: identity.logo,
+    colors: {
+      primary: identity.colors.primary,
+      secondary: identity.colors.secondary,
+      accent: identity.colors.accent,
+    },
+    typography: identity.typography,
+    introOutro: identity.introOutro,
+  };
+}
+
+// ============================================================================
+// Theme bridge
+// ============================================================================
+
+/**
+ * Structured (partial) view of the `platform_settings/theme` doc — only the
+ * branches this bridge reads or preserves. Typed so no `any` is needed; the
+ * full doc is preserved via spreads at each level.
+ */
+interface ThemeColorsPartial {
+  primary?: Partial<ThemeColorScale>;
+  secondary?: Partial<ThemeColorScale>;
+  accent?: Partial<ThemeColorScale>;
+  success?: Partial<ThemeColorScale>;
+  warning?: Partial<ThemeColorScale>;
+  error?: Partial<ThemeColorScale>;
+  info?: unknown;
+  neutral?: unknown;
+  background?: unknown;
+  text?: unknown;
+  border?: unknown;
+  [key: string]: unknown;
+}
+
+interface ThemeTypographyFontFamilyPartial {
+  heading?: string;
+  body?: string;
+  mono?: string;
+  [key: string]: unknown;
+}
+
+interface ThemeTypographyPartial {
+  fontFamily?: ThemeTypographyFontFamilyPartial;
+  fontSize?: Record<string, unknown>;
+  fontWeight?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface ThemeBrandingPartial {
+  companyName?: string;
+  logoUrl?: string;
+  favicon?: string;
+  primaryColor?: string;
+  showPoweredBy?: boolean;
+  [key: string]: unknown;
+}
+
+/** Live theme `layout` branch — only the sub-objects this bridge overlays/preserves. */
+interface ThemeLayoutPartial {
+  borderRadius?: Record<string, unknown>;
+  spacing?: Record<string, unknown>;
+  shadow?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface ThemeDocPartial {
+  colors?: ThemeColorsPartial;
+  typography?: ThemeTypographyPartial;
+  branding?: ThemeBrandingPartial;
+  layout?: ThemeLayoutPartial;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Deep-merge (by hand, level-by-level) the canonical identity into the existing
+ * theme doc. The brand/semantic color mains (+ derived light/dark/contrast),
+ * branding name/logo/primaryColor/favicon/showPoweredBy, heading/body/mono fonts,
+ * and the dashboard-theme layout (borderRadius / spacing / shadow) + typography
+ * (fontSize / fontWeight) are all overlaid from the identity. Every OTHER field
+ * (neutral, info, background, text, border, and any other layout/typography keys)
+ * is preserved verbatim via the structured spreads.
+ */
+export function themeOverlayFromIdentity(
+  identity: BrandIdentity,
+  existingTheme: ThemeDocPartial,
+): Record<string, unknown> {
+  const existingColors: ThemeColorsPartial = existingTheme.colors ?? {};
+  const existingTypography: ThemeTypographyPartial = existingTheme.typography ?? {};
+  const existingFontFamily: ThemeTypographyFontFamilyPartial =
+    existingTypography.fontFamily ?? {};
+  const existingBranding: ThemeBrandingPartial = existingTheme.branding ?? {};
+  const existingLayout: ThemeLayoutPartial = existingTheme.layout ?? {};
+  const dt = identity.dashboardTheme;
+
+  return {
+    ...existingTheme,
+    colors: {
+      ...existingColors,
+      // Brand colors
+      primary: scaleFromHex(identity.colors.primary),
+      secondary: scaleFromHex(identity.colors.secondary),
+      accent: scaleFromHex(identity.colors.accent),
+      // Semantic colors
+      success: scaleFromHex(identity.colors.success),
+      warning: scaleFromHex(identity.colors.warning),
+      error: scaleFromHex(identity.colors.error),
+      // NOTE: background / text / border / neutral / info intentionally untouched.
+    },
+    branding: {
+      ...existingBranding,
+      companyName: identity.companyName,
+      logoUrl: identity.logo?.url ?? existingBranding.logoUrl ?? '',
+      primaryColor: identity.colors.primary,
+      favicon: dt.favicon,
+      showPoweredBy: dt.showPoweredBy,
+    },
+    typography: {
+      ...existingTypography,
+      fontFamily: {
+        ...existingFontFamily,
+        heading: identity.fonts.heading,
+        body: identity.fonts.body,
+        mono: dt.monoFont,
+      },
+      fontSize: { ...existingTypography.fontSize, ...dt.fontSize },
+      fontWeight: { ...existingTypography.fontWeight, ...dt.fontWeight },
+    },
+    layout: {
+      ...existingLayout,
+      borderRadius: { ...existingLayout.borderRadius, ...dt.borderRadius },
+      spacing: { ...existingLayout.spacing, ...dt.spacing },
+      shadow: { ...existingLayout.shadow, ...dt.shadow },
+      // any other layout.* keys preserved via spread.
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+// ============================================================================
+// Orchestrator
+// ============================================================================
+
+const THEME_COLLECTION = 'platform_settings';
+const THEME_DOC = 'theme';
+
+/**
+ * Fan a saved `BrandIdentity` out to all three legacy stores. Each write-back is
+ * INDEPENDENT and isolated in its own try/catch: one failing never blocks the
+ * others, and this function never throws — it logs and returns which stores
+ * succeeded.
+ */
+export async function syncBrandIdentityToLegacyStores(
+  identity: BrandIdentity,
+  userId: string,
+): Promise<{ voice: boolean; brandKit: boolean; theme: boolean }> {
+  const result = { voice: false, brandKit: false, theme: false };
+
+  // 1. VOICE → org brandDNA
+  try {
+    result.voice = await updateBrandDNA(identity.voice, userId);
+  } catch (error) {
+    logger.error(
+      'Brand identity sync: failed to mirror voice into org brandDNA',
+      error instanceof Error ? error : new Error(String(error)),
+      { file: FILE },
+    );
+  }
+
+  // 2. BRAND KIT → settings/brand-kit
+  try {
+    const existing = await getBrandKit();
+    await saveBrandKit(brandKitFromIdentity(identity, existing), userId);
+    result.brandKit = true;
+  } catch (error) {
+    logger.error(
+      'Brand identity sync: failed to write brand kit',
+      error instanceof Error ? error : new Error(String(error)),
+      { file: FILE },
+    );
+  }
+
+  // 3. THEME → platform_settings/theme
+  try {
+    if (!adminDb) {
+      throw new Error('Firebase Admin not initialized');
+    }
+    const ref = adminDb.collection(THEME_COLLECTION).doc(THEME_DOC);
+    const doc = await ref.get();
+    const existing: ThemeDocPartial = doc.exists
+      ? ((doc.data() ?? {}) as ThemeDocPartial)
+      : {};
+    await ref.set(themeOverlayFromIdentity(identity, existing), { merge: true });
+    result.theme = true;
+  } catch (error) {
+    logger.error(
+      'Brand identity sync: failed to write theme overlay',
+      error instanceof Error ? error : new Error(String(error)),
+      { file: FILE },
+    );
+  }
+
+  return result;
+}
