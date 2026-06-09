@@ -38,6 +38,7 @@ import { getCopywriter, type EmailSequenceResult } from './copywriter/specialist
 import { getBlogWriter, type BlogPostResult } from './blog/specialist';
 import { getCalendarCoordinator } from './calendar/specialist';
 import { VideoSpecialist } from './video/specialist';
+import { getHedraSpecialist } from './hedra/specialist';
 import { getAssetGenerator } from '../builder/assets/specialist';
 import { getMusicPlanner, type SoundtrackPlanResult } from './music/specialist';
 import { getPodcastSpecialist, type EpisodePlanResult } from './podcast/specialist';
@@ -241,7 +242,7 @@ const CONTENT_MANAGER_CONFIG: ManagerConfig = {
   },
   maxTokens: 8192,
   temperature: 0.4,
-  specialists: ['COPYWRITER', 'BLOG_WRITER', 'CALENDAR_COORDINATOR', 'VIDEO_SPECIALIST', 'ASSET_GENERATOR', 'MUSIC_PLANNER', 'PODCAST_SPECIALIST'],
+  specialists: ['COPYWRITER', 'BLOG_WRITER', 'CALENDAR_COORDINATOR', 'VIDEO_SPECIALIST', 'HEDRA_SPECIALIST', 'ASSET_GENERATOR', 'MUSIC_PLANNER', 'PODCAST_SPECIALIST'],
   delegationRules: [
     // Copywriter - Short-form text content
     {
@@ -269,6 +270,15 @@ const CONTENT_MANAGER_CONFIG: ManagerConfig = {
       triggerKeywords: ['video', 'storyboard', 'script', 'youtube', 'tiktok', 'reel', 'short', 'thumbnail'],
       delegateTo: 'VIDEO_SPECIALIST',
       priority: 10,
+      requiresApproval: false,
+    },
+    // Hedra Specialist - the generation gateway (picks the model, drives Hedra). The
+    // manager hands the Video Specialist's storyboard here to actually render. Lower
+    // priority than VIDEO so creative direction is produced first.
+    {
+      triggerKeywords: ['hedra', 'render', 'generate video', 'clone', 'avatar', 'animate', 'generation'],
+      delegateTo: 'HEDRA_SPECIALIST',
+      priority: 9,
       requiresApproval: false,
     },
     // Asset Generator - Visual content
@@ -610,6 +620,7 @@ export class ContentManager extends BaseManager {
       { name: 'BLOG_WRITER', factory: getBlogWriter },
       { name: 'CALENDAR_COORDINATOR', factory: getCalendarCoordinator },
       { name: 'VIDEO_SPECIALIST', factory: () => new VideoSpecialist() },
+      { name: 'HEDRA_SPECIALIST', factory: getHedraSpecialist },
       { name: 'ASSET_GENERATOR', factory: getAssetGenerator },
       { name: 'MUSIC_PLANNER', factory: getMusicPlanner },
       { name: 'PODCAST_SPECIALIST', factory: getPodcastSpecialist },

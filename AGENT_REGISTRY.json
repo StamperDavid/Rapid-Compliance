@@ -74,7 +74,7 @@
       "level": "L2",
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/content/manager.ts",
-      "specialists": ["COPYWRITER", "CALENDAR_COORDINATOR", "VIDEO_SPECIALIST"],
+      "specialists": ["COPYWRITER", "CALENDAR_COORDINATOR", "VIDEO_SPECIALIST", "HEDRA_SPECIALIST"],
       "functionalLOC": 1600,
       "note": "Multi-Modal Production Commander - Brand DNA integration, SEO-to-Copy keyword injection, ContentPackage synthesis, quality gate validation"
     },
@@ -322,6 +322,14 @@
       "path": "src/lib/agents/content/video/specialist.ts",
       "reportsTo": "CONTENT_MANAGER",
       "capabilities": ["video_scripts", "storyboards", "audio_cues", "video_seo", "thumbnail_strategy"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_content"
+    },
+    "HEDRA_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/content/hedra/specialist.ts",
+      "reportsTo": "CONTENT_MANAGER",
+      "capabilities": ["generate_media"],
       "verdict": "HIRED",
       "jasperTool": "delegate_to_content"
     },

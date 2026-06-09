@@ -6,13 +6,13 @@
  * after adding or removing an agent file. CI runs the same script with
  * `--check` and fails the build on drift.
  *
- * Total agents: 72
+ * Total agents: 73
  *   L1 (Master Orchestrator): 1
  *   L2 (Managers):            10
- *   L3 (Specialists):         57
+ *   L3 (Specialists):         58
  *   STANDALONE:               4
  *
- * Generated at: 2026-06-05T04:40:18.927Z
+ * Generated at: 2026-06-09T18:42:16.248Z
  *
  * @module lib/agents/agent-registry
  */
@@ -276,7 +276,7 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
   },
 
   // =========================================================================
-  // L3 - CONTENT SPECIALISTS (6)
+  // L3 - CONTENT SPECIALISTS (7)
   // =========================================================================
   {
     id: 'BLOG_WRITER',
@@ -301,6 +301,14 @@ export const AGENT_REGISTRY: AgentDefinition[] = [
     tier: 'L3',
     parentId: 'CONTENT_MANAGER',
     capabilities: ['generate_page_copy', 'generate_proposal', 'generate_email_sequence'],
+  },
+  {
+    id: 'HEDRA_SPECIALIST',
+    name: "Hedra Specialist",
+    role: "Hedra Specialist",
+    tier: 'L3',
+    parentId: 'CONTENT_MANAGER',
+    capabilities: ['generate_media'],
   },
   {
     id: 'MUSIC_PLANNER',
