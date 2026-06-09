@@ -32,7 +32,7 @@ const SaveProjectSchema = z.object({
       'testimonial',
       'social-ad',
     ]),
-    platform: z.enum(['youtube', 'tiktok', 'instagram', 'linkedin', 'website']),
+    platform: z.enum(['youtube', 'tiktok', 'instagram', 'linkedin', 'website', 'generic']),
     duration: z.number().min(10).max(600),
     aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']),
     resolution: z.enum(['720p', '1080p', '4k']),
@@ -53,7 +53,7 @@ const SaveProjectSchema = z.object({
       sceneNumber: z.number(),
       title: z.string().optional(),
       visualDescription: z.string().optional(),
-      scriptText: z.string(),
+      scriptText: z.string().optional().default(''),
       screenshotUrl: z.string().nullable(),
       avatarId: z.string().nullable(),
       avatarName: z.string().nullable().optional(),
@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
     if (!parseResult.success) {
       logger.warn('Invalid save project request', {
         file: 'api/video/project/save/route.ts',
+        issues: parseResult.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
       });
 
       return NextResponse.json(
