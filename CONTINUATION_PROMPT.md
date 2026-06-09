@@ -2,6 +2,31 @@
 
 ---
 
+# 🔴 RESUME HERE — Jun 9 AM — BLOCKER: chat file/folder attachment never uploads
+
+**Symptom:** In the Content Assistant chat (`/content/video`), clicking 📎 (single file) or 📁 (folder), picking a file → **NO attachment chip appears, and the upload request NEVER fires.** `grep -c "/api/settings/brand-identity/asset" dev-server.log` = **0 across the whole session** → the request never leaves the browser. No client error in the log either. (Owner hard-refreshed + I restarted the dev server clean — still broken. So it's a real code/runtime issue, NOT staleness.)
+
+**Already ruled out (don't re-check):**
+- `uploadOne` code is CORRECT (`ContentAssistant.tsx` ~300): accepts all formats, builds FormData, POSTs `/api/settings/brand-identity/asset` via `authFetch`. No early-reject.
+- Buttons wired: paperclip `onClick=fileInputRef.current?.click()` (~823), folder `onClick=folderInputRef.current?.click()` (~834). Inputs present (~803-818), folder input gets `webkitdirectory` via `useEffect([])` (~240). Panel is `aria-hidden`, NOT conditionally rendered, so the inputs ARE in the DOM at mount.
+- Chip renders on `attachments.length>0 || uploadingCount>0` (~720-789). `onFileSelected`→`uploadFiles`→`uploadOne` (~384); `onFolderSelected`→`keepRealFolderFiles`→`uploadOne` (~396).
+- Server: dev server restarted clean, `fflate` present, HTTP 200. Upload route exists.
+
+**TOP SUSPECTS — check in this order:**
+1. **`disabled={loading}` on BOTH attach buttons** (~824, ~835). If `loading` is stuck `true`, clicking is a silent no-op → EXACTLY these symptoms (no chip, no network, no error). Verify `loading` resets; consider NOT gating attach on `loading`.
+2. **Instrument the click chain** — add temp `console.log`/`logger` in the button `onClick`, in `onFileSelected`/`onFolderSelected`, and at top of `uploadOne`. The dev `ClientLogBridge` forwards browser logs to `dev-server.log`, so this pinpoints exactly WHERE the chain breaks (click? input.click()? onChange? uploadOne?).
+3. Confirm `fileInputRef.current`/`folderInputRef.current` are non-null at click time.
+4. Confirm the upload route works server-side (real token).
+
+Files: `src/components/content/ContentAssistant.tsx`; route `src/app/api/settings/brand-identity/asset/route.ts`. Dev server runs on `localhost:3000` from `D:\rapid-dev` (logs to its `dev-server.log`; monitor task watches content/video/asset/brand + errors).
+
+**THEN (once attach works):** owner wants a **30s Pixar-style commercial** — "Velocity" (SalesVelocity superhero) liberates a small-business owner from the "Pipedrive" villain (overpriced, fee-gated, hidden-fee CRM). Emotion = **empowerment**, any SMB owner. The Content Assistant ALREADY produced a strong 3-act `VIDEO_SPECIALIST` delegate brief (Pixar warm lighting, big eyes, Incredibles action; VO ends "Accelerate your growth") — it's in the chat history. He wants to attach a **folder of reference materials** to that build (hence the attach bug is the blocker).
+
+## ✅ SHIPPED tonight (Jun 8–9, all on dev → 585916fb, rapid-dev synced)
+Brand: 4 pages → ONE (`/settings/brand`); save fans out to voice/brand-kit/theme; Publish-to-Agents surgical rebake; full Advanced theme controls; Reference Materials upload+understand; colors fixed to REAL design tokens (accent = pink #EC4899, green = success). Video: blank-leading-scene fix, real-logo+tagline brand-outro (`brand-outro.ts`), auto-save + Load Project recall (`useVideoProjectAutoSave`), chat upload that **accepts + UNDERSTANDS all marketing formats** (image vision / audio+video transcript / PDF / **docx+pptx via fflate** / xlsx / text), multi-file + **whole-folder** upload. Dropped 83MB officeparser(OCR) → 833KB fflate.
+
+---
+
 # ✅ SHIPPED June 8, 2026 — Brand consolidation + references-to-agents (commits `00b3ce19`, `a8453762`)
 Four brand/theme pages (theme, brand-dna, brand-kit, brand-identity) collapsed into ONE: `/settings/brand`. One Save fans out to AI voice (brandDNA), video kit (brand-kit), and dashboard theme (platform_settings/theme) via bridges; old pages redirect. "Publish to Agents" surgically re-bakes all 67 GMs (preserves training edits). Full CRM-theme controls moved onto the page (Advanced section). Reference Materials: upload image/video/PDF → auto-analyzed (OpenRouter vision / Deepgram transcript / PDF parse → summary, proven live) → baked into every agent's Brand DNA on Publish. See memory `project_brand_identity_single_source_consolidation`.
 
