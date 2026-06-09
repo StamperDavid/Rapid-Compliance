@@ -78,7 +78,7 @@ export const VIDEO_TYPE_LABELS: Record<VideoType, string> = {
   'social-ad': 'Social Ad',
 } as const;
 
-export type TargetPlatform = 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website';
+export type TargetPlatform = 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website' | 'generic';
 
 export const TARGET_PLATFORM_LABELS: Record<TargetPlatform, string> = {
   'youtube': 'YouTube',
@@ -86,6 +86,7 @@ export const TARGET_PLATFORM_LABELS: Record<TargetPlatform, string> = {
   'instagram': 'Instagram',
   'linkedin': 'LinkedIn',
   'website': 'Website',
+  'generic': 'Generic / Any',
 } as const;
 
 // ============================================================================
