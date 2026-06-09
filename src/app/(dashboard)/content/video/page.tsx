@@ -6,8 +6,9 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate, Trash2 } from 'lucide-react';
+import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate, Trash2, Check, CloudOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useVideoProjectAutoSave } from '@/hooks/useVideoProjectAutoSave';
 import { VideoPipelineStepper } from './components/VideoPipelineStepper';
 import { StepStoryboard } from './components/StepStoryboard';
 import { StepGeneration } from './components/StepGeneration';
@@ -48,6 +49,10 @@ export default function VideoStudioPage() {
   } = useVideoPipelineStore();
 
   const searchParams = useSearchParams();
+
+  // Auto-save: persists the project to Firestore (debounced) whenever it has
+  // real content, so work is never lost and is always recallable.
+  const { saveStatus } = useVideoProjectAutoSave();
 
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -265,6 +270,34 @@ export default function VideoStudioPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Auto-save indicator — only shown once there's something to save */}
+            {saveStatus !== 'idle' && (
+              <span
+                className={`flex items-center gap-1.5 text-xs mr-1 ${
+                  saveStatus === 'error' ? 'text-destructive' : 'text-muted-foreground'
+                }`}
+                aria-live="polite"
+              >
+                {saveStatus === 'saving' && (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Saving…
+                  </>
+                )}
+                {saveStatus === 'saved' && (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-green-400" />
+                    Saved
+                  </>
+                )}
+                {saveStatus === 'error' && (
+                  <>
+                    <CloudOff className="w-3.5 h-3.5" />
+                    Save failed
+                  </>
+                )}
+              </span>
+            )}
             <Button
               variant="outline"
               size="sm"

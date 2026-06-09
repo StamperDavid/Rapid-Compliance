@@ -40,10 +40,22 @@ const MessageSchema = z.object({
   content: z.string().trim().min(1).max(8000),
 });
 
+/**
+ * An image the operator attached in the chat composer (uploaded to Storage,
+ * permanent URL). Threaded into the Video Specialist brief as a reference and
+ * seeded onto the first storyboard's references so it reaches the canvas.
+ */
+const ReferenceImageSchema = z.object({
+  url: z.string().trim().url().max(2000),
+  fileName: z.string().trim().max(300).optional(),
+});
+
 const AssistantRequestSchema = z.object({
   messages: z.array(MessageSchema).min(1).max(40),
   /** The content-generator tab the operator is on, e.g. '/content/video'. */
   activeTab: z.string().trim().max(120).optional(),
+  /** Optional reference image the operator attached to this message. */
+  referenceImage: ReferenceImageSchema.optional(),
 });
 
 function isVideoStoryboardTab(activeTab: string | undefined): boolean {
@@ -130,7 +142,10 @@ When the operator asks to rebuild / rework / fix / redo / change a SPECIFIC exis
 // System prompt — the Content Manager's conversational identity
 // ────────────────────────────────────────────────────────────────────────────
 
-async function buildSystemPrompt(activeTab: string | undefined): Promise<string> {
+async function buildSystemPrompt(
+  activeTab: string | undefined,
+  hasReferenceImage: boolean,
+): Promise<string> {
   let brandContext = '';
   try {
     brandContext = await buildToolSystemPrompt('voice');
@@ -155,9 +170,12 @@ async function buildSystemPrompt(activeTab: string | undefined): Promise<string>
 
   const tabBlock = `\n\n## CURRENT CONTEXT\n${describeActiveTab(activeTab)}`;
   const protocolBlock = isVideoStoryboardTab(activeTab) ? VIDEO_DELEGATION_PROTOCOL : '';
+  const referenceBlock = hasReferenceImage
+    ? `\n\n## ATTACHED REFERENCE IMAGE\nThe operator attached an image to this message. Treat it as the primary visual reference for what they want to make — its subject, look, and styling should anchor the concept. When you delegate the build, weave the reference into the brief (e.g. "build around the attached photo") so the specialist features it.`
+    : '';
   const brandBlock = brandContext ? `\n\n## BRAND VOICE & IDENTITY (stay in this voice)\n${brandContext}` : '';
 
-  return `${role}${tabBlock}${protocolBlock}${brandBlock}`;
+  return `${role}${tabBlock}${protocolBlock}${referenceBlock}${brandBlock}`;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -182,7 +200,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const systemPrompt = await buildSystemPrompt(parsed.activeTab);
+    const systemPrompt = await buildSystemPrompt(parsed.activeTab, parsed.referenceImage !== undefined);
 
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
@@ -218,6 +236,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ...(directive.targetAudience ? { targetAudience: directive.targetAudience } : {}),
           ...(directive.callToAction ? { callToAction: directive.callToAction } : {}),
           ...(directive.tone ? { tone: directive.tone } : {}),
+          ...(parsed.referenceImage
+            ? {
+                referenceImage: {
+                  url: parsed.referenceImage.url,
+                  ...(parsed.referenceImage.fileName ? { fileName: parsed.referenceImage.fileName } : {}),
+                },
+              }
+            : {}),
         });
         if ('error' in built) {
           logger.warn('[ContentManager] Video Specialist delegation failed', { file: FILE, error: built.error });

@@ -38,6 +38,20 @@ export function sceneHasDescription(scene: PipelineScene): boolean {
 }
 
 /**
+ * Phrases that mark a scene as the closing BRAND CLOSE / CTA / outro shot. For these
+ * scenes the preview must be a deterministic branded card (real logo + tagline),
+ * NOT an AI render — the normal prompt strips all branding language, so the model
+ * would otherwise invent a fake "BRAND CLOSE" text card.
+ */
+const BRAND_CLOSE_PATTERN =
+  /\b(brand close|brand shot|call to action|cta|outro|end card|end ?screen|sign[-\s]?off|closing shot)\b/i;
+
+/** Is this the closing brand / CTA / outro scene? (title or visual description). */
+export function isBrandCloseScene(scene: PipelineScene): boolean {
+  return BRAND_CLOSE_PATTERN.test(scene.title ?? '') || BRAND_CLOSE_PATTERN.test(scene.visualDescription ?? '');
+}
+
+/**
  * Hard rule appended to every storyboard image prompt: the image model must NEVER
  * invent branding. The REAL brand logo is composited onto the still afterward, so
  * the generated scene itself must contain zero text and zero logos — otherwise the
@@ -104,6 +118,33 @@ export async function requestStoryboardThumbnail(
   scene: PipelineScene,
   aspectRatio: string,
 ): Promise<{ url: string } | { error: string }> {
+  // The closing brand / CTA / outro scene gets a deterministic branded card (real
+  // logo + tagline) rendered server-side — never an AI guess that paints a fake
+  // "BRAND CLOSE" text card.
+  if (isBrandCloseScene(scene)) {
+    try {
+      const response = await authFetch('/api/video/brand-outro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aspectRatio,
+          name: hasText(scene.title)
+            ? `Storyboard ${scene.sceneNumber}: ${scene.title}`
+            : `Storyboard ${scene.sceneNumber} brand outro`,
+        }),
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { success: boolean; url?: string; error?: string }
+        | null;
+      if (!response.ok || !data?.success || !data.url) {
+        return { error: data?.error ?? `brand outro failed (${response.status})` };
+      }
+      return { url: data.url };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'brand outro failed' };
+    }
+  }
+
   try {
     const response = await authFetch('/api/content/asset-generator/generate', {
       method: 'POST',

@@ -26,6 +26,7 @@ import {
 } from '@/lib/video/storyboard-completeness';
 import type { AgentMessage } from '@/lib/agents/types';
 import type { CinematicConfig } from '@/types/creative-studio';
+import type { SceneReference } from '@/types/video-pipeline';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Storyboard shape the Video tab applies to its pipeline store.
@@ -44,6 +45,14 @@ export interface AssistantStoryboard {
   wardrobe?: string;
   backgroundPrompt?: string;
   cinematicConfig?: Partial<CinematicConfig>;
+  /** Uploaded reference material seeded onto the scene (e.g. the operator's attached photo). */
+  references?: SceneReference[];
+}
+
+/** A reference image the operator attached in the Content Assistant chat. */
+export interface BriefReferenceImage {
+  url: string;
+  fileName?: string;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -59,6 +68,12 @@ export interface BuildStoryboardInput {
   callToAction?: string;
   tone?: string;
   script?: string;
+  /**
+   * An image the operator attached in the chat (permanent Storage URL). It is
+   * mentioned in the brief the specialist sees AND seeded onto the first
+   * storyboard's `references` so it reaches the canvas as a real scene reference.
+   */
+  referenceImage?: BriefReferenceImage;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -134,6 +149,15 @@ export async function buildStoryboardFromBrief(
   input: BuildStoryboardInput,
 ): Promise<{ storyboards: AssistantStoryboard[] } | { error: string }> {
   const specialist = new VideoSpecialist();
+
+  // If the operator attached a reference image, make the specialist aware of it
+  // in the brief text. (The specialist's LLM contract has no structured image
+  // input, so the reference is communicated in prose AND seeded onto scene 1's
+  // references below for the operator to use on the canvas.)
+  const briefWithReference = input.referenceImage
+    ? `${input.brief}\n\nThe operator attached a reference image (${input.referenceImage.fileName ?? 'photo'}: ${input.referenceImage.url}). Treat it as the primary visual reference — match its subject, look, and styling across the storyboard, and feature it prominently in the opening scene.`
+    : input.brief;
+
   const message: AgentMessage = {
     id: `content-mgr-delegate-${randomUUID()}`,
     timestamp: new Date(),
@@ -143,7 +167,7 @@ export async function buildStoryboardFromBrief(
     priority: 'NORMAL',
     payload: {
       action: 'script_to_storyboard',
-      brief: input.brief,
+      brief: briefWithReference,
       platform: input.platform,
       style: input.style,
       targetDuration: input.targetDuration,
@@ -174,5 +198,21 @@ export async function buildStoryboardFromBrief(
     storyboards.push(mapped);
     prev = mapped;
   }
+
+  // Seed the operator's attached image onto the first storyboard as a real
+  // scene reference so it reaches the canvas (third context channel alongside
+  // structured fields + the chat conversation).
+  if (input.referenceImage && storyboards.length > 0) {
+    const reference: SceneReference = {
+      id: randomUUID(),
+      type: 'image',
+      name: input.referenceImage.fileName ?? 'Attached photo',
+      url: input.referenceImage.url,
+      purpose: 'style',
+      usage: 'Operator attached this photo in the Content Assistant chat as the primary visual reference for the video.',
+    };
+    storyboards[0] = { ...storyboards[0], references: [reference] };
+  }
+
   return { storyboards };
 }

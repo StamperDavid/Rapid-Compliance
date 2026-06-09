@@ -622,6 +622,7 @@ export function StepStoryboard() {
     setAvatar,
     setVoice,
     setStep,
+    setProjectId,
     reset,
   } = useVideoPipelineStore();
 
@@ -975,7 +976,7 @@ export function StepStoryboard() {
       }
 
       const freshScenes = useVideoPipelineStore.getState().scenes;
-      await authFetch('/api/video/project/save', {
+      const saveResponse = await authFetch('/api/video/project/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1017,13 +1018,21 @@ export function StepStoryboard() {
           status: 'approved',
         }),
       });
+      // Persist the returned id so the doc is reused (no duplicate project) by
+      // both later Generate saves and the page-level auto-save.
+      if (saveResponse.ok) {
+        const saveData = (await saveResponse.json()) as { success: boolean; projectId?: string };
+        if (saveData.success && saveData.projectId && !projectId) {
+          setProjectId(saveData.projectId);
+        }
+      }
     } catch {
       // Non-critical — continue to generation even if save fails.
     } finally {
       setIsSaving(false);
     }
     setStep('generation');
-  }, [isReady, handleGenerateThumbnail, updateScene, authFetch, projectId, projectName, brief, avatarId, avatarName, voiceId, voiceName, voiceProvider, setStep]);
+  }, [isReady, handleGenerateThumbnail, updateScene, authFetch, projectId, projectName, brief, avatarId, avatarName, voiceId, voiceName, voiceProvider, setProjectId, setStep]);
 
   const selectedScene = selectedSceneId ? scenes.find((s) => s.id === selectedSceneId) ?? null : null;
   const selectedIndex = selectedScene ? scenes.indexOf(selectedScene) : -1;
