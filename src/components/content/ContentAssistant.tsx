@@ -15,7 +15,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { ImageIcon, MessageSquarePlus, Paperclip, Send, Sparkles, X } from 'lucide-react';
+import {
+  File as FileIcon,
+  FileText,
+  FileVideo,
+  Loader2,
+  MessageSquarePlus,
+  Music,
+  Paperclip,
+  Send,
+  Sparkles,
+  X,
+} from 'lucide-react';
 
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -49,12 +60,59 @@ interface AssistantStoryboard {
   references?: SceneReference[];
 }
 
-/** An image the operator attached in the composer (uploaded → permanent URL). */
-interface AttachedImage {
+/** A file the operator attached in the composer (uploaded → permanent URL). */
+interface Attachment {
+  /** Local-only id so we can key chips and remove individual attachments. */
+  id: string;
   url: string;
   fileName: string;
-  /** Object URL for the local preview thumbnail; revoked on remove/replace. */
-  previewUrl: string;
+  contentType: string;
+  kind: 'image' | 'video' | 'document' | 'other';
+  /** Object URL for the local preview thumbnail (images only); revoked on remove/clear. */
+  previewUrl?: string;
+  /** True while the AI is reading the file (vision / transcript / text extraction). */
+  analyzing?: boolean;
+  /** The AI's read of the file's content (vision for images, transcript for A/V, text for docs). */
+  aiSummary?: string;
+}
+
+/** Coarse medium for picking the chip icon — derived from kind + MIME type. */
+type AttachmentMedium = 'image' | 'video' | 'audio' | 'document' | 'other';
+
+/**
+ * Decide which medium icon a chip should show. The upload route only emits
+ * 'image' | 'video' | 'document' | 'other', collapsing audio into 'other', so we
+ * inspect the MIME type to recover audio and text/document files for a fitting icon.
+ */
+function attachmentMedium(att: Pick<Attachment, 'kind' | 'contentType'>): AttachmentMedium {
+  if (att.kind === 'image') {
+    return 'image';
+  }
+  if (att.kind === 'video') {
+    return 'video';
+  }
+  const ct = (att.contentType || '').toLowerCase();
+  if (ct.startsWith('audio/')) {
+    return 'audio';
+  }
+  if (att.kind === 'document') {
+    return 'document';
+  }
+  if (
+    ct.startsWith('text/') ||
+    ct.includes('pdf') ||
+    ct.includes('word') ||
+    ct.includes('msword') ||
+    ct.includes('officedocument') ||
+    ct.includes('presentation') ||
+    ct.includes('spreadsheet') ||
+    ct.includes('excel') ||
+    ct.includes('powerpoint') ||
+    ct.includes('csv')
+  ) {
+    return 'document';
+  }
+  return 'other';
 }
 
 function isVideoStoryboardTab(pathname: string | null): boolean {
@@ -107,52 +165,123 @@ export function ContentAssistant() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attachment, setAttachment] = useState<AttachedImage | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  /** How many files are currently uploading (lets us show "Uploading N…"). */
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [dragActive, setDragActive] = useState(false);
 
   const threadRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Track the live object URL so we always revoke the previous one on replace/remove.
-  const previewUrlRef = useRef<string | null>(null);
+  // Map of attachment id → its live object URL so we can revoke each one exactly
+  // once on remove/clear/send/unmount (no leaks).
+  const previewUrlsRef = useRef<Map<string, string>>(new Map());
+  // Map of attachment id → its in-flight "understand this file" analysis promise.
+  // `send` awaits any still running so the server always gets the AI's read.
+  const analysisPromisesRef = useRef<Map<string, Promise<void>>>(new Map());
+  // Live mirror of the attachments array so `send` can read the freshest
+  // aiSummaries after awaiting in-flight analyses (state updates are async).
+  const attachmentsRef = useRef<Attachment[]>([]);
 
-  // Revoke any outstanding preview object URL when the component unmounts.
+  const revokePreview = useCallback((id: string) => {
+    const url = previewUrlsRef.current.get(id);
+    if (url) {
+      URL.revokeObjectURL(url);
+      previewUrlsRef.current.delete(id);
+    }
+  }, []);
+
+  const revokeAllPreviews = useCallback(() => {
+    for (const url of previewUrlsRef.current.values()) {
+      URL.revokeObjectURL(url);
+    }
+    previewUrlsRef.current.clear();
+  }, []);
+
+  // Keep the live attachments mirror in sync for `send` to read post-await.
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
+  // Revoke every outstanding preview object URL when the component unmounts.
   useEffect(() => {
     return () => {
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current);
-        previewUrlRef.current = null;
-      }
+      revokeAllPreviews();
     };
-  }, []);
+  }, [revokeAllPreviews]);
 
-  const clearAttachment = useCallback(() => {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = null;
-    }
-    setAttachment(null);
-  }, []);
+  const removeAttachment = useCallback(
+    (id: string) => {
+      revokePreview(id);
+      analysisPromisesRef.current.delete(id);
+      setAttachments((prev) => prev.filter((a) => a.id !== id));
+    },
+    [revokePreview],
+  );
 
-  const uploadImage = useCallback(
+  const clearAttachments = useCallback(() => {
+    revokeAllPreviews();
+    analysisPromisesRef.current.clear();
+    setAttachments([]);
+  }, [revokeAllPreviews]);
+
+  /**
+   * Ask the AI to READ an uploaded file (vision for images, transcript for
+   * audio/video, text for documents) and store its summary on the attachment.
+   * Best-effort: a failure leaves the attachment usable, just without a summary.
+   */
+  const analyzeAttachment = useCallback(
+    async (att: Pick<Attachment, 'id' | 'url' | 'contentType' | 'kind'>) => {
+      setAttachments((prev) =>
+        prev.map((a) => (a.id === att.id ? { ...a, analyzing: true } : a)),
+      );
+      try {
+        const res = await authFetch('/api/settings/brand-identity/asset/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: att.url, contentType: att.contentType, kind: att.kind }),
+        });
+        const data = (await res.json()) as { success?: boolean; aiSummary?: string };
+        const summary = res.ok && data.aiSummary ? data.aiSummary.trim() : '';
+        setAttachments((prev) =>
+          prev.map((a) =>
+            a.id === att.id
+              ? { ...a, analyzing: false, ...(summary ? { aiSummary: summary } : {}) }
+              : a,
+          ),
+        );
+      } catch {
+        // Understanding is best-effort — clear the spinner and move on.
+        setAttachments((prev) =>
+          prev.map((a) => (a.id === att.id ? { ...a, analyzing: false } : a)),
+        );
+      } finally {
+        analysisPromisesRef.current.delete(att.id);
+      }
+    },
+    [authFetch],
+  );
+
+  /** Upload ONE file and append it to the attachment list. Tolerates failure. */
+  const uploadOne = useCallback(
     async (file: File) => {
-      if (!file.type.startsWith('image/')) {
-        setError('Please attach an image file.');
-        return;
-      }
-      setError(null);
-      setUploading(true);
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
 
-      // Show an instant local preview while the upload runs.
-      const previewUrl = URL.createObjectURL(file);
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current);
+      // Show an instant local preview for images while the upload runs. Only
+      // images get an object-URL preview — every other medium uses an icon chip.
+      const localId = crypto.randomUUID();
+      let previewUrl: string | undefined;
+      if (isImage) {
+        previewUrl = URL.createObjectURL(file);
+        previewUrlsRef.current.set(localId, previewUrl);
       }
-      previewUrlRef.current = previewUrl;
 
+      setUploadingCount((n) => n + 1);
       try {
         const form = new FormData();
         form.append('file', file);
+        // Accept any file the upload route allows — the route validates the type
+        // and returns a 400 for anything it can't take, which we surface per file.
         const res = await authFetch('/api/settings/brand-identity/asset', {
           method: 'POST',
           body: form,
@@ -161,47 +290,82 @@ export function ContentAssistant() {
           success: boolean;
           url?: string;
           fileName?: string;
+          contentType?: string;
+          kind?: Attachment['kind'];
           error?: string;
         };
         if (!res.ok || !data.success || !data.url) {
-          throw new Error(data.error ?? 'The image could not be uploaded.');
+          throw new Error(data.error ?? `"${file.name}" could not be uploaded.`);
         }
-        setAttachment({ url: data.url, fileName: data.fileName ?? file.name, previewUrl });
+        const attachment: Attachment = {
+          id: localId,
+          url: data.url,
+          fileName: data.fileName ?? file.name,
+          contentType: data.contentType ?? file.type,
+          kind: data.kind ?? (isVideo ? 'video' : isImage ? 'image' : 'other'),
+          analyzing: true,
+          ...(previewUrl ? { previewUrl } : {}),
+        };
+        setAttachments((prev) => [...prev, attachment]);
+
+        // Kick off the AI read of this file in the background. `send` awaits any
+        // in-flight analysis so the server always has the understanding.
+        const analysis = analyzeAttachment({
+          id: attachment.id,
+          url: attachment.url,
+          contentType: attachment.contentType,
+          kind: attachment.kind,
+        });
+        analysisPromisesRef.current.set(attachment.id, analysis);
+        void analysis;
       } catch (err) {
-        if (previewUrlRef.current === previewUrl) {
-          URL.revokeObjectURL(previewUrl);
-          previewUrlRef.current = null;
-        }
-        setError(err instanceof Error ? err.message : 'The image could not be uploaded.');
+        // One bad file must not blow away the others — just surface a brief error
+        // and clean up this file's preview URL.
+        revokePreview(localId);
+        setError(err instanceof Error ? err.message : `"${file.name}" could not be uploaded.`);
       } finally {
-        setUploading(false);
+        setUploadingCount((n) => n - 1);
       }
     },
-    [authFetch],
+    [authFetch, revokePreview, analyzeAttachment],
+  );
+
+  /** Upload every picked/dropped file concurrently, appending each result. */
+  const uploadFiles = useCallback(
+    (files: FileList | File[]) => {
+      const list = Array.from(files);
+      if (list.length === 0) {
+        return;
+      }
+      setError(null);
+      for (const file of list) {
+        void uploadOne(file);
+      }
+    },
+    [uploadOne],
   );
 
   const onFileSelected = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      // Reset the input so selecting the same file again still fires onChange.
+      const files = e.target.files;
+      // Reset the input so picking the same file(s) again still fires onChange.
       e.target.value = '';
-      if (file) {
-        void uploadImage(file);
+      if (files && files.length > 0) {
+        uploadFiles(files);
       }
     },
-    [uploadImage],
+    [uploadFiles],
   );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragActive(false);
-      const file = e.dataTransfer.files?.[0];
-      if (file) {
-        void uploadImage(file);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        uploadFiles(e.dataTransfer.files);
       }
     },
-    [uploadImage],
+    [uploadFiles],
   );
 
   // Keep the thread scrolled to the newest message.
@@ -213,24 +377,57 @@ export function ContentAssistant() {
 
   const send = useCallback(async () => {
     const text = input.trim();
-    const sentAttachment = attachment;
-    if ((!text && !sentAttachment) || loading || uploading) {
+    const sentAttachments = attachments;
+    const uploading = uploadingCount > 0;
+    if ((!text && sentAttachments.length === 0) || loading || uploading) {
       return;
     }
 
-    // If there's an attachment but no typed text, give the message a body so the
+    // If there are attachments but no typed text, give the message a body so the
     // conversation history (which requires non-empty content) stays valid.
     const messageText =
-      text.length > 0 ? text : `Here's a reference image (${sentAttachment?.fileName ?? 'photo'}).`;
+      text.length > 0
+        ? text
+        : sentAttachments.length === 1
+          ? `Here's a reference file (${sentAttachments[0].fileName}).`
+          : `Here are ${sentAttachments.length} reference files.`;
 
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: messageText }];
     setMessages(nextMessages);
     setInput('');
-    clearAttachment();
     setError(null);
     setLoading(true);
 
     try {
+      // Make sure the AI has finished reading every attached file before we send,
+      // so the server gets each file's understanding (not just that it exists).
+      // Don't block forever on a stuck analysis — whatever's ready is included.
+      if (sentAttachments.length > 0) {
+        const pending = sentAttachments
+          .map((a) => analysisPromisesRef.current.get(a.id))
+          .filter((p): p is Promise<void> => p !== undefined);
+        if (pending.length > 0) {
+          await Promise.allSettled(pending);
+        }
+      }
+
+      // Read the freshest summaries (the awaited analyses updated state → mirror).
+      const summaryById = new Map(attachmentsRef.current.map((a) => [a.id, a.aiSummary]));
+      const outboundAttachments = sentAttachments.map((a) => {
+        const aiSummary = summaryById.get(a.id) ?? a.aiSummary;
+        return {
+          url: a.url,
+          fileName: a.fileName,
+          contentType: a.contentType,
+          kind: a.kind,
+          ...(aiSummary ? { aiSummary } : {}),
+        };
+      });
+
+      // The composer is cleared only after we've captured the summaries above, so
+      // clearing the attachment/analysis state can't strip what we're about to send.
+      clearAttachments();
+
       // Drop the canned welcome before sending — it isn't real conversation.
       const history = nextMessages.filter((m) => m !== WELCOME);
 
@@ -240,9 +437,7 @@ export function ContentAssistant() {
         body: JSON.stringify({
           messages: history,
           activeTab: pathname,
-          ...(sentAttachment
-            ? { referenceImage: { url: sentAttachment.url, fileName: sentAttachment.fileName } }
-            : {}),
+          ...(outboundAttachments.length > 0 ? { attachments: outboundAttachments } : {}),
         }),
       });
 
@@ -360,7 +555,7 @@ export function ContentAssistant() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, uploading, attachment, clearAttachment, messages, authFetch, pathname]);
+  }, [input, loading, uploadingCount, attachments, clearAttachments, messages, authFetch, pathname]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -460,37 +655,71 @@ export function ContentAssistant() {
 
         {/* Composer */}
         <div className="border-t border-border px-5 py-4">
-          {/* Attachment chip — shown above the input once an image is attached/uploading. */}
-          {(attachment !== null || uploading) && (
-            <div className="mb-2 flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-2 py-1.5">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
-                {attachment ? (
-                  <Image
-                    src={attachment.previewUrl}
-                    alt={attachment.fileName}
-                    fill
-                    sizes="40px"
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-              <span className="flex-1 truncate text-xs text-foreground">
-                {uploading ? 'Uploading image…' : attachment?.fileName}
-              </span>
-              {attachment && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={clearAttachment}
-                  aria-label="Remove attached image"
-                  className="h-7 w-7 shrink-0"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+          {/* Attachment chips — one per attached file; image → thumbnail, video → icon tile. */}
+          {(attachments.length > 0 || uploadingCount > 0) && (
+            <div className="mb-2 space-y-1.5">
+              {attachments.map((att) => {
+                const medium = attachmentMedium(att);
+                return (
+                  <div
+                    key={att.id}
+                    className="flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-2 py-1.5"
+                  >
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
+                      {medium === 'image' && att.previewUrl ? (
+                        <Image
+                          src={att.previewUrl}
+                          alt={att.fileName}
+                          fill
+                          sizes="40px"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      ) : medium === 'video' ? (
+                        <FileVideo className="h-4 w-4 text-muted-foreground" />
+                      ) : medium === 'audio' ? (
+                        <Music className="h-4 w-4 text-muted-foreground" />
+                      ) : medium === 'document' ? (
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <FileIcon className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-xs text-foreground">{att.fileName}</span>
+                      {att.analyzing ? (
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Understanding…
+                        </span>
+                      ) : att.aiSummary ? (
+                        <span
+                          className="truncate text-[11px] text-muted-foreground"
+                          title={att.aiSummary}
+                        >
+                          ✓ Understood
+                        </span>
+                      ) : null}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeAttachment(att.id)}
+                      aria-label={`Remove ${att.fileName}`}
+                      className="h-7 w-7 shrink-0"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                );
+              })}
+              {uploadingCount > 0 && (
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2">
+                  <span className="text-xs text-muted-foreground">
+                    Uploading {uploadingCount} file{uploadingCount > 1 ? 's' : ''}…
+                  </span>
+                </div>
               )}
             </div>
           )}
@@ -510,7 +739,8 @@ export function ContentAssistant() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.md,application/pdf"
+              multiple
               className="hidden"
               onChange={onFileSelected}
             />
@@ -519,8 +749,8 @@ export function ContentAssistant() {
               variant="outline"
               size="icon"
               onClick={() => fileInputRef.current?.click()}
-              disabled={loading || uploading}
-              aria-label="Attach an image"
+              disabled={loading}
+              aria-label="Attach a file"
               className="h-10 w-10 shrink-0"
             >
               <Paperclip className="h-4 w-4" />
@@ -538,7 +768,9 @@ export function ContentAssistant() {
               type="button"
               size="icon"
               onClick={() => void send()}
-              disabled={loading || uploading || (input.trim().length === 0 && !attachment)}
+              disabled={
+                loading || uploadingCount > 0 || (input.trim().length === 0 && attachments.length === 0)
+              }
               aria-label="Send message"
               className="h-10 w-10 shrink-0"
             >
@@ -547,7 +779,7 @@ export function ContentAssistant() {
           </div>
           <Caption className="mt-2 flex items-center gap-1.5">
             <MessageSquarePlus className="h-3 w-3" />
-            On the Video tab I can build your storyboards — attach a photo to build around it.
+            Attach anything — photos, clips, audio, PDFs or docs — and I&apos;ll read each one and build around it.
           </Caption>
         </div>
       </div>

@@ -4,12 +4,22 @@
  * Makes agents actually UNDERSTAND the brand reference materials a business
  * uploads — not just the operator's one-line description. For each asset we
  * produce a short, concrete, text-representable summary that downstream Brand
- * DNA baking (`assembleBrandReferenceText`) folds into every agent's prompt:
+ * DNA baking (`assembleBrandReferenceText`) folds into every agent's prompt.
  *
- *   - image    → a vision read (what's shown, style/mood/palette, text/logo)
- *   - video    → Deepgram transcript → summarized message/tone
- *   - document → PDF text → summarized message/tone/claims
- *   - other    → '' (nothing meaningful to extract)
+ * Branches primarily on the asset's contentType (lowercased) so it covers the
+ * full common marketing/imaging/doc/AV/text set:
+ *
+ *   - image/*                         → a vision read (what's shown, style/mood/palette, text/logo)
+ *   - video/*                         → Deepgram transcript → summarized message/tone
+ *   - audio/*                         → Deepgram transcript → summarized message/tone
+ *   - application/pdf                 → PDF text → summarized message/tone/claims
+ *   - text/* (plain, markdown, csv)   → raw UTF-8 text → summarized (short text verbatim)
+ *   - spreadsheets (xlsx / xls)       → xlsx parse → flattened text → summarized
+ *   - Word / PowerPoint (docx/pptx…)  → '' (deep-parse DEFERRED — no docx/pptx parser
+ *                                          in the repo yet; the file still uploads/attaches)
+ *   - anything else                   → '' (nothing meaningful to extract)
+ *
+ * `kind` is kept only as a coarse fallback when contentType is missing/unknown.
  *
  * BEST-EFFORT BY DESIGN: every branch is wrapped so this function NEVER throws.
  * A failed fetch, a missing API key, a hung model call, or a parse error all
@@ -24,6 +34,7 @@
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { transcribeAudioBuffer } from '@/lib/video/transcription-service';
 import { parsePDF } from '@/lib/agent/parsers/pdf-parser';
+import { parseExcel } from '@/lib/agent/parsers/excel-parser';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { ModelName } from '@/types/ai-models';
@@ -166,8 +177,12 @@ async function summarizeImage(url: string): Promise<string> {
   return cap(summary, MAX_SUMMARY_CHARS);
 }
 
-/** Transcribe a brand reference video and summarize it. Never throws. */
-async function summarizeVideo(url: string): Promise<string> {
+/**
+ * Transcribe a brand reference A/V asset (video OR audio) and summarize it.
+ * `transcribeAudioBuffer` accepts both — Deepgram demuxes the audio track from
+ * a video container itself. Never throws — returns '' on failure.
+ */
+async function summarizeAV(url: string): Promise<string> {
   const buf = await fetchBytes(url);
   if (buf === null) {
     return '';
@@ -201,6 +216,53 @@ async function summarizeDocument(url: string): Promise<string> {
 }
 
 /**
+ * Read a plain-text brand reference asset (text/plain, markdown, csv) and
+ * summarize it. Short text is returned verbatim by `summarize`. Never throws.
+ */
+async function summarizeText(url: string): Promise<string> {
+  const buf = await fetchBytes(url);
+  if (buf === null) {
+    return '';
+  }
+  const text = buf.toString('utf-8');
+  if (text.trim().length === 0) {
+    return '';
+  }
+  return summarize(text, 'document');
+}
+
+/**
+ * Parse a brand reference spreadsheet (xlsx / xls) into a flat text rendering
+ * (sheet names + headers + rows) and summarize it. Never throws.
+ */
+async function summarizeSpreadsheet(url: string): Promise<string> {
+  const buf = await fetchBytes(url);
+  if (buf === null) {
+    return '';
+  }
+  const text = await withTimeout(
+    (async (): Promise<string> => {
+      const parsed = await parseExcel(buf);
+      return parsed.sheets
+        .map((sheet) => {
+          const headerLine = sheet.headers.join(' | ');
+          const rowLines = sheet.rows
+            .map((row) => sheet.headers.map((h) => String(row[h] ?? '')).join(' | '))
+            .join('\n');
+          return `Sheet "${sheet.name}":\n${headerLine}\n${rowLines}`;
+        })
+        .join('\n\n');
+    })(),
+    CALL_TIMEOUT_MS,
+    '',
+  );
+  if (text.trim().length === 0) {
+    return '';
+  }
+  return summarize(text, 'document');
+}
+
+/**
  * Produce a short, concrete summary of one uploaded brand reference asset so
  * agents can actually understand it. BEST-EFFORT: never throws — returns '' on
  * any failure, missing key, timeout, or unsupported kind.
@@ -215,12 +277,48 @@ export async function extractAssetSummary(input: {
     return '';
   }
 
+  const ct = (input.contentType ?? '').toLowerCase().trim();
+
   try {
+    // Primary dispatch: branch on contentType so every common format is covered.
+    if (ct.startsWith('image/')) {
+      return await summarizeImage(url);
+    }
+    if (ct.startsWith('video/')) {
+      return await summarizeAV(url);
+    }
+    if (ct.startsWith('audio/')) {
+      return await summarizeAV(url);
+    }
+    if (ct === 'application/pdf') {
+      return await summarizeDocument(url);
+    }
+    if (ct.startsWith('text/')) {
+      // Covers text/plain, text/markdown, text/csv, etc.
+      return await summarizeText(url);
+    }
+    if (ct.includes('spreadsheetml') || ct === 'application/vnd.ms-excel') {
+      // xlsx (...spreadsheetml.sheet) and legacy xls — both parse via `xlsx`.
+      return await summarizeSpreadsheet(url);
+    }
+    if (
+      ct.includes('wordprocessingml') ||
+      ct === 'application/msword' ||
+      ct.includes('presentationml') ||
+      ct === 'application/vnd.ms-powerpoint'
+    ) {
+      // docx / doc / pptx / ppt deep-parse is DEFERRED pending a parser (no
+      // mammoth/officeparser/pptx extractor in the repo). The file still
+      // uploads and attaches; we just don't read its body yet.
+      return '';
+    }
+
+    // Fallback: contentType missing or unrecognized — use the coarse `kind`.
     switch (input.kind) {
       case 'image':
         return await summarizeImage(url);
       case 'video':
-        return await summarizeVideo(url);
+        return await summarizeAV(url);
       case 'document':
         return await summarizeDocument(url);
       case 'other':
