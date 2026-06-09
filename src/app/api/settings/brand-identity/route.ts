@@ -10,7 +10,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth, requirePermission } from '@/lib/auth/api-auth';
 import { getBrandIdentity, saveBrandIdentity } from '@/lib/brand/brand-identity-service';
-import { updateBrandDNA } from '@/lib/brand/brand-dna-service';
+import { syncBrandIdentityToLegacyStores } from '@/lib/brand/brand-identity-bridges';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -85,10 +85,61 @@ const IntroOutroSchema = z.object({
 });
 
 const ExampleAssetSchema = z.object({
-  type: z.enum(['social-post', 'ad', 'image']),
-  mediaId: z.string().optional(),
-  url: z.string().optional(),
-  note: z.string().optional(),
+  id: z.string(),
+  url: z.string().min(1),
+  fileName: z.string(),
+  contentType: z.string(),
+  kind: z.enum(['image', 'video', 'document', 'other']),
+  description: z.string(),
+  purpose: z.string(),
+  uploadedAt: z.string(),
+});
+
+// Keys map 1:1 to the live theme doc (ThemeConfig in src/hooks/useOrgTheme.ts).
+const DashboardThemeSchema = z.object({
+  favicon: z.string(),
+  showPoweredBy: z.boolean(),
+  borderRadius: z.object({
+    sm: z.string(),
+    md: z.string(),
+    lg: z.string(),
+    xl: z.string(),
+    full: z.string(),
+    card: z.string(),
+    button: z.string(),
+    input: z.string(),
+  }),
+  spacing: z.object({
+    xs: z.string(),
+    sm: z.string(),
+    md: z.string(),
+    lg: z.string(),
+    xl: z.string(),
+  }),
+  shadow: z.object({
+    sm: z.string(),
+    md: z.string(),
+    lg: z.string(),
+    xl: z.string(),
+    glow: z.string(),
+  }),
+  fontSize: z.object({
+    xs: z.string(),
+    sm: z.string(),
+    base: z.string(),
+    lg: z.string(),
+    xl: z.string(),
+    '2xl': z.string(),
+    '3xl': z.string(),
+  }),
+  fontWeight: z.object({
+    light: z.number(),
+    normal: z.number(),
+    medium: z.number(),
+    semibold: z.number(),
+    bold: z.number(),
+  }),
+  monoFont: z.string(),
 });
 
 const BrandIdentitySchema = z.object({
@@ -101,6 +152,7 @@ const BrandIdentitySchema = z.object({
   typography: TypographySchema,
   introOutro: IntroOutroSchema,
   exampleAssets: z.array(ExampleAssetSchema),
+  dashboardTheme: DashboardThemeSchema,
 });
 
 // ── GET ─────────────────────────────────────────────────────────────────────
@@ -148,20 +200,29 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
     const brandIdentity = await saveBrandIdentity(parsed.data, permResult.user.uid);
 
-    // Write the saved voice back to the org's `brandDNA` field — the source the
-    // Golden-Master bake reads. Without this, the Brand page would edit the
-    // canonical identity doc but the "Publish to Agents" re-bake (which reads
-    // `getBrandDNA()`) would keep baking the STALE voice. This is the bridge that
-    // makes the page the real source of truth. We do NOT trigger the re-bake here —
-    // publishing to agents is a deliberate, operator-pressed button (so a 67-agent
-    // update never fires by surprise). Failure to mirror must not fail the save
-    // itself (the identity doc is already persisted), so it's isolated here.
+    // Fan the saved identity out to the three legacy stores the rest of the app
+    // already reads, so the operator only edits THIS page:
+    //   1. voice    → org `brandDNA` (the source the Golden-Master bake reads)
+    //   2. brandKit → `settings/brand-kit` (read by the video pipeline)
+    //   3. theme    → `platform_settings/theme` (read by `useOrgTheme` → CSS vars)
+    // We pass the SAVED `brandIdentity` so every field (incl. the logo bridge
+    // fallback) is present. We do NOT trigger the agent re-bake here — publishing
+    // to agents stays a deliberate, operator-pressed button. The sync never throws
+    // and a partial failure must not fail the save (the identity doc is already
+    // persisted), so we log the per-store result and continue.
     try {
-      await updateBrandDNA(parsed.data.voice, permResult.user.uid);
-    } catch (mirrorError) {
+      const syncResult = await syncBrandIdentityToLegacyStores(
+        brandIdentity,
+        permResult.user.uid,
+      );
+      logger.info('Brand identity synced to legacy stores', {
+        ...syncResult,
+        file: FILE,
+      });
+    } catch (syncError) {
       logger.error(
-        'Saved brand identity but failed to mirror voice into org brandDNA',
-        mirrorError instanceof Error ? mirrorError : new Error(String(mirrorError)),
+        'Saved brand identity but failed to sync to legacy stores',
+        syncError instanceof Error ? syncError : new Error(String(syncError)),
         { file: FILE },
       );
     }

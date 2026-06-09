@@ -197,6 +197,9 @@ async function main(): Promise<void> {
     typography,
     introOutro,
     exampleAssets,
+    // The runtime read-bridge in getBrandIdentity() repopulates this from the LIVE
+    // theme doc when absent; seeding the default keeps the type complete here.
+    dashboardTheme: DEFAULT_BRAND_IDENTITY.dashboardTheme,
     updatedAt: new Date().toISOString(),
     updatedBy: 'migrate-to-brand-identity',
   };

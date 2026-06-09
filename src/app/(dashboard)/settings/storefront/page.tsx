@@ -258,8 +258,8 @@ export default function StorefrontSettingsPage() {
           <div style={{ backgroundColor: 'var(--color-success-dark)', border: '1px solid var(--color-success)', borderRadius: '0.5rem', padding: '1rem', marginBottom: '2rem', display: 'flex', gap: '0.75rem', alignItems: 'start' }}>
             <span style={{ fontSize: '1.25rem' }}>✨</span>
             <div style={{ fontSize: '0.875rem', color: 'var(--color-success-light)', lineHeight: '1.5' }}>
-              <strong>Automatic Theme Sync:</strong> Your storefront automatically uses your CRM theme colors and branding. 
-              To change colors, logo, or fonts, go to <Link href={`/settings/theme`} style={{ color: 'var(--color-success-light)', textDecoration: 'underline' }}>Theme Settings</Link>.
+              <strong>Automatic Theme Sync:</strong> Your storefront automatically uses your brand colors and branding.
+              To change colors, logo, or fonts, go to <Link href={`/settings/brand`} style={{ color: 'var(--color-success-light)', textDecoration: 'underline' }}>Brand Identity</Link>.
             </div>
           </div>
 
