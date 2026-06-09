@@ -22,7 +22,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { updateBrandDNA } from '@/lib/brand/brand-dna-service';
 import { getBrandKit, saveBrandKit } from '@/lib/video/brand-kit-service';
-import type { BrandIdentity } from '@/types/brand-identity';
+import type { BrandIdentity, BrandExampleAsset } from '@/types/brand-identity';
 import type { BrandKit } from '@/types/brand-kit';
 
 const FILE = 'brand-identity-bridges.ts';
@@ -82,6 +82,49 @@ function scaleFromHex(hex: string): ThemeColorScale {
     dark: adjustColor(hex, -20),
     contrast: contrastFor(hex),
   };
+}
+
+// ============================================================================
+// Brand reference examples → baked text block
+// ============================================================================
+
+/**
+ * Assemble the operator's uploaded reference materials into a concise text block
+ * that gets baked into every agent's Brand DNA (so all agents study real on-brand
+ * examples — Standing Rule #1). Each line is the operator's own description +
+ * purpose for one asset, plus — when present — the AI-extracted content summary
+ * (`aiSummary`): a vision read of an image, the summarized transcript of a video,
+ * or the summarized text of a PDF, produced by the asset/analyze route. Returns
+ * '' when there are no assets, which produces NO subsection in the baked block.
+ */
+export function assembleBrandReferenceText(assets: BrandExampleAsset[]): string {
+  if (!Array.isArray(assets) || assets.length === 0) {
+    return '';
+  }
+  const MAX_ASSETS = 25;
+  const clip = (s: string, n: number): string =>
+    s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s;
+
+  const shown = assets.slice(0, MAX_ASSETS);
+  const lines = shown.map((a) => {
+    const what = clip((a.description || a.fileName || 'reference').trim(), 200);
+    const why = a.purpose.trim().length > 0
+      ? ` — why it matters: ${clip(a.purpose.trim(), 200)}`
+      : '';
+    // The AI-extracted content summary (vision read / video transcript / PDF
+    // text) — the real, file-level signal the operator's one-line description
+    // can't capture. Appended when present so agents study what's actually IN
+    // the asset, not just what it's called.
+    const inIt = (a.aiSummary ?? '').trim().length > 0
+      ? ` — what's in it: ${clip((a.aiSummary ?? '').trim(), 400)}`
+      : '';
+    return `- (${a.kind}) ${what}${why}${inIt}`;
+  });
+  if (assets.length > MAX_ASSETS) {
+    // Never silently truncate — say how many were left out.
+    lines.push(`- …and ${assets.length - MAX_ASSETS} more reference(s) not listed here.`);
+  }
+  return lines.join('\n');
 }
 
 // ============================================================================
@@ -257,9 +300,15 @@ export async function syncBrandIdentityToLegacyStores(
 ): Promise<{ voice: boolean; brandKit: boolean; theme: boolean }> {
   const result = { voice: false, brandKit: false, theme: false };
 
-  // 1. VOICE → org brandDNA
+  // 1. VOICE (+ assembled reference examples) → org brandDNA
+  // referenceExamples rides on the brandDNA so the existing surgical re-bake bakes
+  // the operator's reference materials into every agent's Brand DNA block. Pushed
+  // to agents by the same "Publish to Agents" button as the voice.
   try {
-    result.voice = await updateBrandDNA(identity.voice, userId);
+    result.voice = await updateBrandDNA(
+      { ...identity.voice, referenceExamples: assembleBrandReferenceText(identity.exampleAssets) },
+      userId,
+    );
   } catch (error) {
     logger.error(
       'Brand identity sync: failed to mirror voice into org brandDNA',

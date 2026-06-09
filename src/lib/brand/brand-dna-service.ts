@@ -26,6 +26,14 @@ export interface BrandDNA {
   avoidPhrases: string[];
   industry: string;
   competitors: string[];
+  /**
+   * Pre-assembled "Brand Reference Examples" text block (built from the brand
+   * identity's uploaded reference materials — each asset's description + purpose).
+   * Baked into every GM's Brand DNA block so all agents study real on-brand
+   * examples. Assembled by `assembleBrandReferenceText` in brand-identity-bridges
+   * and written here on brand-identity save; empty/absent → no subsection baked.
+   */
+  referenceExamples?: string;
   updatedAt?: unknown;
   updatedBy?: string;
 }

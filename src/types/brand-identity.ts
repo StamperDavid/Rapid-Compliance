@@ -59,6 +59,14 @@ export interface BrandExampleAsset {
   description: string; // "What is this?" — what the upload is
   purpose: string; // "Why are you sharing it?" — e.g. prior marketing, brand example, logo change
   uploadedAt: string; // ISO
+  /**
+   * AI-extracted summary of what the asset actually contains — a vision read of
+   * an image, the summarized transcript of a video, or the summarized text of a
+   * PDF. Produced best-effort by the asset/analyze route; baked into agent Brand
+   * DNA via `assembleBrandReferenceText`. Absent/empty when extraction is
+   * unavailable or yielded nothing.
+   */
+  aiSummary?: string;
 }
 
 // ============================================================================

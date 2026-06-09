@@ -150,6 +150,7 @@ function normalizeBrandDNA(dna: BrandDNA | null): string {
     avoidPhrases: Array.isArray(dna.avoidPhrases) ? dna.avoidPhrases : [],
     industry: dna.industry ?? '',
     competitors: Array.isArray(dna.competitors) ? dna.competitors : [],
+    referenceExamples: dna.referenceExamples ?? '',
   };
   const sortedKeys = Object.keys(semantic).sort();
   const ordered: Record<string, unknown> = {};
