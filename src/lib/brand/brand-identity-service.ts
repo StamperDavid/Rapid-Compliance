@@ -98,6 +98,68 @@ async function getDashboardThemeFromLiveTheme(): Promise<DashboardTheme> {
   }
 }
 
+/** One nested theme color slot ({ main, ... }) as stored in platform_settings/theme. */
+interface ThemeColorSlot {
+  main?: string;
+  paper?: string;
+  elevated?: string;
+  primary?: string;
+  secondary?: string;
+}
+
+interface LiveThemeColorsPartial {
+  primary?: ThemeColorSlot;
+  secondary?: ThemeColorSlot;
+  accent?: ThemeColorSlot;
+  success?: ThemeColorSlot;
+  warning?: ThemeColorSlot;
+  error?: ThemeColorSlot;
+  background?: ThemeColorSlot;
+  text?: ThemeColorSlot;
+  border?: ThemeColorSlot;
+}
+
+/**
+ * Read-bridge: pull the operator's REAL brand palette from the live CRM theme doc
+ * (`platform_settings/theme` — the store the old "Theme & Branding" page wrote, and
+ * what drives the dashboard) and map its nested `{ main }` colors onto the flat
+ * 11-color BrandPalette. This is why the Brand page shows the tenant's ACTUAL colors
+ * instead of generic defaults when `brand-identity.colors` hasn't been saved yet.
+ * Every field falls back to the palette default. Returns null only if the theme doc
+ * has no colors at all (so the caller keeps the defaults).
+ */
+async function getPaletteFromLiveTheme(): Promise<BrandPalette | null> {
+  if (!adminDb) {
+    return null;
+  }
+  try {
+    const doc = await adminDb.doc(THEME_DOC_PATH).get();
+    if (!doc.exists) {
+      return null;
+    }
+    const c = (doc.data() as { colors?: LiveThemeColorsPartial }).colors;
+    if (!c) {
+      return null;
+    }
+    const d = DEFAULT_BRAND_IDENTITY.colors;
+    return {
+      primary: c.primary?.main ?? d.primary,
+      secondary: c.secondary?.main ?? d.secondary,
+      accent: c.accent?.main ?? d.accent,
+      background: c.background?.main ?? d.background,
+      surface: c.background?.paper ?? c.background?.elevated ?? d.surface,
+      text: c.text?.primary ?? d.text,
+      textMuted: c.text?.secondary ?? d.textMuted,
+      border: c.border?.main ?? d.border,
+      success: c.success?.main ?? d.success,
+      warning: c.warning?.main ?? d.warning,
+      error: c.error?.main ?? d.error,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Borrow the real brand logo + palette from the website editor (where the tenant
  * already set them up). Returns only an absolute logo URL — a relative default like
@@ -191,15 +253,30 @@ export async function getBrandIdentity(): Promise<BrandIdentity> {
     identity.dashboardTheme = await getDashboardThemeFromLiveTheme();
   }
 
-  // No own logo set → borrow the real one (and palette) from the website editor,
-  // and failing that, fall back to the static logo the app ships with.
+  // Colors bridge: until this doc's `colors` is saved (migration), pull the operator's
+  // REAL palette from the live CRM theme doc — the colors that were in the old
+  // "Theme & Branding" page and drive the dashboard — instead of generic defaults.
+  if (!data.colors) {
+    // Prefer the live CRM theme palette; if that has no colors, fall back to the
+    // website editor's branding colors. Either way the operator sees their REAL
+    // brand colors, regardless of whether a logo is set.
+    const themePalette = await getPaletteFromLiveTheme();
+    if (themePalette) {
+      identity.colors = themePalette;
+    } else {
+      const web = await getWebsiteBranding();
+      if (web.colors) {
+        identity.colors = { ...identity.colors, ...web.colors };
+      }
+    }
+  }
+
+  // No own logo set → borrow the real one from the website editor, and failing
+  // that, fall back to the static logo the app ships with.
   if (!identity.logo?.url) {
     const web = await getWebsiteBranding();
     if (web.logoUrl) {
       identity.logo = { url: web.logoUrl, position: 'bottom-right', opacity: 0.85, scale: 0.1 };
-      if (web.colors && !data.colors) {
-        identity.colors = { ...identity.colors, ...web.colors };
-      }
     } else {
       // Final bridge: the tenant's real logo ships as a static asset (public/logo.png).
       identity.logo = { url: '/logo.png', position: 'bottom-right', opacity: 0.85, scale: 0.1 };
