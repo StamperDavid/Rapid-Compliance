@@ -5,9 +5,24 @@
  * Storage so URLs remain valid long after provider CDN links expire.
  */
 
+import { randomUUID } from 'node:crypto';
 import { adminStorage } from './admin';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+
+/**
+ * Build a PERMANENT, publicly-fetchable Firebase Storage download URL using a
+ * download token in the object's metadata. This is the standard way to get a
+ * public URL that works WITH uniform bucket-level access (UBLA) enabled — unlike
+ * `file.makePublic()` (per-object ACL), which throws on UBLA buckets. The token
+ * acts as the access key; the URL never expires (unlike signed URLs).
+ *
+ * Usage: generate a token, write it as `firebaseStorageDownloadTokens` in the
+ * object's CUSTOM metadata when saving, then return `firebaseDownloadUrl(...)`.
+ */
+export function firebaseDownloadUrl(bucketName: string, storagePath: string, token: string): string {
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(storagePath)}?alt=media&token=${token}`;
+}
 
 /**
  * Download a file from a URL and upload it to Firebase Storage.
@@ -37,6 +52,7 @@ export async function persistUrlToStorage(
 
   const bucket = adminStorage.bucket();
   const file = bucket.file(storagePath);
+  const token = randomUUID();
 
   await file.save(buffer, {
     metadata: {
@@ -44,16 +60,12 @@ export async function persistUrlToStorage(
       metadata: {
         persistedAt: new Date().toISOString(),
         source: 'studio-generation',
+        firebaseStorageDownloadTokens: token,
       },
     },
   });
 
-  const [signedUrl] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
-  });
-
-  return signedUrl;
+  return firebaseDownloadUrl(bucket.name, storagePath, token);
 }
 
 /**
@@ -70,17 +82,18 @@ export async function persistBufferToStorage(
   }
   const bucket = adminStorage.bucket();
   const file = bucket.file(storagePath);
+  const token = randomUUID();
   await file.save(buffer, {
     metadata: {
       contentType,
-      metadata: { persistedAt: new Date().toISOString(), source: 'studio-generation-composited' },
+      metadata: {
+        persistedAt: new Date().toISOString(),
+        source: 'studio-generation-composited',
+        firebaseStorageDownloadTokens: token,
+      },
     },
   });
-  const [signedUrl] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
-  });
-  return signedUrl;
+  return firebaseDownloadUrl(bucket.name, storagePath, token);
 }
 
 /**
