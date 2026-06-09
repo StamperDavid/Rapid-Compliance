@@ -214,7 +214,7 @@ const FOLDER_FILE_CAP = 30;
  * files. `webkitRelativePath` carries the in-folder path, so we test both the
  * file name and every path segment for the junk markers.
  */
-function keepRealFolderFiles(files: FileList): File[] {
+function keepRealFolderFiles(files: FileList | File[]): File[] {
   return Array.from(files).filter((file) => {
     if (file.size === 0) {
       return false;
@@ -587,10 +587,11 @@ export default function BrandIdentityPage() {
   // single picker, just fanned out across a whole folder.
   const handleAssetFolder = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const picked = e.target.files;
-      // Reset so re-picking the same folder fires onChange again.
+      // Snapshot before reset — `value = ''` empties the live FileList, which made
+      // folder selection silently no-op.
+      const picked = Array.from(e.target.files ?? []);
       e.target.value = '';
-      if (!picked || picked.length === 0) {
+      if (picked.length === 0) {
         return;
       }
       setAssetError(null);
