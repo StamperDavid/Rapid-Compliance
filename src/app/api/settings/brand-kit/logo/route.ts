@@ -13,9 +13,11 @@
  * Gated on the same permission as saving the brand kit (canManageTheme).
  */
 
+import { randomUUID } from 'node:crypto';
 import { type NextRequest, NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/auth/api-auth';
 import { adminStorage } from '@/lib/firebase/admin';
+import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
@@ -81,6 +83,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const bucket = adminStorage.bucket();
     const storageFile = bucket.file(storagePath);
+    const downloadToken = randomUUID();
 
     await storageFile.save(buffer, {
       metadata: {
@@ -89,14 +92,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           uploadedBy: permResult.user.uid,
           uploadedAt: new Date().toISOString(),
           purpose: 'brand-logo',
+          firebaseStorageDownloadTokens: downloadToken,
         },
       },
     });
 
-    // Permanent public URL — the logo is composited onto generated images and
-    // referenced by the assembled video, so it must not expire.
-    await storageFile.makePublic();
-    const url = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    // Permanent, publicly-fetchable download URL. Works with uniform bucket-level
+    // access (UBLA) — `makePublic()` per-object ACL throws on UBLA buckets.
+    const url = firebaseDownloadUrl(bucket.name, storagePath, downloadToken);
 
     logger.info('[brand-kit-logo] Logo uploaded', {
       storagePath,

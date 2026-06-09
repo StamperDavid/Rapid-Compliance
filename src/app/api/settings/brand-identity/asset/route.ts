@@ -18,9 +18,11 @@
  * Gated on the same permission as saving the brand identity (canManageTheme).
  */
 
+import { randomUUID } from 'node:crypto';
 import { type NextRequest, NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/auth/api-auth';
 import { adminStorage } from '@/lib/firebase/admin';
+import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
@@ -157,6 +159,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const bucket = adminStorage.bucket();
     const storageFile = bucket.file(storagePath);
+    const downloadToken = randomUUID();
 
     await storageFile.save(buffer, {
       metadata: {
@@ -165,14 +168,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           uploadedBy: permResult.user.uid,
           uploadedAt: new Date().toISOString(),
           purpose: 'brand-reference-asset',
+          firebaseStorageDownloadTokens: downloadToken,
         },
       },
     });
 
-    // Permanent public URL — reference materials are surfaced on the Brand
-    // Identity page indefinitely, so the URL must not expire.
-    await storageFile.makePublic();
-    const url = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    // Permanent, publicly-fetchable download URL. Works with uniform bucket-level
+    // access (UBLA) — `makePublic()` sets a per-object ACL, which throws on UBLA
+    // buckets ("Cannot update access control … uniform bucket-level access").
+    const url = firebaseDownloadUrl(bucket.name, storagePath, downloadToken);
 
     logger.info('[brand-identity-asset] Asset uploaded', {
       storagePath,
