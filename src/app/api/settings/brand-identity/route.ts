@@ -93,6 +93,7 @@ const ExampleAssetSchema = z.object({
   description: z.string(),
   purpose: z.string(),
   uploadedAt: z.string(),
+  aiSummary: z.string().optional(),
 });
 
 // Keys map 1:1 to the live theme doc (ThemeConfig in src/hooks/useOrgTheme.ts).

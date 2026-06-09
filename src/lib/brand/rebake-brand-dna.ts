@@ -50,7 +50,7 @@ export function buildBrandDNABlock(brandDNA: BrandDNA): string {
     ? brandDNA.competitors.join(', ')
     : '(none configured)';
 
-  return [
+  const lines: string[] = [
     '',
     '## Brand DNA (baked into the Golden Master at seed time — this is the tenant-specific identity that defines who you are and who you work for)',
     '',
@@ -63,7 +63,22 @@ export function buildBrandDNABlock(brandDNA: BrandDNA): string {
     `Key phrases to weave in naturally when appropriate: ${keyPhrases}`,
     `Phrases you are forbidden from using: ${avoidPhrases}`,
     `Competitors (never name them unless specifically asked): ${competitors}`,
-  ].join('\n');
+  ];
+
+  // Reference examples subsection — only when the operator has provided reference
+  // materials (assembled into a text block on the org brandDNA at save time). Kept
+  // INSIDE the Brand DNA block so the surgical swap refreshes it as one unit. MUST
+  // match `buildBrandDNABlock` in scripts/lib/brand-dna-helper.js byte-for-byte.
+  if (typeof brandDNA.referenceExamples === 'string' && brandDNA.referenceExamples.trim().length > 0) {
+    lines.push(
+      '',
+      '## Brand Reference Examples (real on-brand examples the operator shared — study them to match our actual style and intent)',
+      '',
+      brandDNA.referenceExamples,
+    );
+  }
+
+  return lines.join('\n');
 }
 
 /**

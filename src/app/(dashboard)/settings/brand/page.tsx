@@ -219,6 +219,8 @@ export default function BrandIdentityPage() {
   const [uploadingAsset, setUploadingAsset] = useState(false);
   const [assetError, setAssetError] = useState<string | null>(null);
   const [armedRemoveId, setArmedRemoveId] = useState<string | null>(null);
+  // Which assets are mid-analysis (AI reading their contents). Set of asset ids.
+  const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const assetFileInputRef = useRef<HTMLInputElement>(null);
   const armDisarmRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -431,6 +433,62 @@ export default function BrandIdentityPage() {
     [authFetch, identity, persistIdentity],
   );
 
+  // ── Reference-material analysis (POST /api/settings/brand-identity/asset/analyze) ──
+  // Asks the backend to AI-read an asset's actual contents and return a short
+  // summary. Runs after upload (non-blocking) and on the manual "Re-analyze"
+  // button. On success the summary is baked into the asset and persisted so the
+  // agents see it. Never throws — failures just clear the spinner.
+  const analyzeAsset = useCallback(
+    async (asset: BrandExampleAsset) => {
+      setAnalyzingIds((prev) => {
+        const next = new Set(prev);
+        next.add(asset.id);
+        return next;
+      });
+      try {
+        const res = await authFetch('/api/settings/brand-identity/asset/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: asset.url,
+            contentType: asset.contentType,
+            kind: asset.kind,
+          }),
+        });
+        const data = (await res.json()) as {
+          success: boolean;
+          aiSummary?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.success || typeof data.aiSummary !== 'string') {
+          return;
+        }
+        const summary = data.aiSummary;
+        // Update this asset's aiSummary immutably and persist the new identity so
+        // the summary survives reloads and reaches the agents.
+        setIdentity((prev) => {
+          const updated: BrandIdentity = {
+            ...prev,
+            exampleAssets: prev.exampleAssets.map((a) =>
+              a.id === asset.id ? { ...a, aiSummary: summary } : a,
+            ),
+          };
+          void persistIdentity(updated);
+          return updated;
+        });
+      } catch {
+        // Network / parse error — leave the asset un-summarised; operator can retry.
+      } finally {
+        setAnalyzingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(asset.id);
+          return next;
+        });
+      }
+    },
+    [authFetch, persistIdentity],
+  );
+
   // ── Reference Materials upload (POST /api/settings/brand-identity/asset) ────
   // Mirrors handleLogoFile: upload one file, append the new asset, persist
   // immediately so the upload isn't lost behind an un-clicked Save.
@@ -476,13 +534,15 @@ export default function BrandIdentityPage() {
           setSaved(true);
           setTimeout(() => setSaved(false), 3000);
         }
+        // Kick off AI analysis of the new asset — don't block upload completion on it.
+        void analyzeAsset(newAsset);
       } catch {
         setAssetError('Upload failed. Please check your connection and try again.');
       } finally {
         setUploadingAsset(false);
       }
     },
-    [authFetch, identity, persistIdentity],
+    [authFetch, identity, persistIdentity, analyzeAsset],
   );
 
   // Immutable per-field update of a single asset by id (state only — persisted on blur).
@@ -1157,7 +1217,8 @@ export default function BrandIdentityPage() {
           </CardTitle>
           <CardDescription>
             Upload examples of your brand — past marketing, ads, imagery, your logo, brand
-            guidelines — and tell your AI agents what each one is and why it matters.
+            guidelines — and tell your AI agents what each one is and why it matters. Saved
+            references are sent to all of your agents when you click Publish to Agents above.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1254,7 +1315,26 @@ export default function BrandIdentityPage() {
                     </div>
                   </div>
 
-                  {/* Two-step remove */}
+                  {/* AI reading of the file (distinct from the operator's own fields above) */}
+                  {analyzingIds.has(asset.id) ? (
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                      Analyzing the file so your agents understand it…
+                    </p>
+                  ) : (
+                    asset.aiSummary && (
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground block">
+                          What your agents see in this:
+                        </label>
+                        <p className="text-xs text-muted-foreground bg-surface-elevated border border-border-light rounded-md p-2 whitespace-pre-wrap">
+                          {asset.aiSummary}
+                        </p>
+                      </div>
+                    )
+                  )}
+
+                  {/* Two-step remove + re-analyze */}
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
@@ -1264,6 +1344,17 @@ export default function BrandIdentityPage() {
                     >
                       {armedRemoveId === asset.id ? 'Click again to remove' : 'Remove'}
                     </Button>
+                    {!analyzingIds.has(asset.id) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void analyzeAsset(asset);
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Re-analyze
+                      </button>
+                    )}
                     {armedRemoveId === asset.id && (
                       <Button
                         type="button"
