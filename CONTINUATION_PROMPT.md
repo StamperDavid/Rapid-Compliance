@@ -2,6 +2,15 @@
 
 ---
 
+# ✅ SHIPPED June 8, 2026 — Brand consolidation + references-to-agents (commits `00b3ce19`, `a8453762`)
+Four brand/theme pages (theme, brand-dna, brand-kit, brand-identity) collapsed into ONE: `/settings/brand`. One Save fans out to AI voice (brandDNA), video kit (brand-kit), and dashboard theme (platform_settings/theme) via bridges; old pages redirect. "Publish to Agents" surgically re-bakes all 67 GMs (preserves training edits). Full CRM-theme controls moved onto the page (Advanced section). Reference Materials: upload image/video/PDF → auto-analyzed (OpenRouter vision / Deepgram transcript / PDF parse → summary, proven live) → baked into every agent's Brand DNA on Publish. See memory `project_brand_identity_single_source_consolidation`.
+
+## 🧪 PRE-MULTI-TENANT TEST QUEUE (owner-deferred, must walk before the multi-tenant flip)
+- **Reference Materials end-to-end (Jun 8):** owner had NO brand imagery on hand to test. Before multi-tenant: upload a real image (vision read shows "what your agents see"), a video (transcript), and a PDF (text summary) → fill description/purpose → Save → Publish to Agents → confirm the reference text lands in a GM's baked Brand DNA block (spot-check via Training Lab or `verify-tagline-live`-style read). Also confirm two-step Remove + storage upload of a real asset.
+- **Dashboard theme bridge first-save (Jun 8):** confirm the FIRST Brand-page Save aligns the live dashboard colors to the brand palette as intended and does NOT wipe advanced theme knobs (read-bridge should preserve them). Visual check on localhost.
+
+---
+
 # 🏷️ RESUME HERE — BRAND IDENTITY UNIFICATION (June 7–8, 2026) ← CURRENT PRIORITY
 
 ## THE DECISION (owner, this session)
