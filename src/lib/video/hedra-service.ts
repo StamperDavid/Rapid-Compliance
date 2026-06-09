@@ -474,6 +474,118 @@ export async function generateHedraAvatarVideo(
 }
 
 // ============================================================================
+// Public API — GENERALIZED DRIVER (drive ANY Hedra model with ANY inputs)
+// ============================================================================
+
+/**
+ * A model-agnostic generation request. The Hedra Specialist constructs one of
+ * these from a creative intent + materials (which model, which reference images,
+ * what controls), and this driver uploads every asset and submits the generation.
+ *
+ * Each *Url is a public URL we upload to Hedra as an asset; the resulting asset id
+ * is placed in the payload by role (start_frame → start_keyframe_id, end_frame →
+ * end_keyframe_id, reference → reference_image_ids, audio → audio_id). This is the
+ * one path every model goes through, parameterized by what that model declares it
+ * accepts (see hedra-capability-service).
+ */
+export interface HedraGenerateRequest {
+  /** Hedra model id (resolve from the capability service by slug if needed). */
+  modelId: string;
+  /** 'video' (default) or 'image'. */
+  type?: 'video' | 'image';
+  textPrompt?: string;
+  /** Start frame / primary conditioning image (e.g. the person or character). */
+  startFrameUrl?: string | null;
+  /** End frame (for start→end transition models). */
+  endFrameUrl?: string | null;
+  /** Additional reference images for character/style consistency. */
+  referenceImageUrls?: string[];
+  /** Pre-recorded audio to drive lip-sync / motion (e.g. OmniHuman, Character-3). */
+  audioUrl?: string | null;
+  /** Inline TTS — Hedra synthesizes the voice server-side. */
+  tts?: { voiceId: string; text: string };
+  resolution?: string;
+  aspectRatio?: string;
+  durationMs?: number;
+  seed?: number;
+}
+
+/**
+ * Drive ANY Hedra model. Uploads every provided asset, builds the payload by role,
+ * submits the generation, and returns the generation id (poll with
+ * getHedraVideoStatus). This is the single gateway the Hedra Specialist uses for
+ * all generation — no more hardcoded model + single-path assumptions.
+ */
+export async function generateWithHedra(req: HedraGenerateRequest): Promise<HedraGenerationResult> {
+  const apiKey = await getHedraApiKey();
+  const type = req.type ?? 'video';
+
+  // Upload every supplied asset in parallel → asset ids by role.
+  const [startId, endId, audioId, referenceIds] = await Promise.all([
+    req.startFrameUrl ? uploadAssetFromUrl(apiKey, req.startFrameUrl, 'image', 'start-frame') : Promise.resolve<string | null>(null),
+    req.endFrameUrl ? uploadAssetFromUrl(apiKey, req.endFrameUrl, 'image', 'end-frame') : Promise.resolve<string | null>(null),
+    req.audioUrl ? uploadAssetFromUrl(apiKey, req.audioUrl, 'audio', 'audio') : Promise.resolve<string | null>(null),
+    req.referenceImageUrls && req.referenceImageUrls.length > 0
+      ? Promise.all(req.referenceImageUrls.map((u, i) => uploadAssetFromUrl(apiKey, u, 'image', `reference-${i}`)))
+      : Promise.resolve<string[]>([]),
+  ]);
+
+  const payload: Record<string, unknown> = {
+    type,
+    ai_model_id: req.modelId,
+  };
+  if (startId) { payload.start_keyframe_id = startId; }
+  if (endId) { payload.end_keyframe_id = endId; }
+  if (referenceIds.length > 0) { payload.reference_image_ids = referenceIds; }
+  if (audioId) { payload.audio_id = audioId; }
+  if (req.tts) {
+    payload.audio_generation = { type: 'text_to_speech', voice_id: req.tts.voiceId, text: req.tts.text };
+  }
+
+  if (type === 'video') {
+    const vid: Record<string, unknown> = {
+      text_prompt: req.textPrompt ?? '',
+      resolution: req.resolution ?? '720p',
+      aspect_ratio: req.aspectRatio ?? '16:9',
+    };
+    if (req.durationMs) { vid.duration_ms = req.durationMs; }
+    if (req.seed !== undefined) { vid.seed = req.seed; }
+    payload.generated_video_inputs = vid;
+  } else {
+    payload.text_prompt = req.textPrompt ?? '';
+    if (req.aspectRatio) { payload.aspect_ratio = req.aspectRatio; }
+    if (req.resolution) { payload.resolution = req.resolution; }
+  }
+
+  const res = await fetch(`${HEDRA_BASE_URL}/generations`, {
+    method: 'POST',
+    headers: hedraHeaders(apiKey, 'application/json'),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(`Hedra generation submit failed (${res.status}): ${await parseHedraError(res)}`);
+  }
+  const gen = (await res.json()) as HedraGenerationResponse;
+  if (!gen?.id) {
+    throw new Error('Hedra generation returned no id');
+  }
+
+  logger.info('[Hedra] generateWithHedra submitted', {
+    modelId: req.modelId,
+    type,
+    hasStart: Boolean(startId),
+    hasEnd: Boolean(endId),
+    references: referenceIds.length,
+    hasAudio: Boolean(audioId),
+    tts: Boolean(req.tts),
+    generationId: gen.id,
+    file: 'hedra-service.ts',
+  });
+
+  return { generationId: gen.id, modelId: req.modelId, status: gen.status, createdAt: gen.created_at };
+}
+
+// ============================================================================
 // Public API — Image Generation
 // ============================================================================
 
