@@ -178,18 +178,25 @@ export const DEFAULT_BRAND_IDENTITY: BrandIdentity = {
   companyName: '',
   tagline: '',
   logo: null,
+  // The REAL SalesVelocity.ai brand palette — mirrors the website builder's
+  // GlobalBranding (src/lib/website-builder/default-config.ts DEFAULT_BRANDING),
+  // which is the actual site's color scheme. The old amber/slate values here were
+  // unrelated placeholders that made the Brand page's Colors look wrong vs. the
+  // site. The two rgba website values (textMuted rgba(255,255,255,0.6), border
+  // rgba(255,255,255,0.1)) are expressed as their nearest #RRGGBB so the color
+  // pickers + the hex-only brand ColorsSchema accept them.
   colors: {
-    primary: '#F59E0B', // amber-500   — mirrors DEFAULT_BRAND_KIT.colors.primary
-    secondary: '#1E293B', // slate-800  — mirrors DEFAULT_BRAND_KIT.colors.secondary
-    accent: '#10B981', // emerald-500  — mirrors DEFAULT_BRAND_KIT.colors.accent
-    background: '#FFFFFF',
-    surface: '#F8FAFC', // slate-50
-    text: '#0F172A', // slate-900
-    textMuted: '#64748B', // slate-500
-    border: '#E2E8F0', // slate-200
-    success: '#10B981', // emerald-500
-    warning: '#F59E0B', // amber-500
-    error: '#EF4444', // red-500
+    primary: '#6366F1', // indigo
+    secondary: '#8B5CF6', // violet
+    accent: '#10B981', // emerald
+    background: '#000000', // dark brand background
+    surface: '#0A0A0A',
+    text: '#FFFFFF',
+    textMuted: '#9CA3AF', // ≈ rgba(255,255,255,0.6)
+    border: '#1F2937', // ≈ rgba(255,255,255,0.1) on dark
+    success: '#10B981',
+    warning: '#F59E0B',
+    error: '#EF4444',
   },
   fonts: {
     heading: 'Inter',
