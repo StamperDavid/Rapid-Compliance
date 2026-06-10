@@ -2,7 +2,48 @@
 
 ---
 
-# 🔴 RESUME HERE — Jun 9 AM — BLOCKER: chat file/folder attachment never uploads
+# 🔴 RESUME HERE — Jun 10 2026 — Reference-conditioned video generation (THE core feature)
+
+**The goal:** prompt + attach reference materials → content generated **FROM** those materials, not reinvented. Test case: a 30s Pixar-style commercial using the owner's actual **Velocity** (hero) + **Pipedrive** (villain) character art. This session closed the gap from "generic text-to-image that reinvents the characters" → "image-to-image conditioned on the operator's real art."
+
+## ✅ PROVEN this session (real outputs on his Velocity — go look)
+- **Image-to-image conditioning WORKS (keystone proof):** `generateHedraImageFromReference` (Flux Kontext Max) reproduced his Velocity re-posed — same suit / purple energy / neon city. Saved at `localhost:3000/velocity-i2i.png`.
+- **Image-to-video:** Kling v3 i2v from his Velocity → real video at `localhost:3000/velocity-proof.mp4`.
+- **Hedra Specialist** end-to-end: chose Veo 3 on its own reasoning, anchored to his Velocity art.
+
+## ✅ SHIPPED (commits 722b6d64 → a1179ba4, dev + rapid-dev synced)
+- **Storage UBLA fix** (download-token URLs, not makePublic) — chat uploads finally work.
+- **Auto-save fixes** (generic platform / empty brief.description / short duration) — projects persist + recall.
+- **Hedra capability service** (`src/lib/video/hedra-capability-service.ts`) — live catalog of ALL 96 Hedra models (incl. OmniHuman, Kling, Veo 3, Sora 2, Flux Kontext i2i). The deep-knowledge layer.
+- **Generalized Hedra driver** (`generateWithHedra` in hedra-service) — drive ANY model with ANY inputs (start/end frame, reference images, audio, TTS).
+- **Hedra Specialist agent** (`src/lib/agents/content/hedra/specialist.ts` + `scripts/seed-hedra-specialist-gm.js`) — GM seeded with Brand DNA, registered under Content Manager, the system-wide generation gateway.
+- **Reference conditioning wired into storyboard scenes** (`b9c5348b`): `asset-generator/generate` accepts `referenceImageUrl` → image-to-image; `matchReferenceForScene` (storyboard-thumbnail.ts) picks the right character per scene by filename token-match (scene "velocity" ⊂ file "SalesVelocity Hero"; "bully" = "PipeDrive Bully"); ContentAssistant passes the matched ref per scene (pool seeded on scene 1).
+- **Media library**: chat uploads register as `UnifiedMediaAsset` records; new `description` + `intendedUse` fields — **HUMAN-authored, AI never generates them** (owner was emphatic); library search includes them.
+- **Chat labeling flow**: upload WITH NO prompt → asks project name + description + intended use → stored VERBATIM, batch-numbered (one answer → all files, "Name 1/2/…"), project stored as a tag for filtering. Upload WITH a prompt → creative flow (attachments used as references). Library picker ("Search library") + consolidated hover dropdown (Upload files / Upload a folder / Search library).
+- **Deterministic build trigger** (`a1179ba4`): the creative-director front-end kept ROLE-PLAYING the hand-off in prose ("@Video Specialist", shot tables, "the machine is running") and never emitted the delegate block → NO build ever fired. Now the route detects build intent ("make the video", "build it", …) and FORCES `buildStoryboardFromBrief` via a JSON-only `forceDelegate` call. The build no longer depends on the model cooperating.
+- UI fixes: attach-dropdown hover-gap, bounded/scrollable chip strip, no-auto-advance on upload, attachment cap 20→100 (a 21-file folder was 400-ing).
+
+## 🔜 IMMEDIATE NEXT — verify the chain end-to-end (the `a1179ba4` fix has NOT had a clean run yet)
+1. Hard-refresh → upload references + prompt + **"make the video"** → confirm in the rapid-dev log: `forceDelegate` → `buildStoryboardFromBrief` → storyboards on canvas → `asset-generator/generate` doing **image-to-image** (the scenes must LOOK like his Velocity/Bully, not the generic "Velocity Arrives = random jumping figure" from before).
+2. Verify `matchReferenceForScene` reliably picks the right character per scene.
+
+## ⏳ STILL TO BUILD (owner requirements, NOT done)
+- **Reference conditioning in the actual VIDEO gen** — right now only storyboard THUMBNAILS are image-conditioned; the scene VIDEO generation (`scene-generator.ts`) still needs i2v conditioned on his characters (OmniHuman / Kling i2v via `generateWithHedra`, start_frame = his character).
+- **Logo white-background bug** — the brand outro composites a non-transparent logo (white plate). Fix the logo transparency.
+- **Audio stage in the editor** — music + VO + ambience laid over the whole stitched video, ONCE, for seamlessness; mute the model's auto-generated audio (`generate_audio:false`). Storyboard `musicCue`/`ambience` pre-fill it.
+- **All generated VIDEOS save to the library** — thumbnails do; finish the final-video persistence (UnifiedMediaAsset pending→ready on Hedra completion, like `/api/content/video/generate`).
+- **Library edit + duplicate controls** (copy/change to repurpose) — PATCH supports description/intendedUse/name/tags; needs UI on the Library page.
+- **End-product grading** — grading the finished video routes to the right specialist (story → Video Specialist; model/material/prompt → Hedra Specialist). Owner requirement; the training-loop (grade → Prompt Engineer → new GM version) exists but Hedra Specialist isn't wired into grade-routing yet.
+- **Library-auto-source (LATER — owner-deferred):** agent pulls references from the library/project automatically WITHOUT attaching. Owner explicitly said prompt+attach is the CURRENT validation; library-auto is future ("eventually my agent will look in here for inspiration").
+
+## Test hygiene (owner re-runs the upload test repeatedly)
+To clear between runs: delete media records with tag `reference-material` AND/OR source `ai-generated` created in the last 24h. **NEVER delete storage. NEVER the whole library** (owner stopped me twice for over-deleting). His Velocity in storage: `organizations/rapid-compliance-root/brand-assets/*SalesVelocity.ai_Hero*`. Dev server: localhost:3000 from `D:\rapid-dev` (its own dev-server.log; monitor task watches content/video/asset/brand + errors).
+
+---
+
+# ✅ RESOLVED (Jun 9) — chat attachment upload + the reference-conditioning build above. Original blocker kept below as history:
+
+# 🔴 [historical] Jun 9 AM — BLOCKER: chat file/folder attachment never uploads
 
 **Symptom:** In the Content Assistant chat (`/content/video`), clicking 📎 (single file) or 📁 (folder), picking a file → **NO attachment chip appears, and the upload request NEVER fires.** `grep -c "/api/settings/brand-identity/asset" dev-server.log` = **0 across the whole session** → the request never leaves the browser. No client error in the log either. (Owner hard-refreshed + I restarted the dev server clean — still broken. So it's a real code/runtime issue, NOT staleness.)
 
