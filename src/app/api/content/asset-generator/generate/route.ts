@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 
 import { requireAuth } from '@/lib/auth/api-auth';
-import { generateHedraImage } from '@/lib/video/hedra-service';
+import { generateHedraImage, generateHedraImageFromReference } from '@/lib/video/hedra-service';
 import { getBrandKit } from '@/lib/video/brand-kit-service';
 import { DEFAULT_BRAND_KIT } from '@/types/brand-kit';
 import { persistUrlToStorage, persistBufferToStorage } from '@/lib/firebase/storage-utils';
@@ -71,6 +71,12 @@ const GenerateImageSchema = z.object({
   applyBrandLogo: z.boolean().optional().default(false),
   /** Optional human-readable name for the saved asset; defaults to prompt. */
   name: z.string().trim().max(120).optional(),
+  /**
+   * When set, the image is generated CONDITIONED on this reference image
+   * (image-to-image) — so the result is built from the operator's actual artwork
+   * (e.g. their character) instead of reinvented from the text prompt.
+   */
+  referenceImageUrl: z.string().url().optional(),
 });
 
 type GenerateImageRequest = z.infer<typeof GenerateImageSchema>;
@@ -181,12 +187,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // 4. Generate via Hedra (auto-discovers the active image model and polls
-    //    until the asset URL is available — typical 5-30s).
-    const generation = await generateHedraImage(imagePrompt, {
-      aspectRatio: body.aspectRatio,
-      resolution: isResolutionValue(body.resolution) ? body.resolution : '1080p',
-    });
+    // 4. Generate via Hedra. When a reference image is supplied, generate
+    //    CONDITIONED on it (image-to-image) so the result is built from the
+    //    operator's actual artwork/character — not reinvented from text. Otherwise
+    //    fall back to text-to-image.
+    const generation = body.referenceImageUrl
+      ? await generateHedraImageFromReference(imagePrompt, body.referenceImageUrl, {
+          aspectRatio: body.aspectRatio,
+        })
+      : await generateHedraImage(imagePrompt, {
+          aspectRatio: body.aspectRatio,
+          resolution: isResolutionValue(body.resolution) ? body.resolution : '1080p',
+        });
 
     // 5. Composite the REAL brand logo onto the image (if one is configured) so
     //    the output carries the actual logo, not a generated lookalike.

@@ -17,6 +17,7 @@
 import { logger } from '@/lib/logger/logger';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getHedraCatalog } from './hedra-capability-service';
 
 // ============================================================================
 // Constants
@@ -732,6 +733,60 @@ async function pollHedraGeneration(
   }
 
   throw new Error(`Hedra image generation timed out after ${maxWaitMs / 1000}s`);
+}
+
+/**
+ * Generate an image CONDITIONED on a reference image (image-to-image), so the
+ * result is built FROM the operator's actual artwork/character instead of being
+ * reinvented from a text prompt. Picks a Hedra image-to-image / reference model
+ * from the live catalog, uploads the reference, and submits it as the source frame.
+ */
+export async function generateHedraImageFromReference(
+  prompt: string,
+  referenceImageUrl: string,
+  options?: { aspectRatio?: string },
+): Promise<HedraImageResult> {
+  const apiKey = await getHedraApiKey();
+
+  // Choose an image-to-image / reference-capable image model from the live catalog.
+  const catalog = await getHedraCatalog();
+  const model =
+    catalog.find((m) => m.type === 'image' && /kontext|i2i|edit|restyle|reference/i.test(`${m.slug} ${m.name}`))
+    ?? catalog.find((m) =>
+      m.type === 'image' &&
+      (m.inputs ?? []).some((mode) => (mode.slots ?? []).some((s) => s.role === 'start_frame' || s.role === 'reference')),
+    );
+  if (!model) {
+    throw new Error('No Hedra image-to-image model available in the live catalog.');
+  }
+
+  const imageAssetId = await uploadAssetFromUrl(apiKey, referenceImageUrl, 'image', 'reference');
+
+  const payload: Record<string, unknown> = {
+    type: 'image',
+    ai_model_id: model.id,
+    text_prompt: prompt,
+    start_keyframe_id: imageAssetId,
+    aspect_ratio: options?.aspectRatio ?? '16:9',
+  };
+
+  logger.info('Hedra image-to-image starting', { modelSlug: model.slug, file: 'hedra-service.ts' });
+
+  const genResponse = await fetch(`${HEDRA_BASE_URL}/generations`, {
+    method: 'POST',
+    headers: hedraHeaders(apiKey, 'application/json'),
+    body: JSON.stringify(payload),
+  });
+  if (!genResponse.ok) {
+    throw new Error(`Hedra image-to-image submit failed (${genResponse.status}): ${await parseHedraError(genResponse)}`);
+  }
+  const generation = (await genResponse.json()) as HedraGenerationResponse;
+  if (!generation?.id) {
+    throw new Error('Hedra image-to-image returned no generation ID');
+  }
+
+  const { url } = await pollHedraGeneration(apiKey, generation.id);
+  return { url, generationId: generation.id, modelId: model.id, modelName: model.slug };
 }
 
 /**

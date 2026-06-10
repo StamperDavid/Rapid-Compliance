@@ -36,7 +36,7 @@ import { Button } from '@/components/ui/button';
 import { SectionTitle, SectionDescription, Caption } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import { requestStoryboardThumbnail, sceneHasDescription } from '@/lib/video/storyboard-thumbnail';
+import { requestStoryboardThumbnail, sceneHasDescription, matchReferenceForScene } from '@/lib/video/storyboard-thumbnail';
 import { cn } from '@/lib/utils';
 import type { CinematicConfig } from '@/types/creative-studio';
 import type { PipelineScene, SceneReference } from '@/types/video-pipeline';
@@ -691,9 +691,11 @@ export function ContentAssistant() {
         // Regenerate the reworked scene's thumbnail in the background.
         void (async () => {
           const aspectRatio = useVideoPipelineStore.getState().brief.aspectRatio;
-          const scene = useVideoPipelineStore.getState().scenes.find((s) => s.id === targetId);
+          const allScenes = useVideoPipelineStore.getState().scenes;
+          const scene = allScenes.find((s) => s.id === targetId);
           if (scene && sceneHasDescription(scene)) {
-            const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio);
+            const refUrl = matchReferenceForScene(scene, allScenes[0]?.references ?? []);
+            const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio, refUrl);
             if ('url' in result) {
               useVideoPipelineStore.getState().updateScene(targetId, { screenshotUrl: result.url });
             }
@@ -717,10 +719,14 @@ export function ContentAssistant() {
         // so the previews appear right after creation (same as the manual flow).
         void (async () => {
           const aspectRatio = useVideoPipelineStore.getState().brief.aspectRatio;
+          // The operator's uploaded reference images are seeded onto scene 1 — use
+          // them as the pool so each scene is generated FROM the matching character.
+          const referencePool = newScenes[0]?.references ?? [];
           for (const id of createdIds) {
             const scene = useVideoPipelineStore.getState().scenes.find((s) => s.id === id);
             if (scene && sceneHasDescription(scene)) {
-              const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio);
+              const refUrl = matchReferenceForScene(scene, referencePool);
+              const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio, refUrl);
               if ('url' in result) {
                 useVideoPipelineStore.getState().updateScene(id, { screenshotUrl: result.url });
               }
