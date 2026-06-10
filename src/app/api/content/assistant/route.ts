@@ -210,6 +210,51 @@ async function buildSystemPrompt(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// Deterministic build trigger — the model often role-plays the hand-off in prose
+// instead of emitting the delegate block, so the build never fires. When the
+// operator clearly asks to build, we FORCE a structured delegate directive with a
+// focused JSON-only call so a build always happens.
+// ────────────────────────────────────────────────────────────────────────────
+
+function wantsBuild(messages: { role: 'user' | 'assistant'; content: string }[]): boolean {
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+  const t = (lastUser?.content ?? '').toLowerCase();
+  if (!t) { return false; }
+  if (/\b(make it|build it|do it|just build it|take it from here|go ahead|make the video|create the video|build the storyboards?|make the (?:f\w*ing )?video|create the video i requested|review.*create the video)\b/.test(t)) {
+    return true;
+  }
+  return /\b(make|build|create|produce|generate|render)\b/.test(t) && /\b(video|commercial|spot|ad|storyboard)\b/.test(t);
+}
+
+async function forceDelegate(
+  messages: { role: 'user' | 'assistant'; content: string }[],
+  attachments: Attachment[],
+): Promise<DelegateDirective | null> {
+  const refBlock = attachments.length > 0
+    ? `\n\nATTACHED REFERENCE FILES (build the brief FROM these — describe who is on screen using them):\n${attachments
+        .map((a) => `- ${a.fileName ?? a.url}${a.aiSummary ? `: ${a.aiSummary}` : ''}`)
+        .join('\n')}`
+    : '';
+  const sys = `You convert a conversation into ONE video-build directive. Output ONLY a JSON object — no prose, no fences, no "@Video Specialist", nothing else — matching exactly:
+{"specialist":"VIDEO_SPECIALIST","brief":"<a rich creative brief: the concept, WHO is on screen and their exact look pulled from the attached references, the emotional arc, the message, the CTA>","platform":"youtube|tiktok|instagram_reels|shorts|linkedin|generic","style":"talking_head|documentary|energetic|cinematic","targetDuration":<integer 15-150>,"targetAudience":"<who it's for>","callToAction":"<what they should do>","tone":"<editorial tone>"}
+Use platform "youtube", style "cinematic", targetDuration 30 unless the conversation clearly says otherwise. The brief MUST weave in the actual attached reference content.${refBlock}`;
+  try {
+    const provider = new OpenRouterProvider(PLATFORM_ID);
+    const response = await provider.chat({
+      model: 'claude-sonnet-4.6',
+      messages: [{ role: 'system', content: sys }, ...messages.map((m) => ({ role: m.role, content: m.content }))],
+      temperature: 0.4,
+      maxTokens: 1500,
+    });
+    const raw = (response.content ?? '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+    const parsed = DelegateDirectiveSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Route handler
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -259,8 +304,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Video Specialist and return the storyboards for the canvas.
     if (isVideoStoryboardTab(parsed.activeTab)) {
       const delegation = extractDelegateDirective(reply);
-      if (delegation?.directive.specialist === 'VIDEO_SPECIALIST') {
-        const { directive } = delegation;
+      let directive = delegation?.directive ?? null;
+      let cleanedReply = delegation?.cleanedReply ?? reply;
+      // Deterministic fallback: if the operator clearly asked to build but the model
+      // role-played the hand-off in prose instead of emitting a delegate block, force
+      // a structured directive so the build always fires.
+      if (!directive && wantsBuild(parsed.messages)) {
+        directive = await forceDelegate(parsed.messages, attachments);
+        if (directive) {
+          cleanedReply = 'Building it now — your storyboards are on the way.';
+        }
+      }
+      if (directive?.specialist === 'VIDEO_SPECIALIST') {
         const built = await buildStoryboardFromBrief({
           brief: directive.brief,
           platform: directive.platform,
@@ -285,12 +340,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           logger.warn('[ContentManager] Video Specialist delegation failed', { file: FILE, error: built.error });
           return NextResponse.json({
             success: true,
-            reply: `${delegation.cleanedReply || 'I tried to build that,'} but the Video Specialist hit a problem: ${built.error}`,
+            reply: `${cleanedReply || 'I tried to build that,'} but the Video Specialist hit a problem: ${built.error}`,
           });
         }
         return NextResponse.json({
           success: true,
-          reply: delegation.cleanedReply || 'Here are your storyboards — review and tweak anything.',
+          reply: cleanedReply || 'Here are your storyboards — review and tweak anything.',
           storyboards: built.storyboards,
           ...(directive.targetSceneNumber ? { targetSceneNumber: directive.targetSceneNumber } : {}),
         });
