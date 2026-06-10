@@ -558,10 +558,11 @@ export function ContentAssistant() {
       return;
     }
 
-    // First explicit submit after fresh uploads → start the library-labeling
-    // exchange. Uploading never advances the conversation on its own; only this
-    // submit does. (Library-picked attachments are already labeled and skip this.)
-    if (freshUploadsRef.current.length > 0) {
+    // First explicit submit after fresh uploads WITH NO PROMPT → start the
+    // library-labeling exchange (the operator is cataloguing). If they typed a
+    // prompt alongside the uploads, that's a creative request that USES the
+    // attachments as references — fall through to the normal flow, don't intercept.
+    if (freshUploadsRef.current.length > 0 && text.length === 0) {
       const pending = freshUploadsRef.current.slice();
       freshUploadsRef.current = [];
       pendingLabelRef.current = pending;
