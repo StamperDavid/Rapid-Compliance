@@ -8,7 +8,7 @@
  * the media library.
  */
 
-import type { PipelineScene } from '@/types/video-pipeline';
+import type { PipelineScene, SceneReference } from '@/types/video-pipeline';
 import type { CinematicConfig } from '@/types/creative-studio';
 
 export function hasText(value?: string | null): boolean {
@@ -35,6 +35,44 @@ export function cinematicSummary(config?: CinematicConfig): string {
 /** Does the storyboard have enough description to picture it? */
 export function sceneHasDescription(scene: PipelineScene): boolean {
   return hasText(scene.title) || hasText(scene.visualDescription) || hasText(scene.location);
+}
+
+/**
+ * Pick the operator's reference image whose name best matches what's IN this scene
+ * (a "Velocity" scene → the Velocity art; a "Bully" scene → the Bully art), so the
+ * scene is generated FROM that actual character instead of reinvented from text.
+ * Bidirectional token-substring match so e.g. scene "velocity" matches file
+ * "SalesVelocity Hero". Returns undefined when nothing matches (falls back to text).
+ */
+export function matchReferenceForScene(
+  scene: PipelineScene,
+  pool: SceneReference[],
+): string | undefined {
+  const images = pool.filter((r) => r.type === 'image' && hasText(r.url));
+  if (images.length === 0) {
+    return undefined;
+  }
+  const tokenize = (s: string): string[] =>
+    s.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 4);
+  const sceneTokens = tokenize(
+    `${scene.title ?? ''} ${scene.visualDescription ?? ''} ${scene.wardrobe ?? ''}`,
+  );
+  let best: SceneReference | undefined;
+  let bestScore = 0;
+  for (const ref of images) {
+    const refTokens = tokenize(ref.name.replace(/\.[a-z0-9]+$/i, ''));
+    let score = 0;
+    for (const rt of refTokens) {
+      if (sceneTokens.some((st) => rt.includes(st) || st.includes(rt))) {
+        score += 1;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = ref;
+    }
+  }
+  return bestScore > 0 ? best?.url : undefined;
 }
 
 /**
@@ -117,6 +155,12 @@ export async function requestStoryboardThumbnail(
   authFetch: AuthFetch,
   scene: PipelineScene,
   aspectRatio: string,
+  /**
+   * When set, the scene is generated CONDITIONED on this reference image
+   * (image-to-image) — so it's built from the operator's actual character art
+   * instead of reinvented from text.
+   */
+  referenceImageUrl?: string,
 ): Promise<{ url: string } | { error: string }> {
   // The closing brand / CTA / outro scene gets a deterministic branded card (real
   // logo + tagline) rendered server-side — never an AI guess that paints a fake
@@ -152,6 +196,7 @@ export async function requestStoryboardThumbnail(
       body: JSON.stringify({
         prompt: buildThumbnailPrompt(scene),
         aspectRatio,
+        ...(referenceImageUrl ? { referenceImageUrl } : {}),
         name: hasText(scene.title)
           ? `Storyboard ${scene.sceneNumber}: ${scene.title}`
           : `Storyboard ${scene.sceneNumber} thumbnail`,
