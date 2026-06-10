@@ -60,7 +60,7 @@ const AssistantRequestSchema = z.object({
   /** The content-generator tab the operator is on, e.g. '/content/video'. */
   activeTab: z.string().trim().max(120).optional(),
   /** Optional reference files (images and/or videos) the operator attached. */
-  attachments: z.array(AttachmentSchema).max(20).optional(),
+  attachments: z.array(AttachmentSchema).max(100).optional(),
 });
 
 function isVideoStoryboardTab(activeTab: string | undefined): boolean {
