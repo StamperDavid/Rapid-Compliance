@@ -135,11 +135,76 @@ function typeIcon(type: MediaAssetType): React.ElementType {
   }
 }
 
-/** A clean download filename for an asset — strips any folder prefix, falls back to id. */
-function downloadName(asset: Pick<UnifiedMediaAsset, 'name' | 'id'>): string {
+/** Common MIME → file-extension map for the asset types this library holds. */
+const MIME_EXTENSIONS: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/ogg': 'ogg',
+  'application/pdf': 'pdf',
+};
+
+/** Best-guess file extension (no dot) for an asset: from its mimeType, then the
+ *  extension embedded in its storage URL, then a sane default for its type. */
+function extensionFor(
+  asset: Pick<UnifiedMediaAsset, 'mimeType' | 'url' | 'type'>,
+): string | null {
+  const mt = asset.mimeType?.toLowerCase().split(';')[0].trim();
+  if (mt && MIME_EXTENSIONS[mt]) {
+    return MIME_EXTENSIONS[mt];
+  }
+  if (mt?.includes('/')) {
+    const sub = mt.split('/')[1];
+    if (/^[a-z0-9]+$/.test(sub)) {
+      return sub;
+    }
+  }
+  // Pull the extension out of the storage path (decode %2F, drop the ?query).
+  try {
+    const path = decodeURIComponent(asset.url.split('?')[0]);
+    const seg = path.split('/').pop() ?? '';
+    const dot = seg.lastIndexOf('.');
+    if (dot > -1 && dot < seg.length - 1) {
+      const ext = seg.slice(dot + 1).toLowerCase();
+      if (/^[a-z0-9]{1,5}$/.test(ext)) {
+        return ext;
+      }
+    }
+  } catch {
+    /* malformed URL — fall through to the type default */
+  }
+  const byType: Record<string, string> = {
+    image: 'png',
+    video: 'mp4',
+    audio: 'mp3',
+    document: 'pdf',
+  };
+  return byType[asset.type] ?? null;
+}
+
+/** A clean download filename for an asset — strips any folder prefix, falls back
+ *  to id, and guarantees a file extension so the OS knows the file type. */
+function downloadName(
+  asset: Pick<UnifiedMediaAsset, 'name' | 'id' | 'mimeType' | 'url' | 'type'>,
+): string {
   const raw = asset.name && asset.name.trim().length > 0 ? asset.name : asset.id;
-  const base = raw.split('/').pop();
-  return base && base.length > 0 ? base : asset.id;
+  const base = (raw.split('/').pop() ?? '').trim() || asset.id;
+  // Already carries a plausible extension → leave it alone.
+  if (/\.[a-z0-9]{1,5}$/i.test(base)) {
+    return base;
+  }
+  const ext = extensionFor(asset);
+  return ext ? `${base}.${ext}` : base;
 }
 
 // ============================================================================
@@ -558,12 +623,14 @@ export default function MediaLibraryUnifiedPage() {
     }
   }, [checkedIds, deleteAssetsByIds]);
 
-  // Download one asset — fetch → blob → save, so cross-origin Storage files actually
-  // download to disk instead of opening in a browser tab.
+  // Download one asset through the same-origin proxy (/api/media/[id]/download).
+  // Going through the proxy avoids the Storage bucket's missing CORS headers,
+  // which silently broke a direct `fetch(asset.url)`.
   const handleDownloadOne = useCallback(async (asset: UnifiedMediaAsset) => {
     try {
-      const res = await fetch(asset.url);
+      const res = await authFetch(`/api/media/${asset.id}/download`);
       if (!res.ok) {
+        setErrorMsg(`Download failed (${res.status}). Try again.`);
         return;
       }
       const blob = await res.blob();
@@ -575,10 +642,10 @@ export default function MediaLibraryUnifiedPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(objectUrl);
-    } catch {
-      /* best-effort download */
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Download failed. Try again.');
     }
-  }, []);
+  }, [authFetch]);
 
   // Download all checked assets as a single .zip.
   const handleBulkDownload = useCallback(async () => {
@@ -594,7 +661,7 @@ export default function MediaLibraryUnifiedPage() {
       await Promise.all(
         items.map(async (a) => {
           try {
-            const res = await fetch(a.url);
+            const res = await authFetch(`/api/media/${a.id}/download`);
             if (!res.ok) {
               return;
             }
@@ -611,6 +678,7 @@ export default function MediaLibraryUnifiedPage() {
         }),
       );
       if (Object.keys(files).length === 0) {
+        setErrorMsg('Download failed — none of the selected files could be retrieved.');
         return;
       }
       const zipped = await new Promise<Uint8Array>((resolve, reject) => {
@@ -628,7 +696,7 @@ export default function MediaLibraryUnifiedPage() {
     } finally {
       setDownloading(false);
     }
-  }, [assets, checkedIds]);
+  }, [assets, checkedIds, authFetch]);
 
   // "Create new project" — group the checked assets under a named project tag
   // (the library already treats a project as a tag for filtering).
