@@ -192,6 +192,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
+    // 3b. Trademark/IP guardrail — ALWAYS applied. Output is used in a business's
+    //     paid ads, so the model must never reproduce IP it doesn't own; a "superhero"
+    //     brief otherwise drifts to Superman / known costumes. With a reference image
+    //     this is a pure prohibition (don't fight the identity-lock); without one we
+    //     also tell it to invent an original design.
+    const trademarkGuard = body.referenceImageUrl
+      ? ' Do not turn the subject into, add, or resemble any real, trademarked or copyrighted character, superhero, mascot, or public figure (no Superman/Batman/Marvel/DC, no S-shield, no recognizable existing costumes or logos).'
+      : ' Original characters only — never depict or resemble any real, trademarked or copyrighted character, superhero, mascot, or public figure (no Superman/Batman/Marvel/DC, no S-shield, no recognizable existing costumes or logos). Invent a wholly original design.';
+    imagePrompt = `${imagePrompt}${trademarkGuard}`;
+
     // 4. Generate via Hedra. When a reference image is supplied, generate
     //    CONDITIONED on it (image-to-image) so the result is built from the
     //    operator's actual artwork/character — not reinvented from text. Otherwise

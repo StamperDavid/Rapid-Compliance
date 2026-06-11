@@ -196,7 +196,10 @@ export function buildThumbnailPrompt(
   const prefix = fidelity === 'exact' ? `${IDENTITY_LOCK} ` : fidelity === 'inspired' ? `${INSPIRED_NOTE} ` : '';
   const brandingRule = hasReference ? NO_INVENTED_BRANDING : NO_FAKE_BRANDING;
   // Trim the descriptive part so the identity-lock + branding rule ALWAYS survive the
-  // 1000-char cap (the asset-generator route rejects prompts longer than that).
+  // 1000-char cap (the asset-generator route rejects prompts longer than that). The
+  // trademark/IP guardrail is appended centrally in the asset-generator route so it
+  // covers every image path (thumbnails AND chat images) and can be tailored to
+  // whether a reference image is present.
   const maxDescLen = 1000 - prefix.length - brandingRule.length - 2;
   const trimmed =
     descriptive.length > maxDescLen ? `${descriptive.slice(0, maxDescLen - 3)}...` : descriptive;
