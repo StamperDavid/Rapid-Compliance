@@ -220,21 +220,10 @@ const StoryboardResultSchema = z.object({
   productionNotes: z.array(z.string().min(1)).min(3).max(6),
   callToAction: z.string().min(1),
 }).superRefine((data, ctx) => {
-  if (data.scenes.length !== data.sceneCount) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['sceneCount'],
-      message: `sceneCount (${data.sceneCount}) must equal scenes.length (${data.scenes.length}).`,
-    });
-  }
-  const sumDurations = data.scenes.reduce((acc, s) => acc + s.duration, 0);
-  if (sumDurations !== data.totalDurationSec) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['totalDurationSec'],
-      message: `totalDurationSec (${data.totalDurationSec}) must equal sum of scene durations (${sumDurations}).`,
-    });
-  }
+  // sceneCount and totalDurationSec are DERIVED values — the model is routinely a few
+  // off on its own arithmetic, and that must not fail an otherwise-good build. We don't
+  // reject on those here; they're normalized to the actual scenes after parsing. Only
+  // the real structural requirement (scene numbers 1-indexed, sequential) is enforced.
   for (let i = 0; i < data.scenes.length; i++) {
     const scene = data.scenes[i];
     if (scene && scene.sceneNumber !== i + 1) {
@@ -448,7 +437,12 @@ async function executeScriptToStoryboard(
     throw new Error(`Video Specialist output did not match expected schema: ${issueSummary}`);
   }
 
-  return result.data;
+  // Snap the derived totals to what the scenes ACTUALLY are, so a few seconds of model
+  // rounding (e.g. scenes summing to 66 while it declared 60) can't fail the build.
+  const data = result.data;
+  data.totalDurationSec = data.scenes.reduce((acc, s) => acc + s.duration, 0);
+  data.sceneCount = data.scenes.length;
+  return data;
 }
 
 // ============================================================================

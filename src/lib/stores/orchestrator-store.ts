@@ -163,11 +163,15 @@ export const useOrchestratorStore = create<OrchestratorUIState>()(
     }),
     {
       name: 'orchestrator-ui-state',
-      storage: createJSONStorage(() => localStorage),
+      // sessionStorage → Jasper's chat survives page nav + refresh but clears when the
+      // site is closed (the operator's "lives until the site is closed" requirement).
+      // hasSeenWelcome/context also reset per fresh site-open, which is fine — context
+      // is re-set on mount and a once-per-session greeting is acceptable.
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         hasSeenWelcome: state.hasSeenWelcome,
         context: state.context,
-        // Don't persist chat history or modal states
+        chatHistory: state.chatHistory,
       }),
     }
   )

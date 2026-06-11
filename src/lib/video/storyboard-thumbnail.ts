@@ -10,6 +10,7 @@
 
 import type { PipelineScene, SceneReference } from '@/types/video-pipeline';
 import type { CinematicConfig } from '@/types/creative-studio';
+import type { IntentSubject, SubjectFidelity } from '@/lib/content/content-intent';
 
 export function hasText(value?: string | null): boolean {
   return typeof value === 'string' && value.trim().length > 0;
@@ -101,6 +102,42 @@ const NO_FAKE_BRANDING =
   'of any kind. Do not invent or depict any logo — the real brand logo is added separately.';
 
 /**
+ * Identity-lock instruction prepended ONLY when the scene is generated from a
+ * reference character image (image-to-image). It locks the person's IDENTITY (face)
+ * but DEFERS clothing/setting/pose to the scene description — otherwise it copies the
+ * reference's outfit too, which put civilian "David" in the suited Velocity costume.
+ * The scene description is the Content Manager's instruction and must win on wardrobe.
+ */
+const IDENTITY_LOCK =
+  'The reference image shows a SPECIFIC, established PERSON. Keep their identity EXACT — ' +
+  'same face, head shape, hair, beard and facial features — so they are unmistakably the ' +
+  'same person. But FOLLOW THE SCENE DESCRIPTION below for everything else: their clothing ' +
+  'and wardrobe, the location/setting, the pose, the action, and their expression may all ' +
+  'differ from the reference (e.g. the SAME person in everyday civilian clothes instead of ' +
+  'a costume/suit). Do NOT copy the reference image\'s outfit or background when the ' +
+  'description calls for something different. Never invent a different person.';
+
+/**
+ * Softer branding rule used WITH a reference image: we still must not let the model
+ * invent a fake SalesVelocity logo, but the strict NO_FAKE_BRANDING rule also wipes
+ * branding that is PART of the reference character (e.g. the villain's "pipedrive"
+ * armband), erasing the character's identity. This blocks only NEW/invented lettering
+ * while preserving markings carried over from the reference.
+ */
+const NO_INVENTED_BRANDING =
+  'Do not ADD any new on-screen text, captions, titles, or invented logos. Keep markings ' +
+  'that are already part of the referenced character or scene. The real brand logo is added separately.';
+
+/**
+ * Note used when fidelity is "inspired" — the operator wants something LIKE the
+ * reference, not a faithful copy. We anchor to the reference for mood/look but
+ * explicitly allow a distinct result, the opposite of the identity-lock.
+ */
+const INSPIRED_NOTE =
+  'Use the reference image as loose inspiration for the look and feel — a similar but ' +
+  'distinct character is welcome. Do not feel bound to copy it exactly.';
+
+/**
  * Phrases that, in a scene description, instruct the model to PAINT branding/on-screen
  * text — which produces a fake logo + garbled lettering. The real logo is composited
  * as a watermark and any tagline/CTA is a clean post-production text overlay, so the
@@ -121,12 +158,29 @@ function stripBrandingLanguage(text: string): string {
   return out.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:])/g, '$1').trim();
 }
 
-/** Build the auto-thumbnail prompt from the storyboard's plain-language fields. */
-export function buildThumbnailPrompt(scene: PipelineScene): string {
+/**
+ * Build the auto-thumbnail prompt from the storyboard's plain-language fields.
+ *
+ * `fidelity` controls how the reference character is used (set only when the scene
+ * is generated image-to-image from the operator's art):
+ *  - 'exact'    — identity-lock: recreate THAT EXACT character; keep its markings.
+ *  - 'inspired' — anchor loosely; a similar-but-distinct character is fine.
+ *  - undefined  — no reference (text-to-image); strict no-branding rule.
+ */
+export function buildThumbnailPrompt(
+  scene: PipelineScene,
+  fidelity?: SubjectFidelity,
+): string {
+  const hasReference = fidelity === 'exact' || fidelity === 'inspired';
   const cine = cinematicSummary(scene.cinematicConfig);
+  // With a reference, "photorealistic film still" fights the character's own style;
+  // let the reference + the scene's own style fields drive the look instead.
+  const opener = hasReference
+    ? 'Keep the reference character; render the scene below.'
+    : 'Cinematic film still, photorealistic, professional color grade.';
   const descriptive = stripBrandingLanguage(
     [
-      'Cinematic film still, photorealistic, professional color grade.',
+      opener,
       hasText(scene.title) ? `Scene: ${scene.title}.` : '',
       hasText(scene.visualDescription) ? `Action: ${scene.visualDescription}.` : '',
       hasText(scene.location) ? `Location: ${scene.location}.` : '',
@@ -139,10 +193,78 @@ export function buildThumbnailPrompt(scene: PipelineScene): string {
       .join(' '),
   );
 
-  // Trim the descriptive part so the no-branding rule ALWAYS survives the length cap.
-  const maxDescLen = 1000 - NO_FAKE_BRANDING.length - 1;
-  const trimmed = descriptive.length > maxDescLen ? `${descriptive.slice(0, maxDescLen - 3)}...` : descriptive;
-  return `${trimmed} ${NO_FAKE_BRANDING}`;
+  const prefix = fidelity === 'exact' ? `${IDENTITY_LOCK} ` : fidelity === 'inspired' ? `${INSPIRED_NOTE} ` : '';
+  const brandingRule = hasReference ? NO_INVENTED_BRANDING : NO_FAKE_BRANDING;
+  // Trim the descriptive part so the identity-lock + branding rule ALWAYS survive the
+  // 1000-char cap (the asset-generator route rejects prompts longer than that).
+  const maxDescLen = 1000 - prefix.length - brandingRule.length - 2;
+  const trimmed =
+    descriptive.length > maxDescLen ? `${descriptive.slice(0, maxDescLen - 3)}...` : descriptive;
+  return `${prefix}${trimmed} ${brandingRule}`;
+}
+
+/**
+ * Pick the right reference + fidelity for a scene from the CONFIRMED intent subjects.
+ * Matches the scene's text to a subject by name, then resolves that subject's
+ * reference image from the seeded pool. Falls back to filename matching (fidelity
+ * 'exact') when no subjects were provided. Returns no refUrl for 'new' subjects.
+ */
+export function matchSubjectForScene(
+  scene: PipelineScene,
+  subjects: IntentSubject[],
+  pool: SceneReference[],
+): { refUrl?: string; fidelity?: SubjectFidelity } {
+  const images = pool.filter((r) => r.type === 'image' && hasText(r.url));
+  if (subjects.length === 0) {
+    // No confirmed subjects — fall back to the legacy filename match, treated as exact.
+    const refUrl = matchReferenceForScene(scene, pool);
+    return refUrl ? { refUrl, fidelity: 'exact' } : {};
+  }
+
+  const tokenize = (s: string): string[] =>
+    s.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+  const sceneTokens = tokenize(`${scene.title ?? ''} ${scene.visualDescription ?? ''} ${scene.wardrobe ?? ''}`);
+
+  let best: IntentSubject | undefined;
+  let bestScore = 0;
+  for (const subject of subjects) {
+    const nameTokens = tokenize(subject.name);
+    let score = 0;
+    for (const nt of nameTokens) {
+      if (sceneTokens.includes(nt)) {
+        // Exact token hit (the scene literally names this character) — weighted high so
+        // "David starting his business" matches DAVID, not the "Businessman" villain.
+        score += 3;
+      } else if (sceneTokens.some((st) => st.includes(nt) || nt.includes(st))) {
+        // Loose substring overlap is a weak signal and must never outweigh an exact hit.
+        score += 1;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = subject;
+    }
+  }
+  if (!best || bestScore === 0) {
+    return {};
+  }
+  if (best.fidelity === 'new') {
+    return { fidelity: 'new' };
+  }
+  // Resolve the subject's reference image from the pool by name overlap.
+  let refUrl: string | undefined;
+  for (const refName of best.referenceNames) {
+    const refTokens = tokenize(refName.replace(/\.[a-z0-9]+$/i, ''));
+    const match = images.find((img) => {
+      const imgTokens = tokenize(img.name.replace(/\.[a-z0-9]+$/i, ''));
+      return refTokens.some((rt) => imgTokens.some((it) => it.includes(rt) || rt.includes(it)));
+    });
+    if (match) {
+      refUrl = match.url;
+      break;
+    }
+  }
+  return { ...(refUrl ? { refUrl } : {}), fidelity: best.fidelity };
 }
 
 type AuthFetch = (url: string, options?: RequestInit) => Promise<Response>;
@@ -161,6 +283,11 @@ export async function requestStoryboardThumbnail(
    * instead of reinvented from text.
    */
   referenceImageUrl?: string,
+  /**
+   * How faithfully to reproduce the referenced character: 'exact' identity-locks
+   * it, 'inspired' anchors loosely. Defaults to 'exact' when a reference is given.
+   */
+  fidelity?: SubjectFidelity,
 ): Promise<{ url: string } | { error: string }> {
   // The closing brand / CTA / outro scene gets a deterministic branded card (real
   // logo + tagline) rendered server-side — never an AI guess that paints a fake
@@ -194,7 +321,7 @@ export async function requestStoryboardThumbnail(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: buildThumbnailPrompt(scene),
+        prompt: buildThumbnailPrompt(scene, referenceImageUrl ? (fidelity ?? 'exact') : undefined),
         aspectRatio,
         ...(referenceImageUrl ? { referenceImageUrl } : {}),
         name: hasText(scene.title)
