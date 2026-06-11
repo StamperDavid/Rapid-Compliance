@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   File as FileIcon,
   FileText,
@@ -36,16 +36,17 @@ import { Button } from '@/components/ui/button';
 import { SectionTitle, SectionDescription, Caption } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import { requestStoryboardThumbnail, sceneHasDescription, matchReferenceForScene } from '@/lib/video/storyboard-thumbnail';
+import { requestStoryboardThumbnail, sceneHasDescription, matchSubjectForScene } from '@/lib/video/storyboard-thumbnail';
+import {
+  useContentAssistantChatStore,
+  WELCOME,
+  type ChatMessage,
+} from '@/lib/stores/content-assistant-chat-store';
+import { stripIntentBlock, type IntentSubject } from '@/lib/content/content-intent';
 import { cn } from '@/lib/utils';
 import type { CinematicConfig } from '@/types/creative-studio';
 import type { PipelineScene, SceneReference } from '@/types/video-pipeline';
 import { MediaLibraryPicker, type LibraryAsset } from './MediaLibraryPicker';
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
 
 /** Storyboard the assistant built, applied to the Video tab's pipeline store. */
 interface AssistantStoryboard {
@@ -179,18 +180,22 @@ function storyboardToScene(sb: AssistantStoryboard, sceneNumber: number): Omit<P
   };
 }
 
-const WELCOME: ChatMessage = {
-  role: 'assistant',
-  content:
-    "Hey — I'm your creative director. Tell me what you're trying to make and I'll help you shape it. Even a rough idea works: who's it for, where will it live, what feeling should it leave behind?",
-};
-
 export function ContentAssistant() {
   const pathname = usePathname();
+  const router = useRouter();
   const authFetch = useAuthFetch();
 
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  // Conversation + panel-open persist across content-page nav and refresh
+  // (content-assistant-chat-store, localStorage-backed). Everything else below
+  // is transient session state.
+  const open = useContentAssistantChatStore((s) => s.open);
+  const setOpen = useContentAssistantChatStore((s) => s.setOpen);
+  const messages = useContentAssistantChatStore((s) => s.messages);
+  const setMessages = useContentAssistantChatStore((s) => s.setMessages);
+  const resetChat = useContentAssistantChatStore((s) => s.resetChat);
+  // Two-step arm for "New conversation" — it discards the current chat, so the
+  // first click arms and the second confirms (auto-disarms after 4s).
+  const [armNewChat, setArmNewChat] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -273,6 +278,28 @@ export function ContentAssistant() {
     analysisPromisesRef.current.clear();
     setAttachments([]);
   }, [revokeAllPreviews]);
+
+  // Start a fresh conversation: wipe the chat back to the welcome and clear all
+  // in-progress composer/labeling state. Two-step armed via `armNewChat`.
+  const startNewConversation = useCallback(() => {
+    resetChat();
+    clearAttachments();
+    pendingLabelRef.current = [];
+    freshUploadsRef.current = [];
+    setAwaitingLabels(false);
+    setInput('');
+    setError(null);
+    setArmNewChat(false);
+  }, [resetChat, clearAttachments]);
+
+  // Auto-disarm the "New conversation" confirm if the operator doesn't follow through.
+  useEffect(() => {
+    if (!armNewChat) {
+      return;
+    }
+    const t = setTimeout(() => { setArmNewChat(false); }, 4000);
+    return () => { clearTimeout(t); };
+  }, [armNewChat]);
 
   /**
    * Ask the AI to READ an uploaded file (vision for images, transcript for
@@ -465,7 +492,7 @@ export function ContentAssistant() {
         setLoading(false);
       }
     },
-    [authFetch, clearAttachments],
+    [authFetch, clearAttachments, setMessages],
   );
 
   /** Upload every picked/dropped file concurrently, appending each result. */
@@ -619,12 +646,16 @@ export function ContentAssistant() {
         };
       });
 
-      // The composer is cleared only after we've captured the summaries above, so
-      // clearing the attachment/analysis state can't strip what we're about to send.
-      clearAttachments();
+      // Attachments now PERSIST across the propose/refine turns (they're the build's
+      // references and must still be present on the approval turn). They're cleared
+      // only once a build actually fires — see the post-response clear below.
 
       // Drop the canned welcome before sending — it isn't real conversation.
-      const history = nextMessages.filter((m) => m !== WELCOME);
+      // Match by content, not reference: after a persisted reload the welcome is
+      // a deserialized copy, so `!== WELCOME` would no longer catch it.
+      const history = nextMessages.filter(
+        (m) => !(m.role === WELCOME.role && m.content === WELCOME.content),
+      );
 
       const res = await authFetch('/api/content/assistant', {
         method: 'POST',
@@ -640,7 +671,9 @@ export function ContentAssistant() {
         success: boolean;
         reply?: string;
         storyboards?: AssistantStoryboard[];
+        subjects?: IntentSubject[];
         targetSceneNumber?: number;
+        imageRequests?: Array<{ name: string; prompt: string; fidelity: string; referenceImageUrl?: string }>;
         error?: string;
       };
 
@@ -648,9 +681,67 @@ export function ContentAssistant() {
         throw new Error(data.error ?? 'The assistant could not respond.');
       }
 
+      // Image generation: the server returned a list of images to create. Generate each
+      // (the asset-generator endpoint saves every result to the media library), then post
+      // a completion message. We hand the operator to the Library where the images appear.
+      const imageRequests = data.imageRequests ?? [];
+      if (imageRequests.length > 0) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.reply as string }]);
+        clearAttachments();
+        setLoading(false);
+        void (async () => {
+          let made = 0;
+          // Run them in PARALLEL — one stuck/slow generation must not block the rest.
+          // Each has its own timeout so a hung Hedra call can't hang the batch forever.
+          await Promise.allSettled(
+            imageRequests.map(async (req) => {
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), 150000);
+              try {
+                const gen = await authFetch('/api/content/asset-generator/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  signal: controller.signal,
+                  body: JSON.stringify({
+                    prompt: req.prompt,
+                    aspectRatio: '2:3',
+                    ...(req.referenceImageUrl ? { referenceImageUrl: req.referenceImageUrl } : {}),
+                    name: req.name,
+                  }),
+                });
+                if (gen.ok) {
+                  made += 1;
+                  setMessages((prev) => [
+                    ...prev,
+                    { role: 'assistant', content: `✓ Image ${made}/${imageRequests.length} done — "${req.name}".` },
+                  ]);
+                  // Tell the Library (if open) to refresh so the new image shows live.
+                  window.dispatchEvent(new Event('media-library-updated'));
+                }
+              } catch {
+                /* timeout or failure on this one — the others continue */
+              } finally {
+                clearTimeout(timer);
+              }
+            }),
+          );
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: `Done — created ${made} of ${imageRequests.length} image${imageRequests.length === 1 ? '' : 's'}. They're saved in your Library (open/refresh the Library to see them).`,
+            },
+          ]);
+        })();
+        return;
+      }
+
       // If the director built storyboards and we're on the Video tab, drop them
       // straight onto the canvas for the operator to review, tweak, and approve.
       const storyboards = data.storyboards ?? [];
+      // The CONFIRMED intent subjects (name → references → fidelity) drive which
+      // reference each scene is built from and how faithfully (exact / inspired / new).
+      const subjects = data.subjects ?? [];
       const onVideoTab = isVideoStoryboardTab(pathname);
 
       // Rework path: the operator asked to rebuild ONE existing storyboard. Replace
@@ -695,8 +786,8 @@ export function ContentAssistant() {
           const allScenes = useVideoPipelineStore.getState().scenes;
           const scene = allScenes.find((s) => s.id === targetId);
           if (scene && sceneHasDescription(scene)) {
-            const refUrl = matchReferenceForScene(scene, allScenes[0]?.references ?? []);
-            const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio, refUrl);
+            const { refUrl, fidelity } = matchSubjectForScene(scene, subjects, allScenes[0]?.references ?? []);
+            const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio, refUrl, fidelity);
             if ('url' in result) {
               useVideoPipelineStore.getState().updateScene(targetId, { screenshotUrl: result.url });
             }
@@ -707,7 +798,7 @@ export function ContentAssistant() {
       // Fresh-build path: a full multi-scene storyboard (no rework target). REPLACE
       // the entire scenes array so the first storyboard IS scene 1 — appending onto
       // the default empty "Storyboard 1" left scene 1 blank (no preview, never ready).
-      const applied = !reworked && storyboards.length > 0 && onVideoTab;
+      const applied = !reworked && storyboards.length > 0;
       if (applied) {
         const newScenes: PipelineScene[] = storyboards.map((sb, idx) => ({
           ...storyboardToScene(sb, idx + 1),
@@ -726,14 +817,27 @@ export function ContentAssistant() {
           for (const id of createdIds) {
             const scene = useVideoPipelineStore.getState().scenes.find((s) => s.id === id);
             if (scene && sceneHasDescription(scene)) {
-              const refUrl = matchReferenceForScene(scene, referencePool);
-              const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio, refUrl);
+              const { refUrl, fidelity } = matchSubjectForScene(scene, subjects, referencePool);
+              const result = await requestStoryboardThumbnail(authFetch, scene, aspectRatio, refUrl, fidelity);
               if ('url' in result) {
                 useVideoPipelineStore.getState().updateScene(id, { screenshotUrl: result.url });
               }
             }
           }
         })();
+      }
+
+      // Built from a non-video content page (e.g. the Library) — the storyboards
+      // were applied to the (persisted) pipeline store above, so take the operator
+      // to the video canvas to review them. The chat panel persists across the nav.
+      if (applied && !onVideoTab) {
+        router.push('/content/video');
+      }
+
+      // A build fired (storyboards came back) — the references did their job, so clear
+      // the composer now. Until a build, attachments persist across propose/refine turns.
+      if (storyboards.length > 0) {
+        clearAttachments();
       }
 
       setMessages((prev) => {
@@ -756,7 +860,7 @@ export function ContentAssistant() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, uploadingCount, attachments, clearAttachments, messages, authFetch, pathname, awaitingLabels, submitLabels]);
+  }, [input, loading, uploadingCount, attachments, clearAttachments, messages, authFetch, pathname, awaitingLabels, submitLabels, router, setMessages]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -807,16 +911,30 @@ export function ContentAssistant() {
               </SectionDescription>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setOpen(false)}
-            aria-label="Close the Content Assistant"
-            className="h-8 w-8 shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              variant={armNewChat ? 'default' : 'ghost'}
+              size={armNewChat ? 'sm' : 'icon'}
+              onClick={() => (armNewChat ? startNewConversation() : setArmNewChat(true))}
+              aria-label={armNewChat ? 'Confirm: start a new conversation' : 'Start a new conversation'}
+              title={armNewChat ? 'Click again to start fresh' : 'New conversation'}
+              className={armNewChat ? 'h-8 gap-1.5 px-2.5 text-xs' : 'h-8 w-8'}
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              {armNewChat && 'Start new?'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setOpen(false)}
+              aria-label="Close the Content Assistant"
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Thread */}
@@ -834,7 +952,7 @@ export function ContentAssistant() {
                     : 'bg-surface-elevated text-foreground',
                 )}
               >
-                {m.content}
+                {m.role === 'assistant' ? stripIntentBlock(m.content) : m.content}
               </div>
             </div>
           ))}

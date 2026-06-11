@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
 import { Zap, ArrowLeft, ArrowRight, Loader2, CheckCircle2, Clock, AlertTriangle, Play, DollarSign } from 'lucide-react';
@@ -23,6 +24,7 @@ function formatElapsed(seconds: number): string {
 
 export function StepGeneration() {
   const authFetch = useAuthFetch();
+  const router = useRouter();
   const {
     scenes,
     avatarId,
@@ -68,6 +70,22 @@ export function StepGeneration() {
   const engineList = 'Hedra';
   const hasSavedResults = useRef(false);
   const hasRefreshedFromFirestore = useRef(false);
+  // Editor-as-destination: once the finished scenes are persisted, the editor is
+  // the place the operator finishes + publishes. We redirect there exactly once.
+  const hasRedirectedRef = useRef(false);
+
+  // Open the editor on the freshly-persisted project. If the project never got a
+  // server-side id (rare — auto-save normally assigns one), fall back to the
+  // legacy in-place assembly step so the operator is never stranded.
+  const goToEditor = useCallback(() => {
+    if (hasRedirectedRef.current) { return; }
+    if (projectId) {
+      hasRedirectedRef.current = true;
+      router.push(`/content/video/editor?project=${projectId}`);
+    } else {
+      advanceStep();
+    }
+  }, [projectId, router, advanceStep]);
 
   // On mount: if we have completed scenes from localStorage, refresh from Firestore
   // to pick up permanent Firebase Storage URLs (localStorage may have expired Hedra CDN URLs)
@@ -132,8 +150,12 @@ export function StepGeneration() {
         })),
         status: completedCount === generatedScenes.length ? 'generated' : 'generating',
       }),
+    }).then((res) => {
+      // Only land in the editor once the project (with its generatedScenes) is
+      // actually persisted — the editor fetches it back by id to seed the timeline.
+      if (res.ok) { goToEditor(); }
     }).catch(() => { /* non-critical — localStorage has the data */ });
-  }, [allComplete, completedCount, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, voiceProvider, generatedScenes, authFetch]);
+  }, [allComplete, completedCount, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, voiceProvider, generatedScenes, authFetch, goToEditor]);
 
   // Elapsed time timer
   useEffect(() => {
@@ -591,10 +613,6 @@ export function StepGeneration() {
     }).catch(() => { /* non-critical */ });
   }, [scenes, generatedScenes, projectId, authFetch]);
 
-  const handleContinue = () => {
-    advanceStep();
-  };
-
   // Phase description
   const phaseDescription = (() => {
     if (allComplete) {
@@ -733,11 +751,11 @@ export function StepGeneration() {
 
           {allComplete && completedCount > 0 && (
             <Button
-              onClick={handleContinue}
+              onClick={goToEditor}
               className="gap-2 bg-primary hover:bg-primary-dark text-white"
             >
               <CheckCircle2 className="w-4 h-4" />
-              Continue to Assembly
+              Open in Editor
               <ArrowRight className="w-4 h-4" />
             </Button>
           )}

@@ -167,7 +167,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (body.brandDnaApplied) {
       try {
         brandKit = await getBrandKit();
-        if (brandKit.enabled && brandKit.colors) {
+        // NEVER inject brand colors when conditioning on a reference image — the
+        // reference defines the subject's exact colors (e.g. a character's outfit),
+        // and forcing the brand palette "prominently throughout" repaints them
+        // (a customer ended up in Pipedrive-green). Brand colors are for text-to-image
+        // scene generation only.
+        if (brandKit.enabled && brandKit.colors && !body.referenceImageUrl) {
           const { primary, secondary, accent } = brandKit.colors;
           // Don't inject the placeholder default palette — it would tint generations
           // a brand-incorrect amber. Only inject colors the tenant actually set.

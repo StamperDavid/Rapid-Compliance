@@ -2,7 +2,177 @@
 
 ---
 
-# 🔴 RESUME HERE — Jun 10 2026 — Reference-conditioned video generation (THE core feature)
+# 🔴 RESUME HERE — Jun 11 2026 (early AM) — Content Manager image vertical + Media Library overhaul
+
+## ▶ NEXT ACTION (start the next session HERE)
+**Slice 1 of "editor-as-destination" is SHIPPED (Jun 11, tsc + lint + `npm run build` all green; pushed
+to dev — NOT yet operator browser-walked).** What landed:
+- `editor/page.tsx` now reads `?project=`, fetches `/api/video/project/[id]`, and `ADD_CLIP`s every
+  completed scene (`status==='completed'` + `videoUrl`) onto the timeline in `sceneNumber` order, with
+  duration from the matching `PipelineScene.duration`. Guarded: only seeds when the timeline is empty
+  (a `useRef` + `clips.length===0`), so it never clobbers an edit in progress. Header shows a "Loading
+  your scenes…" / error pill.
+- `StepGeneration.tsx` — on completion, once the finished scenes are PERSISTED (`/api/video/project/save`
+  resolves ok), it redirects to `/content/video/editor?project={id}` (`goToEditor`, fires once via ref;
+  falls back to legacy `advanceStep` only if there's no `projectId`). The old "Continue to Assembly"
+  button is now "Open in Editor". `handleContinue` removed.
+- `Preview.tsx` — `<video>` is no longer `muted`, so the baked-in lip-synced dialogue plays in the
+  preview. Playback only starts on a user gesture (Space/Play), so autoplay policy is fine.
+- Stitching standardizes on `/api/video/editor/render` (editor Export already uses it); `/api/video/assemble`
+  left dormant, not deleted.
+
+**⚠️ STILL OWED on Slice 1:** the operator browser-walk — generate a short video → confirm clips land on
+the timeline in order → press Play → confirm AUDIO. (Couldn't self-verify: needs auth + a real Hedra
+generation.) **NEXT after that = Slice 2** (collapse wizard + selectable transition/SFX/VFX libraries),
+then Slice 3a/b/c (publish + platform-native "B" versions; smart auto-reframe shared with viral-clip
+maker), effects-by-prompt last. Concrete Slice-1 spec + VERIFIED facts + locked decisions remain in the
+"**Slice 1 (keystone, verified Jun 11)**" paragraph below. Everything below is SHIPPED context + roadmap.
+
+**🛠️ Build note (Jun 11):** the dev server runs on localhost:3000 OUT OF THIS PRIMARY worktree
+(`D:\Future Rapid Compliance`), not rapid-dev — so `npm run build` here clobbers the live `.next` and
+breaks the page. Always KILL the dev server before building, then restart. And `next build` OOM'd in the
+type-check phase at the default heap — run it with `NODE_OPTIONS=--max-old-space-size=8192`.
+
+**Context:** Continued the Content Manager work. Video-from-chat was already live; this session
+wired the **image-from-chat vertical** and did a full **Media Library** pass. Ended with the
+operator frustrated on character STYLE/MATURITY (a generation-quality + targeted-edit gap, below),
+choosing to change gears to the **editor + assembly** discussion — which produced the locked editor
+scope (see NEXT ACTION above + the EDITOR section below).
+
+## ✅ SHIPPED + VERIFIED this session (tsc + lint clean; proven live in dev-server.log)
+- **Image generation from the chat (NEW vertical).** Approve an image request → route's Phase B
+  `mediaType === 'image'` branch builds one `imageRequest` per subject (prompt from subject
+  name/notes + style; reference resolved from chat attachments or library by filename token-match) →
+  client generates each via `/api/content/asset-generator/generate` (which persists to the library).
+  - Runs **in PARALLEL** (`Promise.allSettled`, 150s per-image AbortController timeout). The first
+    cut was sequential and **stalled after ~2** when one Hedra call hung — parallel fixed it.
+    PROVEN: a 6-image batch fired 6 `Hedra image-to-image starting` lines within ~1.5s and all 6 saved.
+  - Posts per-image progress in chat ("✓ Image N/6 done") and fires a `media-library-updated` event.
+- **Media Library overhaul** (`src/app/(dashboard)/content/video/library/page.tsx`):
+  - **Per-tile** (hover): select checkbox, **download** (fetch→blob, real download), **trash**
+    (two-step confirm overlay).
+  - **Bulk bar** (when items checked): **Download** (zips via `fflate`), **New project** (groups
+    selected under a named tag), **Delete** (two-step), Clear.
+  - **Video tiles** now show a **first-frame poster** (`#t=0.1`) + **play on hover** + play icon
+    (were blank before).
+  - **Detail panel is editable**: rename (inline), **category** (dropdown), **description**
+    (editable textarea, saves on blur — REPLACED the read-only AI-prompt display per operator),
+    **assign to project**.
+  - **Live auto-refresh**: listens for `media-library-updated` → re-fetches, so chat-generated
+    images appear without a manual reload.
+- **`isApproval`** (`content-intent.ts`) now catches "build them / these / those / all / my / some".
+- **Schema fix**: `format.durationSeconds` min(1)→**min(0)** — the model emits 0 for images and the
+  tight min was silently failing the whole intent parse. Video build guards 0→30.
+- **IDENTITY_LOCK reframe** (`storyboard-thumbnail.ts`): lock the **face/identity only**; defer
+  wardrobe / setting / pose to the scene description (was forcing the reference's outfit, e.g. civilian
+  David came out in the Velocity suit).
+
+## ⚠️ KNOWN GAPS surfaced this session (NOT yet built — discuss/queue)
+- **TARGETED EDIT is the big one.** Every approval **rebuilds ALL** scenes/images, never just the
+  one the operator asked to change. Burns good outputs + tokens; operator hit this on both storyboards
+  ("you changed them all") and images ("build the other four" → rebuilt 6). The client rework path
+  (`targetSceneNumber`) still exists; the SERVER stopped emitting it in the intent flow. **Re-add a
+  per-item edit path** (intent carries an edit-target → build only that one → return targetSceneNumber).
+- **Character maturity/style** — i2i pulls toward an attached example but doesn't guarantee; the
+  business-owner set needed several passes (kid-looking → adult → style-match). Generation-quality +
+  prompt-richness, not a wiring bug.
+- **Image-generator page doesn't display fresh results** — images land in the **Library**; the
+  `/content/image-generator` page shows nothing new. Operator expected "take me to the image section."
+- **Library refresh fires per-image** (6 events in ~1s → one transient "Failed to fetch" RSC). Harmless;
+  **debounce** offered, not yet done.
+- **Generate→editor flow + editor depth (SFX/VFX)** — the active discussion. See "Editor + Assembly" below.
+- **Logo white-background** — still pending (brand outro composites a non-transparent white plate).
+
+## 🎬 EDITOR = THE FINISHING + PUBLISHING SURFACE — operator vision locked (Jun 11)
+
+**Decision (operator):** The video section collapses to TWO places — the **chat** (request + approve
+storyboards) and **the editor**. The separate **Assembly, Post-Production, and Publish** screens are
+all **consolidated INTO the editor** (fits "consolidate, don't sprawl"). There is no assembly step —
+the editor IS the assembly.
+
+**Flow:** request video → approve storyboards → it generates → **clips auto-land in the editor in
+storyboard order** (a starting cut, fully editable) → operator finishes + publishes there.
+
+**The editor = comprehensive, CapCut-mobile-style**, with **selectable libraries** (the emphasis —
+pre-made, instant click, NOT generate-from-scratch each time):
+- Tons of **transitions**, a **sound-effects** library, a **special-effects** library
+- Trim, rearrange, **add images** (drop from library onto timeline), text
+- TWO kinds of effects: **library effects** (instant, primary) + **prompt-generated effects** (custom
+  AI, slower, power-user extra)
+
+**Audio model (settled — operator corrected my first take):** audio is LAYERED, not merged.
+- **Dialogue** is lip-synced into the video AT GENERATION time → welded to its clip, never separated
+  (moving it breaks lip-sync). Cuts ride with the clip; cut on pauses (editor shows waveforms).
+- **Music** is the ONE continuous layer — a bed laid UNDER the dialogue across the whole cut. Continuity
+  for multi-scene moments = same voice + same music bed. Score LAST (after cuts) so it fits the length;
+  a mid-edit cut ripples + refits the music tail.
+- **SFX/ambience** layered on top. Operator adds/removes music + SFX in the editor.
+
+**Publish panel (inside the editor) — PLATFORM-NATIVE versions (operator chose "B", Jun 11):** operator
+picks the platforms (TikTok, YouTube Shorts, Facebook, Instagram Reels, …), and for each can **adopt that
+platform specialist's recommendation** (demographic resonance, best posting times, SEO, hashtags, caption
+shape) — one click, accept or override. NOT one generic post: each platform gets a **native VERSION**:
+- The specialist supplies a **format target** (aspect + length): TikTok/Shorts/Reels → 9:16 short;
+  YouTube → 16:9; Facebook flexible.
+- The editor render runs **once per platform**, producing a version shaped for each.
+- **Reframing** (16:9→9:16 etc.): **Basic** first = aspect crop with an anchor (center default, operator
+  can nudge the crop box per platform). **Smart auto-reframe** (subject/face tracking) is heavier and is
+  the SAME engine as the **viral-clip maker** — build once, both features use it.
+Reuses the existing specialist swarm + publishing pipeline.
+
+**Build order (confirmed direction):**
+1. **Editor-as-destination + consolidation** — generate → auto-land in editor; fold assembly/post/publish
+   into editor panels; kill the 3 separate screens.
+2. **Selectable libraries** — transitions / SFX / VFX presets (the CapCut-style content/UX lift).
+3. **Publish panel + PLATFORM-NATIVE versions ("B")** —
+   3a. platform multi-select + per-platform specialist recommendation (caption/hashtags/timing) + publish.
+   3b. per-platform RENDER (format/aspect + length) with **basic reframe** (center/operator-adjustable crop).
+   3c. **smart auto-reframe** (subject/face tracking) — SHARED engine with the viral-clip maker (Bucket 1),
+       so sequence it alongside that, not inside the publish work.
+4. **Effects-by-prompt** (custom AI layer) — last.
+
+**Slice 1 (keystone, verified Jun 11):** `editor/page.tsx` ignores `?project=` (starts empty) — confirmed
+by reading it. `/api/video/editor/render` already stitches clips (the editor Export sends clips+overlays →
+one MP4 → Library) — confirmed. So Slice 1 = editor reads `?project=` → fetch project → `ADD_CLIP` per
+completed scene in `sceneNumber` order (duration from `PipelineScene.duration`; `SceneGenerationResult`
+has none); `StepGeneration` auto-redirects to the editor on completion. Standardize stitching on
+`/editor/render`, retire `/api/video/assemble` from the flow (keep route dormant). Editor stays
+reducer-based, initialized from the project; Export → Library (project round-trip save = follow-on).
+
+**Editor today HAS:** timeline (V/T/A tracks), trim, split, transitions (cut/fade/dissolve),
+color/lighting, text overlays, export, render (`/api/video/editor/render`). So stitching + transitions
++ basic edit largely EXIST; the build is libraries + consolidation + publish panel + intelligence below.
+
+## 🤖 EDITOR/CONTENT AI ROADMAP — operator requirements (layer ON TOP of the editor)
+
+**🔑 DELEGATION MODEL (operator, Jun 11):** every AI capability below is **DELEGATED TO, never operated
+directly.** They are **Golden-Master-backed SPECIALISTS** (Brand DNA baked in, Standing Rule #1) that the
+**Content Manager delegates to** when the operator expresses intent ("caption this", "pull viral clips",
+"clean the dead air") — NOT direct editor buttons/tools. The editor is the operator's HANDS-ON MANUAL
+surface (he directly trims/arranges/adds library effects); delegated-AI results LAND in the editor for
+manual refinement. Each AI capability still has a MANUAL equivalent in the editor (UI-parity rule).
+
+**Bucket 1 — Editor-intelligence specialists (delegated; operate on a clip). Shared backbone =
+transcription, ALREADY wired (Deepgram, from the KB work). Not three from-scratch builds.**
+- **Auto-caption** — transcribe → styled captions on the timeline.
+- **Dead-air removal** — detect extended silences → ripple them out (Descript-style).
+- **Viral-clip maker** — score moments → cut short vertical clips (Opus-Clip-style).
+- Each keeps a MANUAL equivalent (UI-parity rule).
+
+**Bucket 2 — Content-automation AI (upstream, in the swarm; ongoing agents, not one-shot features):**
+- **Specialist-knowledge → auto-create videos** — platform specialists' demographic/format knowledge
+  drives the generation pipeline to produce tuned videos.
+- **Trend recognition** — monitor platforms for emerging trends EARLY → surface as marketing
+  opportunities → feed the content engine.
+- **Human-review gate STAYS** — these propose/create, operator approves before publish (not autonomous
+  publishing; consistent with the rest of the swarm + Standing Rules).
+
+**Sequencing:** near-term = editor-as-destination + libraries + publish panel (build order above).
+Bucket 1 bolts onto the editor once it's the surface. Bucket 2 is the higher layer after the editor is solid.
+
+---
+
+# ✅ Jun 10 2026 — Reference-conditioned video generation (THE core feature) — [history]
 
 **The goal:** prompt + attach reference materials → content generated **FROM** those materials, not reinvented. Test case: a 30s Pixar-style commercial using the owner's actual **Velocity** (hero) + **Pipedrive** (villain) character art. This session closed the gap from "generic text-to-image that reinvents the characters" → "image-to-image conditioned on the operator's real art."
 

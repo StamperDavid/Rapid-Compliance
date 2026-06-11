@@ -23,6 +23,13 @@ import { buildToolSystemPrompt } from '@/lib/brand/brand-dna-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { buildStoryboardFromBrief } from '@/lib/video/storyboard-build-service';
+import { listAssets } from '@/lib/media/media-library-service';
+import {
+  type ContentIntent,
+  ContentIntentSchema,
+  findPriorIntent,
+  isApproval,
+} from '@/lib/content/content-intent';
 
 // Re-exported for back-compat: the storyboard shape now lives in the shared service.
 export type { AssistantStoryboard } from '@/lib/video/storyboard-build-service';
@@ -63,47 +70,175 @@ const AssistantRequestSchema = z.object({
   attachments: z.array(AttachmentSchema).max(100).optional(),
 });
 
-function isVideoStoryboardTab(activeTab: string | undefined): boolean {
-  const tab = (activeTab ?? '').toLowerCase();
-  return tab.includes('/content/video') && !tab.includes('/editor') && !tab.includes('/library');
+// The Content Assistant is a universal command bar: the operator can ask to
+// build from ANY content-generator page (video, image, library, editor, voice).
+// Delegation is NOT gated to a single page — the result lands in the right place
+// client-side (a video build navigates to the video canvas, etc.).
+function isContentGeneratorTab(activeTab: string | undefined): boolean {
+  return (activeTab ?? '').toLowerCase().includes('/content');
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Delegation directive — the Content Manager hands the build to a specialist.
+// Approved intent → build input. The Content Manager gathers + CONFIRMS a
+// structured ContentIntent in the chat (always pausing for approval first); on
+// approval we turn that intent into the brief the Video Specialist builds from.
 // ────────────────────────────────────────────────────────────────────────────
 
-const DelegateDirectiveSchema = z.object({
-  specialist: z.literal('VIDEO_SPECIALIST'),
-  brief: z.string().trim().min(1).max(4000),
-  platform: z.enum(['youtube', 'tiktok', 'instagram_reels', 'shorts', 'linkedin', 'generic']).default('youtube'),
-  style: z.enum(['talking_head', 'documentary', 'energetic', 'cinematic']).default('cinematic'),
-  targetDuration: z.number().int().min(15).max(150).default(30),
-  targetAudience: z.string().trim().max(500).optional(),
-  callToAction: z.string().trim().max(500).optional(),
-  tone: z.string().trim().max(300).optional(),
-  /** When reworking ONE existing storyboard, the 1-based number to replace. Omit for a fresh full build. */
-  targetSceneNumber: z.number().int().min(1).max(50).optional(),
-});
+const BUILD_PLATFORMS = ['youtube', 'tiktok', 'instagram_reels', 'shorts', 'linkedin', 'generic'] as const;
+type BuildPlatform = (typeof BUILD_PLATFORMS)[number];
 
-type DelegateDirective = z.infer<typeof DelegateDirectiveSchema>;
+function mapPlatform(platform: string | undefined): BuildPlatform {
+  const p = (platform ?? '').toLowerCase().replace(/[^a-z]/g, '');
+  return BUILD_PLATFORMS.find((bp) => bp.replace(/[^a-z]/g, '') === p) ?? 'youtube';
+}
 
-/** Pull a fenced ```delegate (or ```json) directive out of the reply. */
-function extractDelegateDirective(reply: string): { directive: DelegateDirective; cleanedReply: string } | null {
-  const fence = /```(?:delegate|json)?\s*([\s\S]*?)```/i.exec(reply);
-  if (!fence) {
-    return null;
-  }
-  let raw: unknown;
+/** Compose a rich, specialist-ready brief from the approved structured intent. */
+function mapIntentToBrief(intent: ContentIntent): string {
+  const subjectLines = intent.subjects
+    .map((s) => {
+      const how =
+        s.fidelity === 'exact'
+          ? "reproduce this exact character faithfully from the operator's reference images, only re-rendered in the requested style"
+          : s.fidelity === 'inspired'
+            ? 'use the references as loose inspiration — a similar but distinct character is fine'
+            : 'invent this character from the description';
+      const refs = s.referenceNames.length > 0 ? ` (references: ${s.referenceNames.join(', ')})` : '';
+      const notes = s.notes ? ` — ${s.notes}` : '';
+      return `${s.name} — ${how}${refs}${notes}`;
+    })
+    .join('; ');
+  const hasExactSubjects = intent.subjects.some((s) => s.fidelity === 'exact');
+  return [
+    intent.summary,
+    intent.message ? `Message: ${intent.message}.` : '',
+    subjectLines ? `Characters: ${subjectLines}.` : '',
+    hasExactSubjects
+      ? 'CRITICAL: every person on screen must be ONE of the characters listed above, recreated from the operator\'s provided reference images by name — do NOT invent new or generic characters, and name the character explicitly in every scene where they appear.'
+      : '',
+    intent.beats.length > 0 ? `Beats: ${intent.beats.join(' → ')}.` : '',
+    intent.style ? `Visual style: ${intent.style}.` : '',
+    intent.callToAction ? `Call to action: ${intent.callToAction}.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+/**
+ * Backstop for the approval turn: the proposal turn is SUPPOSED to carry a parseable
+ * ```intent block, but the model occasionally emits malformed JSON or the wrong fence.
+ * When the operator approves and no clean block is in history, re-derive the final
+ * confirmed intent from the whole conversation with a focused JSON-only call so the
+ * build always fires (mirrors the spirit of the old forceDelegate).
+ */
+async function forceIntent(
+  messages: { role: 'user' | 'assistant'; content: string }[],
+  attachments: Attachment[],
+): Promise<ContentIntent | null> {
+  const refBlock = attachments.length > 0
+    ? `\n\nATTACHED REFERENCE FILES (map these to the right characters by name + content):\n${attachments
+        .map((a) => `- ${a.fileName ?? a.url}${a.aiSummary ? `: ${a.aiSummary}` : ''}`)
+        .join('\n')}`
+    : '';
+  const sys = `From the conversation below, output ONLY a JSON object (no prose, no fences) capturing the operator's FINAL confirmed request, folding in every refinement they made. Match exactly:
+{"mediaType":"video|image|music|text","summary":"<plain summary>","subjects":[{"name":"<character>","referenceNames":["<attached file names depicting them>"],"fidelity":"exact|inspired|new"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat>"],"callToAction":"<ask>"}
+Default fidelity "exact" for the operator's named characters. Map references using both file names and the AI's read of each file. If a character appears in MULTIPLE forms (an alter ego, a costume change, a transformation — e.g. a civilian who becomes a hero, or a businessman who becomes a villain), model them as ONE subject with ONE shared reference set and describe the forms in "notes" — they are the SAME person (identical face, hair, beard) and only clothing/state changes.${refBlock}`;
   try {
-    raw = JSON.parse(fence[1].trim());
-  } catch {
+    const provider = new OpenRouterProvider(PLATFORM_ID);
+    const response = await provider.chat({
+      model: 'claude-sonnet-4.6',
+      messages: [{ role: 'system', content: sys }, ...messages.map((m) => ({ role: m.role, content: m.content }))],
+      temperature: 0.3,
+      maxTokens: 2500,
+    });
+    // Extract the JSON object even if the model wrapped it in fences or prefixed it
+    // with a stray label like "intent" — take everything between the first { and last }.
+    const content = (response.content ?? '').trim();
+    const start = content.indexOf('{');
+    const end = content.lastIndexOf('}');
+    const raw = start >= 0 && end > start ? content.slice(start, end + 1) : content;
+    const parsed = ContentIntentSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success) {
+      logger.warn('[ContentManager] forceIntent produced invalid intent', {
+        file: FILE,
+        issues: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+        rawSnippet: raw.slice(0, 300),
+      });
+      return null;
+    }
+    logger.info('[ContentManager] forceIntent re-derived intent on approval', { file: FILE, mediaType: parsed.data.mediaType });
+    return parsed.data;
+  } catch (err) {
+    logger.warn('[ContentManager] forceIntent threw', {
+      file: FILE,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
-  const parsed = DelegateDirectiveSchema.safeParse(raw);
-  if (!parsed.success) {
-    return null;
+}
+
+type BuildAttachment = {
+  url: string;
+  fileName?: string;
+  contentType?: string;
+  kind?: 'image' | 'video' | 'document' | 'other';
+  aiSummary?: string;
+};
+
+/**
+ * When the chat's attachments didn't survive (e.g. a hard refresh dropped the
+ * composer state), resolve the intent's referenced files from the media library
+ * instead — they were uploaded as `reference-material`, so the build can still use
+ * the operator's actual characters without making them re-upload.
+ */
+async function resolveLibraryReferences(intent: ContentIntent): Promise<BuildAttachment[]> {
+  const wantedNames = intent.subjects.flatMap((s) => s.referenceNames).filter((n) => n.length > 0);
+  if (wantedNames.length === 0) {
+    return [];
   }
-  return { directive: parsed.data, cleanedReply: reply.replace(fence[0], '').trim() };
+  let assets: Awaited<ReturnType<typeof listAssets>>['assets'];
+  try {
+    ({ assets } = await listAssets({ source: 'user-upload', limit: 300 }));
+  } catch (err) {
+    logger.warn('[ContentManager] library reference lookup failed', {
+      file: FILE,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+  const refAssets = assets.filter(
+    (a) => (a.tags ?? []).includes('reference-material') && (a.type === 'image' || a.type === 'video'),
+  );
+  // Normalize a filename to comparable words, KEEPING short/numeric tokens so
+  // "Velocity 1" and "Velocity 2" stay distinct (the old token filter dropped the
+  // number and collapsed all of a character's images into one).
+  const norm = (s: string): string =>
+    s.toLowerCase().replace(/\.[a-z0-9]+$/i, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const out: BuildAttachment[] = [];
+  const seen = new Set<string>();
+  for (const name of wantedNames) {
+    const target = norm(name);
+    if (!target) {
+      continue;
+    }
+    // Prefer an exact normalized match; fall back to a contains-match either way.
+    const match =
+      refAssets.find((a) => norm(a.name) === target) ??
+      refAssets.find((a) => {
+        const an = norm(a.name);
+        return an.includes(target) || target.includes(an);
+      });
+    if (match && !seen.has(match.url)) {
+      seen.add(match.url);
+      out.push({
+        url: match.url,
+        fileName: match.name,
+        contentType: match.mimeType,
+        kind: match.type === 'video' ? 'video' : 'image',
+        ...(match.description ? { aiSummary: match.description } : {}),
+      });
+    }
+  }
+  return out;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -130,20 +265,34 @@ function describeActiveTab(activeTab: string | undefined): string {
   return `The operator is in the Content Generator. Help them decide what to create, then delegate to the right specialist.`;
 }
 
-const VIDEO_DELEGATION_PROTOCOL = `
+const INTENT_PROTOCOL = `
 
-## DELEGATING THE BUILD (Video tab) — READ CAREFULLY
-You do NOT build storyboards yourself. You NEVER write the storyboard, shot list, or scene breakdown in prose. You NEVER role-play a hand-off (no "@Video Specialist", no "@Asset Generator", no "PRIORITY BUILD", no "say build", no "the machine is running"). The ONE and ONLY thing that actually builds — that puts storyboards on the operator's screen — is emitting the fenced \`delegate\` block. Prose produces NOTHING.
+## HOW YOU OPERATE — INTERPRET, THEN PAUSE FOR APPROVAL (MANDATORY)
+You NEVER build anything until the operator has approved your understanding. Even when they say "make it now", your job on THAT turn is to interpret and CONFIRM — never to build, never to write the storyboard / shot list / asset in prose.
 
-When the operator wants it built — "make it", "make the video", "create the video", "build it", "go", "take it from here", "create the video I requested" — STOP asking questions and emit ONE short sentence + the delegate block in the SAME reply. Do NOT ask "where will this live" or "do you have art" once they've said make it — default to platform "youtube", style "cinematic", duration 30 and delegate now. Attached reference files are already understood (contents given below) — use them in the brief; NEVER ask the operator to re-attach or re-describe an attached file.
+When the operator has described something to make, reply with TWO parts, IN THIS ORDER:
 
-\`\`\`delegate
-{"specialist":"VIDEO_SPECIALIST","brief":"<a rich creative brief in your words: the concept, who is on screen and their look (from the attached references), the emotional arc, the message, the CTA>","platform":"youtube|tiktok|instagram_reels|shorts|linkedin|generic","style":"talking_head|documentary|energetic|cinematic","targetDuration":<seconds, 15-150>,"targetAudience":"<who it's for>","callToAction":"<what they should do>","tone":"<editorial tone>","targetSceneNumber":<optional 1-based storyboard number, only when reworking ONE existing storyboard>}
+1. A short, plain-language summary of what you understood: the kind of asset (video, image, music, or text); who/what is in it and — for each character/subject — WHICH of their attached reference files depict it and whether you'll keep it EXACT (faithful copy of their art), use it as INSPIRATION (similar but distinct), or invent it NEW; the style; the format (length, shape/aspect, platform); the message; the beats; and the call to action. Keep it human and TIGHT — no shot-by-shot script. The VERY LAST LINE of this summary must be your single question (only if a real detail is genuinely unclear) OR a one-line "Approve this, or tell me what to change?". NOTHING the operator needs to read may come after that line.
+
+2. THEN — and only then — a fenced \`intent\` block. THE OPERATOR NEVER SEES THIS BLOCK (it is stripped from the chat); it exists only to drive the build on approval. So your question MUST be in the summary above — never inside or after this block — and you must put NOTHING after the block. Keep the block COMPACT: its "summary" field is ONE sentence, not the full prose. Emit it EXACTLY in this shape:
+
+\`\`\`intent
+{"mediaType":"video|image|music|text","summary":"<one-sentence summary>","subjects":[{"name":"<character/subject>","referenceNames":["<attached file names that depict this subject>"],"fidelity":"exact|inspired|new"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat 1>","<beat 2>"],"callToAction":"<the ask>"}
 \`\`\`
 
-Write a RICH brief — the specialist turns it into a fully-specified, shot-by-shot storyboard for the operator to review. The ONLY time you withhold the block is while the operator is still openly brainstorming and has NOT asked to build. The moment they ask to build, the block is MANDATORY and questions are FORBIDDEN.
+Rules for the intent:
+- Map references to subjects using BOTH the file names AND the AI's read of each file (given below). Files clearly of the same person/character form that subject's reference set. The operator's naming convention is a strong identity hint.
+- SAME PERSON, MULTIPLE FORMS: if a character appears in more than one form — an alter ego, a costume change, a transformation (e.g. a civilian who becomes a hero, or a businessman who becomes a villain) — model them as ONE subject with ONE shared reference set, and spell the forms out in "notes". They MUST read as the same person across every scene — identical face, hair and beard — only clothing/state changes. Example note: "David is Velocity's civilian self — same exact face/hair/beard, in everyday clothes (no suit) in the early scenes; from the transformation on he is the suited Velocity. The Pipedrive Businessman is the Bully's human form — same face, business suit, who morphs into the armored Bully." Carry this into the story so the build keeps the identity consistent.
+- Default fidelity to "exact" when the operator gives references of named characters and asks to feature them (they want THEIR characters). Use "inspired" only when they say things like "something like this" / "similar but different". Use "new" when they ask you to invent.
+- Set mediaType to exactly what they asked for.
+- If a genuinely important detail is missing or ambiguous, ask ONE focused question inside your summary rather than guessing.
 
-When the operator asks to rebuild / rework / fix / redo / change a SPECIFIC existing storyboard (e.g. "rebuild storyboard 5", "fix SB3", "redo the closing shot"), include \`"targetSceneNumber": N\` (the 1-based storyboard number) in the delegate block, and write \`brief\` as a SINGLE-shot description of just that one storyboard. When building a fresh full video, OMIT targetSceneNumber.`;
+## EVERY TURN — NON-NEGOTIABLE
+This applies on the FIRST request AND on every brief refinement after it:
+- You do NOT build, "re-fire", "send to the Video Specialist", or "lock it in". You CANNOT build. ONLY the operator's explicit approval on the NEXT turn triggers the build. Never say or imply you are building or about to.
+- ALWAYS re-emit a COMPLETE, fresh \`intent\` block that folds in EVERY refinement so far (e.g. if they bumped it to 90 seconds, the block's durationSeconds is 90). Never skip the block, never emit a partial one — even when you're only acknowledging a small tweak.
+- ALWAYS end the VISIBLE part of your reply with your one question OR "Approve this, or tell me what to change?" — this must be the last line the operator reads, every single time.
+- Never write storyboards, shot lists, or asset prose.`;
 
 // ────────────────────────────────────────────────────────────────────────────
 // System prompt — the Content Manager's conversational identity
@@ -172,13 +321,13 @@ async function buildSystemPrompt(
 - **Music Planner** — music & soundtrack
 
 ## HOW YOU WORK
-- Talk like a creative director: bring a point of view, propose concrete ideas. Ask AT MOST ONE sharp clarifying question, and ONLY while the operator is still figuring out what they want — NEVER keep interrogating, and never ask anything once they've said "make it" (then you delegate immediately — see the build protocol).
-- Build on what they've said; keep it tight and human — no bullet-point essays, no corporate filler.
+- Talk like a creative director: bring a point of view, propose concrete ideas, keep it tight and human — no bullet-point essays, no corporate filler.
+- Interpret what the operator wants, then CONFIRM your understanding before anything is built (see the protocol below) — you always pause for their approval first.
 - Stay in the tenant's brand voice (below).
-- You shape the brief, then DELEGATE the build. Don't hand-write the final asset yourself.`;
+- You shape and confirm the plan; the specialists do the production. Don't hand-write the final asset yourself.`;
 
   const tabBlock = `\n\n## CURRENT CONTEXT\n${describeActiveTab(activeTab)}`;
-  const protocolBlock = isVideoStoryboardTab(activeTab) ? VIDEO_DELEGATION_PROTOCOL : '';
+  const protocolBlock = isContentGeneratorTab(activeTab) ? INTENT_PROTOCOL : '';
 
   let referenceBlock = '';
   if (attachments.length > 0) {
@@ -210,51 +359,6 @@ async function buildSystemPrompt(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Deterministic build trigger — the model often role-plays the hand-off in prose
-// instead of emitting the delegate block, so the build never fires. When the
-// operator clearly asks to build, we FORCE a structured delegate directive with a
-// focused JSON-only call so a build always happens.
-// ────────────────────────────────────────────────────────────────────────────
-
-function wantsBuild(messages: { role: 'user' | 'assistant'; content: string }[]): boolean {
-  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-  const t = (lastUser?.content ?? '').toLowerCase();
-  if (!t) { return false; }
-  if (/\b(make it|build it|do it|just build it|take it from here|go ahead|make the video|create the video|build the storyboards?|make the (?:f\w*ing )?video|create the video i requested|review.*create the video)\b/.test(t)) {
-    return true;
-  }
-  return /\b(make|build|create|produce|generate|render)\b/.test(t) && /\b(video|commercial|spot|ad|storyboard)\b/.test(t);
-}
-
-async function forceDelegate(
-  messages: { role: 'user' | 'assistant'; content: string }[],
-  attachments: Attachment[],
-): Promise<DelegateDirective | null> {
-  const refBlock = attachments.length > 0
-    ? `\n\nATTACHED REFERENCE FILES (build the brief FROM these — describe who is on screen using them):\n${attachments
-        .map((a) => `- ${a.fileName ?? a.url}${a.aiSummary ? `: ${a.aiSummary}` : ''}`)
-        .join('\n')}`
-    : '';
-  const sys = `You convert a conversation into ONE video-build directive. Output ONLY a JSON object — no prose, no fences, no "@Video Specialist", nothing else — matching exactly:
-{"specialist":"VIDEO_SPECIALIST","brief":"<a rich creative brief: the concept, WHO is on screen and their exact look pulled from the attached references, the emotional arc, the message, the CTA>","platform":"youtube|tiktok|instagram_reels|shorts|linkedin|generic","style":"talking_head|documentary|energetic|cinematic","targetDuration":<integer 15-150>,"targetAudience":"<who it's for>","callToAction":"<what they should do>","tone":"<editorial tone>"}
-Use platform "youtube", style "cinematic", targetDuration 30 unless the conversation clearly says otherwise. The brief MUST weave in the actual attached reference content.${refBlock}`;
-  try {
-    const provider = new OpenRouterProvider(PLATFORM_ID);
-    const response = await provider.chat({
-      model: 'claude-sonnet-4.6',
-      messages: [{ role: 'system', content: sys }, ...messages.map((m) => ({ role: m.role, content: m.content }))],
-      temperature: 0.4,
-      maxTokens: 1500,
-    });
-    const raw = (response.content ?? '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-    const parsed = DelegateDirectiveSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
 // Route handler
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -277,9 +381,146 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const attachments = parsed.attachments ?? [];
 
-  try {
-    const systemPrompt = await buildSystemPrompt(parsed.activeTab, attachments);
+  // Two-phase flow: the Content Manager ALWAYS proposes its understanding first
+  // (Phase A) and only BUILDS once the operator approves it (Phase B). The approved
+  // understanding rides through the conversation as a fenced ```intent block on the
+  // proposal turn; on approval we read it back (or re-derive it via forceIntent if
+  // the block didn't parse cleanly) to build.
+  const onContentTab = isContentGeneratorTab(parsed.activeTab);
+  const lastUser = [...parsed.messages].reverse().find((m) => m.role === 'user');
+  const userApproves = onContentTab && isApproval(lastUser?.content ?? '');
+  // A proposal exists if there's a prior assistant turn (the welcome is filtered out
+  // client-side before sending, so this only trips on a real proposal).
+  const hasPriorProposal = parsed.messages.slice(0, -1).some((m) => m.role === 'assistant');
 
+  logger.info('[ContentManager] intent check', {
+    file: FILE,
+    activeTab: parsed.activeTab ?? '(none)',
+    attachmentCount: attachments.length,
+    userApproves,
+    hasPriorProposal,
+    lastUserSnippet: (lastUser?.content ?? '').slice(0, 160),
+  });
+
+  try {
+    // ── PHASE B — the operator approved the pending understanding. Resolve the intent
+    // (parsed block first, forceIntent backstop second) and build it.
+    if (userApproves && hasPriorProposal) {
+      // Re-derive the final intent from the WHOLE conversation (folds in every
+      // refinement — e.g. a later "make it 90 seconds"). Fall back to the latest
+      // embedded block only if that synthesis fails.
+      const priorIntent = (await forceIntent(parsed.messages, attachments)) ?? findPriorIntent(parsed.messages);
+      if (priorIntent?.mediaType === 'video') {
+        // References come from the chat composer; if those didn't survive (e.g. a hard
+        // refresh emptied it), resolve them from the media library by the intent's
+        // referenceNames so the operator's characters still reach the build.
+        const buildAttachments: BuildAttachment[] =
+          attachments.length > 0
+            ? attachments.map((a) => ({
+                url: a.url,
+                ...(a.fileName ? { fileName: a.fileName } : {}),
+                ...(a.contentType ? { contentType: a.contentType } : {}),
+                ...(a.kind ? { kind: a.kind } : {}),
+                ...(a.aiSummary ? { aiSummary: a.aiSummary } : {}),
+              }))
+            : await resolveLibraryReferences(priorIntent);
+        logger.info('[ContentManager] build references resolved', {
+          file: FILE,
+          fromChat: attachments.length,
+          fromLibrary: attachments.length === 0 ? buildAttachments.length : 0,
+          durationSeconds: priorIntent.format.durationSeconds ?? 30,
+        });
+        const built = await buildStoryboardFromBrief({
+          brief: mapIntentToBrief(priorIntent),
+          platform: mapPlatform(priorIntent.format.platform),
+          style: 'cinematic',
+          targetDuration:
+            priorIntent.format.durationSeconds && priorIntent.format.durationSeconds >= 5
+              ? priorIntent.format.durationSeconds
+              : 30,
+          ...(priorIntent.callToAction ? { callToAction: priorIntent.callToAction } : {}),
+          ...(buildAttachments.length > 0 ? { attachments: buildAttachments } : {}),
+        });
+        if ('error' in built) {
+          logger.warn('[ContentManager] Video build failed', { file: FILE, error: built.error });
+          return NextResponse.json({
+            success: true,
+            reply: `I started building, but the Video Specialist hit a problem: ${built.error}`,
+          });
+        }
+        logger.info('[ContentManager] video build complete', { file: FILE, scenes: built.storyboards.length });
+        return NextResponse.json({
+          success: true,
+          reply: 'Building it now — your storyboards are on the way.',
+          storyboards: built.storyboards,
+          subjects: priorIntent.subjects,
+        });
+      }
+      if (priorIntent?.mediaType === 'image') {
+        // One image per subject. References come from the chat or, if it was emptied,
+        // the library. Each request is built here; the client runs the actual
+        // generations (reusing /api/content/asset-generator/generate, which persists
+        // every result to the library) and then shows them.
+        const refs: BuildAttachment[] =
+          attachments.length > 0
+            ? attachments.map((a) => ({
+                url: a.url,
+                ...(a.fileName ? { fileName: a.fileName } : {}),
+                ...(a.kind ? { kind: a.kind } : {}),
+              }))
+            : await resolveLibraryReferences(priorIntent);
+        const subjects =
+          priorIntent.subjects.length > 0
+            ? priorIntent.subjects
+            : [{ name: priorIntent.summary.slice(0, 100), referenceNames: [], fidelity: 'inspired' as const, notes: undefined }];
+        const tok = (x: string): string[] =>
+          x.toLowerCase().replace(/\.[a-z0-9]+$/i, '').split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+        const imageRequests = subjects.map((s) => {
+          const promptParts = [
+            s.name,
+            s.notes ?? '',
+            priorIntent.message ?? '',
+            priorIntent.style ? `Style: ${priorIntent.style}.` : '',
+          ].filter(Boolean);
+          let referenceImageUrl: string | undefined;
+          if (s.fidelity !== 'new' && refs.length > 0) {
+            const imgs = refs.filter((r) => r.kind !== 'video');
+            const wanted = s.referenceNames.flatMap(tok);
+            const match =
+              imgs.find((r) => {
+                const rn = tok(r.fileName ?? '');
+                return wanted.some((w) => rn.some((n) => n.includes(w) || w.includes(n)));
+              }) ?? imgs[0];
+            referenceImageUrl = match?.url;
+          }
+          return {
+            name: s.name,
+            prompt: promptParts.join(' ').slice(0, 1000),
+            fidelity: s.fidelity,
+            ...(referenceImageUrl ? { referenceImageUrl } : {}),
+          };
+        });
+        logger.info('[ContentManager] image build dispatched', { file: FILE, count: imageRequests.length });
+        return NextResponse.json({
+          success: true,
+          reply: `On it — generating ${imageRequests.length} image${imageRequests.length === 1 ? '' : 's'} now. They'll appear in the image generator (and your library) as each one finishes.`,
+          imageRequests,
+        });
+      }
+      // Music / text builders are wired in the following phases. Until then,
+      // acknowledge the approval rather than silently doing nothing.
+      if (priorIntent) {
+        return NextResponse.json({
+          success: true,
+          reply: `Got your approval — building ${priorIntent.mediaType} straight from the chat is coming next; video and image are live right now.`,
+        });
+      }
+      // Couldn't resolve an intent (block unparseable AND forceIntent failed) — fall
+      // through to Phase A and re-propose so the operator can re-confirm.
+    }
+
+    // ── PHASE A — interpret the request and PROPOSE the understanding (no build).
+    const systemPrompt = await buildSystemPrompt(parsed.activeTab, attachments);
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
       model: 'claude-sonnet-4.6',
@@ -287,8 +528,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { role: 'system', content: systemPrompt },
         ...parsed.messages.map((m) => ({ role: m.role, content: m.content })),
       ],
-      temperature: 0.8,
-      maxTokens: 1500,
+      temperature: 0.7,
+      maxTokens: 3000,
     });
 
     const reply = response.content?.trim();
@@ -299,59 +540,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { status: 502 },
       );
     }
-
-    // On the Video tab, if the Content Manager decided to build, delegate to the
-    // Video Specialist and return the storyboards for the canvas.
-    if (isVideoStoryboardTab(parsed.activeTab)) {
-      const delegation = extractDelegateDirective(reply);
-      let directive = delegation?.directive ?? null;
-      let cleanedReply = delegation?.cleanedReply ?? reply;
-      // Deterministic fallback: if the operator clearly asked to build but the model
-      // role-played the hand-off in prose instead of emitting a delegate block, force
-      // a structured directive so the build always fires.
-      if (!directive && wantsBuild(parsed.messages)) {
-        directive = await forceDelegate(parsed.messages, attachments);
-        if (directive) {
-          cleanedReply = 'Building it now — your storyboards are on the way.';
-        }
-      }
-      if (directive?.specialist === 'VIDEO_SPECIALIST') {
-        const built = await buildStoryboardFromBrief({
-          brief: directive.brief,
-          platform: directive.platform,
-          style: directive.style,
-          targetDuration: directive.targetDuration,
-          ...(directive.targetAudience ? { targetAudience: directive.targetAudience } : {}),
-          ...(directive.callToAction ? { callToAction: directive.callToAction } : {}),
-          ...(directive.tone ? { tone: directive.tone } : {}),
-          ...(attachments.length > 0
-            ? {
-                attachments: attachments.map((a) => ({
-                  url: a.url,
-                  ...(a.fileName ? { fileName: a.fileName } : {}),
-                  ...(a.contentType ? { contentType: a.contentType } : {}),
-                  ...(a.kind ? { kind: a.kind } : {}),
-                  ...(a.aiSummary ? { aiSummary: a.aiSummary } : {}),
-                })),
-              }
-            : {}),
-        });
-        if ('error' in built) {
-          logger.warn('[ContentManager] Video Specialist delegation failed', { file: FILE, error: built.error });
-          return NextResponse.json({
-            success: true,
-            reply: `${cleanedReply || 'I tried to build that,'} but the Video Specialist hit a problem: ${built.error}`,
-          });
-        }
-        return NextResponse.json({
-          success: true,
-          reply: cleanedReply || 'Here are your storyboards — review and tweak anything.',
-          storyboards: built.storyboards,
-          ...(directive.targetSceneNumber ? { targetSceneNumber: directive.targetSceneNumber } : {}),
-        });
-      }
-    }
-
     return NextResponse.json({ success: true, reply });
   } catch (error) {
     logger.error(
