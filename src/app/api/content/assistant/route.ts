@@ -24,6 +24,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { buildStoryboardFromBrief } from '@/lib/video/storyboard-build-service';
 import { listAssets } from '@/lib/media/media-library-service';
+import { removeBackgroundAndSave } from '@/lib/media/remove-background-asset';
 import {
   type ContentIntent,
   ContentIntentSchema,
@@ -358,6 +359,22 @@ async function buildSystemPrompt(
   return `${role}${tabBlock}${protocolBlock}${referenceBlock}${brandBlock}`;
 }
 
+/**
+ * Detect a clear "remove the white background / make it transparent" request.
+ * Deliberately narrow so it only intercepts an explicit edit ask — never a normal
+ * generation request that merely mentions a background. (Avoids matching e.g.
+ * "no background music".)
+ */
+function isBackgroundRemovalRequest(text: string): boolean {
+  const t = text.toLowerCase();
+  return (
+    /\b(remove|strip|delete|get rid of|take out|knock out|cut out)\b[^.!?]*\bbackground\b/.test(t) ||
+    /\btransparent\s+background\b/.test(t) ||
+    /\bmake\s+(it|this|the\s+(image|logo|picture))\s+transparent\b/.test(t) ||
+    /\bbackground\s+transparent\b/.test(t)
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Route handler
 // ────────────────────────────────────────────────────────────────────────────
@@ -403,6 +420,47 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   try {
+    // ── Background removal — a deterministic EDIT, not generation. Intercept an
+    // explicit "remove the white background / make it transparent" ask and run the
+    // real editor on the referenced image instead of letting the generator redraw
+    // the logo. Only fires on a clear phrase + a resolvable image; otherwise it
+    // falls through to the normal flow untouched.
+    if (onContentTab && isBackgroundRemovalRequest(lastUser?.content ?? '')) {
+      const imageRef = attachments.find(
+        (a) => a.kind === 'image' || (a.contentType ?? '').startsWith('image/'),
+      );
+      if (!imageRef?.url) {
+        return NextResponse.json({
+          success: true,
+          reply:
+            "Tell me which image and I'll strip the white background and save a transparent copy — attach it here, or open it in your Library and click “Remove white background”. I won't regenerate it.",
+        });
+      }
+      try {
+        const baseName = imageRef.fileName ? imageRef.fileName.replace(/\.[a-z0-9]+$/i, '') : 'image';
+        const created = await removeBackgroundAndSave({
+          imageUrl: imageRef.url,
+          name: `${baseName} (transparent)`,
+          userId: authResult.user.uid,
+        });
+        logger.info('[ContentManager] background removed via chat', { file: FILE, assetId: created.id });
+        return NextResponse.json({
+          success: true,
+          reply: `Done — I stripped the white background from **${imageRef.fileName ?? 'your image'}** and saved a transparent copy, "**${created.name}**", to your Library. Refresh the Library to see it. Your original is untouched — no regeneration.`,
+          mediaLibraryUpdated: true,
+        });
+      } catch (err) {
+        logger.warn('[ContentManager] background removal failed', {
+          file: FILE,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return NextResponse.json({
+          success: true,
+          reply: `I tried to strip the background but hit a problem: ${err instanceof Error ? err.message : 'unknown error'}. You can also use the “Remove white background” button on the image in your Library.`,
+        });
+      }
+    }
+
     // ── PHASE B — the operator approved the pending understanding. Resolve the intent
     // (parsed block first, forceIntent backstop second) and build it.
     if (userApproves && hasPriorProposal) {

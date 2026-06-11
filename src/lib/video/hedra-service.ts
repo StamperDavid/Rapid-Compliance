@@ -749,9 +749,14 @@ export async function generateHedraImageFromReference(
   const apiKey = await getHedraApiKey();
 
   // Choose an image-to-image / reference-capable image model from the live catalog.
+  // PREFER Flux Kontext — it's the model that proved out for faithful character
+  // reproduction (it reproduced the operator's hero re-posed). The previous selector
+  // grabbed the first `i2i`-matching model, which landed on `flux2-pro-i2i` — that one
+  // both drifts off-character and intermittently fails with a fal validation error.
   const catalog = await getHedraCatalog();
   const model =
-    catalog.find((m) => m.type === 'image' && /kontext|i2i|edit|restyle|reference/i.test(`${m.slug} ${m.name}`))
+    catalog.find((m) => m.type === 'image' && /kontext/i.test(`${m.slug} ${m.name}`))
+    ?? catalog.find((m) => m.type === 'image' && /i2i|edit|restyle|reference/i.test(`${m.slug} ${m.name}`))
     ?? catalog.find((m) =>
       m.type === 'image' &&
       (m.inputs ?? []).some((mode) => (mode.slots ?? []).some((s) => s.role === 'start_frame' || s.role === 'reference')),
@@ -770,23 +775,38 @@ export async function generateHedraImageFromReference(
     aspect_ratio: options?.aspectRatio ?? '16:9',
   };
 
-  logger.info('Hedra image-to-image starting', { modelSlug: model.slug, file: 'hedra-service.ts' });
+  // Submit + poll once. The fal image models intermittently fail a generation
+  // (e.g. "Input should be a valid dictionary..."), so we retry the whole
+  // generation one time before surfacing a hard error — an identical retry
+  // usually succeeds.
+  const attempt = async (n: number): Promise<HedraImageResult> => {
+    logger.info('Hedra image-to-image starting', { modelSlug: model.slug, attempt: n, file: 'hedra-service.ts' });
+    const genResponse = await fetch(`${HEDRA_BASE_URL}/generations`, {
+      method: 'POST',
+      headers: hedraHeaders(apiKey, 'application/json'),
+      body: JSON.stringify(payload),
+    });
+    if (!genResponse.ok) {
+      throw new Error(`Hedra image-to-image submit failed (${genResponse.status}): ${await parseHedraError(genResponse)}`);
+    }
+    const generation = (await genResponse.json()) as HedraGenerationResponse;
+    if (!generation?.id) {
+      throw new Error('Hedra image-to-image returned no generation ID');
+    }
+    const { url } = await pollHedraGeneration(apiKey, generation.id);
+    return { url, generationId: generation.id, modelId: model.id, modelName: model.slug };
+  };
 
-  const genResponse = await fetch(`${HEDRA_BASE_URL}/generations`, {
-    method: 'POST',
-    headers: hedraHeaders(apiKey, 'application/json'),
-    body: JSON.stringify(payload),
-  });
-  if (!genResponse.ok) {
-    throw new Error(`Hedra image-to-image submit failed (${genResponse.status}): ${await parseHedraError(genResponse)}`);
+  try {
+    return await attempt(1);
+  } catch (err) {
+    logger.warn('Hedra image-to-image failed; retrying once', {
+      modelSlug: model.slug,
+      error: err instanceof Error ? err.message : String(err),
+      file: 'hedra-service.ts',
+    });
+    return attempt(2);
   }
-  const generation = (await genResponse.json()) as HedraGenerationResponse;
-  if (!generation?.id) {
-    throw new Error('Hedra image-to-image returned no generation ID');
-  }
-
-  const { url } = await pollHedraGeneration(apiKey, generation.id);
-  return { url, generationId: generation.id, modelId: model.id, modelName: model.slug };
 }
 
 /**

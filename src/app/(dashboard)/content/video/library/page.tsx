@@ -54,6 +54,7 @@ import {
   Download,
   FolderPlus,
   Pencil,
+  Eraser,
 } from 'lucide-react';
 import {
   MEDIA_CATEGORIES,
@@ -245,6 +246,7 @@ export default function MediaLibraryUnifiedPage() {
 
   // ── Selection / detail panel ────────────────────────────────────────────
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [removingBgId, setRemovingBgId] = useState<string | null>(null);
 
   // ── Multi-select (bulk) + per-tile delete ────────────────────────────────
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -646,6 +648,31 @@ export default function MediaLibraryUnifiedPage() {
       setErrorMsg(err instanceof Error ? err.message : 'Download failed. Try again.');
     }
   }, [authFetch]);
+
+  // Remove the white background from an image asset — a deterministic server-side
+  // edit (NOT regeneration). Saves a new transparent copy and jumps to it.
+  const handleRemoveBackground = useCallback(async (asset: UnifiedMediaAsset) => {
+    setRemovingBgId(asset.id);
+    setErrorMsg(null);
+    try {
+      const res = await authFetch('/api/content/image/remove-background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId: asset.id }),
+      });
+      const data = (await res.json()) as { success: boolean; asset?: UnifiedMediaAsset; error?: string };
+      if (!res.ok || !data.success || !data.asset) {
+        setErrorMsg(data.error ?? 'Background removal failed.');
+        return;
+      }
+      await fetchAssets();
+      setSelectedId(data.asset.id);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Background removal failed.');
+    } finally {
+      setRemovingBgId(null);
+    }
+  }, [authFetch, fetchAssets]);
 
   // Download all checked assets as a single .zip.
   const handleBulkDownload = useCallback(async () => {
@@ -1132,6 +1159,10 @@ export default function MediaLibraryUnifiedPage() {
                 onAssignProject={(project) => {
                   void handleAssignProject(selectedAsset, project);
                 }}
+                onRemoveBackground={(a) => {
+                  void handleRemoveBackground(a);
+                }}
+                removingBackground={removingBgId === selectedAsset.id}
               />
             </div>
           ) : (
@@ -1426,6 +1457,8 @@ interface AssetDetailPanelProps {
   onChangeCategory: (category: string) => void;
   onChangeDescription: (description: string) => void;
   onAssignProject: (project: string) => void;
+  onRemoveBackground: (asset: UnifiedMediaAsset) => void;
+  removingBackground: boolean;
 }
 
 function AssetDetailPanel({
@@ -1445,6 +1478,8 @@ function AssetDetailPanel({
   onChangeCategory,
   onChangeDescription,
   onAssignProject,
+  onRemoveBackground,
+  removingBackground,
 }: AssetDetailPanelProps) {
   const Icon = typeIcon(asset.type);
   const showImage = asset.type === 'image' || Boolean(asset.thumbnailUrl);
@@ -1555,6 +1590,29 @@ function AssetDetailPanel({
           </div>
         )}
       </div>
+
+      {/* Image actions — deterministic edits (no regeneration) */}
+      {asset.type === 'image' && (
+        <div className="p-3 border-b border-border-light">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={removingBackground}
+            onClick={() => onRemoveBackground(asset)}
+            className="w-full gap-2 text-xs"
+          >
+            {removingBackground ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Eraser className="h-3.5 w-3.5" />
+            )}
+            {removingBackground ? 'Removing background…' : 'Remove white background'}
+          </Button>
+          <Caption className="mt-1.5 block text-muted-foreground">
+            Strips the solid white background and saves a transparent copy. Your original is kept.
+          </Caption>
+        </div>
+      )}
 
       {/* Metadata */}
       <div className="p-4 space-y-3 overflow-y-auto">
