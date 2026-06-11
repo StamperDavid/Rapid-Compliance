@@ -5,15 +5,33 @@
 # 🔴 RESUME HERE — Jun 11 2026 (early AM) — Content Manager image vertical + Media Library overhaul
 
 ## ▶ NEXT ACTION (start the next session HERE)
-**Build Slice 1 of "editor-as-destination."** The editor-consolidation scope is LOCKED (operator
-signed off on the vision + "B" platform-native publish). Full scope = the "🎬 EDITOR = THE FINISHING +
-PUBLISHING SURFACE" section below; the concrete Slice-1 spec + VERIFIED facts + locked decisions = the
-"**Slice 1 (keystone, verified Jun 11)**" paragraph in the build-order block below.
-Goal: scenes finish generating → clips AUTO-LOAD onto the Video Editor timeline → operator lands there.
-Seam: `editor/page.tsx` ignores `?project=` (starts empty) — make it read the param, fetch the project,
-`ADD_CLIP` per completed scene in `sceneNumber` order; `StepGeneration` auto-redirects to the editor on
-completion; standardize stitching on `/api/video/editor/render` (retire `/api/video/assemble` from the
-flow). Everything below this line is SHIPPED context + the broader roadmap.
+**Slice 1 of "editor-as-destination" is SHIPPED (Jun 11, tsc + lint + `npm run build` all green; pushed
+to dev — NOT yet operator browser-walked).** What landed:
+- `editor/page.tsx` now reads `?project=`, fetches `/api/video/project/[id]`, and `ADD_CLIP`s every
+  completed scene (`status==='completed'` + `videoUrl`) onto the timeline in `sceneNumber` order, with
+  duration from the matching `PipelineScene.duration`. Guarded: only seeds when the timeline is empty
+  (a `useRef` + `clips.length===0`), so it never clobbers an edit in progress. Header shows a "Loading
+  your scenes…" / error pill.
+- `StepGeneration.tsx` — on completion, once the finished scenes are PERSISTED (`/api/video/project/save`
+  resolves ok), it redirects to `/content/video/editor?project={id}` (`goToEditor`, fires once via ref;
+  falls back to legacy `advanceStep` only if there's no `projectId`). The old "Continue to Assembly"
+  button is now "Open in Editor". `handleContinue` removed.
+- `Preview.tsx` — `<video>` is no longer `muted`, so the baked-in lip-synced dialogue plays in the
+  preview. Playback only starts on a user gesture (Space/Play), so autoplay policy is fine.
+- Stitching standardizes on `/api/video/editor/render` (editor Export already uses it); `/api/video/assemble`
+  left dormant, not deleted.
+
+**⚠️ STILL OWED on Slice 1:** the operator browser-walk — generate a short video → confirm clips land on
+the timeline in order → press Play → confirm AUDIO. (Couldn't self-verify: needs auth + a real Hedra
+generation.) **NEXT after that = Slice 2** (collapse wizard + selectable transition/SFX/VFX libraries),
+then Slice 3a/b/c (publish + platform-native "B" versions; smart auto-reframe shared with viral-clip
+maker), effects-by-prompt last. Concrete Slice-1 spec + VERIFIED facts + locked decisions remain in the
+"**Slice 1 (keystone, verified Jun 11)**" paragraph below. Everything below is SHIPPED context + roadmap.
+
+**🛠️ Build note (Jun 11):** the dev server runs on localhost:3000 OUT OF THIS PRIMARY worktree
+(`D:\Future Rapid Compliance`), not rapid-dev — so `npm run build` here clobbers the live `.next` and
+breaks the page. Always KILL the dev server before building, then restart. And `next build` OOM'd in the
+type-check phase at the default heap — run it with `NODE_OPTIONS=--max-old-space-size=8192`.
 
 **Context:** Continued the Content Manager work. Video-from-chat was already live; this session
 wired the **image-from-chat vertical** and did a full **Media Library** pass. Ended with the

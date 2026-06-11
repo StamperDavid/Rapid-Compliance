@@ -246,7 +246,9 @@ export default function Preview({
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-contain"
           style={{ filter: effectToCssFilter(active.clip.effect) }}
-          muted
+          // NOT muted: each scene's lip-synced dialogue is baked into its video,
+          // so the timeline preview must play sound. Playback is only ever
+          // started by a user gesture (Space / Play), so autoplay policy is fine.
           playsInline
           preload="metadata"
         />

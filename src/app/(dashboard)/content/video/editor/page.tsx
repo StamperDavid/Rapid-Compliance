@@ -20,8 +20,9 @@
  * live inside EffectsPanel via `<ConfirmDialog>`.
  */
 
-import { useReducer, useCallback, useEffect, useState } from 'react';
-import { Scissors, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
+import { useReducer, useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
@@ -39,6 +40,7 @@ import {
   type EditorClip,
 } from './types';
 import type { MediaItem } from '@/types/media-library';
+import type { PipelineProject } from '@/types/video-pipeline';
 
 interface RenderResponse {
   success: boolean;
@@ -53,6 +55,8 @@ function effectiveDuration(clip: EditorClip): number {
 
 export default function VideoEditorPage() {
   const authFetch = useAuthFetch();
+  const searchParams = useSearchParams();
+  const projectIdParam = searchParams.get('project');
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
 
   const {
@@ -75,6 +79,65 @@ export default function VideoEditorPage() {
     error: null,
     item: null,
   });
+
+  // ── Project auto-load: when the editor is opened as the destination of a
+  //    finished generation (`?project=<id>`), pull the project's completed
+  //    scenes onto the timeline in scene order so the operator lands here with
+  //    a starting cut already laid down. The lip-synced dialogue audio is baked
+  //    into each scene's video, so it rides along with the clip. ───────────────
+  const projectLoadedRef = useRef(false);
+  const [projectLoad, setProjectLoad] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  useEffect(() => {
+    if (projectLoadedRef.current) { return; }
+    if (!projectIdParam) { return; }
+    // Never clobber an edit already in progress — only seed an empty timeline.
+    if (clips.length > 0) { return; }
+
+    projectLoadedRef.current = true;
+    setProjectLoad('loading');
+
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/video/project/${projectIdParam}`);
+        if (!res.ok) { throw new Error('Project load failed'); }
+        const data = (await res.json()) as { success: boolean; project?: PipelineProject };
+        if (!data.success || !data.project) { throw new Error('Project not found'); }
+
+        const { scenes, generatedScenes } = data.project;
+        const durationBySceneId = new Map(scenes.map((s) => [s.id, s.duration]));
+        const numberBySceneId = new Map(scenes.map((s) => [s.id, s.sceneNumber]));
+
+        // Only completed scenes that actually rendered a video URL become clips.
+        const ready = generatedScenes
+          .filter((g): g is typeof g & { videoUrl: string } =>
+            g.status === 'completed' && typeof g.videoUrl === 'string' && g.videoUrl.length > 0)
+          .map((g) => ({
+            url: g.videoUrl,
+            thumbnailUrl: g.thumbnailUrl,
+            sceneNumber: numberBySceneId.get(g.sceneId) ?? Number.MAX_SAFE_INTEGER,
+            duration: durationBySceneId.get(g.sceneId) ?? DEFAULT_CLIP_DURATION,
+          }))
+          .sort((a, b) => a.sceneNumber - b.sceneNumber);
+
+        for (const clip of ready) {
+          dispatch({
+            type: 'ADD_CLIP',
+            clip: {
+              name: `Scene ${clip.sceneNumber}`,
+              url: clip.url,
+              thumbnailUrl: clip.thumbnailUrl,
+              duration: clip.duration,
+              source: 'project',
+            },
+          });
+        }
+        setProjectLoad('idle');
+      } catch {
+        setProjectLoad('error');
+      }
+    })();
+  }, [projectIdParam, clips.length, authFetch]);
 
   // ── Split at playhead — reused by toolbar + keyboard ────────────────────
   const splitAtPlayhead = useCallback(() => {
@@ -200,7 +263,21 @@ export default function VideoEditorPage() {
             Trim, stitch, light, and caption — drop clips, drag the playhead, click Export.
           </SectionDescription>
         </div>
-        <ExportStatusPill state={exportState} />
+        <div className="flex items-center gap-2">
+          {projectLoad === 'loading' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Loading your scenes…
+            </div>
+          )}
+          {projectLoad === 'error' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-destructive/10 border border-destructive/30 rounded-md text-xs text-destructive">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Couldn’t load that project — start from the library.
+            </div>
+          )}
+          <ExportStatusPill state={exportState} />
+        </div>
       </header>
 
       <Toolbar
