@@ -371,10 +371,18 @@ export async function getAvatarProfile(profileId: string): Promise<AvatarProfile
 }
 
 /**
- * List all avatar profiles for a user, ordered by createdAt desc.
- * Also includes stock/system avatars (userId === 'system') available to all users.
+ * List avatar profiles for a user, ordered by createdAt desc.
+ *
+ * By default also includes stock/system avatars (userId === 'system') so generic
+ * cast-pickers can offer them. Pass `{ ownOnly: true }` for the Character Library
+ * tab, which must show ONLY the operator's own CREATED characters — never stock or
+ * Hedra-imported avatars (it's a generator + library of the tenant's digital cast,
+ * not a picker of stock Hedra avatars).
  */
-export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[]> {
+export async function listAvatarProfiles(
+  userId: string,
+  opts: { ownOnly?: boolean } = {},
+): Promise<AvatarProfile[]> {
   if (!adminDb) {
     logger.warn('Database not available for listing avatar profiles', {
       file: 'avatar-profile-service.ts',
@@ -405,6 +413,12 @@ export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[
       collectionPath: COLLECTION_PATH,
       file: 'avatar-profile-service.ts',
     });
+  }
+
+  // Character Library tab: only the operator's OWN created characters — exclude
+  // stock/system avatars AND any Hedra-imported ones (source 'custom' = built here).
+  if (opts.ownOnly) {
+    return userProfiles.filter((p) => p.source === 'custom');
   }
 
   try {

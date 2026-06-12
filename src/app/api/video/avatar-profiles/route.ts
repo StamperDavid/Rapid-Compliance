@@ -76,12 +76,18 @@ export async function GET(request: NextRequest) {
     const { user } = authResult;
     const userId = String(user.uid);
 
+    // The Character Library tab passes ?scope=own so it shows ONLY the operator's
+    // own created characters (no stock/Hedra avatars). Other cast-pickers omit it
+    // and still get stock avatars appended.
+    const ownOnly = request.nextUrl.searchParams.get('scope') === 'own';
+
     logger.info('Listing avatar profiles', {
       file: 'api/video/avatar-profiles/route.ts',
       userId,
+      ownOnly,
     });
 
-    const profiles = await listAvatarProfiles(userId);
+    const profiles = await listAvatarProfiles(userId, { ownOnly });
 
     return NextResponse.json({
       success: true,
