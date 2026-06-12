@@ -2,6 +2,85 @@
 
 ---
 
+# 🔴 RESUME HERE — Jun 12 2026 — PHASE 2 of the Character Library (wire characters into generation)
+
+**Goal:** when the operator picks a saved character (and a Look) in the chat, the system
+auto-passes the right face anchor + Look references to Hedra PER SCENE, so the character stays
+consistent across every video. Plus: extract pose stills from the operator's chroma-key
+full-body video.
+
+**Phase 1 SHIPPED (commit `8de0f531` on dev):** Character Library backend + UI exist;
+characters can have alter-ego "Looks" (same face, different outfit, each Look with its own
+images/video/audio). Also shipped same batch: instruction-based image editing (Flux Kontext),
+"Remove background" (white-key + Fal BiRefNet, honest failure with no key), approval-recognition
+fix, delete-bug fix. Everything below the Jun 11 line is prior shipped context.
+
+## VERIFIED FACTS (mapped Jun 12 — do NOT re-investigate from scratch)
+- **Character model**: `AvatarProfile` in `src/lib/video/avatar-profile-service.ts`; Firestore
+  `organizations/{PLATFORM_ID}/avatar_profiles`. Identity = name + `frontalImageUrl` (face
+  anchor) + `description` (DNA) + voiceId/voiceName/voiceProvider. Variants =
+  `looks: CharacterLook[]` where `CharacterLook = { id, name, outfitDescription, imageUrls[],
+  videoUrls[], audioUrls[], isPrimary }`. API: GET/POST `/api/video/avatar-profiles`,
+  PATCH/DELETE `/api/video/avatar-profiles/[profileId]`. UI: `/content/characters` (page.tsx +
+  CharacterForm.tsx).
+- **Intent subjects**: `IntentSubject` in `src/lib/content/content-intent.ts` =
+  `{ name, referenceNames, fidelity, notes }`. Add optional `characterId` (+ `lookId`) to bind a
+  subject to a saved character.
+- **Chat → build**: `src/app/api/content/assistant/route.ts` — `resolveLibraryReferences()`
+  resolves subject ref names from the media library; approved subjects + attachments go to
+  `buildStoryboardFromBrief()` in `src/lib/video/storyboard-build-service.ts` (seeds scene-1
+  refs). Per-scene resolution: `matchReferenceForScene` / `pickSceneReferenceFromSubjects` in
+  `src/lib/video/storyboard-thumbnail.ts`. IDENTITY_LOCK there already = "lock the face,
+  scene/Look supplies wardrobe."
+- **Hedra**: `src/lib/video/hedra-service.ts` — `generateWithHedra` /
+  `generateHedraImageFromReference` / `generateHedraAvatarVideo` accept identity via
+  `start_keyframe_id` (start frame) + `reference_image_ids`. i2i already prefers FLUX KONTEXT.
+  VERIFIED: `enhance_prompt` defaults **FALSE** on the Hedra API — Hedra does NOT mutate our
+  prompts; the prompt-rewriting "agent" is ONLY Hedra's web app (runs/events/agent_thread_id),
+  not the API. Don't chase "Hedra is scrambling prompts."
+- **Scene**: `PipelineScene` (`src/types/video-pipeline.ts`) already has `avatarId` (per-scene
+  character override). Generation: `src/app/api/content/asset-generator/generate/route.ts` +
+  `src/lib/video/scene-generator.ts`.
+
+## THE SEAM (build order)
+1. **Bind characters in the chat**: surface saved characters (names + DNA) to the Content
+   Manager so it references them; when a subject matches a saved Character, carry `characterId`
+   (+ chosen `lookId`) through the intent into the build.
+2. **Storyboard build**: resolve `characterId` → `frontalImageUrl` (identity anchor) + the chosen
+   Look's `imageUrls` (wardrobe) + `outfitDescription`; seed onto scene references and set
+   `scene.avatarId`. Identity from the face anchor, wardrobe from the Look.
+3. **Scene/image generation**: when `scene.avatarId` is set → resolve profile → pass
+   `frontalImageUrl` as `start_keyframe_id` + Look `imageUrls` as `reference_image_ids` to Hedra;
+   use `profile.voiceId` for dialogue (Character-3/Omnia).
+4. **Chroma-key pose extraction**: new route/tool — take the green-screen full-body video →
+   extract pose freeze-frames (ffmpeg/sharp) → save as a Look's pose references in the media
+   library. These become start-frames for full-body action shots.
+5. (Stretch) **Per-model prompt formatting** in the Hedra Specialist: A-B-C (DNA / scene+Look /
+   camera) in the right dialect per model (Veo = camera-first; Kling = subject anchor +
+   negatives; Character-3/Omnia = audio-driven facial).
+
+## STANDING RULES (binding)
+Brand DNA baked into GMs at seed time, never runtime; NO Golden Master edits without a human
+grade; design-system components only (no raw tags/hex/CSS-vars); plain English to the operator;
+the conversational AI MUST ask clarifying questions and NEVER fail silently (users are
+non-technical SMB owners); subagents do the brunt but VERIFY every output (read the diff + run
+tsc + lint), they slip; finish to production-ready, name every shortcut.
+
+## DEV-SERVER / BUILD PROTOCOL
+The dev server runs on localhost:3000 OUT OF THE PRIMARY worktree (`D:\Future Rapid Compliance`).
+KILL it before `npm run build` (the build clobbers `.next` and breaks the live page). Build with
+`NODE_OPTIONS=--max-old-space-size=8192` (it OOMs at the default heap). After build: restart the
+dev server + re-arm a persistent Monitor tailing the harness background-output file (NOT the
+UTF-16 `dev-server.log`). Commit to `dev` with co-author "Claude Opus 4.8 (1M context)", then
+merge dev into rapid-dev.
+
+## DONE
+Pick a saved character + Look in the chat → storyboard scenes use the right face + outfit →
+generated scenes look like the character consistently across shots → tsc + lint + `npm run build`
+green → browser-walk → commit to dev.
+
+---
+
 # 🔴 RESUME HERE — Jun 11 2026 (early AM) — Content Manager image vertical + Media Library overhaul
 
 ## ▶ NEXT ACTION (start the next session HERE)
