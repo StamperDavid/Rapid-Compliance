@@ -10,10 +10,12 @@
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 
+import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getAsset, createAsset } from '@/lib/media/media-library-service';
 import { persistBufferToStorage } from '@/lib/firebase/storage-utils';
-import { removeWhiteBackground } from '@/lib/media/background-removal';
+import { removeWhiteBackground, isSolidWhiteBackground } from '@/lib/media/background-removal';
+import { removeBackgroundWithFal } from '@/lib/ai/providers/fal-provider';
 import type { UnifiedMediaAsset } from '@/types/media-library';
 
 export interface RemoveBackgroundInput {
@@ -57,10 +59,30 @@ export async function removeBackgroundAndSave(
   }
   const inputBuffer = Buffer.from(await upstream.arrayBuffer());
 
-  const outBuffer = await removeWhiteBackground(
-    inputBuffer,
-    input.whiteThreshold !== undefined ? { whiteThreshold: input.whiteThreshold } : {},
-  );
+  // Pick the right tool. A solid white/near-white background is handled by the fast,
+  // exact, free deterministic white-key (preserves the artwork pixel-for-pixel —
+  // ideal for logos). Anything else (a colored or photographic background) needs a
+  // real subject-segmentation model (Fal BiRefNet). We do NOT fall back to the
+  // white-key for a non-white image — that would silently strip nothing and hand
+  // back an unchanged copy; instead we surface the real reason it couldn't run.
+  const solidWhite = await isSolidWhiteBackground(inputBuffer);
+  let outBuffer: Buffer;
+  if (solidWhite) {
+    outBuffer = await removeWhiteBackground(
+      inputBuffer,
+      input.whiteThreshold !== undefined ? { whiteThreshold: input.whiteThreshold } : {},
+    );
+  } else {
+    try {
+      outBuffer = await sharp(await removeBackgroundWithFal(sourceUrl)).png().toBuffer();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn('[remove-background] cutout model unavailable for non-white image', { error: msg });
+      throw new Error(
+        `This image has a non-white background, which needs the AI cutout model — and that isn't available right now: ${msg}`,
+      );
+    }
+  }
 
   const meta = await sharp(outBuffer).metadata();
   const dimensions =

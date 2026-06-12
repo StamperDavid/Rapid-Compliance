@@ -29,6 +29,16 @@ const GreenScreenClipSchema = z.object({
   createdAt: z.string(),
 });
 
+const CharacterLookSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  outfitDescription: z.string().default(''),
+  imageUrls: z.array(z.string().url()).default([]),
+  videoUrls: z.array(z.string().url()).default([]),
+  audioUrls: z.array(z.string().url()).default([]),
+  isPrimary: z.boolean().default(false),
+});
+
 const UpdateProfileSchema = z.object({
   name: z.string().min(1).optional(),
   frontalImageUrl: z.string().url().optional(),
@@ -42,7 +52,9 @@ const UpdateProfileSchema = z.object({
   fullBodyImageUrl: z.string().url().nullable().optional(),
   upperBodyImageUrl: z.string().url().nullable().optional(),
   greenScreenClips: z.array(GreenScreenClipSchema).optional(),
+  looks: z.array(CharacterLookSchema).optional(),
   voiceId: z.string().nullable().optional(),
+  voiceName: z.string().nullable().optional(),
   voiceProvider: z
     .enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra'])
     .nullable()

@@ -27,6 +27,16 @@ const GreenScreenClipSchema = z.object({
   createdAt: z.string().default(() => new Date().toISOString()),
 });
 
+const CharacterLookSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  outfitDescription: z.string().default(''),
+  imageUrls: z.array(z.string().url()).default([]),
+  videoUrls: z.array(z.string().url()).default([]),
+  audioUrls: z.array(z.string().url()).default([]),
+  isPrimary: z.boolean().default(false),
+});
+
 const CreateProfileSchema = z.object({
   name: z.string().min(1),
   frontalImageUrl: z.string().url(),
@@ -40,7 +50,9 @@ const CreateProfileSchema = z.object({
   fullBodyImageUrl: z.string().url().nullable().default(null),
   upperBodyImageUrl: z.string().url().nullable().default(null),
   greenScreenClips: z.array(GreenScreenClipSchema).default([]),
+  looks: z.array(CharacterLookSchema).default([]),
   voiceId: z.string().nullable().default(null),
+  voiceName: z.string().nullable().default(null),
   voiceProvider: z
     .enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra'])
     .nullable()
@@ -141,7 +153,9 @@ export async function POST(request: NextRequest) {
       fullBodyImageUrl: data.fullBodyImageUrl,
       upperBodyImageUrl: data.upperBodyImageUrl,
       greenScreenClips: data.greenScreenClips,
+      looks: data.looks,
       voiceId: data.voiceId,
+      voiceName: data.voiceName,
       voiceProvider: data.voiceProvider,
       hedraCharacterId: data.hedraCharacterId,
       description: data.description,

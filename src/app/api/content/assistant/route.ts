@@ -25,6 +25,7 @@ import { logger } from '@/lib/logger/logger';
 import { buildStoryboardFromBrief } from '@/lib/video/storyboard-build-service';
 import { listAssets } from '@/lib/media/media-library-service';
 import { removeBackgroundAndSave } from '@/lib/media/remove-background-asset';
+import { editImageAndSave } from '@/lib/media/edit-image-asset';
 import {
   type ContentIntent,
   ContentIntentSchema,
@@ -375,6 +376,29 @@ function isBackgroundRemovalRequest(text: string): boolean {
   );
 }
 
+const EDIT_TARGET = '(this|that|it|the\\s+(image|photo|picture|logo|pic|graphic|background))';
+
+/**
+ * Detect a request to EDIT an existing image (change part of it, keep the rest) vs.
+ * create something new. Narrow on purpose: it must clearly target "this / the image",
+ * and never matches a video request. Pairs with an attached image (or an explicit
+ * image noun) before it acts — otherwise the flow asks which image.
+ */
+function isImageEditRequest(text: string): boolean {
+  const t = text.toLowerCase().trim();
+  if (/\bvideo\b/.test(t)) { return false; }
+  return (
+    new RegExp(`\\b(edit|change|modify|tweak|adjust|alter|retouch|recolou?r|recolor)\\b[^.!?]*\\b${EDIT_TARGET}\\b`).test(t) ||
+    new RegExp(`\\b(make|turn)\\s+${EDIT_TARGET}\\b`).test(t) ||
+    new RegExp(`\\b(remove|delete|erase|add|put|replace|swap)\\b[^.!?]*\\b${EDIT_TARGET}\\b`).test(t) ||
+    /^(edit|tweak|retouch)\b/.test(t)
+  );
+}
+
+function mentionsImageNoun(text: string): boolean {
+  return /\b(image|photo|picture|logo|pic|graphic)\b/.test(text.toLowerCase());
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Route handler
 // ────────────────────────────────────────────────────────────────────────────
@@ -433,7 +457,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({
           success: true,
           reply:
-            "Tell me which image and I'll strip the white background and save a transparent copy — attach it here, or open it in your Library and click “Remove white background”. I won't regenerate it.",
+            "Tell me which image and I'll remove the background and save a transparent copy — attach it here, or open it in your Library and click “Remove background”. I won't regenerate it.",
         });
       }
       try {
@@ -446,7 +470,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         logger.info('[ContentManager] background removed via chat', { file: FILE, assetId: created.id });
         return NextResponse.json({
           success: true,
-          reply: `Done — I stripped the white background from **${imageRef.fileName ?? 'your image'}** and saved a transparent copy, "**${created.name}**", to your Library. Refresh the Library to see it. Your original is untouched — no regeneration.`,
+          reply: `Done — I removed the background from **${imageRef.fileName ?? 'your image'}** and saved a transparent copy, "**${created.name}**", to your Library. Refresh the Library to see it. Your original is untouched — no regeneration.`,
           mediaLibraryUpdated: true,
         });
       } catch (err) {
@@ -456,9 +480,54 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         });
         return NextResponse.json({
           success: true,
-          reply: `I tried to strip the background but hit a problem: ${err instanceof Error ? err.message : 'unknown error'}. You can also use the “Remove white background” button on the image in your Library.`,
+          reply: `I tried to strip the background but hit a problem: ${err instanceof Error ? err.message : 'unknown error'}. You can also use the “Remove background” button on the image in your Library.`,
         });
       }
+    }
+
+    // ── Image editing — change part of an existing image, keep the rest (Flux
+    // Kontext). Narrowly detected so it never hijacks a "create new"/video request.
+    // With an attached image we run it; without one we ASK which image rather than
+    // guessing — a non-technical user must never hit a silent dead end.
+    if (onContentTab && isImageEditRequest(lastUser?.content ?? '')) {
+      const imageRef = attachments.find(
+        (a) => a.kind === 'image' || (a.contentType ?? '').startsWith('image/'),
+      );
+      if (imageRef?.url) {
+        try {
+          const instruction = (lastUser?.content ?? '').trim();
+          const baseName = imageRef.fileName ? imageRef.fileName.replace(/\.[a-z0-9]+$/i, '') : 'image';
+          const created = await editImageAndSave({
+            imageUrl: imageRef.url,
+            instruction,
+            name: `${baseName} (edited)`,
+            userId: authResult.user.uid,
+          });
+          logger.info('[ContentManager] image edited via chat', { file: FILE, assetId: created.id });
+          return NextResponse.json({
+            success: true,
+            reply: `Done — I edited **${imageRef.fileName ?? 'your image'}** and saved the new version, "**${created.name}**", to your Library (your original is untouched). It keeps everything else and changes only what you described. Want another tweak? Just tell me.`,
+            mediaLibraryUpdated: true,
+          });
+        } catch (err) {
+          logger.warn('[ContentManager] image edit failed', {
+            file: FILE,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          return NextResponse.json({
+            success: true,
+            reply: `I tried to make that edit but hit a problem: ${err instanceof Error ? err.message : 'unknown error'}. Try rewording the change, or use the “Edit image” box on the image in your Library.`,
+          });
+        }
+      } else if (mentionsImageNoun(lastUser?.content ?? '')) {
+        // Clear edit intent but no image to act on — ASK, never silently stall.
+        return NextResponse.json({
+          success: true,
+          reply:
+            "Happy to edit it — which image do you mean? Attach it here, or open it in your Library and use the “Edit image” box. Then tell me the change (for example, “make the logo bigger” or “change the background to blue”).",
+        });
+      }
+      // Otherwise (ambiguous, no image) fall through to the normal flow.
     }
 
     // ── PHASE B — the operator approved the pending understanding. Resolve the intent

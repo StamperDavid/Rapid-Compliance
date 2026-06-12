@@ -55,6 +55,7 @@ import {
   FolderPlus,
   Pencil,
   Eraser,
+  Wand2,
 } from 'lucide-react';
 import {
   MEDIA_CATEGORIES,
@@ -247,6 +248,7 @@ export default function MediaLibraryUnifiedPage() {
   // ── Selection / detail panel ────────────────────────────────────────────
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [removingBgId, setRemovingBgId] = useState<string | null>(null);
+  const [editingImgId, setEditingImgId] = useState<string | null>(null);
 
   // ── Multi-select (bulk) + per-tile delete ────────────────────────────────
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -353,6 +355,12 @@ export default function MediaLibraryUnifiedPage() {
   useEffect(() => {
     void fetchAssets();
   }, [fetchAssets]);
+
+  // Clear a stale action error when a different asset is opened, so a past failure
+  // doesn't linger on a freshly-selected image.
+  useEffect(() => {
+    setErrorMsg(null);
+  }, [selectedId]);
 
   // Refresh when media is created elsewhere (e.g. the Content Assistant chat
   // generating images) so new items appear live, no manual reload.
@@ -671,6 +679,31 @@ export default function MediaLibraryUnifiedPage() {
       setErrorMsg(err instanceof Error ? err.message : 'Background removal failed.');
     } finally {
       setRemovingBgId(null);
+    }
+  }, [authFetch, fetchAssets]);
+
+  // Edit an image by instruction (Flux Kontext) — changes only what's described,
+  // keeps the rest, saves a new copy and jumps to it.
+  const handleEditImage = useCallback(async (asset: UnifiedMediaAsset, instruction: string) => {
+    setEditingImgId(asset.id);
+    setErrorMsg(null);
+    try {
+      const res = await authFetch('/api/content/image/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId: asset.id, instruction }),
+      });
+      const data = (await res.json()) as { success: boolean; asset?: UnifiedMediaAsset; error?: string };
+      if (!res.ok || !data.success || !data.asset) {
+        setErrorMsg(data.error ?? 'Edit failed. Try rewording the change.');
+        return;
+      }
+      await fetchAssets();
+      setSelectedId(data.asset.id);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Edit failed. Try rewording the change.');
+    } finally {
+      setEditingImgId(null);
     }
   }, [authFetch, fetchAssets]);
 
@@ -1163,6 +1196,11 @@ export default function MediaLibraryUnifiedPage() {
                   void handleRemoveBackground(a);
                 }}
                 removingBackground={removingBgId === selectedAsset.id}
+                onEditImage={(instruction) => {
+                  void handleEditImage(selectedAsset, instruction);
+                }}
+                editingImage={editingImgId === selectedAsset.id}
+                actionError={errorMsg}
               />
             </div>
           ) : (
@@ -1459,6 +1497,9 @@ interface AssetDetailPanelProps {
   onAssignProject: (project: string) => void;
   onRemoveBackground: (asset: UnifiedMediaAsset) => void;
   removingBackground: boolean;
+  onEditImage: (instruction: string) => void;
+  editingImage: boolean;
+  actionError: string | null;
 }
 
 function AssetDetailPanel({
@@ -1480,6 +1521,9 @@ function AssetDetailPanel({
   onAssignProject,
   onRemoveBackground,
   removingBackground,
+  onEditImage,
+  editingImage,
+  actionError,
 }: AssetDetailPanelProps) {
   const Icon = typeIcon(asset.type);
   const showImage = asset.type === 'image' || Boolean(asset.thumbnailUrl);
@@ -1487,13 +1531,22 @@ function AssetDetailPanel({
   const [draftName, setDraftName] = useState(asset.name);
   const [projectDraft, setProjectDraft] = useState('');
   const [draftDescription, setDraftDescription] = useState(asset.description ?? '');
+  const [editInstruction, setEditInstruction] = useState('');
 
   // Reset inline editors when a different asset is opened.
   useEffect(() => {
     setEditingName(false);
     setProjectDraft('');
     setDraftDescription(asset.description ?? '');
+    setEditInstruction('');
   }, [asset.id, asset.description]);
+
+  const submitEdit = (): void => {
+    const next = editInstruction.trim();
+    if (next && !editingImage) {
+      onEditImage(next);
+    }
+  };
 
   const commitDescription = () => {
     if (draftDescription !== (asset.description ?? '')) {
@@ -1606,11 +1659,52 @@ function AssetDetailPanel({
             ) : (
               <Eraser className="h-3.5 w-3.5" />
             )}
-            {removingBackground ? 'Removing background…' : 'Remove white background'}
+            {removingBackground ? 'Removing background…' : 'Remove background'}
           </Button>
           <Caption className="mt-1.5 block text-muted-foreground">
-            Strips the solid white background and saves a transparent copy. Your original is kept.
+            Cuts out the subject and saves a transparent copy. Works on any background. Your original is kept.
           </Caption>
+
+          {/* Edit image — change part of it, keep the rest (Flux Kontext) */}
+          <div className="mt-3">
+            <Input
+              value={editInstruction}
+              onChange={(e) => setEditInstruction(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  submitEdit();
+                }
+              }}
+              placeholder="Describe a change, e.g. “make the logo bigger”"
+              disabled={editingImage}
+              className="h-8 text-xs"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={editingImage || !editInstruction.trim()}
+              onClick={submitEdit}
+              className="mt-1.5 w-full gap-2 text-xs"
+            >
+              {editingImage ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Wand2 className="h-3.5 w-3.5" />
+              )}
+              {editingImage ? 'Editing…' : 'Edit image'}
+            </Button>
+            <Caption className="mt-1.5 block text-muted-foreground">
+              Changes only what you describe and keeps the rest. Saves a new copy — your original stays.
+            </Caption>
+          </div>
+
+          {/* Surface the reason an action failed right here, where the operator clicked. */}
+          {actionError && (
+            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-2">
+              <Caption className="text-destructive">{actionError}</Caption>
+            </div>
+          )}
         </div>
       )}
 

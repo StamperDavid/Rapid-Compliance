@@ -111,6 +111,7 @@ const MOCK_PROFILE = {
   fullBodyImageUrl: null,
   upperBodyImageUrl: null,
   greenScreenClips: [] as never[],
+  looks: [] as never[],
   voiceId: 'voice-en-jake',
   voiceName: 'Jake',
   voiceProvider: 'hedra' as const,
