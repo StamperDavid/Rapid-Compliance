@@ -23,6 +23,7 @@ import { buildToolSystemPrompt } from '@/lib/brand/brand-dna-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { buildStoryboardFromBrief } from '@/lib/video/storyboard-build-service';
+import { listAvatarProfiles, type AvatarProfile } from '@/lib/video/avatar-profile-service';
 import { listAssets } from '@/lib/media/media-library-service';
 import { removeBackgroundAndSave } from '@/lib/media/remove-background-asset';
 import { editImageAndSave } from '@/lib/media/edit-image-asset';
@@ -126,6 +127,48 @@ function mapIntentToBrief(intent: ContentIntent): string {
 }
 
 /**
+ * Load the operator's saved Character Library characters (+ stock characters).
+ * Never throws — a lookup failure just means the chat runs without the cast block.
+ */
+async function loadSavedCharacters(userId: string): Promise<AvatarProfile[]> {
+  try {
+    return await listAvatarProfiles(userId);
+  } catch (err) {
+    logger.warn('[ContentManager] saved-character lookup failed', {
+      file: FILE,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
+/**
+ * Render the operator's saved characters as a compact prompt block the Content
+ * Manager can bind against. Each line carries the characterId + each Look's lookId
+ * so the model can put them straight into the intent's subjects. Empty string when
+ * the operator has no saved characters (the block is then omitted entirely).
+ */
+function formatSavedCharactersBlock(characters: AvatarProfile[]): string {
+  if (characters.length === 0) {
+    return '';
+  }
+  // Cap defensively so a large library can't blow out the prompt; saved characters
+  // are a curated cast, so this is generous in practice.
+  const lines = characters.slice(0, 40).map((c) => {
+    const dna = c.description ? ` — ${c.description}` : '';
+    const voice = c.voiceName ? ` Voice: ${c.voiceName}.` : '';
+    const looks = (c.looks ?? [])
+      .map(
+        (l) =>
+          `    • Look "${l.name}" (lookId: ${l.id})${l.outfitDescription ? ` — ${l.outfitDescription}` : ''}${l.isPrimary ? ' [primary]' : ''}`,
+      )
+      .join('\n');
+    return `- "${c.name}" (characterId: ${c.id})${dna}.${voice}${looks ? `\n  Looks:\n${looks}` : ''}`;
+  });
+  return `\n\n## SAVED CHARACTERS — the operator's reusable cast (PREFER these)\nThese are saved characters with LOCKED identities (each carries its own face, voice, and reference images). When the operator names or clearly means one of them, treat that subject AS the saved character:\n- Set the subject's "characterId" to the matching character's id.\n- If they pick (or you choose) a specific Look — an outfit/state — set the subject's "lookId" to that Look's id. Default to the [primary] Look when they don't specify one.\n- Match by name, case-insensitive, allowing nicknames and partials (e.g. "David" → "David - Professional").\n- A saved character does NOT need attached reference files — its identity comes from the saved profile. The operator may still attach extra references, which you map as usual.\n- Copy the character's key identity details into the subject's "notes" so the build keeps them consistent.\n${lines.join('\n')}`;
+}
+
+/**
  * Backstop for the approval turn: the proposal turn is SUPPOSED to carry a parseable
  * ```intent block, but the model occasionally emits malformed JSON or the wrong fence.
  * When the operator approves and no clean block is in history, re-derive the final
@@ -135,6 +178,7 @@ function mapIntentToBrief(intent: ContentIntent): string {
 async function forceIntent(
   messages: { role: 'user' | 'assistant'; content: string }[],
   attachments: Attachment[],
+  savedCharactersBlock: string,
 ): Promise<ContentIntent | null> {
   const refBlock = attachments.length > 0
     ? `\n\nATTACHED REFERENCE FILES (map these to the right characters by name + content):\n${attachments
@@ -142,8 +186,8 @@ async function forceIntent(
         .join('\n')}`
     : '';
   const sys = `From the conversation below, output ONLY a JSON object (no prose, no fences) capturing the operator's FINAL confirmed request, folding in every refinement they made. Match exactly:
-{"mediaType":"video|image|music|text","summary":"<plain summary>","subjects":[{"name":"<character>","referenceNames":["<attached file names depicting them>"],"fidelity":"exact|inspired|new"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat>"],"callToAction":"<ask>"}
-Default fidelity "exact" for the operator's named characters. Map references using both file names and the AI's read of each file. If a character appears in MULTIPLE forms (an alter ego, a costume change, a transformation — e.g. a civilian who becomes a hero, or a businessman who becomes a villain), model them as ONE subject with ONE shared reference set and describe the forms in "notes" — they are the SAME person (identical face, hair, beard) and only clothing/state changes.${refBlock}`;
+{"mediaType":"video|image|music|text","summary":"<plain summary>","subjects":[{"name":"<character>","referenceNames":["<attached file names depicting them>"],"fidelity":"exact|inspired|new","characterId":"<saved character id, if this subject IS a saved character>","lookId":"<chosen Look id, if any>"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat>"],"callToAction":"<ask>"}
+Default fidelity "exact" for the operator's named characters. Map references using both file names and the AI's read of each file. If a character appears in MULTIPLE forms (an alter ego, a costume change, a transformation — e.g. a civilian who becomes a hero, or a businessman who becomes a villain), model them as ONE subject with ONE shared reference set and describe the forms in "notes" — they are the SAME person (identical face, hair, beard) and only clothing/state changes. When a subject IS one of the SAVED characters listed below, set its "characterId" (and "lookId" for the chosen Look); omit both fields otherwise.${savedCharactersBlock}${refBlock}`;
   try {
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
@@ -279,10 +323,11 @@ When the operator has described something to make, reply with TWO parts, IN THIS
 2. THEN — and only then — a fenced \`intent\` block. THE OPERATOR NEVER SEES THIS BLOCK (it is stripped from the chat); it exists only to drive the build on approval. So your question MUST be in the summary above — never inside or after this block — and you must put NOTHING after the block. Keep the block COMPACT: its "summary" field is ONE sentence, not the full prose. Emit it EXACTLY in this shape:
 
 \`\`\`intent
-{"mediaType":"video|image|music|text","summary":"<one-sentence summary>","subjects":[{"name":"<character/subject>","referenceNames":["<attached file names that depict this subject>"],"fidelity":"exact|inspired|new"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat 1>","<beat 2>"],"callToAction":"<the ask>"}
+{"mediaType":"video|image|music|text","summary":"<one-sentence summary>","subjects":[{"name":"<character/subject>","referenceNames":["<attached file names that depict this subject>"],"fidelity":"exact|inspired|new","characterId":"<saved character id, only if this subject IS a saved character>","lookId":"<chosen Look id, only if a saved character with a chosen Look>"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat 1>","<beat 2>"],"callToAction":"<the ask>"}
 \`\`\`
 
 Rules for the intent:
+- SAVED CHARACTERS: if the operator names or clearly means one of their SAVED characters (listed under "SAVED CHARACTERS" below, when present), set that subject's "characterId" to the matching character's id, and "lookId" to the chosen Look's id (default the [primary] Look). A saved character's identity comes from its profile, so it needs no attached files. Omit both id fields for any subject that is NOT a saved character.
 - Map references to subjects using BOTH the file names AND the AI's read of each file (given below). Files clearly of the same person/character form that subject's reference set. The operator's naming convention is a strong identity hint.
 - SAME PERSON, MULTIPLE FORMS: if a character appears in more than one form — an alter ego, a costume change, a transformation (e.g. a civilian who becomes a hero, or a businessman who becomes a villain) — model them as ONE subject with ONE shared reference set, and spell the forms out in "notes". They MUST read as the same person across every scene — identical face, hair and beard — only clothing/state changes. Example note: "David is Velocity's civilian self — same exact face/hair/beard, in everyday clothes (no suit) in the early scenes; from the transformation on he is the suited Velocity. The Pipedrive Businessman is the Bully's human form — same face, business suit, who morphs into the armored Bully." Carry this into the story so the build keeps the identity consistent.
 - Default fidelity to "exact" when the operator gives references of named characters and asks to feature them (they want THEIR characters). Use "inspired" only when they say things like "something like this" / "similar but different". Use "new" when they ask you to invent.
@@ -305,6 +350,7 @@ type Attachment = z.infer<typeof AttachmentSchema>;
 async function buildSystemPrompt(
   activeTab: string | undefined,
   attachments: Attachment[],
+  savedCharactersBlock: string,
 ): Promise<string> {
   let brandContext = '';
   try {
@@ -329,7 +375,11 @@ async function buildSystemPrompt(
 - You shape and confirm the plan; the specialists do the production. Don't hand-write the final asset yourself.`;
 
   const tabBlock = `\n\n## CURRENT CONTEXT\n${describeActiveTab(activeTab)}`;
-  const protocolBlock = isContentGeneratorTab(activeTab) ? INTENT_PROTOCOL : '';
+  const onContentTab = isContentGeneratorTab(activeTab);
+  const protocolBlock = onContentTab ? INTENT_PROTOCOL : '';
+  // Only surface the saved cast where the intent protocol is active — that's the
+  // only place the model can act on it (emit characterId/lookId in an intent).
+  const characterBlock = onContentTab ? savedCharactersBlock : '';
 
   let referenceBlock = '';
   if (attachments.length > 0) {
@@ -357,7 +407,7 @@ async function buildSystemPrompt(
   }
   const brandBlock = brandContext ? `\n\n## BRAND VOICE & IDENTITY (stay in this voice)\n${brandContext}` : '';
 
-  return `${role}${tabBlock}${protocolBlock}${referenceBlock}${brandBlock}`;
+  return `${role}${tabBlock}${protocolBlock}${characterBlock}${referenceBlock}${brandBlock}`;
 }
 
 /**
@@ -530,13 +580,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Otherwise (ambiguous, no image) fall through to the normal flow.
     }
 
+    // Saved Character Library cast — surfaced to the model so it can bind a subject
+    // to a saved character (characterId/lookId). Loaded once on content tabs; reused
+    // by both the approval backstop (Phase B) and the proposal prompt (Phase A).
+    const savedCharactersBlock = onContentTab
+      ? formatSavedCharactersBlock(await loadSavedCharacters(authResult.user.uid))
+      : '';
+
     // ── PHASE B — the operator approved the pending understanding. Resolve the intent
     // (parsed block first, forceIntent backstop second) and build it.
     if (userApproves && hasPriorProposal) {
       // Re-derive the final intent from the WHOLE conversation (folds in every
       // refinement — e.g. a later "make it 90 seconds"). Fall back to the latest
       // embedded block only if that synthesis fails.
-      const priorIntent = (await forceIntent(parsed.messages, attachments)) ?? findPriorIntent(parsed.messages);
+      const priorIntent =
+        (await forceIntent(parsed.messages, attachments, savedCharactersBlock)) ??
+        findPriorIntent(parsed.messages);
       if (priorIntent?.mediaType === 'video') {
         // References come from the chat composer; if those didn't survive (e.g. a hard
         // refresh emptied it), resolve them from the media library by the intent's
@@ -556,6 +615,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           fromChat: attachments.length,
           fromLibrary: attachments.length === 0 ? buildAttachments.length : 0,
           durationSeconds: priorIntent.format.durationSeconds ?? 30,
+          // Subjects bound to a saved Character Library character (Step 1 binding).
+          boundCharacters: priorIntent.subjects.filter((s) => s.characterId).length,
         });
         const built = await buildStoryboardFromBrief({
           brief: mapIntentToBrief(priorIntent),
@@ -567,6 +628,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               : 30,
           ...(priorIntent.callToAction ? { callToAction: priorIntent.callToAction } : {}),
           ...(buildAttachments.length > 0 ? { attachments: buildAttachments } : {}),
+          // Subjects carry any saved-character bindings (characterId/lookId); the build
+          // resolves them to face + Look anchors and sets each scene's avatarId.
+          ...(priorIntent.subjects.length > 0 ? { subjects: priorIntent.subjects } : {}),
         });
         if ('error' in built) {
           logger.warn('[ContentManager] Video build failed', { file: FILE, error: built.error });
@@ -647,7 +711,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // ── PHASE A — interpret the request and PROPOSE the understanding (no build).
-    const systemPrompt = await buildSystemPrompt(parsed.activeTab, attachments);
+    const systemPrompt = await buildSystemPrompt(parsed.activeTab, attachments, savedCharactersBlock);
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
       model: 'claude-sonnet-4.6',

@@ -32,6 +32,12 @@ export type SubjectFidelity = z.infer<typeof SubjectFidelitySchema>;
  * it and how faithfully to reproduce it. `referenceNames` are matched against the
  * attached files' names AND their AI vision summaries, so the naming convention
  * helps but is not the only signal.
+ *
+ * When the subject IS one of the operator's SAVED characters (Character Library),
+ * `characterId` binds it to that AvatarProfile and `lookId` (optional) to the
+ * chosen Look (outfit/state). A saved character carries its own locked face,
+ * voice, and reference images, so the build resolves its identity anchors from
+ * the profile rather than needing attached files.
  */
 export const IntentSubjectSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -39,6 +45,10 @@ export const IntentSubjectSchema = z.object({
   fidelity: SubjectFidelitySchema.default('exact'),
   /** Free-text per-character guidance, e.g. "civilian in Acts 1–3, suited from Act 4". */
   notes: z.string().trim().max(2000).optional(),
+  /** AvatarProfile id when this subject is a saved Character Library character. */
+  characterId: z.string().trim().max(200).optional(),
+  /** CharacterLook id when the operator picked a specific Look (outfit/state) of that character. */
+  lookId: z.string().trim().max(200).optional(),
 });
 export type IntentSubject = z.infer<typeof IntentSubjectSchema>;
 

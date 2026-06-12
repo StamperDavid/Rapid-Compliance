@@ -24,7 +24,15 @@ import {
   defaultStructuredFields,
   type StructuredDefaults,
 } from '@/lib/video/storyboard-completeness';
+import { pickSubjectForScene } from '@/lib/video/storyboard-thumbnail';
+import {
+  getAvatarProfile,
+  type AvatarProfile,
+  type CharacterLook,
+} from '@/lib/video/avatar-profile-service';
+import { logger } from '@/lib/logger/logger';
 import type { AgentMessage } from '@/lib/agents/types';
+import type { IntentSubject } from '@/lib/content/content-intent';
 import type { CinematicConfig } from '@/types/creative-studio';
 import type { SceneReference } from '@/types/video-pipeline';
 
@@ -47,6 +55,10 @@ export interface AssistantStoryboard {
   cinematicConfig?: Partial<CinematicConfig>;
   /** Uploaded reference material seeded onto the scene (e.g. the operator's attached photo). */
   references?: SceneReference[];
+  /** Saved Character Library character bound to this scene (per-scene avatar override). */
+  avatarId?: string | null;
+  /** Display name for the bound saved character (Cast group). */
+  avatarName?: string | null;
 }
 
 /** A reference file the operator attached in the Content Assistant chat. */
@@ -82,6 +94,13 @@ export interface BuildStoryboardInput {
    * attached as `video` references, but no clip is decomposed into scenes.)
    */
   attachments?: BriefAttachment[];
+  /**
+   * The CONFIRMED intent subjects. Subjects bound to a saved Character Library
+   * character (`characterId`) are resolved here to their face anchor + chosen
+   * Look's wardrobe images, seeded onto the storyboard's references, and matched
+   * to the scenes that feature them (sets `avatarId`/`avatarName` + wardrobe).
+   */
+  subjects?: IntentSubject[];
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -142,6 +161,122 @@ function mapSpecialistScene(
     ...structured,
     ...(scene.backgroundPrompt ? { backgroundPrompt: scene.backgroundPrompt } : {}),
   };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Saved Character Library binding
+// ────────────────────────────────────────────────────────────────────────────
+
+/** A subject bound to a saved character, resolved to its profile + chosen Look. */
+interface BoundCharacter {
+  subject: IntentSubject;
+  profile: AvatarProfile;
+  look: CharacterLook | null;
+}
+
+/**
+ * Resolve every subject bound to a saved Character Library character
+ * (`subject.characterId`) into its profile + the chosen Look (explicit `lookId`,
+ * else the primary Look, else the first). A characterId that doesn't resolve is
+ * skipped with a warning — the build degrades to text / attached references rather
+ * than failing.
+ */
+async function resolveBoundCharacters(subjects: IntentSubject[]): Promise<BoundCharacter[]> {
+  const bound: BoundCharacter[] = [];
+  for (const subject of subjects) {
+    if (!subject.characterId) {
+      continue;
+    }
+    const profile = await getAvatarProfile(subject.characterId);
+    if (!profile) {
+      logger.warn('[StoryboardBuild] bound characterId did not resolve', {
+        file: 'storyboard-build-service.ts',
+        characterId: subject.characterId,
+        subject: subject.name,
+      });
+      continue;
+    }
+    const looks = profile.looks ?? [];
+    const look =
+      (subject.lookId ? looks.find((l) => l.id === subject.lookId) : undefined) ??
+      looks.find((l) => l.isPrimary) ??
+      looks[0] ??
+      null;
+    bound.push({ subject, profile, look });
+  }
+  return bound;
+}
+
+/**
+ * The saved characters' face anchor + chosen Look images as scene references, NAMED
+ * by the subject so the per-scene reference matcher (matchSubjectForScene) links them
+ * to the scenes that feature the character. The frontal image is the identity anchor;
+ * the Look images carry wardrobe/styling.
+ */
+function characterReferences(bound: BoundCharacter[]): SceneReference[] {
+  const refs: SceneReference[] = [];
+  for (const { subject, profile, look } of bound) {
+    if (profile.frontalImageUrl) {
+      refs.push({
+        id: randomUUID(),
+        type: 'image',
+        name: `${subject.name} (face)`,
+        url: profile.frontalImageUrl,
+        purpose: 'character',
+        usage: `Saved character "${profile.name}" — face / identity anchor. Keep this person's face exact across every scene; the scene and Look supply wardrobe, pose, and setting.`,
+      });
+    }
+    for (const url of look?.imageUrls ?? []) {
+      if (!url) {
+        continue;
+      }
+      refs.push({
+        id: randomUUID(),
+        type: 'image',
+        name: subject.name,
+        url,
+        purpose: 'character',
+        usage: `Saved character "${profile.name}"${look ? ` — Look "${look.name}"` : ''}: wardrobe / styling reference.`,
+      });
+    }
+  }
+  return refs;
+}
+
+/**
+ * Bind each scene to the saved character it features: match the scene's text to a
+ * bound subject by name and set the scene's `avatarId` / `avatarName` + adopt the
+ * chosen Look's wardrobe. Mutates the storyboards in place; returns the match count.
+ */
+function applyBoundCharactersToScenes(
+  storyboards: AssistantStoryboard[],
+  bound: BoundCharacter[],
+): number {
+  if (bound.length === 0) {
+    return 0;
+  }
+  const subjects = bound.map((b) => b.subject);
+  let matched = 0;
+  for (const sb of storyboards) {
+    const subject = pickSubjectForScene(sb, subjects);
+    if (!subject) {
+      continue;
+    }
+    const hit = bound.find((b) => b.subject === subject);
+    if (!hit) {
+      continue;
+    }
+    sb.avatarId = hit.profile.id;
+    sb.avatarName = hit.profile.name;
+    const outfit = hit.look?.outfitDescription?.trim();
+    if (outfit) {
+      // The chosen Look IS this character's wardrobe for the video — it wins over the
+      // specialist's generic guess so the character stays on-model across scenes.
+      sb.wardrobe = outfit;
+    }
+    matched += 1;
+  }
+  return matched;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -246,13 +381,30 @@ export async function buildStoryboardFromBrief(
     prev = mapped;
   }
 
+  // Resolve any saved Character Library characters bound in the intent, bind them to
+  // the scenes that feature them (avatarId/avatarName + Look wardrobe), and collect
+  // their face + Look images to seed onto the storyboard references below.
+  const boundCharacters = await resolveBoundCharacters(input.subjects ?? []);
+  const charRefs = characterReferences(boundCharacters);
+  if (boundCharacters.length > 0) {
+    const matchedScenes = applyBoundCharactersToScenes(storyboards, boundCharacters);
+    logger.info('[StoryboardBuild] saved characters bound', {
+      file: 'storyboard-build-service.ts',
+      characters: boundCharacters.length,
+      matchedScenes,
+      characterReferences: charRefs.length,
+    });
+  }
+
   // Seed the operator's attached images (and reference videos) onto the first
   // storyboard as real scene references so they reach the canvas (third context
   // channel alongside structured fields + the chat conversation). Images are the
   // primary visual reference; videos ride along as `video` references the
   // operator can reuse — deep video-to-video decomposition is deferred.
   if (storyboards.length > 0) {
-    const references: SceneReference[] = [];
+    // Saved-character anchors lead the pool (identity first), then the operator's
+    // attached images and reference videos.
+    const references: SceneReference[] = [...charRefs];
     for (const img of imageAttachments) {
       references.push({
         id: randomUUID(),

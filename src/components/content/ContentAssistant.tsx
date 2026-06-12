@@ -63,6 +63,9 @@ interface AssistantStoryboard {
   backgroundPrompt?: string;
   cinematicConfig?: CinematicConfig;
   references?: SceneReference[];
+  /** Saved character bound to this scene by the build (per-scene avatar override). */
+  avatarId?: string | null;
+  avatarName?: string | null;
 }
 
 /** A file the operator attached in the composer (uploaded → permanent URL). */
@@ -161,8 +164,9 @@ function storyboardToScene(sb: AssistantStoryboard, sceneNumber: number): Omit<P
     scriptText: sb.scriptText ?? '',
     visualDescription: sb.visualDescription ?? '',
     screenshotUrl: null,
-    avatarId: null,
-    avatarName: null,
+    // Saved character bound to this scene by the build (per-scene avatar override).
+    avatarId: sb.avatarId ?? null,
+    avatarName: sb.avatarName ?? null,
     voiceId: null,
     voiceProvider: null,
     duration: sb.duration ?? 5,
@@ -763,8 +767,8 @@ export function ContentAssistant() {
           scriptText: sb.scriptText ?? '',
           visualDescription: sb.visualDescription ?? '',
           screenshotUrl: null,
-          avatarId: null,
-          avatarName: null,
+          avatarId: sb.avatarId ?? null,
+          avatarName: sb.avatarName ?? null,
           voiceId: null,
           voiceProvider: null,
           duration: sb.duration ?? 5,
