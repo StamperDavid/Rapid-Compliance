@@ -130,6 +130,12 @@ const BUILD_COMMAND_RE =
 const EDIT_CUE_RE =
   /\b(change|instead|but |except|swap|replace|remove|drop |more |less |bigger|smaller|different|without|shorter|longer|tweak|adjust|fix|\d+\s*(?:seconds?|secs?|minutes?|mins?)|\bscene\b|\bcharacter\b|wardrobe|colou?r|palette|faster|slower|\btone\b|\bmood\b|\bmusic\b|\bvoice\b|narrat|caption|act\s*\d)\b/i;
 
+// An approval that LEADS the message, even with trailing notes that aren't a change
+// to this build (e.g. "approved, in the future don't add blur unless I ask"). The
+// EDIT_CUE_RE guard above still wins, so "approved but make it shorter" re-proposes.
+const APPROVAL_PREFIX_RE =
+  /^\s*(?:yes|yep|yeah|yup|sure|ok|okay|approve[d]?|go ahead|go for it|go|do it|make it|build it|proceed|ship it|send it|perfect|correct|that'?s right|looks? good|sounds? good|love it|lgtm)\b/i;
+
 /**
  * True when the operator's message is a clear go-ahead to BUILD the pending proposal —
  * a bare affirmation OR a build/redo command — and carries no substantive content
@@ -143,5 +149,5 @@ export function isApproval(text: string): boolean {
   if (EDIT_CUE_RE.test(t)) {
     return false;
   }
-  return APPROVAL_RE.test(t) || BUILD_COMMAND_RE.test(t);
+  return APPROVAL_RE.test(t) || BUILD_COMMAND_RE.test(t) || APPROVAL_PREFIX_RE.test(t);
 }

@@ -41,6 +41,21 @@ export interface GreenScreenClip {
   createdAt: string; // ISO string
 }
 
+/**
+ * A "Look" (alter ego) for a character. SAME face/identity as the parent
+ * AvatarProfile, but a distinct outfit/state with its own reference set.
+ * Examples: "David (civilian)" vs "Velocity (hero)" — one face, two looks.
+ */
+export interface CharacterLook {
+  id: string; // crypto.randomUUID()
+  name: string; // e.g. "David (civilian)", "Velocity (hero)"
+  outfitDescription: string; // e.g. "jeans and a grey t-shirt" / "dark armor, glowing purple energy"
+  imageUrls: string[]; // reference images for THIS look
+  videoUrls: string[]; // reference video clips for this look (e.g. chroma-key walk)
+  audioUrls: string[]; // optional audio references for this look
+  isPrimary: boolean; // the default look for the character
+}
+
 export type AvatarTier = 'premium' | 'standard';
 
 /** Character source — 'custom' = user-created in Character Studio, 'hedra' = imported from Hedra library */
@@ -74,6 +89,10 @@ export interface AvatarProfile {
   // Green screen video clips — AI training data for digital clone (premium tier)
   greenScreenClips: GreenScreenClip[]; // Multiple clips = richer AI avatar generation
 
+  // Looks — alter egos sharing the SAME face/identity, each with its own
+  // outfit/state and its own reference set (images, video, audio).
+  looks: CharacterLook[];
+
   // Voice identity — decoupled from character image, always changeable
   // Hedra voices use native TTS (audio_generation); ElevenLabs/UnrealSpeech use audio upload
   voiceId: string | null;
@@ -104,6 +123,7 @@ export interface CreateAvatarProfileData {
   fullBodyImageUrl?: string | null;
   upperBodyImageUrl?: string | null;
   greenScreenClips?: GreenScreenClip[];
+  looks?: CharacterLook[];
   voiceId?: string | null;
   voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
@@ -123,6 +143,7 @@ export interface UpdateAvatarProfileData {
   fullBodyImageUrl?: string | null;
   upperBodyImageUrl?: string | null;
   greenScreenClips?: GreenScreenClip[];
+  looks?: CharacterLook[];
   voiceId?: string | null;
   voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
@@ -148,6 +169,7 @@ interface FirestoreAvatarProfileDoc {
   fullBodyImageUrl: string | null;
   upperBodyImageUrl: string | null;
   greenScreenClips: GreenScreenClip[];
+  looks: CharacterLook[];
   voiceId: string | null;
   voiceName: string | null;
   voiceProvider: VoiceProvider | null;
@@ -203,6 +225,7 @@ function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarPr
     fullBodyImageUrl: data.fullBodyImageUrl ?? null,
     upperBodyImageUrl: data.upperBodyImageUrl ?? null,
     greenScreenClips: clips,
+    looks: data.looks ?? [],
     voiceId: data.voiceId ?? null,
     voiceName: data.voiceName ?? null,
     voiceProvider: data.voiceProvider ?? null,
@@ -249,6 +272,7 @@ export async function createAvatarProfile(
       fullBodyImageUrl: data.fullBodyImageUrl ?? null,
       upperBodyImageUrl: data.upperBodyImageUrl ?? null,
       greenScreenClips,
+      looks: data.looks ?? [],
       voiceId: data.voiceId ?? null,
       voiceName: data.voiceName ?? null,
       voiceProvider: data.voiceProvider ?? null,
@@ -287,6 +311,7 @@ export async function createAvatarProfile(
       fullBodyImageUrl: profileData.fullBodyImageUrl,
       upperBodyImageUrl: profileData.upperBodyImageUrl,
       greenScreenClips,
+      looks: profileData.looks,
       voiceId: profileData.voiceId,
       voiceName: profileData.voiceName,
       voiceProvider: profileData.voiceProvider,
@@ -454,6 +479,9 @@ export async function updateAvatarProfile(
     }
     if (updates.greenScreenClips !== undefined) {
       updateData.greenScreenClips = updates.greenScreenClips;
+    }
+    if (updates.looks !== undefined) {
+      updateData.looks = updates.looks;
     }
     if (updates.voiceId !== undefined) {
       updateData.voiceId = updates.voiceId;

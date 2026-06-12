@@ -179,13 +179,19 @@ export default function VideoStudioPage() {
       const response = await authFetch(`/api/video/project/${id}`, { method: 'DELETE' });
       if (response.ok) {
         setProjects((prev) => prev.filter((p) => p.id !== id));
+        // If the project being deleted is the one currently loaded in the store,
+        // clear it — otherwise auto-save keeps POSTing to the now-deleted doc (500s)
+        // and the editor keeps GETting it (404s) forever.
+        if (id === projectId) {
+          reset();
+        }
       }
     } catch {
       // ignore — row stays
     } finally {
       setDeletingProjectId(null);
     }
-  }, [authFetch]);
+  }, [authFetch, projectId, reset]);
 
   // Auto-load project from ?load={projectId} URL parameter
   useEffect(() => {

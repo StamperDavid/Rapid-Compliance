@@ -92,6 +92,38 @@ async function getFalApiKey(): Promise<string> {
   throw new Error('Fal.ai API key not configured. Add it in Settings > API Keys.');
 }
 
+// ─── Background Removal (subject cutout) ─────────────────────────────────
+
+const BG_REMOVAL_MODEL = 'fal-ai/birefnet';
+
+/**
+ * Remove the background from an image using Fal.ai BiRefNet — a real subject
+ * segmentation model (NOT a generator): it returns the original subject on a
+ * transparent background, so it works on ANY background, not just solid white.
+ * Returns the cut-out image bytes (PNG with alpha).
+ */
+export async function removeBackgroundWithFal(imageUrl: string): Promise<Buffer> {
+  const apiKey = await getFalApiKey();
+  const res = await fetch(`${FAL_BASE_URL}/${BG_REMOVAL_MODEL}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_url: imageUrl }),
+  });
+  if (!res.ok) {
+    throw new Error(`Fal background removal failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+  }
+  const data = (await res.json()) as { image?: { url?: string }; images?: Array<{ url?: string }> };
+  const outUrl = data.image?.url ?? data.images?.[0]?.url;
+  if (!outUrl) {
+    throw new Error('Fal background removal returned no image');
+  }
+  const imgRes = await fetch(outUrl);
+  if (!imgRes.ok) {
+    throw new Error(`Could not fetch the cut-out result (${imgRes.status})`);
+  }
+  return Buffer.from(await imgRes.arrayBuffer());
+}
+
 // ─── Size Resolution ─────────────────────────────────────────────────
 
 function resolveImageSize(

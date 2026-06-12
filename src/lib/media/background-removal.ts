@@ -31,6 +31,38 @@ const DEFAULT_WHITE_THRESHOLD = 235;
 const DEFAULT_FEATHER_THRESHOLD = 200;
 
 /**
+ * Heuristic: is this image sitting on a solid white / near-white background? We
+ * sample the border pixels — if ~all of them are near-white, the fast deterministic
+ * white-key is exact and free; otherwise the subject needs a real cutout model.
+ */
+export async function isSolidWhiteBackground(
+  input: Buffer,
+  whiteThreshold = DEFAULT_WHITE_THRESHOLD,
+): Promise<boolean> {
+  const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
+  if (width === 0 || height === 0) { return false; }
+  let white = 0;
+  let total = 0;
+  const check = (idx: number): void => {
+    const o = idx * 4;
+    total += 1;
+    if (data[o] >= whiteThreshold && data[o + 1] >= whiteThreshold && data[o + 2] >= whiteThreshold) {
+      white += 1;
+    }
+  };
+  for (let x = 0; x < width; x += 1) {
+    check(x);
+    check((height - 1) * width + x);
+  }
+  for (let y = 0; y < height; y += 1) {
+    check(y * width);
+    check(y * width + (width - 1));
+  }
+  return total > 0 && white / total >= 0.9;
+}
+
+/**
  * Strip the connected near-white background from an image and return a transparent
  * PNG buffer. The source artwork pixels are preserved exactly.
  */
