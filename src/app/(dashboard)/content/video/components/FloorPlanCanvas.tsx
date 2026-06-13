@@ -382,7 +382,8 @@ export function FloorPlanCanvas({
         onPointerUp={handlePointerUp}
         onPointerDown={handleStageClick}
       >
-        {/* Backdrop image, if set */}
+        {/* Semi-transparent top-down render underlaying the blocking — a birds-eye
+            of the set so the camera/marker overlay reads clearly on top of it. */}
         {plan.backdropImageUrl && (
           <image
             href={plan.backdropImageUrl}
@@ -391,6 +392,7 @@ export function FloorPlanCanvas({
             width={STAGE_W}
             height={STAGE_H}
             preserveAspectRatio="xMidYMid slice"
+            opacity={0.55}
           />
         )}
 
