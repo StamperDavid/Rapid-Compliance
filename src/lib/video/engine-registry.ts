@@ -2,7 +2,9 @@
  * Video Engine Registry
  * Client-safe constants — no server imports
  *
- * Hedra is the sole video generation engine.
+ * Hedra is the default video generation engine. fal (Seedance) is registered
+ * additively as a second engine (Phase 0 of the video-engine migration) — it is
+ * available but does NOT change Hedra's default behavior anywhere in the app.
  */
 
 import type { VideoEngineId } from '@/types/video-pipeline';
@@ -33,12 +35,25 @@ export const HEDRA_ENGINE_CONFIG: VideoEngineConfig = {
   apiKeyServiceId: 'hedra',
 };
 
+export const FAL_ENGINE_CONFIG: VideoEngineConfig = {
+  id: 'fal',
+  label: 'Seedance (fal)',
+  icon: 'Clapperboard',
+  description: 'ByteDance Seedance 2.0 via fal — reference-to-video that casts a saved character into new scenes from reference images/video',
+  costPer5Seconds: 8,
+  quality: 'high',
+  bestFor: ['reference-to-video', 'character-consistency', 'scene-progression', 'cinematic'],
+  integrationStatus: 'available',
+  apiKeyServiceId: 'fal',
+};
+
 export const VIDEO_ENGINE_REGISTRY: Record<VideoEngineId, VideoEngineConfig> = {
   hedra: HEDRA_ENGINE_CONFIG,
+  fal: FAL_ENGINE_CONFIG,
 } as const;
 
-/** Ordered list of engine IDs for UI display */
-export const ENGINE_ORDER: VideoEngineId[] = ['hedra'];
+/** Ordered list of engine IDs for UI display. Hedra stays first (default). */
+export const ENGINE_ORDER: VideoEngineId[] = ['hedra', 'fal'];
 
 /** Returns the Hedra engine config — engineId parameter retained for call-site compatibility */
 export function getEngineConfig(_engineId?: string | null): VideoEngineConfig {

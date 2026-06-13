@@ -70,6 +70,30 @@ const DEFAULT_THEME: ThemeConfig = {
 };
 
 /**
+ * Build a COMPLETE colors object from a (possibly partial) saved palette, guaranteeing
+ * every group + field exists so the CSS-var application can NEVER crash on a missing
+ * value. A missing color falls back to the app's standard DEFAULT_THEME value for that
+ * exact slot — never `transparent` (which made un-set colors invisible / the whole UI
+ * black) and never a fabricated brand color.
+ */
+function fillColors(saved: unknown): ThemeConfig['colors'] {
+  const savedColors = (saved && typeof saved === 'object' ? saved : {}) as Record<string, Record<string, string>>;
+  const defaults = DEFAULT_THEME.colors as unknown as Record<string, Record<string, string>>;
+  const out: Record<string, Record<string, string>> = {};
+  for (const [group, fields] of Object.entries(defaults)) {
+    const sg = savedColors[group];
+    const savedGroup: Record<string, string> = sg && typeof sg === 'object' ? sg : {};
+    const filled: Record<string, string> = {};
+    for (const [key, defVal] of Object.entries(fields)) {
+      const v = savedGroup[key];
+      filled[key] = typeof v === 'string' && v.trim().length > 0 ? v : defVal;
+    }
+    out[group] = filled;
+  }
+  return out as ThemeConfig['colors'];
+}
+
+/**
  * Hook to load platform theme from Firestore
  * Loads global theme config and applies CSS variables to document.documentElement
  */
@@ -84,7 +108,25 @@ export function useOrgTheme() {
         const themeData = await FirestoreService.get('platform_settings', 'theme');
 
         if (themeData) {
-          setTheme({ ...DEFAULT_THEME, ...themeData } as ThemeConfig);
+          // Deep-merge each section against DEFAULT_THEME so a partial saved palette
+          // can NEVER leave a group (e.g. colors.primary) undefined. A naive shallow
+          // spread would replace the whole `colors`/`typography`/`layout` object with
+          // the saved partial and crash the CSS-var application on a missing field.
+          const saved = themeData as Partial<ThemeConfig>;
+          setTheme({
+            colors: fillColors(saved.colors),
+            typography: {
+              fontFamily: { ...DEFAULT_THEME.typography.fontFamily, ...saved.typography?.fontFamily },
+              fontSize: { ...DEFAULT_THEME.typography.fontSize, ...saved.typography?.fontSize },
+              fontWeight: { ...DEFAULT_THEME.typography.fontWeight, ...saved.typography?.fontWeight },
+            },
+            layout: {
+              borderRadius: { ...DEFAULT_THEME.layout.borderRadius, ...saved.layout?.borderRadius },
+              spacing: { ...DEFAULT_THEME.layout.spacing, ...saved.layout?.spacing },
+              shadow: { ...DEFAULT_THEME.layout.shadow, ...saved.layout?.shadow },
+            },
+            branding: { ...DEFAULT_THEME.branding, ...saved.branding },
+          });
         }
       } catch (error) {
         logger.error('Failed to load platform theme:', error instanceof Error ? error : new Error(String(error)), { file: 'useOrgTheme.ts' });
@@ -116,32 +158,44 @@ export function useOrgTheme() {
       if (rgb) { root.style.setProperty(`${name}-rgb`, rgb); }
     };
 
+    // Safe color read: a missing group OR field falls back to the app's standard
+    // DEFAULT_THEME value for that slot (never `transparent`, never a fabricated brand
+    // color), so a partial saved theme can never blank or crash this effect. This is
+    // belt-and-suspenders with fillColors() on load.
+    const defaultColors = DEFAULT_THEME.colors as unknown as Record<string, Record<string, string>>;
+    const col = (group: string, field: string): string => {
+      const groups = theme.colors as unknown as Record<string, Record<string, string> | undefined>;
+      const v = groups[group]?.[field];
+      if (typeof v === 'string' && v.length > 0) { return v; }
+      return defaultColors[group]?.[field] ?? '#000000';
+    };
+
     // Apply color variables (with auto-generated RGB companions)
-    setColor('--color-primary', theme.colors.primary.main);
-    root.style.setProperty('--color-primary-light', theme.colors.primary.light);
-    root.style.setProperty('--color-primary-dark', theme.colors.primary.dark);
-    root.style.setProperty('--color-primary-contrast', theme.colors.primary.contrast);
-    setColor('--color-secondary', theme.colors.secondary.main);
-    setColor('--color-accent', theme.colors.accent.main);
-    setColor('--color-success', theme.colors.success.main);
-    setColor('--color-error', theme.colors.error.main);
-    setColor('--color-warning', theme.colors.warning.main);
-    setColor('--color-info', theme.colors.info.main);
+    setColor('--color-primary', col('primary', 'main'));
+    root.style.setProperty('--color-primary-light', col('primary', 'light'));
+    root.style.setProperty('--color-primary-dark', col('primary', 'dark'));
+    root.style.setProperty('--color-primary-contrast', col('primary', 'contrast'));
+    setColor('--color-secondary', col('secondary', 'main'));
+    setColor('--color-accent', col('accent', 'main'));
+    setColor('--color-success', col('success', 'main'));
+    setColor('--color-error', col('error', 'main'));
+    setColor('--color-warning', col('warning', 'main'));
+    setColor('--color-info', col('info', 'main'));
 
     // Background colors
-    root.style.setProperty('--color-bg-main', theme.colors.background.main);
-    root.style.setProperty('--color-bg-paper', theme.colors.background.paper);
-    root.style.setProperty('--color-bg-elevated', theme.colors.background.elevated);
+    root.style.setProperty('--color-bg-main', col('background', 'main'));
+    root.style.setProperty('--color-bg-paper', col('background', 'paper'));
+    root.style.setProperty('--color-bg-elevated', col('background', 'elevated'));
 
     // Text colors
-    root.style.setProperty('--color-text-primary', theme.colors.text.primary);
-    root.style.setProperty('--color-text-secondary', theme.colors.text.secondary);
-    setColor('--color-text-disabled', theme.colors.text.disabled);
+    root.style.setProperty('--color-text-primary', col('text', 'primary'));
+    root.style.setProperty('--color-text-secondary', col('text', 'secondary'));
+    setColor('--color-text-disabled', col('text', 'disabled'));
 
     // Border colors
-    root.style.setProperty('--color-border-main', theme.colors.border.main);
-    root.style.setProperty('--color-border-light', theme.colors.border.light);
-    root.style.setProperty('--color-border-strong', theme.colors.border.strong);
+    root.style.setProperty('--color-border-main', col('border', 'main'));
+    root.style.setProperty('--color-border-light', col('border', 'light'));
+    root.style.setProperty('--color-border-strong', col('border', 'strong'));
 
     // Typography
     root.style.setProperty('--font-heading', theme.typography.fontFamily.heading);

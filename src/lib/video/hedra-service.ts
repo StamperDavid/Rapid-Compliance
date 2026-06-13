@@ -17,7 +17,13 @@
 import { logger } from '@/lib/logger/logger';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getHedraCatalog } from './hedra-capability-service';
+import {
+  getHedraCatalog,
+  acceptsReference,
+  maxReferenceImages,
+  modelInputRoles,
+  type HedraModel as HedraCatalogModel,
+} from './hedra-capability-service';
 
 // ============================================================================
 // Constants
@@ -229,7 +235,7 @@ async function downloadFile(url: string): Promise<{ arrayBuffer: ArrayBuffer; co
 async function uploadAssetFromUrl(
   apiKey: string,
   sourceUrl: string,
-  assetType: 'image' | 'audio',
+  assetType: 'image' | 'audio' | 'video',
   name: string,
 ): Promise<string> {
   // Step 1: Download the file from the source URL
@@ -266,8 +272,16 @@ async function uploadAssetFromUrl(
     file: 'hedra-service.ts',
   });
 
-  // Step 3: Upload binary data via multipart POST to /assets/{id}/upload
-  const fileName = assetType === 'image' ? `${name}.png` : `${name}.mp3`;
+  // Step 3: Upload binary data via multipart POST to /assets/{id}/upload.
+  // Pick an extension by asset kind so Hedra (and any CDN sniffing the name)
+  // sees the right container. Video keeps an .mp4 extension — the chroma-key
+  // motion clip that drives character-into-scene placement is uploaded here.
+  const extByType: Record<'image' | 'audio' | 'video', string> = {
+    image: 'png',
+    audio: 'mp3',
+    video: 'mp4',
+  };
+  const fileName = `${name}.${extByType[assetType]}`;
   const formData = new FormData();
   formData.append('file', new Blob([arrayBuffer], { type: contentType }), fileName);
 
@@ -471,6 +485,338 @@ export async function generateHedraAvatarVideo(
     modelId,
     imageAssetId,
     audioMode: audioAssetId ? 'uploaded' : 'inline-tts',
+  });
+}
+
+// ============================================================================
+// Public API — Character Conditioning (start frame + reference images + voice)
+// ============================================================================
+
+/**
+ * A single character's conditioning material for a scene. The lead character is
+ * the only one wired today, but this is an ARRAY-friendly shape so future
+ * multi-character scenes (background extras, second speaker) plug in by adding
+ * more entries — see the multi-character extension point in `generateHedraCharacterVideo`.
+ */
+export interface HedraCharacterReference {
+  /** The identity anchor / start frame — typically the character's frontal portrait. */
+  portraitUrl: string;
+  /**
+   * Additional reference images that lock wardrobe, body angles and styling:
+   * the matched Look's images + the character's full-body / upper-body / extra
+   * angles. The frontal portrait should NOT be repeated here.
+   */
+  referenceImageUrls: string[];
+}
+
+export interface HedraCharacterVideoOptions extends HedraGenerateOptions {
+  /**
+   * Reference sets, one per character. Only `characters[0]` (the bound lead) is
+   * conditioned today; the array shape is the multi-character extension point.
+   */
+  characters: HedraCharacterReference[];
+}
+
+/**
+ * Result of selecting a reference-capable video model from the live catalog.
+ */
+interface ReferenceModelSelection {
+  model: HedraCatalogModel;
+  maxReferences: number;
+}
+
+/**
+ * Pick a video model from the LIVE catalog that can be conditioned on BOTH a
+ * start frame AND reference images. Returns null when no such model exists (the
+ * caller then falls back to portrait-only Character-3 / prompt mode).
+ *
+ * Selection criteria (all verified against the live catalog at runtime — nothing
+ * hardcoded): type === 'video', accepts a `reference` input slot, and accepts a
+ * `start_frame` input slot. We prefer character-tagged models (Hedra tags its
+ * identity-consistency models `character`) and, among those, the one offering the
+ * most reference slots so we can carry the richest identity set.
+ */
+async function selectReferenceCapableVideoModel(): Promise<ReferenceModelSelection | null> {
+  const catalog = await getHedraCatalog();
+
+  const candidates = catalog.filter((m) => {
+    if (m.type !== 'video') { return false; }
+    if (!acceptsReference(m)) { return false; }
+    // Must also take a start frame so the portrait anchors the identity.
+    return modelInputRoles(m).includes('start_frame');
+  });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  // Prefer character-tagged models, then the most reference slots.
+  candidates.sort((a, b) => {
+    const aChar = (a.tags ?? []).includes('character') ? 1 : 0;
+    const bChar = (b.tags ?? []).includes('character') ? 1 : 0;
+    if (aChar !== bChar) { return bChar - aChar; }
+    return maxReferenceImages(b) - maxReferenceImages(a);
+  });
+
+  const model = candidates[0];
+  return { model, maxReferences: Math.max(1, maxReferenceImages(model)) };
+}
+
+/**
+ * Generate a video CONDITIONED on a saved character's identity: the portrait as
+ * the start frame PLUS reference images (the matched wardrobe Look + body angles)
+ * so the character renders consistently across scenes — whether SPEAKING (voice
+ * + script → inline TTS) or SILENT (start frame + references, no audio).
+ *
+ * This selects a reference-capable video model from the LIVE catalog. If none is
+ * available, the catalog fetch fails, or no reference images were supplied, it
+ * returns `null` so the caller can fall back to the existing portrait-only
+ * Character-3 path (speaking) or the prompt path. It never throws for these
+ * fallback conditions — only a genuine submit/upload failure propagates.
+ *
+ * MULTI-CHARACTER EXTENSION POINT: `options.characters` is an array. Today only
+ * the lead (`characters[0]`) is conditioned — its portrait is the start frame and
+ * its references fill the reference slots. To support background extras / a second
+ * speaker, merge each additional character's portrait+references into the reference
+ * set here (respecting `maxReferences`), and adjust the model selection to a
+ * multi-subject model. Left single-character on purpose — multi is out of scope.
+ */
+export async function generateHedraCharacterVideo(
+  options: HedraCharacterVideoOptions,
+): Promise<HedraGenerationResult | null> {
+  const lead = options.characters[0];
+  if (!lead?.portraitUrl) {
+    return null;
+  }
+
+  // De-dupe references and drop the portrait if it leaked into the reference set.
+  const dedupedReferences = Array.from(
+    new Set(lead.referenceImageUrls.filter((u) => u && u !== lead.portraitUrl)),
+  );
+
+  if (dedupedReferences.length === 0) {
+    // No identity references beyond the portrait — let the caller use the
+    // portrait-only path instead (this function adds nothing here).
+    return null;
+  }
+
+  let selection: ReferenceModelSelection | null;
+  try {
+    selection = await selectReferenceCapableVideoModel();
+  } catch (err) {
+    logger.warn('Hedra catalog fetch failed during reference-model selection', {
+      error: err instanceof Error ? err.message : String(err),
+      file: 'hedra-service.ts',
+    });
+    return null;
+  }
+
+  if (!selection) {
+    logger.info('No reference-capable Hedra video model in catalog — caller should fall back', {
+      file: 'hedra-service.ts',
+    });
+    return null;
+  }
+
+  const { model, maxReferences } = selection;
+  // Cap to the model's declared maximum reference slots.
+  const references = dedupedReferences.slice(0, maxReferences);
+
+  const useInlineTTS = Boolean(options.hedraVoiceId && options.speechText);
+
+  const apiKey = await getHedraApiKey();
+
+  logger.info('Hedra character-conditioned generation starting', {
+    modelSlug: model.slug,
+    modelId: model.id,
+    references: references.length,
+    maxReferences,
+    mode: useInlineTTS ? 'speaking-inline-tts' : 'silent-no-audio',
+    file: 'hedra-service.ts',
+  });
+
+  // Upload portrait (start frame) + references in parallel → asset ids.
+  const [startId, referenceIds] = await Promise.all([
+    uploadAssetFromUrl(apiKey, lead.portraitUrl, 'image', 'character-portrait'),
+    Promise.all(
+      references.map((u, i) => uploadAssetFromUrl(apiKey, u, 'image', `character-reference-${i}`)),
+    ),
+  ]);
+
+  const payload: HedraGenerationPayload & { reference_image_ids?: string[] } = {
+    type: 'video',
+    ai_model_id: model.id,
+    start_keyframe_id: startId,
+    generated_video_inputs: {
+      text_prompt: options.textPrompt ?? '',
+      resolution: options.resolution ?? '720p',
+      aspect_ratio: options.aspectRatio ?? '16:9',
+      duration_ms: options.durationMs ?? 10000,
+    },
+  };
+  if (referenceIds.length > 0) {
+    payload.reference_image_ids = referenceIds;
+  }
+  // Speaking → inline TTS. Silent → omit audio entirely (start frame + references only).
+  if (useInlineTTS && options.hedraVoiceId && options.speechText) {
+    payload.audio_generation = {
+      type: 'text_to_speech',
+      voice_id: options.hedraVoiceId,
+      text: options.speechText,
+    };
+  }
+
+  return submitHedraGeneration(apiKey, payload, {
+    mode: 'character-conditioned',
+    modelSlug: model.slug,
+    modelId: model.id,
+    references: referenceIds.length,
+    audioMode: useInlineTTS ? 'inline-tts' : 'silent',
+  });
+}
+
+// ============================================================================
+// Public API — Video-Driven Character Conditioning (PRIMARY, chroma-key clip)
+// ============================================================================
+
+/**
+ * Options for the PRIMARY, video-driven character path.
+ *
+ * The reusable character is driven by a **chroma-key (green-screen) motion clip**
+ * of that character. Casting the character into a new scene = feeding that clip as
+ * the model's `input_video` plus a text scene prompt, so Hedra places the same
+ * character (motion + identity preserved) into the described environment.
+ */
+export interface HedraCharacterClipVideoOptions extends HedraGenerateOptions {
+  /** Public URL to the character's chroma-key (green-screen) motion clip. */
+  sourceVideoUrl: string;
+}
+
+/**
+ * Pick a video model from the LIVE catalog that accepts an `input_video` slot, so
+ * a chroma-key character clip can drive the render. Returns null when no such
+ * model exists (caller then falls back to the image-reference / portrait / prompt
+ * paths). Nothing is hardcoded — the role is confirmed against the live catalog.
+ *
+ * Preference: models that REQUIRE an input video (`requires_input_video`) are the
+ * purpose-built video-to-video / restyle models and rank first; then we prefer
+ * character-tagged models so identity consistency is strongest.
+ */
+async function selectInputVideoCapableModel(): Promise<HedraCatalogModel | null> {
+  const catalog = await getHedraCatalog();
+
+  const candidates = catalog.filter((m) => {
+    if (m.type !== 'video') { return false; }
+    return modelInputRoles(m).includes('input_video');
+  });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  candidates.sort((a, b) => {
+    const aReq = a.requires_input_video ? 1 : 0;
+    const bReq = b.requires_input_video ? 1 : 0;
+    if (aReq !== bReq) { return bReq - aReq; }
+    const aChar = (a.tags ?? []).includes('character') ? 1 : 0;
+    const bChar = (b.tags ?? []).includes('character') ? 1 : 0;
+    return bChar - aChar;
+  });
+
+  return candidates[0];
+}
+
+/**
+ * PRIMARY character path: cast a saved character into a new scene by driving the
+ * render with the character's **chroma-key (green-screen) motion clip** as the
+ * model's `input_video`, plus a text scene prompt. Hedra preserves the character's
+ * identity + motion from the clip and places it into the described environment
+ * (e.g. a comic superhero walking through a real grocery store).
+ *
+ * Works SPEAKING (voice + script → inline TTS) or SILENT (input_video + prompt,
+ * no audio).
+ *
+ * Selects an `input_video`-capable video model from the LIVE catalog, uploads the
+ * clip as a VIDEO asset, and submits it in the `input_video` role. Returns `null`
+ * — never throws — when there is no clip, no input-video-capable model, the
+ * catalog fetch fails, or the clip upload fails, so the caller falls back to the
+ * image-reference path, then portrait-only Character-3, then the prompt path.
+ */
+export async function generateHedraCharacterVideoFromClip(
+  options: HedraCharacterClipVideoOptions,
+): Promise<HedraGenerationResult | null> {
+  const sourceVideoUrl = options.sourceVideoUrl?.trim();
+  if (!sourceVideoUrl) {
+    return null;
+  }
+
+  let model: HedraCatalogModel | null;
+  try {
+    model = await selectInputVideoCapableModel();
+  } catch (err) {
+    logger.warn('Hedra catalog fetch failed during input-video model selection', {
+      error: err instanceof Error ? err.message : String(err),
+      file: 'hedra-service.ts',
+    });
+    return null;
+  }
+
+  if (!model) {
+    logger.info('No input_video-capable Hedra video model in catalog — caller should fall back', {
+      file: 'hedra-service.ts',
+    });
+    return null;
+  }
+
+  const useInlineTTS = Boolean(options.hedraVoiceId && options.speechText);
+  const apiKey = await getHedraApiKey();
+
+  // Upload the chroma-key clip as a VIDEO asset → asset id for the input_video slot.
+  let inputVideoId: string;
+  try {
+    inputVideoId = await uploadAssetFromUrl(apiKey, sourceVideoUrl, 'video', 'character-clip');
+  } catch (err) {
+    logger.warn('Hedra chroma-clip upload failed — caller should fall back', {
+      modelSlug: model.slug,
+      error: err instanceof Error ? err.message : String(err),
+      file: 'hedra-service.ts',
+    });
+    return null;
+  }
+
+  logger.info('Hedra video-driven character generation starting', {
+    modelSlug: model.slug,
+    modelId: model.id,
+    requiresInputVideo: Boolean(model.requires_input_video),
+    mode: useInlineTTS ? 'speaking-inline-tts' : 'silent-no-audio',
+    file: 'hedra-service.ts',
+  });
+
+  const payload: HedraGenerationPayload & { input_video_id?: string } = {
+    type: 'video',
+    ai_model_id: model.id,
+    input_video_id: inputVideoId,
+    generated_video_inputs: {
+      text_prompt: options.textPrompt ?? '',
+      resolution: options.resolution ?? '720p',
+      aspect_ratio: options.aspectRatio ?? '16:9',
+      duration_ms: options.durationMs ?? 10000,
+    },
+  };
+  // Speaking → inline TTS. Silent → omit audio (input_video + prompt only).
+  if (useInlineTTS && options.hedraVoiceId && options.speechText) {
+    payload.audio_generation = {
+      type: 'text_to_speech',
+      voice_id: options.hedraVoiceId,
+      text: options.speechText,
+    };
+  }
+
+  return submitHedraGeneration(apiKey, payload, {
+    mode: 'character-video-driven',
+    modelSlug: model.slug,
+    modelId: model.id,
+    audioMode: useInlineTTS ? 'inline-tts' : 'silent',
   });
 }
 

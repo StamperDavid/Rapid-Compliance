@@ -14,9 +14,10 @@ interface ProviderStatusEntry {
 
 type ProviderStatusMap = Record<VideoEngineId, ProviderStatusEntry>;
 
-/** Hedra is the sole video engine — check its API key configuration */
+/** Video engines whose API-key configuration we surface to the UI. */
 const CHECKABLE_ENGINES: Array<{ id: VideoEngineId; service: APIServiceName }> = [
   { id: 'hedra', service: 'hedra' },
+  { id: 'fal', service: 'fal' },
 ];
 
 export async function GET(request: NextRequest) {
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
 
     const providers: ProviderStatusMap = {
       hedra: { configured: false },
+      fal: { configured: false },
     };
 
     for (const [id, status] of statusEntries) {

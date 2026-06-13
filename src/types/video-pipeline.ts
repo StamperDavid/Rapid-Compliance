@@ -9,6 +9,7 @@
 import type { VideoAspectRatio, VideoResolution } from './video';
 import type { CinematicConfig } from './creative-studio';
 import type { SceneAutoGrade } from './scene-grading';
+import type { ShotPlan, ShotPlanShotTransition } from './shot-plan';
 
 // ============================================================================
 // Pipeline Step Definitions
@@ -93,7 +94,7 @@ export const TARGET_PLATFORM_LABELS: Record<TargetPlatform, string> = {
 // Engine Types
 // ============================================================================
 
-export type VideoEngineId = 'hedra';
+export type VideoEngineId = 'hedra' | 'fal';
 
 // ============================================================================
 // Scene Types
@@ -170,6 +171,16 @@ export interface PipelineScene {
   musicCue?: string;   // Sound — music direction, e.g. "uplifting corporate underscore building to CTA"
   wardrobe?: string;   // Cast — "Smart-casual blazer, no tie"
   references?: SceneReference[]; // References — uploaded context (image/video/audio/text)
+
+  // ── Shot Plan bridge (additive, all optional) ─────────────────────────────
+  // Populated when a scene is derived from a ShotPlan shot. These let the existing
+  // generation pipeline + editor carry the Shot Plan's extra signals without any
+  // existing scene losing meaning when they are absent.
+  transitionIn?: ShotPlanShotTransition; // 'continue' = chain from prior shot's last frame
+  castMemberIds?: string[];              // Shot Plan cast references (into ShotPlanSharedChoices.cast)
+  lastFrameUrl?: string;                 // Saved final frame — chaining anchor for a 'continue' scene
+  seed?: number;                         // Generation seed carried from the plan
+  sourcePlanShotId?: string;             // The ShotPlanShot.id this scene was mapped from
 }
 
 export interface SceneGenerationResult {
@@ -251,6 +262,14 @@ export interface PipelineProject {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+
+  /**
+   * Optional Shot Plan draft. When present it autosaves/loads with the project via
+   * the existing persistence mechanism. Additive — projects without a Shot Plan are
+   * unaffected. `shotPlanToScenes()` derives `scenes` from this when the plan drives
+   * generation.
+   */
+  shotPlan?: ShotPlan;
 }
 
 // ============================================================================

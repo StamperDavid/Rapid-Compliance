@@ -9,9 +9,12 @@
 import { logger } from '@/lib/logger/logger';
 import {
   generateHedraAvatarVideo,
+  generateHedraCharacterVideo,
+  generateHedraCharacterVideoFromClip,
   generateHedraPromptVideo,
   getHedraVideoStatus,
 } from '@/lib/video/hedra-service';
+import type { AvatarProfile, CharacterLook } from '@/lib/video/avatar-profile-service';
 import { buildPromptFromPresets } from '@/lib/ai/cinematic-presets';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio } from '@/types/video';
@@ -199,6 +202,228 @@ async function generateAvatarScene(
 }
 
 // ============================================================================
+// Character Reference Assembly — turn a saved character into Hedra conditioning
+// ============================================================================
+
+/** Lowercase word tokens (length ≥ 3) for case-insensitive overlap matching. */
+function wardrobeTokens(text: string | null | undefined): Set<string> {
+  if (!text) {
+    return new Set<string>();
+  }
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length >= 3),
+  );
+}
+
+/**
+ * Pick the character Look that best fits the scene's wardrobe:
+ *   1. The Look whose `outfitDescription` shares the most word tokens with
+ *      `scene.wardrobe` (case-insensitive). Ties / zero-overlap fall through.
+ *   2. The Look flagged `isPrimary`.
+ *   3. The first Look.
+ *   4. None.
+ */
+function pickLook(looks: CharacterLook[], wardrobe: string | undefined): CharacterLook | null {
+  if (looks.length === 0) {
+    return null;
+  }
+
+  const wanted = wardrobeTokens(wardrobe);
+  if (wanted.size > 0) {
+    let best: CharacterLook | null = null;
+    let bestScore = 0;
+    for (const look of looks) {
+      const tokens = wardrobeTokens(look.outfitDescription);
+      let score = 0;
+      for (const t of wanted) {
+        if (tokens.has(t)) { score++; }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = look;
+      }
+    }
+    if (best && bestScore > 0) {
+      return best;
+    }
+  }
+
+  return looks.find((l) => l.isPrimary) ?? looks[0];
+}
+
+/** Max reference images we assemble for a character (the model may cap lower). */
+const MAX_CHARACTER_REFERENCES = 4;
+
+/**
+ * Assemble a character's reference image URLs for conditioning, in priority order:
+ * matched Look images → additional angles → full-body → upper-body. The frontal
+ * portrait is the start frame and is excluded. De-duped and capped.
+ */
+function assembleCharacterReferences(profile: AvatarProfile, wardrobe: string | undefined): string[] {
+  const look = pickLook(profile.looks ?? [], wardrobe);
+
+  const ordered: string[] = [
+    ...(look?.imageUrls ?? []),
+    ...(profile.additionalImageUrls ?? []),
+    ...(profile.fullBodyImageUrl ? [profile.fullBodyImageUrl] : []),
+    ...(profile.upperBodyImageUrl ? [profile.upperBodyImageUrl] : []),
+  ];
+
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const url of ordered) {
+    if (!url || url === profile.frontalImageUrl || seen.has(url)) {
+      continue;
+    }
+    seen.add(url);
+    deduped.push(url);
+  }
+
+  return deduped.slice(0, MAX_CHARACTER_REFERENCES);
+}
+
+/**
+ * Resolve the character's chroma-key (green-screen) motion clip for the PRIMARY
+ * video-driven path. Preference:
+ *   1. The first usable `greenScreenClips[].videoUrl` (the trained character clip).
+ *   2. Else the matched Look's first `videoUrls[]` entry (same Look `pickLook`
+ *      chooses for the scene wardrobe).
+ * Returns null when the character has no chroma clip — the caller then falls back
+ * to the image-reference path.
+ */
+function resolveChromaClipUrl(profile: AvatarProfile, wardrobe: string | undefined): string | null {
+  for (const clip of profile.greenScreenClips ?? []) {
+    const url = clip?.videoUrl?.trim();
+    if (url) {
+      return url;
+    }
+  }
+
+  const look = pickLook(profile.looks ?? [], wardrobe);
+  for (const url of look?.videoUrls ?? []) {
+    const trimmed = url?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * PRIMARY character path: cast the bound character into the scene by driving the
+ * render with the character's chroma-key motion clip (`input_video`) + a text
+ * scene prompt. Works SPEAKING (voice + script → inline TTS) or SILENT (clip +
+ * prompt, no audio).
+ *
+ * Returns the scene result on success, or `null` when the video-driven path is
+ * unavailable (no input-video-capable model, catalog failure, or clip upload
+ * failure) so the caller can fall back to the image-reference path.
+ */
+async function generateCharacterClipScene(
+  scene: PipelineScene,
+  sourceVideoUrl: string,
+  voiceId: string | null,
+  aspectRatio: VideoAspectRatio,
+): Promise<SceneGenerationResult | null> {
+  const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+  const textPrompt = buildHedraTextPrompt(scene);
+  const script = scene.scriptText?.trim() || '';
+  const speaking = Boolean(voiceId && script);
+
+  logger.info('Submitting video-driven character Hedra generation (chroma clip → input_video)', {
+    sceneId: scene.id,
+    mode: speaking ? 'speaking' : 'silent',
+    file: 'scene-generator.ts',
+  });
+
+  const response = await generateHedraCharacterVideoFromClip({
+    sourceVideoUrl,
+    textPrompt,
+    aspectRatio: hedraAspectRatio,
+    resolution: '1080p',
+    durationMs: scene.duration * 1000,
+    hedraVoiceId: speaking && voiceId ? voiceId : undefined,
+    speechText: speaking ? script : undefined,
+  });
+
+  if (!response) {
+    return null;
+  }
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: response.generationId,
+    provider: 'hedra',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
+/**
+ * Generate a scene conditioned on the FULL identity of a bound character:
+ * portrait (start frame) + reference images (matched Look + body angles) + voice.
+ * Works whether the character is SPEAKING (voice + script → inline TTS) or SILENT
+ * (start frame + references, no audio).
+ *
+ * Returns the scene result on success, or `null` when the character-conditioned
+ * path is unavailable (no reference-capable model, catalog failure, or no
+ * references) so the caller can fall back to the portrait-only / prompt path.
+ */
+async function generateCharacterScene(
+  scene: PipelineScene,
+  portraitUrl: string,
+  references: string[],
+  voiceId: string | null,
+  aspectRatio: VideoAspectRatio,
+): Promise<SceneGenerationResult | null> {
+  const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+  const textPrompt = buildHedraTextPrompt(scene);
+  const script = scene.scriptText?.trim() || '';
+  const speaking = Boolean(voiceId && script);
+
+  logger.info('Submitting character-conditioned Hedra generation', {
+    sceneId: scene.id,
+    references: references.length,
+    mode: speaking ? 'speaking' : 'silent',
+    file: 'scene-generator.ts',
+  });
+
+  const response = await generateHedraCharacterVideo({
+    // MULTI-CHARACTER EXTENSION POINT: push more entries for background extras /
+    // a second speaker. Only the lead is wired today.
+    characters: [{ portraitUrl, referenceImageUrls: references }],
+    textPrompt,
+    aspectRatio: hedraAspectRatio,
+    resolution: '1080p',
+    durationMs: scene.duration * 1000,
+    hedraVoiceId: speaking && voiceId ? voiceId : undefined,
+    speechText: speaking ? script : undefined,
+  });
+
+  if (!response) {
+    return null;
+  }
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: response.generationId,
+    provider: 'hedra',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
+// ============================================================================
 // Scene Generation
 // ============================================================================
 
@@ -226,6 +451,8 @@ export async function generateScene(
     // ── AVATAR MODE: user selected a premium character ───────────────────
     if (effectiveAvatarId) {
       let photoUrl: string | null = null;
+      let characterReferences: string[] = [];
+      let chromaClipUrl: string | null = null;
 
       try {
         const { getAvatarProfile, getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
@@ -236,6 +463,15 @@ export async function generateScene(
           if (!resolvedVoiceId && profile.voiceId) {
             resolvedVoiceId = profile.voiceId;
           }
+
+          // PRIMARY conditioning material: the character's chroma-key motion clip
+          // (green-screen clip → matched Look video). Drives the video-driven path.
+          chromaClipUrl = resolveChromaClipUrl(profile, scene.wardrobe);
+
+          // Assemble the character's identity reference images (matched Look +
+          // body angles) so the bound character renders consistently — used for
+          // both speaking and silent scenes.
+          characterReferences = assembleCharacterReferences(profile, scene.wardrobe);
 
           // Enhance visual description with character metadata
           try {
@@ -251,8 +487,72 @@ export async function generateScene(
         }
       } catch { /* profile load failed */ }
 
+      // ── (a) PRIMARY: video-driven path (chroma-key clip → input_video) ──
+      // Casting the character into the scene = the green-screen motion clip as
+      // the model's input_video + a text scene prompt, so Hedra places the same
+      // character (motion + identity preserved) into the new environment. Runs
+      // SPEAKING (voice + script → inline TTS) or SILENT (clip + prompt, no
+      // audio). Returns null when there is no input-video-capable model / catalog
+      // fetch fails / clip upload fails — then we fall through to the image-
+      // reference path (b) below.
+      if (chromaClipUrl) {
+        logger.info('Generating video-driven character scene (chroma clip → input_video)', {
+          sceneId: scene.id,
+          avatarId: effectiveAvatarId,
+          hasVoice: Boolean(resolvedVoiceId),
+          file: 'scene-generator.ts',
+        });
+        const clipResult = await generateCharacterClipScene(
+          scene,
+          chromaClipUrl,
+          resolvedVoiceId,
+          aspectRatio,
+        );
+        if (clipResult) {
+          return clipResult;
+        }
+        logger.info('Video-driven character path unavailable — falling back to image references', {
+          sceneId: scene.id,
+          avatarId: effectiveAvatarId,
+          file: 'scene-generator.ts',
+        });
+      }
+
+      // ── (b) Image-reference path: condition the render on the character's FULL
+      // identity (portrait start frame + reference images + voice). This runs
+      // whether the character is SPEAKING (voice + script → inline TTS) or SILENT
+      // (start frame + references, no audio). Returns null when no reference-
+      // capable model is in the catalog / catalog fetch fails / no references —
+      // then we fall back to the portrait-only or prompt path below.
+      if (photoUrl && characterReferences.length > 0) {
+        logger.info('Generating character-conditioned scene (start frame + references)', {
+          sceneId: scene.id,
+          avatarId: effectiveAvatarId,
+          references: characterReferences.length,
+          hasVoice: Boolean(resolvedVoiceId),
+          file: 'scene-generator.ts',
+        });
+        const characterResult = await generateCharacterScene(
+          scene,
+          photoUrl,
+          characterReferences,
+          resolvedVoiceId,
+          aspectRatio,
+        );
+        if (characterResult) {
+          return characterResult;
+        }
+        logger.info('Character-conditioned path unavailable — falling back', {
+          sceneId: scene.id,
+          avatarId: effectiveAvatarId,
+          file: 'scene-generator.ts',
+        });
+      }
+
+      // Fallback: portrait-only Character 3 (talking head) when we have a photo
+      // and a voice but couldn't condition on references.
       if (photoUrl && resolvedVoiceId) {
-        logger.info('Generating avatar scene (Character 3)', {
+        logger.info('Generating avatar scene (Character 3, portrait-only)', {
           sceneId: scene.id,
           avatarId: effectiveAvatarId,
           file: 'scene-generator.ts',
