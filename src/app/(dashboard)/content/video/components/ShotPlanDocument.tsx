@@ -194,10 +194,10 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
         </div>
       </div>
 
-      {/* ══ Top row: Section 1 (Characters & Objects) | Section 2 (Environment + Floor Plan) ══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2">
+      {/* ══ Section 1 (Characters & Objects), then Section 2 (Environment + Floor Plan) ══ */}
+      <div>
         {/* SECTION 1 — CHARACTERS & OBJECTS */}
-        <section className="border-b border-zinc-800 px-6 py-5 lg:border-r">
+        <section className="border-b border-zinc-800 px-6 py-5">
           <SectionLabel n={1}>Characters &amp; Objects</SectionLabel>
           {sharedChoices.cast.length === 0 && objects.length === 0 ? (
             <p className="text-xs text-zinc-600">No cast or objects yet.</p>
@@ -218,11 +218,11 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
                     {views.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {views.slice(0, 6).map((v, i) => (
-                          <figure key={`${v.imageUrl}-${i}`} className="w-[74px]">
-                            <div className="relative h-24 w-[74px] overflow-hidden rounded border border-zinc-700 bg-zinc-900">
-                              <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes="74px" unoptimized className="object-cover" />
+                          <figure key={`${v.imageUrl}-${i}`} className="w-28">
+                            <div className="relative h-40 w-28 overflow-hidden rounded border border-zinc-700 bg-zinc-900">
+                              <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes="112px" unoptimized className="object-cover" />
                             </div>
-                            <figcaption className="mt-0.5 text-center text-[8px] font-bold uppercase tracking-[0.1em] text-zinc-500">
+                            <figcaption className="mt-1 text-center text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-400">
                               {v.label}
                             </figcaption>
                           </figure>
