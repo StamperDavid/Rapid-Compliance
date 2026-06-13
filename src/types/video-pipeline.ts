@@ -47,15 +47,15 @@ export function normalizePipelineStep(step: PipelineStep): PipelineStep {
 
 export const PIPELINE_STEP_LABELS: Record<PipelineStep, string> = {
   'request': 'Studio',
-  'storyboard': 'Storyboard',
+  'storyboard': 'Shot Plan',
   'generation': 'Generate',
   'assembly': 'Assembly',
   'post-production': 'Post-Production',
   'publish': 'Publish',
   // Legacy labels (not displayed but keeps TypeScript happy)
-  'decompose': 'Storyboard',
-  'pre-production': 'Storyboard',
-  'approval': 'Storyboard',
+  'decompose': 'Shot Plan',
+  'pre-production': 'Shot Plan',
+  'approval': 'Shot Plan',
 } as const;
 
 // ============================================================================

@@ -41,6 +41,7 @@ import {
 } from './types';
 import type { MediaItem } from '@/types/media-library';
 import type { PipelineProject } from '@/types/video-pipeline';
+import { takeEditorSeed } from '@/lib/video/editor-seed';
 
 interface RenderResponse {
   success: boolean;
@@ -87,6 +88,32 @@ export default function VideoEditorPage() {
   //    into each scene's video, so it rides along with the clip. ───────────────
   const projectLoadedRef = useRef(false);
   const [projectLoad, setProjectLoad] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  // ── Shot Plan handoff: when the operator clicks "Open in editor" on the Shot
+  //    Plan, the generated clips are passed through sessionStorage. Read + clear
+  //    them once on mount and seed the timeline in plan order. One-shot so a
+  //    later manual visit does not re-seed stale clips. ─────────────────────────
+  const seedTakenRef = useRef(false);
+  useEffect(() => {
+    if (seedTakenRef.current) { return; }
+    seedTakenRef.current = true;
+    // Don't clobber an edit already in progress.
+    if (clips.length > 0) { return; }
+    const seed = takeEditorSeed();
+    if (!seed || seed.clips.length === 0) { return; }
+    for (const clip of seed.clips) {
+      dispatch({
+        type: 'ADD_CLIP',
+        clip: {
+          name: clip.name,
+          url: clip.url,
+          thumbnailUrl: clip.thumbnailUrl,
+          duration: clip.duration,
+          source: 'project',
+        },
+      });
+    }
+  }, [clips.length]);
 
   useEffect(() => {
     if (projectLoadedRef.current) { return; }

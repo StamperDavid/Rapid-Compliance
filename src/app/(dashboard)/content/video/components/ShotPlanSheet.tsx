@@ -28,8 +28,9 @@
  * existing /content/video Storyboard step (toggled from StepStoryboard).
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
   Sparkles,
   Plus,
@@ -50,6 +51,15 @@ import {
   RefreshCw,
   ListVideo,
   Palette,
+  Clock,
+  CheckCircle2,
+  Clapperboard,
+  PlayCircle,
+  FileUp,
+  LibraryBig,
+  FileVideo,
+  FileText,
+  File as FileIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -72,6 +82,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import { CinematicControlsPanel } from '@/components/studio/CinematicControlsPanel';
 import { ConstructedPromptDisplay } from '@/components/studio/ConstructedPromptDisplay';
+import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/MediaLibraryPicker';
 import { AvatarPicker } from './AvatarPicker';
 import {
   applyShotPlanEdit,
@@ -83,11 +94,14 @@ import {
   makeBlankShot,
   castMemberFromProfile,
 } from '@/lib/video/shot-plan-blank';
+import { shotPlanToScenes } from '@/lib/video/shot-plan-mapping';
+import { writeEditorSeed, type EditorSeedClip } from '@/lib/video/editor-seed';
 import type {
   ShotPlan,
   ShotPlanShot,
   ShotPlanCastMember,
   ShotPlanShotTransition,
+  ShotPlanShotGenerationStatus,
 } from '@/types/shot-plan';
 import type { CinematicConfig } from '@/types/creative-studio';
 
@@ -109,6 +123,54 @@ interface EditFieldResponse {
 }
 
 type EditTarget = 'shared' | 'shot' | 'plan';
+
+// ============================================================================
+// Reference materials — upload + select-from-library, parity with the Content
+// Assistant. We reuse its exact upload route, analyze route, MediaLibraryPicker,
+// and chip pattern. The planner consumes each reference's description (the LLM is
+// text-only), so we have the agent "understand" every file before generation.
+// ============================================================================
+
+type ReferenceKind = 'image' | 'video' | 'document' | 'other';
+
+/** A reference the operator attached to shape the plan. */
+interface ShotPlanReferenceAttachment {
+  /** Local-only id so we can key + remove chips. */
+  id: string;
+  url: string;
+  fileName: string;
+  contentType: string;
+  kind: ReferenceKind;
+  /** Object-URL preview for images (revoked on remove). */
+  previewUrl?: string;
+  /** True while the agent is reading the file. */
+  analyzing?: boolean;
+  /** The agent's read of the file — what the planner actually consumes. */
+  description?: string;
+}
+
+/** The payload shape the generate route expects for each reference. */
+interface ShotPlanReferencePayload {
+  url: string;
+  description?: string;
+  kind?: string;
+}
+
+/** Map a reference attachment onto the medium icon it should show. */
+function referenceMedium(att: ShotPlanReferenceAttachment): ReferenceKind {
+  if (att.kind === 'image' || att.kind === 'video' || att.kind === 'document') {
+    return att.kind;
+  }
+  return 'other';
+}
+
+/** Map a media-library asset's type onto our reference kind. */
+function libraryAssetKind(type: LibraryAsset['type']): ReferenceKind {
+  if (type === 'image' || type === 'video' || type === 'document') {
+    return type;
+  }
+  return 'other';
+}
 
 /** Map a shot's camera package + look fields onto a CinematicConfig (display). */
 function shotCameraToConfig(shot: ShotPlanShot): CinematicConfig {
@@ -469,11 +531,35 @@ function CastCard({ member, onRemove }: { member: ShotPlanCastMember; onRemove: 
 // Shot card — every per-shot field, manual + Ask AI, plus shot-level actions
 // ============================================================================
 
+/** Visual descriptor for a shot's generation status badge. */
+function statusBadge(status: ShotPlanShotGenerationStatus | undefined): {
+  label: string;
+  className: string;
+  icon: 'spin' | 'check' | 'alert' | 'clock';
+} | null {
+  switch (status) {
+    case 'processing':
+      return { label: 'Generating…', className: 'border-primary/40 bg-primary/10 text-primary-light', icon: 'spin' };
+    case 'completed':
+      return { label: 'Generated', className: 'border-green-500/40 bg-green-500/10 text-green-400', icon: 'check' };
+    case 'failed':
+      return { label: 'Failed', className: 'border-destructive/40 bg-destructive/10 text-destructive', icon: 'alert' };
+    case 'pending':
+      return { label: 'Queued', className: 'border-border-light bg-surface-elevated text-muted-foreground', icon: 'clock' };
+    default:
+      return null;
+  }
+}
+
 interface ShotCardProps {
   plan: ShotPlan;
   shot: ShotPlanShot;
   position: number;
   total: number;
+  /** This shot is generating right now (single-shot or part of a Generate-all run). */
+  isGenerating: boolean;
+  /** Any generation is in flight anywhere in the plan — disables shot-level actions. */
+  busy: boolean;
   onEditField: (field: keyof ShotPlanShot, value: ShotPlanShot[keyof ShotPlanShot]) => void;
   onAskAi: (field: keyof ShotPlanShot, label: string) => void;
   onMove: (dir: -1 | 1) => void;
@@ -489,6 +575,8 @@ function ShotCard({
   shot,
   position,
   total,
+  isGenerating,
+  busy,
   onEditField,
   onAskAi,
   onMove,
@@ -499,7 +587,10 @@ function ShotCard({
   onOpenCamera,
 }: ShotCardProps) {
   const [imgBroken, setImgBroken] = useState(false);
-  const keyframe = shot.generated?.videoUrl ?? shot.generated?.lastFrameUrl ?? null;
+  const generatedVideoUrl = shot.generated?.videoUrl ?? null;
+  const keyframe = shot.generated?.lastFrameUrl ?? shot.generated?.videoUrl ?? null;
+  const badge = statusBadge(shot.generated?.status);
+  const hasRun = Boolean(shot.generated?.videoUrl);
   const castNames = shot.castMemberIds
     .map((id) => plan.sharedChoices.cast.find((c) => c.characterId === id)?.name)
     .filter((n): n is string => Boolean(n));
@@ -545,6 +636,15 @@ function ShotCard({
               <AlertCircle className="w-3 h-3" /> May need review
             </span>
           )}
+          {badge && (
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${badge.className}`}>
+              {badge.icon === 'spin' && <Loader2 className="w-3 h-3 animate-spin" />}
+              {badge.icon === 'check' && <CheckCircle2 className="w-3 h-3" />}
+              {badge.icon === 'alert' && <AlertCircle className="w-3 h-3" />}
+              {badge.icon === 'clock' && <Clock className="w-3 h-3" />}
+              {badge.label}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -583,26 +683,48 @@ function ShotCard({
             An earlier shot changed — this one may need to be regenerated.
           </Caption>
           <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={onKeepUpstream}>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={onKeepUpstream} disabled={busy}>
               <Check className="w-3.5 h-3.5" /> Keep this output
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={onRerun} disabled title="Rerun is wired in the generation step">
-              <RefreshCw className="w-3.5 h-3.5" /> Rerun
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={onRerun}
+              disabled={busy}
+              title="Regenerate this shot with the updated upstream context"
+            >
+              {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              Rerun
             </Button>
           </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,_240px)_1fr] gap-4">
-        {/* Keyframe slot */}
+        {/* Generated clip / keyframe slot */}
         <div className="space-y-2">
           <div className="relative aspect-video overflow-hidden rounded-xl border border-border-strong bg-surface-elevated">
-            {keyframe && !imgBroken ? (
+            {generatedVideoUrl ? (
+              <video
+                src={generatedVideoUrl}
+                poster={shot.generated?.lastFrameUrl ?? undefined}
+                controls
+                playsInline
+                preload="metadata"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : keyframe && !imgBroken ? (
               <Image src={keyframe} alt={`Shot ${position + 1} keyframe`} fill unoptimized className="object-cover" onError={() => setImgBroken(true)} />
+            ) : isGenerating ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                <Caption>Generating this shot…</Caption>
+              </div>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
                 <ImageIcon className="h-7 w-7" />
-                <Caption>No keyframe yet</Caption>
+                <Caption>Not generated yet</Caption>
               </div>
             )}
           </div>
@@ -612,12 +734,13 @@ function ShotCard({
               size="sm"
               className="flex-1 gap-1.5"
               onClick={onRegenerate}
-              disabled
-              title="Single-shot generation is wired in the generation step"
+              disabled={busy}
+              title={hasRun ? 'Regenerate this shot' : 'Generate this shot'}
             >
-              <Wand2 className="w-3.5 h-3.5" /> Regenerate shot
+              {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+              {isGenerating ? 'Generating…' : hasRun ? 'Regenerate shot' : 'Generate shot'}
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={onOpenCamera} title="Open the advanced camera editor">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={onOpenCamera} disabled={busy} title="Open the advanced camera editor">
               <Camera className="w-3.5 h-3.5" />
             </Button>
           </div>
@@ -783,6 +906,244 @@ function CameraDialog({
 }
 
 // ============================================================================
+// Reference materials — upload + select-from-library (Content Assistant parity)
+// ============================================================================
+
+/**
+ * Reference uploader + library picker + removable chips, reusing the exact
+ * Content Assistant flow: upload → /api/settings/brand-identity/asset, then
+ * "understand" each file via /api/settings/brand-identity/asset/analyze, and
+ * select-from-library via the shared MediaLibraryPicker. The plan is shaped by
+ * each reference's `description` (the planner is text-only).
+ */
+function ReferenceMaterials({
+  references,
+  onChange,
+}: {
+  references: ShotPlanReferenceAttachment[];
+  onChange: (next: ShotPlanReferenceAttachment[]) => void;
+}) {
+  const authFetch = useAuthFetch();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  // Always read+write through the latest list so concurrent uploads/analyses
+  // don't clobber each other.
+  const refsRef = useRef<ShotPlanReferenceAttachment[]>(references);
+  refsRef.current = references;
+  const patch = useCallback(
+    (id: string, fields: Partial<ShotPlanReferenceAttachment>) => {
+      onChange(refsRef.current.map((r) => (r.id === id ? { ...r, ...fields } : r)));
+    },
+    [onChange],
+  );
+  const append = useCallback(
+    (att: ShotPlanReferenceAttachment) => {
+      onChange([...refsRef.current, att]);
+    },
+    [onChange],
+  );
+
+  // Have the agent read the file — exactly like the Content Assistant does.
+  const analyze = useCallback(
+    async (id: string, url: string, contentType: string, kind: ReferenceKind) => {
+      patch(id, { analyzing: true });
+      try {
+        const res = await authFetch('/api/settings/brand-identity/asset/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, contentType, kind }),
+        });
+        const data = (await res.json()) as { success?: boolean; aiSummary?: string };
+        const summary = res.ok && data.aiSummary ? data.aiSummary.trim() : '';
+        patch(id, { analyzing: false, ...(summary ? { description: summary } : {}) });
+      } catch {
+        patch(id, { analyzing: false });
+      }
+    },
+    [authFetch, patch],
+  );
+
+  const uploadOne = useCallback(
+    async (file: File) => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      const id = crypto.randomUUID();
+      const previewUrl = isImage ? URL.createObjectURL(file) : undefined;
+
+      setUploadingCount((n) => n + 1);
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await authFetch('/api/settings/brand-identity/asset', { method: 'POST', body: form });
+        const data = (await res.json()) as {
+          success: boolean;
+          url?: string;
+          fileName?: string;
+          contentType?: string;
+          kind?: ReferenceKind;
+          error?: string;
+        };
+        if (!res.ok || !data.success || !data.url) {
+          throw new Error(data.error ?? `"${file.name}" could not be uploaded.`);
+        }
+        const kind: ReferenceKind = data.kind ?? (isVideo ? 'video' : isImage ? 'image' : 'other');
+        append({
+          id,
+          url: data.url,
+          fileName: data.fileName ?? file.name,
+          contentType: data.contentType ?? file.type,
+          kind,
+          analyzing: true,
+          ...(previewUrl ? { previewUrl } : {}),
+        });
+        void analyze(id, data.url, data.contentType ?? file.type, kind);
+      } catch (err) {
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+        }
+        setError(err instanceof Error ? err.message : `"${file.name}" could not be uploaded.`);
+      } finally {
+        setUploadingCount((n) => n - 1);
+      }
+    },
+    [authFetch, analyze, append],
+  );
+
+  const onFileSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const list = Array.from(e.target.files ?? []);
+      e.target.value = '';
+      setError(null);
+      for (const file of list) {
+        void uploadOne(file);
+      }
+    },
+    [uploadOne],
+  );
+
+  const addFromLibrary = useCallback(
+    (picked: LibraryAsset[]) => {
+      for (const asset of picked) {
+        const id = crypto.randomUUID();
+        const kind = libraryAssetKind(asset.type);
+        append({
+          id,
+          url: asset.url,
+          fileName: asset.name,
+          contentType: asset.mimeType,
+          kind,
+          analyzing: true,
+          ...(asset.type === 'image' ? { previewUrl: asset.url } : {}),
+        });
+        void analyze(id, asset.url, asset.mimeType, kind);
+      }
+    },
+    [analyze, append],
+  );
+
+  const remove = useCallback(
+    (id: string) => {
+      const target = refsRef.current.find((r) => r.id === id);
+      if (target?.previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      onChange(refsRef.current.filter((r) => r.id !== id));
+    },
+    [onChange],
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <Caption className="font-medium text-muted-foreground">
+          Reference materials (optional) — the look, style, world or characters to follow
+        </Caption>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.md,application/pdf"
+            multiple
+            className="hidden"
+            onChange={onFileSelected}
+          />
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => fileInputRef.current?.click()}>
+            <FileUp className="h-3.5 w-3.5" /> Upload
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setLibraryOpen(true)}>
+            <LibraryBig className="h-3.5 w-3.5" /> Library
+          </Button>
+        </div>
+      </div>
+
+      {(references.length > 0 || uploadingCount > 0) && (
+        <div className="flex flex-wrap gap-2">
+          {references.map((att) => {
+            const medium = referenceMedium(att);
+            return (
+              <div
+                key={att.id}
+                className="flex max-w-xs items-center gap-2 rounded-xl border border-border-light bg-surface-elevated px-2 py-1.5"
+              >
+                <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
+                  {medium === 'image' && att.previewUrl ? (
+                    <Image src={att.previewUrl} alt={att.fileName} fill sizes="36px" unoptimized className="object-cover" />
+                  ) : medium === 'video' ? (
+                    <FileVideo className="h-4 w-4 text-muted-foreground" />
+                  ) : medium === 'document' ? (
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <FileIcon className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-xs text-foreground">{att.fileName}</span>
+                  {att.analyzing ? (
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Understanding…
+                    </span>
+                  ) : att.description ? (
+                    <span className="truncate text-[11px] text-muted-foreground" title={att.description}>
+                      ✓ Understood
+                    </span>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => remove(att.id)}
+                  aria-label={`Remove ${att.fileName}`}
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
+          {uploadingCount > 0 && (
+            <div className="flex items-center gap-2 rounded-xl border border-border-light bg-surface-elevated px-3 py-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              <Caption>Uploading {uploadingCount} file{uploadingCount > 1 ? 's' : ''}…</Caption>
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 text-xs text-destructive">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <MediaLibraryPicker open={libraryOpen} onOpenChange={setLibraryOpen} onSelect={addFromLibrary} authFetch={authFetch} />
+    </div>
+  );
+}
+
+// ============================================================================
 // Entry screen — Generate with AI / Start blank
 // ============================================================================
 
@@ -792,12 +1153,25 @@ function EntryScreen({
   isGenerating,
   error,
 }: {
-  onGenerate: (brief: string) => void;
+  onGenerate: (brief: string, references: ShotPlanReferencePayload[]) => void;
   onStartBlank: () => void;
   isGenerating: boolean;
   error: string | null;
 }) {
   const [brief, setBrief] = useState('');
+  const [references, setReferences] = useState<ShotPlanReferenceAttachment[]>([]);
+
+  const stillReading = references.some((r) => r.analyzing);
+
+  const submit = useCallback(() => {
+    const payload: ShotPlanReferencePayload[] = references.map((r) => ({
+      url: r.url,
+      ...(r.description ? { description: r.description } : {}),
+      kind: r.kind,
+    }));
+    onGenerate(brief.trim(), payload);
+  }, [brief, references, onGenerate]);
+
   return (
     <div className="rounded-2xl border border-border-strong border-dashed bg-card p-8 space-y-5">
       <div className="text-center space-y-1">
@@ -817,6 +1191,12 @@ function EntryScreen({
           placeholder="e.g. A 30-second ad showing a stressed sales rep discovering SalesVelocity and closing deals faster."
           className="w-full rounded-md border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y"
         />
+        <ReferenceMaterials references={references} onChange={setReferences} />
+        {stillReading && (
+          <Caption className="flex items-center gap-1.5">
+            <Loader2 className="h-3 w-3 animate-spin" /> Reading your references — they&apos;ll shape the plan.
+          </Caption>
+        )}
         {error && (
           <div className="flex items-center gap-2 text-xs text-destructive">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
@@ -826,8 +1206,8 @@ function EntryScreen({
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button
             className="gap-2"
-            disabled={isGenerating || brief.trim().length === 0}
-            onClick={() => onGenerate(brief.trim())}
+            disabled={isGenerating || stillReading || brief.trim().length === 0}
+            onClick={submit}
           >
             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             {isGenerating ? 'Drafting your plan…' : 'Generate with AI'}
@@ -845,8 +1225,18 @@ function EntryScreen({
 // Main component
 // ============================================================================
 
+/** Response shape for the per-shot + all-shots generation routes. */
+interface ShotGenerationResponse {
+  success: boolean;
+  plan?: ShotPlan;
+  /** generate-all returns the partially-generated plan on a mid-run halt. */
+  partialPlan?: ShotPlan;
+  error?: string;
+}
+
 export function ShotPlanSheet() {
   const authFetch = useAuthFetch();
+  const router = useRouter();
   const shotPlan = useVideoPipelineStore((s) => s.shotPlan);
   const setShotPlan = useVideoPipelineStore((s) => s.setShotPlan);
 
@@ -857,6 +1247,14 @@ export function ShotPlanSheet() {
   const [askAiError, setAskAiError] = useState<string | null>(null);
   const [castPickerOpen, setCastPickerOpen] = useState(false);
   const [cameraShotId, setCameraShotId] = useState<string | null>(null);
+
+  // ── Shot-generation state (wires the orchestrator routes) ──
+  // The set of shot ids currently rendering (single-shot or part of an all-run).
+  const [generatingShotIds, setGeneratingShotIds] = useState<Set<string>>(new Set());
+  // True while a Generate-all run is in flight (the whole plan is long-running).
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  // Plain-English generation failure surfaced to the operator (never silent).
+  const [shotGenError, setShotGenError] = useState<string | null>(null);
 
   const cameraShot = useMemo(
     () => (cameraShotId ? shotPlan?.shots.find((s) => s.id === cameraShotId) ?? null : null),
@@ -1023,6 +1421,109 @@ export function ShotPlanSheet() {
     [shotPlan, setShotPlan],
   );
 
+  // ── Generation: any run in flight disables editing/competing generations ──
+  const busy = isGeneratingAll || generatingShotIds.size > 0;
+
+  // Generate (or regenerate) ONE shot through the orchestrator route. The route
+  // returns the updated plan with this shot's `generated` field written; we swap
+  // it into the store so the status badge + clip render immediately.
+  const generateOneShot = useCallback(
+    async (shotId: string) => {
+      const plan = useVideoPipelineStore.getState().shotPlan;
+      if (!plan || busy) {
+        return;
+      }
+      setShotGenError(null);
+      setGeneratingShotIds((prev) => new Set(prev).add(shotId));
+      try {
+        const res = await authFetch('/api/content/shot-plan/generate-shot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan, shotId }),
+        });
+        const data = (await res.json()) as ShotGenerationResponse;
+        if (!res.ok || !data.success || !data.plan) {
+          throw new Error(data.error ?? 'That shot could not be generated. Please try again.');
+        }
+        setShotPlan(data.plan);
+      } catch (err) {
+        setShotGenError(err instanceof Error ? err.message : 'That shot could not be generated. Please try again.');
+      } finally {
+        setGeneratingShotIds((prev) => {
+          const next = new Set(prev);
+          next.delete(shotId);
+          return next;
+        });
+      }
+    },
+    [authFetch, setShotPlan, busy],
+  );
+
+  // Generate EVERY shot in order. Long-running (one render + persist per shot);
+  // all shot badges show "Generating…" while it runs. On a mid-run halt the route
+  // returns the partially-generated plan so completed shots are still shown.
+  const generateAll = useCallback(async () => {
+    const plan = useVideoPipelineStore.getState().shotPlan;
+    if (!plan || busy || plan.shots.length === 0) {
+      return;
+    }
+    setShotGenError(null);
+    setIsGeneratingAll(true);
+    setGeneratingShotIds(new Set(plan.shots.map((s) => s.id)));
+    try {
+      const res = await authFetch('/api/content/shot-plan/generate-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = (await res.json()) as ShotGenerationResponse;
+      if (!res.ok || !data.success || !data.plan) {
+        // Surface the failure AND keep whatever did generate (partialPlan).
+        if (data.partialPlan) {
+          setShotPlan(data.partialPlan);
+        }
+        throw new Error(data.error ?? 'Generation stopped before all shots finished. Please try again.');
+      }
+      setShotPlan(data.plan);
+    } catch (err) {
+      setShotGenError(err instanceof Error ? err.message : 'Generation stopped before all shots finished. Please try again.');
+    } finally {
+      setIsGeneratingAll(false);
+      setGeneratingShotIds(new Set());
+    }
+  }, [authFetch, setShotPlan, busy]);
+
+  // ── Open the generated clips in the existing Video Editor ──
+  // Map the plan's completed shots (in order) into the editor seed, hand it off
+  // via sessionStorage, and navigate. Reuses the established editor flow.
+  const openInEditor = useCallback(() => {
+    const plan = useVideoPipelineStore.getState().shotPlan;
+    if (!plan) {
+      return;
+    }
+    const scenes = shotPlanToScenes(plan);
+    const ordered = [...plan.shots].sort((a, b) => a.index - b.index);
+    const clips: EditorSeedClip[] = [];
+    ordered.forEach((shot, i) => {
+      const url = shot.generated?.videoUrl;
+      if (shot.generated?.status === 'completed' && url) {
+        const scene = scenes.find((s) => s.id === shot.id);
+        clips.push({
+          url,
+          thumbnailUrl: shot.generated?.lastFrameUrl ?? null,
+          name: scene?.title ?? `Shot ${i + 1}`,
+          duration: shot.durationSeconds,
+        });
+      }
+    });
+    if (clips.length === 0) {
+      setShotGenError('Generate at least one shot before opening the editor.');
+      return;
+    }
+    writeEditorSeed({ clips });
+    router.push('/content/video/editor');
+  }, [router]);
+
   // ── Cast helpers ──
   const addCast = useCallback(
     (member: ShotPlanCastMember) => {
@@ -1067,9 +1568,61 @@ export function ShotPlanSheet() {
 
   const orderedShots = [...shotPlan.shots].sort((a, b) => a.index - b.index);
   const { sharedChoices } = shotPlan;
+  const completedCount = orderedShots.filter((s) => s.generated?.status === 'completed' && s.generated.videoUrl).length;
 
   return (
     <div className="space-y-6">
+      {/* ── Generation toolbar — the creation → editor path ── */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-border-strong bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clapperboard className="h-4 w-4 text-primary" />
+          {completedCount === orderedShots.length && orderedShots.length > 0 ? (
+            <span className="text-foreground">All {orderedShots.length} shots generated — ready to assemble.</span>
+          ) : (
+            <span>
+              {completedCount}/{orderedShots.length} shots generated.
+              {' '}Generate every shot, then open the clips in the editor to stitch them.
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            className="gap-1.5"
+            onClick={() => { void generateAll(); }}
+            disabled={busy || orderedShots.length === 0}
+          >
+            {isGeneratingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+            {isGeneratingAll ? 'Generating all shots…' : 'Generate all shots'}
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1.5"
+            onClick={openInEditor}
+            disabled={busy || completedCount === 0}
+            title={completedCount === 0 ? 'Generate at least one shot first' : 'Open the generated clips in the editor to assemble'}
+          >
+            <PlayCircle className="h-4 w-4" /> Open in editor
+          </Button>
+        </div>
+      </div>
+
+      {/* Generation error — plain English, never silent */}
+      {shotGenError && (
+        <div className="flex items-start justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+          <div className="flex items-start gap-2 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <span>{shotGenError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShotGenError(null)}
+            className="text-destructive/60 transition-colors hover:text-destructive"
+            aria-label="Dismiss error"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {/* ── Section 1: Header / Shared Choices ── */}
       <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-5">
         <div className="flex items-start justify-between gap-3">
@@ -1155,7 +1708,7 @@ export function ShotPlanSheet() {
           <SectionTitle className="flex items-center gap-2">
             <ListVideo className="w-5 h-5 text-primary" /> Storyboard
           </SectionTitle>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={addShot}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={addShot} disabled={busy}>
             <Plus className="w-3.5 h-3.5" /> Add shot
           </Button>
         </div>
@@ -1166,13 +1719,15 @@ export function ShotPlanSheet() {
             shot={shot}
             position={i}
             total={orderedShots.length}
+            isGenerating={generatingShotIds.has(shot.id)}
+            busy={busy}
             onEditField={(field, value) => editShotField(shot.id, field, value)}
             onAskAi={(field, label) => setAskAi({ target: 'shot', shotId: shot.id, field, label })}
             onMove={(dir) => moveShot(shot.id, dir)}
             onDelete={() => deleteShot(shot.id)}
             onKeepUpstream={() => keepUpstream(shot.id)}
-            onRerun={() => { /* TODO: wire single-shot rerun in the generation step */ }}
-            onRegenerate={() => { /* TODO: wire single-shot generation in the generation step */ }}
+            onRerun={() => { void generateOneShot(shot.id); }}
+            onRegenerate={() => { void generateOneShot(shot.id); }}
             onOpenCamera={() => setCameraShotId(shot.id)}
           />
         ))}

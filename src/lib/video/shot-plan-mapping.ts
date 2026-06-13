@@ -110,6 +110,42 @@ function buildBackgroundPrompt(plan: ShotPlan, shot: ShotPlanShot): string {
   return parts.filter(Boolean).join('. ');
 }
 
+/**
+ * Compose the FULL generation prompt for a shot — the action plus the
+ * background/look-bible context. This is the consistent prompt the Shot-Plan
+ * generation orchestrator sends to the engine when a shot has no explicit
+ * `assembledPrompt` override. It leads with the shot's forward-action so the
+ * engine prioritizes what happens, then appends the shared world/look anchors
+ * (environment fingerprint, palette, art style, mood, cinematography notes) for
+ * cross-shot consistency.
+ *
+ * EXPORTED + pure: no I/O, no generation. The orchestrator reuses this so the
+ * editor path (`shotPlanToScenes` → `backgroundPrompt`) and the generation path
+ * build prompts from the same source of truth.
+ */
+export function composeShotGenerationPrompt(plan: ShotPlan, shot: ShotPlanShot): string {
+  const parts: string[] = [];
+
+  if (shot.action.trim()) {
+    parts.push(shot.action.trim());
+  }
+
+  // Camera package — lead the look context with the framing when present.
+  const cameraBits = [shot.camera.shotType, shot.camera.movement, shot.camera.lens]
+    .map((c) => c?.trim())
+    .filter((c): c is string => Boolean(c));
+  if (cameraBits.length > 0) {
+    parts.push(cameraBits.join(', '));
+  }
+
+  const background = buildBackgroundPrompt(plan, shot);
+  if (background) {
+    parts.push(background);
+  }
+
+  return parts.filter(Boolean).join('. ');
+}
+
 /** Map a shot's camera package onto a CinematicConfig (only the fields we carry). */
 function buildCinematicConfig(shot: ShotPlanShot): CinematicConfig | undefined {
   const config: CinematicConfig = {};

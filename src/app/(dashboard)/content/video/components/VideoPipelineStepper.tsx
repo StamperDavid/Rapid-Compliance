@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   Clapperboard,
-  Layers,
   CheckCircle,
   Zap,
   Puzzle,
@@ -15,7 +14,7 @@ import { PIPELINE_STEPS, PIPELINE_STEP_LABELS, type PipelineStep } from '@/types
 
 const STEP_ICONS: Partial<Record<PipelineStep, React.ElementType>> = {
   'request': Clapperboard,
-  'storyboard': Layers,
+  'storyboard': Clapperboard,
   'generation': Zap,
   'assembly': Puzzle,
   'post-production': Wand2,
@@ -44,7 +43,7 @@ export function VideoPipelineStepper({
     <div className="w-full py-4">
       <div className="flex items-center justify-between">
         {visibleSteps.map((step, index) => {
-          const Icon = STEP_ICONS[step] ?? Layers;
+          const Icon = STEP_ICONS[step] ?? Clapperboard;
           const isCompleted = completedSteps.includes(step);
           const isCurrent = step === currentStep;
           const isReachable = reachableSteps.includes(step);

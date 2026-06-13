@@ -64,6 +64,24 @@ interface ShotPlanPlannerGMConfig {
 // INPUT CONTRACT
 // ============================================================================
 
+/**
+ * A reference material the operator attached to shape the plan (uploaded or
+ * picked from the media library). The LLM is text-only, so it consumes the
+ * `description` (the agent's read of the file) — NOT the pixels. Image refs are
+ * still flagged so the model knows to let them inform the palette / environment
+ * fingerprint / art style.
+ */
+const ShotPlanReferenceSchema = z.object({
+  /** Permanent URL of the reference asset (kept for traceability; not fetched by the LLM). */
+  url: z.string().trim().url(),
+  /** The agent's read of the file (vision summary / transcript / extracted text). */
+  description: z.string().trim().max(4000).optional(),
+  /** Coarse medium so the prompt can describe what kind of reference it is. */
+  kind: z.string().trim().max(40).optional(),
+});
+
+export type ShotPlanReference = z.infer<typeof ShotPlanReferenceSchema>;
+
 const GenerateShotPlanInputSchema = z.object({
   /** The creative brief, in plain language. */
   brief: z.string().trim().min(1),
@@ -73,6 +91,8 @@ const GenerateShotPlanInputSchema = z.object({
   shotCount: z.number().int().min(1).max(50).optional(),
   /** Optional title hint for the plan. */
   title: z.string().trim().max(300).optional(),
+  /** Optional reference materials that define the desired look / style / world / characters. */
+  references: z.array(ShotPlanReferenceSchema).max(20).optional(),
 });
 
 export type GenerateShotPlanInput = z.infer<typeof GenerateShotPlanInputSchema>;
@@ -306,6 +326,39 @@ function resolveCast(
 // PROMPT BUILDERS
 // ============================================================================
 
+/**
+ * Describe the operator's attached reference materials for the text-only model.
+ * The model consumes the DESCRIPTIONS (the agent's read of each file), not the
+ * pixels. Image references are explicitly noted as inputs to the palette /
+ * environment fingerprint / art style so the plan is SHAPED by them.
+ */
+function buildReferencesBlock(references: ShotPlanReference[] | undefined): string {
+  if (!references || references.length === 0) {
+    return '';
+  }
+  const items = references
+    .map((ref, i) => {
+      const kind = (ref.kind ?? 'reference').toLowerCase();
+      const trimmedDesc = ref.description?.trim();
+      const desc =
+        trimmedDesc && trimmedDesc.length > 0
+          ? trimmedDesc
+          : '(no description was captured for this file)';
+      const imageNote =
+        kind === 'image'
+          ? ' (this is an IMAGE reference — let it inform the colorPalette, environmentFingerprint, and artStyle)'
+          : '';
+      return `  ${i + 1}. [${kind}]${imageNote}: ${desc}`;
+    })
+    .join('\n');
+  return [
+    'REFERENCE MATERIALS (study these — they define the desired look / style / world / characters):',
+    items,
+    'Shape the ENTIRE plan around these references: the colorPalette, environmentFingerprint, moodKeywords, cinematographyNotes, artStyle, and every shot must reflect them. These descriptions are an AI read of the operator\'s attached files (you cannot see the pixels) — honor what they describe.',
+    '',
+  ].join('\n');
+}
+
 function buildGenerateUserPrompt(
   input: GenerateShotPlanInput,
   availableCastBlock: string,
@@ -318,6 +371,7 @@ function buildGenerateUserPrompt(
     input.title ? `TITLE HINT: ${input.title}` : '',
     input.shotCount ? `DESIRED SHOT COUNT: ${input.shotCount}` : 'DESIRED SHOT COUNT: you decide (typically 2-6 for an ad).',
     '',
+    buildReferencesBlock(input.references),
     'AVAILABLE CHARACTERS (the operator\'s saved cast — AUTO-CAST these by their EXACT characterId; never invent characters):',
     availableCastBlock,
     '',
@@ -586,6 +640,7 @@ export const __internal = {
   loadGMConfig,
   stripJsonFences,
   buildAvailableCastBlock,
+  buildReferencesBlock,
   buildGenerateUserPrompt,
   buildLookBibleContext,
   resolveReferenceImageUrls,

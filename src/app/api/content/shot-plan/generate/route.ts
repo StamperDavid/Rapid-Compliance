@@ -22,10 +22,17 @@ export const dynamic = 'force-dynamic';
 
 const FILE = 'api/content/shot-plan/generate/route.ts';
 
+const ReferenceSchema = z.object({
+  url: z.string().trim().url(),
+  description: z.string().trim().max(4000).optional(),
+  kind: z.string().trim().max(40).optional(),
+});
+
 const BodySchema = z.object({
   brief: z.string().trim().min(1, 'Describe the video you want to plan').max(8000),
   shotCount: z.number().int().min(1).max(50).optional(),
   title: z.string().trim().max(300).optional(),
+  references: z.array(ReferenceSchema).max(20).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -50,6 +57,7 @@ export async function POST(request: NextRequest) {
       userId: user.uid,
       ...(body.shotCount !== undefined ? { shotCount: body.shotCount } : {}),
       ...(body.title ? { title: body.title } : {}),
+      ...(body.references && body.references.length > 0 ? { references: body.references } : {}),
     });
 
     logger.info('[shot-plan/generate] plan generated', {
