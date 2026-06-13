@@ -85,6 +85,7 @@ import { ConstructedPromptDisplay } from '@/components/studio/ConstructedPromptD
 import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/MediaLibraryPicker';
 import { AvatarPicker } from './AvatarPicker';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
+import { ShotPlanDocument } from './ShotPlanDocument';
 import {
   applyShotPlanEdit,
   clearUpstreamChanged,
@@ -1657,6 +1658,102 @@ function SheetSection({
 }
 
 // ============================================================================
+// Storyboard strip panel — a compact numbered keyframe card (OpenArt-style)
+// ============================================================================
+
+/**
+ * One panel in the horizontal storyboard strip: the keyframe still, a CUT number,
+ * the transition (continue/cut), a `lens · movement · shot-size · duration`
+ * metadata line, and the action. Click to open the full per-shot editor below.
+ */
+function StoryboardPanel({
+  shot,
+  position,
+  selected,
+  isGenerating,
+  onSelect,
+}: {
+  shot: ShotPlanShot;
+  position: number;
+  selected: boolean;
+  isGenerating: boolean;
+  onSelect: () => void;
+}) {
+  const [imgBroken, setImgBroken] = useState(false);
+  const still = shot.generated?.keyframeUrl ?? shot.generated?.lastFrameUrl ?? null;
+  const badge = statusBadge(shot.generated?.status);
+  const specs = [
+    shot.camera.shotType,
+    shot.camera.movement,
+    shot.camera.lensType ?? shot.camera.lens ?? shot.camera.focalLength,
+  ]
+    .map((s) => s?.trim())
+    .filter((s): s is string => Boolean(s));
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`group relative flex w-56 flex-shrink-0 flex-col overflow-hidden rounded-lg border bg-card text-left transition-colors ${
+        selected ? 'border-primary ring-1 ring-primary' : 'border-border-strong hover:border-primary/60'
+      }`}
+    >
+      <div className="relative aspect-video bg-surface-elevated">
+        {still && !imgBroken ? (
+          <Image
+            src={still}
+            alt={`Shot ${position + 1} keyframe`}
+            fill
+            sizes="224px"
+            unoptimized
+            className="object-cover"
+            onError={() => setImgBroken(true)}
+          />
+        ) : isGenerating ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+            <ImageIcon className="h-6 w-6" />
+          </div>
+        )}
+        {/* Cut number + transition */}
+        <div className="absolute left-1.5 top-1.5 flex items-center gap-1">
+          <span className="rounded bg-background/85 px-1.5 py-0.5 text-[11px] font-bold text-primary">
+            {position + 1}
+          </span>
+          <span className="inline-flex items-center gap-0.5 rounded bg-background/85 px-1 py-0.5 text-[10px] text-foreground">
+            {shot.transitionIn === 'continue' ? (
+              <><Link2 className="h-2.5 w-2.5 text-primary" /> CONT</>
+            ) : (
+              <><Scissors className="h-2.5 w-2.5 text-primary" /> CUT</>
+            )}
+          </span>
+        </div>
+        {badge && (
+          <span
+            className={`absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] ${badge.className}`}
+          >
+            {badge.icon === 'spin' && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
+            {badge.icon === 'check' && <CheckCircle2 className="h-2.5 w-2.5" />}
+            {badge.label}
+          </span>
+        )}
+      </div>
+      <div className="space-y-1 p-2">
+        <div className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {specs.length > 0 ? specs.join(' · ') : 'camera not set'} · {shot.durationSeconds}s
+        </div>
+        <div className="line-clamp-2 text-xs text-foreground">
+          {shot.title?.trim() || shot.action?.trim() || 'Untitled shot'}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ============================================================================
 // Main component
 // ============================================================================
 
@@ -1682,6 +1779,10 @@ export function ShotPlanSheet() {
   const [askAiError, setAskAiError] = useState<string | null>(null);
   const [castPickerOpen, setCastPickerOpen] = useState(false);
   const [cameraShotId, setCameraShotId] = useState<string | null>(null);
+  // The storyboard panel currently expanded into the full per-shot editor below the strip.
+  const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
+  // Review = the cinematic production-sheet document (default); Edit = the full form.
+  const [viewMode, setViewMode] = useState<'review' | 'edit'>('review');
   const [objectDialogOpen, setObjectDialogOpen] = useState(false);
   const [envLibraryOpen, setEnvLibraryOpen] = useState(false);
 
@@ -2159,6 +2260,22 @@ export function ShotPlanSheet() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg border border-border-strong bg-surface-elevated p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode('review')}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'review' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Review
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('edit')}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Edit
+            </button>
+          </div>
           <Button
             className="gap-1.5"
             onClick={() => { void generateAll(); }}
@@ -2204,7 +2321,18 @@ export function ShotPlanSheet() {
           </button>
         </div>
       )}
-      {/* ══ THE PRODUCTION SHEET — a professional film-studio shot-plan document ══ */}
+      {/* ══ REVIEW — the cinematic production-sheet document ══ */}
+      {viewMode === 'review' && (
+        <ShotPlanDocument
+          plan={shotPlan}
+          onEdit={(id) => { setSelectedShotId(id); setViewMode('edit'); }}
+          onFloorPlanChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
+        />
+      )}
+
+      {/* ══ EDIT — the full production-sheet form ══ */}
+      {viewMode === 'edit' && (
+      <>
       <div className="overflow-hidden rounded-2xl border border-border-strong bg-card">
         {/* SHARED CHOICES header bar — the at-a-glance look bible every cut inherits */}
         <div className="border-b border-border-strong bg-surface-elevated px-6 py-4">
@@ -2400,29 +2528,54 @@ export function ShotPlanSheet() {
             </Button>
           }
         >
-        <div className="space-y-4">
-        {orderedShots.map((shot, i) => (
-          <ShotCard
-            key={shot.id}
-            plan={shotPlan}
-            shot={shot}
-            position={i}
-            total={orderedShots.length}
-            isGenerating={generatingShotIds.has(shot.id)}
-            isKeyframing={keyframingShotIds.has(shot.id)}
-            busy={busy}
-            onEditField={(field, value) => editShotField(shot.id, field, value)}
-            onAskAi={(field, label) => setAskAi({ target: 'shot', shotId: shot.id, field, label })}
-            onMove={(dir) => moveShot(shot.id, dir)}
-            onDelete={() => deleteShot(shot.id)}
-            onKeepUpstream={() => keepUpstream(shot.id)}
-            onRerun={() => { void generateOneShot(shot.id); }}
-            onRegenerate={() => { void generateOneShot(shot.id); }}
-            onGenerateKeyframe={() => { void generateOneKeyframe(shot.id); }}
-            onOpenCamera={() => setCameraShotId(shot.id)}
-          />
-        ))}
+        {/* Horizontal numbered keyframe strip — the storyboard at a glance */}
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {orderedShots.map((shot, i) => (
+            <StoryboardPanel
+              key={shot.id}
+              shot={shot}
+              position={i}
+              selected={selectedShotId === shot.id}
+              isGenerating={generatingShotIds.has(shot.id) || keyframingShotIds.has(shot.id)}
+              onSelect={() => setSelectedShotId((prev) => (prev === shot.id ? null : shot.id))}
+            />
+          ))}
         </div>
+
+        {/* Click a panel to open its full per-shot editor here */}
+        {(() => {
+          const selected = orderedShots.find((s) => s.id === selectedShotId);
+          const selectedIndex = orderedShots.findIndex((s) => s.id === selectedShotId);
+          if (!selected) {
+            return (
+              <Caption className="mt-3 block">
+                Select a shot above to edit its action, camera, lighting and dialogue — or regenerate its still.
+              </Caption>
+            );
+          }
+          return (
+            <div className="mt-4">
+              <ShotCard
+                plan={shotPlan}
+                shot={selected}
+                position={selectedIndex}
+                total={orderedShots.length}
+                isGenerating={generatingShotIds.has(selected.id)}
+                isKeyframing={keyframingShotIds.has(selected.id)}
+                busy={busy}
+                onEditField={(field, value) => editShotField(selected.id, field, value)}
+                onAskAi={(field, label) => setAskAi({ target: 'shot', shotId: selected.id, field, label })}
+                onMove={(dir) => moveShot(selected.id, dir)}
+                onDelete={() => { deleteShot(selected.id); setSelectedShotId(null); }}
+                onKeepUpstream={() => keepUpstream(selected.id)}
+                onRerun={() => { void generateOneShot(selected.id); }}
+                onRegenerate={() => { void generateOneShot(selected.id); }}
+                onGenerateKeyframe={() => { void generateOneKeyframe(selected.id); }}
+                onOpenCamera={() => setCameraShotId(selected.id)}
+              />
+            </div>
+          );
+        })()}
         </SheetSection>
 
         <SheetSection number={5} title="Floor Plan &amp; Camera Blocking" icon={ListVideo}>
@@ -2465,6 +2618,8 @@ export function ShotPlanSheet() {
         </SheetSection>
       </div>
       {/* ══ end production sheet ══ */}
+      </>
+      )}
 
       {/* ── Dialogs ── */}
       <AskAiDialog
