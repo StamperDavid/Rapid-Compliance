@@ -202,64 +202,79 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
           {sharedChoices.cast.length === 0 && objects.length === 0 ? (
             <p className="text-xs text-zinc-600">No cast or objects yet.</p>
           ) : (
-            <div className="space-y-4">
-              {sharedChoices.cast.map((member) => {
-                const views =
-                  member.modelSheet && member.modelSheet.length > 0
-                    ? member.modelSheet
-                    : member.referenceImageUrls.map((url) => ({ label: 'REF', imageUrl: url }));
-                return (
-                  <div key={member.characterId}>
-                    <div className="mb-2 flex items-center gap-2 border-b border-zinc-800 pb-1">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-100">{member.name}</span>
-                      {member.role && <span className="text-[9px] uppercase tracking-wider text-amber-400/80">{member.role}</span>}
-                      <span className="ml-auto text-[9px] uppercase tracking-wider text-zinc-600">Model sheet</span>
+            <div className="flex flex-col gap-6 lg:flex-row">
+              {/* Reference images — turnarounds + objects (left) */}
+              <div className="min-w-0 flex-1 space-y-4">
+                {sharedChoices.cast.map((member) => {
+                  const views =
+                    member.modelSheet && member.modelSheet.length > 0
+                      ? member.modelSheet
+                      : member.referenceImageUrls.map((url) => ({ label: 'REF', imageUrl: url }));
+                  return (
+                    <div key={member.characterId}>
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-100">{member.name}</span>
+                        {member.role && <span className="text-[9px] uppercase tracking-wider text-amber-400/80">{member.role}</span>}
+                        <span className="ml-auto text-[9px] uppercase tracking-wider text-zinc-600">Turnaround</span>
+                      </div>
+                      {views.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {views.slice(0, 5).map((v, i) => (
+                            <figure key={`${v.imageUrl}-${i}`} className="w-24">
+                              <div className="relative h-32 w-24 overflow-hidden rounded border border-zinc-700 bg-zinc-900">
+                                <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes="96px" unoptimized className="object-cover" />
+                              </div>
+                              <figcaption className="mt-1 text-center text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                                {v.label}
+                              </figcaption>
+                            </figure>
+                          ))}
+                        </div>
+                      ) : (
+                        <EmptyImage label="no refs" className="h-16 w-full" />
+                      )}
                     </div>
-                    {views.length > 0 ? (
+                  );
+                })}
+                {objects.map((obj) => (
+                  <div key={obj.id}>
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-100">{obj.name}</span>
+                      <span className="text-[9px] uppercase tracking-wider text-zinc-600">Object</span>
+                    </div>
+                    {obj.referenceImageUrls.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
-                        {views.slice(0, 6).map((v, i) => (
-                          <figure key={`${v.imageUrl}-${i}`} className="w-28">
-                            <div className="relative h-40 w-28 overflow-hidden rounded border border-zinc-700 bg-zinc-900">
-                              <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes="112px" unoptimized className="object-cover" />
-                            </div>
-                            <figcaption className="mt-1 text-center text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-                              {v.label}
-                            </figcaption>
-                          </figure>
+                        {obj.referenceImageUrls.slice(0, 5).map((url, i) => (
+                          <RefImage key={`${url}-${i}`} src={url} alt={`${obj.name} reference ${i + 1}`} className="h-24 w-24" />
                         ))}
                       </div>
                     ) : (
                       <EmptyImage label="no refs" className="h-16 w-full" />
                     )}
                   </div>
-                );
-              })}
-              {objects.map((obj) => (
-                <div key={obj.id}>
-                  <div className="mb-1.5 flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-200">{obj.name}</span>
-                    <span className="text-[9px] uppercase tracking-wider text-zinc-500">object</span>
+                ))}
+              </div>
+
+              {/* Build notes (right) */}
+              <div className="space-y-3 lg:w-56 lg:shrink-0 lg:border-l lg:border-zinc-800 lg:pl-5">
+                <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500">Build notes</div>
+                {sharedChoices.cast.map((m) => (
+                  <div key={m.characterId} className="text-[11px] text-zinc-300">
+                    <span className="font-semibold text-zinc-100">{m.name}</span>
+                    {m.role ? ` — ${m.role}` : ''}
                   </div>
-                  {obj.referenceImageUrls.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {obj.referenceImageUrls.slice(0, 6).map((url, i) => (
-                        <RefImage key={`${url}-${i}`} src={url} alt={`${obj.name} reference ${i + 1}`} className="h-16 w-16" />
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptyImage label="no refs" className="h-16 w-full" />
-                  )}
+                ))}
+                <div className="space-y-2 border-t border-zinc-800 pt-2">
+                  <Field label="Art style" value={look.artStyle ?? sharedChoices.artStyle} />
+                  <Field label="Film stock" value={look.filmStock} />
+                  <Field label="Camera" value={look.camera} />
+                  <Field label="Movie look" value={look.movieLook} />
+                  <Field label="DP style" value={look.videographerStyle ?? look.photographerStyle} />
+                  <Field label="Lens" value={look.lensType ?? look.focalLength} />
                 </div>
-              ))}
+              </div>
             </div>
           )}
-          {/* Material language / look chips */}
-          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-zinc-800 pt-3">
-            <Field label="Art style" value={look.artStyle ?? sharedChoices.artStyle} />
-            <Field label="Film stock" value={look.filmStock} />
-            <Field label="Camera" value={look.camera} />
-            <Field label="Movie look" value={look.movieLook} />
-          </div>
         </section>
 
         {/* SECTION 2 — ENVIRONMENT + FLOOR PLAN */}
