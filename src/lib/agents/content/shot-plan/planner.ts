@@ -150,7 +150,9 @@ const LlmFloorPlanSchema = z.object({
         id: z.string().trim().min(1),
         kind: z.enum(['actor', 'object', 'set-piece', 'entry', 'zone']),
         label: z.string().trim().min(1),
-        refId: z.string().trim().min(1).optional(),
+        // Optional link to a cast/object id — the model often sends "" for zones/
+        // entries that link to nothing, so tolerate empty and normalize in assembly.
+        refId: z.string().trim().max(200).optional(),
         x: z.number().min(0).max(1),
         y: z.number().min(0).max(1),
         facing: z.number().min(0).max(360).optional(),
@@ -515,7 +517,10 @@ function assembleShotPlan(
 
   // Remap the AI floor plan's camera nodes from 0-based shotIndex → real shot id.
   const floorPlan: ShotPlanFloorPlan = {
-    elements: body.floorPlan.elements,
+    elements: body.floorPlan.elements.map((e) => ({
+      ...e,
+      refId: e.refId?.trim() ? e.refId.trim() : undefined,
+    })),
     cameras: body.floorPlan.cameras
       .map((c) => {
         const target = shots[c.shotIndex];
