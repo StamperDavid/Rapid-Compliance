@@ -390,8 +390,14 @@ export async function generateShot(
         castRefCount: castRefs.length,
         objectRefCount: objectRefs.length,
         envRefCount: envRefs.length,
+        mode: cutRefs.length > 0 ? 'reference-to-video' : 'text-to-video',
       });
-      const submitted = await provider.generateVideo(req, ctx);
+      // No references at all (e.g. a pure landscape / scenery shot with no cast,
+      // objects or env images) → text-to-video. Otherwise reference-to-video.
+      const submitted =
+        cutRefs.length > 0
+          ? await provider.generateVideo(req, ctx)
+          : await provider.generateTextToVideo(req, ctx);
       generationId = submitted.generationId;
     } else {
       const prior = priorShot(plan, shot);
