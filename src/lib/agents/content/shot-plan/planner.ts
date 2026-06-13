@@ -51,7 +51,10 @@ const SPECIALIST_ID = 'SHOT_PLAN_PLANNER';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 
 /** A full multi-shot plan is a sizeable JSON object — give it room. */
-const MIN_OUTPUT_TOKENS_FOR_PLAN = 8000;
+// The plan JSON is large now (full look bible + per-shot deep camera + the
+// auto-built floor plan with elements/cameras/routes/subject-paths), so it needs
+// generous output headroom — at 8000 the JSON was truncating into invalid JSON.
+const MIN_OUTPUT_TOKENS_FOR_PLAN = 16000;
 /** A single-field surgical edit is small. */
 const MIN_OUTPUT_TOKENS_FOR_FIELD = 2000;
 
