@@ -859,12 +859,149 @@ export async function generateFloorPlanImage(plan: ShotPlan, ctx: TenantContext)
 }
 
 // ============================================================================
+// generateEnvironmentHero — the establishing render of the world
+// ============================================================================
+
+/**
+ * Render a wide establishing "hero" image of the environment (the production-sheet
+ * env render) from the environment fingerprint + look bible, and store it on
+ * `sharedChoices.environmentHeroImageUrl`. Ownership rule applies.
+ */
+export async function generateEnvironmentHero(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
+  const sc = plan.sharedChoices;
+  const look = sc.lookBible ?? {};
+  const fingerprint = sc.environmentFingerprint?.trim() || 'the scene environment';
+  const lookBits = [look.movieLook, look.filmStock, look.lighting, look.atmosphere, look.artStyle]
+    .map((s) => s?.trim())
+    .filter((s): s is string => Boolean(s));
+  const prompt =
+    `Wide cinematic establishing shot of ${fingerprint}. ${lookBits.join(', ')}. ` +
+    'Atmospheric, film-still quality, no people, no text.';
+
+  const workDir = await createWorkDir('shot-plan-envhero');
+  try {
+    logger.info('[shot-plan-gen] submitting environment hero', { file: FILE, tenantId: ctx.tenantId });
+    const result = await generateWithFal(prompt, { aspectRatio: '16:9' });
+    if (!result.url) {
+      throw new Error('environment hero generation returned no image url');
+    }
+    const buf = await downloadToFile(result.url, join(workDir, 'envhero.png'), 'environment hero');
+    const url = await uploadPermanent(
+      buf,
+      `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
+      'image/png',
+      'environment hero',
+    );
+    await createAsset({
+      type: 'image',
+      category: 'thumbnail',
+      name: `Environment — ${plan.title || plan.id}`,
+      description: `Establishing environment render for Shot Plan "${plan.title || plan.id}".`,
+      url,
+      mimeType: 'image/png',
+      fileSize: buf.length,
+      source: 'ai-generated',
+      aiProvider: 'fal',
+      aiPrompt: prompt,
+      createdBy: 'system',
+      tags: ['shot-plan', 'environment'],
+    });
+    return applyShotPlanEdit(plan, { target: 'shared', field: 'environmentHeroImageUrl', value: url });
+  } finally {
+    await cleanupWorkDir(workDir);
+  }
+}
+
+// ============================================================================
+// generateLightingSwatches — the rendered lighting/mood board tiles
+// ============================================================================
+
+/** Distinct lighting setups to render as swatches: the look-bible baseline + per-shot accents (capped). */
+function resolveLightingSetups(plan: ShotPlan): string[] {
+  const setups: string[] = [];
+  const push = (v: string | undefined): void => {
+    const t = v?.trim();
+    if (t && !setups.some((s) => s.toLowerCase() === t.toLowerCase())) {
+      setups.push(t);
+    }
+  };
+  push(plan.sharedChoices.lookBible?.lighting);
+  for (const shot of plan.shots) {
+    push(shot.lighting);
+  }
+  // Fallback: derive from mood keywords if no explicit lighting anywhere.
+  if (setups.length === 0) {
+    for (const k of plan.sharedChoices.moodKeywords) {
+      push(`${k} lighting`);
+    }
+  }
+  return setups.slice(0, 4);
+}
+
+/**
+ * Render a small grid of lighting-setup swatches (the mood board) — one comparable
+ * tile per distinct lighting condition — and store them on `sharedChoices.lightingSwatches`.
+ * Best-effort per tile. Ownership rule applies.
+ */
+export async function generateLightingSwatches(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
+  const setups = resolveLightingSetups(plan);
+  if (setups.length === 0) {
+    return plan;
+  }
+  const fingerprint = plan.sharedChoices.environmentFingerprint?.trim() || 'a cinematic set';
+  const swatches: { label: string; imageUrl: string }[] = [];
+
+  for (const setup of setups) {
+    const workDir = await createWorkDir('shot-plan-lighting');
+    try {
+      const prompt =
+        `Cinematic lighting study tile: ${setup}. The same simple subject lit by this setup ` +
+        `in ${fingerprint}. Moody, atmospheric, clear directional light, film still, no text.`;
+      logger.info('[shot-plan-gen] submitting lighting swatch', { file: FILE, tenantId: ctx.tenantId, setup });
+      const result = await generateWithFal(prompt, { aspectRatio: '1:1' });
+      if (!result.url) {
+        continue;
+      }
+      const buf = await downloadToFile(result.url, join(workDir, 'swatch.png'), `lighting swatch ${setup}`);
+      const url = await uploadPermanent(
+        buf,
+        `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
+        'image/png',
+        `lighting swatch ${setup}`,
+      );
+      await createAsset({
+        type: 'image',
+        category: 'thumbnail',
+        name: `Lighting — ${setup.slice(0, 60)}`,
+        description: `Lighting swatch for Shot Plan "${plan.title || plan.id}".`,
+        url,
+        mimeType: 'image/png',
+        fileSize: buf.length,
+        source: 'ai-generated',
+        aiProvider: 'fal',
+        aiPrompt: prompt,
+        createdBy: 'system',
+        tags: ['shot-plan', 'lighting'],
+      });
+      swatches.push({ label: setup, imageUrl: url });
+    } finally {
+      await cleanupWorkDir(workDir);
+    }
+  }
+
+  if (swatches.length === 0) {
+    return plan;
+  }
+  return applyShotPlanEdit(plan, { target: 'shared', field: 'lightingSwatches', value: swatches });
+}
+
+// ============================================================================
 // renderShotPlanAssets — make the document COMPLETE for review (the "preview" step)
 // ============================================================================
 
 /** Progress for the full-sheet asset render (floor-plan image + every keyframe). */
 export interface ShotPlanAssetProgress {
-  phase: 'floor-plan' | 'keyframe';
+  phase: 'floor-plan' | 'environment-hero' | 'lighting-swatches' | 'keyframe';
   shotId?: string;
   index?: number;
   total?: number;
@@ -902,7 +1039,27 @@ export async function renderShotPlanAssets(
     onProgress?.({ phase: 'floor-plan', status: 'failed', error });
   }
 
-  // 2. A keyframe still for every shot, in order (best-effort each).
+  // 2. Environment hero render (best-effort).
+  try {
+    current = await generateEnvironmentHero(current, ctx);
+    onProgress?.({ phase: 'environment-hero', status: 'completed' });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logger.error('[shot-plan-gen] environment hero render failed (continuing)', err instanceof Error ? err : new Error(error), { file: FILE });
+    onProgress?.({ phase: 'environment-hero', status: 'failed', error });
+  }
+
+  // 3. Lighting-mood swatch grid (best-effort; itself per-tile best-effort).
+  try {
+    current = await generateLightingSwatches(current, ctx);
+    onProgress?.({ phase: 'lighting-swatches', status: 'completed' });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logger.error('[shot-plan-gen] lighting swatches render failed (continuing)', err instanceof Error ? err : new Error(error), { file: FILE });
+    onProgress?.({ phase: 'lighting-swatches', status: 'failed', error });
+  }
+
+  // 4. A keyframe still for every shot, in order (best-effort each).
   const ordered = [...current.shots].sort((a, b) => a.index - b.index);
   for (let i = 0; i < ordered.length; i += 1) {
     const shotId = ordered[i].id;

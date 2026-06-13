@@ -85,6 +85,15 @@ export interface ShotPlanObject {
 }
 
 /**
+ * A rendered lighting-setup swatch for the mood board — a named, thumbnail-sized
+ * render of one lighting condition (e.g. "backlit smoke / tracer glow").
+ */
+export interface ShotPlanLightingSwatch {
+  label: string;
+  imageUrl: string;
+}
+
+/**
  * The project-level look bible. Every shot inherits these unless it overrides a
  * specific field. The `environmentFingerprint` is the written signature of the
  * world and the single strongest cross-shot consistency anchor.
@@ -100,6 +109,10 @@ export interface ShotPlanSharedChoices {
   cast: ShotPlanCastMember[];
   /** Non-character objects/props available to every shot (appearance-anchored). */
   objects?: ShotPlanObject[];
+  /** AI-rendered hero/establishing image of the world (production-sheet env render). */
+  environmentHeroImageUrl?: string;
+  /** AI-rendered lighting-setup swatches (label + thumbnail) for the mood board. */
+  lightingSwatches?: ShotPlanLightingSwatch[];
   /**
    * Visual reference images for the WORLD/environment — establishing-shot anchors
    * that pin the look of the set alongside the written `environmentFingerprint`.
@@ -364,6 +377,11 @@ export const ShotPlanObjectSchema = z.object({
   description: z.string().trim().max(2000).optional(),
 });
 
+export const ShotPlanLightingSwatchSchema = z.object({
+  label: z.string().trim().min(1).max(200),
+  imageUrl: z.string().trim().url(),
+});
+
 /**
  * The Look Bible schema = the studio `CinematicConfigSchema` extended with
  * `videographerStyle` (present on the `CinematicConfig` interface but missing
@@ -380,6 +398,8 @@ export const ShotPlanSharedChoicesSchema = z.object({
   cast: z.array(ShotPlanCastMemberSchema).max(40).default([]),
   objects: z.array(ShotPlanObjectSchema).max(40).optional(),
   environmentReferenceImageUrls: z.array(z.string().trim().url()).max(20).optional(),
+  environmentHeroImageUrl: z.string().trim().url().optional(),
+  lightingSwatches: z.array(ShotPlanLightingSwatchSchema).max(12).optional(),
   moodKeywords: z.array(z.string().trim().min(1).max(120)).max(40).default([]),
   cinematographyNotes: z.array(z.string().trim().min(1).max(2000)).max(40).default([]),
   artStyle: z.string().trim().max(2000).optional(),
