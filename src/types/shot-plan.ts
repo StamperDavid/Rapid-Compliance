@@ -26,6 +26,13 @@
 
 import { z } from 'zod';
 
+import {
+  type CinematicConfig,
+  type ViewingDirection,
+  CinematicConfigSchema,
+  VIEWING_DIRECTIONS,
+} from '@/types/creative-studio';
+
 // ============================================================================
 // Shared Choices — the project-level "look bible"
 // ============================================================================
@@ -60,6 +67,24 @@ export interface ShotPlanCastMember {
 }
 
 /**
+ * A non-character production OBJECT / prop — a vehicle, product, weapon, creature
+ * rig, set piece — that recurs across shots and needs visual consistency. The
+ * `referenceImageUrls` are its appearance anchors (uploaded or library) so the
+ * engine renders the SAME object every shot, exactly like cast identity anchoring.
+ * This is OpenArt's "Objects" half of its "Characters & Objects" reference bucket.
+ */
+export interface ShotPlanObject {
+  /** Stable id used by shots' `objectIds`. */
+  id: string;
+  /** Display name / model designation, e.g. "Weaponized drone — BARRD-9X". */
+  name: string;
+  /** Appearance-anchor reference images (uploaded or from the media library). */
+  referenceImageUrls: string[];
+  /** Optional material-language / detail note, e.g. "matte gunmetal, scarred armor". */
+  description?: string;
+}
+
+/**
  * The project-level look bible. Every shot inherits these unless it overrides a
  * specific field. The `environmentFingerprint` is the written signature of the
  * world and the single strongest cross-shot consistency anchor.
@@ -73,12 +98,29 @@ export interface ShotPlanSharedChoices {
   environmentFingerprint: string;
   /** The cast available to every shot (resolved from AvatarProfile). */
   cast: ShotPlanCastMember[];
+  /** Non-character objects/props available to every shot (appearance-anchored). */
+  objects?: ShotPlanObject[];
+  /**
+   * Visual reference images for the WORLD/environment — establishing-shot anchors
+   * that pin the look of the set alongside the written `environmentFingerprint`.
+   * Uploaded or selected from the media library.
+   */
+  environmentReferenceImageUrls?: string[];
   /** Mood keywords applied across the production, e.g. ["tense", "hopeful"]. */
   moodKeywords: string[];
   /** Free-text cinematography direction notes shared across shots. */
   cinematographyNotes: string[];
   /** Overarching art style, e.g. "Pixar 3D", "gritty documentary". */
   artStyle?: string;
+  /**
+   * The project-level cinematic "look bible" — the deep, image-backed RenderZero
+   * controls (movie look, film stock, camera body, color grade/filters,
+   * photographer/videographer style, color temperature, aspect ratio, baseline
+   * lighting + atmosphere). SET ONCE and inherited by every shot; this is the
+   * cross-shot consistency anchor that holds a long (movie-length) chain together.
+   * Reuses `CinematicConfig` so it maps 1:1 onto the existing studio pickers.
+   */
+  lookBible?: CinematicConfig;
 }
 
 // ============================================================================
@@ -116,6 +158,12 @@ export interface ShotPlanShotGenerated {
   videoUrl?: string;
   /** Saved final frame — the chaining anchor for a downstream `continue` shot. */
   lastFrameUrl?: string;
+  /**
+   * Pre-video storyboard STILL for this shot — a cheap keyframe generated before
+   * the (expensive) video so the operator can see/approve the look first. For a
+   * `continue` shot this is effectively the prior shot's last frame.
+   */
+  keyframeUrl?: string;
   seed?: number;
   status?: ShotPlanShotGenerationStatus;
   /** Provider/job id for polling + round-trip. */
@@ -130,7 +178,18 @@ export interface ShotPlanShotGenerated {
 export interface ShotPlanShotCamera {
   shotType?: string;
   movement?: string;
+  /** Legacy free-text lens label (kept for back-compat). Prefer lensType + focalLength. */
   lens?: string;
+  /** Preset lens type (e.g. "anamorphic", "macro") — from the cinematic preset library. */
+  lensType?: string;
+  /** Focal length (e.g. "35mm", "85mm"). */
+  focalLength?: string;
+  /** Composition rule (e.g. "rule of thirds", "centered", "leading lines"). */
+  composition?: string;
+  /** Camera viewing direction relative to the subject. */
+  viewingDirection?: ViewingDirection;
+  /** True when the subject should appear unaware of the camera (candid framing). */
+  subjectUnawareOfCamera?: boolean;
 }
 
 /**
@@ -146,6 +205,8 @@ export interface ShotPlanShot {
   action: string;
   /** Which cast appear — references into `ShotPlanSharedChoices.cast`. */
   castMemberIds: string[];
+  /** Which objects/props appear — references into `ShotPlanSharedChoices.objects`. */
+  objectIds?: string[];
   /** This shot's setting — consistent with the environment fingerprint. */
   environment: string;
   /** Camera package (preset ids/labels). */
@@ -173,6 +234,82 @@ export interface ShotPlanShot {
 }
 
 // ============================================================================
+// Floor plan / top-down blocking — the spatial choreography that DRIVES camera
+// ============================================================================
+
+/** A point on the top-down stage, in NORMALIZED [0,1] coordinates (x→right, y→down). */
+export interface FloorPlanPoint {
+  x: number;
+  y: number;
+}
+
+/** What a placed marker on the floor plan represents. */
+export type FloorPlanElementKind = 'actor' | 'object' | 'set-piece' | 'entry' | 'zone';
+
+export const FLOOR_PLAN_ELEMENT_KINDS: readonly FloorPlanElementKind[] = [
+  'actor',
+  'object',
+  'set-piece',
+  'entry',
+  'zone',
+] as const;
+
+/** A placed marker: an actor, object/prop, set piece, entry point, or labeled zone. */
+export interface FloorPlanElement {
+  id: string;
+  kind: FloorPlanElementKind;
+  /** Human label, e.g. "Bear start zone", "Drone entry". */
+  label: string;
+  /** Link to a cast `characterId` (kind 'actor') or object `id` (kind 'object'). */
+  refId?: string;
+  /** Position on the stage, normalized [0,1]. */
+  x: number;
+  y: number;
+  /** Facing direction in degrees (0 = toward top/north, clockwise), optional. */
+  facing?: number;
+}
+
+/**
+ * A camera position for a specific shot — the numbered "cut" on the plan. Drives
+ * the shot's camera-direction prompt: where the camera sits relative to the
+ * subjects, where it points, and (if it moves) the route it travels.
+ */
+export interface FloorPlanCamera {
+  /** The shot this camera node represents (matches `ShotPlanShot.id`). */
+  shotId: string;
+  /** Camera position on the stage, normalized [0,1]. */
+  x: number;
+  y: number;
+  /** Direction the camera points, in degrees (0 = toward top/north, clockwise). */
+  facing: number;
+  /** Lens cone half-angle hint in degrees (derived from focal length), optional. */
+  fovDegrees?: number;
+  /** Movement route the camera travels during the shot (polyline), optional. */
+  route?: FloorPlanPoint[];
+}
+
+/** A subject's movement path across the stage during a shot/scene. */
+export interface FloorPlanSubjectPath {
+  /** The `FloorPlanElement.id` that moves. */
+  elementId: string;
+  path: FloorPlanPoint[];
+}
+
+/**
+ * The top-down blocking diagram for the plan — OpenArt's floor plan, but
+ * structured + field-addressable so it can be edited AND translated into precise
+ * camera-direction prompt language at generation time (our differentiator).
+ */
+export interface ShotPlanFloorPlan {
+  /** Optional AI-rendered top-down set image used as the canvas backdrop. */
+  backdropImageUrl?: string;
+  elements: FloorPlanElement[];
+  /** One camera node per shot (the numbered cuts). */
+  cameras: FloorPlanCamera[];
+  subjectPaths: FloorPlanSubjectPath[];
+}
+
+// ============================================================================
 // Plan envelope
 // ============================================================================
 
@@ -192,6 +329,8 @@ export interface ShotPlan {
   title: string;
   sharedChoices: ShotPlanSharedChoices;
   shots: ShotPlanShot[];
+  /** Top-down blocking diagram (camera positions/routes + actor/prop placement). */
+  floorPlan?: ShotPlanFloorPlan;
   createdAt: string;
   updatedAt: string;
   status: ShotPlanStatus;
@@ -218,14 +357,33 @@ export const ShotPlanCastMemberSchema = z.object({
   role: z.string().trim().max(200).optional(),
 });
 
+export const ShotPlanObjectSchema = z.object({
+  id: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
+  referenceImageUrls: z.array(z.string().trim().url()).max(20).default([]),
+  description: z.string().trim().max(2000).optional(),
+});
+
+/**
+ * The Look Bible schema = the studio `CinematicConfigSchema` extended with
+ * `videographerStyle` (present on the `CinematicConfig` interface but missing
+ * from the base schema), so the full deep-control set round-trips without loss.
+ */
+export const ShotPlanLookBibleSchema = CinematicConfigSchema.extend({
+  videographerStyle: z.string().trim().optional(),
+});
+
 export const ShotPlanSharedChoicesSchema = z.object({
   cutCount: z.number().int().min(0).max(200),
   colorPalette: z.array(ShotPlanColorSwatchSchema).max(40).default([]),
   environmentFingerprint: z.string().trim().max(4000).default(''),
   cast: z.array(ShotPlanCastMemberSchema).max(40).default([]),
+  objects: z.array(ShotPlanObjectSchema).max(40).optional(),
+  environmentReferenceImageUrls: z.array(z.string().trim().url()).max(20).optional(),
   moodKeywords: z.array(z.string().trim().min(1).max(120)).max(40).default([]),
   cinematographyNotes: z.array(z.string().trim().min(1).max(2000)).max(40).default([]),
   artStyle: z.string().trim().max(2000).optional(),
+  lookBible: ShotPlanLookBibleSchema.optional(),
 });
 
 export const ShotPlanShotTransitionSchema = z.enum(['continue', 'cut']);
@@ -240,6 +398,7 @@ export const ShotPlanShotGenerationStatusSchema = z.enum([
 export const ShotPlanShotGeneratedSchema = z.object({
   videoUrl: z.string().trim().url().optional(),
   lastFrameUrl: z.string().trim().url().optional(),
+  keyframeUrl: z.string().trim().url().optional(),
   seed: z.number().int().optional(),
   status: ShotPlanShotGenerationStatusSchema.optional(),
   generationId: z.string().trim().max(200).optional(),
@@ -249,6 +408,11 @@ export const ShotPlanShotCameraSchema = z.object({
   shotType: z.string().trim().max(200).optional(),
   movement: z.string().trim().max(200).optional(),
   lens: z.string().trim().max(200).optional(),
+  lensType: z.string().trim().max(200).optional(),
+  focalLength: z.string().trim().max(200).optional(),
+  composition: z.string().trim().max(200).optional(),
+  viewingDirection: z.enum(VIEWING_DIRECTIONS).optional(),
+  subjectUnawareOfCamera: z.boolean().optional(),
 });
 
 export const ShotPlanShotSchema = z.object({
@@ -257,6 +421,7 @@ export const ShotPlanShotSchema = z.object({
   title: z.string().trim().max(300).default(''),
   action: z.string().trim().max(4000).default(''),
   castMemberIds: z.array(z.string().trim().min(1).max(200)).max(40).default([]),
+  objectIds: z.array(z.string().trim().min(1).max(200)).max(40).optional(),
   environment: z.string().trim().max(4000).default(''),
   camera: ShotPlanShotCameraSchema.default({}),
   lighting: z.string().trim().max(2000).optional(),
@@ -269,6 +434,42 @@ export const ShotPlanShotSchema = z.object({
   upstreamChanged: z.boolean().optional(),
 });
 
+export const FloorPlanPointSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+});
+
+export const FloorPlanElementSchema = z.object({
+  id: z.string().trim().min(1).max(200),
+  kind: z.enum(['actor', 'object', 'set-piece', 'entry', 'zone']),
+  label: z.string().trim().max(300).default(''),
+  refId: z.string().trim().max(200).optional(),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  facing: z.number().min(0).max(360).optional(),
+});
+
+export const FloorPlanCameraSchema = z.object({
+  shotId: z.string().trim().min(1).max(200),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  facing: z.number().min(0).max(360),
+  fovDegrees: z.number().min(1).max(180).optional(),
+  route: z.array(FloorPlanPointSchema).max(100).optional(),
+});
+
+export const FloorPlanSubjectPathSchema = z.object({
+  elementId: z.string().trim().min(1).max(200),
+  path: z.array(FloorPlanPointSchema).max(100).default([]),
+});
+
+export const ShotPlanFloorPlanSchema = z.object({
+  backdropImageUrl: z.string().trim().url().optional(),
+  elements: z.array(FloorPlanElementSchema).max(100).default([]),
+  cameras: z.array(FloorPlanCameraSchema).max(200).default([]),
+  subjectPaths: z.array(FloorPlanSubjectPathSchema).max(100).default([]),
+});
+
 export const ShotPlanStatusSchema = z.enum(['draft', 'ready', 'generating', 'complete']);
 
 export const ShotPlanSchema = z.object({
@@ -276,6 +477,7 @@ export const ShotPlanSchema = z.object({
   title: z.string().trim().max(300).default(''),
   sharedChoices: ShotPlanSharedChoicesSchema,
   shots: z.array(ShotPlanShotSchema).max(200).default([]),
+  floorPlan: ShotPlanFloorPlanSchema.optional(),
   createdAt: z.string().trim().min(1),
   updatedAt: z.string().trim().min(1),
   status: ShotPlanStatusSchema.default('draft'),

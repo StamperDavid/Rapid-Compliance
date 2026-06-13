@@ -60,6 +60,7 @@ import {
   FileVideo,
   FileText,
   File as FileIcon,
+  Package,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -94,12 +95,13 @@ import {
   makeBlankShot,
   castMemberFromProfile,
 } from '@/lib/video/shot-plan-blank';
-import { shotPlanToScenes } from '@/lib/video/shot-plan-mapping';
+import { shotPlanToScenes, buildEffectiveCinematicConfig } from '@/lib/video/shot-plan-mapping';
 import { writeEditorSeed, type EditorSeedClip } from '@/lib/video/editor-seed';
 import type {
   ShotPlan,
   ShotPlanShot,
   ShotPlanCastMember,
+  ShotPlanObject,
   ShotPlanShotTransition,
   ShotPlanShotGenerationStatus,
 } from '@/types/shot-plan';
@@ -170,17 +172,6 @@ function libraryAssetKind(type: LibraryAsset['type']): ReferenceKind {
     return type;
   }
   return 'other';
-}
-
-/** Map a shot's camera package + look fields onto a CinematicConfig (display). */
-function shotCameraToConfig(shot: ShotPlanShot): CinematicConfig {
-  return {
-    ...(shot.camera.shotType ? { shotType: shot.camera.shotType } : {}),
-    ...(shot.camera.movement ? { camera: shot.camera.movement } : {}),
-    ...(shot.camera.lens ? { lensType: shot.camera.lens } : {}),
-    ...(shot.lighting ? { lighting: shot.lighting } : {}),
-    ...(shot.mood ? { atmosphere: shot.mood } : {}),
-  };
 }
 
 // ============================================================================
@@ -497,6 +488,87 @@ function PaletteEditor({
 // Cast member card
 // ============================================================================
 
+// ============================================================================
+// Two-step confirm remove button — first click arms, second click fires,
+// auto-disarm after ~5s (project rule for destructive actions).
+// ============================================================================
+
+function ConfirmRemoveButton({
+  onConfirm,
+  label,
+  className,
+  iconClassName,
+}: {
+  onConfirm: () => void;
+  /** Accessible label, e.g. "Remove David from cast". */
+  label: string;
+  /** Wrapper button classes for the disarmed (icon) state. */
+  className?: string;
+  /** Icon size/classes for the disarmed state. */
+  iconClassName?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const disarm = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setArmed(false);
+  }, []);
+
+  const handleClick = useCallback(() => {
+    if (armed) {
+      disarm();
+      onConfirm();
+      return;
+    }
+    setArmed(true);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setArmed(false);
+    }, 5000);
+  }, [armed, disarm, onConfirm]);
+
+  if (armed) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <button
+          type="button"
+          onClick={handleClick}
+          className="inline-flex items-center gap-1 rounded-md bg-destructive/15 px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/25"
+        >
+          <Trash2 className="h-3 w-3" /> Click again to confirm
+        </button>
+        <button
+          type="button"
+          onClick={disarm}
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-foreground"
+          aria-label="Cancel remove"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-label={label}
+      title={label}
+      className={className ?? 'rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-destructive'}
+    >
+      <Trash2 className={iconClassName ?? 'h-4 w-4'} />
+    </button>
+  );
+}
+
 function CastCard({ member, onRemove }: { member: ShotPlanCastMember; onRemove: () => void }) {
   const [imgBroken, setImgBroken] = useState(false);
   const thumb = member.referenceImageUrls[0];
@@ -524,6 +596,195 @@ function CastCard({ member, onRemove }: { member: ShotPlanCastMember; onRemove: 
         <Trash2 className="h-4 w-4" />
       </button>
     </div>
+  );
+}
+
+// ============================================================================
+// Object / prop card — mirrors CastCard; shows up to 3 reference thumbnails,
+// the description, and a two-step-confirm remove.
+// ============================================================================
+
+function ObjectThumb({ url, alt }: { url: string; alt: string }) {
+  const [broken, setBroken] = useState(false);
+  return (
+    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-background">
+      {!broken ? (
+        <Image src={url} alt={alt} fill unoptimized className="object-cover" onError={() => setBroken(true)} />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-muted-foreground">
+          <ImageIcon className="h-5 w-5" />
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ObjectCard({ object, onRemove }: { object: ShotPlanObject; onRemove: () => void }) {
+  const thumbs = object.referenceImageUrls.slice(0, 3);
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-border-strong bg-card p-3">
+      {thumbs[0] ? (
+        <ObjectThumb url={thumbs[0]} alt={object.name} />
+      ) : (
+        <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-elevated text-muted-foreground">
+          <Package className="h-5 w-5" />
+        </div>
+      )}
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="truncate text-sm font-medium text-foreground">{object.name}</p>
+          <ConfirmRemoveButton
+            onConfirm={onRemove}
+            label={`Remove ${object.name}`}
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-destructive"
+            iconClassName="h-4 w-4"
+          />
+        </div>
+        {object.description && <Caption className="line-clamp-2">{object.description}</Caption>}
+        {thumbs.length > 1 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {thumbs.slice(1).map((url, i) => (
+              <ObjectThumb key={`${url}-${i}`} url={url} alt={`${object.name} reference ${i + 2}`} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Add-object dialog — name + optional description + library-picked reference
+// images. Image-LIBRARY based (MediaLibraryPicker); no disk-upload flow.
+// ============================================================================
+
+function AddObjectDialog({
+  open,
+  onOpenChange,
+  onSave,
+  authFetch,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (object: ShotPlanObject) => void;
+  authFetch: (input: string, init?: RequestInit) => Promise<Response>;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [referenceImageUrls, setReferenceImageUrls] = useState<string[]>([]);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+
+  const reset = useCallback(() => {
+    setName('');
+    setDescription('');
+    setReferenceImageUrls([]);
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        reset();
+      }
+      onOpenChange(next);
+    },
+    [reset, onOpenChange],
+  );
+
+  const addFromLibrary = useCallback((picked: LibraryAsset[]) => {
+    const urls = picked.filter((a) => a.type === 'image').map((a) => a.url);
+    setReferenceImageUrls((prev) => [...prev, ...urls.filter((u) => !prev.includes(u))]);
+  }, []);
+
+  const removeImage = useCallback((url: string) => {
+    setReferenceImageUrls((prev) => prev.filter((u) => u !== url));
+  }, []);
+
+  const handleSave = useCallback(() => {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) {
+      return;
+    }
+    onSave({
+      id: crypto.randomUUID(),
+      name: trimmed,
+      referenceImageUrls,
+      ...(description.trim() ? { description: description.trim() } : {}),
+    });
+    reset();
+    onOpenChange(false);
+  }, [name, description, referenceImageUrls, onSave, reset, onOpenChange]);
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="bg-card border border-border-strong max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <Package className="w-4 h-4 text-primary" /> Add an object or prop
+          </DialogTitle>
+          <DialogDescription>
+            A recurring object, prop, vehicle or product the engine should render the
+            same way in every shot. Add reference images so its look stays consistent.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Caption className="font-medium text-muted-foreground">Name</Caption>
+            <Input
+              value={name}
+              autoFocus
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Weaponized drone — BARRD-9X"
+              className="bg-surface-elevated border-border-strong text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="space-y-1">
+            <Caption className="font-medium text-muted-foreground">Description (optional)</Caption>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="Material/detail note, e.g. matte gunmetal, scarred armor…"
+              className="w-full rounded-md border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Caption className="font-medium text-muted-foreground">Reference images</Caption>
+              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setLibraryOpen(true)}>
+                <LibraryBig className="h-3.5 w-3.5" /> Add reference image
+              </Button>
+            </div>
+            {referenceImageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {referenceImageUrls.map((url, i) => (
+                  <div
+                    key={`${url}-${i}`}
+                    className="relative h-16 w-16 overflow-hidden rounded-lg border border-border-light bg-surface-elevated"
+                  >
+                    <Image src={url} alt={`Reference ${i + 1}`} fill sizes="64px" unoptimized className="object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(url)}
+                      aria-label={`Remove reference ${i + 1}`}
+                      className="absolute right-0.5 top-0.5 rounded-md bg-background/80 p-0.5 text-muted-foreground transition-colors hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={() => handleOpenChange(false)}>Cancel</Button>
+            <Button size="sm" className="gap-1.5" disabled={name.trim().length === 0} onClick={handleSave}>
+              <Check className="w-3.5 h-3.5" /> Add object
+            </Button>
+          </div>
+        </div>
+        <MediaLibraryPicker open={libraryOpen} onOpenChange={setLibraryOpen} onSelect={addFromLibrary} authFetch={authFetch} />
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -558,6 +819,8 @@ interface ShotCardProps {
   total: number;
   /** This shot is generating right now (single-shot or part of a Generate-all run). */
   isGenerating: boolean;
+  /** A keyframe still is being generated for this shot right now. */
+  isKeyframing: boolean;
   /** Any generation is in flight anywhere in the plan — disables shot-level actions. */
   busy: boolean;
   onEditField: (field: keyof ShotPlanShot, value: ShotPlanShot[keyof ShotPlanShot]) => void;
@@ -567,6 +830,7 @@ interface ShotCardProps {
   onKeepUpstream: () => void;
   onRerun: () => void;
   onRegenerate: () => void;
+  onGenerateKeyframe: () => void;
   onOpenCamera: () => void;
 }
 
@@ -576,6 +840,7 @@ function ShotCard({
   position,
   total,
   isGenerating,
+  isKeyframing,
   busy,
   onEditField,
   onAskAi,
@@ -584,11 +849,15 @@ function ShotCard({
   onKeepUpstream,
   onRerun,
   onRegenerate,
+  onGenerateKeyframe,
   onOpenCamera,
 }: ShotCardProps) {
   const [imgBroken, setImgBroken] = useState(false);
   const generatedVideoUrl = shot.generated?.videoUrl ?? null;
-  const keyframe = shot.generated?.lastFrameUrl ?? shot.generated?.videoUrl ?? null;
+  // Prefer the cheap pre-video keyframe still, then the saved last frame.
+  const keyframe = shot.generated?.keyframeUrl ?? shot.generated?.lastFrameUrl ?? null;
+  const planObjects = plan.sharedChoices.objects ?? [];
+  const selectedObjectIds = shot.objectIds ?? [];
   const badge = statusBadge(shot.generated?.status);
   const hasRun = Boolean(shot.generated?.videoUrl);
   const castNames = shot.castMemberIds
@@ -603,6 +872,17 @@ function ShotCard({
     const next: ShotPlanShotTransition = shot.transitionIn === 'continue' ? 'cut' : 'continue';
     onEditField('transitionIn', next);
   }, [shot.transitionIn, onEditField]);
+
+  const toggleObject = useCallback(
+    (objectId: string) => {
+      const current = shot.objectIds ?? [];
+      const next = current.includes(objectId)
+        ? current.filter((id) => id !== objectId)
+        : [...current, objectId];
+      onEditField('objectIds', next);
+    },
+    [shot.objectIds, onEditField],
+  );
 
   return (
     <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-4">
@@ -744,12 +1024,55 @@ function ShotCard({
               <Camera className="w-3.5 h-3.5" />
             </Button>
           </div>
+          {/* Cheap pre-video keyframe still — see/approve the look before the
+              (expensive) full video render. */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-1.5"
+            onClick={onGenerateKeyframe}
+            disabled={busy}
+            title="Generate a quick still to preview this shot's look before the full video"
+          >
+            {isKeyframing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+            {isKeyframing ? 'Generating still…' : 'Preview still'}
+          </Button>
           {castNames.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               <Users className="h-3 w-3 text-muted-foreground" />
               {castNames.map((n) => (
                 <span key={n} className="rounded-full bg-surface-elevated px-2 py-0.5 text-[11px] text-foreground">{n}</span>
               ))}
+            </div>
+          )}
+          {/* Per-shot object selection — toggle which props/objects appear in
+              THIS shot. Renders nothing until objects are defined. */}
+          {planObjects.length > 0 && (
+            <div className="space-y-1.5">
+              <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                <Package className="h-3 w-3" /> Objects in this shot
+              </Caption>
+              <div className="flex flex-wrap gap-1.5">
+                {planObjects.map((obj) => {
+                  const active = selectedObjectIds.includes(obj.id);
+                  return (
+                    <button
+                      key={obj.id}
+                      type="button"
+                      onClick={() => toggleObject(obj.id)}
+                      aria-pressed={active}
+                      className={
+                        active
+                          ? 'inline-flex items-center gap-1 rounded-full border border-primary bg-primary/15 px-2.5 py-0.5 text-[11px] font-medium text-primary transition-colors'
+                          : 'inline-flex items-center gap-1 rounded-full border border-border-light bg-surface-elevated px-2.5 py-0.5 text-[11px] text-foreground transition-colors hover:border-primary'
+                      }
+                    >
+                      {active && <Check className="h-3 w-3" />}
+                      {obj.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -835,7 +1158,7 @@ function ShotCard({
             <Caption className="font-medium text-muted-foreground">Assembled prompt (override)</Caption>
             <ConstructedPromptDisplay
               basePrompt={shot.assembledPrompt ?? shot.action}
-              config={shotCameraToConfig(shot)}
+              config={buildEffectiveCinematicConfig(plan, shot)}
               onEdit={(text) => onEditField('assembledPrompt', text.trim() ? text.trim() : undefined)}
             />
           </div>
@@ -849,6 +1172,34 @@ function ShotCard({
 // Camera editor dialog — reuses the full CinematicControlsPanel
 // ============================================================================
 
+/** Camera-movement options (no preset category exists for movement in the panel). */
+const CAMERA_MOVEMENT_OPTIONS = [
+  'static',
+  'slow push-in',
+  'push-in',
+  'dolly out',
+  'pan left',
+  'pan right',
+  'tilt up',
+  'tilt down',
+  'tracking shot',
+  'crane up',
+  'crane down',
+  'handheld',
+  'steadicam',
+  'orbit',
+  'zoom in',
+  'zoom out',
+  'crash zoom',
+] as const;
+
+/** What the camera dialog commits back: the per-shot camera + lighting/mood accents. */
+interface ShotLookCommit {
+  camera: ShotPlanShot['camera'];
+  lighting?: string;
+  mood?: string;
+}
+
 function CameraDialog({
   shot,
   onClose,
@@ -856,10 +1207,13 @@ function CameraDialog({
 }: {
   shot: ShotPlanShot | null;
   onClose: () => void;
-  onCommit: (camera: ShotPlanShot['camera']) => void;
+  onCommit: (update: ShotLookCommit) => void;
 }) {
-  // Map the shot's camera onto a CinematicConfig the panel understands and back.
+  // The panel edits a CinematicConfig; we map only the PER-SHOT dimensions to/from
+  // it (framing, lens, composition, angle, lighting/atmosphere accents). Movement
+  // has no preset category, so it gets its own control below.
   const [config, setConfig] = useState<CinematicConfig>({});
+  const [movement, setMovement] = useState('');
 
   // Seed config when a shot is opened.
   const seedKey = shot?.id ?? null;
@@ -868,36 +1222,77 @@ function CameraDialog({
     setSeededFor(seedKey);
     setConfig({
       ...(shot.camera.shotType ? { shotType: shot.camera.shotType } : {}),
-      ...(shot.camera.lens ? { lensType: shot.camera.lens } : {}),
-      ...(shot.camera.movement ? { camera: shot.camera.movement } : {}),
+      ...(shot.camera.lensType ? { lensType: shot.camera.lensType } : {}),
+      ...(shot.camera.focalLength ? { focalLength: shot.camera.focalLength } : {}),
+      ...(shot.camera.composition ? { composition: shot.camera.composition } : {}),
+      ...(shot.camera.viewingDirection ? { viewingDirection: shot.camera.viewingDirection } : {}),
+      ...(shot.camera.subjectUnawareOfCamera ? { subjectUnawareOfCamera: true } : {}),
+      ...(shot.lighting ? { lighting: shot.lighting } : {}),
+      ...(shot.mood ? { atmosphere: shot.mood } : {}),
     });
+    setMovement(shot.camera.movement ?? '');
   }
 
+  // Preserve a planner/custom movement value that isn't in our preset list.
+  const movementOptions =
+    movement && !CAMERA_MOVEMENT_OPTIONS.includes(movement as (typeof CAMERA_MOVEMENT_OPTIONS)[number])
+      ? [movement, ...CAMERA_MOVEMENT_OPTIONS]
+      : [...CAMERA_MOVEMENT_OPTIONS];
+
   const handleSave = useCallback(() => {
-    onCommit({
+    if (!shot) {
+      return;
+    }
+    const camera: ShotPlanShot['camera'] = {
       ...(config.shotType ? { shotType: config.shotType } : {}),
-      ...(config.camera ? { movement: config.camera } : {}),
-      ...(config.lensType ? { lens: config.lensType } : {}),
+      ...(movement.trim() ? { movement: movement.trim() } : {}),
+      // Preserve any legacy free-text lens; lensType is the preset path.
+      ...(shot.camera.lens ? { lens: shot.camera.lens } : {}),
+      ...(config.lensType ? { lensType: config.lensType } : {}),
+      ...(config.focalLength ? { focalLength: config.focalLength } : {}),
+      ...(config.composition ? { composition: config.composition } : {}),
+      ...(config.viewingDirection ? { viewingDirection: config.viewingDirection } : {}),
+      ...(config.subjectUnawareOfCamera ? { subjectUnawareOfCamera: true } : {}),
+    };
+    onCommit({
+      camera,
+      lighting: config.lighting?.trim() ? config.lighting.trim() : undefined,
+      mood: config.atmosphere?.trim() ? config.atmosphere.trim() : undefined,
     });
-  }, [config, onCommit]);
+  }, [config, movement, shot, onCommit]);
 
   return (
     <Dialog open={shot !== null} onOpenChange={(o) => { if (!o) { onClose(); } }}>
       <DialogContent className="bg-card border border-border-strong max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
-            <Camera className="w-4 h-4 text-primary" /> Camera &amp; look
+            <Camera className="w-4 h-4 text-primary" /> Camera &amp; look — this shot
           </DialogTitle>
           <DialogDescription>
-            Direct the shot like a cinematographer — shot type, movement, lens and the full
-            look surface. Saving updates this shot&apos;s camera package.
+            Direct THIS shot — framing, lens, composition, angle and lighting/mood accents.
+            Your project-wide look (movie look, film stock, camera body, color grade) is set
+            once in the Look Bible and inherited here automatically.
           </DialogDescription>
         </DialogHeader>
+        {/* Camera movement — dedicated control (no preset category for it). */}
+        <div className="space-y-1">
+          <Caption className="font-medium text-muted-foreground">Camera movement</Caption>
+          <select
+            value={movement}
+            onChange={(e) => setMovement(e.target.value)}
+            className="w-full rounded-md border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground"
+          >
+            <option value="">No movement specified</option>
+            {movementOptions.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
         <CinematicControlsPanel config={config} onChange={setConfig} compact={false} studioMode="advanced" medium="video" />
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
           <Button size="sm" className="gap-1.5" onClick={handleSave}>
-            <Check className="w-3.5 h-3.5" /> Save camera
+            <Check className="w-3.5 h-3.5" /> Save shot look
           </Button>
         </div>
       </DialogContent>
@@ -1247,10 +1642,14 @@ export function ShotPlanSheet() {
   const [askAiError, setAskAiError] = useState<string | null>(null);
   const [castPickerOpen, setCastPickerOpen] = useState(false);
   const [cameraShotId, setCameraShotId] = useState<string | null>(null);
+  const [objectDialogOpen, setObjectDialogOpen] = useState(false);
+  const [envLibraryOpen, setEnvLibraryOpen] = useState(false);
 
   // ── Shot-generation state (wires the orchestrator routes) ──
   // The set of shot ids currently rendering (single-shot or part of an all-run).
   const [generatingShotIds, setGeneratingShotIds] = useState<Set<string>>(new Set());
+  // The set of shot ids whose cheap pre-video keyframe still is rendering.
+  const [keyframingShotIds, setKeyframingShotIds] = useState<Set<string>>(new Set());
   // True while a Generate-all run is in flight (the whole plan is long-running).
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   // Plain-English generation failure surfaced to the operator (never silent).
@@ -1349,6 +1748,26 @@ export function ShotPlanSheet() {
     [applyEdit],
   );
 
+  // Commit the camera dialog's full per-shot look (camera + lighting + mood) in a
+  // SINGLE store update — chaining edits on the accumulating plan so all three
+  // stick (three separate editShotField calls would each start from a stale plan).
+  const commitShotLook = useCallback(
+    (shotId: string, update: ShotLookCommit) => {
+      if (!shotPlan) {
+        return;
+      }
+      try {
+        let next = applyShotPlanEdit(shotPlan, { target: 'shot', shotId, field: 'camera', value: update.camera });
+        next = applyShotPlanEdit(next, { target: 'shot', shotId, field: 'lighting', value: update.lighting });
+        next = applyShotPlanEdit(next, { target: 'shot', shotId, field: 'mood', value: update.mood });
+        setShotPlan(next);
+      } catch {
+        // An out-of-contract value is rejected; the fields revert on next render.
+      }
+    },
+    [shotPlan, setShotPlan],
+  );
+
   const moveShot = useCallback(
     (shotId: string, dir: -1 | 1) => {
       if (!shotPlan) {
@@ -1422,7 +1841,7 @@ export function ShotPlanSheet() {
   );
 
   // ── Generation: any run in flight disables editing/competing generations ──
-  const busy = isGeneratingAll || generatingShotIds.size > 0;
+  const busy = isGeneratingAll || generatingShotIds.size > 0 || keyframingShotIds.size > 0;
 
   // Generate (or regenerate) ONE shot through the orchestrator route. The route
   // returns the updated plan with this shot's `generated` field written; we swap
@@ -1450,6 +1869,40 @@ export function ShotPlanSheet() {
         setShotGenError(err instanceof Error ? err.message : 'That shot could not be generated. Please try again.');
       } finally {
         setGeneratingShotIds((prev) => {
+          const next = new Set(prev);
+          next.delete(shotId);
+          return next;
+        });
+      }
+    },
+    [authFetch, setShotPlan, busy],
+  );
+
+  // Generate a CHEAP pre-video keyframe still for ONE shot. Mirrors
+  // generateOneShot but hits the keyframe route and tracks its own id set.
+  const generateOneKeyframe = useCallback(
+    async (shotId: string) => {
+      const plan = useVideoPipelineStore.getState().shotPlan;
+      if (!plan || busy) {
+        return;
+      }
+      setShotGenError(null);
+      setKeyframingShotIds((prev) => new Set(prev).add(shotId));
+      try {
+        const res = await authFetch('/api/content/shot-plan/generate-keyframe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan, shotId }),
+        });
+        const data = (await res.json()) as ShotGenerationResponse;
+        if (!res.ok || !data.success || !data.plan) {
+          throw new Error(data.error ?? 'That still could not be generated. Please try again.');
+        }
+        setShotPlan(data.plan);
+      } catch (err) {
+        setShotGenError(err instanceof Error ? err.message : 'That still could not be generated. Please try again.');
+      } finally {
+        setKeyframingShotIds((prev) => {
           const next = new Set(prev);
           next.delete(shotId);
           return next;
@@ -1549,6 +2002,63 @@ export function ShotPlanSheet() {
         target: 'shared',
         field: 'cast',
         value: shotPlan.sharedChoices.cast.filter((c) => c.characterId !== characterId),
+      });
+    },
+    [shotPlan, applyEdit],
+  );
+
+  // ── Objects & props helpers ──
+  const addObject = useCallback(
+    (object: ShotPlanObject) => {
+      if (!shotPlan) {
+        return;
+      }
+      applyEdit({
+        target: 'shared',
+        field: 'objects',
+        value: [...(shotPlan.sharedChoices.objects ?? []), object],
+      });
+    },
+    [shotPlan, applyEdit],
+  );
+
+  const removeObject = useCallback(
+    (objectId: string) => {
+      if (!shotPlan) {
+        return;
+      }
+      applyEdit({
+        target: 'shared',
+        field: 'objects',
+        value: (shotPlan.sharedChoices.objects ?? []).filter((o) => o.id !== objectId),
+      });
+    },
+    [shotPlan, applyEdit],
+  );
+
+  // ── Environment reference images helpers ──
+  const addEnvironmentImages = useCallback(
+    (urls: string[]) => {
+      if (!shotPlan || urls.length === 0) {
+        return;
+      }
+      const existing = shotPlan.sharedChoices.environmentReferenceImageUrls ?? [];
+      // Append only URLs we don't already have.
+      const merged = [...existing, ...urls.filter((u) => !existing.includes(u))];
+      applyEdit({ target: 'shared', field: 'environmentReferenceImageUrls', value: merged });
+    },
+    [shotPlan, applyEdit],
+  );
+
+  const removeEnvironmentImage = useCallback(
+    (url: string) => {
+      if (!shotPlan) {
+        return;
+      }
+      applyEdit({
+        target: 'shared',
+        field: 'environmentReferenceImageUrls',
+        value: (shotPlan.sharedChoices.environmentReferenceImageUrls ?? []).filter((u) => u !== url),
       });
     },
     [shotPlan, applyEdit],
@@ -1669,15 +2179,67 @@ export function ShotPlanSheet() {
             onCommit={(v) => applyEdit({ target: 'shared', field: 'cinematographyNotes', value: v })}
             onAskAi={() => setAskAi({ target: 'shared', field: 'cinematographyNotes', label: 'the cinematography notes' })}
           />
-          <div className="lg:col-span-2">
-            <EditableText
-              label="Art style"
-              value={sharedChoices.artStyle ?? ''}
-              placeholder="e.g. gritty documentary, Pixar 3D…"
-              onCommit={(v) => applyEdit({ target: 'shared', field: 'artStyle', value: v || undefined })}
-              onAskAi={() => setAskAi({ target: 'shared', field: 'artStyle', label: 'the art style' })}
-            />
+        </div>
+
+        {/* Environment reference images — establishing-shot anchors that pin the
+            look of the world alongside the written fingerprint. Library-based. */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
+              <ImageIcon className="w-3.5 h-3.5" /> Environment reference images
+            </Caption>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEnvLibraryOpen(true)}>
+              <Plus className="w-3.5 h-3.5" /> Add image
+            </Button>
           </div>
+          {(sharedChoices.environmentReferenceImageUrls ?? []).length === 0 ? (
+            <Caption>Add images of the world/set to anchor its look across every shot.</Caption>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {(sharedChoices.environmentReferenceImageUrls ?? []).map((url, i) => (
+                <div
+                  key={`${url}-${i}`}
+                  className="relative h-20 w-20 overflow-hidden rounded-lg border border-border-light bg-surface-elevated"
+                >
+                  <Image src={url} alt={`Environment reference ${i + 1}`} fill sizes="80px" unoptimized className="object-cover" />
+                  <div className="absolute right-0.5 top-0.5 rounded-md bg-background/80">
+                    <ConfirmRemoveButton
+                      onConfirm={() => removeEnvironmentImage(url)}
+                      label={`Remove environment reference ${i + 1}`}
+                      className="rounded-md p-0.5 text-muted-foreground transition-colors hover:text-destructive"
+                      iconClassName="h-3.5 w-3.5"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Look Bible — the deep, image-backed cinematic controls, set ONCE and
+            inherited by every shot. This is the RenderZero depth, and it owns
+            art style (so there is no duplicate standalone art-style field). */}
+        <div className="space-y-2 border-t border-border-light pt-5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <Clapperboard className="w-4 h-4 text-primary" /> Cinematic look
+            </CardTitle>
+            <span className="rounded-full border border-border-light bg-surface-elevated px-2 py-0.5 text-[11px] text-muted-foreground">
+              Set once · every shot inherits this
+            </span>
+          </div>
+          <SectionDescription>
+            The deep look bible — movie look, film stock, camera body, lens, color grade,
+            photographer/videographer style and more, chosen from visual options. Each shot
+            can fine-tune its own framing in its camera editor.
+          </SectionDescription>
+          <CinematicControlsPanel
+            config={sharedChoices.lookBible ?? {}}
+            onChange={(c) => applyEdit({ target: 'shared', field: 'lookBible', value: c })}
+            compact={false}
+            studioMode="advanced"
+            medium="video"
+          />
         </div>
       </div>
 
@@ -1702,6 +2264,30 @@ export function ShotPlanSheet() {
         )}
       </div>
 
+      {/* ── Objects & Props ── */}
+      <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-primary" /> Objects &amp; Props
+          </CardTitle>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setObjectDialogOpen(true)}>
+            <Plus className="w-3.5 h-3.5" /> Add object
+          </Button>
+        </div>
+        {(sharedChoices.objects ?? []).length === 0 ? (
+          <SectionDescription>
+            No objects yet. Add a recurring prop, vehicle or product with reference images so the
+            engine renders it the same way across shots.
+          </SectionDescription>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(sharedChoices.objects ?? []).map((object) => (
+              <ObjectCard key={object.id} object={object} onRemove={() => removeObject(object.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ── Section 3: Storyboard ── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -1720,6 +2306,7 @@ export function ShotPlanSheet() {
             position={i}
             total={orderedShots.length}
             isGenerating={generatingShotIds.has(shot.id)}
+            isKeyframing={keyframingShotIds.has(shot.id)}
             busy={busy}
             onEditField={(field, value) => editShotField(shot.id, field, value)}
             onAskAi={(field, label) => setAskAi({ target: 'shot', shotId: shot.id, field, label })}
@@ -1728,6 +2315,7 @@ export function ShotPlanSheet() {
             onKeepUpstream={() => keepUpstream(shot.id)}
             onRerun={() => { void generateOneShot(shot.id); }}
             onRegenerate={() => { void generateOneShot(shot.id); }}
+            onGenerateKeyframe={() => { void generateOneKeyframe(shot.id); }}
             onOpenCamera={() => setCameraShotId(shot.id)}
           />
         ))}
@@ -1753,7 +2341,7 @@ export function ShotPlanSheet() {
           </div>
           <div className="space-y-1">
             <Caption className="font-medium text-muted-foreground">Art style</Caption>
-            <p className="text-sm text-foreground">{sharedChoices.artStyle ?? '—'}</p>
+            <p className="text-sm text-foreground">{sharedChoices.lookBible?.artStyle ?? sharedChoices.artStyle ?? '—'}</p>
           </div>
         </div>
       </div>
@@ -1770,9 +2358,9 @@ export function ShotPlanSheet() {
       <CameraDialog
         shot={cameraShot}
         onClose={() => setCameraShotId(null)}
-        onCommit={(camera) => {
+        onCommit={(update) => {
           if (cameraShot) {
-            editShotField(cameraShot.id, 'camera', camera);
+            commitShotLook(cameraShot.id, update);
           }
           setCameraShotId(null);
         }}
@@ -1795,6 +2383,21 @@ export function ShotPlanSheet() {
           />
         </DialogContent>
       </Dialog>
+
+      <AddObjectDialog
+        open={objectDialogOpen}
+        onOpenChange={setObjectDialogOpen}
+        onSave={addObject}
+        authFetch={authFetch}
+      />
+
+      {/* Environment reference image picker — appends image URLs to the shared look. */}
+      <MediaLibraryPicker
+        open={envLibraryOpen}
+        onOpenChange={setEnvLibraryOpen}
+        onSelect={(picked) => addEnvironmentImages(picked.filter((a) => a.type === 'image').map((a) => a.url))}
+        authFetch={authFetch}
+      />
     </div>
   );
 }

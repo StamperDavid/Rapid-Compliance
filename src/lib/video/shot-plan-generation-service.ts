@@ -39,6 +39,7 @@ import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { adminStorage } from '@/lib/firebase/admin';
 import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
+import { generateWithFal, generateFromReferenceWithFal } from '@/lib/ai/providers/fal-provider';
 import { createAsset } from '@/lib/media/media-library-service';
 import {
   ensureFfmpeg,
@@ -117,6 +118,44 @@ function resolveCastReferenceImageUrls(plan: ShotPlan, shot: ShotPlanShot): stri
     }
   }
   return urls;
+}
+
+/**
+ * Resolve the appearance-anchor reference images for every OBJECT/prop the shot
+ * lists in `objectIds`, in order, de-duplicated — so the engine renders the same
+ * object each shot, exactly like cast identity anchoring.
+ */
+function resolveObjectReferenceImageUrls(plan: ShotPlan, shot: ShotPlanShot): string[] {
+  const urls: string[] = [];
+  for (const objectId of shot.objectIds ?? []) {
+    const obj = plan.sharedChoices.objects?.find((o) => o.id === objectId);
+    if (!obj) {
+      continue;
+    }
+    for (const url of obj.referenceImageUrls) {
+      if (url && !urls.includes(url)) {
+        urls.push(url);
+      }
+    }
+  }
+  return urls;
+}
+
+/** The shared environment establishing-reference images (world look anchors). */
+function environmentReferenceImageUrls(plan: ShotPlan): string[] {
+  return [...new Set(plan.sharedChoices.environmentReferenceImageUrls ?? [])].filter(Boolean);
+}
+
+/**
+ * Ceiling on reference images sent to the engine. Past a handful, extra refs
+ * dilute rather than help the model lock identity/continuity. The continuation
+ * frame (when present) always leads and is never dropped.
+ */
+const MAX_REFERENCE_IMAGES = 7;
+
+/** De-duplicate + cap a reference-image list, preserving order (lead frame kept). */
+function capReferenceImages(urls: string[]): string[] {
+  return [...new Set(urls.filter(Boolean))].slice(0, MAX_REFERENCE_IMAGES);
 }
 
 /**
@@ -319,6 +358,8 @@ export async function generateShot(
   const shot = requireShot(plan, shotId);
   const cut = isCutShot(plan, shot);
   const castRefs = resolveCastReferenceImageUrls(plan, shot);
+  const objectRefs = resolveObjectReferenceImageUrls(plan, shot);
+  const envRefs = environmentReferenceImageUrls(plan);
   const basePrompt = buildShotPrompt(plan, shot);
 
   // Pre-flight: ffmpeg must be available before we spend money on a generation.
@@ -330,9 +371,11 @@ export async function generateShot(
     // ── Submit the generation (cut vs. identity-locked continue) ──────────────
     let generationId: string;
     if (cut) {
+      // CUT = fresh scene: cast identity first, then object + environment anchors.
+      const cutRefs = capReferenceImages([...castRefs, ...objectRefs, ...envRefs]);
       const req: VideoGenerateRequest = {
         prompt: basePrompt,
-        imageUrls: castRefs,
+        imageUrls: cutRefs,
         resolution: DEFAULT_RESOLUTION,
         aspectRatio: DEFAULT_ASPECT_RATIO,
         durationSeconds: shot.durationSeconds,
@@ -343,6 +386,8 @@ export async function generateShot(
         file: FILE,
         shotId,
         castRefCount: castRefs.length,
+        objectRefCount: objectRefs.length,
+        envRefCount: envRefs.length,
       });
       const submitted = await provider.generateVideo(req, ctx);
       generationId = submitted.generationId;
@@ -356,10 +401,13 @@ export async function generateShot(
         );
       }
       // Identity-locked continue: last frame FIRST (continuity, @Image1), then
-      // cast refs (identity). reference-to-video, not pure image-to-video.
+      // cast refs (identity), then object anchors. reference-to-video, not pure
+      // image-to-video. The environment carries over from the continuation frame,
+      // so env refs are not re-sent here.
+      const continueRefs = capReferenceImages([priorLastFrame, ...castRefs, ...objectRefs]);
       const req: VideoGenerateRequest = {
         prompt: buildContinuePrompt(basePrompt),
-        imageUrls: [priorLastFrame, ...castRefs],
+        imageUrls: continueRefs,
         resolution: DEFAULT_RESOLUTION,
         aspectRatio: DEFAULT_ASPECT_RATIO,
         durationSeconds: shot.durationSeconds,
@@ -371,6 +419,7 @@ export async function generateShot(
         shotId,
         priorShotId: prior?.id,
         castRefCount: castRefs.length,
+        objectRefCount: objectRefs.length,
       });
       const submitted = await provider.generateVideo(req, ctx);
       generationId = submitted.generationId;
@@ -595,4 +644,151 @@ export async function regenerateShot(
   });
 
   return { plan: next, flaggedDownstreamShotIds };
+}
+
+// ============================================================================
+// generateShotKeyframe — CHEAP pre-video still
+// ============================================================================
+
+/**
+ * Generate a CHEAP pre-video STILL (keyframe) for ONE shot so the operator can
+ * approve the look BEFORE committing to the expensive video generation.
+ *
+ * Behavior:
+ *   - CONTINUE shot whose prior shot already has `generated.lastFrameUrl`: NO new
+ *     generation, NO spend. The continuation literally starts on that frame, so we
+ *     reuse it directly as this shot's `keyframeUrl` (it already lives on OUR
+ *     storage — it was persisted by the prior shot's `generateShot`).
+ *   - Otherwise (CUT shot, or a continue shot with no prior frame yet): generate a
+ *     single still from the shot's composed prompt PLUS the cast reference images
+ *     (identity). When cast refs exist we use Flux Kontext image-to-image off the
+ *     first cast ref (the identity anchor); with no cast refs we fall back to a
+ *     pure text-to-image Flux generation.
+ *
+ * Ownership rule (NON-NEGOTIABLE): the still is downloaded off fal's TEMPORARY CDN,
+ * persisted to OUR Firebase Storage with a permanent download-token URL, and
+ * registered in the media library. The `keyframeUrl` written onto the shot never
+ * references a fal URL.
+ *
+ * Failure policy: a missing keyframe must NOT block video generation, so this does
+ * NOT set the shot's `generated.status` to 'failed'. It logs the error and rethrows
+ * a clear message (mirroring `generateShot`'s phrasing) so the caller/route can
+ * surface it — but the shot's generation lifecycle is left untouched.
+ */
+export async function generateShotKeyframe(
+  plan: ShotPlan,
+  shotId: string,
+  ctx: TenantContext,
+): Promise<ShotPlan> {
+  const shot = requireShot(plan, shotId);
+  const cut = isCutShot(plan, shot);
+
+  // ── Free path: a continue shot whose prior frame already exists ────────────
+  if (!cut) {
+    const prior = priorShot(plan, shot);
+    const priorLastFrame = prior?.generated?.lastFrameUrl;
+    if (priorLastFrame) {
+      logger.info('[shot-plan-gen] keyframe reuses prior last frame (no spend)', {
+        file: FILE,
+        shotId,
+        priorShotId: prior?.id,
+      });
+      const generated: ShotPlanShotGenerated = {
+        ...shot.generated,
+        keyframeUrl: priorLastFrame,
+      };
+      return writeGenerated(plan, shotId, generated);
+    }
+  }
+
+  // ── Generate path: a fresh still from the prompt + cast identity refs ───────
+  const castRefs = resolveCastReferenceImageUrls(plan, shot);
+  const basePrompt = buildShotPrompt(plan, shot);
+  const workDir = await createWorkDir('shot-plan-keyframe');
+
+  try {
+    // When the shot has cast refs, anchor identity off the first ref via Flux
+    // Kontext (image-to-image). With no cast refs, fall back to text-to-image.
+    // ctx is referenced explicitly: these fal image helpers resolve the key from
+    // the platform credential store (single-tenant), so there is no per-call ctx
+    // arg, but we log it so the multi-tenant metering seam is visible here too.
+    const seed = typeof shot.generated?.seed === 'number' ? shot.generated.seed : undefined;
+    logger.info('[shot-plan-gen] submitting keyframe still', {
+      file: FILE,
+      shotId,
+      tenantId: ctx.tenantId,
+      mode: castRefs.length > 0 ? 'kontext' : 'text-to-image',
+      castRefCount: castRefs.length,
+    });
+
+    const result =
+      castRefs.length > 0
+        ? await generateFromReferenceWithFal(basePrompt, castRefs[0], {
+            ...(seed !== undefined ? { seed } : {}),
+          })
+        : await generateWithFal(basePrompt, {
+            aspectRatio: '16:9',
+            ...(seed !== undefined ? { seed } : {}),
+          });
+
+    const falImageUrl = result.url;
+    if (!falImageUrl) {
+      throw new Error('keyframe generation returned no image url');
+    }
+
+    // ── Persist to OUR storage (ownership rule) ───────────────────────────────
+    const framePath = join(workDir, 'keyframe.png');
+    const frameBuf = await downloadToFile(falImageUrl, framePath, `shot ${shotId} keyframe`);
+
+    const frameStoragePath = `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`;
+    const permanentKeyframeUrl = await uploadPermanent(
+      frameBuf,
+      frameStoragePath,
+      'image/png',
+      `shot ${shotId} keyframe`,
+    );
+
+    // ── Register the still in the media library ───────────────────────────────
+    await createAsset({
+      type: 'image',
+      category: 'thumbnail',
+      name: `Shot ${shot.index + 1} keyframe${shot.title ? ` — ${shot.title}` : ''}`,
+      description:
+        `Pre-video keyframe still for shot from Shot Plan "${plan.title || plan.id}".`,
+      url: permanentKeyframeUrl,
+      mimeType: 'image/png',
+      fileSize: frameBuf.length,
+      source: 'ai-generated',
+      aiProvider: 'fal',
+      aiPrompt: basePrompt,
+      createdBy: 'system',
+      tags: ['shot-plan', 'keyframe'],
+    });
+
+    // ── Write the keyframe url onto the shot (preserving prior generated) ──────
+    const generated: ShotPlanShotGenerated = {
+      ...shot.generated,
+      keyframeUrl: permanentKeyframeUrl,
+    };
+
+    logger.info('[shot-plan-gen] keyframe completed + persisted', {
+      file: FILE,
+      shotId,
+      keyframeUrl: permanentKeyframeUrl,
+    });
+
+    return writeGenerated(plan, shotId, generated);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error(
+      '[shot-plan-gen] keyframe generation failed',
+      err instanceof Error ? err : new Error(message),
+      { file: FILE, shotId },
+    );
+    // A missing keyframe must NOT block video generation — do NOT set the shot's
+    // generated.status to 'failed'. Just rethrow a clear error for the caller.
+    throw new Error(`Shot "${shotId}" keyframe generation failed: ${message}`);
+  } finally {
+    await cleanupWorkDir(workDir);
+  }
 }
