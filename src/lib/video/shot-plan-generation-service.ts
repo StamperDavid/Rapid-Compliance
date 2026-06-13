@@ -61,6 +61,7 @@ import type {
   ShotPlanShot,
   ShotPlanShotGenerated,
   ShotPlanFloorPlan,
+  ShotPlanCastMember,
 } from '@/types/shot-plan';
 
 const FILE = 'video/shot-plan-generation-service.ts';
@@ -996,12 +997,100 @@ export async function generateLightingSwatches(plan: ShotPlan, ctx: TenantContex
 }
 
 // ============================================================================
+// generateCharacterSheets — a rendered model/turnaround sheet per cast member
+// ============================================================================
+
+/** The turnaround views rendered for each character's model sheet. */
+const CHARACTER_VIEWS: { label: string; view: string }[] = [
+  { label: 'FRONT', view: 'front view, facing the camera directly' },
+  { label: '3/4', view: 'three-quarter front view, body turned about 45 degrees' },
+  { label: 'PROFILE', view: 'full side profile view' },
+  { label: 'BACK', view: 'back view, facing away from camera' },
+];
+
+/**
+ * Render a clean model/turnaround sheet for every cast member (FRONT · 3⁄4 ·
+ * PROFILE · BACK) from their reference image via Flux Kontext, so the production
+ * sheet shows a rich character reference like a real model sheet — not just the
+ * operator's uploads. Best-effort per view + per character. Ownership rule applies.
+ */
+export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
+  const cast = plan.sharedChoices.cast;
+  if (cast.length === 0) {
+    return plan;
+  }
+
+  const updated: ShotPlanCastMember[] = [];
+  let changed = false;
+
+  for (const member of cast) {
+    const ref = member.referenceImageUrls[0];
+    if (!ref) {
+      updated.push(member);
+      continue;
+    }
+    const sheet: { label: string; imageUrl: string }[] = [];
+    for (const { label, view } of CHARACTER_VIEWS) {
+      const workDir = await createWorkDir('shot-plan-charsheet');
+      try {
+        const prompt =
+          `The exact same character, ${view}, full body head-to-toe, neutral standing A-pose, ` +
+          'on a clean light-grey studio cyclorama, character turnaround model sheet, evenly lit ' +
+          'soft studio lighting, no dramatic shadows, consistent identity and wardrobe, sharp detail.';
+        logger.info('[shot-plan-gen] submitting character view', { file: FILE, tenantId: ctx.tenantId, character: member.name, label });
+        const result = await generateFromReferenceWithFal(prompt, ref, {});
+        if (!result.url) {
+          continue;
+        }
+        const buf = await downloadToFile(result.url, join(workDir, 'view.png'), `char ${member.name} ${label}`);
+        const url = await uploadPermanent(
+          buf,
+          `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
+          'image/png',
+          `char ${member.name} ${label}`,
+        );
+        await createAsset({
+          type: 'image',
+          category: 'thumbnail',
+          name: `${member.name} — ${label}`,
+          description: `Character model-sheet view for Shot Plan "${plan.title || plan.id}".`,
+          url,
+          mimeType: 'image/png',
+          fileSize: buf.length,
+          source: 'ai-generated',
+          aiProvider: 'fal',
+          aiPrompt: prompt,
+          createdBy: 'system',
+          tags: ['shot-plan', 'character-sheet'],
+        });
+        sheet.push({ label, imageUrl: url });
+      } catch (err) {
+        logger.error('[shot-plan-gen] character view failed (continuing)', err instanceof Error ? err : new Error(String(err)), { file: FILE, character: member.name, label });
+      } finally {
+        await cleanupWorkDir(workDir);
+      }
+    }
+    if (sheet.length > 0) {
+      updated.push({ ...member, modelSheet: sheet });
+      changed = true;
+    } else {
+      updated.push(member);
+    }
+  }
+
+  if (!changed) {
+    return plan;
+  }
+  return applyShotPlanEdit(plan, { target: 'shared', field: 'cast', value: updated });
+}
+
+// ============================================================================
 // renderShotPlanAssets — make the document COMPLETE for review (the "preview" step)
 // ============================================================================
 
 /** Progress for the full-sheet asset render (floor-plan image + every keyframe). */
 export interface ShotPlanAssetProgress {
-  phase: 'floor-plan' | 'environment-hero' | 'lighting-swatches' | 'keyframe';
+  phase: 'floor-plan' | 'environment-hero' | 'lighting-swatches' | 'character-sheets' | 'keyframe';
   shotId?: string;
   index?: number;
   total?: number;
@@ -1059,7 +1148,17 @@ export async function renderShotPlanAssets(
     onProgress?.({ phase: 'lighting-swatches', status: 'failed', error });
   }
 
-  // 4. A keyframe still for every shot, in order (best-effort each).
+  // 4. Character model/turnaround sheets (best-effort per character/view).
+  try {
+    current = await generateCharacterSheets(current, ctx);
+    onProgress?.({ phase: 'character-sheets', status: 'completed' });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logger.error('[shot-plan-gen] character sheets render failed (continuing)', err instanceof Error ? err : new Error(error), { file: FILE });
+    onProgress?.({ phase: 'character-sheets', status: 'failed', error });
+  }
+
+  // 5. A keyframe still for every shot, in order (best-effort each).
   const ordered = [...current.shots].sort((a, b) => a.index - b.index);
   for (let i = 0; i < ordered.length; i += 1) {
     const shotId = ordered[i].id;

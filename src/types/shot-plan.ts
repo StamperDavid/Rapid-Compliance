@@ -64,6 +64,12 @@ export interface ShotPlanCastMember {
   referenceImageUrls: string[];
   /** Free-text role, e.g. "hero", "narrator", "background extra". */
   role?: string;
+  /**
+   * AI-rendered model/turnaround sheet for this character (labeled views like
+   * FRONT / 3⁄4 / PROFILE / BACK / DETAIL), generated from the reference at render
+   * time so the production sheet shows a rich character reference, not just uploads.
+   */
+  modelSheet?: { label: string; imageUrl: string }[];
 }
 
 /**
@@ -368,6 +374,10 @@ export const ShotPlanCastMemberSchema = z.object({
   name: z.string().trim().min(1).max(200),
   referenceImageUrls: z.array(z.string().trim().url()).max(20).default([]),
   role: z.string().trim().max(200).optional(),
+  modelSheet: z
+    .array(z.object({ label: z.string().trim().min(1).max(80), imageUrl: z.string().trim().url() }))
+    .max(8)
+    .optional(),
 });
 
 export const ShotPlanObjectSchema = z.object({

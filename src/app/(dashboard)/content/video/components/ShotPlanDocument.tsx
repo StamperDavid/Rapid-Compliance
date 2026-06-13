@@ -171,14 +171,16 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
           <div>
             <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-500">Color palette</div>
             {sharedChoices.colorPalette.length > 0 ? (
-              <div className="flex items-center gap-1">
-                {sharedChoices.colorPalette.slice(0, 10).map((sw, i) => (
-                  <span
-                    key={`${sw.hex}-${i}`}
-                    title={`${sw.name} (${sw.hex})`}
-                    className="h-6 w-6 rounded-sm border border-zinc-700"
-                    style={{ backgroundColor: sw.hex }}
-                  />
+              <div className="flex items-end gap-1.5">
+                {sharedChoices.colorPalette.slice(0, 8).map((sw, i) => (
+                  <figure key={`${sw.hex}-${i}`} className="text-center">
+                    <span
+                      title={sw.name}
+                      className="block h-6 w-10 rounded-sm border border-zinc-700"
+                      style={{ backgroundColor: sw.hex }}
+                    />
+                    <figcaption className="mt-0.5 font-mono text-[7px] uppercase tracking-tight text-zinc-500">{sw.hex}</figcaption>
+                  </figure>
                 ))}
               </div>
             ) : (
@@ -201,23 +203,37 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
             <p className="text-xs text-zinc-600">No cast or objects yet.</p>
           ) : (
             <div className="space-y-4">
-              {sharedChoices.cast.map((member) => (
-                <div key={member.characterId}>
-                  <div className="mb-1.5 flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-200">{member.name}</span>
-                    {member.role && <span className="text-[9px] uppercase tracking-wider text-zinc-500">{member.role}</span>}
-                  </div>
-                  {member.referenceImageUrls.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {member.referenceImageUrls.slice(0, 6).map((url, i) => (
-                        <RefImage key={`${url}-${i}`} src={url} alt={`${member.name} reference ${i + 1}`} className="h-16 w-16" />
-                      ))}
+              {sharedChoices.cast.map((member) => {
+                const views =
+                  member.modelSheet && member.modelSheet.length > 0
+                    ? member.modelSheet
+                    : member.referenceImageUrls.map((url) => ({ label: 'REF', imageUrl: url }));
+                return (
+                  <div key={member.characterId}>
+                    <div className="mb-2 flex items-center gap-2 border-b border-zinc-800 pb-1">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-100">{member.name}</span>
+                      {member.role && <span className="text-[9px] uppercase tracking-wider text-amber-400/80">{member.role}</span>}
+                      <span className="ml-auto text-[9px] uppercase tracking-wider text-zinc-600">Model sheet</span>
                     </div>
-                  ) : (
-                    <EmptyImage label="no refs" className="h-16 w-full" />
-                  )}
-                </div>
-              ))}
+                    {views.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {views.slice(0, 6).map((v, i) => (
+                          <figure key={`${v.imageUrl}-${i}`} className="w-[74px]">
+                            <div className="relative h-24 w-[74px] overflow-hidden rounded border border-zinc-700 bg-zinc-900">
+                              <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes="74px" unoptimized className="object-cover" />
+                            </div>
+                            <figcaption className="mt-0.5 text-center text-[8px] font-bold uppercase tracking-[0.1em] text-zinc-500">
+                              {v.label}
+                            </figcaption>
+                          </figure>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyImage label="no refs" className="h-16 w-full" />
+                    )}
+                  </div>
+                );
+              })}
               {objects.map((obj) => (
                 <div key={obj.id}>
                   <div className="mb-1.5 flex items-center gap-2">
@@ -249,6 +265,16 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
         {/* SECTION 2 — ENVIRONMENT + FLOOR PLAN */}
         <section className="border-b border-zinc-800 px-6 py-5">
           <SectionLabel n={2}>Environment &amp; Floor Plan</SectionLabel>
+          {sharedChoices.environmentHeroImageUrl && (
+            <figure className="mb-3">
+              <div className="relative aspect-video w-full overflow-hidden rounded border border-zinc-700 bg-zinc-900">
+                <Image src={sharedChoices.environmentHeroImageUrl} alt="Environment hero render" fill sizes="600px" unoptimized className="object-cover" />
+              </div>
+              <figcaption className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                EXT. — {(sharedChoices.environmentFingerprint || 'Environment').slice(0, 64)}
+              </figcaption>
+            </figure>
+          )}
           {envImages.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-1.5">
               {envImages.slice(0, 4).map((url, i) => (
@@ -283,6 +309,20 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
       {/* ══ SECTION 4 — LIGHTING / MOOD / STYLE ══ */}
       <section className="border-b border-zinc-800 px-6 py-5">
         <SectionLabel n={4}>Lighting · Mood · Style</SectionLabel>
+        {sharedChoices.lightingSwatches && sharedChoices.lightingSwatches.length > 0 && (
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {sharedChoices.lightingSwatches.map((sw, i) => (
+              <figure key={`${sw.imageUrl}-${i}`}>
+                <div className="relative aspect-square w-full overflow-hidden rounded border border-zinc-700 bg-zinc-900">
+                  <Image src={sw.imageUrl} alt={sw.label} fill sizes="140px" unoptimized className="object-cover" />
+                </div>
+                <figcaption className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-zinc-500" title={sw.label}>
+                  {sw.label}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <div className="space-y-2">
             <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-500">Lighting &amp; cinematography</div>
