@@ -33,8 +33,10 @@ import {
   ShotPlanSchema,
   ShotPlanSharedChoicesSchema,
   ShotPlanShotSchema,
+  ShotPlanLookBibleSchema,
   type ShotPlan,
   type ShotPlanCastMember,
+  type ShotPlanFloorPlan,
 } from '@/types/shot-plan';
 import type { ShotPlanEditTarget } from '@/lib/video/shot-plan-edit';
 import type { ModelName } from '@/types/ai-models';
@@ -130,6 +132,53 @@ const LlmCastMemberSchema = z.object({
   role: z.string().trim().min(1).optional(),
 });
 
+/** A normalized [0,1] point on the top-down stage. */
+const LlmPointSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+});
+
+/**
+ * The AI-authored floor plan / blocking. Cameras reference shots by 0-based
+ * `shotIndex` (the model doesn't know our generated shot ids — we remap to the
+ * real shot id during assembly). All coordinates are normalized [0,1].
+ */
+const LlmFloorPlanSchema = z.object({
+  elements: z
+    .array(
+      z.object({
+        id: z.string().trim().min(1),
+        kind: z.enum(['actor', 'object', 'set-piece', 'entry', 'zone']),
+        label: z.string().trim().min(1),
+        refId: z.string().trim().min(1).optional(),
+        x: z.number().min(0).max(1),
+        y: z.number().min(0).max(1),
+        facing: z.number().min(0).max(360).optional(),
+      }),
+    )
+    .default([]),
+  cameras: z
+    .array(
+      z.object({
+        shotIndex: z.number().int().min(0),
+        x: z.number().min(0).max(1),
+        y: z.number().min(0).max(1),
+        facing: z.number().min(0).max(360),
+        fovDegrees: z.number().min(1).max(180).optional(),
+        route: z.array(LlmPointSchema).optional(),
+      }),
+    )
+    .default([]),
+  subjectPaths: z
+    .array(
+      z.object({
+        elementId: z.string().trim().min(1),
+        path: z.array(LlmPointSchema).default([]),
+      }),
+    )
+    .default([]),
+});
+
 /** The plan body the model returns (envelope fields id/createdAt/updatedAt are ours). */
 const LlmShotPlanSchema = z.object({
   title: z.string().trim().min(1),
@@ -148,6 +197,8 @@ const LlmShotPlanSchema = z.object({
     moodKeywords: z.array(z.string().trim().min(1)).default([]),
     cinematographyNotes: z.array(z.string().trim().min(1)).default([]),
     artStyle: z.string().trim().min(1).optional(),
+    // The deep, SET-ONCE cinematic look bible — the model MUST fill it.
+    lookBible: ShotPlanLookBibleSchema,
   }),
   shots: z
     .array(
@@ -160,6 +211,11 @@ const LlmShotPlanSchema = z.object({
           shotType: z.string().trim().min(1).optional(),
           movement: z.string().trim().min(1).optional(),
           lens: z.string().trim().min(1).optional(),
+          lensType: z.string().trim().min(1).optional(),
+          focalLength: z.string().trim().min(1).optional(),
+          composition: z.string().trim().min(1).optional(),
+          viewingDirection: z.enum(['front', 'back', 'left', 'right']).optional(),
+          subjectUnawareOfCamera: z.boolean().optional(),
         }),
         lighting: z.string().trim().min(1).optional(),
         mood: z.string().trim().min(1).optional(),
@@ -169,6 +225,8 @@ const LlmShotPlanSchema = z.object({
       }),
     )
     .min(1),
+  // The AI-authored top-down blocking (camera cuts + routes + actor placement).
+  floorPlan: LlmFloorPlanSchema,
 });
 
 type LlmShotPlan = z.infer<typeof LlmShotPlanSchema>;
@@ -455,6 +513,28 @@ function assembleShotPlan(
     dialogue: shot.dialogue,
   }));
 
+  // Remap the AI floor plan's camera nodes from 0-based shotIndex → real shot id.
+  const floorPlan: ShotPlanFloorPlan = {
+    elements: body.floorPlan.elements,
+    cameras: body.floorPlan.cameras
+      .map((c) => {
+        const target = shots[c.shotIndex];
+        if (!target) {
+          return null;
+        }
+        return {
+          shotId: target.id,
+          x: c.x,
+          y: c.y,
+          facing: c.facing,
+          ...(c.fovDegrees !== undefined ? { fovDegrees: c.fovDegrees } : {}),
+          ...(c.route ? { route: c.route } : {}),
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null),
+    subjectPaths: body.floorPlan.subjectPaths,
+  };
+
   const candidate: ShotPlan = {
     id: `splan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     title: titleHint ?? body.title,
@@ -466,8 +546,10 @@ function assembleShotPlan(
       moodKeywords: body.sharedChoices.moodKeywords,
       cinematographyNotes: body.sharedChoices.cinematographyNotes,
       artStyle: body.sharedChoices.artStyle,
+      lookBible: body.sharedChoices.lookBible,
     },
     shots,
+    floorPlan,
     createdAt: now,
     updatedAt: now,
     status: 'draft',

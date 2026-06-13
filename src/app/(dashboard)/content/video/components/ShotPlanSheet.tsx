@@ -85,6 +85,7 @@ import { CinematicControlsPanel } from '@/components/studio/CinematicControlsPan
 import { ConstructedPromptDisplay } from '@/components/studio/ConstructedPromptDisplay';
 import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/MediaLibraryPicker';
 import { AvatarPicker } from './AvatarPicker';
+import { FloorPlanCanvas } from './FloorPlanCanvas';
 import {
   applyShotPlanEdit,
   clearUpstreamChanged,
@@ -2319,6 +2320,28 @@ export function ShotPlanSheet() {
             onOpenCamera={() => setCameraShotId(shot.id)}
           />
         ))}
+      </div>
+
+      {/* ── Floor plan & camera blocking — top-down map that DRIVES the camera ── */}
+      <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-4">
+        <div className="space-y-1">
+          <CardTitle className="flex items-center gap-2">
+            <ListVideo className="w-4 h-4 text-primary" /> Floor plan &amp; camera blocking
+          </CardTitle>
+          <SectionDescription>
+            A top-down map of your set. Place your actors, objects, zones and entries, drop a
+            numbered camera for each shot, aim it and draw its movement, and sketch how the
+            subjects move. This blocking is translated into precise camera direction for every
+            shot — so the map actually directs the camera, not just decorates the plan.
+          </SectionDescription>
+        </div>
+        <FloorPlanCanvas
+          floorPlan={shotPlan.floorPlan}
+          shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
+          cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
+          objects={(sharedChoices.objects ?? []).map((o) => ({ id: o.id, name: o.name }))}
+          onChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
+        />
       </div>
 
       {/* ── Section 4: Lighting / Mood / Style summary ── */}

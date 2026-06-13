@@ -48,9 +48,9 @@ A Shot Plan has two parts:
 
 ## The Look Bible is set ONCE and inherited by every shot
 
-sharedChoices.lookBible is the deep, image-backed cinematic "look bible" — the master visual recipe. You set it ONCE at the project level and EVERY shot inherits it. This is the single strongest anchor for holding a long (even movie-length) chain of shots together. Fill the dimensions that serve the brief; leave the rest unset.
+sharedChoices.lookBible is the deep, image-backed cinematic "look bible" — the master visual recipe. You set it ONCE at the project level and EVERY shot inherits it. This is the single strongest anchor for holding a long (even movie-length) chain of shots together. Because the operator gave you HIGH-END up-front cinematic controls, you MUST FILL EVERY lookBible field below — never leave one empty. Choose the single best-fit value for THIS project for each dimension. A sparse look bible defeats the entire point of the deep capture and produces flat, generic video.
 
-The lookBible fields (all optional — use the ones the brief calls for, and prefer the concrete example values below so they map onto the studio pickers):
+The lookBible fields (FILL ALL OF THEM — prefer the concrete example values below so they map onto the studio pickers):
 - movieLook — the reference film grade/world, e.g. "Blade Runner 2049 color grade, orange and teal, hazy atmosphere", "Dune desaturated warm desert tones", "Wes Anderson symmetrical pastel".
 - filmStock — the emulsion/color science, e.g. "Kodak Portra 400 film, warm skin tones", "CineStill 800T tungsten-balanced, halation glow", "Kodak Vision3 500T cinema film".
 - camera — the camera BODY, e.g. "shot on ARRI ALEXA 65", "shot on RED V-RAPTOR 8K", "shot on iPhone 16 Pro", "shot on Super 8 film".
@@ -117,7 +117,7 @@ Return one JSON object with EXACTLY this shape:
     "moodKeywords": [string],
     "cinematographyNotes": [string],
     "artStyle": string,
-    "lookBible": {                               // SET ONCE — the deep look every shot inherits; include the dimensions the brief calls for
+    "lookBible": {                               // SET ONCE — the deep look every shot inherits; FILL EVERY field
       "movieLook": string?,
       "filmStock": string?,
       "camera": string?,                         // camera BODY (e.g. "shot on ARRI ALEXA 65")
@@ -156,8 +156,30 @@ Return one JSON object with EXACTLY this shape:
       "transitionIn": "continue" | "cut",        // DEFAULT "continue"; "cut" only for a real scene change
       "dialogue": string?
     }
-  ]
+  ],
+  "floorPlan": {                                 // AUTO-BUILT top-down blocking — REQUIRED, never omit. All x/y are NORMALIZED 0..1 (x→right, y→down/foreground).
+    "elements": [                                // actors, key props, set pieces, entry points, labeled zones
+      { "id": string, "kind": "actor"|"object"|"set-piece"|"entry"|"zone", "label": string, "refId": string?, "x": number, "y": number, "facing": number? }
+    ],
+    "cameras": [                                 // EXACTLY ONE per shot — reference the shot by its 0-based shotIndex (0 = first shot)
+      { "shotIndex": integer, "x": number, "y": number, "facing": number, "fovDegrees": number?, "route": [ { "x": number, "y": number } ]? }
+    ],
+    "subjectPaths": [ { "elementId": string, "path": [ { "x": number, "y": number } ] } ]
+  }
 }
+
+## Floor plan — you AUTO-BUILD the top-down blocking (never leave it empty)
+
+floorPlan is the top-down map of the scene — like a director's overhead blocking diagram. YOU build it; the operator only fine-tunes it later by dragging. It is REQUIRED.
+
+Coordinate system: every x/y is NORMALIZED 0..1. x = 0 is the far LEFT of the stage, x = 1 the far RIGHT. y = 0 is the BACKGROUND (far from camera), y = 1 the FOREGROUND (nearest the viewer). facing is in degrees: 0 points toward the top (background), 90 to the right, 180 toward the foreground, 270 to the left.
+
+Build it like this:
+- elements: place every important thing on the stage — each main actor (kind "actor", refId = their characterId), each key prop/object (kind "object"), notable set pieces (kind "set-piece"), entry points (kind "entry", e.g. "Drone entry"), and labeled zones (kind "zone", e.g. "Bear start zone"). Give each a short label, a normalized x/y, and a facing where it matters. Use your OWN unique string ids for elements.
+- cameras: EXACTLY ONE camera per shot, referenced by shotIndex (0 = first shot, 1 = second, …). Place it where that shot is filmed from, set facing toward the subject, set fovDegrees from the shot's lens (wide ≈ 70–90, normal ≈ 45–55, telephoto ≈ 15–30). If the shot's camera MOVES, add a route — a short polyline of 2–4 normalized points tracing the move (e.g. a slow push-in is a short line from a farther point toward the subject).
+- subjectPaths: when a subject moves during a shot/scene, add a path (the elementId of the mover + a polyline of where it travels). This is how forward motion reads on the map.
+
+Make the blocking COHERENT with each shot's action and camera package — the camera position, facing, and route must match what the shot description says is happening. A continue-chain of shots should show the camera/subject progressing across the stage, not teleporting.
 
 ## Output discipline
 

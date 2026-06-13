@@ -60,6 +60,7 @@ import type {
   ShotPlan,
   ShotPlanShot,
   ShotPlanShotGenerated,
+  ShotPlanFloorPlan,
 } from '@/types/shot-plan';
 
 const FILE = 'video/shot-plan-generation-service.ts';
@@ -788,6 +789,70 @@ export async function generateShotKeyframe(
     // A missing keyframe must NOT block video generation — do NOT set the shot's
     // generated.status to 'failed'. Just rethrow a clear error for the caller.
     throw new Error(`Shot "${shotId}" keyframe generation failed: ${message}`);
+  } finally {
+    await cleanupWorkDir(workDir);
+  }
+}
+
+// ============================================================================
+// generateFloorPlanImage — the rendered top-down backdrop for the blocking map
+// ============================================================================
+
+/**
+ * Render a BEAUTIFUL top-down floor-plan image of the scene (the OpenArt-style
+ * overhead set render) and store it on `plan.floorPlan.backdropImageUrl`. The
+ * interactive FloorPlanCanvas draws the camera/route/actor markers ON TOP of this
+ * image — so the operator sees a real rendered set from above, not a blank grid.
+ *
+ * Text-to-image via Flux from the environment fingerprint. Ownership rule applies:
+ * the render is persisted to OUR storage + media library; never a fal URL on the
+ * plan. The structured blocking itself is authored by the planner, not here.
+ */
+export async function generateFloorPlanImage(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
+  const fingerprint = plan.sharedChoices.environmentFingerprint?.trim() || 'the scene environment';
+  const prompt =
+    `Top-down overhead floor-plan view of ${fingerprint}. A clean architectural ` +
+    'overhead map of the set seen from directly above — ground layout, key set ' +
+    'pieces, and open staging areas clearly readable. Muted, high-contrast, ' +
+    'schematic-but-rendered look so bright camera markers read clearly on top. ' +
+    'No text, no labels, no numbers.';
+
+  const workDir = await createWorkDir('shot-plan-floorplan');
+  try {
+    logger.info('[shot-plan-gen] submitting floor-plan image', { file: FILE, tenantId: ctx.tenantId });
+    const result = await generateWithFal(prompt, { aspectRatio: '16:9' });
+    const falUrl = result.url;
+    if (!falUrl) {
+      throw new Error('floor-plan image generation returned no image url');
+    }
+
+    const imgPath = join(workDir, 'floorplan.png');
+    const buf = await downloadToFile(falUrl, imgPath, 'floor-plan image');
+
+    const storagePath = `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`;
+    const permanentUrl = await uploadPermanent(buf, storagePath, 'image/png', 'floor-plan image');
+
+    await createAsset({
+      type: 'image',
+      category: 'thumbnail',
+      name: `Floor plan — ${plan.title || plan.id}`,
+      description: `Top-down floor-plan render for Shot Plan "${plan.title || plan.id}".`,
+      url: permanentUrl,
+      mimeType: 'image/png',
+      fileSize: buf.length,
+      source: 'ai-generated',
+      aiProvider: 'fal',
+      aiPrompt: prompt,
+      createdBy: 'system',
+      tags: ['shot-plan', 'floor-plan'],
+    });
+
+    const nextFloorPlan: ShotPlanFloorPlan = {
+      ...(plan.floorPlan ?? { elements: [], cameras: [], subjectPaths: [] }),
+      backdropImageUrl: permanentUrl,
+    };
+    logger.info('[shot-plan-gen] floor-plan image persisted', { file: FILE, url: permanentUrl });
+    return applyShotPlanEdit(plan, { target: 'plan', field: 'floorPlan', value: nextFloorPlan });
   } finally {
     await cleanupWorkDir(workDir);
   }

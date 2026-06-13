@@ -56,6 +56,11 @@ export type ShotPlanEdit =
       target: 'plan';
       field: 'status';
       value: ShotPlan['status'];
+    }
+  | {
+      target: 'plan';
+      field: 'floorPlan';
+      value: ShotPlan['floorPlan'];
     };
 
 /** The outcome of applying an edit. */
