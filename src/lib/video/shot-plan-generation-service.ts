@@ -857,3 +857,64 @@ export async function generateFloorPlanImage(plan: ShotPlan, ctx: TenantContext)
     await cleanupWorkDir(workDir);
   }
 }
+
+// ============================================================================
+// renderShotPlanAssets — make the document COMPLETE for review (the "preview" step)
+// ============================================================================
+
+/** Progress for the full-sheet asset render (floor-plan image + every keyframe). */
+export interface ShotPlanAssetProgress {
+  phase: 'floor-plan' | 'keyframe';
+  shotId?: string;
+  index?: number;
+  total?: number;
+  status: 'completed' | 'failed';
+  error?: string;
+}
+
+/**
+ * Render EVERY image the production sheet needs so the operator reviews a COMPLETE
+ * document, not a skeleton: the top-down floor-plan backdrop + a keyframe still for
+ * every shot. This is the OpenArt "Preview Shot Plan" step — planning already
+ * happened; here we render the stills before review (video comes later, on demand).
+ *
+ * Best-effort PER ASSET: a single failed image is reported via onProgress and
+ * skipped, never aborting the whole sheet — the operator can regenerate that one
+ * piece individually. Returns the plan with every successful asset persisted.
+ *
+ * LONG-RUNNING: one image generation per shot + one for the floor plan. Acceptable
+ * for a preview step; a queue/poll split can come later without changing this API.
+ */
+export async function renderShotPlanAssets(
+  plan: ShotPlan,
+  ctx: TenantContext,
+  onProgress?: (progress: ShotPlanAssetProgress) => void,
+): Promise<ShotPlan> {
+  let current = plan;
+
+  // 1. Floor-plan backdrop render (best-effort).
+  try {
+    current = await generateFloorPlanImage(current, ctx);
+    onProgress?.({ phase: 'floor-plan', status: 'completed' });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logger.error('[shot-plan-gen] floor-plan image render failed (continuing)', err instanceof Error ? err : new Error(error), { file: FILE });
+    onProgress?.({ phase: 'floor-plan', status: 'failed', error });
+  }
+
+  // 2. A keyframe still for every shot, in order (best-effort each).
+  const ordered = [...current.shots].sort((a, b) => a.index - b.index);
+  for (let i = 0; i < ordered.length; i += 1) {
+    const shotId = ordered[i].id;
+    try {
+      current = await generateShotKeyframe(current, shotId, ctx);
+      onProgress?.({ phase: 'keyframe', shotId, index: i, total: ordered.length, status: 'completed' });
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      logger.error('[shot-plan-gen] keyframe render failed (continuing)', err instanceof Error ? err : new Error(error), { file: FILE, shotId });
+      onProgress?.({ phase: 'keyframe', shotId, index: i, total: ordered.length, status: 'failed', error });
+    }
+  }
+
+  return current;
+}

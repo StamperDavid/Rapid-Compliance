@@ -28,7 +28,7 @@
  * existing /content/video Storyboard step (toggled from StepStoryboard).
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
@@ -42,7 +42,6 @@ import {
   AlertCircle,
   Wand2,
   Camera,
-  Film,
   ImageIcon,
   Scissors,
   Link2,
@@ -61,6 +60,7 @@ import {
   FileText,
   File as FileIcon,
   Package,
+  type LucideIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -73,7 +73,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  SectionTitle,
   SubsectionTitle,
   CardTitle,
   SectionDescription,
@@ -1618,6 +1617,46 @@ function EntryScreen({
 }
 
 // ============================================================================
+// Production-sheet section frame — numbered, dense, film-studio styling
+// ============================================================================
+
+/**
+ * One numbered section of the production sheet (e.g. "SECTION 1 · CHARACTERS &
+ * OBJECTS"), styled like a real shot-sheet: a primary number badge, an uppercase
+ * tracked title, an optional right-aligned action, and a bordered body. Sections
+ * stack inside the single sheet container divided by borders (not floating cards).
+ */
+function SheetSection({
+  number,
+  title,
+  icon: Icon,
+  action,
+  children,
+}: {
+  number: number;
+  title: string;
+  icon: LucideIcon;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="border-b border-border-strong px-6 py-5 last:border-b-0">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/15 text-xs font-bold text-primary">
+            {number}
+          </span>
+          <Icon className="h-4 w-4 text-primary" />
+          <h3 className="text-xs font-bold uppercase tracking-widest text-foreground">{title}</h3>
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ============================================================================
 // Main component
 // ============================================================================
 
@@ -1655,6 +1694,9 @@ export function ShotPlanSheet() {
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   // Plain-English generation failure surfaced to the operator (never silent).
   const [shotGenError, setShotGenError] = useState<string | null>(null);
+  // While the just-generated plan's images (floor plan + keyframes) are rendering
+  // so the document arrives COMPLETE for review.
+  const [isRenderingSheet, setIsRenderingSheet] = useState(false);
 
   const cameraShot = useMemo(
     () => (cameraShotId ? shotPlan?.shots.find((s) => s.id === cameraShotId) ?? null : null),
@@ -1692,11 +1734,31 @@ export function ShotPlanSheet() {
         if (!res.ok || !data.success || !data.plan) {
           throw new Error(data.error ?? 'Could not generate a Shot Plan');
         }
+        // Show the structured plan immediately…
         setShotPlan(data.plan);
+        setIsGenerating(false);
+
+        // …then render every image (floor-plan backdrop + each shot's keyframe) so
+        // the document arrives COMPLETE for review. Best-effort: if rendering fails
+        // (e.g. provider funds), the plan still stands and assets can be regenerated.
+        setIsRenderingSheet(true);
+        try {
+          const renderRes = await authFetch('/api/content/shot-plan/render-assets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: data.plan }),
+          });
+          const renderData = (await renderRes.json()) as GenerateResponse;
+          if (renderRes.ok && renderData.success && renderData.plan) {
+            setShotPlan(renderData.plan);
+          }
+        } finally {
+          setIsRenderingSheet(false);
+        }
       } catch (err) {
         setGenerateError(err instanceof Error ? err.message : 'Could not generate a Shot Plan');
-      } finally {
         setIsGenerating(false);
+        setIsRenderingSheet(false);
       }
     },
     [authFetch, setShotPlan],
@@ -2117,6 +2179,14 @@ export function ShotPlanSheet() {
         </div>
       </div>
 
+      {/* The just-generated plan is rendering its images so the document arrives complete */}
+      {isRenderingSheet && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
+          <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-primary" />
+          Rendering your production sheet — generating the floor plan and every shot still so the document is complete and ready to edit…
+        </div>
+      )}
+
       {/* Generation error — plain English, never silent */}
       {shotGenError && (
         <div className="flex items-start justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
@@ -2134,24 +2204,55 @@ export function ShotPlanSheet() {
           </button>
         </div>
       )}
-      {/* ── Section 1: Header / Shared Choices ── */}
-      <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1 space-y-3">
-            <EditableText
-              label="Plan title"
-              value={shotPlan.title}
-              placeholder="Untitled Shot Plan"
-              onCommit={(v) => applyEdit({ target: 'plan', field: 'title', value: v })}
-              onAskAi={() => setAskAi({ target: 'plan', field: 'title', label: 'the plan title' })}
-            />
+      {/* ══ THE PRODUCTION SHEET — a professional film-studio shot-plan document ══ */}
+      <div className="overflow-hidden rounded-2xl border border-border-strong bg-card">
+        {/* SHARED CHOICES header bar — the at-a-glance look bible every cut inherits */}
+        <div className="border-b border-border-strong bg-surface-elevated px-6 py-4">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-primary">Shared choices</span>
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">the look bible every cut inherits</span>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border-light bg-surface-elevated px-3 py-1 text-xs text-muted-foreground">
-            <Film className="w-3.5 h-3.5 text-primary" />
-            {orderedShots.length} cut{orderedShots.length !== 1 ? 's' : ''}
-          </span>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="flex items-center gap-2">
+              <Caption className="uppercase tracking-wider text-muted-foreground">Cut count</Caption>
+              <span className="rounded-md bg-primary/15 px-2 py-0.5 text-sm font-bold text-primary">{orderedShots.length}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Caption className="uppercase tracking-wider text-muted-foreground">Palette</Caption>
+              {sharedChoices.colorPalette.length > 0 ? (
+                <div className="flex items-center gap-1">
+                  {sharedChoices.colorPalette.slice(0, 8).map((sw, i) => (
+                    <span
+                      key={`${sw.hex}-${i}`}
+                      title={`${sw.name} (${sw.hex})`}
+                      className="h-5 w-5 rounded border border-border-light"
+                      style={{ backgroundColor: sw.hex }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Caption>—</Caption>
+              )}
+            </div>
+            <div className="flex min-w-[220px] flex-1 items-center gap-2">
+              <Caption className="uppercase tracking-wider text-muted-foreground">Environment</Caption>
+              <span className="truncate text-sm text-foreground">{sharedChoices.environmentFingerprint || '—'}</span>
+            </div>
+          </div>
         </div>
 
+        {/* Plan title */}
+        <div className="border-b border-border-strong px-6 py-3">
+          <EditableText
+            label="Plan title"
+            value={shotPlan.title}
+            placeholder="Untitled Shot Plan"
+            onCommit={(v) => applyEdit({ target: 'plan', field: 'title', value: v })}
+            onAskAi={() => setAskAi({ target: 'plan', field: 'title', label: 'the plan title' })}
+          />
+        </div>
+
+        <SheetSection number={1} title="Look &amp; World" icon={Clapperboard}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <PaletteEditor
             swatches={sharedChoices.colorPalette}
@@ -2242,18 +2343,18 @@ export function ShotPlanSheet() {
             medium="video"
           />
         </div>
-      </div>
+        </SheetSection>
 
-      {/* ── Section 2: Cast ── */}
-      <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" /> Cast
-          </CardTitle>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCastPickerOpen(true)}>
-            <Plus className="w-3.5 h-3.5" /> Add cast
-          </Button>
-        </div>
+        <SheetSection
+          number={2}
+          title="Cast"
+          icon={Users}
+          action={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCastPickerOpen(true)}>
+              <Plus className="w-3.5 h-3.5" /> Add cast
+            </Button>
+          }
+        >
         {sharedChoices.cast.length === 0 ? (
           <SectionDescription>No cast yet. Add your saved characters to use them across shots.</SectionDescription>
         ) : (
@@ -2263,18 +2364,18 @@ export function ShotPlanSheet() {
             ))}
           </div>
         )}
-      </div>
+        </SheetSection>
 
-      {/* ── Objects & Props ── */}
-      <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-primary" /> Objects &amp; Props
-          </CardTitle>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setObjectDialogOpen(true)}>
-            <Plus className="w-3.5 h-3.5" /> Add object
-          </Button>
-        </div>
+        <SheetSection
+          number={3}
+          title="Objects &amp; Props"
+          icon={Package}
+          action={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setObjectDialogOpen(true)}>
+              <Plus className="w-3.5 h-3.5" /> Add object
+            </Button>
+          }
+        >
         {(sharedChoices.objects ?? []).length === 0 ? (
           <SectionDescription>
             No objects yet. Add a recurring prop, vehicle or product with reference images so the
@@ -2287,18 +2388,19 @@ export function ShotPlanSheet() {
             ))}
           </div>
         )}
-      </div>
+        </SheetSection>
 
-      {/* ── Section 3: Storyboard ── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <SectionTitle className="flex items-center gap-2">
-            <ListVideo className="w-5 h-5 text-primary" /> Storyboard
-          </SectionTitle>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={addShot} disabled={busy}>
-            <Plus className="w-3.5 h-3.5" /> Add shot
-          </Button>
-        </div>
+        <SheetSection
+          number={4}
+          title="Storyboard"
+          icon={ListVideo}
+          action={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={addShot} disabled={busy}>
+              <Plus className="w-3.5 h-3.5" /> Add shot
+            </Button>
+          }
+        >
+        <div className="space-y-4">
         {orderedShots.map((shot, i) => (
           <ShotCard
             key={shot.id}
@@ -2320,21 +2422,17 @@ export function ShotPlanSheet() {
             onOpenCamera={() => setCameraShotId(shot.id)}
           />
         ))}
-      </div>
-
-      {/* ── Floor plan & camera blocking — top-down map that DRIVES the camera ── */}
-      <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-4">
-        <div className="space-y-1">
-          <CardTitle className="flex items-center gap-2">
-            <ListVideo className="w-4 h-4 text-primary" /> Floor plan &amp; camera blocking
-          </CardTitle>
-          <SectionDescription>
-            A top-down map of your set. Place your actors, objects, zones and entries, drop a
-            numbered camera for each shot, aim it and draw its movement, and sketch how the
-            subjects move. This blocking is translated into precise camera direction for every
-            shot — so the map actually directs the camera, not just decorates the plan.
-          </SectionDescription>
         </div>
+        </SheetSection>
+
+        <SheetSection number={5} title="Floor Plan &amp; Camera Blocking" icon={ListVideo}>
+        <SectionDescription>
+          A top-down map of your set — the AI places your actors, objects, zones and a numbered
+          camera for each shot with its movement; you fine-tune by dragging. This blocking is
+          translated into precise camera direction for every shot, so the map actually directs the
+          camera, not just decorates the plan.
+        </SectionDescription>
+        <div className="mt-3">
         <FloorPlanCanvas
           floorPlan={shotPlan.floorPlan}
           shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
@@ -2342,13 +2440,10 @@ export function ShotPlanSheet() {
           objects={(sharedChoices.objects ?? []).map((o) => ({ id: o.id, name: o.name }))}
           onChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
         />
-      </div>
+        </div>
+        </SheetSection>
 
-      {/* ── Section 4: Lighting / Mood / Style summary ── */}
-      <div className="rounded-2xl border border-border-strong bg-card p-6 space-y-3">
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" /> Lighting, mood &amp; style
-        </CardTitle>
+        <SheetSection number={6} title="Lighting, Mood &amp; Style" icon={Sparkles}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1">
             <Caption className="font-medium text-muted-foreground">Mood</Caption>
@@ -2367,7 +2462,9 @@ export function ShotPlanSheet() {
             <p className="text-sm text-foreground">{sharedChoices.lookBible?.artStyle ?? sharedChoices.artStyle ?? '—'}</p>
           </div>
         </div>
+        </SheetSection>
       </div>
+      {/* ══ end production sheet ══ */}
 
       {/* ── Dialogs ── */}
       <AskAiDialog
