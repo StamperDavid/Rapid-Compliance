@@ -1839,19 +1839,42 @@ export function ShotPlanSheet() {
         setShotPlan(data.plan);
         setIsGenerating(false);
 
-        // …then render every image (floor-plan backdrop + each shot's keyframe) so
-        // the document arrives COMPLETE for review. Best-effort: if rendering fails
-        // (e.g. provider funds), the plan still stands and assets can be regenerated.
+        // …then render the image spread PROGRESSIVELY — one short request per asset,
+        // applying each result as it lands (so images pop in one-by-one and persist),
+        // instead of one multi-minute request that can drop before the browser gets it.
+        // Best-effort per step: a failed asset is skipped, never aborting the rest.
         setIsRenderingSheet(true);
+        // Each step reads the LATEST plan from the store (set by the prior step) so
+        // results accumulate without a closure variable racing across awaits.
+        const renderStep = async (step: string, shotId?: string): Promise<void> => {
+          const current = useVideoPipelineStore.getState().shotPlan;
+          if (!current) {
+            return;
+          }
+          try {
+            const res = await authFetch('/api/content/shot-plan/render-asset', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ plan: current, step, ...(shotId ? { shotId } : {}) }),
+            });
+            const d = (await res.json()) as GenerateResponse;
+            if (res.ok && d.success && d.plan) {
+              setShotPlan(d.plan);
+            }
+          } catch {
+            /* best-effort — skip this asset, keep rendering the rest */
+          }
+        };
         try {
-          const renderRes = await authFetch('/api/content/shot-plan/render-assets', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan: data.plan }),
-          });
-          const renderData = (await renderRes.json()) as GenerateResponse;
-          if (renderRes.ok && renderData.success && renderData.plan) {
-            setShotPlan(renderData.plan);
+          await renderStep('floor-plan');
+          await renderStep('environment-hero');
+          await renderStep('lighting');
+          await renderStep('characters');
+          const shotIds = [...(useVideoPipelineStore.getState().shotPlan?.shots ?? [])]
+            .sort((a, b) => a.index - b.index)
+            .map((s) => s.id);
+          for (const id of shotIds) {
+            await renderStep('keyframe', id);
           }
         } finally {
           setIsRenderingSheet(false);
