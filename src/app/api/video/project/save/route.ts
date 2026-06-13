@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { createProject, updateProject } from '@/lib/video/pipeline-project-service';
 import { CinematicConfigSchema } from '@/types/creative-studio';
+import { ShotPlanSchema } from '@/types/shot-plan';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,6 +110,8 @@ const SaveProjectSchema = z.object({
   finalVideoUrl: z.string().nullable().default(null),
   transitionType: z.enum(['cut', 'fade', 'dissolve']).default('fade'),
   status: z.enum(['draft', 'approved', 'generating', 'generated', 'assembled', 'completed']).default('draft'),
+  // The Shot Plan (with its rendered images) — persisted so it survives reload.
+  shotPlan: ShotPlanSchema.nullable().optional(),
 });
 
 // ============================================================================
@@ -166,6 +169,7 @@ export async function POST(request: NextRequest) {
         generatedScenes: data.generatedScenes,
         finalVideoUrl: data.finalVideoUrl,
         transitionType: data.transitionType,
+        shotPlan: data.shotPlan ?? undefined,
         status: data.status,
       });
 

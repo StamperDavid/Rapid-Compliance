@@ -131,6 +131,9 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
   const finalVideoUrl = useVideoPipelineStore((s) => s.finalVideoUrl);
   const transitionType = useVideoPipelineStore((s) => s.transitionType);
   const currentStep = useVideoPipelineStore((s) => s.currentStep);
+  // The Shot Plan is its own content source — a plan (with its rendered images)
+  // must persist even when there are no legacy pipeline "scenes".
+  const shotPlan = useVideoPipelineStore((s) => s.shotPlan);
 
   const [saveStatus, setSaveStatus] = useState<ProjectSaveStatus>('idle');
 
@@ -155,7 +158,9 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
    */
   const buildPayload = useCallback((): Record<string, unknown> | null => {
     const state = useVideoPipelineStore.getState();
-    if (!hasRealContent(state.scenes)) {
+    // Save when there are real scenes OR a Shot Plan (the shot-plan flow has no
+    // pipeline scenes, so gating only on scenes meant plans never persisted).
+    if (!hasRealContent(state.scenes) && !state.shotPlan) {
       return null;
     }
 
@@ -205,6 +210,7 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
       generatedScenes: state.generatedScenes,
       finalVideoUrl: state.finalVideoUrl,
       transitionType: state.transitionType,
+      shotPlan: state.shotPlan ?? null,
       status,
     };
   }, []);
@@ -273,7 +279,7 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
 
   // ── Debounced auto-save on content change ────────────────────────────────
   useEffect(() => {
-    if (!hasRealContent(scenes)) {
+    if (!hasRealContent(scenes) && !shotPlan) {
       return;
     }
 
@@ -306,6 +312,7 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
     finalVideoUrl,
     transitionType,
     currentStep,
+    shotPlan,
   ]);
 
   // ── Immediate save (key events) ──────────────────────────────────────────
