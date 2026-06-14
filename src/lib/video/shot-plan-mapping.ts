@@ -21,6 +21,7 @@ import type {
   ShotPlan,
   ShotPlanShot,
   ShotPlanShotGenerationStatus,
+  ShotPlanCastMember,
   FloorPlanPoint,
   FloorPlanElement,
 } from '@/types/shot-plan';
@@ -31,7 +32,7 @@ import type {
  * averages out — so we cap by dropping the LOWEST-priority trailing anchors
  * (cinematography notes, palette) before ever touching the core action + look.
  */
-const MAX_PROMPT_CHARS = 1500;
+const MAX_PROMPT_CHARS = 3000;
 
 /**
  * Join prompt fragments into one string: trim, drop empties, de-duplicate
@@ -271,12 +272,145 @@ export function describeBlockingForShot(plan: ShotPlan, shot: ShotPlanShot): str
 }
 
 /**
+ * Build the global PROJECT-context fragment from the shared look bible — the era +
+ * genre that frame every shot (e.g. "1947 post-war, neo-noir."). Returns '' when
+ * neither is set. Woven near the FRONT of the prompt so it survives truncation and
+ * colors how the engine reads everything after it.
+ */
+function buildProjectContextPrompt(plan: ShotPlan): string {
+  const { timePeriod, genre } = plan.sharedChoices;
+  const bits: string[] = [];
+  const period = timePeriod?.trim();
+  const g = genre?.trim();
+  if (period) {
+    bits.push(period);
+  }
+  if (g) {
+    bits.push(g);
+  }
+  return bits.join(', ');
+}
+
+/**
+ * Weave ONE cast member into a concise visual descriptor: identity traits (apparent
+ * age, gender, ethnicity, build, hair) that LOCK the look and are ALWAYS present,
+ * followed by styling (wardrobe + accessories). `wardrobeMode` controls the
+ * wardrobe phrasing — `'signature'` states it verbatim as a fixed iconic outfit;
+ * `'flexible'` (default) states it as this scene's outfit. Returns '' when there
+ * is nothing meaningful to say about the member.
+ *
+ * `costumeState` (the per-shot wardrobe-condition continuity note, when present for
+ * this character) is folded onto the wardrobe so the engine renders e.g. a "torn,
+ * muddy" version of the signature coat without losing the base garment.
+ */
+function describeCastMember(member: ShotPlanCastMember, costumeState?: string): string {
+  // Identity traits — these pin the look and are always kept first.
+  const identity = [
+    member.apparentAge?.trim(),
+    member.gender?.trim(),
+    member.ethnicity?.trim(),
+    member.build?.trim(),
+    [member.hairColor?.trim(), member.hairStyle?.trim()].filter(Boolean).join(' ').trim()
+      ? `${[member.hairColor?.trim(), member.hairStyle?.trim()].filter(Boolean).join(' ')} hair`
+      : '',
+  ]
+    .filter((s): s is string => Boolean(s))
+    .join(', ');
+
+  // Styling — wardrobe (phrased per wardrobeMode) + accessories.
+  const wardrobe = member.wardrobe?.trim();
+  const condition = costumeState?.trim();
+  let wardrobeBit = '';
+  if (wardrobe) {
+    const garment = condition ? `${wardrobe} (${condition})` : wardrobe;
+    wardrobeBit =
+      member.wardrobeMode === 'signature'
+        ? `signature wardrobe: ${garment}`
+        : `wearing ${garment}`;
+  } else if (condition) {
+    // No base garment recorded, but a costume condition was set for this shot.
+    wardrobeBit = `wardrobe ${condition}`;
+  }
+
+  const accessories = (member.accessories ?? [])
+    .map((a) => a.trim())
+    .filter((a) => a.length > 0);
+  const accessoryBit = accessories.length > 0 ? `with ${accessories.join(', ')}` : '';
+
+  const styling = [wardrobeBit, accessoryBit].filter(Boolean).join(', ');
+
+  const descriptor = [identity, styling].filter(Boolean).join(', ');
+  if (!descriptor) {
+    return '';
+  }
+  return `${member.name}: ${descriptor}`;
+}
+
+/**
+ * Build the per-character descriptor block for the cast appearing in THIS shot —
+ * one concise identity + styling line per member (see `describeCastMember`), with
+ * the shot's `costumeStates` entry (matched by characterId) folded into wardrobe.
+ * Order follows `shot.castMemberIds` so the lead the operator listed first leads.
+ */
+function buildCastPrompt(plan: ShotPlan, shot: ShotPlanShot): string {
+  const lines = shot.castMemberIds
+    .map((id) => {
+      const member = plan.sharedChoices.cast.find((c) => c.characterId === id);
+      if (!member) {
+        return '';
+      }
+      const costume = shot.costumeStates?.find((s) => s.characterId === id)?.state;
+      return describeCastMember(member, costume);
+    })
+    .filter((s) => s.length > 0);
+  return lines.join('. ');
+}
+
+/**
+ * Build the per-character emotional+physical STATE fragment for this shot from
+ * `shot.characterStates` (matched by characterId → cast name). This is the
+ * Script-Supervisor continuity overlay (e.g. "David: exhausted, limping").
+ */
+function buildCharacterStatesPrompt(plan: ShotPlan, shot: ShotPlanShot): string {
+  const bits = (shot.characterStates ?? [])
+    .map((ref) => {
+      const state = ref.state.trim();
+      if (!state) {
+        return '';
+      }
+      const member = plan.sharedChoices.cast.find((c) => c.characterId === ref.characterId);
+      const name = member?.name?.trim();
+      return name ? `${name}: ${state}` : state;
+    })
+    .filter((s) => s.length > 0);
+  return bits.join('; ');
+}
+
+/**
+ * Build the scene-condition fragment from this shot's `timeOfDay` + `weather`
+ * (e.g. "golden hour, heavy rain"). Returns '' when neither is set.
+ */
+function buildSceneConditionsPrompt(shot: ShotPlanShot): string {
+  const bits = [shot.timeOfDay?.trim(), shot.weather?.trim()].filter(
+    (s): s is string => Boolean(s),
+  );
+  return bits.join(', ');
+}
+
+/**
  * Compose the FULL generation prompt for a shot — the forward-action subject run
  * through the shared cinematic-preset composer (`buildPromptFromPresets`, the same
  * one powering the UI live preview), with the effective Look Bible + per-shot
- * config applied, then the shot-plan-unique text anchors (environment, palette,
- * mood keywords, cinematography notes) and the camera MOVEMENT (which has no
+ * config applied, then the film-production detail (project era/genre, per-character
+ * identity + wardrobe, per-character/per-object continuity states, scene time +
+ * weather), the shot-plan-unique text anchors (environment, palette, mood
+ * keywords, cinematography notes) and the camera MOVEMENT (which has no
  * `CinematicConfig` slot) appended. De-duplicated and length-capped.
+ *
+ * Fragment order = truncation priority. `joinPromptFragments` drops from the END,
+ * so the highest-value image descriptors (action, period/genre, character identity
+ * + wardrobe, continuity states, scene conditions, featured objects, environment)
+ * lead, and the lower-value camera/palette/notes trail and are sacrificed first.
  *
  * EXPORTED + pure: no I/O, no generation. Used when a shot has no explicit
  * `assembledPrompt` override; the override always wins upstream when present.
@@ -288,20 +422,50 @@ export function composeShotGenerationPrompt(plan: ShotPlan, shot: ShotPlanShot):
   // Core: action + cinematic presets, ordered + phrased by the shared composer.
   const fragments: string[] = [buildPromptFromPresets(subject, config)];
 
+  // Global project context — era + genre frame everything; keep it high.
+  const projectContext = buildProjectContextPrompt(plan);
+  if (projectContext) {
+    fragments.push(projectContext);
+  }
+
+  // Per-character identity + wardrobe descriptors (locks the cast look).
+  const cast = buildCastPrompt(plan, shot);
+  if (cast) {
+    fragments.push(cast);
+  }
+
+  // Per-character emotional+physical continuity state for this shot.
+  const characterStates = buildCharacterStatesPrompt(plan, shot);
+  if (characterStates) {
+    fragments.push(characterStates);
+  }
+
   // Featured objects/props this shot references — name them so the engine renders
   // the SAME object, anchored by the object reference images passed at gen time.
+  // Each object's per-shot condition (`propStates`, matched by objectId) is folded in.
   const objectBits = (shot.objectIds ?? [])
     .map((id) => {
       const obj = plan.sharedChoices.objects?.find((o) => o.id === id);
       if (!obj) {
         return '';
       }
-      return obj.description?.trim() ? `${obj.name} (${obj.description.trim()})` : obj.name;
+      const base = obj.description?.trim() ? `${obj.name} (${obj.description.trim()})` : obj.name;
+      const condition = shot.propStates?.find((p) => p.objectId === id)?.state?.trim();
+      return condition ? `${base} — ${condition}` : base;
     })
     .filter((s) => s.length > 0);
   if (objectBits.length > 0) {
     fragments.push(`Featuring ${objectBits.join(', ')}`);
   }
+
+  // Scene conditions — time of day + weather for this shot.
+  const conditions = buildSceneConditionsPrompt(shot);
+  if (conditions) {
+    fragments.push(conditions);
+  }
+
+  // Shot-plan-unique shared anchors (environment, palette, mood keywords, notes).
+  fragments.push(buildBackgroundPrompt(plan, shot));
 
   // Camera movement has no CinematicConfig slot — append it explicitly.
   if (shot.camera.movement?.trim()) {
@@ -317,9 +481,6 @@ export function composeShotGenerationPrompt(plan: ShotPlan, shot: ShotPlanShot):
   if (blocking) {
     fragments.push(blocking);
   }
-
-  // Shot-plan-unique shared anchors (environment, palette, mood keywords, notes).
-  fragments.push(buildBackgroundPrompt(plan, shot));
 
   return joinPromptFragments(fragments);
 }

@@ -91,6 +91,12 @@ const DOWNSTREAM_AFFECTING_SHOT_FIELDS: ReadonlySet<keyof ShotPlanShot> = new Se
   'mood',
   'transitionIn',
   'index',
+  // Continuity overlay — these carry forward and affect later shots.
+  'timeOfDay',
+  'weather',
+  'characterStates',
+  'costumeStates',
+  'propStates',
 ]);
 
 // ============================================================================

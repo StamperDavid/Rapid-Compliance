@@ -64,6 +64,40 @@ export interface ShotPlanCastMember {
   referenceImageUrls: string[];
   /** Free-text role, e.g. "hero", "narrator", "background extra". */
   role?: string;
+  /** Doc layout weight: a `lead` gets the big block, `supporting` a smaller one. */
+  billing?: 'lead' | 'supporting';
+  /**
+   * What kind of subject this member is. A `group` is several people shown as a
+   * single block (e.g. "Cannibal Tribe Hunters"); drives adaptive doc labeling.
+   */
+  subjectKind?: 'person' | 'creature' | 'group';
+  /**
+   * Descriptive character notes — wardrobe, features, demeanor, hero props
+   * (e.g. "soaked wool coat, gaunt eyes, cigarette + lighter as hero props").
+   * Shown beside the palette in the character block; the planner fills it.
+   */
+  notes?: string;
+  /** Apparent age range, e.g. "late 30s", "child ~8". */
+  apparentAge?: string;
+  /** Gender presentation, e.g. "male", "female", "androgynous". */
+  gender?: string;
+  /** Ethnicity / heritage cue for casting consistency. */
+  ethnicity?: string;
+  /** Body type / height, e.g. "tall, lean", "stocky, 5'6\"". */
+  build?: string;
+  /** Hair color, e.g. "jet black", "silver-grey". */
+  hairColor?: string;
+  /** Hair style, e.g. "slicked back", "shoulder-length waves". */
+  hairStyle?: string;
+  /** The defining outfit for this look, e.g. "soaked wool trench coat". */
+  wardrobe?: string;
+  /** Recurring accessories — watch, glasses, hat, bag, etc. */
+  accessories?: string[];
+  /**
+   * Wardrobe handling across scenes. `flexible` (default) re-costumes per scene;
+   * `signature` keeps the defining outfit constant for an iconic look.
+   */
+  wardrobeMode?: 'flexible' | 'signature';
   /**
    * AI-rendered model/turnaround sheet for this character (labeled views like
    * FRONT / 3⁄4 / PROFILE / BACK / DETAIL), generated from the reference at render
@@ -86,6 +120,8 @@ export interface ShotPlanObject {
   name: string;
   /** Appearance-anchor reference images (uploaded or from the media library). */
   referenceImageUrls: string[];
+  /** Whether this is an inanimate `object`/prop or a non-cast `creature` rig. */
+  subjectKind?: 'object' | 'creature';
   /** Optional material-language / detail note, e.g. "matte gunmetal, scarred armor". */
   description?: string;
 }
@@ -100,6 +136,24 @@ export interface ShotPlanLightingSwatch {
 }
 
 /**
+ * One distinct location/area when the video spans multiple environments. The doc
+ * renders a hero image per zone plus a per-zone slice of the top-down route strip,
+ * so a multi-location story reads as a sequence of clearly bounded sets.
+ */
+export interface ShotPlanEnvironmentZone {
+  /** Stable id used by shots' route grouping and the floor-plan zone bands. */
+  id: string;
+  /** Human label, e.g. "Zone 1 · Workspace (Home)". */
+  label: string;
+  /** AI hero render establishing this zone's look. */
+  heroImageUrl?: string;
+  /** Bulleted set-design elements specific to this zone. */
+  setDesign?: string[];
+  /** Ids of the shots that occur in this zone. */
+  cutIds?: string[];
+}
+
+/**
  * The project-level look bible. Every shot inherits these unless it overrides a
  * specific field. The `environmentFingerprint` is the written signature of the
  * world and the single strongest cross-shot consistency anchor.
@@ -107,6 +161,10 @@ export interface ShotPlanLightingSwatch {
 export interface ShotPlanSharedChoices {
   /** How many shots/cuts the plan is built for. */
   cutCount: number;
+  /** Era/year the project is set in, e.g. "1947 post-war", "near-future 2090". */
+  timePeriod?: string;
+  /** Genre of the piece, e.g. "neo-noir", "corporate explainer". */
+  genre?: string;
   /** Named palette swatches shared across every shot. */
   colorPalette: ShotPlanColorSwatch[];
   /** The written signature of the world — the consistency anchor. */
@@ -140,6 +198,16 @@ export interface ShotPlanSharedChoices {
    * Reuses `CinematicConfig` so it maps 1:1 onto the existing studio pickers.
    */
   lookBible?: CinematicConfig;
+  /**
+   * Distinct locations when the video spans multiple environments; the doc renders
+   * one hero per zone plus a per-zone slice of the top-down route strip.
+   */
+  environmentZones?: ShotPlanEnvironmentZone[];
+  /**
+   * Per-subject-kind label overrides for the doc, e.g. override "Character notes"
+   * with "Material language" for creatures.
+   */
+  adaptiveLabels?: { characterNotes?: string };
 }
 
 // ============================================================================
@@ -212,6 +280,29 @@ export interface ShotPlanShotCamera {
 }
 
 /**
+ * A per-shot continuity note for ONE character — the Script-Supervisor layer that
+ * pins a character's emotional+physical or costume condition for THIS shot (e.g.
+ * `{ characterId, state: "exhausted, limping" }` or `{ ..., state: "coat torn, muddy" }`).
+ */
+export interface ShotPlanCharacterStateRef {
+  /** References a `ShotPlanCastMember.characterId`. */
+  characterId: string;
+  /** The character's condition for this shot, e.g. "injured", "soaked", "clean". */
+  state: string;
+}
+
+/**
+ * A per-shot continuity note for ONE object/prop — its condition for THIS shot
+ * (e.g. `{ objectId, state: "lantern lit" }` → later `{ ..., state: "lantern spent" }`).
+ */
+export interface ShotPlanPropStateRef {
+  /** References a `ShotPlanObject.id`. */
+  objectId: string;
+  /** The object's condition for this shot, e.g. "full", "empty", "lit", "spent". */
+  state: string;
+}
+
+/**
  * One shot/cut. EVERY field is individually addressable so a surgical edit (manual
  * or scoped-AI) can change exactly one field and regenerate only what is affected.
  */
@@ -228,6 +319,19 @@ export interface ShotPlanShot {
   objectIds?: string[];
   /** This shot's setting — consistent with the environment fingerprint. */
   environment: string;
+  /** Time of day for this shot, e.g. "golden hour", "night", "dawn". */
+  timeOfDay?: string;
+  /** Weather for this shot, e.g. "heavy rain", "clear", "fog". */
+  weather?: string;
+  /**
+   * Per-character emotional+physical state THIS shot (e.g. injured/exhausted/wet)
+   * — the continuity overlay a downstream shot inherits or deliberately changes.
+   */
+  characterStates?: ShotPlanCharacterStateRef[];
+  /** Per-character costume condition THIS shot (e.g. clean/bloodied/torn). */
+  costumeStates?: ShotPlanCharacterStateRef[];
+  /** Per-object condition THIS shot (e.g. lit→spent, full→empty). */
+  propStates?: ShotPlanPropStateRef[];
   /** Camera package (preset ids/labels). */
   camera: ShotPlanShotCamera;
   lighting?: string;
@@ -315,6 +419,21 @@ export interface FloorPlanSubjectPath {
 }
 
 /**
+ * A horizontal band on the top-down route strip that partitions it per location,
+ * so a multi-zone story shows where one set ends and the next begins.
+ */
+export interface ShotPlanFloorPlanZone {
+  /** Stable id (typically the matching `ShotPlanEnvironmentZone.id`). */
+  id: string;
+  /** Human label for the band, e.g. "Zone 1 · Workspace (Home)". */
+  label: string;
+  /** Normalized [0,1] left edge of this zone band on the strip. */
+  x0: number;
+  /** Normalized [0,1] right edge of this zone band on the strip. */
+  x1: number;
+}
+
+/**
  * The top-down blocking diagram for the plan — OpenArt's floor plan, but
  * structured + field-addressable so it can be edited AND translated into precise
  * camera-direction prompt language at generation time (our differentiator).
@@ -326,6 +445,8 @@ export interface ShotPlanFloorPlan {
   /** One camera node per shot (the numbered cuts). */
   cameras: FloorPlanCamera[];
   subjectPaths: FloorPlanSubjectPath[];
+  /** Per-location bands partitioning the route strip when the story spans zones. */
+  zones?: ShotPlanFloorPlanZone[];
 }
 
 // ============================================================================
@@ -343,6 +464,62 @@ export const SHOT_PLAN_STATUSES: readonly ShotPlanStatus[] = [
 ] as const;
 
 /** The complete, field-addressable Shot Plan. */
+// ============================================================================
+// PAGE LAYOUT — the AI DESIGNS the page composition; the renderer just paints it.
+// The planner authors a `layout`: an ordered stack of rows, each row a set of
+// blocks with relative width/height weights. The renderer is a generic painter —
+// it lays the page out as a fixed-ratio canvas, distributes the rows by their
+// height weights (so the page ALWAYS fills — no dead space), and draws each block
+// by its `type`. This is "the AI constructs the page", not a hard-coded template.
+// ============================================================================
+
+/** The render primitives the AI can compose a page from. */
+export type ShotPlanBlockType =
+  | 'characters' // cast reference / turnaround blocks
+  | 'environment' // environment hero(es) / set design (per zone)
+  | 'floorplan' // top-down blocking / camera route
+  | 'storyboard' // the ordered cut frames
+  | 'lighting' // lighting swatches
+  | 'cinematography' // look bible / camera / style fields
+  | 'mood' // mood keywords + cinematography notes
+  | 'palette' // color palette swatches
+  | 'notes' // character / continuity notes
+  | 'prompt'; // the assembled video prompt
+
+export const SHOT_PLAN_BLOCK_TYPES: readonly ShotPlanBlockType[] = [
+  'characters',
+  'environment',
+  'floorplan',
+  'storyboard',
+  'lighting',
+  'cinematography',
+  'mood',
+  'palette',
+  'notes',
+  'prompt',
+] as const;
+
+/** One block the AI placed in a row, with its relative width within that row. */
+export interface ShotPlanLayoutBlock {
+  type: ShotPlanBlockType;
+  /** Section heading the AI chose for this block (e.g. "1. Character Reference"). */
+  title?: string;
+  /** Relative width within the row (fr units); the renderer normalizes these. */
+  widthWeight: number;
+}
+
+/** One horizontal row of the page; its height is a relative weight of the canvas. */
+export interface ShotPlanLayoutRow {
+  /** Relative height of this row vs the others (fr units); rows fill the canvas. */
+  heightWeight: number;
+  blocks: ShotPlanLayoutBlock[];
+}
+
+/** The AI-authored page composition. */
+export interface ShotPlanLayout {
+  rows: ShotPlanLayoutRow[];
+}
+
 export interface ShotPlan {
   id: string;
   title: string;
@@ -350,6 +527,8 @@ export interface ShotPlan {
   shots: ShotPlanShot[];
   /** Top-down blocking diagram (camera positions/routes + actor/prop placement). */
   floorPlan?: ShotPlanFloorPlan;
+  /** AI-authored page composition. When absent, the renderer uses a default layout. */
+  layout?: ShotPlanLayout;
   createdAt: string;
   updatedAt: string;
   status: ShotPlanStatus;
@@ -374,6 +553,18 @@ export const ShotPlanCastMemberSchema = z.object({
   name: z.string().trim().min(1).max(200),
   referenceImageUrls: z.array(z.string().trim().url()).max(20).default([]),
   role: z.string().trim().max(200).optional(),
+  billing: z.enum(['lead', 'supporting']).optional(),
+  subjectKind: z.enum(['person', 'creature', 'group']).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  apparentAge: z.string().trim().max(300).optional(),
+  gender: z.string().trim().max(300).optional(),
+  ethnicity: z.string().trim().max(300).optional(),
+  build: z.string().trim().max(300).optional(),
+  hairColor: z.string().trim().max(300).optional(),
+  hairStyle: z.string().trim().max(300).optional(),
+  wardrobe: z.string().trim().max(300).optional(),
+  accessories: z.array(z.string().trim().min(1).max(200)).max(12).optional(),
+  wardrobeMode: z.enum(['flexible', 'signature']).optional(),
   modelSheet: z
     .array(z.object({ label: z.string().trim().min(1).max(80), imageUrl: z.string().trim().url() }))
     .max(8)
@@ -384,6 +575,7 @@ export const ShotPlanObjectSchema = z.object({
   id: z.string().trim().min(1).max(200),
   name: z.string().trim().min(1).max(200),
   referenceImageUrls: z.array(z.string().trim().url()).max(20).default([]),
+  subjectKind: z.enum(['object', 'creature']).optional(),
   description: z.string().trim().max(2000).optional(),
 });
 
@@ -401,8 +593,18 @@ export const ShotPlanLookBibleSchema = CinematicConfigSchema.extend({
   videographerStyle: z.string().trim().optional(),
 });
 
+export const ShotPlanEnvironmentZoneSchema = z.object({
+  id: z.string().trim().min(1).max(200),
+  label: z.string().trim().min(1).max(200),
+  heroImageUrl: z.string().trim().url().optional(),
+  setDesign: z.array(z.string().trim().min(1).max(2000)).max(12).optional(),
+  cutIds: z.array(z.string().trim().min(1).max(200)).optional(),
+});
+
 export const ShotPlanSharedChoicesSchema = z.object({
   cutCount: z.number().int().min(0).max(200),
+  timePeriod: z.string().trim().max(200).optional(),
+  genre: z.string().trim().max(200).optional(),
   colorPalette: z.array(ShotPlanColorSwatchSchema).max(40).default([]),
   environmentFingerprint: z.string().trim().max(4000).default(''),
   cast: z.array(ShotPlanCastMemberSchema).max(40).default([]),
@@ -414,6 +616,8 @@ export const ShotPlanSharedChoicesSchema = z.object({
   cinematographyNotes: z.array(z.string().trim().min(1).max(2000)).max(40).default([]),
   artStyle: z.string().trim().max(2000).optional(),
   lookBible: ShotPlanLookBibleSchema.optional(),
+  environmentZones: z.array(ShotPlanEnvironmentZoneSchema).max(12).optional(),
+  adaptiveLabels: z.object({ characterNotes: z.string().trim().max(80).optional() }).optional(),
 });
 
 export const ShotPlanShotTransitionSchema = z.enum(['continue', 'cut']);
@@ -445,6 +649,16 @@ export const ShotPlanShotCameraSchema = z.object({
   subjectUnawareOfCamera: z.boolean().optional(),
 });
 
+export const ShotPlanCharacterStateRefSchema = z.object({
+  characterId: z.string().trim().min(1).max(200),
+  state: z.string().trim().min(1).max(500),
+});
+
+export const ShotPlanPropStateRefSchema = z.object({
+  objectId: z.string().trim().min(1).max(200),
+  state: z.string().trim().min(1).max(500),
+});
+
 export const ShotPlanShotSchema = z.object({
   id: z.string().trim().min(1).max(200),
   index: z.number().int().min(0),
@@ -453,6 +667,11 @@ export const ShotPlanShotSchema = z.object({
   castMemberIds: z.array(z.string().trim().min(1).max(200)).max(40).default([]),
   objectIds: z.array(z.string().trim().min(1).max(200)).max(40).optional(),
   environment: z.string().trim().max(4000).default(''),
+  timeOfDay: z.string().trim().max(200).optional(),
+  weather: z.string().trim().max(200).optional(),
+  characterStates: z.array(ShotPlanCharacterStateRefSchema).max(40).optional(),
+  costumeStates: z.array(ShotPlanCharacterStateRefSchema).max(40).optional(),
+  propStates: z.array(ShotPlanPropStateRefSchema).max(40).optional(),
   camera: ShotPlanShotCameraSchema.default({}),
   lighting: z.string().trim().max(2000).optional(),
   mood: z.string().trim().max(2000).optional(),
@@ -493,14 +712,50 @@ export const FloorPlanSubjectPathSchema = z.object({
   path: z.array(FloorPlanPointSchema).max(100).default([]),
 });
 
+export const ShotPlanFloorPlanZoneSchema = z.object({
+  id: z.string().trim().min(1).max(200),
+  label: z.string().trim().max(300).default(''),
+  x0: z.number().min(0).max(1),
+  x1: z.number().min(0).max(1),
+});
+
 export const ShotPlanFloorPlanSchema = z.object({
   backdropImageUrl: z.string().trim().url().optional(),
   elements: z.array(FloorPlanElementSchema).max(100).default([]),
   cameras: z.array(FloorPlanCameraSchema).max(200).default([]),
   subjectPaths: z.array(FloorPlanSubjectPathSchema).max(100).default([]),
+  zones: z.array(ShotPlanFloorPlanZoneSchema).max(40).optional(),
 });
 
 export const ShotPlanStatusSchema = z.enum(['draft', 'ready', 'generating', 'complete']);
+
+export const ShotPlanBlockTypeSchema = z.enum([
+  'characters',
+  'environment',
+  'floorplan',
+  'storyboard',
+  'lighting',
+  'cinematography',
+  'mood',
+  'palette',
+  'notes',
+  'prompt',
+]);
+
+export const ShotPlanLayoutBlockSchema = z.object({
+  type: ShotPlanBlockTypeSchema,
+  title: z.string().trim().max(120).optional(),
+  widthWeight: z.number().min(0.1).max(100),
+});
+
+export const ShotPlanLayoutRowSchema = z.object({
+  heightWeight: z.number().min(0.1).max(100),
+  blocks: z.array(ShotPlanLayoutBlockSchema).min(1).max(8),
+});
+
+export const ShotPlanLayoutSchema = z.object({
+  rows: z.array(ShotPlanLayoutRowSchema).min(1).max(12),
+});
 
 export const ShotPlanSchema = z.object({
   id: z.string().trim().min(1).max(200),
@@ -508,6 +763,7 @@ export const ShotPlanSchema = z.object({
   sharedChoices: ShotPlanSharedChoicesSchema,
   shots: z.array(ShotPlanShotSchema).max(200).default([]),
   floorPlan: ShotPlanFloorPlanSchema.optional(),
+  layout: ShotPlanLayoutSchema.optional(),
   createdAt: z.string().trim().min(1),
   updatedAt: z.string().trim().min(1),
   status: ShotPlanStatusSchema.default('draft'),

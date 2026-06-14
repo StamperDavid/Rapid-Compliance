@@ -1007,11 +1007,32 @@ export async function generateLightingSwatches(plan: ShotPlan, ctx: TenantContex
 // ============================================================================
 
 /** The turnaround views rendered for each character's model sheet. */
-const CHARACTER_VIEWS: { label: string; view: string }[] = [
-  { label: 'FRONT', view: 'front view, facing the camera directly' },
-  { label: '3/4', view: 'three-quarter front view, body turned about 45 degrees' },
-  { label: 'PROFILE', view: 'full side profile view' },
-  { label: 'BACK', view: 'back view, facing away from camera' },
+const CHARACTER_VIEWS: { label: string; view: string; framing: string }[] = [
+  {
+    label: 'FRONT',
+    view: 'front view, facing the camera directly',
+    framing: 'full body head-to-toe, neutral standing A-pose',
+  },
+  {
+    label: 'SIDE',
+    view: 'full side profile view',
+    framing: 'full body head-to-toe, neutral standing pose',
+  },
+  {
+    label: 'BACK',
+    view: 'back view, facing away from camera',
+    framing: 'full body head-to-toe, neutral standing pose',
+  },
+  {
+    label: 'FACE CLOSE-UP',
+    view: 'front-facing head-and-shoulders portrait',
+    framing: 'tight close-up on the face, head and shoulders only, sharp facial detail',
+  },
+  {
+    label: 'COSTUME DETAIL',
+    view: 'three-quarter view emphasising signature wardrobe, props and accessories',
+    framing: 'medium close-up on the costume, wardrobe textures and accessory detail',
+  },
 ];
 
 /**
@@ -1036,11 +1057,11 @@ export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext
       continue;
     }
     const sheet: { label: string; imageUrl: string }[] = [];
-    for (const { label, view } of CHARACTER_VIEWS) {
+    for (const { label, view, framing } of CHARACTER_VIEWS) {
       const workDir = await createWorkDir('shot-plan-charsheet');
       try {
         const prompt =
-          `The exact same character, ${view}, full body head-to-toe, neutral standing A-pose, ` +
+          `The exact same character, ${view}, ${framing}, ` +
           'on a clean light-grey studio cyclorama, character turnaround model sheet, evenly lit ' +
           'soft studio lighting, no dramatic shadows, consistent identity and wardrobe, sharp detail.';
         logger.info('[shot-plan-gen] submitting character view', { file: FILE, tenantId: ctx.tenantId, character: member.name, label });

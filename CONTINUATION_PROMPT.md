@@ -2,7 +2,262 @@
 
 ---
 
-# 🔴 RESUME HERE — Jun 12 2026 — PHASE 2 of the Character Library (wire characters into generation)
+# 🔴 RESUME HERE — Jun 14 2026 — SHOT DOC: adaptive cinematic production system (SPEC — awaiting owner sign-off)
+
+**One-line:** Recreate & exceed OpenArt Smart Shot's adaptive production sheet, with NO length
+cap. Brief → timed script → one or more ordered **Shot Docs** → chained renders → stitched in
+the editor → any length (shorts → feature films / TV series). Each Shot Doc is a data-driven,
+self-describing document that reflows to its content, with a master visual overview + click-to-
+expand detail popups that double as the edit surface.
+
+**Discovery (from the operator's real OpenArt artifacts, NOT marketing — those were wrong):**
+- The document's STRUCTURE changes per video (1 char fills §1 + notes; creature+object adds an
+  object MODEL SHEET block and relabels notes "MATERIAL LANGUAGE"; 3 men + a tribe → 3 char
+  columns + 1 GROUP column + palette-ref column; multi-location → N environment heroes + a
+  continuous cross-location top-down ROUTE strip). ⇒ an intelligence layer AUTHORS the doc's
+  shape; a renderer lays out whatever shape it's handed.
+- Their tool DID do 5 scenes with one camera route across all locations (artifact 214400).
+  Multi-scene is real; the marketing "single-scene only" claim is false for what it produces.
+- "High quality" (artifact 221305) = MORE structural reasoning: lead vs supporting cast,
+  consolidating ~9 locations into 3 ENVIRONMENT ZONES, and a storyboard header showing
+  "(55 SECONDS TOTAL)". Their sheet DERIVES runtime; we make the timed script the source of
+  truth so length is unlimited.
+- Measured ratios: 4-section doc ≈ 1.49:1 (141853=1.498, 214400=1.493, 221305=1.497); 3-section
+  OpenArt sheet = 1.91:1. §1:§2 width = 766:916 ≈ 6:7. Full-body figure H/W ≈ 2.7 (≈3:8);
+  close-up ≈ 3:4. Hero ≈ 50% of §2. Storyboard = 5 frames ~16:9. Pipeline is image-first →
+  image-to-video (GPT-Image-2 + Seedance 2.0); we're already on fal + Seedance 2.0.
+
+## THREE INTELLIGENCE LAYERS (the part we're missing today)
+
+**1A. Script layer (timed).** Brief (+ saved characters/refs/Brand DNA) → full script with
+timing baked in. `ScriptDocument{ title, totalSeconds (derived), scenes[] }`,
+`ScriptScene{ index, slug, summary, location, timeOfDay, startSec, endSec, beats[], transitionOut }`,
+`ScriptBeat{ action, dialogue?, durationSec, suggestedShotType?, isSceneEnding }`. The script is
+the SOURCE OF TRUTH for duration + where scenes end. Runtime emerges; no length slider.
+
+**1B. Segmentation layer (multi-doc).** Reads the timed script → decides HOW MANY Shot Docs +
+their order. Heuristic: one doc per scene, OR group consecutive scenes sharing environment+cast
+into one doc (like the 3-zone consolidation). Cap per-doc cuts to a legible range (~3–8).
+`VideoProject{ id, title, script, docs: ShotDocRef[] (ordered, each remembers which scenes it
+covers) }`. Each doc's LAST rendered frame seeds the NEXT doc's first frame (existing
+continue/cut mechanism) so the editor stitches in order → unlimited length.
+
+**1C. Document-structure layer (self-describing).** Per doc the planner authors STRUCTURE, not
+just content: `subjectBlocks` typed `lead|supporting|group|creature|object` (each: which
+reference views — turnaround for people, model-sheet for objects/vehicles, material-language for
+creatures — + notes + role + palette); `environmentZones` (label + heroImage + setDesignBullets
++ which cuts occur there; many locations may collapse into fewer zones); `route` (ordered path
+across zones for the continuous top-down strip, per-cut camera nodes + arrows + subject paths);
+`cuts` (per-cut camera package + durationSec from script + transitionIn + action/dialogue);
+`lightingSetups` (one per zone/mood + swatch); moodKeywords; cinematographyNotes; full lookBible;
+`adaptiveLabels` (e.g. "Character Notes" vs "Material Language").
+
+## THE INTELLIGENCE IS THE PRODUCT
+The planner is a genuine cinematic PRODUCTION DESIGNER that authors a complete pro document on
+every request — NOT a form-filler. It must reason about: lead vs supporting cast; consolidating
+many locations into ENVIRONMENT ZONES; which reference views each subject needs (turnaround for a
+person, MODEL SHEET for a vehicle/object, COSTUME/ACCESSORY DETAIL for wardrobe-heavy characters,
+MATERIAL LANGUAGE for creatures); camera grammar; and timing. **Run this planner on Opus 4.8
+(claude-opus-4-8), not Sonnet** — it's the most demanding reasoning task in the app and document
+quality is gated by model taste. GM still holds the prompt (Standing Rule #1); we just point it at
+the top-tier model. Costume/accessory parity is already in motion: FACE CLOSE-UP + COSTUME/
+ACCESSORY DETAIL views were added to character-sheet generation Jun 14; the planner decides PER
+SUBJECT which detail views matter.
+
+## HARD VISUAL RULES (non-negotiable in the layout engine)
+1. **No blank sections, ever.** Missing data → the grid REFLOWS to fill space; never render an
+   empty cell or a big blank gap.
+2. **No ugly text walls on the master.** The master sheet is VISUAL — images, swatches, tiny
+   labels, short captions only.
+3. **Prose + deep detail live behind the additional-info icon.** Full character notes, set-design
+   lists, cinematography notes, per-cut breakdowns all open in a POPUP, not on the face of the doc.
+
+## RENDERER = RULES-DRIVEN LAYOUT ENGINE (not a fixed poster)
+Reads the structure and reflows. Off-white (stone-300) paper, zoom/pan, ≈1.49:1.
+- Header: cut count + TOTAL RUNTIME (from script) + palette chips + environment fingerprint.
+- §1 Character Reference: splits width across subjectBlocks (+ palette-ref column). 1 subject →
+  fills width (spread reference row + large Character Notes + palette). N subjects → N columns
+  sized to content (lead/group wider), each = full-body turnaround row over close-up row + name +
+  brief notes. Ratios: full-body ≈ 3:8, close-up ≈ 3:4.
+- §2 Environment/Set Design: one hero per zone (splits width) + continuous top-down ROUTE strip
+  divided per zone w/ per-cut camera nodes + arrows (single scene → one stage; multi → chained).
+  Set-design bullets per zone.
+- §3 Storyboard: one frame per cut, in order; ~16:9 still + caption (lens·move·size·duration +
+  action); header shows "(NN SECONDS TOTAL)".
+- §4 Lighting/Mood/Style: swatches (per setup) | mood pills | lens + cinematography notes (richer
+  than theirs — every captured field).
+- Footer: assembled video prompt + Generate.
+
+## DETAIL LAYER (progressive disclosure) — REPLACES the Review/Edit mode toggle
+- Master Shot Doc = visual overview. Click a storyboard frame → popup = that CUT's mini shot doc
+  (keyframe, full camera/lens, action, dialogue, prompt, chaining to prev frame) — view + edit.
+- Click a section's detail icon → popup = that section fully expanded (every field, per-cut
+  overrides, full notes), scrolls on overflow.
+- ONE popup level max; popups scroll, never nest. Popups read/write the SAME plan object — edits
+  propagate to the master instantly (single source of truth).
+- Reuse existing UI as popup bodies: FloorPlanCanvas, per-shot editor, CinematicControlsPanel.
+- Multi-scene: scene popup = smaller Shot Doc; cut popup = one cut.
+
+## DATA MODEL
+- NEW: ScriptDocument/ScriptScene/ScriptBeat; VideoProject envelope (ordered docs + chaining
+  frames). EXTEND ShotPlan → "ShotDoc": subjectBlocks (typed), environmentZones, multi-zone
+  route, per-cut durationSec, lightingSetups, adaptiveLabels. Much already exists (cast, objects,
+  floorPlan, lightingSwatches, lookBible, shots). Persist project + ordered docs to Firestore
+  (autosave already wired for single shotPlan).
+
+## GENERATION PIPELINE (image-first; Seedance 2.0; ownership rule)
+Script (LLM) → segment into docs → per doc: characters (turnarounds) → environment heroes/zones →
+floor-plan/route backdrop → lighting swatches → storyboard keyframes (Flux/GPT-Image-equivalent)
+→ per cut: image→video via Seedance 2.0 chained by last frame → stitch all docs in editor.
+Consistency via identity anchors + last-frame seeding. All fal temp assets persisted to Firebase
+Storage + createAsset.
+
+## AGENTS (reuse, don't proliferate)
+- Repurpose SHOT_PLAN_PLANNER GM into the document-structure author (exists; widen output schema
+  + GM, reseed). Script-writing = a step/role on the planner or Content Manager, NOT a new agent
+  unless owner confirms. Standing Rules #1/#2 intact (Brand DNA baked at seed; GMs change only via
+  graded human edits).
+
+## BUILD PHASES (parallel-agent-hours; each: tsc+lint clean, seed-run if GM changed, verify
+   script, owner walkthrough before next)
+- **P0 (done / in-flight):** off-white adaptive single-doc renderer w/ measured ratios, char
+  columns, turnarounds + face/costume views, planner per-character notes, "Shot Doc" rename.
+- **P1:** renderer → true layout engine (subjectBlocks / zones / continuous route); planner emits
+  self-describing structure.
+- **P2:** detail popups (cut mini-doc + section expand); remove the Review/Edit mode toggle.
+- **P3:** timed-script layer + segmentation + VideoProject ordered docs + chaining persistence.
+- **P4:** multi-doc stitch in editor → feature length.
+
+## CHARACTER SYSTEM (P-CHAR) — identity vs wardrobe + select/create + auto-save
+Core principle (owner, Jun 14): **ALL character detail is ENGINE INPUT first; display is optional.**
+The full appearance feeds the generation prompt for accuracy; the master sheet shows only
+name/role/thumbnail; everything else lives behind the additional-details popup (viewable + editable
+on demand). Data completeness for the engine, progressive disclosure for the eyes.
+
+- **Category fix (the current bug):** today we lock a character's WHOLE appearance (face + outfit).
+  Wrong. **Identity = immutable** (face, build, special characteristics: dimples, freckles, scars,
+  snaggle tooth, permanent accessory) → locked into every render. **Wardrobe/styling = per-scene**
+  → generated to fit the scene/role/period. (Symptom: a Pixar superhero cast into a noir detective
+  scene still rendered caped instead of re-dressed in a trench + fedora.)
+- **We already have the bones:** `AvatarProfile` (identity) + `CharacterLook[]` (outfits/states) +
+  shipped instruction-based image editing (Flux Kontext) = the re-costume tool. Identity-lock logic
+  ("lock the face, scene/Look supplies wardrobe") exists in `storyboard-thumbnail.ts` for the old
+  path — needs wiring into the new Shot Doc generation.
+- **Build:**
+  1. Enrich the character description with STRUCTURED fields: immutable physical traits + accessories
+     + base wardrobe (so traits like freckles/snaggle tooth persist through every re-costume — they
+     are identity, not wardrobe).
+  2. Planner (Opus 4.6) authors PER-SCENE wardrobe per cast member, reasoning about role + period +
+     genre; emits it into the cut/scene spec.
+  3. Generator re-costumes via image-to-image (Flux Kontext) into the scene wardrobe while LOCKING
+     face + immutable traits → a scene-specific reference used for that scene's shots.
+  4. `composeShotGenerationPrompt` must include identity traits + per-scene wardrobe + accessories
+     (engine gets everything).
+  5. Select-or-create character picker (reuse `AvatarPicker` + `CharacterForm`; add a plain "create
+     new described character" path) + auto-save AI-invented characters to the Library once a keyframe
+     gives them a face anchor.
+  6. All of the above surfaced ONLY in the additional-details popup, not the master sheet.
+- **Wardrobe mode (owner decision pending, recommended default):** per-character flag —
+  **"flexible"** (default → re-costume per scene) vs **"signature"** (keep the defining outfit, e.g.
+  a superhero suit / mascot / uniform). Planner may override per scene. Maps onto the existing
+  exact/inspired/new fidelity.
+- **Scout's reuse-first plan (already mapped):** picker "create new" → existing POST route; stop
+  `resolveCast` from DROPPING AI-invented picks (keep as `unsaved` so they can be saved + bound);
+  "Save to Library" affordance on unsaved cast; Admin-SDK writes via existing service; no new
+  collection. Files: `AvatarPicker.tsx`, `CharacterForm.tsx` (reuse), `ShotPlanSheet.tsx` (CastCard),
+  `planner.ts` (resolveCast), `shot-plan.ts` (`unsaved` flag + relax refs for unsaved), optional
+  `assistant/route.ts` for chat parity.
+
+## PRODUCTION FIELD REGISTRY (P-FIELDS) — audited Jun 14, ALL to be added
+
+Owner mandate: EVERY field below gets (1) a hand-editable INPUT on the RenderZero-styled
+dashboard, (2) AI-filled like existing fields (extend the GM completeness mandate + make
+required in the LLM schema), (3) representation on the Shot Doc (image / text / popup detail —
+heavy detail behind the additional-info icon, not the master face), and (4) sent to the video
+engine in the CORRECT way (mapped into composeShotGenerationPrompt for image-relevant fields;
+carried as metadata for downstream audio/edit/VFX layers). Touch all 5 layers in lockstep:
+input form → `shot-plan.ts` types → planner GM + LLM schema → renderer (master + popup) →
+`shot-plan-mapping.ts` prompt composer (+ generation service for re-costuming).
+
+Verdict from the production audit: today's doc is a CINEMATOGRAPHY + BLOCKING sheet; ~10 of 18
+departments are unstructured (crammed into free-text notes/description/environment).
+
+PREREQUISITE: a scout is mapping `AvatarProfile`/`CharacterLook` (so we don't duplicate
+wardrobe/identity) + WHERE the dashboard input fields live. Place character identity vs look
+fields per that result (look fields likely belong on `CharacterLook`, surfaced to the cast member).
+
+### Project-level (sharedChoices) — accuracy header
+- `timePeriod` (P0), `genre` (P0), `deliveryFormat` (P1, → drives aspect+pacing),
+  `contrastLevel` (P2), `saturationLevel` (P2), `targetDuration` (P2).
+
+### Per-character — IDENTITY (immutable; locked into every render)
+- `apparentAge` (P0), `gender` (P0), `ethnicity`/skinTone (P0), `build`/height (P0),
+  `distinguishingFeatures[]` (P1: scars/tattoos/freckles/moles), `hairColor` (P0),
+  base `facialHair` (P1), `voiceId` (P1, lip-sync layer).
+
+### Per-character/look — WARDROBE & STYLING (mutable per scene)
+- `wardrobe` (P0), `accessories[]` (P0), `wardrobeColors[]` (P1, keyed to palette),
+  `footwear` (P1), `hairStyle` (P0), `makeupLook` (P1), `sfxMakeup` (P1).
+- Wardrobe mode flag: `flexible` (default, re-costume per scene) vs `signature` (keep outfit).
+
+### Per-object — props
+- `propRole` (P1: hero/background/dressing), `scale` (P2). (HAVE: refs, description, subjectKind.)
+
+### Per-environment-zone — art dept
+- `locationType` (P1: INT/EXT + locale), `architecturalStyle` (P1), `setMateriality[]` (P1),
+  `groundSurface` (P2). (HAVE: setDesign[], heroImageUrl.)
+
+### Per-shot — direction / lighting / sound / edit / vfx / movement
+- `keyLightDirection` (P1), `practicalLights[]` (P1), `performanceNote` (P1, per-char),
+  `eyeline`/gazeTarget (P1), `transitionStyle` (P1: cut/dissolve/match/wipe),
+  `actionIntensity` (P1, drives i2v motion), `ambience` (P1), `sfxCues[]` (P1),
+  `musicCue` (P2), `vfxElements[]` (P1), `requiresVfx` (P2), `pacing`/`pacingRole` (P2).
+
+### Per-shot CONTINUITY OVERLAY (the missing Script-Supervisor layer — biggest coherence fix)
+- `timeOfDay` (P0), `weather` (P0), `storyTime` (P1),
+  `characterStateAtShot` (P0: per-char emotional+physical — injured/exhausted/wet),
+  `propStateAtShot` (P0: per-object condition — lit→spent, full→empty),
+  `costumeStateAtShot` (P0: clean→bloodied→torn), `continuityNotes` (P1).
+
+### TOP-10 P0 to land first
+wardrobe+accessories · identity block (age/gender/ethnicity/build) · hairStyle+hairColor ·
+timePeriod · genre · timeOfDay · weather · characterStateAtShot · propState · costumeState.
+
+### Planner reframe
+Reframe `SHOT_PLAN_PLANNER` GM from "director/cinematographer" → FULL PRODUCTION-TEAM
+intelligence (director + production designer + costume + hair/makeup + props + sound +
+continuity); extend the COMPLETENESS MANDATE + OUTPUT CONTRACT to populate every new field;
+reseed (Standing Rule #1). Build P0 set first, then P1 cluster, then P2.
+
+## SHOT DOC BACKLOG (next tweaks — captured Jun 14, not yet built)
+- **Signage / background text control.** Planner authors the EXACT background signage/text
+  (using Brand DNA in the GM for on-brand ideas), feeds it to the engine as explicit strings
+  ("sign reads 'X'") so it's real words, correctly spelled — and make it editable. Caveat:
+  fal/Seedance/Flux text rendering is imperfect even with exact text in the prompt; the 100%
+  version is a post-gen text OVERLAY/composite (later option).
+- **Scene Key panel** in the floor-plan section's empty side space: a legend listing EVERY
+  element in the scene (characters, props, set pieces, signage text, cameras), each editable
+  inline. Turns the dead space into the scene's control panel. The floor-plan section becomes
+  the full editing hub: ADD/EDIT camera MOVEMENT (route already exists in FloorPlanCanvas; add
+  the movement-description + lens edit), and EDIT element descriptions inline — including the
+  background signage strings (ties to the signage-text item above).
+- **Active-camera clarity.** Each cut maps to one numbered floor-plan camera node, but it's not
+  obvious which node shot which storyboard frame. In the Scene Key, label each camera
+  ("Cut 3 → 50mm, shooting NE, push-in") and highlight the active one so blocking ↔ final frame
+  are clearly linked.
+- (Plus the earlier carried tweaks: read-only floor-plan view option, P1/P2 production fields,
+  per-zone hero generation for true multi-location.)
+
+## OPEN ITEMS TO CONFIRM WITH OWNER
+1. Script-writer = new role, or folded into the planner / Content Manager?
+2. Per-doc cut cap + segmentation heuristic (per-scene vs grouped zones)?
+3. Keep Hedra path during transition (owner said remove Hedra AFTER shot-doc upgrades)?
+4. Wardrobe mode default: flexible-by-default + signature toggle (recommended), or always ask before
+   re-costuming?
+
+---
+
+# Jun 12 2026 — PHASE 2 of the Character Library (wire characters into generation)
 
 **Goal:** when the operator picks a saved character (and a Look) in the chat, the system
 auto-passes the right face anchor + Look references to Hedra PER SCENE, so the character stays

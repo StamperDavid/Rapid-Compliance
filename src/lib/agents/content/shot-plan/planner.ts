@@ -33,7 +33,6 @@ import {
   ShotPlanSchema,
   ShotPlanSharedChoicesSchema,
   ShotPlanShotSchema,
-  ShotPlanLookBibleSchema,
   type ShotPlan,
   type ShotPlanCastMember,
   type ShotPlanFloorPlan,
@@ -133,6 +132,22 @@ const LlmCastMemberSchema = z.object({
   lookId: z.string().trim().min(1).optional(),
   name: z.string().trim().min(1),
   role: z.string().trim().min(1).optional(),
+  billing: z.enum(['lead', 'supporting']).optional(),
+  subjectKind: z.enum(['person', 'creature', 'group']).optional(),
+  notes: z.string().trim().min(1).max(2000).optional(),
+  // Casting & wardrobe — REQUIRED (completeness): the production team fills the
+  // full physical identity + a scene-appropriate wardrobe for every cast member.
+  apparentAge: z.string().trim().min(1),
+  gender: z.string().trim().min(1),
+  ethnicity: z.string().trim().min(1),
+  build: z.string().trim().min(1),
+  hairColor: z.string().trim().min(1),
+  hairStyle: z.string().trim().min(1),
+  wardrobe: z.string().trim().min(1),
+  // Optional — not every character carries accessories.
+  accessories: z.array(z.string().trim().min(1)).optional(),
+  // 'flexible' (default) re-costumes per scene; 'signature' locks an iconic outfit.
+  wardrobeMode: z.enum(['flexible', 'signature']).optional(),
 });
 
 /** A normalized [0,1] point on the top-down stage. */
@@ -182,6 +197,44 @@ const LlmFloorPlanSchema = z.object({
       }),
     )
     .default([]),
+  // Per-location bands partitioning the route strip left→right. The model emits a
+  // label + normalized [0,1] span per zone (in zone order); we assign the stable id.
+  zones: z
+    .array(
+      z.object({
+        label: z.string().trim().min(1).max(300),
+        x0: z.number().min(0).max(1),
+        x1: z.number().min(0).max(1),
+      }),
+    )
+    .max(40)
+    .optional(),
+});
+
+/**
+ * STRICT look-bible schema for the LLM — UNLIKE the lenient storage schema
+ * (`ShotPlanLookBibleSchema`, every field optional), every look dimension here is
+ * REQUIRED so a sparse plan FAILS validation and the retry loop forces the model to
+ * fill it. Over-detailed by design: every field is generation-grade data the engine
+ * uses. Only `photographerStyle` (stills-only) and the per-shot framing fields
+ * (shotType / viewingDirection / subjectUnawareOfCamera, set per shot, not project-wide)
+ * stay optional at the project level.
+ */
+const LlmLookBibleSchema = z.object({
+  movieLook: z.string().trim().min(1),
+  filmStock: z.string().trim().min(1),
+  camera: z.string().trim().min(1),
+  lensType: z.string().trim().min(1),
+  focalLength: z.string().trim().min(1),
+  videographerStyle: z.string().trim().min(1),
+  filters: z.array(z.string().trim().min(1)).min(1),
+  temperature: z.number().min(0).max(1),
+  aspectRatio: z.enum(['1:1', '16:9', '9:16', '21:9', '4:3', '3:2']),
+  artStyle: z.string().trim().min(1),
+  composition: z.string().trim().min(1),
+  lighting: z.string().trim().min(1),
+  atmosphere: z.string().trim().min(1),
+  photographerStyle: z.string().trim().min(1).optional(),
 });
 
 /** The plan body the model returns (envelope fields id/createdAt/updatedAt are ours). */
@@ -189,6 +242,9 @@ const LlmShotPlanSchema = z.object({
   title: z.string().trim().min(1),
   sharedChoices: z.object({
     cutCount: z.number().int().min(1).max(50),
+    // Period & genre — REQUIRED: every department's detail must be consistent with these.
+    timePeriod: z.string().trim().min(1),
+    genre: z.string().trim().min(1),
     colorPalette: z
       .array(
         z.object({
@@ -196,14 +252,28 @@ const LlmShotPlanSchema = z.object({
           hex: z.string().trim().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/),
         }),
       )
-      .min(1),
+      .min(2),
     environmentFingerprint: z.string().trim().min(1),
     cast: z.array(LlmCastMemberSchema).default([]),
-    moodKeywords: z.array(z.string().trim().min(1)).default([]),
-    cinematographyNotes: z.array(z.string().trim().min(1)).default([]),
+    moodKeywords: z.array(z.string().trim().min(1)).min(3),
+    cinematographyNotes: z.array(z.string().trim().min(1)).min(2),
     artStyle: z.string().trim().min(1).optional(),
-    // The deep, SET-ONCE cinematic look bible — the model MUST fill it.
-    lookBible: ShotPlanLookBibleSchema,
+    // The deep, SET-ONCE cinematic look bible — every field REQUIRED (strict schema).
+    lookBible: LlmLookBibleSchema,
+    // Consolidated ordered set of locations. The model references shots by 0-based
+    // cutIndices; we remap those to real shot ids and assign each zone its stable id.
+    environmentZones: z
+      .array(
+        z.object({
+          label: z.string().trim().min(1).max(200),
+          setDesign: z.array(z.string().trim().min(1).max(2000)).min(3).max(8),
+          cutIndices: z.array(z.number().int().min(0)).min(1),
+        }),
+      )
+      .max(12)
+      .optional(),
+    // Adaptive doc labels (e.g. "Material language" instead of "Character notes").
+    adaptiveLabels: z.object({ characterNotes: z.string().trim().max(80).optional() }).optional(),
   }),
   shots: z
     .array(
@@ -212,9 +282,40 @@ const LlmShotPlanSchema = z.object({
         action: z.string().trim().min(1),
         castMemberIds: z.array(z.string().trim().min(1)).default([]),
         environment: z.string().trim().min(1),
+        // Continuity (Script Supervisor) — REQUIRED per beat, consistent within a scene/zone.
+        timeOfDay: z.string().trim().min(1),
+        weather: z.string().trim().min(1),
+        // Per-character emotional+physical state + costume condition for this beat,
+        // and per-prop condition — optional continuity overlays the engine inherits.
+        characterStates: z
+          .array(
+            z.object({
+              characterId: z.string().trim().min(1),
+              state: z.string().trim().min(1),
+            }),
+          )
+          .optional(),
+        costumeStates: z
+          .array(
+            z.object({
+              characterId: z.string().trim().min(1),
+              state: z.string().trim().min(1),
+            }),
+          )
+          .optional(),
+        propStates: z
+          .array(
+            z.object({
+              objectId: z.string().trim().min(1),
+              state: z.string().trim().min(1),
+            }),
+          )
+          .optional(),
         camera: z.object({
-          shotType: z.string().trim().min(1).optional(),
-          movement: z.string().trim().min(1).optional(),
+          // Required per-beat framing — these populate the storyboard caption + drive the cut.
+          shotType: z.string().trim().min(1),
+          movement: z.string().trim().min(1),
+          // Optional per-shot overrides of the look bible (fall back to lookBible when omitted).
           lens: z.string().trim().min(1).optional(),
           lensType: z.string().trim().min(1).optional(),
           focalLength: z.string().trim().min(1).optional(),
@@ -222,8 +323,9 @@ const LlmShotPlanSchema = z.object({
           viewingDirection: z.enum(['front', 'back', 'left', 'right']).optional(),
           subjectUnawareOfCamera: z.boolean().optional(),
         }),
-        lighting: z.string().trim().min(1).optional(),
-        mood: z.string().trim().min(1).optional(),
+        // Required per-beat ACCENTS (on top of the baseline lookBible lighting/mood).
+        lighting: z.string().trim().min(1),
+        mood: z.string().trim().min(1),
         durationSeconds: z.number().min(1).max(120),
         transitionIn: z.enum(['continue', 'cut']),
         dialogue: z.string().trim().min(1).optional(),
@@ -232,6 +334,42 @@ const LlmShotPlanSchema = z.object({
     .min(1),
   // The AI-authored top-down blocking (camera cuts + routes + actor placement).
   floorPlan: LlmFloorPlanSchema,
+  // The AI-authored PAGE COMPOSITION — the planner designs the production sheet
+  // itself: an ordered stack of rows, each row a set of blocks with relative
+  // width/height weights. REQUIRED so the AI always designs the page (the renderer
+  // is a generic painter; if for any reason it's absent the renderer falls back to
+  // a default). Matches the ShotPlanLayout contract 1:1 so it passes through as-is.
+  layout: z.object({
+    rows: z
+      .array(
+        z.object({
+          heightWeight: z.number().min(0.1).max(100),
+          blocks: z
+            .array(
+              z.object({
+                type: z.enum([
+                  'characters',
+                  'environment',
+                  'floorplan',
+                  'storyboard',
+                  'lighting',
+                  'cinematography',
+                  'mood',
+                  'palette',
+                  'notes',
+                  'prompt',
+                ]),
+                title: z.string().trim().max(120).optional(),
+                widthWeight: z.number().min(0.1).max(100),
+              }),
+            )
+            .min(1)
+            .max(8),
+        }),
+      )
+      .min(1)
+      .max(12),
+  }),
 });
 
 type LlmShotPlan = z.infer<typeof LlmShotPlanSchema>;
@@ -380,6 +518,18 @@ function resolveCast(
       name: member.name || profile.name,
       referenceImageUrls: resolveReferenceImageUrls(profile, member.lookId),
       role: member.role,
+      billing: member.billing,
+      subjectKind: member.subjectKind,
+      notes: member.notes,
+      apparentAge: member.apparentAge,
+      gender: member.gender,
+      ethnicity: member.ethnicity,
+      build: member.build,
+      hairColor: member.hairColor,
+      hairStyle: member.hairStyle,
+      wardrobe: member.wardrobe,
+      ...(member.accessories ? { accessories: member.accessories } : {}),
+      wardrobeMode: member.wardrobeMode ?? 'flexible',
     });
   }
   return resolved;
@@ -443,9 +593,11 @@ function buildGenerateUserPrompt(
     '  "title": string,',
     '  "sharedChoices": {',
     '    "cutCount": integer (= number of shots),',
+    '    "timePeriod": string  // era/year the piece is set in (REQUIRED),',
+    '    "genre": string  // genre of the piece (REQUIRED),',
     '    "colorPalette": [ { "name": string, "hex": "#rrggbb" } ]  // 2-6 named swatches, the look bible,',
     '    "environmentFingerprint": string  // the written signature of the world — the single strongest cross-shot consistency anchor,',
-    '    "cast": [ { "characterId": "<exact id from AVAILABLE CHARACTERS>", "lookId": "<optional exact lookId>", "name": string, "role": string } ],',
+    '    "cast": [ { "characterId": "<exact id from AVAILABLE CHARACTERS>", "lookId": "<optional exact lookId>", "name": string, "role": string, "notes": string, "apparentAge": string, "gender": string, "ethnicity": string, "build": string, "hairColor": string, "hairStyle": string, "wardrobe": string, "accessories": [string] (optional), "wardrobeMode": "flexible" | "signature" (optional) } ],  // fill the FULL identity + scene-appropriate wardrobe for every member,',
     '    "moodKeywords": [string],',
     '    "cinematographyNotes": [string],',
     '    "artStyle": string',
@@ -456,6 +608,11 @@ function buildGenerateUserPrompt(
     '      "action": string  // the forward-motion description of what happens,',
     '      "castMemberIds": [ "<characterId values that appear in this shot, from sharedChoices.cast>" ],',
     '      "environment": string  // consistent with environmentFingerprint,',
+    '      "timeOfDay": string  // REQUIRED, consistent within a scene/zone,',
+    '      "weather": string  // REQUIRED, consistent within a scene/zone,',
+    '      "characterStates": [ { "characterId": string, "state": string } ]  // optional emotional+physical state per character present,',
+    '      "costumeStates": [ { "characterId": string, "state": string } ]  // optional costume condition per character,',
+    '      "propStates": [ { "objectId": string, "state": string } ]  // optional key-prop condition,',
     '      "camera": { "shotType": string, "movement": string, "lens": string },',
     '      "lighting": string,',
     '      "mood": string,',
@@ -468,8 +625,13 @@ function buildGenerateUserPrompt(
     '',
     'HARD RULES:',
     '- Auto-cast the operator\'s real characters: any character that appears must be in sharedChoices.cast with its EXACT characterId, and referenced per-shot in castMemberIds by that same id. Do NOT output referenceImageUrls — those are resolved from the profile automatically.',
+    '- For every cast member write "notes": a vivid 1-2 sentence description (build, face, wardrobe, demeanor) that a director would read off the production sheet. Never leave it blank.',
+    '- For EVERY cast member also fill the full casting card: apparentAge, gender, ethnicity, build, hairColor, hairStyle, and a scene-appropriate "wardrobe" (+ accessories when fitting). Wardrobe + hair must suit timePeriod and genre. Default wardrobeMode to "flexible"; use "signature" only when the outfit IS the identity (uniform, superhero suit, mascot).',
+    '- Always set sharedChoices.timePeriod and sharedChoices.genre, and keep every department consistent with them.',
+    '- EVERY shot must set timeOfDay and weather (consistent within a scene/zone). For each character present, add a characterStates entry (emotional+physical) and a costumeStates entry when wardrobe condition matters; give propStates for key props. On a "continue" shot, state must follow logically from the prior shot.',
     '- cutCount MUST equal the number of items in shots.',
     '- environmentFingerprint + colorPalette are the look bible — keep every shot visually consistent with them.',
+    '- DESIGN THE PAGE: include a "layout" (rows of side-by-side blocks with relative height/width weights) that composes a balanced, COMPLETELY FULL landscape page (see "YOU DESIGN THE PAGE" in your system prompt). Include every block type that has content; storyboard near the bottom; prompt last.',
     '- transitionIn: use "continue" when the shot is continuous action in the SAME place/time as the prior shot (an unbroken take); use "cut" when it is a NEW location or a time jump. The FIRST shot is always "cut".',
     '- Stay on-brand (see the Brand DNA in your system prompt). Never use any forbidden phrase. Never fabricate logos, statistics, or claims.',
     '- Output ONLY the JSON object.',
@@ -493,6 +655,11 @@ function makeShotId(index: number): string {
   return `shot_${index + 1}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Clamp a number into the normalized [0,1] range. */
+function clamp01(n: number): number {
+  return Math.min(1, Math.max(0, n));
+}
+
 /** Assemble the contract-valid ShotPlan from the model body + resolved cast. */
 function assembleShotPlan(
   body: LlmShotPlan,
@@ -501,22 +668,37 @@ function assembleShotPlan(
 ): ShotPlan {
   const now = isoNow();
   const validCastIds = new Set(cast.map((c) => c.characterId));
+  // Objects are not authored by the LLM in this plan body, so the only valid object
+  // ids for propStates are those carried on the assembled plan (currently none).
+  const validObjectIds = new Set<string>();
 
-  const shots = body.shots.map((shot, index) => ({
-    id: makeShotId(index),
-    index,
-    title: shot.title,
-    action: shot.action,
-    // Keep only cast ids that survived resolution; the first shot can never "continue".
-    castMemberIds: shot.castMemberIds.filter((id) => validCastIds.has(id)),
-    environment: shot.environment,
-    camera: shot.camera,
-    lighting: shot.lighting,
-    mood: shot.mood,
-    durationSeconds: shot.durationSeconds,
-    transitionIn: index === 0 ? ('cut' as const) : shot.transitionIn,
-    dialogue: shot.dialogue,
-  }));
+  const shots = body.shots.map((shot, index) => {
+    // Per-character continuity overlays — keep only references to cast that survived.
+    const characterStates = shot.characterStates?.filter((s) => validCastIds.has(s.characterId));
+    const costumeStates = shot.costumeStates?.filter((s) => validCastIds.has(s.characterId));
+    // Per-prop continuity overlays — keep only references to known objects.
+    const propStates = shot.propStates?.filter((s) => validObjectIds.has(s.objectId));
+    return {
+      id: makeShotId(index),
+      index,
+      title: shot.title,
+      action: shot.action,
+      // Keep only cast ids that survived resolution; the first shot can never "continue".
+      castMemberIds: shot.castMemberIds.filter((id) => validCastIds.has(id)),
+      environment: shot.environment,
+      timeOfDay: shot.timeOfDay,
+      weather: shot.weather,
+      ...(characterStates && characterStates.length > 0 ? { characterStates } : {}),
+      ...(costumeStates && costumeStates.length > 0 ? { costumeStates } : {}),
+      ...(propStates && propStates.length > 0 ? { propStates } : {}),
+      camera: shot.camera,
+      lighting: shot.lighting,
+      mood: shot.mood,
+      durationSeconds: shot.durationSeconds,
+      transitionIn: index === 0 ? ('cut' as const) : shot.transitionIn,
+      dialogue: shot.dialogue,
+    };
+  });
 
   // Remap the AI floor plan's camera nodes from 0-based shotIndex → real shot id.
   const floorPlan: ShotPlanFloorPlan = {
@@ -541,13 +723,46 @@ function assembleShotPlan(
       })
       .filter((c): c is NonNullable<typeof c> => c !== null),
     subjectPaths: body.floorPlan.subjectPaths,
+    // Per-location bands: assign each LLM zone a stable id, clamp the span, and
+    // ensure x0 < x1 (swap if the model returned them reversed).
+    ...(body.floorPlan.zones && body.floorPlan.zones.length > 0
+      ? {
+          zones: body.floorPlan.zones.map((z, i) => {
+            const a = clamp01(z.x0);
+            const b = clamp01(z.x1);
+            return {
+              id: `fz-${i}`,
+              label: z.label,
+              x0: Math.min(a, b),
+              x1: Math.max(a, b),
+            };
+          }),
+        }
+      : {}),
   };
+
+  // Consolidated environment zones: remap each LLM zone's 0-based cutIndices to the
+  // real generated shot ids (mirrors the floor-plan camera shotIndex→shotId remap).
+  // heroImageUrl is left undefined (rendered later). Omit the field if none returned.
+  const environmentZones =
+    body.sharedChoices.environmentZones && body.sharedChoices.environmentZones.length > 0
+      ? body.sharedChoices.environmentZones.map((zone, i) => ({
+          id: `zone-${i}`,
+          label: zone.label,
+          ...(zone.setDesign ? { setDesign: zone.setDesign } : {}),
+          cutIds: (zone.cutIndices ?? [])
+            .map((idx) => shots[idx]?.id)
+            .filter((id): id is string => Boolean(id)),
+        }))
+      : undefined;
 
   const candidate: ShotPlan = {
     id: `splan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     title: titleHint ?? body.title,
     sharedChoices: {
       cutCount: shots.length,
+      timePeriod: body.sharedChoices.timePeriod,
+      genre: body.sharedChoices.genre,
       colorPalette: body.sharedChoices.colorPalette,
       environmentFingerprint: body.sharedChoices.environmentFingerprint,
       cast,
@@ -555,9 +770,16 @@ function assembleShotPlan(
       cinematographyNotes: body.sharedChoices.cinematographyNotes,
       artStyle: body.sharedChoices.artStyle,
       lookBible: body.sharedChoices.lookBible,
+      ...(environmentZones ? { environmentZones } : {}),
+      ...(body.sharedChoices.adaptiveLabels
+        ? { adaptiveLabels: body.sharedChoices.adaptiveLabels }
+        : {}),
     },
     shots,
     floorPlan,
+    // The AI-designed page composition passes through as-is — it already matches the
+    // ShotPlanLayout contract. Omit the field if (defensively) absent.
+    ...(body.layout ? { layout: body.layout } : {}),
     createdAt: now,
     updatedAt: now,
     status: 'draft',

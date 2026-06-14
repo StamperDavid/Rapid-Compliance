@@ -58,7 +58,7 @@ export function StepStoryboard() {
         <div>
           <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
             <Clapperboard className="h-5 w-5 text-primary" />
-            Shot Plan
+            Shot Doc
           </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Build your video as a production sheet — a shared look bible plus an ordered set of
@@ -70,7 +70,7 @@ export function StepStoryboard() {
           variant={scrapArmed ? 'destructive' : 'outline'}
           className="gap-1.5 text-xs"
           onClick={handleScrap}
-          title="Delete this video and clear the Shot Plan"
+          title="Delete this video and clear the Shot Doc"
         >
           <Trash2 className="h-3.5 w-3.5" />
           {scrapArmed ? 'Click again to scrap' : 'Scrap video'}

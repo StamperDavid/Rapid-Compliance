@@ -106,6 +106,8 @@ import type {
   ShotPlanObject,
   ShotPlanShotTransition,
   ShotPlanShotGenerationStatus,
+  ShotPlanCharacterStateRef,
+  ShotPlanPropStateRef,
 } from '@/types/shot-plan';
 import type { CinematicConfig } from '@/types/creative-studio';
 
@@ -335,6 +337,49 @@ function EditableText({
 }
 
 // ============================================================================
+// EditableTextSimple — inline manual edit WITHOUT Ask-AI. Used for nested fields
+// (e.g. per-cast-member identity) that commit through an array-replace path the
+// field-scoped Ask-AI route can't address.
+// ============================================================================
+
+function EditableTextSimple({
+  label,
+  value,
+  placeholder,
+  onCommit,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  onCommit: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  if (draft !== value && document.activeElement?.getAttribute('data-field') !== label) {
+    setDraft(value);
+  }
+
+  const commit = useCallback(() => {
+    if (draft !== value) {
+      onCommit(draft);
+    }
+  }, [draft, value, onCommit]);
+
+  return (
+    <div className="space-y-1">
+      <Caption className="font-medium text-muted-foreground">{label}</Caption>
+      <Input
+        data-field={label}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        placeholder={placeholder}
+        className="bg-surface-elevated border-border-strong text-foreground placeholder:text-muted-foreground"
+      />
+    </div>
+  );
+}
+
+// ============================================================================
 // Tag list editor (palette names, mood keywords, cinematography notes)
 // ============================================================================
 
@@ -368,6 +413,72 @@ function TagListEditor({
         <Caption className="font-medium text-muted-foreground">{label}</Caption>
         <AskAiButton onClick={onAskAi} title={`Ask AI to revise ${label.toLowerCase()}`} />
       </div>
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((item, i) => (
+            <span
+              key={`${item}-${i}`}
+              className="inline-flex items-center gap-1 rounded-full border border-border-light bg-surface-elevated px-2.5 py-0.5 text-xs text-foreground"
+            >
+              {item}
+              <button
+                type="button"
+                onClick={() => onCommit(items.filter((_, idx) => idx !== i))}
+                className="text-muted-foreground hover:text-destructive"
+                aria-label={`Remove ${item}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
+          placeholder={placeholder}
+          className="bg-surface-elevated border-border-strong text-foreground placeholder:text-muted-foreground"
+        />
+        <Button variant="outline" size="sm" onClick={addItem} disabled={draft.trim().length === 0}>
+          <Plus className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// TagArrayEditor — tag-list editor WITHOUT Ask-AI, for nested array fields
+// (e.g. per-cast-member accessories) committed via an array-replace path.
+// ============================================================================
+
+function TagArrayEditor({
+  label,
+  items,
+  placeholder,
+  onCommit,
+}: {
+  label: string;
+  items: string[];
+  placeholder: string;
+  onCommit: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = useState('');
+
+  const addItem = useCallback(() => {
+    const v = draft.trim();
+    if (v.length === 0) {
+      return;
+    }
+    onCommit([...items, v]);
+    setDraft('');
+  }, [draft, items, onCommit]);
+
+  return (
+    <div className="space-y-2">
+      <Caption className="font-medium text-muted-foreground">{label}</Caption>
       {items.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {items.map((item, i) => (
@@ -571,32 +682,140 @@ function ConfirmRemoveButton({
   );
 }
 
-function CastCard({ member, onRemove }: { member: ShotPlanCastMember; onRemove: () => void }) {
+function CastCard({
+  member,
+  cast,
+  editing,
+  onRemove,
+  onCastChange,
+}: {
+  member: ShotPlanCastMember;
+  /** The full cast array — edits clone it and replace THIS member. */
+  cast: ShotPlanCastMember[];
+  /** Show the inline identity & wardrobe editor (Edit mode only). */
+  editing: boolean;
+  onRemove: () => void;
+  /** Commit a whole-array cast replacement (mirrors removeCast). */
+  onCastChange: (next: ShotPlanCastMember[]) => void;
+}) {
   const [imgBroken, setImgBroken] = useState(false);
+  const [open, setOpen] = useState(false);
   const thumb = member.referenceImageUrls[0];
+
+  // Update exactly THIS member (matched by characterId) and hand back the whole
+  // array — the established cast-edit pattern (see removeCast).
+  const patchMember = useCallback(
+    (fields: Partial<ShotPlanCastMember>) => {
+      onCastChange(
+        cast.map((c) => (c.characterId === member.characterId ? { ...c, ...fields } : c)),
+      );
+    },
+    [cast, member.characterId, onCastChange],
+  );
+
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border-strong bg-card p-3">
-      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-surface-elevated">
-        {thumb && !imgBroken ? (
-          <Image src={thumb} alt={member.name} fill unoptimized className="object-cover" onError={() => setImgBroken(true)} />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-muted-foreground">
-            <Users className="h-5 w-5" />
-          </span>
+    <div className="rounded-2xl border border-border-strong bg-card p-3">
+      <div className="flex items-center gap-3">
+        <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-surface-elevated">
+          {thumb && !imgBroken ? (
+            <Image src={thumb} alt={member.name} fill unoptimized className="object-cover" onError={() => setImgBroken(true)} />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-muted-foreground">
+              <Users className="h-5 w-5" />
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-foreground">{member.name}</p>
+          {member.role && <Caption className="capitalize">{member.role}</Caption>}
+        </div>
+        {editing && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            title="Identity & wardrobe"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-foreground"
+          >
+            {open ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+          </button>
         )}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-destructive"
+          aria-label={`Remove ${member.name} from cast`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{member.name}</p>
-        {member.role && <Caption className="capitalize">{member.role}</Caption>}
-      </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-destructive"
-        aria-label={`Remove ${member.name} from cast`}
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
+
+      {editing && open && (
+        <div className="mt-3 space-y-3 border-t border-border-light pt-3">
+          <Caption className="font-medium uppercase tracking-wider text-muted-foreground">Identity &amp; wardrobe</Caption>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <EditableTextSimple
+              label="Apparent age"
+              value={member.apparentAge ?? ''}
+              placeholder="e.g. late 30s"
+              onCommit={(v) => patchMember({ apparentAge: v.trim() ? v.trim() : undefined })}
+            />
+            <EditableTextSimple
+              label="Gender"
+              value={member.gender ?? ''}
+              placeholder="e.g. female, androgynous"
+              onCommit={(v) => patchMember({ gender: v.trim() ? v.trim() : undefined })}
+            />
+            <EditableTextSimple
+              label="Ethnicity"
+              value={member.ethnicity ?? ''}
+              placeholder="e.g. East Asian, Latina"
+              onCommit={(v) => patchMember({ ethnicity: v.trim() ? v.trim() : undefined })}
+            />
+            <EditableTextSimple
+              label="Build"
+              value={member.build ?? ''}
+              placeholder="e.g. tall, lean"
+              onCommit={(v) => patchMember({ build: v.trim() ? v.trim() : undefined })}
+            />
+            <EditableTextSimple
+              label="Hair color"
+              value={member.hairColor ?? ''}
+              placeholder="e.g. jet black"
+              onCommit={(v) => patchMember({ hairColor: v.trim() ? v.trim() : undefined })}
+            />
+            <EditableTextSimple
+              label="Hair style"
+              value={member.hairStyle ?? ''}
+              placeholder="e.g. slicked back"
+              onCommit={(v) => patchMember({ hairStyle: v.trim() ? v.trim() : undefined })}
+            />
+          </div>
+          <EditableTextSimple
+            label="Wardrobe"
+            value={member.wardrobe ?? ''}
+            placeholder="The defining outfit, e.g. soaked wool trench coat"
+            onCommit={(v) => patchMember({ wardrobe: v.trim() ? v.trim() : undefined })}
+          />
+          <TagArrayEditor
+            label="Accessories"
+            items={member.accessories ?? []}
+            placeholder="Add an accessory, e.g. watch…"
+            onCommit={(next) => patchMember({ accessories: next.length > 0 ? next : undefined })}
+          />
+          <div className="space-y-1">
+            <Caption className="font-medium text-muted-foreground">Wardrobe across scenes</Caption>
+            <select
+              value={member.wardrobeMode ?? 'flexible'}
+              onChange={(e) => patchMember({ wardrobeMode: e.target.value as 'flexible' | 'signature' })}
+              className="w-full rounded-md border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground"
+            >
+              <option value="flexible">Flexible — re-costume per scene</option>
+              <option value="signature">Signature — keep this outfit constant</option>
+            </select>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -812,6 +1031,98 @@ function statusBadge(status: ShotPlanShotGenerationStatus | undefined): {
     default:
       return null;
   }
+}
+
+// ============================================================================
+// Continuity block — the Script-Supervisor layer. For every character in this
+// shot: their physical/emotional state + costume condition; for every object in
+// this shot: its condition. Each commits the rebuilt array via onEditField.
+// ============================================================================
+
+function ContinuityBlock({
+  shot,
+  plan,
+  onEditField,
+}: {
+  shot: ShotPlanShot;
+  plan: ShotPlan;
+  onEditField: (field: keyof ShotPlanShot, value: ShotPlanShot[keyof ShotPlanShot]) => void;
+}) {
+  const castInShot = shot.castMemberIds
+    .map((id) => plan.sharedChoices.cast.find((c) => c.characterId === id))
+    .filter((c): c is ShotPlanCastMember => Boolean(c));
+  const objectsInShot = (shot.objectIds ?? [])
+    .map((id) => (plan.sharedChoices.objects ?? []).find((o) => o.id === id))
+    .filter((o): o is ShotPlanObject => Boolean(o));
+
+  if (castInShot.length === 0 && objectsInShot.length === 0) {
+    return null;
+  }
+
+  // Build the next state-ref array: replace this subject's entry (or drop it when
+  // cleared) and keep every other entry untouched.
+  const commitCharacterState = (
+    field: 'characterStates' | 'costumeStates',
+    characterId: string,
+    state: string,
+  ): void => {
+    const current = shot[field] ?? [];
+    const without = current.filter((r) => r.characterId !== characterId);
+    const next: ShotPlanCharacterStateRef[] = state.trim()
+      ? [...without, { characterId, state: state.trim() }]
+      : without;
+    onEditField(field, next.length > 0 ? next : undefined);
+  };
+
+  const commitPropState = (objectId: string, state: string): void => {
+    const current = shot.propStates ?? [];
+    const without = current.filter((r) => r.objectId !== objectId);
+    const next: ShotPlanPropStateRef[] = state.trim()
+      ? [...without, { objectId, state: state.trim() }]
+      : without;
+    onEditField('propStates', next.length > 0 ? next : undefined);
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border-light bg-surface-elevated/40 p-3">
+      <Caption className="font-medium uppercase tracking-wider text-muted-foreground">Continuity</Caption>
+      {castInShot.map((member) => {
+        const charState = (shot.characterStates ?? []).find((r) => r.characterId === member.characterId)?.state ?? '';
+        const costumeState = (shot.costumeStates ?? []).find((r) => r.characterId === member.characterId)?.state ?? '';
+        return (
+          <div key={member.characterId} className="space-y-2">
+            <Caption className="font-medium text-foreground">{member.name}</Caption>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <EditableTextSimple
+                label="State"
+                value={charState}
+                placeholder="e.g. exhausted, limping"
+                onCommit={(v) => commitCharacterState('characterStates', member.characterId, v)}
+              />
+              <EditableTextSimple
+                label="Costume condition"
+                value={costumeState}
+                placeholder="e.g. coat torn, muddy"
+                onCommit={(v) => commitCharacterState('costumeStates', member.characterId, v)}
+              />
+            </div>
+          </div>
+        );
+      })}
+      {objectsInShot.map((object) => {
+        const propState = (shot.propStates ?? []).find((r) => r.objectId === object.id)?.state ?? '';
+        return (
+          <EditableTextSimple
+            key={object.id}
+            label={`${object.name} — condition`}
+            value={propState}
+            placeholder="e.g. lantern lit, lantern spent"
+            onCommit={(v) => commitPropState(object.id, v)}
+          />
+        );
+      })}
+    </div>
+  );
 }
 
 interface ShotCardProps {
@@ -1120,6 +1431,23 @@ function ShotCard({
               onAskAi={() => onAskAi('mood', 'the mood')}
             />
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <EditableText
+              label="Time of day"
+              value={shot.timeOfDay ?? ''}
+              placeholder="e.g. golden hour, night, dawn"
+              onCommit={(v) => onEditField('timeOfDay', v || undefined)}
+              onAskAi={() => onAskAi('timeOfDay', 'the time of day')}
+            />
+            <EditableText
+              label="Weather"
+              value={shot.weather ?? ''}
+              placeholder="e.g. heavy rain, clear, fog"
+              onCommit={(v) => onEditField('weather', v || undefined)}
+              onAskAi={() => onAskAi('weather', 'the weather')}
+            />
+          </div>
+          <ContinuityBlock shot={shot} plan={plan} onEditField={onEditField} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Caption className="font-medium text-muted-foreground">Duration (seconds)</Caption>
@@ -1573,7 +1901,7 @@ function EntryScreen({
     <div className="rounded-2xl border border-border-strong border-dashed bg-card p-8 space-y-5">
       <div className="text-center space-y-1">
         <ListVideo className="mx-auto h-10 w-10 text-muted-foreground" />
-        <SubsectionTitle>Build a Shot Plan</SubsectionTitle>
+        <SubsectionTitle>Build a Shot Doc</SubsectionTitle>
         <SectionDescription className="mx-auto max-w-md">
           A production sheet for your video — a shared look bible plus an ordered set of shots,
           every field editable by hand or with AI. Describe your video and we&apos;ll draft the
@@ -1782,6 +2110,9 @@ export function ShotPlanSheet() {
   const [cameraShotId, setCameraShotId] = useState<string | null>(null);
   // The storyboard panel currently expanded into the full per-shot editor below the strip.
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
+  // The Shot Doc stays the visual reference; clicking a storyboard opens THIS shot's
+  // details in a scrollable popup (not a whole-page mode switch).
+  const [detailShotId, setDetailShotId] = useState<string | null>(null);
   // Review = the cinematic production-sheet document (default); Edit = the full form.
   const [viewMode, setViewMode] = useState<'review' | 'edit'>('review');
   const [objectDialogOpen, setObjectDialogOpen] = useState(false);
@@ -1834,7 +2165,7 @@ export function ShotPlanSheet() {
         });
         const data = (await res.json()) as GenerateResponse;
         if (!res.ok || !data.success || !data.plan) {
-          throw new Error(data.error ?? 'Could not generate a Shot Plan');
+          throw new Error(data.error ?? 'Could not generate a Shot Doc');
         }
         // Show the structured plan immediately…
         setShotPlan(data.plan);
@@ -1881,7 +2212,7 @@ export function ShotPlanSheet() {
           setIsRenderingSheet(false);
         }
       } catch (err) {
-        setGenerateError(err instanceof Error ? err.message : 'Could not generate a Shot Plan');
+        setGenerateError(err instanceof Error ? err.message : 'Could not generate a Shot Doc');
         setIsGenerating(false);
         setIsRenderingSheet(false);
       }
@@ -2195,6 +2526,15 @@ export function ShotPlanSheet() {
     [shotPlan, applyEdit],
   );
 
+  // Replace the whole cast array — the commit path for per-member identity edits
+  // (mirrors removeCast's whole-array replacement).
+  const setCast = useCallback(
+    (next: ShotPlanCastMember[]) => {
+      applyEdit({ target: 'shared', field: 'cast', value: next });
+    },
+    [applyEdit],
+  );
+
   // ── Objects & props helpers ──
   const addObject = useCallback(
     (object: ShotPlanObject) => {
@@ -2350,7 +2690,8 @@ export function ShotPlanSheet() {
         <ZoomPanViewport>
           <ShotPlanDocument
             plan={shotPlan}
-            onEdit={(id) => { setSelectedShotId(id); setViewMode('edit'); }}
+            onEdit={(id) => setDetailShotId((prev) => (prev === id ? null : id))}
+            onEditSection={() => { setViewMode('edit'); }}
             onFloorPlanChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
           />
         </ZoomPanViewport>
@@ -2400,7 +2741,7 @@ export function ShotPlanSheet() {
           <EditableText
             label="Plan title"
             value={shotPlan.title}
-            placeholder="Untitled Shot Plan"
+            placeholder="Untitled Shot Doc"
             onCommit={(v) => applyEdit({ target: 'plan', field: 'title', value: v })}
             onAskAi={() => setAskAi({ target: 'plan', field: 'title', label: 'the plan title' })}
           />
@@ -2434,6 +2775,20 @@ export function ShotPlanSheet() {
             placeholder="Add a cinematography note…"
             onCommit={(v) => applyEdit({ target: 'shared', field: 'cinematographyNotes', value: v })}
             onAskAi={() => setAskAi({ target: 'shared', field: 'cinematographyNotes', label: 'the cinematography notes' })}
+          />
+          <EditableText
+            label="Time period"
+            value={sharedChoices.timePeriod ?? ''}
+            placeholder="e.g. 1947 post-war, near-future 2090"
+            onCommit={(v) => applyEdit({ target: 'shared', field: 'timePeriod', value: v.trim() ? v.trim() : undefined })}
+            onAskAi={() => setAskAi({ target: 'shared', field: 'timePeriod', label: 'the time period' })}
+          />
+          <EditableText
+            label="Genre"
+            value={sharedChoices.genre ?? ''}
+            placeholder="e.g. neo-noir, corporate explainer"
+            onCommit={(v) => applyEdit({ target: 'shared', field: 'genre', value: v.trim() ? v.trim() : undefined })}
+            onAskAi={() => setAskAi({ target: 'shared', field: 'genre', label: 'the genre' })}
           />
         </div>
 
@@ -2514,7 +2869,14 @@ export function ShotPlanSheet() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {sharedChoices.cast.map((member) => (
-              <CastCard key={member.characterId} member={member} onRemove={() => removeCast(member.characterId)} />
+              <CastCard
+                key={member.characterId}
+                member={member}
+                cast={sharedChoices.cast}
+                editing
+                onRemove={() => removeCast(member.characterId)}
+                onCastChange={setCast}
+              />
             ))}
           </div>
         )}
@@ -2666,6 +3028,49 @@ export function ShotPlanSheet() {
           setCameraShotId(null);
         }}
       />
+
+      {/* Per-shot details popup — opened by clicking a storyboard on the Shot Doc.
+          The Shot Doc stays the visual reference; this overlays its full details,
+          scrollable, and closes via the X / overlay / clicking the storyboard again. */}
+      {(() => {
+        const detail = orderedShots.find((s) => s.id === detailShotId);
+        const detailIndex = orderedShots.findIndex((s) => s.id === detailShotId);
+        return (
+          <Dialog open={detail != null} onOpenChange={(o) => { if (!o) { setDetailShotId(null); } }}>
+            <DialogContent className="bg-card border border-border-strong max-w-3xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-foreground">
+                  <ListVideo className="w-4 h-4 text-primary" />
+                  Cut {detailIndex + 1}{detail?.title ? ` — ${detail.title}` : ''}
+                </DialogTitle>
+                <DialogDescription>
+                  Full details for this shot — action, camera, lighting, dialogue and its still. Edits save straight to the Shot Doc.
+                </DialogDescription>
+              </DialogHeader>
+              {detail && (
+                <ShotCard
+                  plan={shotPlan}
+                  shot={detail}
+                  position={detailIndex}
+                  total={orderedShots.length}
+                  isGenerating={generatingShotIds.has(detail.id)}
+                  isKeyframing={keyframingShotIds.has(detail.id)}
+                  busy={busy}
+                  onEditField={(field, value) => editShotField(detail.id, field, value)}
+                  onAskAi={(field, label) => setAskAi({ target: 'shot', shotId: detail.id, field, label })}
+                  onMove={(dir) => moveShot(detail.id, dir)}
+                  onDelete={() => { deleteShot(detail.id); setDetailShotId(null); }}
+                  onKeepUpstream={() => keepUpstream(detail.id)}
+                  onRerun={() => { void generateOneShot(detail.id); }}
+                  onRegenerate={() => { void generateOneShot(detail.id); }}
+                  onGenerateKeyframe={() => { void generateOneKeyframe(detail.id); }}
+                  onOpenCamera={() => setCameraShotId(detail.id)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       <Dialog open={castPickerOpen} onOpenChange={setCastPickerOpen}>
         <DialogContent className="bg-card border border-border-strong max-w-4xl max-h-[85vh] overflow-y-auto">

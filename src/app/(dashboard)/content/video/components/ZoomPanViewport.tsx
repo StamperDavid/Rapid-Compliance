@@ -7,13 +7,12 @@
 
 'use client';
 
-import { useCallback, useRef, useState, type ReactNode, type WheelEvent, type PointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type PointerEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
 const MIN_SCALE = 0.4;
-const MAX_SCALE = 3;
-const ZOOM_SENSITIVITY = 0.0015;
+const MAX_SCALE = 1.25;
 
 export function ZoomPanViewport({ children }: { children: ReactNode }) {
   const [scale, setScale] = useState(1);
@@ -23,19 +22,23 @@ export function ZoomPanViewport({ children }: { children: ReactNode }) {
 
   const clampScale = (s: number): number => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
 
-  const onWheel = useCallback((e: WheelEvent<HTMLDivElement>) => {
-    // Zoom toward the cursor; keep the point under the pointer stable.
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
-    setScale((prev) => {
-      const next = clampScale(prev * (1 - e.deltaY * ZOOM_SENSITIVITY));
-      const ratio = next / prev;
-      setTx((t) => px - ratio * (px - t));
-      setTy((t) => py - ratio * (py - t));
-      return next;
-    });
+  const frameRef = useRef<HTMLDivElement>(null);
+
+  // Wheel PANS the document, captured NON-PASSIVELY so it scrolls ONLY the doc
+  // (never the page) while the pointer is over it. Off the doc → normal page scroll.
+  // Magnification is the slider / +/- buttons only — the wheel never zooms.
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) {
+      return;
+    }
+    const handler = (e: globalThis.WheelEvent) => {
+      e.preventDefault();
+      setTy((t) => t - e.deltaY);
+      setTx((t) => t - e.deltaX);
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
   }, []);
 
   const onPointerDown = useCallback(
@@ -79,6 +82,16 @@ export function ZoomPanViewport({ children }: { children: ReactNode }) {
         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-300" onClick={() => setScale((s) => clampScale(s * 0.85))} title="Zoom out">
           <ZoomOut className="h-4 w-4" />
         </Button>
+        <input
+          type="range"
+          aria-label="Magnification"
+          min={Math.round(MIN_SCALE * 100)}
+          max={Math.round(MAX_SCALE * 100)}
+          value={Math.round(scale * 100)}
+          onChange={(e) => setScale(clampScale(Number(e.target.value) / 100))}
+          className="h-1 w-28 cursor-pointer accent-amber-400"
+          data-no-pan
+        />
         <span className="min-w-[3ch] text-center text-[11px] tabular-nums text-zinc-400">{Math.round(scale * 100)}%</span>
         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-300" onClick={() => setScale((s) => clampScale(s * 1.15))} title="Zoom in">
           <ZoomIn className="h-4 w-4" />
@@ -89,8 +102,8 @@ export function ZoomPanViewport({ children }: { children: ReactNode }) {
       </div>
 
       <div
+        ref={frameRef}
         className="relative h-[80vh] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950"
-        onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPan}
