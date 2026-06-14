@@ -97,7 +97,7 @@ function DocStoryboardPanel({
     <button
       type="button"
       onClick={onEdit}
-      className="group relative flex w-60 flex-shrink-0 flex-col overflow-hidden rounded border border-zinc-700 bg-zinc-900 text-left transition-colors hover:border-amber-400/60"
+      className="group relative flex w-full flex-col overflow-hidden rounded border border-zinc-700 bg-zinc-900 text-left transition-colors hover:border-amber-400/60"
     >
       <div className="relative aspect-video bg-zinc-950">
         {still ? (
@@ -149,7 +149,7 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
   const videoPrompt = orderedShots[0] ? composeShotGenerationPrompt(plan, orderedShots[0]) : '';
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 text-zinc-200 shadow-2xl">
+    <div className="w-[1280px] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 text-zinc-200 shadow-2xl">
       {/* ══ SHARED CHOICES header bar ══ */}
       <div className="border-b border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 px-6 py-4">
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -194,16 +194,16 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
         </div>
       </div>
 
-      {/* ══ Section 1 (Characters & Objects), then Section 2 (Environment + Floor Plan) ══ */}
-      <div>
+      {/* ══ Top row: Section 1 (Characters & Objects) | Section 2 (Environment + Floor Plan) ══ */}
+      <div className="grid grid-cols-[5fr_7fr]">
         {/* SECTION 1 — CHARACTERS & OBJECTS */}
-        <section className="border-b border-zinc-800 px-6 py-5">
+        <section className="border-b border-r border-zinc-800 px-6 py-5">
           <SectionLabel n={1}>Characters &amp; Objects</SectionLabel>
           {sharedChoices.cast.length === 0 && objects.length === 0 ? (
             <p className="text-xs text-zinc-600">No cast or objects yet.</p>
           ) : (
-            <div className="flex flex-col gap-6 lg:flex-row">
-              {/* Reference images — turnarounds + objects (left) */}
+            <div className="flex flex-col gap-4">
+              {/* Reference images — turnarounds + objects */}
               <div className="min-w-0 flex-1 space-y-4">
                 {sharedChoices.cast.map((member) => {
                   const views =
@@ -255,8 +255,8 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
                 ))}
               </div>
 
-              {/* Build notes (right) */}
-              <div className="space-y-3 lg:w-56 lg:shrink-0 lg:border-l lg:border-zinc-800 lg:pl-5">
+              {/* Build notes */}
+              <div className="space-y-2 border-t border-zinc-800 pt-3">
                 <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500">Build notes</div>
                 {sharedChoices.cast.map((m) => (
                   <div key={m.characterId} className="text-[11px] text-zinc-300">
@@ -313,7 +313,7 @@ export function ShotPlanDocument({ plan, onEdit, onFloorPlanChange }: ShotPlanDo
         {orderedShots.length === 0 ? (
           <p className="text-xs text-zinc-600">No shots yet.</p>
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="grid grid-cols-5 gap-3">
             {orderedShots.map((shot, i) => (
               <DocStoryboardPanel key={shot.id} shot={shot} position={i} onEdit={() => onEdit(shot.id)} />
             ))}

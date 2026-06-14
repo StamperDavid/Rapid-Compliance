@@ -86,6 +86,7 @@ import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/Medi
 import { AvatarPicker } from './AvatarPicker';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { ShotPlanDocument } from './ShotPlanDocument';
+import { ZoomPanViewport } from './ZoomPanViewport';
 import {
   applyShotPlanEdit,
   clearUpstreamChanged,
@@ -2346,11 +2347,13 @@ export function ShotPlanSheet() {
       )}
       {/* ══ REVIEW — the cinematic production-sheet document ══ */}
       {viewMode === 'review' && (
-        <ShotPlanDocument
-          plan={shotPlan}
-          onEdit={(id) => { setSelectedShotId(id); setViewMode('edit'); }}
-          onFloorPlanChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
-        />
+        <ZoomPanViewport>
+          <ShotPlanDocument
+            plan={shotPlan}
+            onEdit={(id) => { setSelectedShotId(id); setViewMode('edit'); }}
+            onFloorPlanChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
+          />
+        </ZoomPanViewport>
       )}
 
       {/* ══ EDIT — the full production-sheet form ══ */}
