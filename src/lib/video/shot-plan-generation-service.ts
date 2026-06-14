@@ -841,7 +841,7 @@ export async function generateFloorPlanImage(plan: ShotPlan, ctx: TenantContext)
 
     await createAsset({
       type: 'image',
-      category: 'thumbnail',
+      category: 'graphic',
       name: `Floor plan — ${plan.title || plan.id}`,
       description: `Top-down floor-plan render for Shot Plan "${plan.title || plan.id}".`,
       url: permanentUrl,
@@ -901,7 +901,7 @@ export async function generateEnvironmentHero(plan: ShotPlan, ctx: TenantContext
     );
     await createAsset({
       type: 'image',
-      category: 'thumbnail',
+      category: 'photo',
       name: `Environment — ${plan.title || plan.id}`,
       description: `Establishing environment render for Shot Plan "${plan.title || plan.id}".`,
       url,
@@ -978,7 +978,7 @@ export async function generateLightingSwatches(plan: ShotPlan, ctx: TenantContex
       );
       await createAsset({
         type: 'image',
-        category: 'thumbnail',
+        category: 'graphic',
         name: `Lighting — ${setup.slice(0, 60)}`,
         description: `Lighting swatch for Shot Plan "${plan.title || plan.id}".`,
         url,
@@ -1078,7 +1078,7 @@ export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext
         );
         await createAsset({
           type: 'image',
-          category: 'thumbnail',
+          category: 'character',
           name: `${member.name} — ${label}`,
           description: `Character model-sheet view for Shot Plan "${plan.title || plan.id}".`,
           url,
@@ -1088,7 +1088,9 @@ export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext
           aiProvider: 'fal',
           aiPrompt: prompt,
           createdBy: 'system',
-          tags: ['shot-plan', 'character-sheet'],
+          characterId: member.characterId,
+          characterName: member.name,
+          tags: ['shot-plan', 'character-sheet', 'character', label.toLowerCase()],
         });
         sheet.push({ label, imageUrl: url });
       } catch (err) {

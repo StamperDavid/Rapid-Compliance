@@ -29,6 +29,8 @@ export const MEDIA_CATEGORIES = [
   'social-graphic',
   'banner',
   'avatar-portrait',
+  // A reusable Character Library subject (turnaround / reference / look).
+  'character',
   // Photo/photography & generic graphics
   'photo',
   'graphic',
@@ -97,6 +99,14 @@ export interface UnifiedMediaAsset {
   derivedFrom?: string[];
   /** IDs of social posts / blog posts / emails that have used this asset. */
   usedInPosts?: string[];
+  /** Character Library profile (AvatarProfile id) this asset depicts / belongs to. */
+  characterId?: string;
+  /** Denormalized character name for display without a profile lookup. */
+  characterName?: string;
+  /** Video project (project id) this asset belongs to. */
+  projectId?: string;
+  /** Denormalized project title for display without a project lookup. */
+  projectName?: string;
   /** ISO 8601. */
   createdAt: string;
   /** ISO 8601. */
@@ -133,6 +143,10 @@ export interface MediaListFilters {
   /** Substring search across `name`, `tags`, and `aiPrompt`. */
   search?: string;
   source?: MediaAssetSource;
+  /** Restrict to assets belonging to one Character Library subject. */
+  characterId?: string;
+  /** Restrict to assets belonging to one video project. */
+  projectId?: string;
   /** ISO 8601 inclusive lower bound on createdAt. */
   createdAfter?: string;
   /** ISO 8601 inclusive upper bound on createdAt. */
@@ -161,6 +175,10 @@ export interface MediaCreateInput {
   parentAssetId?: string;
   derivedFrom?: string[];
   usedInPosts?: string[];
+  characterId?: string;
+  characterName?: string;
+  projectId?: string;
+  projectName?: string;
   brandDnaApplied?: boolean;
 }
 
@@ -348,6 +366,9 @@ function mapUnifiedToLegacyCategory(
   if (category === 'thumbnail') { return 'thumbnail'; }
   if (category === 'photo') { return 'photo'; }
   if (category === 'graphic') { return 'graphic'; }
+  // A Character Library subject is an image asset; the legacy shape has no
+  // 'character' slot, so surface it as the legacy image category 'photo'.
+  if (category === 'character') { return 'photo'; }
   // Fallback: pick a sensible default per type (logo/banner/etc → graphic)
   if (type === 'audio') { return 'sound'; }
   if (type === 'video') { return 'clip'; }

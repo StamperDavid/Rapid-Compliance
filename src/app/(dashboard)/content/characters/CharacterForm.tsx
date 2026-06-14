@@ -29,6 +29,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Caption, CardTitle, SectionDescription } from '@/components/ui/typography';
+import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/MediaLibraryPicker';
 import {
   Dialog,
   DialogContent,
@@ -175,6 +176,10 @@ export default function CharacterForm({
 
   // ── Upload + save state ─────────────────────────────────────────────────────
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
+  // Which image slot the "from library" picker should fill (null = closed).
+  const [libraryTarget, setLibraryTarget] = useState<
+    null | 'frontal' | 'additional' | 'fullBody' | 'upperBody'
+  >(null);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -306,6 +311,34 @@ export default function CharacterForm({
   const removeAdditional = useCallback((url: string) => {
     setAdditionalImageUrls((prev) => prev.filter((u) => u !== url));
   }, []);
+
+  // Fill the open slot from EXISTING library images (no re-upload).
+  const applyLibrarySelection = useCallback(
+    (assets: LibraryAsset[]) => {
+      const urls = assets.filter((a) => a.type === 'image').map((a) => a.url);
+      if (urls.length > 0) {
+        if (libraryTarget === 'frontal') {
+          setFrontalImageUrl(urls[0]);
+        } else if (libraryTarget === 'fullBody') {
+          setFullBodyImageUrl(urls[0]);
+        } else if (libraryTarget === 'upperBody') {
+          setUpperBodyImageUrl(urls[0]);
+        } else if (libraryTarget === 'additional') {
+          setAdditionalImageUrls((prev) => {
+            const merged = [...prev];
+            for (const u of urls) {
+              if (!merged.includes(u) && merged.length < MAX_ADDITIONAL_IMAGES) {
+                merged.push(u);
+              }
+            }
+            return merged;
+          });
+        }
+      }
+      setLibraryTarget(null);
+    },
+    [libraryTarget],
+  );
 
   // ── Looks (alter egos) ──────────────────────────────────────────────────────
   const addLook = useCallback(() => {
@@ -514,6 +547,7 @@ export default function CharacterForm({
   const canAddMore = additionalImageUrls.length < MAX_ADDITIONAL_IMAGES;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
@@ -640,6 +674,15 @@ export default function CharacterForm({
                 {uploadingSlot === 'frontal' ? 'Uploading…' : 'Upload face anchor'}
               </Button>
             )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setLibraryTarget('frontal')}
+              className="mt-2 ml-2 gap-1.5 text-xs"
+            >
+              <Plus className="h-3.5 w-3.5" /> From library
+            </Button>
           </div>
 
           {/* Additional reference images */}
@@ -687,6 +730,16 @@ export default function CharacterForm({
                     <Plus className="h-4 w-4" />
                   )}
                   <span className="text-[10px]">Add</span>
+                </button>
+              )}
+              {canAddMore && (
+                <button
+                  type="button"
+                  onClick={() => setLibraryTarget('additional')}
+                  className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="text-[10px]">Library</span>
                 </button>
               )}
             </div>
@@ -857,6 +910,17 @@ export default function CharacterForm({
         </div>
       </DialogContent>
     </Dialog>
+    <MediaLibraryPicker
+      open={libraryTarget !== null}
+      onOpenChange={(o) => {
+        if (!o) {
+          setLibraryTarget(null);
+        }
+      }}
+      onSelect={applyLibrarySelection}
+      authFetch={authFetch}
+    />
+    </>
   );
 }
 
