@@ -19,9 +19,17 @@ Jasper's `produce_video`/`generate_video`/`assemble_video`/`get_video_status` re
 Plan tool. tsc + lint clean. **Everything below this entry that references Hedra is historical** —
 those notes document the work as it happened and are superseded by this entry.
 
-**OPEN (flagged to owner):** the Studio composer's "Video" tool and Jasper's in-chat video tools were
-stubbed (they point to the Shot Plan tool) rather than rewired to Seedance — decide whether to fully
-wire them to Seedance or leave them pointing at the Shot Plan UI.
+**DEFERRED (owner, Jun 15 — "not tonight"):** the Studio composer's "Video" tool
+(`/api/content/video/generate`) and Jasper's in-chat video tools
+(`produce_video`/`generate_video`/`assemble_video`/`get_video_status`) are currently **stubbed** —
+they return a clear message pointing the operator at the Shot Plan tool rather than generating. They
+were NOT rewired to Seedance because their old flow also depended on the now-deleted polling route, so
+a correct rewire is its own task. **TODO when picked up:** decide (a) fully wire them to Seedance (the
+Studio quick-video route would generate via the fal provider + a sync/persist path; Jasper tools would
+build a ShotPlan and call the shot-plan generate flow), or (b) keep them as redirects to the Shot Plan
+UI and remove the dead tool surface. Files: `src/app/api/content/video/generate/route.ts`,
+`src/lib/orchestrator/jasper-tools.ts` (the four `case` handlers), and the Studio video tab in
+`src/app/(dashboard)/content/video/studio/page.tsx` (which still polled the deleted route).
 
 ---
 
