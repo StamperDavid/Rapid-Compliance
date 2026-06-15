@@ -2,9 +2,8 @@
  * Video Provider Abstraction Layer — shared types (Phase 0)
  *
  * These types define the engine-agnostic contract every video generation
- * provider implements. They are ADDITIVE: the existing Hedra code path is
- * untouched. New call sites can program against `VideoEngineProvider` and swap
- * engines (hedra | fal) without knowing the underlying API shape.
+ * provider implements. Call sites program against `VideoEngineProvider` and can
+ * swap engines without knowing the underlying API shape.
  *
  * Multi-tenant note: every provider method takes a `TenantContext` so the
  * credential + metering seams can resolve per-tenant once multi-tenancy is
@@ -15,7 +14,7 @@ import type { VideoEngineId } from '@/types/video-pipeline';
 
 /**
  * Engine-agnostic generation request. A provider maps these neutral fields onto
- * its own API shape (Hedra asset uploads / fal queue body, etc.). Fields are
+ * its own API shape (e.g. the fal queue body). Fields are
  * optional where an engine may not need them; a provider validates what it
  * requires and ignores what it cannot use.
  */

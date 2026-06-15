@@ -77,7 +77,7 @@ const STYLE_OPTIONS: Array<{ value: CharacterStyleTag; label: string }> = [
 
 const MAX_ADDITIONAL_IMAGES = 4;
 
-const VOICE_PROVIDERS = ['elevenlabs', 'unrealspeech', 'custom', 'hedra'] as const;
+const VOICE_PROVIDERS = ['elevenlabs', 'unrealspeech', 'custom'] as const;
 type VoiceProvider = (typeof VOICE_PROVIDERS)[number];
 
 // ============================================================================

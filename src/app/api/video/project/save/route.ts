@@ -62,9 +62,9 @@ const SaveProjectSchema = z.object({
       avatarId: z.string().nullable(),
       avatarName: z.string().nullable().optional(),
       voiceId: z.string().nullable(),
-      voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).nullable().default(null),
+      voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom']).nullable().default(null),
       duration: z.number(),
-      engine: z.enum(['hedra']).nullable().default(null),
+      engine: z.enum(['fal']).nullable().default(null),
       backgroundPrompt: z.string().nullable().default(null),
       cinematicConfig: CinematicConfigSchema.optional(),
       // Structured context fields (plain-language scene builder)
@@ -94,12 +94,12 @@ const SaveProjectSchema = z.object({
   avatarName: z.string().nullable(),
   voiceId: z.string().nullable(),
   voiceName: z.string().nullable(),
-  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).nullable().default(null),
+  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom']).nullable().default(null),
   generatedScenes: z.array(
     z.object({
       sceneId: z.string(),
       providerVideoId: z.string(),
-      provider: z.enum(['hedra']).nullable(),
+      provider: z.enum(['fal']).nullable(),
       status: z.enum(['draft', 'approved', 'generating', 'completed', 'failed']),
       videoUrl: z.string().nullable(),
       thumbnailUrl: z.string().nullable(),

@@ -190,7 +190,7 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
         voiceId: s.voiceId ?? null,
         voiceProvider: s.voiceProvider ?? null,
         duration: s.duration,
-        engine: s.engine ?? 'hedra',
+        engine: s.engine ?? 'fal',
         backgroundPrompt: s.backgroundPrompt ?? null,
         cinematicConfig: s.cinematicConfig,
         location: s.location,

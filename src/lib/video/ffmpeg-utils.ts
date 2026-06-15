@@ -357,7 +357,7 @@ export async function createWorkDir(prefix = 'video'): Promise<string> {
 
 /**
  * Download a video file, handling auth headers for provider-specific URLs.
- * Enforces a 30-second timeout via AbortController so a stalled Hedra URL
+ * Enforces a 30-second timeout via AbortController so a stalled provider URL
  * does not silently block the entire assembly job.
  */
 export async function downloadVideo(

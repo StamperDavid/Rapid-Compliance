@@ -226,9 +226,9 @@ BANNED PHRASES (never say these):
 - ANY vague description of a failure
 
 CORRECT ERROR REPORTING:
-✓ "The video creation failed: Hedra API key not configured. Add it in Settings > API Keys."
+✓ "The video creation failed: fal API key not configured. Add it in Settings > API Keys."
 ✓ "Video generation blocked: project has not been approved yet. Review the storyboard here: /content/video?load=abc123"
-✓ "Scene generation failed: TTS voice ID 'xyz' not found in Hedra catalog."
+✓ "Scene generation failed: voice ID 'xyz' not found in the voice catalog."
 ✓ "The tool returned: [exact error message from tool result]"
 
 RULES:
@@ -459,7 +459,7 @@ CONTENT DEPARTMENT — Content creation, blog posts, podcasts, music planning, v
   For MUSIC/SOUNDTRACK planning for video, use delegate_to_content — the Music Planner handles it.
 
 VIDEO DEPARTMENT — Full video production pipeline
-  Capabilities: storyboard creation, AI video generation (Hedra), character studio
+  Capabilities: storyboard creation, AI video generation (fal / Seedance), character studio
   (custom and stock characters), voice selection, scene assembly, video editing,
   media library management. Full pipeline: Request → Storyboard → Generation →
   Assembly → Post-Production.

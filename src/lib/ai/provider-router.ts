@@ -9,7 +9,6 @@
  *  - google  → photorealistic, natural lighting, product photography
  *  - kling   → cinematic video, complex camera movements
  *  - openai  → DALL-E 3, general purpose, good prompt understanding
- *  - hedra   → talking head avatars (handled separately by video pipeline)
  */
 
 import { generateWithFal, getFalCapabilities } from './providers/fal-provider';
@@ -20,7 +19,6 @@ import {
   getKlingCapabilities,
 } from './providers/kling-provider';
 import { generateImage as generateWithOpenAIDalle } from './image-generation-service';
-import { generateHedraImage } from '@/lib/video/hedra-service';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
@@ -40,7 +38,6 @@ const PROVIDER_TO_SERVICE: Record<StudioProvider, APIServiceName> = {
   fal: 'fal',
   google: 'gemini', // Imagen uses the same Google AI Studio key as Gemini
   openai: 'openai',
-  hedra: 'hedra',
   kling: 'kling',
 };
 
@@ -65,7 +62,7 @@ async function isProviderAvailable(provider: StudioProvider): Promise<boolean> {
  * Decision tree:
  * 1. User-specified provider → use that exactly
  * 2. Video → kling (only text-to-video provider in this router)
- * 3. Image → hedra (primary — uses existing API key, no additional keys)
+ * 3. Image → fal (primary — Flux models, fast iteration)
  *    Style-specific routing only applies when user explicitly picks a provider.
  */
 export function autoSelectProvider(request: GenerationRequest): StudioProvider {
@@ -79,8 +76,8 @@ export function autoSelectProvider(request: GenerationRequest): StudioProvider {
     return 'kling';
   }
 
-  // All image generation → hedra (single key covers all models)
-  return 'hedra';
+  // All image generation → fal (Flux models)
+  return 'fal';
 }
 
 // ─── Fallback Provider Selection ─────────────────────────────────────
@@ -98,8 +95,8 @@ async function findFallbackProvider(
     );
   }
 
-  // Image fallback chain: hedra → google → fal → openai
-  const imageFallbackOrder: StudioProvider[] = ['hedra', 'google', 'fal', 'openai'];
+  // Image fallback chain: fal → google → openai
+  const imageFallbackOrder: StudioProvider[] = ['fal', 'google', 'openai'];
 
   for (const provider of imageFallbackOrder) {
     if (provider !== excludeProvider && await isProviderAvailable(provider)) {
@@ -218,33 +215,6 @@ export async function routeGeneration(
           metadata: {
             width: widthHeight[0],
             height: widthHeight[1],
-            format: 'image/png',
-          },
-          createdAt: new Date().toISOString(),
-        };
-      }
-
-      case 'hedra': {
-        if (request.type === 'video') {
-          throw new Error(
-            'Hedra video generation is handled by the Video Pipeline, not the Creative Studio router. ' +
-            'Use the /api/video endpoints for talking head videos.'
-          );
-        }
-
-        const hedraResult = await generateHedraImage(assembledPrompt, {
-          aspectRatio: request.presets.aspectRatio,
-        });
-
-        return {
-          id: hedraResult.generationId,
-          url: hedraResult.url,
-          provider: 'hedra',
-          model: hedraResult.modelName,
-          cost: 0.04,
-          metadata: {
-            width: 1024,
-            height: 1024,
             format: 'image/png',
           },
           createdAt: new Date().toISOString(),
@@ -380,31 +350,6 @@ export async function getAvailableProviders(): Promise<ProviderConfig[]> {
     recommended: ['general purpose', 'text rendering', 'prompt adherence'],
   });
 
-  // Hedra (for completeness — avatars handled by Video Pipeline)
-  const hedraConfigured = await isProviderAvailable('hedra');
-  providers.push({
-    provider: 'hedra',
-    displayName: 'Hedra Character-3',
-    description: 'Hedra — talking head avatar video generation (managed via Video Pipeline)',
-    isConfigured: hedraConfigured,
-    isHealthy: hedraConfigured,
-    capabilities: [
-      {
-        type: 'video',
-        models: ['character-3'],
-        maxResolution: '1024x1024',
-        supportedAspectRatios: ['1:1', '16:9', '9:16'],
-        supportsCharacterRef: true,
-        supportsStyleRef: false,
-        supportsInpainting: false,
-      },
-    ],
-    costPerUnit: {
-      'character-3': 0.10,
-    },
-    recommended: ['talking heads', 'avatar videos', 'character animation'],
-  });
-
   return providers;
 }
 
@@ -456,9 +401,6 @@ export function getProviderCostEstimate(
 
     case 'openai':
       return isHighRes ? 0.08 : 0.04;
-
-    case 'hedra':
-      return 0.10;
 
     default:
       return 0.05;

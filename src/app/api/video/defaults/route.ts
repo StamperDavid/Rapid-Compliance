@@ -16,7 +16,7 @@ const UpdateDefaultsSchema = z.object({
   avatarName: z.string().nullable().optional(),
   voiceId: z.string().nullable().optional(),
   voiceName: z.string().nullable().optional(),
-  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).nullable().optional(),
+  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom']).nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {

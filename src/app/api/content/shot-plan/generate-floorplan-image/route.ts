@@ -10,7 +10,7 @@
  * Thin route: authenticate, validate (Zod), delegate, map errors to HTTP. The
  * image is persisted to OUR Firebase Storage + media library (ownership rule).
  *
- * ADDITIVE: part of the Shot-Plan flow; does NOT touch the Hedra path.
+ * Part of the Shot-Plan flow on fal / Seedance.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

@@ -31,7 +31,7 @@ export type ViewingDirection = (typeof VIEWING_DIRECTIONS)[number];
 export const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '21:9', '4:3', '3:2'] as const;
 export type AspectRatio = (typeof ASPECT_RATIOS)[number];
 
-export const STUDIO_PROVIDERS = ['fal', 'google', 'openai', 'hedra', 'kling'] as const;
+export const STUDIO_PROVIDERS = ['fal', 'google', 'openai', 'kling'] as const;
 export type StudioProvider = (typeof STUDIO_PROVIDERS)[number];
 
 export const GENERATION_STATUSES = [
@@ -218,7 +218,6 @@ export interface CharacterProfile {
   physicalDescription?: string;
   voiceId?: string;
   style?: string;
-  hedraAvatarId?: string;
   thumbnailUrl?: string;
   tags: string[];
   createdAt: string;
@@ -357,7 +356,6 @@ export const CreateCharacterSchema = z.object({
   physicalDescription: z.string().max(1000).optional(),
   voiceId: z.string().optional(),
   style: z.string().optional(),
-  hedraAvatarId: z.string().optional(),
   tags: z.array(z.string()).max(20).default([]),
 });
 

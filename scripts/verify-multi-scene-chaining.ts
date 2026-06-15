@@ -3,8 +3,8 @@
  *
  * This extends scripts/verify-last-frame-chaining.ts from 2 clips to 3 chained
  * scenes. The backbone mechanism is identical (last-frame → start-frame chaining
- * via the NEW provider abstraction, dogfooding the fal Seedance provider — NOT the
- * legacy Hedra path). The KEY DIFFERENCE: every next-scene prompt AGGRESSIVELY
+ * via the provider abstraction, dogfooding the fal Seedance provider). The KEY
+ * DIFFERENCE: every next-scene prompt AGGRESSIVELY
  * drives FORWARD narrative progression (new location, camera moving forward) so the
  * model EXTENDS the story rather than re-angling the same moment.
  *

@@ -3,7 +3,7 @@
  *
  * Stores learned video style preferences from user feedback during the
  * review/approval workflow. Over time, the Video Production Agent references
- * these preferences when generating Hedra prompts to produce more consistent,
+ * these preferences when generating video prompts to produce more consistent,
  * on-brand results without repeated user corrections.
  *
  * Collection path: organizations/{PLATFORM_ID}/video_brand_preferences/{docId}

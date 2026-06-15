@@ -16,7 +16,6 @@ import type { TenantContext } from './types';
 
 /** Maps an engine id to the apiKeyService service name that holds its key. */
 const ENGINE_API_KEY_SERVICE: Record<VideoEngineId, APIServiceName> = {
-  hedra: 'hedra',
   fal: 'fal',
 };
 

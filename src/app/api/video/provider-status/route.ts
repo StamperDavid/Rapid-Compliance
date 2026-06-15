@@ -16,7 +16,6 @@ type ProviderStatusMap = Record<VideoEngineId, ProviderStatusEntry>;
 
 /** Video engines whose API-key configuration we surface to the UI. */
 const CHECKABLE_ENGINES: Array<{ id: VideoEngineId; service: APIServiceName }> = [
-  { id: 'hedra', service: 'hedra' },
   { id: 'fal', service: 'fal' },
 ];
 
@@ -40,7 +39,6 @@ export async function GET(request: NextRequest) {
     );
 
     const providers: ProviderStatusMap = {
-      hedra: { configured: false },
       fal: { configured: false },
     };
 

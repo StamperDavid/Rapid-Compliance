@@ -15,7 +15,7 @@
  * shot failure the orchestrator halts and the partial plan is returned in the
  * error response so the operator can inspect / resume.
  *
- * ADDITIVE: new Shot-Plan generation flow — does NOT touch the Hedra path.
+ * The Shot-Plan generation flow, rendering on fal / Seedance.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

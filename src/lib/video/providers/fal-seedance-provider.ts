@@ -13,8 +13,7 @@
  *   poll status_url until status === 'COMPLETED'
  *   GET response_url → { video: { url } }
  *
- * ADDITIVE: nothing else in the app imports this yet. Call sites are migrated
- * off Hedra onto this provider (via the router) in a later, separate stage.
+ * The Shot Plan generation flow drives this provider via the engine router.
  */
 
 import { z } from 'zod';

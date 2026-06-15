@@ -170,7 +170,7 @@ function storyboardToScene(sb: AssistantStoryboard, sceneNumber: number): Omit<P
     voiceId: null,
     voiceProvider: null,
     duration: sb.duration ?? 5,
-    engine: 'hedra',
+    engine: 'fal',
     backgroundPrompt: sb.backgroundPrompt ?? null,
     cinematicConfig: sb.cinematicConfig,
     location: sb.location,
@@ -696,7 +696,7 @@ export function ContentAssistant() {
         void (async () => {
           let made = 0;
           // Run them in PARALLEL — one stuck/slow generation must not block the rest.
-          // Each has its own timeout so a hung Hedra call can't hang the batch forever.
+          // Each has its own timeout so a hung generation call can't hang the batch forever.
           await Promise.allSettled(
             imageRequests.map(async (req) => {
               const controller = new AbortController();
@@ -772,7 +772,7 @@ export function ContentAssistant() {
           voiceId: null,
           voiceProvider: null,
           duration: sb.duration ?? 5,
-          engine: 'hedra',
+          engine: 'fal',
           backgroundPrompt: sb.backgroundPrompt ?? null,
           cinematicConfig: sb.cinematicConfig,
           location: sb.location,

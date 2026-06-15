@@ -10,7 +10,7 @@
  * Thin route: auth, validate (Zod), delegate to the generation service, map errors.
  * All images persist to OUR storage + media library (ownership rule).
  *
- * ADDITIVE: part of the Shot-Plan flow; does NOT touch the Hedra path.
+ * Part of the Shot-Plan flow on fal / Seedance.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

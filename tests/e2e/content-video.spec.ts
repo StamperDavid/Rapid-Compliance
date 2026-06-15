@@ -14,7 +14,7 @@
  * Journey 4 — Load Project Modal:
  *   Open Load Project modal → verify list/empty state → close
  *
- * Note: Actual video generation requires Hedra API and is not tested here.
+ * Note: Actual video generation requires the fal / Seedance API and is not tested here.
  * Generation, assembly, and post-production steps are tested up to the
  * "Start Generation" button visibility.
  */

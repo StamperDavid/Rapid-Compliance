@@ -53,7 +53,7 @@ export interface VideoPipelineState {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
-  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
 
   // Shot Plan draft (additive) — the OpenArt-style production sheet. Optional so
   // existing flows are unaffected; autosaves/loads with the rest of the project.
@@ -93,7 +93,7 @@ export interface VideoPipelineState {
   removeScene: (sceneId: string) => void;
   reorderScenes: (fromIndex: number, toIndex: number) => void;
   setAvatar: (id: string, name: string) => void;
-  setVoice: (id: string, name: string, provider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra') => void;
+  setVoice: (id: string, name: string, provider?: 'elevenlabs' | 'unrealspeech' | 'custom') => void;
   setGeneratedScenes: (results: SceneGenerationResult[]) => void;
   updateGeneratedScene: (sceneId: string, updates: Partial<SceneGenerationResult>) => void;
   setFinalVideoUrl: (url: string) => void;
@@ -251,7 +251,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         set({
           voiceId: id,
           voiceName: name,
-          voiceProvider: provider ?? 'hedra',
+          voiceProvider: provider ?? null,
         }),
 
       setGeneratedScenes: (results) => set({ generatedScenes: results }),

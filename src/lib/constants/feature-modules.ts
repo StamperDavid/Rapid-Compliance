@@ -81,10 +81,6 @@ export const API_KEY_SETUP_LINKS: Record<string, { url: string; docsUrl: string 
     url: 'https://app.dataforseo.com/api-dashboard',
     docsUrl: 'https://docs.dataforseo.com',
   },
-  hedra: {
-    url: 'https://www.hedra.com/api-profile',
-    docsUrl: 'https://www.hedra.com/docs/api-reference/public/list-models',
-  },
   serper: {
     url: 'https://serper.dev/api-key',
     docsUrl: 'https://serper.dev/docs',
@@ -269,17 +265,17 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     sidebarItemIds: ['video'],
     requiredApiKeys: [
       {
-        serviceId: 'hedra',
-        label: 'Hedra API Key (Character-3)',
-        description: 'Generate AI videos with Hedra Character-3 — the sole video engine.',
-        setupUrl: API_KEY_SETUP_LINKS.hedra.url,
-        docsUrl: API_KEY_SETUP_LINKS.hedra.docsUrl,
+        serviceId: 'fal',
+        label: 'fal.ai API Key (Seedance)',
+        description: 'Generate AI videos with Seedance via fal.ai — the sole video engine.',
+        setupUrl: API_KEY_SETUP_LINKS.fal.url,
+        docsUrl: API_KEY_SETUP_LINKS.fal.docsUrl,
         priority: 'required',
       },
       {
         serviceId: 'elevenlabs',
         label: 'ElevenLabs API Key',
-        description: 'Premium voice cloning for custom characters. Hedra built-in voices work without this.',
+        description: 'Premium voice cloning for custom characters and narration.',
         setupUrl: API_KEY_SETUP_LINKS.elevenlabs.url,
         docsUrl: API_KEY_SETUP_LINKS.elevenlabs.docsUrl,
         priority: 'recommended',

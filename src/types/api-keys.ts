@@ -131,9 +131,6 @@ export interface APIKeysConfig {
 
   // Video Generation Services
   video?: {
-    hedra?: {
-      apiKey: string;
-    };
     kling?: {
       accessKey: string;
       secretKey: string;
@@ -406,8 +403,7 @@ export type APIServiceName =
   | 'later'        // Later.com social media scheduling
   | 'minimax'       // MiniMax AI Music Generation
   | 'replicate'     // Replicate — hosted MusicGen (Meta) for AI music
-  | 'hedra'         // Hedra Character-3 talking head avatars
-  | 'fal'           // Fal.ai — Flux, SDXL, Stable Diffusion image generation
+  | 'fal'           // Fal.ai — Flux/SDXL image generation + Seedance video
   | 'google-ai-studio'  // Google AI Studio (Imagen 3) — photorealistic image generation
   | 'kling'         // Kling 3.0 — cinematic video + image generation
   | 'deepgram'      // Deepgram — speech-to-text transcription

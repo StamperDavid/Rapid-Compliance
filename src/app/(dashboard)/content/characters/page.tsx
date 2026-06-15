@@ -98,7 +98,7 @@ export default function CharacterLibraryPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      // scope=own → only the operator's own created characters (never stock/Hedra avatars).
+      // scope=own → only the operator's own created characters (never stock avatars).
       const res = await authFetch('/api/video/avatar-profiles?scope=own');
       if (!res.ok) {
         setErrorMsg(`Failed to load characters (${res.status})`);

@@ -40,7 +40,7 @@ const CharacterLookSchema = z.object({
 const CreateProfileSchema = z.object({
   name: z.string().min(1),
   frontalImageUrl: z.string().url(),
-  source: z.enum(['custom', 'hedra']).optional(),
+  source: z.enum(['custom']).optional(),
   role: z
     .enum(['hero', 'villain', 'extra', 'narrator', 'presenter', 'custom'])
     .optional(),
@@ -54,10 +54,9 @@ const CreateProfileSchema = z.object({
   voiceId: z.string().nullable().default(null),
   voiceName: z.string().nullable().default(null),
   voiceProvider: z
-    .enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra'])
+    .enum(['elevenlabs', 'unrealspeech', 'custom'])
     .nullable()
     .default(null),
-  hedraCharacterId: z.string().nullable().default(null),
   description: z.string().nullable().default(null),
   isDefault: z.boolean().default(false),
 });
@@ -77,7 +76,7 @@ export async function GET(request: NextRequest) {
     const userId = String(user.uid);
 
     // The Character Library tab passes ?scope=own so it shows ONLY the operator's
-    // own created characters (no stock/Hedra avatars). Other cast-pickers omit it
+    // own created characters (no stock avatars). Other cast-pickers omit it
     // and still get stock avatars appended.
     const ownOnly = request.nextUrl.searchParams.get('scope') === 'own';
 
@@ -163,7 +162,6 @@ export async function POST(request: NextRequest) {
       voiceId: data.voiceId,
       voiceName: data.voiceName,
       voiceProvider: data.voiceProvider,
-      hedraCharacterId: data.hedraCharacterId,
       description: data.description,
       isDefault: data.isDefault,
     });

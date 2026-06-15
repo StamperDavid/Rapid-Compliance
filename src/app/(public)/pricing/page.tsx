@@ -45,7 +45,7 @@ function FallbackContent() {
     'Voice AI Closers (outbound) + AI Receptionist (inbound)',
     // Content engine
     'Magic Studio — Image + Video + Music + Copy generation',
-    'Video Production Pipeline (Hedra avatar + AI-narrated)',
+    'Video Production Pipeline (AI avatar + AI-narrated)',
     'Music Generation (royalty-free, brand-tuned)',
     'AI Copywriting (blog, ads, emails, scripts)',
     'Media Library + Brand Kit',

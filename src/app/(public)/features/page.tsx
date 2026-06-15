@@ -123,10 +123,10 @@ function FallbackContent() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
                 { icon: '✨', title: 'Magic Studio', desc: 'Single canvas for image + video + music + copy generation. Drag, refine, reuse.' },
-                { icon: '🎥', title: 'Video Production', desc: 'Hedra-powered avatars, AI-narrated voice-overs, scene assembly, post-production.' },
+                { icon: '🎥', title: 'Video Production', desc: 'AI-powered avatars, AI-narrated voice-overs, scene assembly, post-production.' },
                 { icon: '🎵', title: 'Music Generation', desc: 'Brand-tuned, royalty-free tracks for video, ads, and podcasts.' },
                 { icon: '✍️', title: 'AI Copywriting', desc: 'Blog posts, ad copy, emails, scripts — every piece runs through your brand voice.' },
-                { icon: '🖼️', title: 'Media Library', desc: 'Centralized assets, brand kit, intro/outro reels, Hedra characters.' },
+                { icon: '🖼️', title: 'Media Library', desc: 'Centralized assets, brand kit, intro/outro reels, character profiles.' },
                 { icon: '📅', title: 'Content Calendar', desc: 'Plan and schedule every piece of content across every channel from one place.' },
               ].map((f, idx) => (
                 <div key={idx} className="p-6 bg-white/5 border border-white/10 rounded-xl">

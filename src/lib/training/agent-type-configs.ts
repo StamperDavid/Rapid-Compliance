@@ -194,7 +194,7 @@ const VIDEO_CONFIG: AgentTypeTrainingConfig = {
     { id: 'video_visual_description', label: 'Visual Description Quality', description: 'Rich, specific visual directions that translate well to video generation — setting, lighting, action, camera', weight: 0.18 },
     { id: 'video_narration_handling', label: 'Narration Handling', description: 'Narration written as voiceover, NOT as character speech. On-screen characters perform actions, not talk.', weight: 0.16 },
     { id: 'video_scene_structure', label: 'Scene Structure', description: 'Logical scene progression, appropriate scene count, good pacing and duration distribution', weight: 0.12 },
-    { id: 'video_prompt_quality', label: 'Hedra Prompt Quality', description: 'Final prompts optimized for Hedra — correct structure, no forbidden elements, cinematic language', weight: 0.12 },
+    { id: 'video_prompt_quality', label: 'Engine Prompt Quality', description: 'Final prompts optimized for fal / Seedance — correct structure, no forbidden elements, cinematic language', weight: 0.12 },
   ],
   scenarioTypes: [
     { id: 'video_product_demo', label: 'Product Demo', description: 'Showcasing a product or service with a presenter character', examples: ['Show our SaaS dashboard in action', 'Demonstrate the mobile app onboarding'] },

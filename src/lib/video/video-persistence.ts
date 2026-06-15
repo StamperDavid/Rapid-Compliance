@@ -1,9 +1,9 @@
 /**
  * Video Persistence Service
  *
- * Downloads completed videos from Hedra's expiring CDN and uploads them
+ * Downloads completed videos from the engine's expiring CDN and uploads them
  * to Firebase Storage for permanent access. This runs automatically
- * during scene polling — the moment Hedra marks a video as complete,
+ * during scene polling — the moment the engine marks a video as complete,
  * we persist it so the URL never expires.
  *
  * Deduplication: A module-level Map tracks in-flight persistence operations.
@@ -32,7 +32,7 @@ const inFlightPersistence = new Map<string, Promise<string>>();
 // ============================================================================
 
 /**
- * Download a completed video from Hedra's CDN and upload to Firebase Storage.
+ * Download a completed video from the engine's CDN and upload to Firebase Storage.
  * Returns a long-lived signed URL (365 days).
  *
  * Throws if Firebase Storage is unavailable or if all upload retries are
@@ -43,7 +43,7 @@ const inFlightPersistence = new Map<string, Promise<string>>();
  */
 export async function persistVideoToStorage(
   generationId: string,
-  hedraVideoUrl: string,
+  videoUrl: string,
   projectId: string,
   sceneId: string,
 ): Promise<string> {
@@ -63,7 +63,7 @@ export async function persistVideoToStorage(
   }
 
   // Start persistence and track it
-  const persistPromise = doPersist(generationId, hedraVideoUrl, projectId, sceneId);
+  const persistPromise = doPersist(generationId, videoUrl, projectId, sceneId);
   inFlightPersistence.set(generationId, persistPromise);
 
   try {
@@ -79,7 +79,7 @@ export async function persistVideoToStorage(
  */
 async function doPersist(
   generationId: string,
-  hedraVideoUrl: string,
+  videoUrl: string,
   projectId: string,
   sceneId: string,
 ): Promise<string> {
@@ -93,25 +93,25 @@ async function doPersist(
   try {
     await mkdir(workDir, { recursive: true });
 
-    // Download from Hedra CDN
-    logger.info('Downloading video from Hedra for persistence', {
+    // Download from the engine CDN
+    logger.info('Downloading video for persistence', {
       generationId: generationId.slice(0, 8),
       sceneId: sceneId.slice(0, 8),
       file: 'video-persistence.ts',
     });
 
     const downloadStart = Date.now();
-    const response = await fetch(hedraVideoUrl, { redirect: 'follow' });
+    const response = await fetch(videoUrl, { redirect: 'follow' });
 
     if (!response.ok) {
-      throw new Error(`Hedra download failed: ${response.status} ${response.statusText}`);
+      throw new Error(`Video download failed: ${response.status} ${response.statusText}`);
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
     const { writeFile } = await import('fs/promises');
     await writeFile(tempPath, buffer);
 
-    logger.info('Video downloaded from Hedra', {
+    logger.info('Video downloaded for persistence', {
       generationId: generationId.slice(0, 8),
       sizeBytes: buffer.length,
       downloadMs: Date.now() - downloadStart,
@@ -130,7 +130,7 @@ async function doPersist(
           generationId,
           sceneId,
           projectId,
-          provider: 'hedra',
+          provider: 'fal',
           persistedAt: new Date().toISOString(),
         },
       },

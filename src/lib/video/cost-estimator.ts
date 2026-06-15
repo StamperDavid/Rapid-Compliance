@@ -1,24 +1,24 @@
 /**
  * Video Pipeline Cost Estimator
  *
- * Estimates Hedra generation costs based on scene configuration.
- * Pricing is based on Hedra's published rates — update when pricing changes.
+ * Estimates fal / Seedance generation costs based on scene configuration.
+ * Pricing is approximate — update when fal pricing changes.
  */
 
 import type { PipelineScene } from '@/types/video-pipeline';
 
 // ============================================================================
-// Hedra Pricing (updated March 2026)
+// fal / Seedance Pricing (approximate)
 // ============================================================================
 
 /** Per-generation cost in USD by mode and duration tier */
-const HEDRA_PRICING = {
-  /** Character 3 (avatar + inline TTS) — portrait-driven video */
+const FAL_PRICING = {
+  /** Reference-to-video (a cast character placed in the scene) */
   avatar: {
     base: 0.10,       // up to 15s
     perSecond: 0.007,  // per additional second beyond 15s
   },
-  /** Kling O3 T2V (prompt-only) — text-to-video with native audio */
+  /** Text-to-video (prompt-only) with native audio */
   promptOnly: {
     base: 0.07,        // up to 10s
     perSecond: 0.007,  // per additional second beyond 10s
@@ -65,7 +65,7 @@ function getSceneMode(
  * Estimates the cost for a single scene based on its mode and duration.
  */
 function estimateSceneCost(mode: 'avatar' | 'prompt-only', durationSeconds: number): number {
-  const pricing = mode === 'avatar' ? HEDRA_PRICING.avatar : HEDRA_PRICING.promptOnly;
+  const pricing = mode === 'avatar' ? FAL_PRICING.avatar : FAL_PRICING.promptOnly;
   const baseDuration = mode === 'avatar' ? 15 : 10;
 
   if (durationSeconds <= baseDuration) {

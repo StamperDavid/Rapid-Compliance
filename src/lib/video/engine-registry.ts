@@ -2,9 +2,7 @@
  * Video Engine Registry
  * Client-safe constants — no server imports
  *
- * Hedra is the default video generation engine. fal (Seedance) is registered
- * additively as a second engine (Phase 0 of the video-engine migration) — it is
- * available but does NOT change Hedra's default behavior anywhere in the app.
+ * fal (Seedance) is the sole video generation engine.
  */
 
 import type { VideoEngineId } from '@/types/video-pipeline';
@@ -23,18 +21,6 @@ export interface VideoEngineConfig {
   apiKeyServiceId: string | null; // null = not yet integrated
 }
 
-export const HEDRA_ENGINE_CONFIG: VideoEngineConfig = {
-  id: 'hedra',
-  label: 'Hedra',
-  icon: 'Theater',
-  description: 'AI video generation with superior lip-sync and character acting (Character-3)',
-  costPer5Seconds: 8,
-  quality: 'high',
-  bestFor: ['talking-head', 'lip-sync', 'avatar', 'presentation', 'character-in-action'],
-  integrationStatus: 'available',
-  apiKeyServiceId: 'hedra',
-};
-
 export const FAL_ENGINE_CONFIG: VideoEngineConfig = {
   id: 'fal',
   label: 'Seedance (fal)',
@@ -48,21 +34,20 @@ export const FAL_ENGINE_CONFIG: VideoEngineConfig = {
 };
 
 export const VIDEO_ENGINE_REGISTRY: Record<VideoEngineId, VideoEngineConfig> = {
-  hedra: HEDRA_ENGINE_CONFIG,
   fal: FAL_ENGINE_CONFIG,
 } as const;
 
-/** Ordered list of engine IDs for UI display. Hedra stays first (default). */
-export const ENGINE_ORDER: VideoEngineId[] = ['hedra', 'fal'];
+/** Ordered list of engine IDs for UI display. */
+export const ENGINE_ORDER: VideoEngineId[] = ['fal'];
 
-/** Returns the Hedra engine config — engineId parameter retained for call-site compatibility */
+/** Returns the fal (Seedance) engine config — engineId parameter retained for call-site compatibility */
 export function getEngineConfig(_engineId?: string | null): VideoEngineConfig {
-  return HEDRA_ENGINE_CONFIG;
+  return FAL_ENGINE_CONFIG;
 }
 
 /** Calculate estimated cost in cents for a scene given duration */
 export function estimateSceneCost(_engineId: VideoEngineId | null, durationSeconds: number): number {
-  return Math.ceil(durationSeconds / 5) * HEDRA_ENGINE_CONFIG.costPer5Seconds;
+  return Math.ceil(durationSeconds / 5) * FAL_ENGINE_CONFIG.costPer5Seconds;
 }
 
 /** Format cents as USD string */

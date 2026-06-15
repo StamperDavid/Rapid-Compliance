@@ -1,7 +1,7 @@
 /**
  * Verify Jasper plans the video pipeline correctly — Stage A, Prompt 3.
  *
- * Does not fire Hedra. Only exercises the PLAN layer: Jasper receives the
+ * Does not fire the video engine. Only exercises the PLAN layer: Jasper receives the
  * video-creation request, must call propose_mission_plan, and the plan must
  * include at least one real video-pipeline tool (produce_video or
  * batch_produce_videos). Tools that merely edit or inspect the library

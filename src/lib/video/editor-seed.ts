@@ -3,7 +3,7 @@
  *
  * The Shot Plan is the sole video-creation flow. Once its shots are generated,
  * the operator opens the generated clips in the existing Video Editor for final
- * stitching/edit. Rather than coupling the Shot Plan to the Hedra-shaped project
+ * stitching/edit. Rather than coupling the Shot Plan to the legacy project
  * save route, the generated clips are handed to the editor through a small,
  * typed sessionStorage payload: the Shot Plan writes it, navigates to the
  * editor, and the editor reads + clears it on mount and seeds its timeline.

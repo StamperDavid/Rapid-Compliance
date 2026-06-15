@@ -255,7 +255,7 @@ function StudioPageInner() {
   }, [updateActiveSlot]);
 
   // ────────────────────────────────────────────────────────────────────────
-  // Portrait upload — convert to base64 data URI for Hedra
+  // Portrait upload — convert to base64 data URI for the video engine
   // ────────────────────────────────────────────────────────────────────────
 
   const handlePortraitUpload = useCallback(

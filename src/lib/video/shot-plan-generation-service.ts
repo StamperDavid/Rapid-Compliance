@@ -2,10 +2,9 @@
  * Shot Plan generation ORCHESTRATOR (server-side, ADDITIVE).
  *
  * Turns a `ShotPlan` into real video, shot-by-shot, on the fal / Seedance
- * provider — with LAST-FRAME CHAINING + IDENTITY RE-ANCHORING. This is a NEW,
- * parallel generation flow: it does NOT touch the Hedra `scene-generator.ts`
- * path or any Hedra route. It dogfoods the engine-agnostic provider abstraction
- * (`src/lib/video/providers`) exactly like the proven chaining scripts
+ * provider — with LAST-FRAME CHAINING + IDENTITY RE-ANCHORING. It dogfoods the
+ * engine-agnostic provider abstraction (`src/lib/video/providers`) exactly like
+ * the proven chaining scripts
  * (`scripts/verify-last-frame-chaining.ts`, `scripts/salvage-two-scene-chain.ts`).
  *
  * Cut vs. continue (the core of the chaining logic):

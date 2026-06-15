@@ -1,8 +1,8 @@
 /**
  * Video Module
  *
- * Hedra-powered video generation system featuring:
- * - Hedra Character-3 API integration (sole video engine)
+ * fal / Seedance-powered video generation system featuring:
+ * - fal / Seedance video generation (sole video engine)
  * - AI Video Generation Engine
  *   - Director Service: Brand DNA + Trends → Master Storyboard
  *   - Stitcher Service: Post-production pipeline

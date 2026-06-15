@@ -2,8 +2,7 @@
  * Instruction-based image EDITING — change part of an existing image while keeping
  * the rest, instead of regenerating it from scratch.
  *
- * Runs on Flux Kontext (an editing model in the Hedra catalog, via the existing
- * Hedra key — no extra credential): it takes the operator's exact image + a plain
+ * Runs on Flux Kontext via fal.ai: it takes the operator's exact image + a plain
  * instruction ("make the shirt red", "remove the person on the left") and returns a
  * version with only that change applied. The result is saved as a NEW library asset;
  * the original is always kept.
@@ -17,7 +16,7 @@ import sharp from 'sharp';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getAsset, createAsset } from '@/lib/media/media-library-service';
 import { persistBufferToStorage } from '@/lib/firebase/storage-utils';
-import { generateHedraImageFromReference } from '@/lib/video/hedra-service';
+import { generateFromReferenceWithFal } from '@/lib/ai/providers/fal-provider';
 import type { UnifiedMediaAsset } from '@/types/media-library';
 
 export interface EditImageInput {
@@ -58,7 +57,7 @@ export async function editImageAndSave(input: EditImageInput): Promise<UnifiedMe
   }
 
   // The edit itself — Flux Kontext keeps the image and applies only the instruction.
-  const edited = await generateHedraImageFromReference(instruction, sourceUrl, {});
+  const edited = await generateFromReferenceWithFal(instruction, sourceUrl, {});
 
   // Pull the result bytes once so we can persist permanently + record real dimensions.
   const res = await fetch(edited.url);

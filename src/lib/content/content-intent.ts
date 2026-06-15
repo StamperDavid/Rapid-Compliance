@@ -5,7 +5,7 @@
  * request + attached references into this structured shape, shows the operator a
  * plain-language summary, and PAUSES for approval before anything is generated.
  * On approval the same structure drives the right specialist (Video Specialist,
- * Hedra image gen, Music Planner, Copywriter).
+ * fal image gen, Music Planner, Copywriter).
  *
  * It is emitted by the model as a fenced ```intent JSON block inside its proposal
  * reply, so it round-trips through the conversation history: the proposal turn

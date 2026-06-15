@@ -18,7 +18,6 @@ interface UseVideoProviderStatusReturn {
 }
 
 const DEFAULT_STATUS: ProviderStatusMap = {
-  hedra: { configured: false },
   fal: { configured: false },
 };
 

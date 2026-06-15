@@ -1,8 +1,8 @@
 /**
  * VERIFICATION (one-off): last-frame chaining produces a seamless continuous video.
  *
- * This is the backbone proof for long-form video. It dogfoods the NEW provider
- * abstraction (src/lib/video/providers) — NOT the legacy Hedra path.
+ * This is the backbone proof for long-form video. It dogfoods the provider
+ * abstraction (src/lib/video/providers) on the fal Seedance provider.
  *
  *   1. CLIP 1  — provider.generateVideo (reference-to-video) from the Velocity image.
  *   2. EXTRACT — pull the LAST FRAME of clip1 as a PNG (ffmpeg, same mechanism as

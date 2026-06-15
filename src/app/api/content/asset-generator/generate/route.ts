@@ -2,9 +2,8 @@
  * AI Image Generation API (Magic Studio image tool)
  * POST /api/content/asset-generator/generate
  *
- * Auth-gated. Validates the request via Zod, calls the simplest already-wired
- * single-image generator (`generateHedraImage` — same provider the rest of
- * the Studio video stack uses, so the operator only manages one API key),
+ * Auth-gated. Validates the request via Zod, calls the fal.ai image generator
+ * (`generateWithFal` — Flux models; reference-conditioned edits use Flux Kontext),
  * persists the rendered image to Firebase Storage, and writes a
  * `UnifiedMediaAsset` record to organizations/{PLATFORM_ID}/media/{id}.
  *
@@ -24,7 +23,7 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 
 import { requireAuth } from '@/lib/auth/api-auth';
-import { generateHedraImage, generateHedraImageFromReference } from '@/lib/video/hedra-service';
+import { generateWithFal, generateFromReferenceWithFal } from '@/lib/ai/providers/fal-provider';
 import { getBrandKit } from '@/lib/video/brand-kit-service';
 import { DEFAULT_BRAND_KIT } from '@/types/brand-kit';
 import { persistUrlToStorage, persistBufferToStorage } from '@/lib/firebase/storage-utils';
@@ -35,6 +34,7 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import type { UnifiedMediaAsset } from '@/types/media-library';
+import type { AspectRatio } from '@/types/creative-studio';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +45,6 @@ const FILE = 'api/content/asset-generator/generate/route.ts';
 // ────────────────────────────────────────────────────────────────────────────
 
 const ASPECT_RATIO_PATTERN = /^\d+:\d+$/;
-const RESOLUTION_VALUES = ['720p', '1080p', '1440p (2K QHD)'] as const;
 
 const GenerateImageSchema = z.object({
   prompt: z.string().trim().min(1, 'prompt is required').max(1000),
@@ -125,8 +124,10 @@ function inferDimensionsFromAspectRatio(aspect: string): { width: number; height
   return { width: Math.round((longSide * w) / h), height: longSide };
 }
 
-function isResolutionValue(value: string): value is (typeof RESOLUTION_VALUES)[number] {
-  return (RESOLUTION_VALUES as readonly string[]).includes(value);
+/** fal accepts a fixed set of aspect-ratio tokens; coerce or fall back to undefined. */
+const FAL_ASPECT_RATIOS: readonly string[] = ['1:1', '16:9', '9:16', '21:9', '4:3', '3:2'];
+function toFalAspectRatio(value: string): AspectRatio | undefined {
+  return FAL_ASPECT_RATIOS.includes(value) ? (value as AspectRatio) : undefined;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -202,17 +203,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       : ' Original characters only — never depict or resemble any real, trademarked or copyrighted character, superhero, mascot, or public figure (no Superman/Batman/Marvel/DC, no S-shield, no recognizable existing costumes or logos). Invent a wholly original design.';
     imagePrompt = `${imagePrompt}${trademarkGuard}`;
 
-    // 4. Generate via Hedra. When a reference image is supplied, generate
-    //    CONDITIONED on it (image-to-image) so the result is built from the
-    //    operator's actual artwork/character — not reinvented from text. Otherwise
-    //    fall back to text-to-image.
+    // 4. Generate via fal.ai. When a reference image is supplied, generate
+    //    CONDITIONED on it (Flux Kontext image-to-image) so the result is built
+    //    from the operator's actual artwork/character — not reinvented from text.
+    //    Otherwise fall back to text-to-image (Flux).
     const generation = body.referenceImageUrl
-      ? await generateHedraImageFromReference(imagePrompt, body.referenceImageUrl, {
-          aspectRatio: body.aspectRatio,
+      ? await generateFromReferenceWithFal(imagePrompt, body.referenceImageUrl, {
+          aspectRatio: toFalAspectRatio(body.aspectRatio),
         })
-      : await generateHedraImage(imagePrompt, {
-          aspectRatio: body.aspectRatio,
-          resolution: isResolutionValue(body.resolution) ? body.resolution : '1080p',
+      : await generateWithFal(imagePrompt, {
+          aspectRatio: toFalAspectRatio(body.aspectRatio),
         });
 
     // 5. Composite the REAL brand logo onto the image (if one is configured) so
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // 6. Persist to Firebase Storage so the URL outlives Hedra's CDN.
+    // 6. Persist to Firebase Storage so the URL outlives the provider's temporary CDN.
     const assetId = randomUUID();
     const storagePath = imageStoragePath(assetId);
     let permanentUrl = generation.url;
@@ -281,9 +281,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       fileSize,
       ...(dimensions ? { dimensions } : {}),
       source: 'ai-generated',
-      aiProvider: 'hedra',
+      aiProvider: 'fal',
       aiPrompt: body.prompt,
-      aiGenerationId: generation.generationId,
+      aiGenerationId: generation.id,
       processingState: 'ready',
       createdAt: now,
       updatedAt: now,
@@ -301,8 +301,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     logger.info('[asset-generator-generate] Asset saved to media library', {
       assetId,
-      provider: 'hedra',
-      modelId: generation.modelId,
+      provider: 'fal',
+      model: generation.model,
       brandDnaApplied: asset.brandDnaApplied,
       file: FILE,
     });
@@ -324,7 +324,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
 
     // Surface configuration errors as 400 so the UI can show the operator
-    // a "go fix your API key" message instead of a generic 500. The Hedra
+    // a "go fix your API key" message instead of a generic 500. The fal
     // service throws the literal phrase "API key not configured" with a
     // pointer to /settings/api-keys when the key is missing.
     const isConfigError =

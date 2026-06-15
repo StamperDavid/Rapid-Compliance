@@ -84,8 +84,8 @@ Areas to evaluate: keyword density, heading hierarchy, meta descriptions, conten
     }
     case 'video': {
       return `You are an expert AI video production analyst analyzing a training session for an AI screenwriter agent.
-Focus on: user intent adherence (correct character, scene count, topic), character consistency across scenes, visual description quality for Hedra video generation, narration as voiceover (NOT character speech), scene structure and pacing.
-Areas to evaluate: character descriptions, scene count accuracy, narration handling, visual prompting, Hedra optimization, user prompt fidelity.`;
+Focus on: user intent adherence (correct character, scene count, topic), character consistency across scenes, visual description quality for fal / Seedance video generation, narration as voiceover (NOT character speech), scene structure and pacing.
+Areas to evaluate: character descriptions, scene count accuracy, narration handling, visual prompting, engine prompt optimization, user prompt fidelity.`;
     }
     case 'orchestrator': {
       return `You are an expert AI orchestration analyst evaluating a training session for Jasper, a strategic AI business partner who delegates tasks to specialized agent teams.
@@ -124,7 +124,7 @@ function getDomainAreas(agentType: AgentDomain): string {
       return 'e.g., "keyword_optimization", "readability", "search_intent", "content_depth", "heading_structure", "internal_linking"';
     }
     case 'video': {
-      return 'e.g., "character_consistency", "scene_count", "narration_handling", "visual_description", "user_intent", "hedra_optimization"';
+      return 'e.g., "character_consistency", "scene_count", "narration_handling", "visual_description", "user_intent", "engine_optimization"';
     }
     case 'orchestrator': {
       return 'e.g., "delegation_routing", "tool_selection", "prompt_adherence", "mission_structure", "error_handling", "context_retention"';

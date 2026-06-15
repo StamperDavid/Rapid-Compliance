@@ -8,8 +8,7 @@
  * Thin route: authenticate, validate (Zod), delegate to the generation
  * orchestrator, map errors to HTTP. No business logic here.
  *
- * ADDITIVE: this is the new Shot-Plan generation flow — it does NOT touch the
- * Hedra scene-generator path or any Hedra route.
+ * This is the Shot-Plan generation flow, rendering on fal / Seedance.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

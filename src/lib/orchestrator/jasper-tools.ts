@@ -43,68 +43,6 @@ import type { SequenceEmail } from '@/lib/workflows/sequence-scheduler';
 // over a literal-type mismatch.
 // ============================================================================
 
-import type { VideoAspectRatio, VideoResolution } from '@/types/video';
-import type { VideoType, TargetPlatform } from '@/types/video-pipeline';
-
-function normalizeAspectRatio(input: string | undefined): VideoAspectRatio {
-  if (input === '16:9' || input === '9:16' || input === '1:1' || input === '4:3') {
-    return input;
-  }
-  // '4:5' (Instagram portrait) and 'auto' aren't in the union — fall back to 9:16 (closest portrait shape).
-  if (input === '4:5' || input === 'portrait') {
-    return '9:16';
-  }
-  if (input === 'square') {
-    return '1:1';
-  }
-  return '16:9';
-}
-
-function normalizeResolution(input: string | undefined): VideoResolution {
-  if (input === '720p' || input === '1080p' || input === '4k') {
-    return input;
-  }
-  return '1080p';
-}
-
-function normalizeVideoType(input: string | undefined): VideoType {
-  switch (input) {
-    case 'tutorial':
-    case 'explainer':
-    case 'product-demo':
-    case 'sales-pitch':
-    case 'testimonial':
-    case 'social-ad':
-      return input;
-    case 'demo':
-    case 'product_demo':
-      return 'product-demo';
-    case 'sales':
-    case 'sales_pitch':
-      return 'sales-pitch';
-    case 'social':
-    case 'ad':
-    case 'social_ad':
-      return 'social-ad';
-    default:
-      return 'explainer';
-  }
-}
-
-function normalizeTargetPlatform(input: string | undefined): TargetPlatform {
-  if (
-    input === 'youtube' ||
-    input === 'tiktok' ||
-    input === 'instagram' ||
-    input === 'linkedin' ||
-    input === 'website'
-  ) {
-    return input;
-  }
-  // Twitter / X / Facebook / generic social → bucket as 'website' (the
-  // catch-all aspect for non-pipeline-native targets).
-  return 'website';
-}
 
 // ============================================================================
 // TIMEOUT UTILITY — Prevents hung LLM calls from spinning forever
@@ -1411,13 +1349,13 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'get_video_status',
       description:
-        'Check the status of a video being generated via Hedra. Returns progress, completion status, and the video URL when ready. ENABLED: TRUE.',
+        'Check the status of a video generation. NOTE: video creation now happens in the Shot Plan tool (Content → Video) on fal / Seedance; this returns a pointer there. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           videoId: {
             type: 'string',
-            description: 'The Hedra generation ID returned from generate_video',
+            description: 'The generation ID, if any',
           },
         },
         required: ['videoId'],
@@ -1578,8 +1516,8 @@ export const JASPER_TOOLS: ToolDefinition[] = [
         properties: {
           filter: {
             type: 'string',
-            description: 'Filter by source: custom (user-created clones), hedra (stock characters), or all (default)',
-            enum: ['custom', 'hedra', 'all'],
+            description: 'Filter by source: custom (user-created clones) or all (default)',
+            enum: ['custom', 'all'],
           },
         },
         required: [],
@@ -4484,331 +4422,38 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         break;
       }
 
-      case 'generate_video': {
-        // Take an existing pipeline project and dispatch Hedra renders for
-        // its saved scenes. Companion to produce_video — used when the
-        // operator already has an approved storyboard and wants to (re-)render
-        // without regenerating the script.
-        const genStart = Date.now();
-        trackMissionStep(context, 'generate_video', 'RUNNING', { toolArgs: args });
-        try {
-          const projectId = (args.storyboardId as string | undefined) ?? (args.projectId as string | undefined);
-          if (!projectId) {
-            throw new Error('generate_video requires storyboardId (or projectId) of a saved pipeline project. Use produce_video to create storyboard + render in one step, or create_video to produce a storyboard first.');
-          }
-          const { getProject } = await import('@/lib/video/pipeline-project-service');
-          const project = await getProject(projectId);
-          if (!project) {
-            throw new Error(`Pipeline project ${projectId} not found.`);
-          }
-          if (!project.scenes || project.scenes.length === 0) {
-            throw new Error(`Pipeline project ${projectId} has no saved scenes — run produce_video first or create a storyboard at /content/video.`);
-          }
-          const avatarId = (args.avatarId as string | undefined) ?? project.avatarId ?? '';
-          const voiceId = (args.voiceId as string | undefined) ?? project.voiceId ?? '';
-          if (!avatarId || !voiceId) {
-            throw new Error(`generate_video needs avatarId+voiceId — pass via args or save them on project ${projectId}.`);
-          }
-          const aspectRatio = normalizeAspectRatio((args.aspectRatio as string | undefined) ?? project.brief?.aspectRatio);
-          const { generateAllScenes } = await import('@/lib/video/scene-generator');
-          const sceneResults = await generateAllScenes(project.scenes, avatarId, voiceId, aspectRatio, undefined, 'hedra');
-          const dispatched = sceneResults.filter((r) => r.providerVideoId && r.status !== 'failed');
-          const failed = sceneResults.filter((r) => r.status === 'failed');
-          content = JSON.stringify({
-            status: failed.length === 0 ? 'RENDERING' : 'PARTIAL_DISPATCH',
-            projectId,
-            scenesDispatched: dispatched.length,
-            scenesFailed: failed.length,
-            sceneGenerationIds: dispatched.map((r) => ({ sceneId: r.sceneId, providerVideoId: r.providerVideoId })),
-            provider: 'hedra',
-            message: failed.length === 0
-              ? `${dispatched.length} Hedra renders dispatched for project ${projectId}. Watch progress at /content/video?project=${projectId}.`
-              : `${failed.length} of ${project.scenes.length} dispatches failed: ${failed.map((f) => f.error ?? 'unknown').join('; ')}. ${dispatched.length} are rendering.`,
-            videoLibraryPath: '/content/video',
-            reviewLink: `/content/video?project=${projectId}`,
-          });
-          trackMissionStep(context, 'generate_video', failed.length === 0 ? 'COMPLETED' : 'FAILED', {
-            summary: `generate_video: ${dispatched.length}/${project.scenes.length} renders dispatched for project ${projectId}`,
-            durationMs: Date.now() - genStart,
-            toolResult: content,
-          });
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-          trackMissionStep(context, 'generate_video', 'FAILED', {
-            summary: `generate_video: FAILED — ${errorMsg}`,
-            durationMs: Date.now() - genStart,
-            error: errorMsg,
-          });
-          content = JSON.stringify({ error: errorMsg, specialist: 'VIDEO_SPECIALIST' });
-        }
-        break;
-      }
-
+      case 'generate_video':
       case 'get_video_status': {
-        const videoStatusStart = Date.now();
-        trackMissionStep(context, 'get_video_status', 'RUNNING', { toolArgs: args });
-
-        const { getHedraVideoStatus } = await import('@/lib/video/hedra-service');
-        const videoId = args.videoId as string;
-
-        const hedraStatus = await getHedraVideoStatus(videoId);
-
-        const statusMessage = hedraStatus.status === 'completed'
-          ? 'Video is ready! You can view it in the video library.'
-          : hedraStatus.status === 'failed'
-            ? `Video generation failed: ${hedraStatus.error ?? 'Unknown error'}`
-            : 'Video is still being generated. Check back in a few minutes.';
-
+        // The legacy storyboard render/poll pipeline has been removed. Video
+        // is now created in the Shot Plan tool (Content → Video), which renders
+        // shot-by-shot on fal / Seedance and hands the clips to the editor.
+        trackMissionStep(context, name, 'COMPLETED', { toolArgs: args });
         content = JSON.stringify({
-          status: hedraStatus.status === 'completed'
-            ? 'completed'
-            : hedraStatus.status === 'failed'
-              ? 'failed'
-              : 'processing',
-          videoId,
-          videoUrl: hedraStatus.videoUrl ?? null,
-          thumbnailUrl: null,
-          provider: 'hedra',
-          errorMessage: hedraStatus.error ?? null,
-          message: statusMessage,
+          status: 'MOVED',
+          message:
+            'Video rendering now happens in the Shot Plan tool at Content → Video — build the ' +
+            'shots there and they render on Seedance, then finish in the editor.',
           videoLibraryPath: '/content/video',
-        });
-
-        trackMissionStep(context, 'get_video_status', 'COMPLETED', {
-          summary: `Video status check: ${videoId}`,
-          durationMs: Date.now() - videoStatusStart,
-          toolResult: content,
+          reviewLink: '/content/video',
         });
         break;
       }
 
-      case 'produce_video': {
-        // Full pipeline: VIDEO_SPECIALIST.script_to_storyboard → persist as
-        // a pipeline project → dispatch render job through video-job-service
-        // (which the worker picks up and drives through Hedra).
-        const produceStart = Date.now();
-        trackMissionStep(context, 'produce_video', 'RUNNING', { toolArgs: args });
-        try {
-          const description = (args.description as string | undefined)
-            ?? (args.prompt as string | undefined)
-            ?? (args.script as string | undefined);
-          if (!description) {
-            throw new Error('produce_video requires `description` (or `prompt`/`script`) describing what the video is about.');
-          }
-
-          const platform = normalizeTargetPlatform(args.platform as string | undefined);
-          const videoType = normalizeVideoType(args.videoType as string | undefined);
-          const style = (args.vibe as string | undefined) ?? (args.style as string | undefined) ?? 'documentary';
-          const duration = args.duration ? Number(args.duration) : 30;
-          const title = (args.title as string | undefined) ?? description.slice(0, 80);
-          const aspectRatio = normalizeAspectRatio(args.aspectRatio as string | undefined);
-          const resolution = normalizeResolution(args.resolution as string | undefined);
-
-          // Step 1 — generate storyboard via the real VIDEO_SPECIALIST.
-          const { getVideoSpecialist } = await import('@/lib/agents/content/video/specialist');
-          const specialist = getVideoSpecialist();
-          await specialist.initialize();
-          const specialistResult = await specialist.execute({
-            id: `produce_video_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'VIDEO_SPECIALIST',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: {
-              action: 'script_to_storyboard' as const,
-              script: description,
-              brief: title,
-              platform,
-              style,
-              targetDuration: duration,
-              targetAudience: (args.audience as string | undefined) ?? undefined,
-              callToAction: (args.callToAction as string | undefined) ?? undefined,
-            },
-            requiresResponse: true,
-            traceId: `trace_produce_video_${Date.now()}`,
-          });
-          if (specialistResult.status !== 'COMPLETED' || !specialistResult.data) {
-            throw new Error(`VIDEO_SPECIALIST storyboard generation failed: ${specialistResult.errors?.join('; ') ?? 'no data returned'}`);
-          }
-          const storyboardData = specialistResult.data as Record<string, unknown>;
-          const scenesRaw = storyboardData.scenes;
-          if (!Array.isArray(scenesRaw) || scenesRaw.length === 0) {
-            throw new Error('VIDEO_SPECIALIST returned no scenes — cannot dispatch render.');
-          }
-
-          // Step 2 — persist as a pipeline project so the renderer has an
-          // addressable storyboardId.
-          const { createProject, saveApprovedStoryboard } = await import('@/lib/video/pipeline-project-service');
-          const proj = await createProject(
-            {
-              description,
-              videoType,
-              platform,
-              duration,
-              aspectRatio,
-              resolution,
-              targetAudience: (args.audience as string | undefined),
-              callToAction: (args.callToAction as string | undefined),
-            },
-            'JASPER_ORCHESTRATOR',
-          );
-          if (!proj.success || !proj.projectId) {
-            throw new Error(`Failed to persist storyboard as a pipeline project: ${proj.error ?? 'unknown error'}`);
-          }
-
-          // Resolve avatar + voice from args, falling back to platform defaults.
-          const { getVideoDefaults } = await import('@/lib/video/video-defaults-service');
-          const defaults = await getVideoDefaults();
-          const avatarId = (args.avatarId as string | undefined) ?? defaults.avatarId ?? '';
-          const avatarName = (args.avatarName as string | undefined) ?? defaults.avatarName ?? 'default';
-          const voiceId = (args.voiceId as string | undefined) ?? defaults.voiceId ?? '';
-          const voiceName = (args.voiceName as string | undefined) ?? defaults.voiceName ?? 'default';
-          if (!avatarId || !voiceId) {
-            throw new Error('produce_video requires avatarId+voiceId (pass via args) or saved video defaults. Use list_avatars to pick one, or set defaults at /content/video/defaults.');
-          }
-
-          // saveApprovedStoryboard takes typed PipelineScene[] — narrow it.
-          const scenes = scenesRaw as Parameters<typeof saveApprovedStoryboard>[1];
-          await saveApprovedStoryboard(proj.projectId, scenes, avatarId, avatarName, voiceId, voiceName);
-
-          // Step 3 — dispatch Hedra renders for each scene. generateAllScenes
-          // submits all scenes to Hedra (concurrency 3, staggered for TTS rate
-          // limits) and returns per-scene providerVideoIds. Renders complete
-          // async on Hedra's side; the operator polls via get_video_status or
-          // watches progress at /content/video.
-          const { generateAllScenes } = await import('@/lib/video/scene-generator');
-          const sceneResults = await generateAllScenes(
-            scenes,
-            avatarId,
-            voiceId,
-            aspectRatio,
-            undefined,
-            'hedra',
-          );
-
-          const dispatched = sceneResults.filter((r) => r.providerVideoId && r.status !== 'failed');
-          const failed = sceneResults.filter((r) => r.status === 'failed');
-
-          content = JSON.stringify({
-            status: failed.length === 0 ? 'RENDERING' : 'PARTIAL_DISPATCH',
-            projectId: proj.projectId,
-            storyboardScenes: scenes.length,
-            scenesDispatched: dispatched.length,
-            scenesFailed: failed.length,
-            sceneGenerationIds: dispatched.map((r) => ({ sceneId: r.sceneId, providerVideoId: r.providerVideoId })),
-            provider: 'hedra',
-            message: failed.length === 0
-              ? `Storyboard (${scenes.length} scenes) generated and ${dispatched.length} Hedra renders dispatched. Renders complete async — typical 1-5 min per scene. Watch progress at /content/video?project=${proj.projectId} or call get_video_status with one of the providerVideoIds.`
-              : `Storyboard (${scenes.length} scenes) generated, but ${failed.length} of ${scenes.length} scene dispatches failed: ${failed.map((f) => f.error ?? 'unknown').join('; ')}. ${dispatched.length} are rendering.`,
-            videoLibraryPath: '/content/video',
-            reviewLink: `/content/video?project=${proj.projectId}`,
-          });
-          trackMissionStep(context, 'produce_video', failed.length === 0 ? 'COMPLETED' : 'FAILED', {
-            summary: failed.length === 0
-              ? `produce_video: storyboard (${scenes.length} scenes) saved as project ${proj.projectId}; ${dispatched.length} Hedra renders dispatched`
-              : `produce_video: ${failed.length}/${scenes.length} scene dispatches failed`,
-            durationMs: Date.now() - produceStart,
-            toolResult: content,
-          });
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-          trackMissionStep(context, 'produce_video', 'FAILED', {
-            summary: `produce_video: FAILED — ${errorMsg}`,
-            durationMs: Date.now() - produceStart,
-            error: errorMsg,
-          });
-          content = JSON.stringify({ error: errorMsg, specialist: 'VIDEO_SPECIALIST' });
-        }
-        break;
-      }
-
+      case 'produce_video':
       case 'assemble_video': {
-        // Assemble already-rendered scenes into a single concatenated video.
-        // The /api/video/assemble route owns the FFmpeg concat + watermark
-        // pipeline; this handler invokes it server-side. Requires a project
-        // whose scenes have completed Hedra renders (use generate_video or
-        // produce_video first, then poll until scenes are ready).
-        const assembleStart = Date.now();
-        trackMissionStep(context, 'assemble_video', 'RUNNING', { toolArgs: args });
-        try {
-          const projectId = (args.storyboardId as string | undefined) ?? (args.projectId as string | undefined);
-          if (!projectId) {
-            throw new Error('assemble_video requires storyboardId (or projectId) of a saved pipeline project with already-rendered scenes.');
-          }
-          const { getProject } = await import('@/lib/video/pipeline-project-service');
-          const project = await getProject(projectId);
-          if (!project) {
-            throw new Error(`Pipeline project ${projectId} not found.`);
-          }
-          // Collect Hedra generationIds from each scene's provider data.
-          const sceneGenerationIds = (project.scenes ?? [])
-            .map((s) => (s as unknown as { providerVideoId?: string }).providerVideoId)
-            .filter((id): id is string => typeof id === 'string' && id.length > 0);
-          if (sceneGenerationIds.length === 0) {
-            throw new Error(`No rendered scenes on project ${projectId}. Run generate_video or produce_video first, then wait for scenes to finish rendering.`);
-          }
-          // Resolve each scene's current Hedra status into a downloadable URL.
-          const { getHedraVideoStatus } = await import('@/lib/video/hedra-service');
-          const sceneUrls: string[] = [];
-          for (const genId of sceneGenerationIds) {
-            const status = await getHedraVideoStatus(genId);
-            if (status.status !== 'completed' || !status.videoUrl) {
-              throw new Error(`Scene ${genId} is not ready (status=${status.status}). Wait for all scenes to complete before assembling.`);
-            }
-            sceneUrls.push(status.videoUrl);
-          }
-          // Run FFmpeg concat using the same shared utilities as /api/video/assemble.
-          const { createWorkDir, downloadVideo, uploadToStorage, cleanupWorkDir, buildSmartConcatArgs, runFfmpeg, getStoragePath } = await import('@/lib/video/ffmpeg-utils');
-          const workDir = await createWorkDir();
-          const transitionType: 'cut' | 'fade' | 'dissolve' =
-            (args.transitionType as 'cut' | 'fade' | 'dissolve' | undefined) ?? project.transitionType ?? 'fade';
-          const outputResolution = normalizeResolution(args.outputResolution as string | undefined);
-          const [outWidth, outHeight] = outputResolution === '720p'
-            ? [1280, 720]
-            : outputResolution === '4k'
-              ? [3840, 2160]
-              : [1920, 1080];
-          try {
-            const localScenePaths: string[] = [];
-            for (let i = 0; i < sceneUrls.length; i++) {
-              const localPath = `${workDir}/scene-${i}.mp4`;
-              await downloadVideo(sceneUrls[i], localPath);
-              localScenePaths.push(localPath);
-            }
-            const outputPath = `${workDir}/assembled.mp4`;
-            const ffmpegArgs = await buildSmartConcatArgs(localScenePaths, outputPath, transitionType, outWidth, outHeight);
-            await runFfmpeg(ffmpegArgs);
-            const storagePath = getStoragePath(projectId, 'assembled');
-            const finalUrl = await uploadToStorage(outputPath, storagePath);
-            content = JSON.stringify({
-              status: 'COMPLETED',
-              projectId,
-              finalVideoUrl: finalUrl,
-              sceneCount: sceneUrls.length,
-              transitionType,
-              outputResolution,
-              message: `Assembled ${sceneUrls.length} scenes into final video. Available at /content/video?project=${projectId}.`,
-              videoLibraryPath: '/content/video',
-              reviewLink: `/content/video?project=${projectId}`,
-            });
-            trackMissionStep(context, 'assemble_video', 'COMPLETED', {
-              summary: `assemble_video: ${sceneUrls.length} scenes concatenated → ${finalUrl}`,
-              durationMs: Date.now() - assembleStart,
-              toolResult: content,
-            });
-          } finally {
-            await cleanupWorkDir(workDir);
-          }
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-          trackMissionStep(context, 'assemble_video', 'FAILED', {
-            summary: `assemble_video: FAILED — ${errorMsg}`,
-            durationMs: Date.now() - assembleStart,
-            error: errorMsg,
-          });
-          content = JSON.stringify({ error: errorMsg, specialist: 'VIDEO_SPECIALIST' });
-        }
+        // The legacy storyboard render + FFmpeg-assemble pipeline has been
+        // removed. End-to-end video creation now lives in the Shot Plan tool
+        // (Content → Video): it writes a shot plan, renders each shot on fal /
+        // Seedance, and hands the clips to the editor for final assembly.
+        trackMissionStep(context, name, 'COMPLETED', { toolArgs: args });
+        content = JSON.stringify({
+          status: 'MOVED',
+          message:
+            'Producing and assembling videos now happens in the Shot Plan tool at Content → Video — ' +
+            'build the shots there (they render on Seedance) and assemble the final cut in the editor.',
+          videoLibraryPath: '/content/video',
+          reviewLink: '/content/video',
+        });
         break;
       }
 
@@ -4967,7 +4612,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             return {
               id: doc.id,
               name: (data.name as string) ?? 'Unnamed',
-              source: (data.source as string) ?? 'hedra',
+              source: (data.source as string) ?? 'custom',
               role: (data.role as string) ?? 'presenter',
               voiceId: (data.voiceId as string | null) ?? null,
               voiceName: (data.voiceName as string | null) ?? null,

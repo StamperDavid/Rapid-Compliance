@@ -115,7 +115,7 @@ async function main() {
       const data = orgSnap.data();
       const keysToTest = {
         'openrouter': data?.ai?.openrouterApiKey,
-        'hedra': data?.video?.hedra?.apiKey,
+        'fal': data?.imageGen?.fal?.apiKey,
         'elevenlabs': data?.voice?.elevenlabs?.apiKey,
         'unrealSpeech': data?.voice?.unrealSpeech?.apiKey,
       };

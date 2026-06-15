@@ -2,6 +2,29 @@
 
 ---
 
+# 🔴 Jun 15 2026 — HEDRA FULLY REMOVED (video engine = fal / Seedance via Shot Plan)
+
+Per the owner's go-ahead, the entire legacy Hedra pipeline was removed. The live video flow is
+now the **Shot Plan** tool (Content → Video) → renders each shot on **fal / Seedance** (last-frame
+chaining) → hands clips to the standalone editor. Deleted: `hedra-service.ts`,
+`hedra-capability-service.ts`, `hedra-prompt-agent.ts`, `hedra-prompt-translator.ts`,
+`scene-generator.ts`, the `HEDRA_SPECIALIST` agent, the old wizard steps
+(`StepGeneration`/`StepAssembly`/`StepPostProduction`/`StepPublish` + `SceneProgressCard`/
+`EngineSelector`/`HedraCharacterBrowser`), and the routes `/api/video/{generate-scenes, poll-scenes,
+regenerate-scene, scene-review, scene-preview/save, decompose, calendar/generate-all, assemble,
+stream, avatar-profiles/sync-hedra, avatar-profiles/hedra-characters}`. `/api/content/video/generate`
+is inert (redirects to Shot Plan). Image gen + Studio image/edit tools repointed to fal (Flux +
+Flux Kontext); image auto-select defaults to fal. The `hedra` API-key field → **fal.ai (Seedance)**.
+Jasper's `produce_video`/`generate_video`/`assemble_video`/`get_video_status` redirect to the Shot
+Plan tool. tsc + lint clean. **Everything below this entry that references Hedra is historical** —
+those notes document the work as it happened and are superseded by this entry.
+
+**OPEN (flagged to owner):** the Studio composer's "Video" tool and Jasper's in-chat video tools were
+stubbed (they point to the Shot Plan tool) rather than rewired to Seedance — decide whether to fully
+wire them to Seedance or leave them pointing at the Shot Plan UI.
+
+---
+
 # 🔴 RESUME HERE — Jun 14 2026 — SHOT DOC: adaptive cinematic production system (SPEC — awaiting owner sign-off)
 
 **One-line:** Recreate & exceed OpenArt Smart Shot's adaptive production sheet, with NO length

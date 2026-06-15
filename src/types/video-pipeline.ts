@@ -94,7 +94,7 @@ export const TARGET_PLATFORM_LABELS: Record<TargetPlatform, string> = {
 // Engine Types
 // ============================================================================
 
-export type VideoEngineId = 'hedra' | 'fal';
+export type VideoEngineId = 'fal';
 
 // ============================================================================
 // Scene Types
@@ -108,7 +108,7 @@ export type SceneStatus =
   | 'completed'
   | 'failed';
 
-export type VoiceProviderId = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
+export type VoiceProviderId = 'elevenlabs' | 'unrealspeech' | 'custom';
 
 /**
  * A piece of uploaded context/reference material attached to a scene.
@@ -154,7 +154,7 @@ export interface PipelineScene {
   voiceId: string | null; // Per-scene voice override (null = use project default)
   voiceProvider: VoiceProviderId | null; // Per-scene voice provider (null = use project default)
   duration: number; // seconds
-  engine: VideoEngineId | null; // null = defaults to hedra
+  engine: VideoEngineId | null; // null = defaults to fal
   backgroundPrompt: string | null; // Composed environment prompt fed to generation
   cinematicConfig?: CinematicConfig; // Cinematic presets from Creative Studio (Look & Camera)
   status: SceneStatus;

@@ -115,7 +115,7 @@ export interface UnifiedMediaAsset {
   createdBy: string;
   brandDnaApplied: boolean;
   /**
-   * Lifecycle state for async-generated assets (e.g. Hedra video, where the
+   * Lifecycle state for async-generated assets (e.g. AI video, where the
    * generation API returns immediately and the actual video is rendered
    * server-side over ~30-60s). When omitted the asset is treated as ready.
    *   pending    — placeholder created, provider has accepted the job

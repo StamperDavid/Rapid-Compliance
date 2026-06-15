@@ -140,7 +140,6 @@ function makeFirestoreDoc(
     voiceId: string | null;
     voiceName: string | null;
     voiceProvider: string | null;
-    hedraCharacterId: string | null;
     description: string | null;
     isDefault: boolean;
     isFavorite: boolean;
@@ -166,7 +165,6 @@ function makeFirestoreDoc(
       voiceId: null,
       voiceName: null,
       voiceProvider: null,
-      hedraCharacterId: null,
       description: null,
       isDefault: false,
       isFavorite: false,
@@ -352,21 +350,6 @@ describe('getAvatarProfile', () => {
     const profile = await getAvatarProfile(PROFILE_ID);
 
     expect(profile).toBeNull();
-  });
-
-  it('applies backward-compat hedraAssetId → hedraCharacterId mapping', async () => {
-    const doc = makeFirestoreDoc(PROFILE_ID);
-    const originalData = doc.data();
-    mockGet.mockResolvedValueOnce({
-      exists: true,
-      id: PROFILE_ID,
-      // Simulate a legacy document that uses hedraAssetId instead of hedraCharacterId
-      data: () => ({ ...originalData, hedraCharacterId: null, hedraAssetId: 'hedra-legacy-id' }),
-    });
-
-    const profile = await getAvatarProfile(PROFILE_ID);
-
-    expect(profile?.hedraCharacterId).toBe('hedra-legacy-id');
   });
 
   it('infers tier from greenScreenClips when tier field is absent', async () => {

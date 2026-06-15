@@ -1,13 +1,13 @@
 /**
  * Video Generation Types
- * Types for AI Video Factory - Hedra Character-3 integration
+ * Types for AI Video Factory - fal / Seedance integration
  */
 
 // ============================================================================
 // Video Generation Request/Response Types
 // ============================================================================
 
-export type VideoProvider = 'hedra';
+export type VideoProvider = 'fal';
 export type VideoStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:3';
 export type VideoResolution = '720p' | '1080p' | '4k';
@@ -67,8 +67,8 @@ export interface VideoGenerationResponse {
   creditsUsed?: number;
 }
 
-/** TTS / voice provider identifier — includes 'hedra' for voice catalog display */
-export type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
+/** TTS / voice provider identifier */
+export type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom';
 
 export interface VideoVoice {
   id: string;
