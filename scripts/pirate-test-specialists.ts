@@ -118,6 +118,13 @@ import { getSalesChatSpecialist } from '../src/lib/agents/sales-chat/specialist'
 import { getPromptEngineer } from '../src/lib/agents/prompt-engineer/specialist';
 import type { BaseSpecialist } from '../src/lib/agents/base-specialist';
 import type { AgentMessage, AgentReport } from '../src/lib/agents/types';
+// ── LLM-only run targets (Jun 16 2026): agents whose GM-driven LLM step is not
+//    reachable via the generic execute() factory path, but whose prose IS
+//    grep-able once the prompt-authoring/copy step is exercised directly. ──
+import { __internal as assetGeneratorInternal } from '../src/lib/agents/builder/assets/specialist';
+import { getSchedulingSpecialist } from '../src/lib/agents/operations/scheduling/specialist';
+import { OpenRouterProvider } from '../src/lib/ai/openrouter-provider';
+import { getActiveJasperGoldenMaster, invalidateJasperGMCache } from '../src/lib/orchestrator/jasper-golden-master';
 
 const PLATFORM_ID = 'rapid-compliance-root';
 const COLLECTION = `organizations/${PLATFORM_ID}/specialistGoldenMasters`;
@@ -148,13 +155,53 @@ The user prompt will specify a task. Execute it AS a pirate would. Output ONLY t
 
 Aye, ye understand? Arrr, ye best. Now get to plunderin'.`;
 
+/**
+ * APPEND variant — for agents with a complex, deeply-nested output schema whose
+ * structural rules live in the real GM systemPrompt (e.g. SHOT_PLAN_PLANNER's
+ * layout block-type enums + object-shaped lookBible/floorPlan). Full-replace
+ * pirate prompts throw those rules away and the strict schema rejects the
+ * output. Appending keeps the agent's REAL instructions and only injects the
+ * dialect — a hardcoded fake still cannot comply, so it remains a valid
+ * fake-detector while letting complex-schema agents stay schema-valid.
+ */
+const PIRATE_APPEND = `
+
+## ADDITIONAL TEST DIRECTIVE — PIRATE DIALECT (overrides voice only)
+In ADDITION to every instruction above, write every free-text field VALUE in
+exaggerated pirate dialect — use "arrr", "matey", "ye", "yer", "aye",
+"landlubber", "doubloon", "plunder", "shiver me timbers", "me hearties"
+heavily. Keep ALL structure exactly as specified above: obey every schema
+shape, enum value, number, hex code, date, URL, and array/length limit — only
+the human-readable text wording becomes pirate. Do not break the JSON shape.`;
+
 interface TestCase {
   specialistId: string;
   department: string;
   gmDocId: string;
-  specialistFactory: () => BaseSpecialist;
-  buildPayload: () => Record<string, unknown>;
-  extractProseFields: (report: AgentReport) => string[];
+  /**
+   * Standard execute()-based path. Required UNLESS `llmOnlyRun` is provided.
+   * When `llmOnlyRun` is set, the harness skips message-building + execute()
+   * entirely and uses the returned prose strings directly.
+   */
+  specialistFactory?: () => BaseSpecialist;
+  buildPayload?: () => Record<string, unknown>;
+  extractProseFields?: (report: AgentReport) => string[];
+  /**
+   * LLM-only override: exercise the agent's GM-driven LLM step directly and
+   * return the prose strings to grep for pirate markers. Used for agents whose
+   * LLM path is not reachable through the generic execute() factory (image-
+   * first asset planning, plain-function planners, or CRM/meeting-gated copy).
+   * The GM swap + cache invalidation + restore + ledger write are identical to
+   * the standard path; only the "produce prose" step differs.
+   */
+  llmOnlyRun?: () => Promise<string[]>;
+  /**
+   * How the pirate prompt is applied. 'replace' (default) overwrites the GM
+   * systemPrompt entirely. 'append' keeps the real GM and appends only the
+   * dialect directive — required for agents whose strict output schema rules
+   * live in the real prompt (e.g. SHOT_PLAN_PLANNER).
+   */
+  pirateMode?: 'replace' | 'append';
 }
 
 const PIRATE_MARKERS = [
@@ -641,11 +688,13 @@ const TESTS: TestCase[] = [
     extractProseFields: extractAllProse,
   },
   // ═══════════════════════════════════════════════════════════════════
-  // COVERAGE EXPANSION (Jun 16 2026) — all remaining LLM-backed specialists
-  // Excluded by design (not pirate-testable via execute()):
-  //   ASSET_GENERATOR  — generates images, not prose (image-API gated)
-  //   SHOT_PLAN_PLANNER — no execute() factory; planner.ts exports functions
-  //   SCHEDULING_SPECIALIST — LLM call gated behind real CRM/meeting I/O
+  // COVERAGE EXPANSION (Jun 16 2026) — all remaining LLM-backed specialists.
+  // The three agents previously excluded by design are now covered via the
+  // `llmOnlyRun` override (defined at the BOTTOM of this array): ASSET_GENERATOR,
+  // SHOT_PLAN_PLANNER, and SCHEDULING_SPECIALIST. Each exercises its GM-driven
+  // LLM step directly (prompt-authoring / plan generation / meeting copy) and
+  // returns the prose strings for marker-grepping, since their LLM path is not
+  // reachable through the generic execute() factory.
   // ═══════════════════════════════════════════════════════════════════
   // ── Marketing (14) ──
   {
@@ -1118,6 +1167,249 @@ const TESTS: TestCase[] = [
     }),
     extractProseFields: extractAllProse,
   },
+  // ═══════════════════════════════════════════════════════════════════
+  // LLM-ONLY OVERRIDES (Jun 16 2026) — agents whose GM-driven LLM step is not
+  // reachable via the generic execute() factory. Each runs the prompt-authoring
+  // / plan / copy step directly and returns its prose for marker-grepping. The
+  // GM swap + cache invalidation + restore + ledger write are handled by the
+  // shared runOneTest() machinery exactly as for the execute()-based tests.
+  // All three use specialistGoldenMasters, so findActiveGM() reaches them.
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    // ASSET_GENERATOR — verifies the LLM prompt-AUTHORING step (no image
+    // generation). loadGMConfig reads the (now-pirate) GM; we call OpenRouter
+    // ourselves with the real system prompt + the real user prompt, parse the
+    // plan JSON, and grep the authored strategies/prompts/altText/rationales.
+    specialistId: 'ASSET_GENERATOR',
+    department: 'Builder',
+    gmDocId: `sgm_asset_generator_${INDUSTRY_KEY}_v1`,
+    llmOnlyRun: async (): Promise<string[]> => {
+      const REQ = {
+        action: 'generate_asset_package' as const,
+        brandName: 'SalesVelocity.ai',
+        brandStyle: 'modern, dark UI with blue accent, enterprise-credible',
+        industry: 'B2B SaaS sales automation',
+        brandColors: { primary: '#1E40AF', secondary: '#0F172A', accent: '#38BDF8' },
+        pages: [{ id: 'home', name: 'Home' }],
+        tagline: 'AI agents that run your sales pipeline',
+        companyDescription:
+          'An AI agent swarm that qualifies leads, runs outreach, and drafts proposals.',
+      };
+      const ctx = await assetGeneratorInternal.loadGMConfig('saas_sales_ops');
+      const userPrompt = assetGeneratorInternal.buildGenerateAssetPackageUserPrompt(REQ);
+      const provider = new OpenRouterProvider(PLATFORM_ID);
+      const resp = await provider.chat({
+        model: ctx.gm.model,
+        messages: [
+          { role: 'system', content: ctx.resolvedSystemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: ctx.gm.temperature,
+        maxTokens: ctx.gm.maxTokens,
+      });
+      const parsed: unknown = JSON.parse(
+        assetGeneratorInternal.stripJsonFences(resp.content ?? ''),
+      );
+      const out: string[] = [];
+      collectStrings(parsed, out);
+      return out;
+    },
+  },
+  {
+    // SHOT_PLAN_PLANNER — planner.ts exports plain functions (no execute()).
+    // generateShotPlan loads its GM via getActiveSpecialistGMByIndustry, so the
+    // standard GM swap reaches it. userId 'pirate_test_user' yields an empty
+    // cast (read-only, no writes).
+    specialistId: 'SHOT_PLAN_PLANNER',
+    department: 'Content',
+    gmDocId: `sgm_shot_plan_planner_${INDUSTRY_KEY}_v1`,
+    // Append-mode: the ShotPlan schema is deeply nested (layout block-type enums,
+    // object-shaped lookBible/floorPlan) and those rules live in the real GM.
+    // Full-replace pirate prompts strip them and the strict schema rejects the
+    // output, so keep the real GM and inject only the dialect.
+    pirateMode: 'append',
+    llmOnlyRun: async (): Promise<string[]> => {
+      const { generateShotPlan } = await import('../src/lib/agents/content/shot-plan/planner');
+      const plan = await generateShotPlan({
+        brief:
+          'A 30-second product demo for SalesVelocity.ai: AI agents qualify leads, run outreach, and draft proposals so reps only talk to hot prospects. Dark UI, blue accent, confident and modern.',
+        userId: 'pirate_test_user',
+        shotCount: 2,
+        title: 'SalesVelocity Agent Swarm Demo',
+      });
+      const out: string[] = [];
+      collectStrings(plan, out);
+      return out;
+    },
+  },
+  {
+    // SCHEDULING_SPECIALIST — execute()-based, but its single LLM call (brand-
+    // voiced meeting title + description) only fires after real CRM + meeting
+    // I/O. This run seeds disposable docs, suppresses Zoom (autoCreateZoom:false),
+    // invokes create_meeting, extracts the prose, then deletes EVERY doc it
+    // touched in a finally block. CONFIRMED SAFE: scheduler-engine.ts gates the
+    // entire createZoomMeeting() call behind `if (schedulerConfig.autoCreateZoom)`
+    // (line 109), so no real Zoom meeting is created.
+    specialistId: 'SCHEDULING_SPECIALIST',
+    department: 'Operations',
+    gmDocId: `sgm_scheduling_specialist_${INDUSTRY_KEY}_v1`,
+    llmOnlyRun: async (): Promise<string[]> => {
+      const db = admin.firestore();
+      const ORG_BASE = 'organizations/rapid-compliance-root';
+      const LEAD_ID = 'L_pirate_sched_test';
+      const SCHED_ID = 'pirate_test_sched';
+      // A concrete far-future weekday (Tuesday, 2027-06-15) at 15:00 UTC.
+      const START_TIME = '2027-06-15T15:00:00Z';
+
+      const leadRef = db.doc(`${ORG_BASE}/leads/${LEAD_ID}`);
+      const schedRef = db.doc(`${ORG_BASE}/meetingSchedulers/${SCHED_ID}`);
+      const bookingRef = db.doc(`${ORG_BASE}/settings/booking`);
+
+      // Save the original booking config so we can restore it (or delete if none).
+      const originalBookingSnap = await bookingRef.get();
+      const originalBooking = originalBookingSnap.exists ? originalBookingSnap.data() : null;
+
+      // All days enabled, 00:00-23:59, so the slot passes availability validation
+      // regardless of the server's local timezone.
+      const allDayHours = {
+        monday: { enabled: true, start: '00:00', end: '23:59' },
+        tuesday: { enabled: true, start: '00:00', end: '23:59' },
+        wednesday: { enabled: true, start: '00:00', end: '23:59' },
+        thursday: { enabled: true, start: '00:00', end: '23:59' },
+        friday: { enabled: true, start: '00:00', end: '23:59' },
+        saturday: { enabled: true, start: '00:00', end: '23:59' },
+        sunday: { enabled: true, start: '00:00', end: '23:59' },
+      };
+
+      let createdMeetingId: string | undefined;
+
+      try {
+        // SETUP — disposable lead, scheduler config, and an all-days booking config.
+        await leadRef.set({
+          email: 'pirate-test@example.com',
+          firstName: 'Pirate',
+          lastName: 'Test',
+          createdAt: new Date().toISOString(),
+        });
+        await schedRef.set({
+          id: SCHED_ID,
+          name: 'Pirate Test Scheduler',
+          duration: 30,
+          bufferBefore: 0,
+          bufferAfter: 0,
+          assignmentType: 'manual',
+          assignedUsers: ['operator'],
+          autoCreateZoom: false,
+          sendReminders: false,
+          reminderTimes: [],
+          workingHours: allDayHours,
+        });
+        await bookingRef.set({
+          timezone: 'America/Denver',
+          defaultMeetingDuration: 30,
+          workingHours: allDayHours,
+        });
+
+        const specialist = getSchedulingSpecialist();
+        await specialist.initialize();
+        const msg: AgentMessage = {
+          id: `pirate_test_SCHEDULING_SPECIALIST_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'PIRATE_TEST_HARNESS',
+          to: 'SCHEDULING_SPECIALIST',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            action: 'create_meeting',
+            startTime: START_TIME,
+            durationMinutes: 30,
+            attendeeRef: { type: 'lead', id: LEAD_ID },
+            schedulerConfigId: SCHED_ID,
+          },
+          requiresResponse: true,
+          traceId: `pirate_trace_${Date.now()}`,
+        };
+
+        const report = await specialist.execute(msg);
+        if (report.status !== 'COMPLETED') {
+          const errMsg = (report.errors ?? []).join(' | ') || 'no errors in report';
+          console.log(`    ✗ scheduling create_meeting failed: ${errMsg.slice(0, 300)}`);
+          return [];
+        }
+        const data = report.data as { id?: string } | null;
+        createdMeetingId = typeof data?.id === 'string' ? data.id : undefined;
+        return extractAllProse(report);
+      } finally {
+        // TEARDOWN — leave NO residue.
+        // 1. Delete the meeting record if one was created.
+        if (createdMeetingId) {
+          try {
+            await db.doc(`${ORG_BASE}/meetings/${createdMeetingId}`).delete();
+          } catch (e) {
+            console.error('    ✗ teardown: failed to delete meeting', e);
+          }
+        }
+        // 2. Delete any activity docs spawned for the disposable lead.
+        try {
+          const activitiesSnap = await db.collection(`${ORG_BASE}/activities`).get();
+          const deletions: Array<Promise<FirebaseFirestore.WriteResult>> = [];
+          for (const doc of activitiesSnap.docs) {
+            const a = doc.data() as { relatedTo?: Array<{ entityId?: string }> };
+            const touchesLead = Array.isArray(a.relatedTo)
+              && a.relatedTo.some((r) => r?.entityId === LEAD_ID);
+            if (touchesLead) {
+              deletions.push(doc.ref.delete());
+            }
+          }
+          await Promise.all(deletions);
+        } catch (e) {
+          console.error('    ✗ teardown: failed to clean activities', e);
+        }
+        // 3. Delete any scheduledReminders the engine may have written (none with
+        //    sendReminders:false, but be thorough).
+        try {
+          const remSnap = await db.collection(`${ORG_BASE}/scheduledReminders`).get();
+          const remDeletions: Array<Promise<FirebaseFirestore.WriteResult>> = [];
+          for (const doc of remSnap.docs) {
+            const r = doc.data() as { meetingId?: string };
+            if (createdMeetingId && r.meetingId === createdMeetingId) {
+              remDeletions.push(doc.ref.delete());
+            }
+          }
+          await Promise.all(remDeletions);
+        } catch (e) {
+          console.error('    ✗ teardown: failed to clean scheduledReminders', e);
+        }
+        // 4. Delete the round-robin state subdoc + disposable scheduler config.
+        try {
+          await db.doc(`${ORG_BASE}/meetingSchedulers/${SCHED_ID}/state/roundRobin`).delete();
+        } catch {
+          // ignore — only present for round-robin assignment
+        }
+        try {
+          await schedRef.delete();
+        } catch (e) {
+          console.error('    ✗ teardown: failed to delete scheduler config', e);
+        }
+        // 5. Delete the disposable lead.
+        try {
+          await leadRef.delete();
+        } catch (e) {
+          console.error('    ✗ teardown: failed to delete lead', e);
+        }
+        // 6. Restore the original booking config (or delete if none existed).
+        try {
+          if (originalBooking) {
+            await bookingRef.set(originalBooking);
+          } else {
+            await bookingRef.delete();
+          }
+        } catch (e) {
+          console.error('    ✗ teardown: failed to restore booking config', e);
+        }
+      }
+    },
+  },
 ];
 
 async function findActiveGM(
@@ -1192,42 +1484,64 @@ async function runOneTest(
   };
 
   try {
-    // Swap to pirate
-    await overwritePrompt(docRef, PIRATE_PROMPT);
+    // Swap to pirate. 'append' keeps the real GM (its strict schema rules) and
+    // only injects the dialect; 'replace' (default) overwrites entirely.
+    const swappedPrompt = tc.pirateMode === 'append'
+      ? `${originalPrompt}${PIRATE_APPEND}`
+      : PIRATE_PROMPT;
+    await overwritePrompt(docRef, swappedPrompt);
     invalidateIndustryGMCache(tc.specialistId, INDUSTRY_KEY);
-    console.log(`    ✓ pirate prompt written (${PIRATE_PROMPT.length} chars), cache cleared`);
+    console.log(`    ✓ pirate prompt written (${swappedPrompt.length} chars, mode=${tc.pirateMode ?? 'replace'}), cache cleared`);
 
-    // Call specialist
-    const specialist = tc.specialistFactory();
-    await specialist.initialize();
-    const msg: AgentMessage = {
-      id: `pirate_test_${tc.specialistId}_${Date.now()}`,
-      timestamp: new Date(),
-      from: 'PIRATE_TEST_HARNESS',
-      to: tc.specialistId,
-      type: 'COMMAND',
-      priority: 'NORMAL',
-      payload: tc.buildPayload(),
-      requiresResponse: true,
-      traceId: `pirate_trace_${Date.now()}`,
-    };
+    let proseFields: string[];
 
-    console.log(`    → calling execute()...`);
-    const report = await specialist.execute(msg);
-    console.log(`    ← report status: ${report.status}`);
-
-    if (report.status !== 'COMPLETED') {
-      const errMsg = (report.errors ?? []).join(' | ') || 'no errors in report';
-      result = {
-        ...result,
-        status: 'FAIL',
-        error: `specialist returned status=${report.status}: ${errMsg}`,
+    if (tc.llmOnlyRun) {
+      // LLM-only path: the agent's GM-driven prose step is exercised directly
+      // (no AgentMessage, no execute()). The function returns the prose strings
+      // and does its own disposable-doc setup/teardown where needed.
+      console.log(`    → running llmOnlyRun() (GM-driven LLM step, no execute())...`);
+      proseFields = await tc.llmOnlyRun();
+      console.log(`    ← llmOnlyRun returned ${proseFields.length} prose strings`);
+    } else {
+      // Standard execute()-based path.
+      if (!tc.specialistFactory || !tc.buildPayload) {
+        throw new Error(
+          `TestCase ${tc.specialistId} has neither llmOnlyRun nor specialistFactory+buildPayload`,
+        );
+      }
+      const specialist = tc.specialistFactory();
+      await specialist.initialize();
+      const msg: AgentMessage = {
+        id: `pirate_test_${tc.specialistId}_${Date.now()}`,
+        timestamp: new Date(),
+        from: 'PIRATE_TEST_HARNESS',
+        to: tc.specialistId,
+        type: 'COMMAND',
+        priority: 'NORMAL',
+        payload: tc.buildPayload(),
+        requiresResponse: true,
+        traceId: `pirate_trace_${Date.now()}`,
       };
-      console.log(`    ✗ SPECIALIST FAILED: ${errMsg.slice(0, 300)}`);
-      return result;
+
+      console.log(`    → calling execute()...`);
+      const report = await specialist.execute(msg);
+      console.log(`    ← report status: ${report.status}`);
+
+      if (report.status !== 'COMPLETED') {
+        const errMsg = (report.errors ?? []).join(' | ') || 'no errors in report';
+        result = {
+          ...result,
+          status: 'FAIL',
+          error: `specialist returned status=${report.status}: ${errMsg}`,
+        };
+        console.log(`    ✗ SPECIALIST FAILED: ${errMsg.slice(0, 300)}`);
+        return result;
+      }
+
+      const extract = tc.extractProseFields ?? extractAllProse;
+      proseFields = extract(report);
     }
 
-    const proseFields = tc.extractProseFields(report);
     const combined = proseFields.join(' ');
     const markers = countPirateMarkers(combined);
 
@@ -1253,6 +1567,137 @@ async function runOneTest(
       console.log(`    ✓ original GM restored`);
     } catch (restoreErr) {
       console.error(`    ✗ FAILED TO RESTORE ${docId}:`, restoreErr);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JASPER (MASTER_ORCHESTRATOR) — fully custom test
+//
+// Jasper's prompt is NOT in specialistGoldenMasters. It lives as a TOP-LEVEL
+// `systemPrompt` field on the active doc in `.../goldenMasters` where
+// agentType === 'orchestrator' AND isActive === true. The doc is resolved
+// dynamically (not by hardcoded id). We swap the top-level systemPrompt to
+// pirate, invalidate Jasper's GM cache, call the LLM directly with the loaded
+// GM prompt, grep for markers, then restore in a finally block.
+// ═══════════════════════════════════════════════════════════════════════════
+async function runJasperPirateTest(db: FirebaseFirestore.Firestore): Promise<TestResult> {
+  const department = 'Orchestrator';
+  console.log(`\n→   ${'MASTER_ORCHESTRATOR'.padEnd(22)} (${department})`);
+
+  const COLLECTION_PATH = `organizations/${PLATFORM_ID}/goldenMasters`;
+  const snap = await db.collection(COLLECTION_PATH)
+    .where('agentType', '==', 'orchestrator')
+    .where('isActive', '==', true)
+    .limit(1)
+    .get();
+
+  if (snap.empty) {
+    const errResult: TestResult = {
+      specialistId: 'MASTER_ORCHESTRATOR',
+      department,
+      docId: '(none)',
+      status: 'FAIL',
+      proseFieldsFound: 0,
+      pirateMarkersTotal: 0,
+      sampleProse: '',
+      error: `No active orchestrator GM found in ${COLLECTION_PATH}`,
+    };
+    console.log(`    ✗ ${errResult.error}`);
+    return errResult;
+  }
+
+  const docSnap = snap.docs[0];
+  const docRef = docSnap.ref;
+  const docId = docSnap.id;
+  const data = docSnap.data() as { systemPrompt?: string; systemPromptSnapshot?: string };
+  const originalSystemPrompt = data.systemPrompt ?? '';
+  const hasSnapshot = typeof data.systemPromptSnapshot === 'string';
+  const originalSnapshot = hasSnapshot ? (data.systemPromptSnapshot ?? '') : undefined;
+
+  console.log(`    GM doc:       ${docId}`);
+  console.log(`    original len: ${originalSystemPrompt.length} chars`);
+
+  if (originalSystemPrompt.length < 100) {
+    const errResult: TestResult = {
+      specialistId: 'MASTER_ORCHESTRATOR',
+      department,
+      docId,
+      status: 'FAIL',
+      proseFieldsFound: 0,
+      pirateMarkersTotal: 0,
+      sampleProse: '',
+      error: `Jasper GM top-level systemPrompt is empty/short (length=${originalSystemPrompt.length})`,
+    };
+    console.log(`    ✗ ${errResult.error}`);
+    return errResult;
+  }
+
+  let result: TestResult = {
+    specialistId: 'MASTER_ORCHESTRATOR',
+    department,
+    docId,
+    status: 'FAIL',
+    proseFieldsFound: 0,
+    pirateMarkersTotal: 0,
+    sampleProse: '',
+  };
+
+  try {
+    // Swap the top-level systemPrompt (+ snapshot if it exists) to pirate.
+    const update: Record<string, string> = { systemPrompt: PIRATE_PROMPT };
+    if (hasSnapshot) { update.systemPromptSnapshot = PIRATE_PROMPT; }
+    await docRef.update(update);
+    invalidateJasperGMCache();
+    console.log(`    ✓ pirate prompt written to top-level systemPrompt, Jasper cache cleared`);
+
+    const gm = await getActiveJasperGoldenMaster();
+    if (!gm) {
+      throw new Error('getActiveJasperGoldenMaster() returned null after swap');
+    }
+
+    const provider = new OpenRouterProvider(PLATFORM_ID);
+    console.log(`    → calling OpenRouter with Jasper GM prompt...`);
+    const resp = await provider.chat({
+      // 'claude-sonnet-4' is the ModelName; the provider maps it to the
+      // OpenRouter slug 'anthropic/claude-sonnet-4' internally.
+      model: 'claude-sonnet-4',
+      messages: [
+        { role: 'system', content: gm.systemPrompt },
+        { role: 'user', content: 'Say hello and tell me in two sentences what you do.' },
+      ],
+      temperature: 0.7,
+      maxTokens: 512,
+    });
+
+    const content = resp.content ?? '';
+    const markers = countPirateMarkers(content);
+
+    result = {
+      ...result,
+      status: markers.length >= 3 ? 'PASS' : 'FAIL',
+      proseFieldsFound: 1,
+      pirateMarkersTotal: markers.length,
+      sampleProse: preview(content),
+      error: markers.length < 3 ? `only ${markers.length} pirate markers found (need ≥ 3)` : undefined,
+    };
+
+    console.log(`    markers hit:  ${markers.length} [${markers.slice(0, 6).join(', ')}]`);
+    console.log(`    sample:       ${preview(content, 180)}`);
+    console.log(`    ${result.status === 'PASS' ? '✓ PASS' : '✗ FAIL'}`);
+    return result;
+  } finally {
+    // Always restore the original top-level systemPrompt (+ snapshot).
+    try {
+      const restore: Record<string, string> = { systemPrompt: originalSystemPrompt };
+      if (hasSnapshot && originalSnapshot !== undefined) {
+        restore.systemPromptSnapshot = originalSnapshot;
+      }
+      await docRef.update(restore);
+      invalidateJasperGMCache();
+      console.log(`    ✓ original Jasper GM restored`);
+    } catch (restoreErr) {
+      console.error(`    ✗ FAILED TO RESTORE Jasper GM ${docId}:`, restoreErr);
     }
   }
 }
@@ -1313,6 +1758,46 @@ async function main(): Promise<void> {
     } catch (ledgerErr) {
       console.error(
         `    ✗ FAILED TO RECORD VERIFICATION for ${tc.specialistId}:`,
+        ledgerErr instanceof Error ? ledgerErr.message : ledgerErr,
+      );
+    }
+  }
+
+  // ── Jasper (MASTER_ORCHESTRATOR) — separate GM location, fully custom test. ──
+  // Runs unless a CLI filter is set that does not include it.
+  const runJasper = filter.length === 0 || filter.includes('MASTER_ORCHESTRATOR');
+  if (runJasper) {
+    let jr: TestResult;
+    try {
+      jr = await runJasperPirateTest(db);
+    } catch (err) {
+      console.error(`\n    ✗ UNHANDLED ERROR in MASTER_ORCHESTRATOR:`, err instanceof Error ? err.message : err);
+      jr = {
+        specialistId: 'MASTER_ORCHESTRATOR',
+        department: 'Orchestrator',
+        docId: '(unknown)',
+        status: 'FAIL',
+        proseFieldsFound: 0,
+        pirateMarkersTotal: 0,
+        sampleProse: '',
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+    results.push(jr);
+
+    try {
+      await recordVerification({
+        agentId: 'MASTER_ORCHESTRATOR',
+        status: jr.status === 'PASS' ? 'pass' : 'fail',
+        markersFound: jr.pirateMarkersTotal,
+        proseFieldsFound: jr.proseFieldsFound,
+        error: jr.error,
+        runAt: new Date().toISOString(),
+        industryKey: INDUSTRY_KEY,
+      });
+    } catch (ledgerErr) {
+      console.error(
+        `    ✗ FAILED TO RECORD VERIFICATION for MASTER_ORCHESTRATOR:`,
         ledgerErr instanceof Error ? ledgerErr.message : ledgerErr,
       );
     }

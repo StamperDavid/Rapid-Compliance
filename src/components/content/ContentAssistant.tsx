@@ -885,10 +885,10 @@ export function ContentAssistant() {
           type="button"
           onClick={() => setOpen(true)}
           className="fixed bottom-6 right-24 z-40 h-12 gap-2 rounded-full shadow-lg"
-          aria-label="Open the Content Assistant"
+          aria-label="Open the Content Manager chat"
         >
           <Sparkles className="h-4 w-4" />
-          Content Assistant
+          Content Manager
         </Button>
       )}
 
@@ -900,7 +900,7 @@ export function ContentAssistant() {
         )}
         aria-hidden={!open}
         role="complementary"
-        aria-label="Content Assistant"
+        aria-label="Content Manager chat"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
@@ -909,7 +909,7 @@ export function ContentAssistant() {
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <SectionTitle className="text-base">Content Assistant</SectionTitle>
+              <SectionTitle className="text-base">Content Manager</SectionTitle>
               <SectionDescription className="text-xs">
                 Your creative director — let&apos;s shape what you want to make.
               </SectionDescription>
@@ -933,7 +933,7 @@ export function ContentAssistant() {
               variant="ghost"
               size="icon"
               onClick={() => setOpen(false)}
-              aria-label="Close the Content Assistant"
+              aria-label="Close the Content Manager chat"
               className="h-8 w-8"
             >
               <X className="h-4 w-4" />

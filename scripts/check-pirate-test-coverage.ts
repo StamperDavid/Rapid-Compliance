@@ -60,9 +60,10 @@ const ID_PATTERNS: ReadonlyArray<RegExp> = [
 // LLM-backed IDs that are intentionally absent from the pirate harness.
 // Keep the rationale next to each — this is the documented escape hatch.
 const EXCLUSIONS: Readonly<Record<string, string>> = {
-  ASSET_GENERATOR: 'generates images, not prose — no text fields to grep for pirate markers',
-  SHOT_PLAN_PLANNER: 'planner.ts exports plain functions; no execute()/factory for the generic harness',
-  SCHEDULING_SPECIALIST: 'LLM step gated behind real CRM/meeting I/O the standalone harness cannot reach',
+  // ASSET_GENERATOR, SHOT_PLAN_PLANNER, and SCHEDULING_SPECIALIST are now COVERED
+  // via the `llmOnlyRun` override in scripts/pirate-test-specialists.ts (Jun 16
+  // 2026): each exercises its GM-driven LLM step directly and greps the authored
+  // prose for pirate markers. They are therefore no longer excluded.
 };
 
 interface LlmAgent {
