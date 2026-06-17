@@ -33,6 +33,8 @@ import {
   findPriorIntent,
   isApproval,
 } from '@/lib/content/content-intent';
+import { getCopywriter, type PageCopyResult } from '@/lib/agents/content/copywriter/specialist';
+import type { AgentMessage } from '@/lib/agents/types';
 
 // Re-exported for back-compat: the storyboard shape now lives in the shared service.
 export type { AssistantStoryboard } from '@/lib/video/storyboard-build-service';
@@ -673,12 +675,77 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           imageRequests,
         });
       }
-      // Music / text builders are wired in the following phases. Until then,
-      // acknowledge the approval rather than silently doing nothing.
-      if (priorIntent) {
+      // ── Music — generate REAL audio (MusicGen, ≤30s, brand-aware). The route
+      // returns the request; the client posts it to /api/content/music/generate
+      // (the same proven endpoint the Audio Lab uses), which persists the track to
+      // the media library. Mirrors the image flow. (The Music Planner specialist
+      // only PLANS — actual audio comes from the generation endpoint.)
+      if (priorIntent?.mediaType === 'music') {
+        const promptParts = [priorIntent.summary, priorIntent.message ?? '', priorIntent.beats.join('. ')].filter(Boolean);
+        const durationSeconds =
+          priorIntent.format.durationSeconds && priorIntent.format.durationSeconds >= 1
+            ? Math.min(priorIntent.format.durationSeconds, 30)
+            : 20;
+        const musicRequest = {
+          prompt: promptParts.join(' ').slice(0, 1000),
+          ...(priorIntent.style ? { genre: priorIntent.style } : {}),
+          durationSeconds,
+          name: priorIntent.summary.slice(0, 80),
+        };
+        logger.info('[ContentManager] music build dispatched', { file: FILE, durationSeconds });
         return NextResponse.json({
           success: true,
-          reply: `Got your approval — building ${priorIntent.mediaType} straight from the chat is coming next; video and image are live right now.`,
+          reply: "On it — composing your track now (up to 30 seconds). It'll appear in your Audio Lab and Library when it's ready.",
+          musicRequests: [musicRequest],
+        });
+      }
+
+      // ── Text — the Copywriter writes it now; we return it inline in the chat.
+      if (priorIntent?.mediaType === 'text') {
+        const copywriter = getCopywriter();
+        await copywriter.initialize();
+        const sections =
+          priorIntent.beats.length > 0
+            ? priorIntent.beats.map((b, i) => ({ id: `s${i + 1}`, name: b.slice(0, 60), purpose: b }))
+            : undefined;
+        const ts = Date.now();
+        const message: AgentMessage = {
+          id: `cm_text_${ts}`,
+          timestamp: new Date(),
+          from: 'CONTENT_MANAGER_CHAT',
+          to: 'COPYWRITER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            action: 'generate_page_copy',
+            pageId: `copy_${ts}`,
+            pageName: priorIntent.summary.slice(0, 100),
+            pagePurpose: priorIntent.message ?? priorIntent.summary,
+            ...(sections ? { sections } : {}),
+            ...(priorIntent.style ? { toneOfVoice: priorIntent.style } : {}),
+            ...(priorIntent.callToAction ? { keyPhrases: [priorIntent.callToAction] } : {}),
+          },
+          requiresResponse: true,
+          traceId: `cm_text_${ts}`,
+        };
+        const report = await copywriter.execute(message);
+        if (report.status !== 'COMPLETED') {
+          logger.warn('[ContentManager] text build failed', { file: FILE, errors: report.errors });
+          return NextResponse.json({
+            success: true,
+            reply: `I started writing, but the Copywriter hit a problem: ${(report.errors ?? []).join('; ') || 'unknown error'}. Want me to try again?`,
+          });
+        }
+        const copy = report.data as PageCopyResult;
+        const body = [
+          `# ${copy.headlines.h1}`,
+          ...copy.sections.map((s) => `## ${s.heading}\n${s.content}${s.cta ? `\n\n**${s.cta}**` : ''}`),
+        ].join('\n\n');
+        logger.info('[ContentManager] text build complete', { file: FILE, sections: copy.sections.length });
+        return NextResponse.json({
+          success: true,
+          reply: `Here's your copy:\n\n${body}\n\n---\nWant me to tweak anything?`,
+          textOutput: copy,
         });
       }
       // Couldn't resolve an intent (block unparseable AND forceIntent failed) — fall

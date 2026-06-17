@@ -678,6 +678,8 @@ export function ContentAssistant() {
         subjects?: IntentSubject[];
         targetSceneNumber?: number;
         imageRequests?: Array<{ name: string; prompt: string; fidelity: string; referenceImageUrl?: string }>;
+        musicRequests?: Array<{ prompt: string; genre?: string; durationSeconds?: number; name?: string }>;
+        mediaLibraryUpdated?: boolean;
         error?: string;
       };
 
@@ -734,6 +736,58 @@ export function ContentAssistant() {
             {
               role: 'assistant',
               content: `Done — created ${made} of ${imageRequests.length} image${imageRequests.length === 1 ? '' : 's'}. They're saved in your Library (open/refresh the Library to see them).`,
+            },
+          ]);
+        })();
+        return;
+      }
+
+      // Music generation: the server returned music request(s). Generate each via the
+      // proven /api/content/music/generate endpoint (which saves to the media library),
+      // then post a completion message. Mirrors the image flow.
+      const musicRequests = data.musicRequests ?? [];
+      if (musicRequests.length > 0) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.reply as string }]);
+        clearAttachments();
+        setLoading(false);
+        void (async () => {
+          let made = 0;
+          await Promise.allSettled(
+            musicRequests.map(async (req) => {
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), 180000);
+              try {
+                const gen = await authFetch('/api/content/music/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  signal: controller.signal,
+                  body: JSON.stringify({
+                    prompt: req.prompt,
+                    ...(req.genre ? { genre: req.genre } : {}),
+                    ...(req.durationSeconds ? { durationSeconds: req.durationSeconds } : {}),
+                    ...(req.name ? { name: req.name } : {}),
+                  }),
+                });
+                if (gen.ok) {
+                  made += 1;
+                  // Tell the Library / Audio Lab (if open) to refresh so the track shows live.
+                  window.dispatchEvent(new Event('media-library-updated'));
+                }
+              } catch {
+                /* timeout or failure on this one — the others continue */
+              } finally {
+                clearTimeout(timer);
+              }
+            }),
+          );
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content:
+                made > 0
+                  ? `Done — your track${musicRequests.length === 1 ? ' is' : 's are'} saved in your Audio Lab and Library (open/refresh to hear ${musicRequests.length === 1 ? 'it' : 'them'}).`
+                  : `I couldn't finish composing that — try again, or use the music studio in the Audio Lab directly.`,
             },
           ]);
         })();
@@ -859,6 +913,12 @@ export function ContentAssistant() {
         }
         return next;
       });
+
+      // Live-refresh the Library / Audio Lab when the route saved an asset inline
+      // (e.g. a chat background-removal or image edit) with no imageRequests batch.
+      if (data.mediaLibraryUpdated) {
+        window.dispatchEvent(new Event('media-library-updated'));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
