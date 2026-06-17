@@ -3,8 +3,9 @@
  * CRUD for user-editable email templates stored in Firestore
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { type QueryDocumentSnapshot as AdminQueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type {
@@ -16,12 +17,12 @@ import type {
 
 interface PaginationOptions {
   pageSize?: number;
-  lastDoc?: QueryDocumentSnapshot;
+  lastDoc?: AdminQueryDocumentSnapshot;
 }
 
 interface PaginatedResult<T> {
   data: T[];
-  lastDoc: QueryDocumentSnapshot | null;
+  lastDoc: AdminQueryDocumentSnapshot | null;
   hasMore: boolean;
 }
 
@@ -49,7 +50,7 @@ export async function getEmailTemplates(
 
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<UserEmailTemplate>(
+    const result = await AdminFirestoreService.getAllPaginated<UserEmailTemplate>(
       getSubCollection('emailTemplates'),
       constraints,
       options?.pageSize ?? 50,
@@ -70,7 +71,7 @@ export async function getEmailTemplates(
  */
 export async function getEmailTemplate(templateId: string): Promise<UserEmailTemplate | null> {
   try {
-    const template = await FirestoreService.get<UserEmailTemplate>(
+    const template = await AdminFirestoreService.get<UserEmailTemplate>(
       getSubCollection('emailTemplates'),
       templateId
     );
@@ -107,7 +108,7 @@ export async function createEmailTemplate(data: CreateEmailTemplateInput): Promi
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('emailTemplates'),
       templateId,
       template,
@@ -131,7 +132,7 @@ export async function updateEmailTemplate(
   updates: UpdateEmailTemplateInput
 ): Promise<UserEmailTemplate> {
   try {
-    await FirestoreService.update(
+    await AdminFirestoreService.update(
       getSubCollection('emailTemplates'),
       templateId,
       { ...updates, updatedAt: new Date() }
@@ -156,7 +157,7 @@ export async function updateEmailTemplate(
  */
 export async function deleteEmailTemplate(templateId: string): Promise<void> {
   try {
-    await FirestoreService.delete(getSubCollection('emailTemplates'), templateId);
+    await AdminFirestoreService.delete(getSubCollection('emailTemplates'), templateId);
     logger.info('Email template deleted', { templateId });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

@@ -16,7 +16,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import {
   parseHashtags,
   parseKeywords,
@@ -725,7 +725,7 @@ export class AutonomousPostingAgent {
     }
 
     // Compliance check: 30-day cooldown
-    const originalPost = await FirestoreService.get<SocialMediaPost>(
+    const originalPost = await AdminFirestoreService.get<SocialMediaPost>(
       getSubCollection(SOCIAL_POSTS_COLLECTION),
       action.originalPostId
     );
@@ -779,7 +779,7 @@ export class AutonomousPostingAgent {
   ): Promise<void> {
     const taskId = `escalation-${actionType.toLowerCase()}-${Date.now()}`;
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('tasks'),
       taskId,
       {
@@ -1359,7 +1359,7 @@ export class AutonomousPostingAgent {
   ): Promise<void> {
     const taskId = `social-manual-${platform}-${Date.now()}`;
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('tasks'),
       taskId,
       {
@@ -1431,7 +1431,7 @@ export class AutonomousPostingAgent {
           updatedAt: new Date(),
         };
 
-        await FirestoreService.set(
+        await AdminFirestoreService.set(
           getSubCollection(SOCIAL_POSTS_COLLECTION),
           scheduledPost.id,
           scheduledPost
@@ -1503,7 +1503,7 @@ export class AutonomousPostingAgent {
 
     try {
       // Get current queue position
-      const existingQueue = await FirestoreService.getAll<QueuedPost>(
+      const existingQueue = await AdminFirestoreService.getAll<QueuedPost>(
         getSubCollection(SOCIAL_QUEUE_COLLECTION)
       );
       const queuePosition = existingQueue.length + 1;
@@ -1523,7 +1523,7 @@ export class AutonomousPostingAgent {
           updatedAt: new Date(),
         };
 
-        await FirestoreService.set(
+        await AdminFirestoreService.set(
           getSubCollection(SOCIAL_QUEUE_COLLECTION),
           queuedPost.id,
           queuedPost
@@ -1647,7 +1647,7 @@ export class AutonomousPostingAgent {
     try {
       // Get queued posts ordered by position
       const { orderBy, limit } = await import('firebase/firestore');
-      const queuedPosts = await FirestoreService.getAll<QueuedPost>(
+      const queuedPosts = await AdminFirestoreService.getAll<QueuedPost>(
         getSubCollection(SOCIAL_QUEUE_COLLECTION),
         [
           orderBy('queuePosition', 'asc'),
@@ -1666,7 +1666,7 @@ export class AutonomousPostingAgent {
         results.push(result);
 
         // Move from queue to posts collection
-        await FirestoreService.delete(
+        await AdminFirestoreService.delete(
           getSubCollection(SOCIAL_QUEUE_COLLECTION),
           post.id
         );
@@ -1713,14 +1713,14 @@ export class AutonomousPostingAgent {
   private async reorderQueue(): Promise<void> {
     try {
       const { orderBy } = await import('firebase/firestore');
-      const queuedPosts = await FirestoreService.getAll<QueuedPost>(
+      const queuedPosts = await AdminFirestoreService.getAll<QueuedPost>(
         getSubCollection(SOCIAL_QUEUE_COLLECTION),
         [orderBy('queuePosition', 'asc')]
       );
 
       for (let i = 0; i < queuedPosts.length; i++) {
         if (queuedPosts[i].queuePosition !== i + 1) {
-          await FirestoreService.update(
+          await AdminFirestoreService.update(
             getSubCollection(SOCIAL_QUEUE_COLLECTION),
             queuedPosts[i].id,
             { queuePosition: i + 1, updatedAt: new Date() }
@@ -1764,14 +1764,14 @@ export class AutonomousPostingAgent {
       updatedAt: new Date(),
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection(SOCIAL_POSTS_COLLECTION),
       postId,
       post
     );
 
     // Also log to analytics collection for reporting
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection(SOCIAL_ANALYTICS_COLLECTION),
       postId,
       {
@@ -1797,7 +1797,7 @@ export class AutonomousPostingAgent {
         constraints.unshift(where('platform', '==', platform));
       }
 
-      return await FirestoreService.getAll<QueuedPost>(
+      return await AdminFirestoreService.getAll<QueuedPost>(
         getSubCollection(SOCIAL_QUEUE_COLLECTION),
         constraints
       );
@@ -1822,7 +1822,7 @@ export class AutonomousPostingAgent {
         constraints.unshift(where('platform', '==', platform));
       }
 
-      return await FirestoreService.getAll<ScheduledPost>(
+      return await AdminFirestoreService.getAll<ScheduledPost>(
         getSubCollection(SOCIAL_POSTS_COLLECTION),
         constraints
       );
@@ -1838,13 +1838,13 @@ export class AutonomousPostingAgent {
   async cancelPost(postId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Try to find in scheduled posts
-      const post = await FirestoreService.get<SocialMediaPost>(
+      const post = await AdminFirestoreService.get<SocialMediaPost>(
         getSubCollection(SOCIAL_POSTS_COLLECTION),
         postId
       );
 
       if (post?.status === 'scheduled') {
-        await FirestoreService.update(
+        await AdminFirestoreService.update(
           getSubCollection(SOCIAL_POSTS_COLLECTION),
           postId,
           { status: 'cancelled', updatedAt: new Date() }
@@ -1865,13 +1865,13 @@ export class AutonomousPostingAgent {
       }
 
       // Try to find in queue
-      const queuedPost = await FirestoreService.get<QueuedPost>(
+      const queuedPost = await AdminFirestoreService.get<QueuedPost>(
         getSubCollection(SOCIAL_QUEUE_COLLECTION),
         postId
       );
 
       if (queuedPost) {
-        await FirestoreService.delete(
+        await AdminFirestoreService.delete(
           getSubCollection(SOCIAL_QUEUE_COLLECTION),
           postId
         );
@@ -1920,7 +1920,7 @@ export class AutonomousPostingAgent {
 
       constraints.push(orderBy('publishedAt', 'desc'));
 
-      const posts = await FirestoreService.getAll<{ platform: SocialPlatform; success: boolean }>(
+      const posts = await AdminFirestoreService.getAll<{ platform: SocialPlatform; success: boolean }>(
         getSubCollection(SOCIAL_ANALYTICS_COLLECTION),
         constraints
       );

@@ -6,7 +6,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
@@ -308,7 +308,7 @@ export const ecommerceConfigSchema = z.object({
  * Parse-at-the-boundary: validates once when reading, returns typed data.
  */
 export async function getEcommerceConfig(): Promise<EcommerceConfigData | null> {
-  const raw = await FirestoreService.get(
+  const raw = await AdminFirestoreService.get(
     getSubCollection('ecommerce'),
     'config'
   );

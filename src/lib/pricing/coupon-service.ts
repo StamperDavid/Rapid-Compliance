@@ -3,9 +3,14 @@
  *
  * Handles validation, redemption, and AI authorization for both
  * Platform-level and Merchant-level coupons.
+ *
+ * Data access: Firebase Admin SDK (server-side only).
+ * Client SDK was removed to fix the silent-auth-failure bug when this
+ * service is called from AI agent tools (which run on the server).
  */
 
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, increment } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
@@ -24,19 +29,21 @@ import type {
 // ============================================
 
 export class PlatformPricingService {
-  private static db = getFirestore();
-
   /**
    * Get all active pricing plans
    */
   static async getActivePlans(): Promise<PlatformPricingPlan[]> {
-    const plansRef = collection(this.db, COLLECTIONS.PLATFORM_PRICING);
-    const q = query(plansRef, where('is_active', '==', true));
-    const snapshot = await getDocs(q);
+    if (!adminDb) {
+      return [];
+    }
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.PLATFORM_PRICING)
+      .where('is_active', '==', true)
+      .get();
 
-    const plans = snapshot.docs.map(doc => ({
-      ...doc.data(),
-      plan_id: doc.id,
+    const plans = snapshot.docs.map(d => ({
+      ...d.data(),
+      plan_id: d.id,
     })) as PlatformPricingPlan[];
 
     return plans.sort((a, b) => a.display_order - b.display_order);
@@ -46,17 +53,18 @@ export class PlatformPricingService {
    * Get public pricing plans (for pricing page)
    */
   static async getPublicPlans(): Promise<PlatformPricingPlan[]> {
-    const plansRef = collection(this.db, COLLECTIONS.PLATFORM_PRICING);
-    const q = query(
-      plansRef,
-      where('is_active', '==', true),
-      where('is_public', '==', true)
-    );
-    const snapshot = await getDocs(q);
+    if (!adminDb) {
+      return [];
+    }
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.PLATFORM_PRICING)
+      .where('is_active', '==', true)
+      .where('is_public', '==', true)
+      .get();
 
-    const plans = snapshot.docs.map(doc => ({
-      ...doc.data(),
-      plan_id: doc.id,
+    const plans = snapshot.docs.map(d => ({
+      ...d.data(),
+      plan_id: d.id,
     })) as PlatformPricingPlan[];
 
     return plans.sort((a, b) => a.display_order - b.display_order);
@@ -66,16 +74,21 @@ export class PlatformPricingService {
    * Get a specific plan by ID
    */
   static async getPlan(planId: string): Promise<PlatformPricingPlan | null> {
-    const planRef = doc(this.db, COLLECTIONS.PLATFORM_PRICING, planId);
-    const snapshot = await getDoc(planRef);
+    if (!adminDb) {
+      return null;
+    }
+    const snap = await adminDb
+      .collection(COLLECTIONS.PLATFORM_PRICING)
+      .doc(planId)
+      .get();
 
-    if (!snapshot.exists()) {
+    if (!snap.exists) {
       return null;
     }
 
     return {
-      ...snapshot.data(),
-      plan_id: snapshot.id,
+      ...snap.data(),
+      plan_id: snap.id,
     } as PlatformPricingPlan;
   }
 
@@ -83,18 +96,21 @@ export class PlatformPricingService {
    * Create or update a pricing plan (Admin only)
    */
   static async savePlan(plan: Omit<PlatformPricingPlan, 'created_at' | 'updated_at'>): Promise<PlatformPricingPlan> {
-    const planRef = doc(this.db, COLLECTIONS.PLATFORM_PRICING, plan.plan_id);
-    const existingPlan = await getDoc(planRef);
+    if (!adminDb) {
+      throw new Error('Database not available');
+    }
+    const planRef = adminDb.collection(COLLECTIONS.PLATFORM_PRICING).doc(plan.plan_id);
+    const existingSnap = await planRef.get();
 
     const now = new Date().toISOString();
-    const existingData = existingPlan.exists() ? (existingPlan.data() as PlatformPricingPlan) : undefined;
+    const existingData = existingSnap.exists ? (existingSnap.data() as PlatformPricingPlan) : undefined;
     const planData: PlatformPricingPlan = {
       ...plan,
       created_at: existingData?.created_at ?? now,
       updated_at: now,
     };
 
-    await setDoc(planRef, planData);
+    await planRef.set(planData);
     return planData;
   }
 
@@ -106,12 +122,17 @@ export class PlatformPricingService {
     priceUsd: number,
     yearlyPriceUsd?: number
   ): Promise<void> {
-    const planRef = doc(this.db, COLLECTIONS.PLATFORM_PRICING, planId);
-    await updateDoc(planRef, {
-      price_usd: priceUsd,
-      ...(yearlyPriceUsd !== undefined && { yearly_price_usd: yearlyPriceUsd }),
-      updated_at: new Date().toISOString(),
-    });
+    if (!adminDb) {
+      throw new Error('Database not available');
+    }
+    await adminDb
+      .collection(COLLECTIONS.PLATFORM_PRICING)
+      .doc(planId)
+      .update({
+        price_usd: priceUsd,
+        ...(yearlyPriceUsd !== undefined && { yearly_price_usd: yearlyPriceUsd }),
+        updated_at: new Date().toISOString(),
+      });
   }
 }
 
@@ -120,8 +141,6 @@ export class PlatformPricingService {
 // ============================================
 
 export class CouponService {
-  private static db = getFirestore();
-
   // ----------------------------------------
   // PLATFORM COUPON METHODS
   // ----------------------------------------
@@ -135,12 +154,16 @@ export class CouponService {
     billingCycle: 'monthly' | 'yearly',
     originalAmount: number
   ): Promise<CouponValidationResult> {
+    if (!adminDb) {
+      return { valid: false, error: 'COUPON_NOT_FOUND' };
+    }
     const normalizedCode = code.toUpperCase().trim();
 
     // Find the coupon
-    const couponsRef = collection(this.db, COLLECTIONS.PLATFORM_COUPONS);
-    const q = query(couponsRef, where('code', '==', normalizedCode));
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.PLATFORM_COUPONS)
+      .where('code', '==', normalizedCode)
+      .get();
 
     if (snapshot.empty) {
       return { valid: false, error: 'COUPON_NOT_FOUND' };
@@ -224,6 +247,9 @@ export class CouponService {
     bypass_stripe?: boolean;
     error?: string;
   }> {
+    if (!adminDb) {
+      return { success: false, error: 'Database not available' };
+    }
     // First validate
     const validation = await this.validatePlatformCoupon(code, planId, billingCycle, originalAmount);
 
@@ -252,14 +278,18 @@ export class CouponService {
     };
 
     // Save redemption
-    const redemptionRef = doc(this.db, COLLECTIONS.COUPON_REDEMPTIONS, redemptionId);
-    await setDoc(redemptionRef, redemption);
+    await adminDb
+      .collection(COLLECTIONS.COUPON_REDEMPTIONS)
+      .doc(redemptionId)
+      .set(redemption);
 
     // Increment coupon usage
-    const couponRef = doc(this.db, COLLECTIONS.PLATFORM_COUPONS, coupon.id);
-    await updateDoc(couponRef, {
-      current_uses: increment(1),
-    });
+    await adminDb
+      .collection(COLLECTIONS.PLATFORM_COUPONS)
+      .doc(coupon.id)
+      .update({
+        current_uses: FieldValue.increment(1),
+      });
 
     // Handle FREE FOREVER - Mark org as active_internal
     if (isFreeForever) {
@@ -280,17 +310,22 @@ export class CouponService {
   private static async activateInternalOrganization(
     couponCode: string
   ): Promise<void> {
-    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
-    await updateDoc(orgRef, {
-      status: 'active_internal',
-      subscription_status: 'active',
-      is_internal: true,
-      free_forever_coupon: couponCode,
-      activated_at: new Date().toISOString(),
-      // No Stripe subscription needed
-      stripe_customer_id: null,
-      stripe_subscription_id: null,
-    });
+    if (!adminDb) {
+      throw new Error('Database not available');
+    }
+    await adminDb
+      .collection(COLLECTIONS.ORGANIZATIONS)
+      .doc(PLATFORM_ID)
+      .update({
+        status: 'active_internal',
+        subscription_status: 'active',
+        is_internal: true,
+        free_forever_coupon: couponCode,
+        activated_at: new Date().toISOString(),
+        // No Stripe subscription needed
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+      });
   }
 
   // ----------------------------------------
@@ -307,13 +342,17 @@ export class CouponService {
     customerId?: string,
     isAIRequest: boolean = false
   ): Promise<CouponValidationResult> {
+    if (!adminDb) {
+      return { valid: false, error: 'COUPON_NOT_FOUND' };
+    }
     const normalizedCode = code.toUpperCase().trim();
 
     // Get coupon from merchant's collection
     const couponsPath = getMerchantCouponsCollection();
-    const couponsRef = collection(this.db, couponsPath);
-    const q = query(couponsRef, where('code', '==', normalizedCode));
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb
+      .collection(couponsPath)
+      .where('code', '==', normalizedCode)
+      .get();
 
     if (snapshot.empty) {
       return { valid: false, error: 'COUPON_NOT_FOUND' };
@@ -424,6 +463,9 @@ export class CouponService {
     redemption?: CouponRedemption;
     error?: string;
   }> {
+    if (!adminDb) {
+      return { success: false, error: 'Database not available' };
+    }
     // Validate first
     const validation = await this.validateMerchantCoupon(
       code,
@@ -457,15 +499,19 @@ export class CouponService {
     };
 
     // Save redemption
-    const redemptionRef = doc(this.db, COLLECTIONS.COUPON_REDEMPTIONS, redemptionId);
-    await setDoc(redemptionRef, redemption);
+    await adminDb
+      .collection(COLLECTIONS.COUPON_REDEMPTIONS)
+      .doc(redemptionId)
+      .set(redemption);
 
     // Increment coupon usage
     const couponPath = getMerchantCouponsCollection();
-    const couponRef = doc(this.db, couponPath, coupon.id);
-    await updateDoc(couponRef, {
-      current_uses: increment(1),
-    });
+    await adminDb
+      .collection(couponPath)
+      .doc(coupon.id)
+      .update({
+        current_uses: FieldValue.increment(1),
+      });
 
     return {
       success: true,
@@ -482,9 +528,14 @@ export class CouponService {
    * Internal admin orgs get full AI access regardless of agent permissions
    */
   static async isInternalAdminOrg(): Promise<boolean> {
-    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
-    const orgSnap = await getDoc(orgRef);
-    const orgData = orgSnap.data() ?? {};
+    if (!adminDb) {
+      return false;
+    }
+    const snap = await adminDb
+      .collection(COLLECTIONS.ORGANIZATIONS)
+      .doc(PLATFORM_ID)
+      .get();
+    const orgData = snap.data() ?? {};
     return orgData.is_internal_admin === true;
   }
 
@@ -503,6 +554,16 @@ export class CouponService {
       isInternalAdmin?: boolean;
     } = {}
   ): Promise<AIAuthorizedDiscounts> {
+    if (!adminDb) {
+      return {
+        available_coupons: [],
+        max_ai_discount_percentage: 0,
+        require_human_approval_above: 30,
+        can_stack_discounts: false,
+        auto_offer_on_hesitation: true,
+        auto_offer_on_price_objection: true,
+      };
+    }
     const { canNegotiate = false, isInternalAdmin = false } = options;
 
     // Check if org is internal admin (override flag)
@@ -510,13 +571,11 @@ export class CouponService {
 
     // Get all AI-authorized coupons for this organization
     const couponsPath = getMerchantCouponsCollection();
-    const couponsRef = collection(this.db, couponsPath);
-    const q = query(
-      couponsRef,
-      where('ai_authorized', '==', true),
-      where('status', '==', 'active')
-    );
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb
+      .collection(couponsPath)
+      .where('ai_authorized', '==', true)
+      .where('status', '==', 'active')
+      .get();
 
     // Filter coupons based on permissions
     const filteredDocs = snapshot.docs.filter(docSnap => {
@@ -551,8 +610,10 @@ export class CouponService {
     });
 
     // Get organization's AI discount settings
-    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
-    const orgSnap = await getDoc(orgRef);
+    const orgSnap = await adminDb
+      .collection(COLLECTIONS.ORGANIZATIONS)
+      .doc(PLATFORM_ID)
+      .get();
     const orgData = orgSnap.data() ?? {};
 
     // Calculate max AI discount from available coupons (post-filter)
@@ -594,6 +655,9 @@ export class CouponService {
       conversation_sentiment?: string;
     }
   ): Promise<AIDiscountRequest> {
+    if (!adminDb) {
+      throw new Error('Database not available');
+    }
     const requestId = `ai_discount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Check if within auto-approval threshold
@@ -612,8 +676,10 @@ export class CouponService {
       resolved_at: isAutoApproved ? new Date().toISOString() : undefined,
     };
 
-    const requestRef = doc(this.db, COLLECTIONS.AI_DISCOUNT_REQUESTS, requestId);
-    await setDoc(requestRef, request);
+    await adminDb
+      .collection(COLLECTIONS.AI_DISCOUNT_REQUESTS)
+      .doc(requestId)
+      .set(request);
 
     return request;
   }
@@ -629,6 +695,9 @@ export class CouponService {
     couponData: Omit<MerchantCoupon, 'id' | 'created_at' | 'updated_at' | 'current_uses'>,
     createdBy: string
   ): Promise<MerchantCoupon> {
+    if (!adminDb) {
+      throw new Error('Database not available');
+    }
     const couponId = `coupon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
@@ -643,8 +712,7 @@ export class CouponService {
     };
 
     const couponPath = getMerchantCouponsCollection();
-    const couponRef = doc(this.db, couponPath, couponId);
-    await setDoc(couponRef, coupon);
+    await adminDb.collection(couponPath).doc(couponId).set(coupon);
 
     return coupon;
   }
@@ -653,13 +721,15 @@ export class CouponService {
    * Get all merchant coupons for an organization
    */
   static async getMerchantCoupons(): Promise<MerchantCoupon[]> {
+    if (!adminDb) {
+      return [];
+    }
     const couponPath = getMerchantCouponsCollection();
-    const couponsRef = collection(this.db, couponPath);
-    const snapshot = await getDocs(couponsRef);
+    const snapshot = await adminDb.collection(couponPath).get();
 
-    return snapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id,
+    return snapshot.docs.map(d => ({
+      ...d.data(),
+      id: d.id,
     })) as MerchantCoupon[];
   }
 
@@ -670,13 +740,17 @@ export class CouponService {
     couponId: string,
     updates: Partial<MerchantCoupon>
   ): Promise<void> {
+    if (!adminDb) {
+      throw new Error('Database not available');
+    }
     const couponPath = getMerchantCouponsCollection();
-    const couponRef = doc(this.db, couponPath, couponId);
-
-    await updateDoc(couponRef, {
-      ...updates,
-      updated_at: new Date().toISOString(),
-    });
+    await adminDb
+      .collection(couponPath)
+      .doc(couponId)
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      });
   }
 
   /**
@@ -697,6 +771,9 @@ export class CouponService {
     couponData: Omit<PlatformCoupon, 'id' | 'created_at' | 'updated_at' | 'current_uses'>,
     createdBy: string
   ): Promise<PlatformCoupon> {
+    if (!adminDb) {
+      throw new Error('Database not available');
+    }
     const couponId = `platform_coupon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
@@ -710,8 +787,10 @@ export class CouponService {
       created_by: createdBy,
     };
 
-    const couponRef = doc(this.db, COLLECTIONS.PLATFORM_COUPONS, couponId);
-    await setDoc(couponRef, coupon);
+    await adminDb
+      .collection(COLLECTIONS.PLATFORM_COUPONS)
+      .doc(couponId)
+      .set(coupon);
 
     return coupon;
   }
@@ -720,12 +799,16 @@ export class CouponService {
    * Get all platform coupons (Admin only)
    */
   static async getPlatformCoupons(): Promise<PlatformCoupon[]> {
-    const couponsRef = collection(this.db, COLLECTIONS.PLATFORM_COUPONS);
-    const snapshot = await getDocs(couponsRef);
+    if (!adminDb) {
+      return [];
+    }
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.PLATFORM_COUPONS)
+      .get();
 
-    return snapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id,
+    return snapshot.docs.map(d => ({
+      ...d.data(),
+      id: d.id,
     })) as PlatformCoupon[];
   }
 
@@ -754,13 +837,14 @@ export class CouponService {
     couponId: string,
     customerId: string
   ): Promise<number> {
-    const redemptionsRef = collection(this.db, COLLECTIONS.COUPON_REDEMPTIONS);
-    const q = query(
-      redemptionsRef,
-      where('coupon_id', '==', couponId),
-      where('customer_id', '==', customerId)
-    );
-    const snapshot = await getDocs(q);
+    if (!adminDb) {
+      return 0;
+    }
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.COUPON_REDEMPTIONS)
+      .where('coupon_id', '==', couponId)
+      .where('customer_id', '==', customerId)
+      .get();
     return snapshot.size;
   }
 
@@ -774,15 +858,22 @@ export class CouponService {
     totalDiscountGiven: number;
     topCoupons: { code: string; uses: number; revenue_impact: number }[];
   }> {
+    if (!adminDb) {
+      return {
+        totalCoupons: 0,
+        activeCoupons: 0,
+        totalRedemptions: 0,
+        totalDiscountGiven: 0,
+        topCoupons: [],
+      };
+    }
     const coupons = await this.getMerchantCoupons();
 
     // Get redemptions
-    const redemptionsRef = collection(this.db, COLLECTIONS.COUPON_REDEMPTIONS);
-    const q = query(
-      redemptionsRef,
-      where('coupon_type', '==', 'merchant')
-    );
-    const redemptionsSnap = await getDocs(q);
+    const redemptionsSnap = await adminDb
+      .collection(COLLECTIONS.COUPON_REDEMPTIONS)
+      .where('coupon_type', '==', 'merchant')
+      .get();
     const redemptions = redemptionsSnap.docs.map(d => d.data() as CouponRedemption);
 
     const totalDiscountGiven = redemptions.reduce((sum, r) => sum + r.discount_amount, 0);
