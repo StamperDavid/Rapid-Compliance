@@ -24,7 +24,6 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { SocialAccountService } from '@/lib/social/social-account-service';
 import { DiscordPostingService } from '@/lib/social/discord-posting-service';
 import { decryptToken } from '@/lib/security/token-encryption';
-import type { DiscordCredentials } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +77,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const accounts = await SocialAccountService.listAccounts('discord');
       const active = accounts.find((a) => a.status === 'active' && a.isDefault) ?? accounts[0];
       if (active && 'botToken' in active.credentials) {
-        const creds = active.credentials as DiscordCredentials;
+        const creds = active.credentials;
         if (!botToken && creds.botToken) {
           // Bot token may be encrypted at rest — try decrypt; fall back to raw.
           try {

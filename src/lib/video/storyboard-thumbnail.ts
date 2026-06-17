@@ -206,6 +206,56 @@ export function buildThumbnailPrompt(
   return `${prefix}${trimmed} ${brandingRule}`;
 }
 
+/** The minimal scene text a name-match needs — satisfied by PipelineScene AND AssistantStoryboard. */
+type SceneTextFields = {
+  title?: string | null;
+  visualDescription?: string | null;
+  wardrobe?: string | null;
+};
+
+const subjectTokenize = (s: string): string[] =>
+  s.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+
+/**
+ * Pick the CONFIRMED intent subject a scene is about, by matching the scene's text
+ * to each subject's name. Shared by the client thumbnail picker (refUrl resolution)
+ * and the server-side storyboard build (binding a saved character's avatarId per
+ * scene), so both agree on which character a scene features. Returns undefined when
+ * no subject scores (the scene names nobody in the cast).
+ */
+export function pickSubjectForScene(
+  scene: SceneTextFields,
+  subjects: IntentSubject[],
+): IntentSubject | undefined {
+  if (subjects.length === 0) {
+    return undefined;
+  }
+  const sceneTokens = subjectTokenize(
+    `${scene.title ?? ''} ${scene.visualDescription ?? ''} ${scene.wardrobe ?? ''}`,
+  );
+  let best: IntentSubject | undefined;
+  let bestScore = 0;
+  for (const subject of subjects) {
+    const nameTokens = subjectTokenize(subject.name);
+    let score = 0;
+    for (const nt of nameTokens) {
+      if (sceneTokens.includes(nt)) {
+        // Exact token hit (the scene literally names this character) — weighted high so
+        // "David starting his business" matches DAVID, not the "Businessman" villain.
+        score += 3;
+      } else if (sceneTokens.some((st) => st.includes(nt) || nt.includes(st))) {
+        // Loose substring overlap is a weak signal and must never outweigh an exact hit.
+        score += 1;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = subject;
+    }
+  }
+  return bestScore > 0 ? best : undefined;
+}
+
 /**
  * Pick the right reference + fidelity for a scene from the CONFIRMED intent subjects.
  * Matches the scene's text to a subject by name, then resolves that subject's
@@ -224,31 +274,8 @@ export function matchSubjectForScene(
     return refUrl ? { refUrl, fidelity: 'exact' } : {};
   }
 
-  const tokenize = (s: string): string[] =>
-    s.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
-  const sceneTokens = tokenize(`${scene.title ?? ''} ${scene.visualDescription ?? ''} ${scene.wardrobe ?? ''}`);
-
-  let best: IntentSubject | undefined;
-  let bestScore = 0;
-  for (const subject of subjects) {
-    const nameTokens = tokenize(subject.name);
-    let score = 0;
-    for (const nt of nameTokens) {
-      if (sceneTokens.includes(nt)) {
-        // Exact token hit (the scene literally names this character) — weighted high so
-        // "David starting his business" matches DAVID, not the "Businessman" villain.
-        score += 3;
-      } else if (sceneTokens.some((st) => st.includes(nt) || nt.includes(st))) {
-        // Loose substring overlap is a weak signal and must never outweigh an exact hit.
-        score += 1;
-      }
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      best = subject;
-    }
-  }
-  if (!best || bestScore === 0) {
+  const best = pickSubjectForScene(scene, subjects);
+  if (!best) {
     return {};
   }
   if (best.fidelity === 'new') {
@@ -257,14 +284,28 @@ export function matchSubjectForScene(
   // Resolve the subject's reference image from the pool by name overlap.
   let refUrl: string | undefined;
   for (const refName of best.referenceNames) {
-    const refTokens = tokenize(refName.replace(/\.[a-z0-9]+$/i, ''));
+    const refTokens = subjectTokenize(refName.replace(/\.[a-z0-9]+$/i, ''));
     const match = images.find((img) => {
-      const imgTokens = tokenize(img.name.replace(/\.[a-z0-9]+$/i, ''));
+      const imgTokens = subjectTokenize(img.name.replace(/\.[a-z0-9]+$/i, ''));
       return refTokens.some((rt) => imgTokens.some((it) => it.includes(rt) || rt.includes(it)));
     });
     if (match) {
       refUrl = match.url;
       break;
+    }
+  }
+  // Saved character: it has no attached referenceNames (its identity comes from the
+  // profile), but the build seeds its face/Look images onto the pool NAMED by the
+  // subject. Fall back to matching those by the subject's own name so the scene is
+  // still conditioned on the saved character's art.
+  if (!refUrl && best.characterId) {
+    const nameTokens = subjectTokenize(best.name);
+    const match = images.find((img) => {
+      const imgTokens = subjectTokenize(img.name.replace(/\.[a-z0-9]+$/i, ''));
+      return nameTokens.some((nt) => imgTokens.some((it) => it.includes(nt) || nt.includes(it)));
+    });
+    if (match) {
+      refUrl = match.url;
     }
   }
   return { ...(refUrl ? { refUrl } : {}), fidelity: best.fidelity };

@@ -64,6 +64,14 @@ import {
   type MediaAssetType,
   type UnifiedMediaAsset,
 } from '@/types/media-library';
+import {
+  AssetActionsMenu,
+  BulkActionsBar,
+  makeProjectId,
+  type AssetActions,
+  type CharacterOption,
+  type ProjectOption,
+} from './AssetActionsMenu';
 
 // ============================================================================
 // Constants
@@ -91,6 +99,14 @@ const SOURCE_FILTERS: Array<{ value: MediaAssetSource | 'all'; label: string }> 
 
 // 5 second auto-disarm window per destructive_actions_two_step_confirmation
 const DISARM_TIMEOUT_MS = 5000;
+
+// Short, all-caps TYPE badge label per asset type.
+const TYPE_BADGE_LABEL: Record<MediaAssetType, string> = {
+  image: 'IMAGE',
+  video: 'VIDEO',
+  audio: 'AUDIO',
+  document: 'DOC',
+};
 
 // ============================================================================
 // Helpers
@@ -257,10 +273,14 @@ export default function MediaLibraryUnifiedPage() {
   const [bulkArmed, setBulkArmed] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  // "Create new project" groups the selected assets under a named project tag.
-  const [projectNameInput, setProjectNameInput] = useState('');
-  const [showProjectInput, setShowProjectInput] = useState(false);
-  const [creatingProject, setCreatingProject] = useState(false);
+  // Bulk action progress (e.g. "Updating 3 of 8…") + busy flag.
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<string | null>(null);
+
+  // ── Character Library profiles (lazy-loaded for the assign menus) ─────────
+  const [characters, setCharacters] = useState<CharacterOption[]>([]);
+  const [charactersLoading, setCharactersLoading] = useState(false);
+  const [charactersLoaded, setCharactersLoaded] = useState(false);
 
   // ── Tag editor ──────────────────────────────────────────────────────────
   const [newTag, setNewTag] = useState('');
@@ -516,12 +536,39 @@ export default function MediaLibraryUnifiedPage() {
     [patchAsset],
   );
 
-  const handleAssignProject = useCallback(
-    (asset: UnifiedMediaAsset, project: string) => {
-      const tags = Array.from(new Set([...asset.tags, project.trim()]));
-      return patchAsset(asset.id, { tags });
-    },
+  const handleChangeIntendedUse = useCallback(
+    (id: string, intendedUse: string) => patchAsset(id, { intendedUse }),
     [patchAsset],
+  );
+
+  // Assign a project to a single asset from the detail panel. A typed name with
+  // no existing match becomes a brand-new project (stable generated id).
+  const handleDetailAssignProject = useCallback(
+    (asset: UnifiedMediaAsset, name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        return Promise.resolve();
+      }
+      const existing = assets.find(
+        (a) => a.projectName?.toLowerCase() === trimmed.toLowerCase() && a.projectId,
+      );
+      const projectId = existing?.projectId ?? makeProjectId(trimmed);
+      return patchAsset(asset.id, { projectId, projectName: trimmed });
+    },
+    [assets, patchAsset],
+  );
+
+  // Patch an asset record WITHOUT updating grid state — used by the bulk runner
+  // which batches its single grid refresh once all PATCHes resolve.
+  const patchAssetSilent = useCallback(
+    async (id: string, patch: Record<string, unknown>) => {
+      await authFetch(`/api/media/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      }).catch(() => null);
+    },
+    [authFetch],
   );
 
   const armDelete = useCallback(() => {
@@ -584,6 +631,47 @@ export default function MediaLibraryUnifiedPage() {
     setCheckedIds(new Set());
     setBulkArmed(false);
   }, []);
+
+  // ── Character Library: lazy-load the operator's own profiles on first use ──
+  const loadCharacters = useCallback(() => {
+    if (charactersLoaded || charactersLoading) {
+      return;
+    }
+    setCharactersLoading(true);
+    void (async () => {
+      try {
+        const res = await authFetch('/api/video/avatar-profiles?scope=own');
+        if (!res.ok) {
+          return;
+        }
+        const data = (await res.json()) as {
+          success: boolean;
+          profiles?: Array<{ id: string; name: string }>;
+        };
+        const list = (data.profiles ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+        }));
+        setCharacters(list);
+        setCharactersLoaded(true);
+      } finally {
+        setCharactersLoading(false);
+      }
+    })();
+  }, [authFetch, charactersLoaded, charactersLoading]);
+
+  // Distinct projects already present across loaded assets (id → name).
+  const projects = useMemo<ProjectOption[]>(() => {
+    const byId = new Map<string, string>();
+    for (const a of assets) {
+      if (a.projectId && a.projectName && !byId.has(a.projectId)) {
+        byId.set(a.projectId, a.projectName);
+      }
+    }
+    return Array.from(byId.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [assets]);
 
   // Delete a set of assets (Firestore records only — Storage is left untouched
   // server-side) and prune them from the grid, selection, and open detail.
@@ -758,38 +846,145 @@ export default function MediaLibraryUnifiedPage() {
     }
   }, [assets, checkedIds, authFetch]);
 
-  // "Create new project" — group the checked assets under a named project tag
-  // (the library already treats a project as a tag for filtering).
-  const handleCreateProject = useCallback(async () => {
-    const name = projectNameInput.trim();
-    const ids = Array.from(checkedIds);
-    if (!name || ids.length === 0) {
-      return;
-    }
-    setCreatingProject(true);
-    try {
-      await Promise.all(
-        ids.map(async (id) => {
-          const asset = assets.find((a) => a.id === id);
-          if (!asset) {
-            return;
+  // Build the full action set for a SINGLE asset. Each action PATCHes that one
+  // asset via `patchAsset` (which also updates local grid state).
+  const buildAssetActions = useCallback(
+    (asset: UnifiedMediaAsset): AssetActions => ({
+      onAssignCharacter: async (character) => {
+        if (character) {
+          // Only flip an uncategorized/`other` asset to 'character' — never
+          // clobber a meaningful category the operator already chose.
+          const patch: Record<string, unknown> = {
+            characterId: character.id,
+            characterName: character.name,
+          };
+          if (asset.category === 'other') {
+            patch.category = 'character';
           }
-          const tags = Array.from(new Set([...(asset.tags ?? []), name]));
-          await authFetch(`/api/media/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tags }),
-          }).catch(() => null);
-        }),
-      );
-      await fetchAssets();
-      setShowProjectInput(false);
-      setProjectNameInput('');
-      clearChecked();
-    } finally {
-      setCreatingProject(false);
-    }
-  }, [assets, authFetch, checkedIds, clearChecked, fetchAssets, projectNameInput]);
+          await patchAsset(asset.id, patch);
+        } else {
+          await patchAsset(asset.id, { characterId: '', characterName: '' });
+        }
+      },
+      onAssignProject: async (project) => {
+        if (project) {
+          await patchAsset(asset.id, {
+            projectId: project.id,
+            projectName: project.name,
+          });
+        } else {
+          await patchAsset(asset.id, { projectId: '', projectName: '' });
+        }
+      },
+      onSetCategory: async (category) => {
+        await patchAsset(asset.id, { category });
+      },
+      onAddTags: async (tags) => {
+        const next = Array.from(new Set([...asset.tags, ...tags]));
+        await patchAsset(asset.id, { tags: next });
+      },
+      onRemoveTags: async (tags) => {
+        const drop = new Set(tags);
+        await patchAsset(asset.id, {
+          tags: asset.tags.filter((t) => !drop.has(t)),
+        });
+      },
+      onSetIntendedUse: async (intendedUse) => {
+        await patchAsset(asset.id, { intendedUse });
+      },
+      onDownload: async () => {
+        await handleDownloadOne(asset);
+      },
+      onDelete: async () => {
+        await handleTileDelete(asset.id);
+      },
+    }),
+    [patchAsset, handleDownloadOne, handleTileDelete],
+  );
+
+  // Apply a per-asset patch builder across every checked asset, sequentially,
+  // surfacing simple progress. Refetches once at the end so the grid + derived
+  // project list reflect every change. Used for all bulk field actions.
+  const runBulkPatch = useCallback(
+    async (
+      buildPatch: (asset: UnifiedMediaAsset) => Record<string, unknown> | null,
+      verb: string,
+    ) => {
+      const ids = Array.from(checkedIds);
+      if (ids.length === 0) {
+        return;
+      }
+      setBulkBusy(true);
+      try {
+        let done = 0;
+        for (const id of ids) {
+          const asset = assets.find((a) => a.id === id);
+          done += 1;
+          setBulkProgress(`${verb} ${done} of ${ids.length}…`);
+          if (!asset) {
+            continue;
+          }
+          const patch = buildPatch(asset);
+          if (patch) {
+            await patchAssetSilent(id, patch);
+          }
+        }
+        await fetchAssets();
+      } finally {
+        setBulkBusy(false);
+        setBulkProgress(null);
+      }
+    },
+    [assets, checkedIds, fetchAssets, patchAssetSilent],
+  );
+
+  // The bulk action set — same shape as a single asset's, applied to ALL
+  // checked assets. Download + delete reuse the existing zip/delete handlers.
+  const bulkActions = useMemo<AssetActions>(
+    () => ({
+      onAssignCharacter: (character) =>
+        runBulkPatch(
+          (asset) =>
+            character
+              ? {
+                  characterId: character.id,
+                  characterName: character.name,
+                  ...(asset.category === 'other'
+                    ? { category: 'character' as MediaAssetCategory }
+                    : {}),
+                }
+              : { characterId: '', characterName: '' },
+          'Updating',
+        ),
+      onAssignProject: (project) =>
+        runBulkPatch(
+          () =>
+            project
+              ? { projectId: project.id, projectName: project.name }
+              : { projectId: '', projectName: '' },
+          'Updating',
+        ),
+      onSetCategory: (category) =>
+        runBulkPatch(() => ({ category }), 'Updating'),
+      onAddTags: (tags) =>
+        runBulkPatch(
+          (asset) => ({ tags: Array.from(new Set([...asset.tags, ...tags])) }),
+          'Tagging',
+        ),
+      onRemoveTags: (tags) => {
+        const drop = new Set(tags);
+        return runBulkPatch(
+          (asset) => ({ tags: asset.tags.filter((t) => !drop.has(t)) }),
+          'Updating',
+        );
+      },
+      onSetIntendedUse: (intendedUse) =>
+        runBulkPatch(() => ({ intendedUse }), 'Updating'),
+      onDownload: () => handleBulkDownload(),
+      onDelete: () => handleBulkDelete(),
+    }),
+    [runBulkPatch, handleBulkDownload, handleBulkDelete],
+  );
 
   // Auto-disarm the per-tile + bulk delete confirmations (same 5s window).
   useEffect(() => {
@@ -1055,95 +1250,23 @@ export default function MediaLibraryUnifiedPage() {
             )}
           </div>
 
-          {/* Bulk action bar — appears when items are checked */}
+          {/* Bulk action bar — the SAME full action set, applied to every
+              checked asset. Appears when ≥1 tile is selected. */}
           {checkedIds.size > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2">
-              <span className="text-sm font-medium text-foreground">{checkedIds.size} selected</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={clearChecked}>
-                  Clear
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={downloading}
-                  onClick={() => {
-                    void handleBulkDownload();
-                  }}
-                  className="gap-1.5"
-                >
-                  {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  Download
-                </Button>
-                {!showProjectInput ? (
-                  <Button variant="outline" size="sm" onClick={() => setShowProjectInput(true)} className="gap-1.5">
-                    <FolderPlus className="h-4 w-4" />
-                    New project
-                  </Button>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      value={projectNameInput}
-                      onChange={(e) => setProjectNameInput(e.target.value)}
-                      placeholder="Project name"
-                      className="h-8 w-36 text-xs"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          void handleCreateProject();
-                        }
-                      }}
-                    />
-                    <Button
-                      size="sm"
-                      disabled={creatingProject || !projectNameInput.trim()}
-                      onClick={() => {
-                        void handleCreateProject();
-                      }}
-                      className="h-8 gap-1 px-2"
-                    >
-                      {creatingProject ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderPlus className="h-3.5 w-3.5" />}
-                      Create
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowProjectInput(false);
-                        setProjectNameInput('');
-                      }}
-                      className="h-8 px-2"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-                {!bulkArmed ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBulkArmed(true)}
-                    className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </Button>
-                ) : (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={bulkDeleting}
-                    onClick={() => {
-                      void handleBulkDelete();
-                    }}
-                    className="gap-1.5"
-                  >
-                    {bulkDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                    Delete {checkedIds.size} — confirm
-                  </Button>
-                )}
-              </div>
-            </div>
+            <BulkActionsBar
+              count={checkedIds.size}
+              characters={characters}
+              charactersLoading={charactersLoading}
+              onLoadCharacters={loadCharacters}
+              projects={projects}
+              actions={bulkActions}
+              busy={bulkBusy || bulkDeleting || downloading}
+              progress={bulkProgress}
+              isArmedDelete={bulkArmed}
+              onArmDelete={() => setBulkArmed(true)}
+              onCancelDelete={() => setBulkArmed(false)}
+              onClear={clearChecked}
+            />
           )}
 
           {/* Grid + detail panel */}
@@ -1166,6 +1289,11 @@ export default function MediaLibraryUnifiedPage() {
                 onDownloadOne={(a) => {
                   void handleDownloadOne(a);
                 }}
+                characters={characters}
+                charactersLoading={charactersLoading}
+                onLoadCharacters={loadCharacters}
+                projects={projects}
+                buildAssetActions={buildAssetActions}
               />
               <AssetDetailPanel
                 asset={selectedAsset}
@@ -1189,8 +1317,11 @@ export default function MediaLibraryUnifiedPage() {
                 onChangeDescription={(description) => {
                   void handleChangeDescription(selectedAsset.id, description);
                 }}
+                onChangeIntendedUse={(intendedUse) => {
+                  void handleChangeIntendedUse(selectedAsset.id, intendedUse);
+                }}
                 onAssignProject={(project) => {
-                  void handleAssignProject(selectedAsset, project);
+                  void handleDetailAssignProject(selectedAsset, project);
                 }}
                 onRemoveBackground={(a) => {
                   void handleRemoveBackground(a);
@@ -1221,6 +1352,11 @@ export default function MediaLibraryUnifiedPage() {
               onDownloadOne={(a) => {
                 void handleDownloadOne(a);
               }}
+              characters={characters}
+              charactersLoading={charactersLoading}
+              onLoadCharacters={loadCharacters}
+              projects={projects}
+              buildAssetActions={buildAssetActions}
             />
           )}
         </div>
@@ -1246,6 +1382,11 @@ interface AssetGridProps {
   onCancelTileDelete: () => void;
   onConfirmTileDelete: (id: string) => void;
   onDownloadOne: (asset: UnifiedMediaAsset) => void;
+  characters: CharacterOption[];
+  charactersLoading: boolean;
+  onLoadCharacters: () => void;
+  projects: ProjectOption[];
+  buildAssetActions: (asset: UnifiedMediaAsset) => AssetActions;
 }
 
 function AssetGrid({
@@ -1261,6 +1402,11 @@ function AssetGrid({
   onCancelTileDelete,
   onConfirmTileDelete,
   onDownloadOne,
+  characters,
+  charactersLoading,
+  onLoadCharacters,
+  projects,
+  buildAssetActions,
 }: AssetGridProps) {
   if (loading) {
     return (
@@ -1296,6 +1442,11 @@ function AssetGrid({
           onCancelDelete={onCancelTileDelete}
           onConfirmDelete={onConfirmTileDelete}
           onDownload={onDownloadOne}
+          characters={characters}
+          charactersLoading={charactersLoading}
+          onLoadCharacters={onLoadCharacters}
+          projects={projects}
+          actions={buildAssetActions(asset)}
         />
       ))}
     </div>
@@ -1314,6 +1465,11 @@ interface AssetTileProps {
   onCancelDelete: () => void;
   onConfirmDelete: (id: string) => void;
   onDownload: (asset: UnifiedMediaAsset) => void;
+  characters: CharacterOption[];
+  charactersLoading: boolean;
+  onLoadCharacters: () => void;
+  projects: ProjectOption[];
+  actions: AssetActions;
 }
 
 function AssetTile({
@@ -1328,6 +1484,11 @@ function AssetTile({
   onCancelDelete,
   onConfirmDelete,
   onDownload,
+  characters,
+  charactersLoading,
+  onLoadCharacters,
+  projects,
+  actions,
 }: AssetTileProps) {
   const Icon = typeIcon(asset.type);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -1349,12 +1510,12 @@ function AssetTile({
     <div
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
-      className={`group relative overflow-hidden rounded-xl border bg-card transition-all ${
+      className={`group relative rounded-xl border bg-card transition-all ${
         isSelected ? 'border-primary ring-2 ring-primary/40' : 'border-border-strong hover:border-primary/40'
       }`}
     >
       <button type="button" onClick={() => onSelect(asset.id)} className="block w-full text-left">
-        <div className="aspect-square bg-surface-elevated relative overflow-hidden">
+        <div className="aspect-square bg-surface-elevated relative overflow-hidden rounded-t-xl">
           {showImage ? (
             <Image
               src={asset.thumbnailUrl ?? asset.url}
@@ -1392,10 +1553,32 @@ function AssetTile({
               AI
             </div>
           )}
+          {/* TYPE badge — quick at-a-glance media type */}
+          <div className="absolute bottom-1.5 right-1.5 rounded-full bg-black/65 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white pointer-events-none">
+            {TYPE_BADGE_LABEL[asset.type]}
+          </div>
         </div>
         <div className="p-2">
           <p className="text-xs font-medium text-foreground truncate">{asset.name}</p>
-          <Caption className="block truncate">{asset.category}</Caption>
+          {/* Auto-labels: category + first few tags */}
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            <span className="inline-flex max-w-full items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary truncate">
+              {asset.category}
+            </span>
+            {asset.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex max-w-full items-center rounded-full border border-border-strong bg-surface-elevated px-1.5 py-0.5 text-[10px] text-muted-foreground truncate"
+              >
+                {tag}
+              </span>
+            ))}
+            {asset.tags.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">
+                +{asset.tags.length - 3}
+              </span>
+            )}
+          </div>
         </div>
       </button>
 
@@ -1441,6 +1624,16 @@ function AssetTile({
           >
             <Trash2 className="h-4 w-4" />
           </button>
+          {/* Full action set without opening the detail panel */}
+          <AssetActionsMenu
+            asset={asset}
+            characters={characters}
+            charactersLoading={charactersLoading}
+            onLoadCharacters={onLoadCharacters}
+            projects={projects}
+            actions={actions}
+            onArmDelete={() => onArmDelete(asset.id)}
+          />
         </div>
       )}
 
@@ -1494,6 +1687,7 @@ interface AssetDetailPanelProps {
   onRename: (name: string) => void;
   onChangeCategory: (category: string) => void;
   onChangeDescription: (description: string) => void;
+  onChangeIntendedUse: (intendedUse: string) => void;
   onAssignProject: (project: string) => void;
   onRemoveBackground: (asset: UnifiedMediaAsset) => void;
   removingBackground: boolean;
@@ -1518,6 +1712,7 @@ function AssetDetailPanel({
   onRename,
   onChangeCategory,
   onChangeDescription,
+  onChangeIntendedUse,
   onAssignProject,
   onRemoveBackground,
   removingBackground,
@@ -1531,6 +1726,7 @@ function AssetDetailPanel({
   const [draftName, setDraftName] = useState(asset.name);
   const [projectDraft, setProjectDraft] = useState('');
   const [draftDescription, setDraftDescription] = useState(asset.description ?? '');
+  const [draftIntendedUse, setDraftIntendedUse] = useState(asset.intendedUse ?? '');
   const [editInstruction, setEditInstruction] = useState('');
 
   // Reset inline editors when a different asset is opened.
@@ -1538,8 +1734,9 @@ function AssetDetailPanel({
     setEditingName(false);
     setProjectDraft('');
     setDraftDescription(asset.description ?? '');
+    setDraftIntendedUse(asset.intendedUse ?? '');
     setEditInstruction('');
-  }, [asset.id, asset.description]);
+  }, [asset.id, asset.description, asset.intendedUse]);
 
   const submitEdit = (): void => {
     const next = editInstruction.trim();
@@ -1566,6 +1763,11 @@ function AssetDetailPanel({
     if (next) {
       onAssignProject(next);
       setProjectDraft('');
+    }
+  };
+  const commitIntendedUse = () => {
+    if (draftIntendedUse !== (asset.intendedUse ?? '')) {
+      onChangeIntendedUse(draftIntendedUse);
     }
   };
   return (
@@ -1754,6 +1956,24 @@ function AssetDetailPanel({
             className="w-full resize-y rounded-md border border-border-strong bg-surface-elevated px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground"
           />
         </div>
+        {/* Editable intended use (saves on blur) */}
+        <div>
+          <Caption className="block mb-1">Intended use</Caption>
+          <textarea
+            value={draftIntendedUse}
+            onChange={(e) => setDraftIntendedUse(e.target.value)}
+            onBlur={commitIntendedUse}
+            placeholder="How is this meant to be used?"
+            rows={2}
+            className="w-full resize-y rounded-md border border-border-strong bg-surface-elevated px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+        {asset.characterName && (
+          <MetaRow label="Character" value={asset.characterName} />
+        )}
+        {asset.projectName && (
+          <MetaRow label="Project" value={asset.projectName} />
+        )}
         <MetaRow label="Created" value={formatDate(asset.createdAt)} />
         {asset.brandDnaApplied && (
           <div className="flex items-center gap-1.5 text-xs text-primary">

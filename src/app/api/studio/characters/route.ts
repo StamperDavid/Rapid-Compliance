@@ -95,7 +95,6 @@ export async function POST(request: NextRequest) {
       physicalDescription: validated.physicalDescription,
       voiceId: validated.voiceId,
       style: validated.style,
-      hedraAvatarId: validated.hedraAvatarId,
       tags: validated.tags,
       userId: user.uid,
       createdAt: now,

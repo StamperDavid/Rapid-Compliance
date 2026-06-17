@@ -245,6 +245,136 @@ export async function generateWithFal(
   };
 }
 
+// ─── Flux Kontext — instruction-based image editing ──────────────────────
+
+/** fal model for prompt-driven edits of an existing image (image + prompt → image). */
+const FLUX_KONTEXT_MODEL = 'fal-ai/flux-pro/kontext';
+
+export interface FalKontextOptions {
+  /** Optional deterministic seed. */
+  seed?: number;
+  /** Output aspect ratio token (passed through to fal when supplied). */
+  aspectRatio?: AspectRatio;
+}
+
+/**
+ * Edit an existing image with a natural-language instruction using Flux Pro
+ * Kontext (image-to-image). Mirrors `generateWithFal`'s key resolution and
+ * GenerationResult return shape.
+ *
+ * Retries ONCE on fal's intermittent "Input should be a valid dictionary"
+ * 422 error, which fal occasionally returns on an otherwise valid request.
+ *
+ * @param prompt   - The edit instruction (e.g. "make the background a beach").
+ * @param imageUrl - Publicly fetchable URL of the source image to edit.
+ * @param options  - Optional seed / aspect ratio.
+ */
+export async function generateFromReferenceWithFal(
+  prompt: string,
+  imageUrl: string,
+  options: FalKontextOptions = {}
+): Promise<GenerationResult> {
+  if (!imageUrl) {
+    throw new Error('generateFromReferenceWithFal requires a source imageUrl');
+  }
+  const apiKey = await getFalApiKey();
+  const model = FLUX_KONTEXT_MODEL;
+
+  const requestBody: Record<string, unknown> = {
+    prompt,
+    image_url: imageUrl,
+    num_images: 1,
+  };
+  if (options.seed !== undefined) {
+    requestBody.seed = options.seed;
+  }
+  if (options.aspectRatio !== undefined) {
+    requestBody.aspect_ratio = options.aspectRatio;
+  }
+
+  const url = `${FAL_BASE_URL}/${model}`;
+
+  logger.info('[Fal] Starting Kontext image edit', {
+    model,
+    promptLength: prompt.length,
+    file: 'fal-provider.ts',
+  });
+
+  /** One request attempt. Returns the parsed response or throws. */
+  const attempt = async (): Promise<FalApiResponse> => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      const err = new Error(`Fal.ai Kontext error (${response.status}): ${errorText}`);
+      // Tag the intermittent dictionary error so the caller can decide to retry.
+      if (/valid dictionary/i.test(errorText)) {
+        (err as Error & { isFalDictRetryable?: boolean }).isFalDictRetryable = true;
+      }
+      throw err;
+    }
+    return (await response.json()) as FalApiResponse;
+  };
+
+  let data: FalApiResponse;
+  try {
+    data = await attempt();
+  } catch (firstError) {
+    const retryable =
+      firstError instanceof Error &&
+      (firstError as Error & { isFalDictRetryable?: boolean }).isFalDictRetryable === true;
+    if (!retryable) {
+      if (firstError instanceof Error) {
+        logger.error('[Fal] Kontext edit failed', firstError, { model, file: 'fal-provider.ts' });
+      }
+      throw firstError;
+    }
+    logger.warn('[Fal] Kontext "valid dictionary" error — retrying once', {
+      model,
+      file: 'fal-provider.ts',
+    });
+    data = await attempt();
+  }
+
+  if (!data.images || data.images.length === 0) {
+    throw new Error('Fal.ai Kontext returned empty image response');
+  }
+
+  const image = data.images[0];
+  const cost = MODEL_COSTS[model] ?? 0.05;
+
+  const metadata: GenerationMetadata = {
+    width: image.width,
+    height: image.height,
+    format: image.content_type || 'image/png',
+    seed: data.seed,
+  };
+
+  const generationId = `fal-kontext-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  logger.info('[Fal] Kontext image edit completed', {
+    generationId,
+    model,
+    file: 'fal-provider.ts',
+  });
+
+  return {
+    id: generationId,
+    url: image.url,
+    provider: 'fal',
+    model,
+    cost,
+    metadata,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 // ─── Model Info ──────────────────────────────────────────────────────
 
 /**

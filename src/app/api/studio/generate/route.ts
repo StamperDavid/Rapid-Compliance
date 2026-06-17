@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 8. Persist generated images to Firebase Storage so URLs survive
-    //    provider CDN expiry (DALL-E ~1hr, Hedra/fal variable).
+    //    provider CDN expiry (DALL-E ~1hr, fal variable).
     if (validated.type === 'image' && result.url) {
       try {
         const storagePath = studioImagePath(docRef.id);

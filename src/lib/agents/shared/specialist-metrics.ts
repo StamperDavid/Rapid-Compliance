@@ -118,6 +118,106 @@ export async function identifyLowPerformers(
 }
 
 /**
+ * Telemetry-shaped execution summary for a single agent over a period.
+ *
+ * Distinct from `AgentPerformanceAggregation` because the telemetry page
+ * needs the real average response time, the real last-execution timestamp,
+ * and a real recent-failure count — none of which the aggregation exposes.
+ * Quality score and retry rate are deliberately NOT included here because the
+ * underlying entries record them synthetically (binary 100/0 quality, always
+ * 0 retries), so surfacing them would be faking real data.
+ */
+export interface AgentExecutionSummary {
+  /** Real count of recorded executions in the period. */
+  totalExecutions: number;
+  /** Approved / total in [0,1]. null when there were no executions. */
+  successRate: number | null;
+  /** Count of executions that were not approved (real failures). */
+  recentFailures: number;
+  /** Mean responseTimeMs across the period. null when no executions. */
+  avgResponseTimeMs: number | null;
+  /** ISO timestamp of the most recent execution, or null. */
+  lastExecutionAt: string | null;
+  /** Top failure modes seen in the period (real). */
+  commonFailureModes: Array<{ mode: string; count: number }>;
+}
+
+/**
+ * Single-query execution summaries for EVERY agent that has performance
+ * records in the period, keyed by agentId. Reads the same `agentPerformance`
+ * collection as `getAllSpecialistMetrics` but in one pass, and derives the
+ * telemetry-only fields (avg response time, last execution, recent failures).
+ *
+ * NOTE: `agentType` is intentionally NOT filtered here — manager dispatchers
+ * and deterministic agents also write performance entries, and the telemetry
+ * page needs their real activity too. Specialists write `swarm_specialist`,
+ * managers write their `AgentDomain`; both are returned keyed by agentId.
+ */
+export async function getAllAgentExecutionSummaries(
+  periodDays: number = 30,
+): Promise<Map<string, AgentExecutionSummary>> {
+  const out = new Map<string, AgentExecutionSummary>();
+  if (!adminDb) { return out; }
+
+  const cutoff = new Date(Date.now() - periodDays * MS_PER_DAY).toISOString();
+
+  const snap = await adminDb
+    .collection(getPerformanceCollectionPath())
+    .where('timestamp', '>=', cutoff)
+    .orderBy('timestamp', 'desc')
+    .get();
+
+  if (snap.empty) { return out; }
+
+  const entries = snap.docs.map(doc => doc.data() as AgentPerformanceEntry);
+
+  const grouped = new Map<string, AgentPerformanceEntry[]>();
+  for (const entry of entries) {
+    const existing = grouped.get(entry.agentId) ?? [];
+    existing.push(entry);
+    grouped.set(entry.agentId, existing);
+  }
+
+  for (const [agentId, agentEntries] of grouped) {
+    const total = agentEntries.length;
+    const approved = agentEntries.filter(e => e.approved).length;
+    const recentFailures = total - approved;
+
+    const responseTimes = agentEntries
+      .map(e => e.responseTimeMs)
+      .filter((ms): ms is number => typeof ms === 'number' && Number.isFinite(ms));
+    const avgResponseTimeMs = responseTimes.length > 0
+      ? Math.round(responseTimes.reduce((sum, ms) => sum + ms, 0) / responseTimes.length)
+      : null;
+
+    // Entries are sorted desc by timestamp at the query level.
+    const lastExecutionAt = agentEntries[0]?.timestamp ?? null;
+
+    const failureCounts = new Map<string, number>();
+    for (const entry of agentEntries) {
+      if (entry.failureMode) {
+        failureCounts.set(entry.failureMode, (failureCounts.get(entry.failureMode) ?? 0) + 1);
+      }
+    }
+    const commonFailureModes = Array.from(failureCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([mode, count]) => ({ mode, count }));
+
+    out.set(agentId, {
+      totalExecutions: total,
+      successRate: total > 0 ? approved / total : null,
+      recentFailures,
+      avgResponseTimeMs,
+      lastExecutionAt,
+      commonFailureModes,
+    });
+  }
+
+  return out;
+}
+
+/**
  * Get performance history entries for a specific specialist.
  */
 export async function getSpecialistHistory(

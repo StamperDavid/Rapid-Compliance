@@ -100,28 +100,25 @@ export function SwarmMonitorWidget({
     return () => { cancelled = true; };
   }, [authFetch]);
 
-  // Calculate counts from live data
-  const functionalCount = metrics?.functionalAgents ?? 0;
-  const executingCount = metrics?.executingAgents ?? 0;
+  // Calculate counts from real per-agent health.
+  const healthyCount = agents.filter((a) => a.health === 'HEALTHY').length;
+  const verifiedCount = metrics?.verifiedAgents ?? 0;
   const managerCount = agents.length;
 
-  // Status color mapping
-  const getStatusColor = (status: SystemAgentStatus['status']) => {
-    switch (status) {
-      case 'FUNCTIONAL':
+  // Per-agent health dot color (real green/amber/red).
+  const getHealthDotColor = (health: SystemAgentStatus['health']) => {
+    switch (health) {
+      case 'HEALTHY':
         return 'bg-[var(--color-success)]';
-      case 'EXECUTING':
-        return 'bg-[var(--color-primary)] animate-pulse';
-      case 'SHELL':
-        return 'bg-[var(--color-warning)]';
-      case 'GHOST':
-        return 'bg-[var(--color-text-disabled)]';
+      case 'DEGRADED':
+        return 'bg-[var(--color-error)]';
+      case 'IDLE':
       default:
-        return 'bg-[var(--color-text-secondary)]';
+        return 'bg-[var(--color-text-disabled)]';
     }
   };
 
-  // Health indicator color
+  // Overall-health text color.
   const getHealthColor = (health: typeof overallHealth) => {
     switch (health) {
       case 'HEALTHY':
@@ -129,7 +126,6 @@ export function SwarmMonitorWidget({
       case 'DEGRADED':
         return 'text-[var(--color-warning)]';
       case 'CRITICAL':
-      case 'OFFLINE':
         return 'text-[var(--color-error)]';
       default:
         return 'text-[var(--color-text-secondary)]';
@@ -217,15 +213,15 @@ export function SwarmMonitorWidget({
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="bg-[var(--color-bg-primary)] rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-[var(--color-success)]">
-            {functionalCount}
+            {healthyCount}
           </div>
-          <div className="text-xs text-[var(--color-text-secondary)]">Functional</div>
+          <div className="text-xs text-[var(--color-text-secondary)]">Healthy</div>
         </div>
         <div className="bg-[var(--color-bg-primary)] rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-[var(--color-primary)]">
-            {executingCount}
+            {verifiedCount}
           </div>
-          <div className="text-xs text-[var(--color-text-secondary)]">Active</div>
+          <div className="text-xs text-[var(--color-text-secondary)]">Verified</div>
         </div>
         <div className="bg-[var(--color-bg-primary)] rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-[var(--color-text-primary)]">
@@ -263,17 +259,17 @@ export function SwarmMonitorWidget({
                   className="flex items-center justify-between p-2 bg-[var(--color-bg-primary)] rounded-lg"
                 >
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${getStatusColor(agent.status)}`} />
+                    <div className={`w-2 h-2 rounded-full ${getHealthDotColor(agent.health)}`} />
                     <span className="text-sm text-[var(--color-text-primary)]">{agent.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {agent.activeWorkloads > 0 && (
+                    {agent.executions > 0 && (
                       <span className="text-xs text-[var(--color-primary)]">
-                        {agent.activeWorkloads} tasks
+                        {agent.executions} runs
                       </span>
                     )}
                     <span className="text-xs text-[var(--color-text-secondary)]">
-                      {agent.status}
+                      {agent.statusReason}
                     </span>
                   </div>
                 </div>
@@ -285,12 +281,17 @@ export function SwarmMonitorWidget({
             )}
           </div>
 
-          {/* Saga Metrics */}
-          {metrics && metrics.activeSagas > 0 && (
+          {/* Execution Metrics (real, period-scoped) */}
+          {metrics && metrics.totalExecutions > 0 && (
             <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
               <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
-                <span>Active Workflows: {metrics.activeSagas}</span>
-                <span>Success Rate: {(metrics.successRate * 100).toFixed(0)}%</span>
+                <span>Executions ({metrics.periodDays}d): {metrics.totalExecutions.toLocaleString()}</span>
+                <span>
+                  Success Rate:{' '}
+                  {metrics.overallSuccessRate !== null
+                    ? `${(metrics.overallSuccessRate * 100).toFixed(0)}%`
+                    : '—'}
+                </span>
               </div>
             </div>
           )}
@@ -313,7 +314,7 @@ export function SwarmMonitorWidget({
         <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
           <div className={`w-2 h-2 rounded-full ${getHealthColor(overallHealth)}`} />
           <span>
-            {functionalCount} of {TOTAL_AGENTS} agents ready
+            {healthyCount} of {TOTAL_AGENTS} agents healthy
           </span>
           {error && (
             <span className="text-xs text-[var(--color-warning)]">(stale)</span>

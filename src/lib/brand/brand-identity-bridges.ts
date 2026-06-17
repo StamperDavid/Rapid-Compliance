@@ -217,13 +217,64 @@ interface ThemeDocPartial {
 }
 
 /**
+ * `info` + `neutral` are the ONLY color groups the operator can't set on the Brand
+ * Identity page (there's no field for them). They mirror the canonical defaults in
+ * `useOrgTheme.ts` (DEFAULT_THEME) and are ALWAYS written — existing operator values
+ * win — so the saved theme can never be missing a group. Everything else
+ * (background / text / border) IS a real operator choice and is derived below.
+ */
+const DEFAULT_INFO_NEUTRAL = {
+  info: { main: '#3b82f6', light: '#60a5fa', dark: '#2563eb' },
+  neutral: { 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db', 400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151', 800: '#1f2937', 900: '#111827' },
+} as const;
+
+/** Coerce an unknown theme-color branch into a spreadable record (drops non-objects). */
+function asColorRecord(v: unknown): Record<string, string> {
+  return v && typeof v === 'object' ? (v as Record<string, string>) : {};
+}
+
+/**
+ * Map the operator's flat brand palette onto the theme's nested structural color
+ * groups. background / text / border are REAL operator choices on the Brand Identity
+ * page — they were previously DROPPED here (the bug that blanked the dashboard when a
+ * logo swap re-saved the identity). The light/dark/elevated/disabled sub-shades the
+ * operator can't set directly are derived from their chosen colors (modest, clamp-safe
+ * deltas) so the palette stays internally consistent for ANY base — light theme or dark.
+ */
+function structuralColorsFromIdentity(identity: BrandIdentity): {
+  background: { main: string; paper: string; elevated: string };
+  text: { primary: string; secondary: string; disabled: string };
+  border: { main: string; light: string; strong: string };
+} {
+  const c = identity.colors;
+  return {
+    background: {
+      main: c.background,
+      paper: c.surface,
+      elevated: adjustColor(c.surface, 12),
+    },
+    text: {
+      primary: c.text,
+      secondary: c.textMuted,
+      disabled: adjustColor(c.textMuted, -22),
+    },
+    border: {
+      main: c.border,
+      light: adjustColor(c.border, -10),
+      strong: adjustColor(c.border, 12),
+    },
+  };
+}
+
+/**
  * Deep-merge (by hand, level-by-level) the canonical identity into the existing
  * theme doc. The brand/semantic color mains (+ derived light/dark/contrast),
  * branding name/logo/primaryColor/favicon/showPoweredBy, heading/body/mono fonts,
  * and the dashboard-theme layout (borderRadius / spacing / shadow) + typography
- * (fontSize / fontWeight) are all overlaid from the identity. Every OTHER field
- * (neutral, info, background, text, border, and any other layout/typography keys)
- * is preserved verbatim via the structured spreads.
+ * (fontSize / fontWeight) are all overlaid from the identity. background / text /
+ * border are also derived from the identity (see structuralColorsFromIdentity); only
+ * neutral / info (no operator field) and any other layout/typography keys are
+ * preserved verbatim via the structured spreads.
  */
 export function themeOverlayFromIdentity(
   identity: BrandIdentity,
@@ -241,7 +292,7 @@ export function themeOverlayFromIdentity(
     ...existingTheme,
     colors: {
       ...existingColors,
-      // Brand colors
+      // Brand colors (derived from the operator's palette)
       primary: scaleFromHex(identity.colors.primary),
       secondary: scaleFromHex(identity.colors.secondary),
       accent: scaleFromHex(identity.colors.accent),
@@ -249,7 +300,14 @@ export function themeOverlayFromIdentity(
       success: scaleFromHex(identity.colors.success),
       warning: scaleFromHex(identity.colors.warning),
       error: scaleFromHex(identity.colors.error),
-      // NOTE: background / text / border / neutral / info intentionally untouched.
+      // Structural colors — DERIVED from the operator's own palette (background /
+      // surface / text / textMuted / border on the Brand Identity page). Always
+      // written in full, so a save can never leave the theme missing a group (the
+      // bug that blanked the dashboard on a logo swap).
+      ...structuralColorsFromIdentity(identity),
+      // info + neutral aren't brand fields → keep the existing value or the default.
+      info: { ...DEFAULT_INFO_NEUTRAL.info, ...asColorRecord(existingColors.info) },
+      neutral: { ...DEFAULT_INFO_NEUTRAL.neutral, ...asColorRecord(existingColors.neutral) },
     },
     branding: {
       ...existingBranding,

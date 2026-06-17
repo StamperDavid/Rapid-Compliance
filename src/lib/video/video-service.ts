@@ -1,5 +1,5 @@
 /**
- * Video Service — Hedra video generation support, templates, and project management
+ * Video Service — video generation support, templates, and project management
  *
  * API keys are read from Firestore via the API Key Service
  * (Settings > API Keys), NOT from process.env.

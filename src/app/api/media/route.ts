@@ -116,6 +116,10 @@ const PostJsonSchema = z.object({
   parentAssetId: z.string().optional(),
   derivedFrom: z.array(z.string()).optional(),
   usedInPosts: z.array(z.string()).optional(),
+  characterId: z.string().optional(),
+  characterName: z.string().optional(),
+  projectId: z.string().optional(),
+  projectName: z.string().optional(),
   brandDnaApplied: z.boolean().optional(),
 });
 
@@ -182,6 +186,8 @@ export async function GET(request: NextRequest) {
       : undefined;
 
     const search = searchParams.get('search') ?? undefined;
+    const characterId = searchParams.get('characterId') ?? undefined;
+    const projectId = searchParams.get('projectId') ?? undefined;
     const createdAfter = searchParams.get('createdAfter') ?? undefined;
     const createdBefore = searchParams.get('createdBefore') ?? undefined;
 
@@ -196,6 +202,8 @@ export async function GET(request: NextRequest) {
       source,
       tags,
       search,
+      ...(characterId ? { characterId } : {}),
+      ...(projectId ? { projectId } : {}),
       createdAfter,
       createdBefore,
       limit,
@@ -350,6 +358,10 @@ export async function POST(request: NextRequest) {
       ...(body.parentAssetId ? { parentAssetId: body.parentAssetId } : {}),
       ...(body.derivedFrom ? { derivedFrom: body.derivedFrom } : {}),
       ...(body.usedInPosts ? { usedInPosts: body.usedInPosts } : {}),
+      ...(body.characterId ? { characterId: body.characterId } : {}),
+      ...(body.characterName ? { characterName: body.characterName } : {}),
+      ...(body.projectId ? { projectId: body.projectId } : {}),
+      ...(body.projectName ? { projectName: body.projectName } : {}),
       brandDnaApplied: body.brandDnaApplied === true,
     });
 

@@ -388,6 +388,47 @@ export async function getActiveSpecialistGMByIndustry(
 }
 
 /**
+ * Active-GM summary for one specialist, used by the telemetry page to decide
+ * whether an agent is seeded (and at what version/model) without issuing a
+ * separate query per agent.
+ */
+export interface ActiveSpecialistGMSummary {
+  specialistId: string;
+  version: number;
+  model: string | null;
+}
+
+/**
+ * One-query lookup of every active specialist GM, keyed by specialistId.
+ * Replaces N per-agent `getActiveSpecialistGMByIndustry` round trips on the
+ * telemetry page. Scoped to a single industryKey (the runtime default).
+ */
+export async function listActiveSpecialistGMs(
+  industryKey: string,
+): Promise<Map<string, ActiveSpecialistGMSummary>> {
+  const out = new Map<string, ActiveSpecialistGMSummary>();
+  if (!adminDb) { return out; }
+
+  const snapshot = await adminDb
+    .collection(getGMCollectionPath())
+    .where('industryKey', '==', industryKey)
+    .where('isActive', '==', true)
+    .get();
+
+  for (const doc of snapshot.docs) {
+    const gm = doc.data() as SpecialistGoldenMaster;
+    const modelRaw = gm.config?.model;
+    out.set(gm.specialistId, {
+      specialistId: gm.specialistId,
+      version: gm.version,
+      model: typeof modelRaw === 'string' ? modelRaw : null,
+    });
+  }
+
+  return out;
+}
+
+/**
  * Invalidate the industry-scoped GM cache for a given specialist+industry pair.
  * Called after a new GM version is deployed so the next request reloads.
  */

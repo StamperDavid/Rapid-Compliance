@@ -55,8 +55,8 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   // Audio / Music
   minimax: 'audio.minimax.apiKey',
 
-  // Video (Hedra only)
-  hedra: 'video.hedra.apiKey',
+  // Video / Image generation (fal — Seedance video + Flux images)
+  fal: 'imageGen.fal.apiKey',
 
   // Voice
   elevenlabs: 'voice.elevenlabs.apiKey',

@@ -93,6 +93,10 @@ const PatchSchema = z
     parentAssetId: z.string().optional(),
     derivedFrom: z.array(z.string()).optional(),
     usedInPosts: z.array(z.string()).optional(),
+    characterId: z.string().optional(),
+    characterName: z.string().optional(),
+    projectId: z.string().optional(),
+    projectName: z.string().optional(),
     brandDnaApplied: z.boolean().optional(),
   })
   .strict();
@@ -199,6 +203,10 @@ export async function PATCH(
       ...(body.parentAssetId ? { parentAssetId: body.parentAssetId } : {}),
       ...(body.derivedFrom ? { derivedFrom: body.derivedFrom } : {}),
       ...(body.usedInPosts ? { usedInPosts: body.usedInPosts } : {}),
+      ...(body.characterId ? { characterId: body.characterId } : {}),
+      ...(body.characterName ? { characterName: body.characterName } : {}),
+      ...(body.projectId ? { projectId: body.projectId } : {}),
+      ...(body.projectName ? { projectName: body.projectName } : {}),
       ...(typeof body.brandDnaApplied === 'boolean'
         ? { brandDnaApplied: body.brandDnaApplied }
         : {}),

@@ -25,6 +25,7 @@ import {
   type PublishConfig,
   type PublishResult,
 } from '@/types/video-pipeline';
+import type { ShotPlan } from '@/types/shot-plan';
 import type { VideoAspectRatio, VideoResolution } from '@/types/video';
 import type { VideoTemplate } from '@/lib/video/templates';
 
@@ -52,7 +53,11 @@ export interface VideoPipelineState {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
-  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
+
+  // Shot Plan draft (additive) — the OpenArt-style production sheet. Optional so
+  // existing flows are unaffected; autosaves/loads with the rest of the project.
+  shotPlan: ShotPlan | null;
 
   // Step 5: Generation - Scene render results
   generatedScenes: SceneGenerationResult[];
@@ -82,12 +87,13 @@ export interface VideoPipelineState {
   setStep: (step: PipelineStep) => void;
   setDecompositionPlan: (plan: DecompositionPlan) => void;
   setScenes: (scenes: PipelineScene[]) => void;
+  setShotPlan: (plan: ShotPlan | null) => void;
   addScene: (scene: Omit<PipelineScene, 'id'>) => void;
   updateScene: (sceneId: string, updates: Partial<PipelineScene>) => void;
   removeScene: (sceneId: string) => void;
   reorderScenes: (fromIndex: number, toIndex: number) => void;
   setAvatar: (id: string, name: string) => void;
-  setVoice: (id: string, name: string, provider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra') => void;
+  setVoice: (id: string, name: string, provider?: 'elevenlabs' | 'unrealspeech' | 'custom') => void;
   setGeneratedScenes: (results: SceneGenerationResult[]) => void;
   updateGeneratedScene: (sceneId: string, updates: Partial<SceneGenerationResult>) => void;
   setFinalVideoUrl: (url: string) => void;
@@ -126,6 +132,7 @@ const initialState = {
   },
   decompositionPlan: null,
   scenes: [],
+  shotPlan: null,
   avatarId: null,
   avatarName: null,
   voiceId: null,
@@ -190,6 +197,8 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
 
       setScenes: (scenes) => set({ scenes }),
 
+      setShotPlan: (plan) => set({ shotPlan: plan }),
+
       addScene: (scene) => {
         const { scenes } = get();
         const newScene: PipelineScene = {
@@ -242,7 +251,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         set({
           voiceId: id,
           voiceName: name,
-          voiceProvider: provider ?? 'hedra',
+          voiceProvider: provider ?? null,
         }),
 
       setGeneratedScenes: (results) => set({ generatedScenes: results }),
@@ -342,6 +351,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
           currentStep: normalizePipelineStep(project.currentStep),
           brief: project.brief,
           scenes: project.scenes,
+          shotPlan: project.shotPlan ?? null,
           avatarId: project.avatarId,
           avatarName: project.avatarName,
           voiceId: project.voiceId,
@@ -400,6 +410,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         brief: state.brief,
         decompositionPlan: state.decompositionPlan,
         scenes: state.scenes,
+        shotPlan: state.shotPlan,
         avatarId: state.avatarId,
         avatarName: state.avatarName,
         voiceId: state.voiceId,

@@ -251,7 +251,7 @@ async function extractVideoFramesAsync(
     }
 
     // Fallback: use the video URL itself as a single-frame reference.
-    // Many video hosting providers (Hedra, Mux, etc.) serve an OG image / thumbnail
+    // Many video hosting providers (Mux, etc.) serve an OG image / thumbnail
     // at the video URL by appending query params or using a known thumbnail endpoint.
     logger.info('[Video] Google Video Intelligence not configured — using video thumbnail fallback', { file: 'vision-service.ts' });
     const thumbnailUrl = deriveVideoThumbnail(videoUrl);

@@ -22,7 +22,7 @@ import type { CinematicConfig } from '@/types/creative-studio';
 // ============================================================================
 
 export type ScriptVideoType = 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad';
-export type ScriptEngine = 'hedra';
+export type ScriptEngine = 'fal';
 
 export interface ScriptScene {
   sceneNumber: number;
@@ -106,8 +106,8 @@ const AISceneSchema = z.object({
   scriptText: z.string(),
   visualDescription: z.string(),
   suggestedDuration: z.number(),
-  // Accept any engine string from the AI but normalize to 'hedra' (sole engine)
-  engine: z.string().nullable().transform(() => 'hedra' as const),
+  // Accept any engine string from the AI but normalize to 'fal' (sole engine)
+  engine: z.string().nullable().transform(() => 'fal' as const),
   backgroundPrompt: z.string().nullable(),
   shotGroupId: z.string().nullable().default(null),
   // Structured storyboard fields — optional at parse time, GUARANTEED non-blank
@@ -139,29 +139,29 @@ function buildSystemPrompt(
 ): string {
   let prompt = `You are an elite video scriptwriter and cinematic director producing broadcast-quality content for SalesVelocity.ai. Your scripts are narration (voiceover) that plays OVER the video — the on-screen characters do NOT speak or lip-sync.
 
-## VIDEO ENGINE — HEDRA (Two Generation Modes)
-All scenes use **Hedra**, which has TWO distinct video generation modes. You MUST understand the difference:
+## VIDEO ENGINE — fal / SEEDANCE (Two Generation Modes)
+All scenes render on **Seedance via fal**, which has TWO modes. You MUST understand the difference:
 
-### Mode 1: Kling O3 Text-to-Video (Prompt-Only — NO avatar)
-Used when NO avatar/character photo is assigned. The AI generates everything — characters, environment, audio — from the text prompt alone.
-- **How it works:** You describe the scene in visualDescription → Hedra generates the character, setting, and audio all from that text.
-- **Audio:** Kling O3 generates audio NATIVELY from the prompt. There is NO separate voice/TTS step. If you want the character to speak, include their dialogue IN the visualDescription (e.g., "the man speaks confidently to camera, saying...").
+### Mode 1: Text-to-Video (Prompt-Only — NO character reference)
+Used when NO avatar/character is assigned. Seedance generates everything — characters, environment, audio — from the text prompt alone.
+- **How it works:** You describe the scene in visualDescription → Seedance generates the character, setting, and audio all from that text.
+- **Audio:** Seedance generates audio NATIVELY from the prompt. There is NO separate voice/TTS step. If you want a character to speak, include their dialogue IN the visualDescription (e.g., "the man speaks confidently to camera, saying...").
 - **scriptText role:** Voiceover narration that plays OVER the video. The on-screen character does NOT lip-sync to this — they perform actions silently while the narration plays.
 - **Best for:** Cinematic B-roll, action scenes, environmental shots, characters performing tasks.
 
-### Mode 2: Character 3 (Avatar — WITH uploaded photo)
-Used when the user selects a specific avatar with a portrait photo. Character 3 takes the photo + a voice + a script and makes the person lip-sync.
-- **How it works:** A portrait photo + voice ID + script text → Character 3 generates a talking-head video where the person in the photo speaks the script.
-- **Audio:** Uses inline Text-to-Speech (TTS) with a specific Hedra voice. The character LIP-SYNCS the scriptText.
-- **scriptText role:** The ACTUAL DIALOGUE the character speaks on camera. Write it as natural speech, not narration.
-- **Best for:** Talking-head presentations, personal messages, spokesperson content.
+### Mode 2: Reference-to-Video (WITH a cast character)
+Used when the user selects a saved character. Seedance casts that character — from its reference images — into the new scene, keeping identity consistent across shots via last-frame chaining.
+- **How it works:** The character's reference images + the scene description → Seedance places that exact character into the scene.
+- **Audio:** Seedance generates the scene audio with the video; a separate narration track (ElevenLabs/UnrealSpeech) can be laid over it in the editor.
+- **scriptText role:** Voiceover narration over the scene. The on-screen character performs; it is NOT lip-synced TTS.
+- **Best for:** Recurring brand characters, multi-scene stories, a consistent spokesperson across shots.
 
 ### Which mode applies to THIS video?
-- If an avatar is provided below → Character 3 mode. The scriptText IS dialogue.
-- If NO avatar is provided → Kling O3 prompt-only mode. The scriptText is voiceover narration. Characters are generated from visualDescription.
+- If a character is provided below → Reference-to-Video mode (that character is cast into every scene).
+- If NO character is provided → Text-to-Video mode. Characters are generated from visualDescription.
 
 **General rules for both modes:**
-- Every scene = one Hedra clip (5-12 seconds, stitched from multiple 5s generations)
+- Every scene = one Seedance clip (5-12 seconds, stitched from shorter generations)
 - backgroundPrompt describes the environment/setting
 - visualDescription describes what is SEEN on screen
 - Write scripts that flow naturally when scenes are played back-to-back
@@ -257,15 +257,15 @@ When a character's dialogue is too long for one scene (more than ~25 words per 5
 - Never start a continuation scene with the character in a different location or pose
 - Scenes that are NOT part of a multi-part split should have shotGroupId set to null
 
-## HEDRA SPEECH RULES (TTS Pronunciation)
-When writing scriptText that will be spoken by Hedra's TTS engine:
+## SPEECH RULES (TTS Pronunciation)
+When writing scriptText that will be spoken by the voiceover TTS engine:
 - URLs must be written phonetically: "salesvelocity.ai" → "sales velocity dot A I"
 - Abbreviations should be spelled out: "CRM" → "C-R-M" or "customer relationship management"
 - Dollar amounts: "$1,500" → "fifteen hundred dollars"
 - Percentages: "50%" → "fifty percent"
 - Email addresses: "info@company.com" → "info at company dot com"
 - Technical terms: "API" → "A-P-I", "SaaS" → "sass" or "software as a service"
-These rules ensure Hedra's text-to-speech pronounces everything correctly and naturally.`;
+These rules ensure the text-to-speech pronounces everything correctly and naturally.`;
 
   if (!avatarContext) {
     prompt += `\n\n## CHARACTER / PRESENTER (NO AVATAR SELECTED)
@@ -275,7 +275,7 @@ No specific avatar has been chosen — the video AI will generate the characters
 1. The characters described in the user's Topic are the ON-SCREEN characters. They are IN the scene performing actions. They do NOT speak or lip-sync — the script is voiceover narration that plays over the video.
 2. If the user says "a tall bald man in his 40s wearing a black henley", your visualDescription MUST describe that exact person in EVERY SCENE. NOT a woman. NOT a different person. NOT a "team member". The user's character is the protagonist of EVERY scene.
 3. Copy the user's character descriptions EXACTLY into every visualDescription — same age, gender, ethnicity, clothing, grooming, physical features.
-4. **CHARACTER CONTINUITY (CRITICAL):** When the same character appears in multiple scenes, you MUST explicitly state "the same [character description] from scene X" in the visualDescription. Hedra generates each scene independently — if you don't reference back, it will create a different person. Example: Scene 1 says "A tall bald white man in his 40s wearing a black henley" → Scene 4 MUST say "The same tall bald white man in his 40s wearing a black henley from scene 1".
+4. **CHARACTER CONTINUITY (CRITICAL):** When the same character appears in multiple scenes, you MUST explicitly state "the same [character description] from scene X" in the visualDescription. The engine generates each scene independently — if you don't reference back, it will create a different person. Example: Scene 1 says "A tall bald white man in his 40s wearing a black henley" → Scene 4 MUST say "The same tall bald white man in his 40s wearing a black henley from scene 1".
 5. If the user describes multiple characters for different scenes, use exactly those characters in those scenes.
 6. **NEVER introduce characters the user did not mention.** If the user describes one character, that character appears in ALL scenes — do not swap in a different person for any scene.
 7. NEVER invent a different on-screen character than what the user described. If scene 3 shows a "team meeting", the user's protagonist is the one presenting — do not replace them with a random colleague.
@@ -352,7 +352,7 @@ Return ONLY valid JSON (no markdown, no code fences). EVERY field present on EVE
       "scriptText": "Natural spoken script with emotional direction. Conversational, specific, compelling. 15-25 words per 5 seconds.",
       "visualDescription": "Full scene description: character appearance (age, gender, clothing, grooming), demeanor, framing, mood. Keep character appearance CONSISTENT across all scenes.",
       "suggestedDuration": 12,
-      "engine": "hedra",
+      "engine": "fal",
       "backgroundPrompt": "Cinematic background: setting + lighting + color palette + atmosphere. Must match the script's emotional tone.",
       "shotGroupId": null,
       "location": "Modern open-plan office, glass-walled, city skyline beyond",
@@ -407,7 +407,7 @@ function buildUserPrompt(
 
 **Topic:** ${description}
 **Total duration:** ${duration} seconds (distribute across scenes — vary durations for pacing, not all equal)
-**Scenes:** EXACTLY ${sceneCount} scenes — no more, no less. Each stitched from short Hedra clips.
+**Scenes:** EXACTLY ${sceneCount} scenes — no more, no less. Each stitched from short Seedance clips.
 
 CRITICAL: The Topic above contains the user's creative direction. If they describe specific characters (age, gender, ethnicity, clothing, setting), you MUST use those EXACT descriptions in your visualDescription fields. Do NOT substitute a different character. If only ONE character is described, that SAME character must appear in EVERY scene — never introduce a different person.
 
@@ -783,7 +783,7 @@ function generateFallbackScripts(
         scriptText: `Hey, welcome! Today I'm going to walk you through ${topic}. By the end, you'll know exactly how to do this yourself.`,
         visualDescription: 'Title card with tutorial topic, professional background',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Modern bright office with large monitor showing tutorial interface, indoor plants, warm lighting, clean desk',
         shotGroupId: null,
       });
@@ -795,7 +795,7 @@ function generateFallbackScripts(
           scriptText: `Now let me show you step ${i - 1}. This is where things get interesting.`,
           visualDescription: `Screen recording showing step ${i - 1} in action`,
           suggestedDuration: durationPerScene,
-          engine: 'hedra',
+          engine: 'fal',
           backgroundPrompt: 'Clean workspace with soft ambient lighting, monitor displaying software interface, shallow depth of field',
           shotGroupId: null,
         });
@@ -807,7 +807,7 @@ function generateFallbackScripts(
         scriptText: `And that's it! You've got everything you need to get started. Try it out and let me know how it goes.`,
         visualDescription: 'Summary slide with key takeaways',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Bright creative studio with motivational backdrop, warm tones, professional lighting',
         shotGroupId: null,
       });
@@ -821,7 +821,7 @@ function generateFallbackScripts(
         scriptText: `Here's something that might surprise you about ${topic}. Let me break it down.`,
         visualDescription: 'Presenter opens with a bold statement, direct to camera',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Sleek modern conference room with glass walls, city skyline visible, dramatic lighting, shallow depth of field',
         shotGroupId: null,
       });
@@ -832,7 +832,7 @@ function generateFallbackScripts(
         scriptText: `Most teams waste hours on this. The old way of doing things just doesn't cut it anymore.`,
         visualDescription: 'Presenter explains the pain point with empathy',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Creative studio with exposed brick walls, warm pendant lighting, comfortable setting with plants and books',
         shotGroupId: null,
       });
@@ -843,7 +843,7 @@ function generateFallbackScripts(
         scriptText: `That's exactly why we built this. It takes what used to be a headache and makes it automatic.`,
         visualDescription: 'Presenter introduces the solution with enthusiasm',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Modern tech office with large displays showing dashboards and analytics, blue accent lighting, clean aesthetic',
         shotGroupId: null,
       });
@@ -855,7 +855,7 @@ function generateFallbackScripts(
           scriptText: `The results speak for themselves. Teams are saving hours every week and getting better outcomes.`,
           visualDescription: 'Presenter highlights key metrics and results',
           suggestedDuration: durationPerScene,
-          engine: 'hedra',
+          engine: 'fal',
           backgroundPrompt: 'Bright co-working space with whiteboard showing growth charts, natural window light, green plants, energetic atmosphere',
           shotGroupId: null,
         });
@@ -867,7 +867,7 @@ function generateFallbackScripts(
         scriptText: `Ready to see this in action? Head over to the link below and try it free.`,
         visualDescription: 'Presenter delivers CTA with confident smile',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Bright professional studio with branded backdrop, warm inviting lighting, casual setting',
         shotGroupId: null,
       });
@@ -881,7 +881,7 @@ function generateFallbackScripts(
         scriptText: `If you're dealing with ${topic}, I get it. It's frustrating, and you're not alone.`,
         visualDescription: 'Presenter connects empathetically with the viewer',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Warm cozy office with bookshelves, soft lighting, plants, inviting atmosphere',
         shotGroupId: null,
       });
@@ -892,7 +892,7 @@ function generateFallbackScripts(
         scriptText: `What if this whole process could run on autopilot? That's exactly what we built.`,
         visualDescription: 'Presenter introduces the product with excitement',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Modern tech lab with holographic displays, cool blue ambient lighting, futuristic minimal design',
         shotGroupId: null,
       });
@@ -903,7 +903,7 @@ function generateFallbackScripts(
         scriptText: `Unlike anything else out there, this actually delivers. It's fast, simple, and the results are real.`,
         visualDescription: 'Presenter walks through key differentiators',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Modern creative workspace with whiteboard showing strategy diagrams, bright natural light',
         shotGroupId: null,
       });
@@ -915,7 +915,7 @@ function generateFallbackScripts(
           scriptText: `Our customers are seeing real results. One team cut their prospecting time by 80% in the first week. Another closed three new deals in their first month.`,
           visualDescription: 'Presenter shares testimonials with conviction',
           suggestedDuration: durationPerScene,
-          engine: 'hedra',
+          engine: 'fal',
           backgroundPrompt: 'Bright open-plan office with team celebration in background, motivational wall art, warm afternoon light',
           shotGroupId: null,
         });
@@ -927,7 +927,7 @@ function generateFallbackScripts(
         scriptText: `Want to see these results yourself? Click below and let's get you started. Seriously, you'll thank yourself later.`,
         visualDescription: 'Presenter delivers confident CTA',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Professional studio with clean branded backdrop, confident warm lighting, inviting atmosphere',
         shotGroupId: null,
       });
@@ -941,7 +941,7 @@ function generateFallbackScripts(
         scriptText: `Hey! I want to show you something that's going to change how you think about ${topic}.`,
         visualDescription: 'Opening title with eye-catching visual',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Modern bright office with clean desk, large monitor, indoor plants, warm professional lighting',
         shotGroupId: null,
       });
@@ -960,7 +960,7 @@ function generateFallbackScripts(
           scriptText: `Let me show you how this works in practice. It's simpler than you'd think.`,
           visualDescription: `Presenter demonstrates key feature ${i - 1}`,
           suggestedDuration: durationPerScene,
-          engine: 'hedra',
+          engine: 'fal',
           backgroundPrompt: bgPrompts[(i - 2) % bgPrompts.length],
           shotGroupId: null,
         });
@@ -972,7 +972,7 @@ function generateFallbackScripts(
         scriptText: `That's a wrap! If any of this clicked for you, check out the link below. Let's make it happen.`,
         visualDescription: 'CTA with contact info',
         suggestedDuration: durationPerScene,
-        engine: 'hedra',
+        engine: 'fal',
         backgroundPrompt: 'Bright creative studio space with branded elements, warm inviting lighting',
         shotGroupId: null,
       });

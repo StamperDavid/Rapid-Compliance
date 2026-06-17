@@ -77,6 +77,10 @@ interface MediaDocData {
   parentAssetId?: string;
   derivedFrom?: string[];
   usedInPosts?: string[];
+  characterId?: string;
+  characterName?: string;
+  projectId?: string;
+  projectName?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
   createdBy?: string;
@@ -115,6 +119,10 @@ function rowToAsset(id: string, data: MediaDocData): UnifiedMediaAsset {
     ...(data.parentAssetId ? { parentAssetId: data.parentAssetId } : {}),
     ...(Array.isArray(data.derivedFrom) ? { derivedFrom: data.derivedFrom } : {}),
     ...(Array.isArray(data.usedInPosts) ? { usedInPosts: data.usedInPosts } : {}),
+    ...(data.characterId ? { characterId: data.characterId } : {}),
+    ...(data.characterName ? { characterName: data.characterName } : {}),
+    ...(data.projectId ? { projectId: data.projectId } : {}),
+    ...(data.projectName ? { projectName: data.projectName } : {}),
     createdAt: toIsoString(data.createdAt),
     updatedAt: toIsoString(data.updatedAt),
     createdBy: data.createdBy ?? 'unknown',
@@ -184,6 +192,12 @@ export async function listAssets(
   }
   if (filters.source) {
     query = query.where('source', '==', filters.source);
+  }
+  if (filters.characterId) {
+    query = query.where('characterId', '==', filters.characterId);
+  }
+  if (filters.projectId) {
+    query = query.where('projectId', '==', filters.projectId);
   }
 
   let snapshot: FirebaseFirestore.QuerySnapshot;
@@ -258,6 +272,10 @@ export async function createAsset(
     ...(input.parentAssetId ? { parentAssetId: input.parentAssetId } : {}),
     ...(input.derivedFrom ? { derivedFrom: input.derivedFrom } : {}),
     ...(input.usedInPosts ? { usedInPosts: input.usedInPosts } : {}),
+    ...(input.characterId ? { characterId: input.characterId } : {}),
+    ...(input.characterName ? { characterName: input.characterName } : {}),
+    ...(input.projectId ? { projectId: input.projectId } : {}),
+    ...(input.projectName ? { projectName: input.projectName } : {}),
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     createdBy: input.createdBy,

@@ -26,8 +26,8 @@
  * This specialist produces the EDITORIAL storyboard — scene scripts,
  * visual directions, durations, shot types. It does NOT pick avatars,
  * voices, or render engines — those are runtime decisions handled by the
- * Hedra render pipeline (src/lib/video/pipeline-project-service.ts and
- * the /api/video routes). Content fields emitted here (scriptText, title,
+ * fal / Seedance render pipeline (the Shot Plan flow under /api/content/shot-plan).
+ * Content fields emitted here (scriptText, title,
  * visualDescription, backgroundPrompt, duration) align 1:1 with the
  * PipelineScene content surface so downstream mapping is an identity
  * transform for the editorial spine.

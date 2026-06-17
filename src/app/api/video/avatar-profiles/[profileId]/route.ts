@@ -42,7 +42,7 @@ const CharacterLookSchema = z.object({
 const UpdateProfileSchema = z.object({
   name: z.string().min(1).optional(),
   frontalImageUrl: z.string().url().optional(),
-  source: z.enum(['custom', 'hedra']).optional(),
+  source: z.enum(['custom']).optional(),
   role: z
     .enum(['hero', 'villain', 'extra', 'narrator', 'presenter', 'custom'])
     .optional(),
@@ -56,10 +56,9 @@ const UpdateProfileSchema = z.object({
   voiceId: z.string().nullable().optional(),
   voiceName: z.string().nullable().optional(),
   voiceProvider: z
-    .enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra'])
+    .enum(['elevenlabs', 'unrealspeech', 'custom'])
     .nullable()
     .optional(),
-  hedraCharacterId: z.string().nullable().optional(),
   isFavorite: z.boolean().optional(),
   description: z.string().nullable().optional(),
   isDefault: z.boolean().optional(),

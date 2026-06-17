@@ -63,6 +63,9 @@ interface AssistantStoryboard {
   backgroundPrompt?: string;
   cinematicConfig?: CinematicConfig;
   references?: SceneReference[];
+  /** Saved character bound to this scene by the build (per-scene avatar override). */
+  avatarId?: string | null;
+  avatarName?: string | null;
 }
 
 /** A file the operator attached in the composer (uploaded → permanent URL). */
@@ -161,12 +164,13 @@ function storyboardToScene(sb: AssistantStoryboard, sceneNumber: number): Omit<P
     scriptText: sb.scriptText ?? '',
     visualDescription: sb.visualDescription ?? '',
     screenshotUrl: null,
-    avatarId: null,
-    avatarName: null,
+    // Saved character bound to this scene by the build (per-scene avatar override).
+    avatarId: sb.avatarId ?? null,
+    avatarName: sb.avatarName ?? null,
     voiceId: null,
     voiceProvider: null,
     duration: sb.duration ?? 5,
-    engine: 'hedra',
+    engine: 'fal',
     backgroundPrompt: sb.backgroundPrompt ?? null,
     cinematicConfig: sb.cinematicConfig,
     location: sb.location,
@@ -674,6 +678,8 @@ export function ContentAssistant() {
         subjects?: IntentSubject[];
         targetSceneNumber?: number;
         imageRequests?: Array<{ name: string; prompt: string; fidelity: string; referenceImageUrl?: string }>;
+        musicRequests?: Array<{ prompt: string; genre?: string; durationSeconds?: number; name?: string }>;
+        mediaLibraryUpdated?: boolean;
         error?: string;
       };
 
@@ -692,7 +698,7 @@ export function ContentAssistant() {
         void (async () => {
           let made = 0;
           // Run them in PARALLEL — one stuck/slow generation must not block the rest.
-          // Each has its own timeout so a hung Hedra call can't hang the batch forever.
+          // Each has its own timeout so a hung generation call can't hang the batch forever.
           await Promise.allSettled(
             imageRequests.map(async (req) => {
               const controller = new AbortController();
@@ -736,6 +742,58 @@ export function ContentAssistant() {
         return;
       }
 
+      // Music generation: the server returned music request(s). Generate each via the
+      // proven /api/content/music/generate endpoint (which saves to the media library),
+      // then post a completion message. Mirrors the image flow.
+      const musicRequests = data.musicRequests ?? [];
+      if (musicRequests.length > 0) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.reply as string }]);
+        clearAttachments();
+        setLoading(false);
+        void (async () => {
+          let made = 0;
+          await Promise.allSettled(
+            musicRequests.map(async (req) => {
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), 180000);
+              try {
+                const gen = await authFetch('/api/content/music/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  signal: controller.signal,
+                  body: JSON.stringify({
+                    prompt: req.prompt,
+                    ...(req.genre ? { genre: req.genre } : {}),
+                    ...(req.durationSeconds ? { durationSeconds: req.durationSeconds } : {}),
+                    ...(req.name ? { name: req.name } : {}),
+                  }),
+                });
+                if (gen.ok) {
+                  made += 1;
+                  // Tell the Library / Audio Lab (if open) to refresh so the track shows live.
+                  window.dispatchEvent(new Event('media-library-updated'));
+                }
+              } catch {
+                /* timeout or failure on this one — the others continue */
+              } finally {
+                clearTimeout(timer);
+              }
+            }),
+          );
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content:
+                made > 0
+                  ? `Done — your track${musicRequests.length === 1 ? ' is' : 's are'} saved in your Audio Lab and Library (open/refresh to hear ${musicRequests.length === 1 ? 'it' : 'them'}).`
+                  : `I couldn't finish composing that — try again, or use the music studio in the Audio Lab directly.`,
+            },
+          ]);
+        })();
+        return;
+      }
+
       // If the director built storyboards and we're on the Video tab, drop them
       // straight onto the canvas for the operator to review, tweak, and approve.
       const storyboards = data.storyboards ?? [];
@@ -763,12 +821,12 @@ export function ContentAssistant() {
           scriptText: sb.scriptText ?? '',
           visualDescription: sb.visualDescription ?? '',
           screenshotUrl: null,
-          avatarId: null,
-          avatarName: null,
+          avatarId: sb.avatarId ?? null,
+          avatarName: sb.avatarName ?? null,
           voiceId: null,
           voiceProvider: null,
           duration: sb.duration ?? 5,
-          engine: 'hedra',
+          engine: 'fal',
           backgroundPrompt: sb.backgroundPrompt ?? null,
           cinematicConfig: sb.cinematicConfig,
           location: sb.location,
@@ -855,6 +913,12 @@ export function ContentAssistant() {
         }
         return next;
       });
+
+      // Live-refresh the Library / Audio Lab when the route saved an asset inline
+      // (e.g. a chat background-removal or image edit) with no imageRequests batch.
+      if (data.mediaLibraryUpdated) {
+        window.dispatchEvent(new Event('media-library-updated'));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -881,10 +945,10 @@ export function ContentAssistant() {
           type="button"
           onClick={() => setOpen(true)}
           className="fixed bottom-6 right-24 z-40 h-12 gap-2 rounded-full shadow-lg"
-          aria-label="Open the Content Assistant"
+          aria-label="Open the Content Manager chat"
         >
           <Sparkles className="h-4 w-4" />
-          Content Assistant
+          Content Manager
         </Button>
       )}
 
@@ -896,7 +960,7 @@ export function ContentAssistant() {
         )}
         aria-hidden={!open}
         role="complementary"
-        aria-label="Content Assistant"
+        aria-label="Content Manager chat"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
@@ -905,7 +969,7 @@ export function ContentAssistant() {
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <SectionTitle className="text-base">Content Assistant</SectionTitle>
+              <SectionTitle className="text-base">Content Manager</SectionTitle>
               <SectionDescription className="text-xs">
                 Your creative director — let&apos;s shape what you want to make.
               </SectionDescription>
@@ -929,7 +993,7 @@ export function ContentAssistant() {
               variant="ghost"
               size="icon"
               onClick={() => setOpen(false)}
-              aria-label="Close the Content Assistant"
+              aria-label="Close the Content Manager chat"
               className="h-8 w-8"
             >
               <X className="h-4 w-4" />

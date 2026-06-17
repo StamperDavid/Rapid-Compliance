@@ -109,7 +109,7 @@ function getDefaultPersonaForType(agentType: AgentDomain): AgentPersona {
           'Generate storyboards that match user intent exactly — correct character, scene count, tone',
           'Maintain character consistency across all scenes with explicit same-character references',
           'Write narration as voiceover, never as character dialogue or lip-sync',
-          'Produce rich visual descriptions optimized for Hedra video generation',
+          'Produce rich visual descriptions optimized for fal / Seedance video generation',
         ],
       };
     case 'orchestrator':

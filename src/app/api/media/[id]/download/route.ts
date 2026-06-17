@@ -21,13 +21,19 @@ import { getAsset } from '@/lib/media/media-library-service';
 
 export const dynamic = 'force-dynamic';
 
-/** A Content-Disposition-safe filename: drop any folder prefix and characters
- *  that would break the header, falling back to the asset id. */
-function safeFilename(name: string | null | undefined, id: string): string {
+/**
+ * Build an RFC 6266-safe Content-Disposition value. HTTP headers are ByteStrings
+ * (latin-1), so a non-ASCII character in the asset name (em-dash, emoji, accent)
+ * THROWS when set as a header. We emit BOTH an ASCII-only `filename="..."` fallback
+ * and a percent-encoded `filename*=UTF-8''...` that modern browsers prefer.
+ */
+function contentDisposition(name: string | null | undefined, id: string): string {
   const raw = name && name.trim().length > 0 ? name : id;
-  const base = raw.split('/').pop() ?? raw;
-  const cleaned = base.replace(/["\r\n]/g, '').trim();
-  return cleaned.length > 0 ? cleaned : id;
+  const base = (raw.split('/').pop() ?? raw).replace(/["\r\n]/g, '').trim() || id;
+  // ASCII fallback: replace anything outside printable ASCII (incl. em-dash, emoji).
+  const ascii = base.replace(/[^\x20-\x7E]/g, '_') || id;
+  const encoded = encodeURIComponent(base);
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
 }
 
 export async function GET(
@@ -65,7 +71,6 @@ export async function GET(
       );
     }
 
-    const filename = safeFilename(asset.name, asset.id);
     const contentType =
       (asset.mimeType && asset.mimeType.trim().length > 0 ? asset.mimeType : null) ??
       upstream.headers.get('content-type') ??
@@ -73,7 +78,7 @@ export async function GET(
 
     const headers = new Headers();
     headers.set('Content-Type', contentType);
-    headers.set('Content-Disposition', `attachment; filename="${filename}"`);
+    headers.set('Content-Disposition', contentDisposition(asset.name, asset.id));
     headers.set('Cache-Control', 'private, no-store');
     const contentLength = upstream.headers.get('content-length');
     if (contentLength) {

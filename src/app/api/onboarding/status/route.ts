@@ -119,7 +119,6 @@ function checkApiKeyPresence(apiKeysDoc: Record<string, unknown> | null, service
     },
     paypal_client_id: (d) => Boolean((d.payments as Record<string, unknown> | undefined)?.paypal),
     twilio_account_sid: (d) => Boolean((d.sms as Record<string, unknown> | undefined)?.twilio),
-    hedra: (d) => Boolean((d.video as Record<string, unknown> | undefined)?.hedra),
     fal: (d) => Boolean((d.imageGeneration as Record<string, unknown> | undefined)?.fal ?? d.fal),
     elevenlabs: (d) => Boolean((d.voice as Record<string, unknown> | undefined)?.elevenlabs ?? d.elevenlabs),
     twitter_consumer_key: (d) => Boolean((d.social as Record<string, unknown> | undefined)?.twitter ?? d.twitter),

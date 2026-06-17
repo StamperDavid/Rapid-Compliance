@@ -81,17 +81,6 @@ async function testProviderKey(
       return { valid: true, message: 'OpenAI API key validated' };
     }
 
-    case 'hedra': {
-      // Public models endpoint with key header
-      const response = await fetch('https://api.hedra.com/web-app/public/models', {
-        headers: { 'x-api-key': apiKey },
-      });
-      if (response.status === 401 || response.status === 403) {
-        return { valid: false, message: 'Hedra API key is invalid or unauthorized' };
-      }
-      return { valid: true, message: 'Hedra API key validated' };
-    }
-
     default: {
       const _exhaustive: never = provider;
       return { valid: false, message: `Unknown provider: ${String(_exhaustive)}` };

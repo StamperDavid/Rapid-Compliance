@@ -1,7 +1,7 @@
 /**
  * AI Video Generation Engine Types
  *
- * Comprehensive type definitions for the Director Service, Hedra generation engine,
+ * Comprehensive type definitions for the Director Service, fal / Seedance generation engine,
  * and Automated Post-Production (Stitcher) system.
  */
 
@@ -67,8 +67,8 @@ export type TransitionType =
 // VIDEO GENERATION PROVIDERS
 // ============================================================================
 
-/** Hedra is the sole video generation provider. */
-export type VideoGenerationProvider = 'hedra';
+/** fal (Seedance) is the sole video generation provider. */
+export type VideoGenerationProvider = 'fal';
 
 // ============================================================================
 // MASTER STORYBOARD
@@ -170,7 +170,7 @@ export interface StoryboardShot {
   // Visual prompt for AI generation
   visualPrompt: VisualPrompt;
 
-  // Provider (Hedra is the sole engine)
+  // Provider (fal / Seedance is the sole engine)
   preferredProvider?: VideoGenerationProvider;
 
   // Timing

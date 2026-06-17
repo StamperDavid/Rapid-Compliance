@@ -19,10 +19,11 @@ import { z } from 'zod';
 
 import { requireAuth } from '@/lib/auth/api-auth';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
-import { buildToolSystemPrompt } from '@/lib/brand/brand-dna-service';
+import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { buildStoryboardFromBrief } from '@/lib/video/storyboard-build-service';
+import { listAvatarProfiles, type AvatarProfile } from '@/lib/video/avatar-profile-service';
 import { listAssets } from '@/lib/media/media-library-service';
 import { removeBackgroundAndSave } from '@/lib/media/remove-background-asset';
 import { editImageAndSave } from '@/lib/media/edit-image-asset';
@@ -32,6 +33,8 @@ import {
   findPriorIntent,
   isApproval,
 } from '@/lib/content/content-intent';
+import { getCopywriter, type PageCopyResult } from '@/lib/agents/content/copywriter/specialist';
+import type { AgentMessage } from '@/lib/agents/types';
 
 // Re-exported for back-compat: the storyboard shape now lives in the shared service.
 export type { AssistantStoryboard } from '@/lib/video/storyboard-build-service';
@@ -39,6 +42,10 @@ export type { AssistantStoryboard } from '@/lib/video/storyboard-build-service';
 export const dynamic = 'force-dynamic';
 
 const FILE = 'api/content/assistant/route.ts';
+
+// The conversational Content Manager brain lives in ONE Golden Master.
+const CONTENT_MANAGER_ID = 'CONTENT_MANAGER';
+const CONTENT_MANAGER_INDUSTRY = 'saas_sales_ops';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Request validation
@@ -126,6 +133,48 @@ function mapIntentToBrief(intent: ContentIntent): string {
 }
 
 /**
+ * Load the operator's saved Character Library characters (+ stock characters).
+ * Never throws — a lookup failure just means the chat runs without the cast block.
+ */
+async function loadSavedCharacters(userId: string): Promise<AvatarProfile[]> {
+  try {
+    return await listAvatarProfiles(userId);
+  } catch (err) {
+    logger.warn('[ContentManager] saved-character lookup failed', {
+      file: FILE,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
+/**
+ * Render the operator's saved characters as a compact prompt block the Content
+ * Manager can bind against. Each line carries the characterId + each Look's lookId
+ * so the model can put them straight into the intent's subjects. Empty string when
+ * the operator has no saved characters (the block is then omitted entirely).
+ */
+function formatSavedCharactersBlock(characters: AvatarProfile[]): string {
+  if (characters.length === 0) {
+    return '';
+  }
+  // Cap defensively so a large library can't blow out the prompt; saved characters
+  // are a curated cast, so this is generous in practice.
+  const lines = characters.slice(0, 40).map((c) => {
+    const dna = c.description ? ` — ${c.description}` : '';
+    const voice = c.voiceName ? ` Voice: ${c.voiceName}.` : '';
+    const looks = (c.looks ?? [])
+      .map(
+        (l) =>
+          `    • Look "${l.name}" (lookId: ${l.id})${l.outfitDescription ? ` — ${l.outfitDescription}` : ''}${l.isPrimary ? ' [primary]' : ''}`,
+      )
+      .join('\n');
+    return `- "${c.name}" (characterId: ${c.id})${dna}.${voice}${looks ? `\n  Looks:\n${looks}` : ''}`;
+  });
+  return `\n\n## SAVED CHARACTERS — the operator's reusable cast (PREFER these)\nThese are saved characters with LOCKED identities (each carries its own face, voice, and reference images). When the operator names or clearly means one of them, treat that subject AS the saved character:\n- Set the subject's "characterId" to the matching character's id.\n- If they pick (or you choose) a specific Look — an outfit/state — set the subject's "lookId" to that Look's id. Default to the [primary] Look when they don't specify one.\n- Match by name, case-insensitive, allowing nicknames and partials (e.g. "David" → "David - Professional").\n- A saved character does NOT need attached reference files — its identity comes from the saved profile. The operator may still attach extra references, which you map as usual.\n- Copy the character's key identity details into the subject's "notes" so the build keeps them consistent.\n${lines.join('\n')}`;
+}
+
+/**
  * Backstop for the approval turn: the proposal turn is SUPPOSED to carry a parseable
  * ```intent block, but the model occasionally emits malformed JSON or the wrong fence.
  * When the operator approves and no clean block is in history, re-derive the final
@@ -135,6 +184,7 @@ function mapIntentToBrief(intent: ContentIntent): string {
 async function forceIntent(
   messages: { role: 'user' | 'assistant'; content: string }[],
   attachments: Attachment[],
+  savedCharactersBlock: string,
 ): Promise<ContentIntent | null> {
   const refBlock = attachments.length > 0
     ? `\n\nATTACHED REFERENCE FILES (map these to the right characters by name + content):\n${attachments
@@ -142,8 +192,8 @@ async function forceIntent(
         .join('\n')}`
     : '';
   const sys = `From the conversation below, output ONLY a JSON object (no prose, no fences) capturing the operator's FINAL confirmed request, folding in every refinement they made. Match exactly:
-{"mediaType":"video|image|music|text","summary":"<plain summary>","subjects":[{"name":"<character>","referenceNames":["<attached file names depicting them>"],"fidelity":"exact|inspired|new"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat>"],"callToAction":"<ask>"}
-Default fidelity "exact" for the operator's named characters. Map references using both file names and the AI's read of each file. If a character appears in MULTIPLE forms (an alter ego, a costume change, a transformation — e.g. a civilian who becomes a hero, or a businessman who becomes a villain), model them as ONE subject with ONE shared reference set and describe the forms in "notes" — they are the SAME person (identical face, hair, beard) and only clothing/state changes.${refBlock}`;
+{"mediaType":"video|image|music|text","summary":"<plain summary>","subjects":[{"name":"<character>","referenceNames":["<attached file names depicting them>"],"fidelity":"exact|inspired|new","characterId":"<saved character id, if this subject IS a saved character>","lookId":"<chosen Look id, if any>"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat>"],"callToAction":"<ask>"}
+Default fidelity "exact" for the operator's named characters. Map references using both file names and the AI's read of each file. If a character appears in MULTIPLE forms (an alter ego, a costume change, a transformation — e.g. a civilian who becomes a hero, or a businessman who becomes a villain), model them as ONE subject with ONE shared reference set and describe the forms in "notes" — they are the SAME person (identical face, hair, beard) and only clothing/state changes. When a subject IS one of the SAVED characters listed below, set its "characterId" (and "lookId" for the chosen Look); omit both fields otherwise.${savedCharactersBlock}${refBlock}`;
   try {
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
@@ -267,69 +317,47 @@ function describeActiveTab(activeTab: string | undefined): string {
   return `The operator is in the Content Generator. Help them decide what to create, then delegate to the right specialist.`;
 }
 
-const INTENT_PROTOCOL = `
-
-## HOW YOU OPERATE — INTERPRET, THEN PAUSE FOR APPROVAL (MANDATORY)
-You NEVER build anything until the operator has approved your understanding. Even when they say "make it now", your job on THAT turn is to interpret and CONFIRM — never to build, never to write the storyboard / shot list / asset in prose.
-
-When the operator has described something to make, reply with TWO parts, IN THIS ORDER:
-
-1. A short, plain-language summary of what you understood: the kind of asset (video, image, music, or text); who/what is in it and — for each character/subject — WHICH of their attached reference files depict it and whether you'll keep it EXACT (faithful copy of their art), use it as INSPIRATION (similar but distinct), or invent it NEW; the style; the format (length, shape/aspect, platform); the message; the beats; and the call to action. Keep it human and TIGHT — no shot-by-shot script. The VERY LAST LINE of this summary must be your single question (only if a real detail is genuinely unclear) OR a one-line "Approve this, or tell me what to change?". NOTHING the operator needs to read may come after that line.
-
-2. THEN — and only then — a fenced \`intent\` block. THE OPERATOR NEVER SEES THIS BLOCK (it is stripped from the chat); it exists only to drive the build on approval. So your question MUST be in the summary above — never inside or after this block — and you must put NOTHING after the block. Keep the block COMPACT: its "summary" field is ONE sentence, not the full prose. Emit it EXACTLY in this shape:
-
-\`\`\`intent
-{"mediaType":"video|image|music|text","summary":"<one-sentence summary>","subjects":[{"name":"<character/subject>","referenceNames":["<attached file names that depict this subject>"],"fidelity":"exact|inspired|new"}],"style":"<e.g. Pixar 3D>","format":{"durationSeconds":<int>,"aspectRatio":"<e.g. 16:9>","platform":"<e.g. youtube>"},"message":"<core message>","beats":["<beat 1>","<beat 2>"],"callToAction":"<the ask>"}
-\`\`\`
-
-Rules for the intent:
-- Map references to subjects using BOTH the file names AND the AI's read of each file (given below). Files clearly of the same person/character form that subject's reference set. The operator's naming convention is a strong identity hint.
-- SAME PERSON, MULTIPLE FORMS: if a character appears in more than one form — an alter ego, a costume change, a transformation (e.g. a civilian who becomes a hero, or a businessman who becomes a villain) — model them as ONE subject with ONE shared reference set, and spell the forms out in "notes". They MUST read as the same person across every scene — identical face, hair and beard — only clothing/state changes. Example note: "David is Velocity's civilian self — same exact face/hair/beard, in everyday clothes (no suit) in the early scenes; from the transformation on he is the suited Velocity. The Pipedrive Businessman is the Bully's human form — same face, business suit, who morphs into the armored Bully." Carry this into the story so the build keeps the identity consistent.
-- Default fidelity to "exact" when the operator gives references of named characters and asks to feature them (they want THEIR characters). Use "inspired" only when they say things like "something like this" / "similar but different". Use "new" when they ask you to invent.
-- Set mediaType to exactly what they asked for.
-- If a genuinely important detail is missing or ambiguous, ask ONE focused question inside your summary rather than guessing.
-
-## EVERY TURN — NON-NEGOTIABLE
-This applies on the FIRST request AND on every brief refinement after it:
-- You do NOT build, "re-fire", "send to the Video Specialist", or "lock it in". You CANNOT build. ONLY the operator's explicit approval on the NEXT turn triggers the build. Never say or imply you are building or about to.
-- ALWAYS re-emit a COMPLETE, fresh \`intent\` block that folds in EVERY refinement so far (e.g. if they bumped it to 90 seconds, the block's durationSeconds is 90). Never skip the block, never emit a partial one — even when you're only acknowledging a small tweak.
-- ALWAYS end the VISIBLE part of your reply with your one question OR "Approve this, or tell me what to change?" — this must be the last line the operator reads, every single time.
-- Never write storyboards, shot lists, or asset prose.`;
-
 // ────────────────────────────────────────────────────────────────────────────
-// System prompt — the Content Manager's conversational identity
+// System prompt — loaded from the Content Manager's Golden Master (one brain)
 // ────────────────────────────────────────────────────────────────────────────
 
 type Attachment = z.infer<typeof AttachmentSchema>;
 
+/**
+ * The Content Manager's conversational identity, intent protocol, and brand
+ * voice all live in its Golden Master (managerGoldenMasters / CONTENT_MANAGER),
+ * with Brand DNA baked in at seed time (Standing Rule #1). This route loads that
+ * ONE GM and uses its systemPrompt verbatim, appending only per-request runtime
+ * context (active tab, the operator's saved cast, attached references). There is
+ * NO hardcoded identity and NO runtime Brand DNA merge here.
+ *
+ * Returns null when the GM is not seeded — the caller surfaces an honest error
+ * rather than silently falling back to a divergent hardcoded brain.
+ */
 async function buildSystemPrompt(
   activeTab: string | undefined,
   attachments: Attachment[],
-): Promise<string> {
-  let brandContext = '';
-  try {
-    brandContext = await buildToolSystemPrompt('voice');
-  } catch (error) {
-    logger.warn('[ContentManager] Failed to load brand context — continuing without', {
-      file: FILE,
-      error: error instanceof Error ? error.message : String(error),
-    });
+  savedCharactersBlock: string,
+): Promise<string | null> {
+  const gm = await getActiveManagerGMByIndustry(CONTENT_MANAGER_ID, CONTENT_MANAGER_INDUSTRY);
+  const rawPrompt = gm?.config?.systemPrompt;
+  const base = typeof rawPrompt === 'string' && rawPrompt.length > 0
+    ? rawPrompt
+    : (gm?.systemPromptSnapshot ?? '');
+  if (!base) {
+    logger.error(
+      '[ContentManager] No active Content Manager GM found — run scripts/seed-content-manager-gm.js',
+      undefined,
+      { file: FILE },
+    );
+    return null;
   }
 
-  const role = `You are the Content Manager for SalesVelocity.ai — the content director who turns a request into finished content by DELEGATING to your team of specialists. You do not do the production yourself; you understand what the operator wants and hand it to the right specialist:
-- **Video Specialist** — shot-by-shot storyboards (Video tab)
-- **Copywriter** — headlines, ad copy, scripts, email copy
-- **Asset Generator** — images
-- **Music Planner** — music & soundtrack
-
-## HOW YOU WORK
-- Talk like a creative director: bring a point of view, propose concrete ideas, keep it tight and human — no bullet-point essays, no corporate filler.
-- Interpret what the operator wants, then CONFIRM your understanding before anything is built (see the protocol below) — you always pause for their approval first.
-- Stay in the tenant's brand voice (below).
-- You shape and confirm the plan; the specialists do the production. Don't hand-write the final asset yourself.`;
-
+  const onContentTab = isContentGeneratorTab(activeTab);
   const tabBlock = `\n\n## CURRENT CONTEXT\n${describeActiveTab(activeTab)}`;
-  const protocolBlock = isContentGeneratorTab(activeTab) ? INTENT_PROTOCOL : '';
+  // Only surface the saved cast where the intent protocol can act on it (emit
+  // characterId/lookId in an intent).
+  const characterBlock = onContentTab ? savedCharactersBlock : '';
 
   let referenceBlock = '';
   if (attachments.length > 0) {
@@ -355,9 +383,8 @@ async function buildSystemPrompt(
       .join('\n');
     referenceBlock = `\n\n## ATTACHED REFERENCE MATERIALS\nThe operator attached these files, and here is what each one actually contains (the AI's read of it):\n${list}\nUse this understanding directly — build the concept FROM what's in these files, not just the fact that they exist. Treat image(s) as the primary visual reference (their subject, look, and styling should anchor the concept), video(s) as motion / pacing / vibe references, and audio / documents as substance to incorporate (script, transcript, copy, data). When you delegate the build, weave the actual content into the brief (e.g. "build around the attached photo of …" / "use the script from the attached doc") so the specialist works from the real material.`;
   }
-  const brandBlock = brandContext ? `\n\n## BRAND VOICE & IDENTITY (stay in this voice)\n${brandContext}` : '';
 
-  return `${role}${tabBlock}${protocolBlock}${referenceBlock}${brandBlock}`;
+  return `${base}${tabBlock}${characterBlock}${referenceBlock}`;
 }
 
 /**
@@ -530,13 +557,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Otherwise (ambiguous, no image) fall through to the normal flow.
     }
 
+    // Saved Character Library cast — surfaced to the model so it can bind a subject
+    // to a saved character (characterId/lookId). Loaded once on content tabs; reused
+    // by both the approval backstop (Phase B) and the proposal prompt (Phase A).
+    const savedCharactersBlock = onContentTab
+      ? formatSavedCharactersBlock(await loadSavedCharacters(authResult.user.uid))
+      : '';
+
     // ── PHASE B — the operator approved the pending understanding. Resolve the intent
     // (parsed block first, forceIntent backstop second) and build it.
     if (userApproves && hasPriorProposal) {
       // Re-derive the final intent from the WHOLE conversation (folds in every
       // refinement — e.g. a later "make it 90 seconds"). Fall back to the latest
       // embedded block only if that synthesis fails.
-      const priorIntent = (await forceIntent(parsed.messages, attachments)) ?? findPriorIntent(parsed.messages);
+      const priorIntent =
+        (await forceIntent(parsed.messages, attachments, savedCharactersBlock)) ??
+        findPriorIntent(parsed.messages);
       if (priorIntent?.mediaType === 'video') {
         // References come from the chat composer; if those didn't survive (e.g. a hard
         // refresh emptied it), resolve them from the media library by the intent's
@@ -556,6 +592,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           fromChat: attachments.length,
           fromLibrary: attachments.length === 0 ? buildAttachments.length : 0,
           durationSeconds: priorIntent.format.durationSeconds ?? 30,
+          // Subjects bound to a saved Character Library character (Step 1 binding).
+          boundCharacters: priorIntent.subjects.filter((s) => s.characterId).length,
         });
         const built = await buildStoryboardFromBrief({
           brief: mapIntentToBrief(priorIntent),
@@ -567,6 +605,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               : 30,
           ...(priorIntent.callToAction ? { callToAction: priorIntent.callToAction } : {}),
           ...(buildAttachments.length > 0 ? { attachments: buildAttachments } : {}),
+          // Subjects carry any saved-character bindings (characterId/lookId); the build
+          // resolves them to face + Look anchors and sets each scene's avatarId.
+          ...(priorIntent.subjects.length > 0 ? { subjects: priorIntent.subjects } : {}),
         });
         if ('error' in built) {
           logger.warn('[ContentManager] Video build failed', { file: FILE, error: built.error });
@@ -634,12 +675,77 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           imageRequests,
         });
       }
-      // Music / text builders are wired in the following phases. Until then,
-      // acknowledge the approval rather than silently doing nothing.
-      if (priorIntent) {
+      // ── Music — generate REAL audio (MusicGen, ≤30s, brand-aware). The route
+      // returns the request; the client posts it to /api/content/music/generate
+      // (the same proven endpoint the Audio Lab uses), which persists the track to
+      // the media library. Mirrors the image flow. (The Music Planner specialist
+      // only PLANS — actual audio comes from the generation endpoint.)
+      if (priorIntent?.mediaType === 'music') {
+        const promptParts = [priorIntent.summary, priorIntent.message ?? '', priorIntent.beats.join('. ')].filter(Boolean);
+        const durationSeconds =
+          priorIntent.format.durationSeconds && priorIntent.format.durationSeconds >= 1
+            ? Math.min(priorIntent.format.durationSeconds, 30)
+            : 20;
+        const musicRequest = {
+          prompt: promptParts.join(' ').slice(0, 1000),
+          ...(priorIntent.style ? { genre: priorIntent.style } : {}),
+          durationSeconds,
+          name: priorIntent.summary.slice(0, 80),
+        };
+        logger.info('[ContentManager] music build dispatched', { file: FILE, durationSeconds });
         return NextResponse.json({
           success: true,
-          reply: `Got your approval — building ${priorIntent.mediaType} straight from the chat is coming next; video and image are live right now.`,
+          reply: "On it — composing your track now (up to 30 seconds). It'll appear in your Audio Lab and Library when it's ready.",
+          musicRequests: [musicRequest],
+        });
+      }
+
+      // ── Text — the Copywriter writes it now; we return it inline in the chat.
+      if (priorIntent?.mediaType === 'text') {
+        const copywriter = getCopywriter();
+        await copywriter.initialize();
+        const sections =
+          priorIntent.beats.length > 0
+            ? priorIntent.beats.map((b, i) => ({ id: `s${i + 1}`, name: b.slice(0, 60), purpose: b }))
+            : undefined;
+        const ts = Date.now();
+        const message: AgentMessage = {
+          id: `cm_text_${ts}`,
+          timestamp: new Date(),
+          from: 'CONTENT_MANAGER_CHAT',
+          to: 'COPYWRITER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            action: 'generate_page_copy',
+            pageId: `copy_${ts}`,
+            pageName: priorIntent.summary.slice(0, 100),
+            pagePurpose: priorIntent.message ?? priorIntent.summary,
+            ...(sections ? { sections } : {}),
+            ...(priorIntent.style ? { toneOfVoice: priorIntent.style } : {}),
+            ...(priorIntent.callToAction ? { keyPhrases: [priorIntent.callToAction] } : {}),
+          },
+          requiresResponse: true,
+          traceId: `cm_text_${ts}`,
+        };
+        const report = await copywriter.execute(message);
+        if (report.status !== 'COMPLETED') {
+          logger.warn('[ContentManager] text build failed', { file: FILE, errors: report.errors });
+          return NextResponse.json({
+            success: true,
+            reply: `I started writing, but the Copywriter hit a problem: ${(report.errors ?? []).join('; ') || 'unknown error'}. Want me to try again?`,
+          });
+        }
+        const copy = report.data as PageCopyResult;
+        const body = [
+          `# ${copy.headlines.h1}`,
+          ...copy.sections.map((s) => `## ${s.heading}\n${s.content}${s.cta ? `\n\n**${s.cta}**` : ''}`),
+        ].join('\n\n');
+        logger.info('[ContentManager] text build complete', { file: FILE, sections: copy.sections.length });
+        return NextResponse.json({
+          success: true,
+          reply: `Here's your copy:\n\n${body}\n\n---\nWant me to tweak anything?`,
+          textOutput: copy,
         });
       }
       // Couldn't resolve an intent (block unparseable AND forceIntent failed) — fall
@@ -647,7 +753,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // ── PHASE A — interpret the request and PROPOSE the understanding (no build).
-    const systemPrompt = await buildSystemPrompt(parsed.activeTab, attachments);
+    const systemPrompt = await buildSystemPrompt(parsed.activeTab, attachments, savedCharactersBlock);
+    if (!systemPrompt) {
+      return NextResponse.json(
+        { success: false, error: "The Content Manager isn't configured right now. Please try again shortly." },
+        { status: 503 },
+      );
+    }
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
       model: 'claude-sonnet-4.6',

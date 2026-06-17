@@ -3,13 +3,9 @@
  * Firestore CRUD for character profiles with multi-angle reference images,
  * green screen clips, voice assignment, and Character Studio metadata.
  *
- * Supports two character sources:
- *   - 'custom'  — user-created premium characters with full identity control
- *   - 'hedra'   — imported from Hedra's character library (stock extras)
- *
- * Voice assignment is decoupled from character image. Two TTS paths:
- *   - Hedra voice → Hedra native TTS (audio_generation with voice_id + text)
- *   - ElevenLabs/UnrealSpeech → synthesize audio ourselves, upload to Hedra
+ * Characters are user-created ('custom') in Character Studio with full identity
+ * control. Voice assignment is decoupled from the character image and uses
+ * ElevenLabs / UnrealSpeech / custom clones for TTS.
  *
  * Collection path: organizations/{PLATFORM_ID}/avatar_profiles/{profileId}
  *
@@ -58,8 +54,8 @@ export interface CharacterLook {
 
 export type AvatarTier = 'premium' | 'standard';
 
-/** Character source — 'custom' = user-created in Character Studio, 'hedra' = imported from Hedra library */
-export type CharacterSource = 'custom' | 'hedra';
+/** Character source — 'custom' = user-created in Character Studio */
+export type CharacterSource = 'custom';
 
 /** Character role in productions */
 export type CharacterRole = 'hero' | 'villain' | 'extra' | 'narrator' | 'presenter' | 'custom';
@@ -73,7 +69,7 @@ export interface AvatarProfile {
   name: string; // e.g., "David - Professional"
 
   // Character Studio fields
-  source: CharacterSource; // 'custom' = user-created, 'hedra' = from Hedra library
+  source: CharacterSource; // 'custom' = user-created
   role: CharacterRole; // Character's role in productions
   styleTag: CharacterStyleTag; // Visual style for prompt optimization
 
@@ -94,13 +90,9 @@ export interface AvatarProfile {
   looks: CharacterLook[];
 
   // Voice identity — decoupled from character image, always changeable
-  // Hedra voices use native TTS (audio_generation); ElevenLabs/UnrealSpeech use audio upload
   voiceId: string | null;
   voiceName: string | null; // Display name (e.g., "Rachel", "Custom Clone - David")
   voiceProvider: VoiceProvider | null;
-
-  // Hedra integration — used for Hedra library characters and dedup during import
-  hedraCharacterId: string | null; // Hedra CHARACTER element ID (for library imports)
 
   // Metadata
   description: string | null; // "Professional look, navy suit"
@@ -110,7 +102,7 @@ export interface AvatarProfile {
   updatedAt: string; // ISO string
 }
 
-type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
+type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom';
 
 export interface CreateAvatarProfileData {
   name: string;
@@ -127,7 +119,6 @@ export interface CreateAvatarProfileData {
   voiceId?: string | null;
   voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
-  hedraCharacterId?: string | null;
   description?: string | null;
   isDefault?: boolean;
 }
@@ -147,7 +138,6 @@ export interface UpdateAvatarProfileData {
   voiceId?: string | null;
   voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
-  hedraCharacterId?: string | null;
   description?: string | null;
   isDefault?: boolean;
   isFavorite?: boolean;
@@ -173,7 +163,6 @@ interface FirestoreAvatarProfileDoc {
   voiceId: string | null;
   voiceName: string | null;
   voiceProvider: VoiceProvider | null;
-  hedraCharacterId: string | null;
   description: string | null;
   isDefault: boolean;
   isFavorite: boolean;
@@ -208,15 +197,11 @@ function timestampToISO(timestamp: unknown): string {
 function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarProfile {
   const data = raw as FirestoreAvatarProfileDoc;
   const clips = data.greenScreenClips ?? [];
-  // Backward compat: existing docs may have hedraAssetId instead of hedraCharacterId
-  const hedraId = data.hedraCharacterId
-    ?? (raw as Record<string, unknown>).hedraAssetId as string | null
-    ?? null;
   return {
     id,
     userId: data.userId ?? '',
     name: data.name ?? '',
-    source: data.source ?? (hedraId ? 'hedra' : 'custom'),
+    source: 'custom',
     role: data.role ?? 'presenter',
     styleTag: data.styleTag ?? 'real',
     tier: data.tier ?? (clips.length > 0 ? 'premium' : 'standard'),
@@ -229,7 +214,6 @@ function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarPr
     voiceId: data.voiceId ?? null,
     voiceName: data.voiceName ?? null,
     voiceProvider: data.voiceProvider ?? null,
-    hedraCharacterId: hedraId,
     description: data.description ?? null,
     isDefault: data.isDefault ?? false,
     isFavorite: data.isFavorite ?? false,
@@ -276,7 +260,6 @@ export async function createAvatarProfile(
       voiceId: data.voiceId ?? null,
       voiceName: data.voiceName ?? null,
       voiceProvider: data.voiceProvider ?? null,
-      hedraCharacterId: data.hedraCharacterId ?? null,
       description: data.description ?? null,
       isDefault: data.isDefault ?? false,
       isFavorite: false,
@@ -315,7 +298,6 @@ export async function createAvatarProfile(
       voiceId: profileData.voiceId,
       voiceName: profileData.voiceName,
       voiceProvider: profileData.voiceProvider,
-      hedraCharacterId: profileData.hedraCharacterId,
       description: profileData.description,
       isDefault: profileData.isDefault,
       isFavorite: false,
@@ -371,10 +353,17 @@ export async function getAvatarProfile(profileId: string): Promise<AvatarProfile
 }
 
 /**
- * List all avatar profiles for a user, ordered by createdAt desc.
- * Also includes stock/system avatars (userId === 'system') available to all users.
+ * List avatar profiles for a user, ordered by createdAt desc.
+ *
+ * By default also includes stock/system avatars (userId === 'system') so generic
+ * cast-pickers can offer them. Pass `{ ownOnly: true }` for the Character Library
+ * tab, which must show ONLY the operator's own CREATED characters — never stock
+ * avatars (it's a generator + library of the tenant's digital cast).
  */
-export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[]> {
+export async function listAvatarProfiles(
+  userId: string,
+  opts: { ownOnly?: boolean } = {},
+): Promise<AvatarProfile[]> {
   if (!adminDb) {
     logger.warn('Database not available for listing avatar profiles', {
       file: 'avatar-profile-service.ts',
@@ -405,6 +394,12 @@ export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[
       collectionPath: COLLECTION_PATH,
       file: 'avatar-profile-service.ts',
     });
+  }
+
+  // Character Library tab: only the operator's OWN created characters — exclude
+  // stock/system avatars (source 'custom' = built here).
+  if (opts.ownOnly) {
+    return userProfiles.filter((p) => p.source === 'custom');
   }
 
   try {
@@ -491,9 +486,6 @@ export async function updateAvatarProfile(
     }
     if (updates.voiceProvider !== undefined) {
       updateData.voiceProvider = updates.voiceProvider;
-    }
-    if (updates.hedraCharacterId !== undefined) {
-      updateData.hedraCharacterId = updates.hedraCharacterId;
     }
     if (updates.description !== undefined) {
       updateData.description = updates.description;

@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, Library, Star, Theater, Wand2 } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, Star, Wand2 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { HedraCharacterBrowser } from './HedraCharacterBrowser';
 import { CloneWizard } from '@/components/video/CloneWizard';
 
 // Avatar Profile shape returned by GET /api/video/avatar-profiles
 interface AvatarProfileItem {
   id: string;
   name: string;
-  source: 'custom' | 'hedra';
+  source: 'custom';
   role: 'hero' | 'villain' | 'extra' | 'narrator' | 'presenter' | 'custom';
   styleTag: 'real' | 'anime' | 'stylized';
   tier: 'premium' | 'standard';
@@ -30,7 +29,7 @@ interface AvatarProfileItem {
     createdAt: string;
   }>;
   voiceId: string | null;
-  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
   description: string | null;
   isDefault: boolean;
   isFavorite: boolean;
@@ -143,14 +142,9 @@ function AvatarCard({
         </div>
       )}
 
-      {/* Source + tier + action badges */}
+      {/* Tier + action badges */}
       <span className="absolute top-1.5 right-1.5 flex items-center gap-1">
-        {profile.source === 'hedra' ? (
-          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-primary/20 border border-primary/30 text-primary-light text-[9px] font-bold rounded">
-            <Theater className="w-2.5 h-2.5" />
-            HEDRA
-          </span>
-        ) : profile.tier === 'premium' ? (
+        {profile.tier === 'premium' ? (
           <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-primary/20 border border-primary/30 text-primary-light text-[9px] font-bold rounded">
             <Crown className="w-2.5 h-2.5" />
             PREMIUM
@@ -240,11 +234,8 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [isHedraBrowserOpen, setIsHedraBrowserOpen] = useState(false);
   const [isCloneWizardOpen, setIsCloneWizardOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [syncingHedra, setSyncingHedra] = useState(false);
-  const hedraAutoSyncedRef = useRef(false);
 
   const toggleFavorite = useCallback(async (profileId: string) => {
     const profile = profiles.find((p) => p.id === profileId);
@@ -320,47 +311,6 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
     void fetchProfiles();
   }, [fetchProfiles]);
 
-  // Auto-sync all Hedra characters into avatar profiles on mount.
-  // Runs once after the initial profile load completes. Any un-imported
-  // Hedra characters get created as avatar profiles automatically.
-  useEffect(() => {
-    if (hedraAutoSyncedRef.current || isLoading) { return; }
-    hedraAutoSyncedRef.current = true;
-
-    void (async () => {
-      try {
-        setSyncingHedra(true);
-
-        const response = await authFetch('/api/video/avatar-profiles/hedra-characters');
-        if (!response.ok) { return; }
-
-        const data = await response.json() as {
-          success: boolean;
-          characters: Array<{ id: string; alreadyImported: boolean; imageUrl: string | null }>;
-        };
-        if (!data.success) { return; }
-
-        const unimported = data.characters.filter((c) => !c.alreadyImported && c.imageUrl);
-        if (unimported.length === 0) { return; }
-
-        const syncResponse = await authFetch('/api/video/avatar-profiles/sync-hedra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ characterIds: unimported.map((c) => c.id) }),
-        });
-        const syncData = await syncResponse.json() as { success: boolean; imported?: number };
-
-        if (syncData.success && syncData.imported && syncData.imported > 0) {
-          await fetchProfiles();
-        }
-      } catch {
-        // Silent — don't block the picker if Hedra sync fails
-      } finally {
-        setSyncingHedra(false);
-      }
-    })();
-  }, [isLoading, authFetch, fetchProfiles]);
-
   const filteredProfiles = useMemo(() => {
     let result = profiles;
 
@@ -381,13 +331,11 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
 
   const favoritesCount = useMemo(() => profiles.filter((p) => p.isFavorite).length, [profiles]);
 
-  if (isLoading || (syncingHedra && profiles.length === 0)) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="text-sm">
-          {syncingHedra ? 'Syncing Hedra characters...' : 'Loading avatar profiles...'}
-        </span>
+        <span className="text-sm">Loading avatar profiles...</span>
       </div>
     );
   }
@@ -398,7 +346,7 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
         <div className="flex flex-col items-center justify-center py-12 gap-3">
           <AlertCircle className="w-8 h-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            {error ?? 'No avatar profiles yet. Create your AI clone or browse Hedra characters.'}
+            {error ?? 'No avatar profiles yet. Create your AI clone to get started.'}
           </p>
           <div className="flex gap-2">
             <button
@@ -408,13 +356,6 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
               <Wand2 className="w-4 h-4" />
               Create Your AI Clone
             </button>
-            <button
-              onClick={() => setIsHedraBrowserOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-surface-elevated border border-border-strong hover:border-border text-foreground text-sm font-medium rounded-lg transition-colors"
-            >
-              <Library className="w-4 h-4" />
-              Browse Hedra
-            </button>
           </div>
         </div>
         <CloneWizard
@@ -422,18 +363,13 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
           onClose={() => setIsCloneWizardOpen(false)}
           onComplete={handleCloneComplete}
         />
-        <HedraCharacterBrowser
-          isOpen={isHedraBrowserOpen}
-          onClose={() => setIsHedraBrowserOpen(false)}
-          onImportComplete={() => void fetchProfiles()}
-        />
       </>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Search + Favorites + Hedra row */}
+      {/* Search + Favorites + Clone row */}
       <div className="flex items-center gap-2">
         {profiles.length > 3 && (
           <div className="relative flex-1">
@@ -470,26 +406,12 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
           <Wand2 className="w-3.5 h-3.5" />
           Clone Yourself
         </button>
-        <button
-          onClick={() => setIsHedraBrowserOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-surface-elevated border border-border-strong hover:border-primary/50 hover:bg-border-strong text-foreground hover:text-primary-light text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
-          title="Browse and import characters from Hedra"
-        >
-          <Library className="w-3.5 h-3.5" />
-          Browse Hedra
-        </button>
       </div>
 
       {/* Results count */}
       <p className="text-xs text-muted-foreground">
         {filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''}
         {searchQuery ? ' matching search' : ' available'}
-        {syncingHedra && (
-          <span className="inline-flex items-center gap-1 ml-2 text-primary-light">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            Syncing Hedra characters...
-          </span>
-        )}
       </p>
 
       <div className="max-h-[520px] overflow-y-auto pr-1">
@@ -524,11 +446,6 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
         isOpen={isCloneWizardOpen}
         onClose={() => setIsCloneWizardOpen(false)}
         onComplete={handleCloneComplete}
-      />
-      <HedraCharacterBrowser
-        isOpen={isHedraBrowserOpen}
-        onClose={() => setIsHedraBrowserOpen(false)}
-        onImportComplete={() => void fetchProfiles()}
       />
     </div>
   );

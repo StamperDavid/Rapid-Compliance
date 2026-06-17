@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
@@ -9,15 +9,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate, Trash2, Check, CloudOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useVideoProjectAutoSave } from '@/hooks/useVideoProjectAutoSave';
-import { VideoPipelineStepper } from './components/VideoPipelineStepper';
 import { StepStoryboard } from './components/StepStoryboard';
-import { StepGeneration } from './components/StepGeneration';
-import { StepAssembly } from './components/StepAssembly';
-import { StepPostProduction } from './components/StepPostProduction';
-import { StepPublish } from './components/StepPublish';
 import { TemplatePickerModal } from './components/TemplatePickerModal';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import { PIPELINE_STEPS, type PipelineStep, type PipelineProject } from '@/types/video-pipeline';
+import type { PipelineProject } from '@/types/video-pipeline';
 import type { VideoTemplate } from '@/lib/video/templates';
 
 // ─── Types ────────────────────────────────────────────────────────────
@@ -62,64 +57,6 @@ export default function VideoStudioPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [autoLoading, setAutoLoading] = useState(false);
-
-  // Subscribe to the reactive data that canAdvanceTo depends on
-  const scenes = useVideoPipelineStore((s) => s.scenes);
-  const generatedScenes = useVideoPipelineStore((s) => s.generatedScenes);
-  const finalVideoUrl = useVideoPipelineStore((s) => s.finalVideoUrl);
-  const postProductionVideoUrl = useVideoPipelineStore((s) => s.postProductionVideoUrl);
-
-  // Compute which steps are reachable based on actual store data
-  const reachableSteps = useMemo(() => {
-    const reachable: PipelineStep[] = [];
-    // Storyboard is manual-first — always reachable so you can build scenes
-    // directly without going through the Studio/brief funnel first.
-    reachable.push('storyboard');
-    if (scenes.length > 0 && scenes.every((s) => s.scriptText.trim().length > 0)) {
-      reachable.push('generation');
-    }
-    if (
-      generatedScenes.length > 0 &&
-      generatedScenes.every((s) => s.status === 'completed' || s.status === 'failed') &&
-      generatedScenes.some((s) => s.status === 'completed' && s.videoUrl)
-    ) {
-      reachable.push('assembly');
-    }
-    if (finalVideoUrl) {
-      reachable.push('post-production');
-    }
-    if (postProductionVideoUrl || finalVideoUrl) {
-      reachable.push('publish');
-    }
-    return reachable;
-  }, [scenes, generatedScenes, finalVideoUrl, postProductionVideoUrl]);
-
-  const completedSteps = useMemo(() => {
-    // Steps before current are completed, plus all steps before any reachable step
-    const completed = new Set<PipelineStep>();
-    const currentIndex = PIPELINE_STEPS.indexOf(currentStep);
-    for (let i = 0; i < currentIndex; i++) {
-      completed.add(PIPELINE_STEPS[i]);
-    }
-    for (const step of reachableSteps) {
-      const stepIndex = PIPELINE_STEPS.indexOf(step);
-      for (let i = 0; i < stepIndex; i++) {
-        completed.add(PIPELINE_STEPS[i]);
-      }
-    }
-    return [...completed];
-  }, [currentStep, reachableSteps]);
-
-  const handleStepClick = useCallback(
-    (step: PipelineStep) => {
-      const targetIndex = PIPELINE_STEPS.indexOf(step);
-      const currentIndex = PIPELINE_STEPS.indexOf(currentStep);
-      if (targetIndex <= currentIndex || reachableSteps.includes(step)) {
-        setStep(step);
-      }
-    },
-    [currentStep, setStep, reachableSteps],
-  );
 
   const handleNewProject = useCallback(() => {
     reset();
@@ -234,25 +171,9 @@ export default function VideoStudioPage() {
 
   // The Storyboard creator is the entry screen. The legacy 'request'/Studio
   // opening is retired — it maps to the storyboard like the other legacy steps.
-  const renderCurrentStep = () => {
-    switch (currentStep) {
-      case 'generation':
-        return <StepGeneration />;
-      case 'assembly':
-        return <StepAssembly />;
-      case 'post-production':
-        return <StepPostProduction />;
-      case 'publish':
-        return <StepPublish />;
-      case 'request':
-      case 'storyboard':
-      case 'decompose':
-      case 'pre-production':
-      case 'approval':
-      default:
-        return <StepStoryboard />;
-    }
-  };
+  // The Shot Plan is the sole video-creation surface; it renders the clips on
+  // fal / Seedance and hands off to the editor. There are no other wizard steps.
+  const renderCurrentStep = () => <StepStoryboard />;
 
   return (
     <div className="bg-background">
@@ -334,15 +255,6 @@ export default function VideoStudioPage() {
           </div>
         </div>
 
-        {/* ── Pipeline Stepper (always visible) ────────────────── */}
-        <div className="px-6 pb-2">
-          <VideoPipelineStepper
-            currentStep={currentStep}
-            onStepClick={handleStepClick}
-            completedSteps={completedSteps}
-            reachableSteps={reachableSteps}
-          />
-        </div>
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}

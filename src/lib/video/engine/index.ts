@@ -1,7 +1,7 @@
 /**
  * AI Video Generation Engine
  *
- * Video generation is powered by Hedra Character-3 exclusively.
+ * Video generation is powered by fal / Seedance exclusively.
  * Legacy multi-model picker and provider routing have been removed.
  *
  * @module video/engine
@@ -17,7 +17,7 @@ export type {
   CameraMotion,
   TransitionType,
 
-  // Provider (Hedra only)
+  // Provider (fal / Seedance only)
   VideoGenerationProvider,
 
   // Storyboard

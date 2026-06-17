@@ -42,7 +42,7 @@ Bluesky, Telegram, and Truth Social don't need developer apps — the credential
 
 ## Video Generation
 
-- [ ] **Hedra** — ALREADY CONFIGURED. No action needed.
+- [ ] **fal.ai (Seedance)** — video engine. Add your fal API key at Settings → API Keys → "fal.ai (Seedance)" (https://fal.ai/dashboard/keys).
 
 ## Voice & SMS
 
@@ -197,7 +197,7 @@ Note: Bluesky, Threads, Truth Social, Telegram, WhatsApp Business, and Google Bu
 | AI (LLM providers) | OpenRouter, OpenAI | Anthropic (optional), Gemini (optional) |
 | Email | SendGrid | Resend (optional) |
 | Payments | Stripe | — |
-| Video | Hedra | — |
+| Video | fal.ai (Seedance) | — |
 | Voice/SMS | Twilio, ElevenLabs, Unreal Speech | — |
 | SEO | Serper, PageSpeed, DataForSEO | Verify DataForSEO password |
 | Enrichment | Apollo, Clay | — |

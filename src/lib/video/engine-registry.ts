@@ -2,7 +2,7 @@
  * Video Engine Registry
  * Client-safe constants — no server imports
  *
- * Hedra is the sole video generation engine.
+ * fal (Seedance) is the sole video generation engine.
  */
 
 import type { VideoEngineId } from '@/types/video-pipeline';
@@ -21,33 +21,33 @@ export interface VideoEngineConfig {
   apiKeyServiceId: string | null; // null = not yet integrated
 }
 
-export const HEDRA_ENGINE_CONFIG: VideoEngineConfig = {
-  id: 'hedra',
-  label: 'Hedra',
-  icon: 'Theater',
-  description: 'AI video generation with superior lip-sync and character acting (Character-3)',
+export const FAL_ENGINE_CONFIG: VideoEngineConfig = {
+  id: 'fal',
+  label: 'Seedance (fal)',
+  icon: 'Clapperboard',
+  description: 'ByteDance Seedance 2.0 via fal — reference-to-video that casts a saved character into new scenes from reference images/video',
   costPer5Seconds: 8,
   quality: 'high',
-  bestFor: ['talking-head', 'lip-sync', 'avatar', 'presentation', 'character-in-action'],
+  bestFor: ['reference-to-video', 'character-consistency', 'scene-progression', 'cinematic'],
   integrationStatus: 'available',
-  apiKeyServiceId: 'hedra',
+  apiKeyServiceId: 'fal',
 };
 
 export const VIDEO_ENGINE_REGISTRY: Record<VideoEngineId, VideoEngineConfig> = {
-  hedra: HEDRA_ENGINE_CONFIG,
+  fal: FAL_ENGINE_CONFIG,
 } as const;
 
-/** Ordered list of engine IDs for UI display */
-export const ENGINE_ORDER: VideoEngineId[] = ['hedra'];
+/** Ordered list of engine IDs for UI display. */
+export const ENGINE_ORDER: VideoEngineId[] = ['fal'];
 
-/** Returns the Hedra engine config — engineId parameter retained for call-site compatibility */
+/** Returns the fal (Seedance) engine config — engineId parameter retained for call-site compatibility */
 export function getEngineConfig(_engineId?: string | null): VideoEngineConfig {
-  return HEDRA_ENGINE_CONFIG;
+  return FAL_ENGINE_CONFIG;
 }
 
 /** Calculate estimated cost in cents for a scene given duration */
 export function estimateSceneCost(_engineId: VideoEngineId | null, durationSeconds: number): number {
-  return Math.ceil(durationSeconds / 5) * HEDRA_ENGINE_CONFIG.costPer5Seconds;
+  return Math.ceil(durationSeconds / 5) * FAL_ENGINE_CONFIG.costPer5Seconds;
 }
 
 /** Format cents as USD string */

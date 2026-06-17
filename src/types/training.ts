@@ -536,6 +536,30 @@ export interface ManagerGoldenMaster {
 }
 
 // ============================================================================
+// AGENT VERIFICATION LEDGER (pirate-test results → telemetry)
+// ============================================================================
+
+/**
+ * Last-known verification result for a single agent, produced by the
+ * pirate-test harness (`scripts/pirate-test-specialists.ts`) and surfaced
+ * on the telemetry page as each agent's real "last verified" status.
+ *
+ * One record per agent (doc id = agentId, upsert/merge). The telemetry page
+ * reads the whole collection to render a verified/unverified column.
+ *
+ * Collection: `organizations/{orgId}/agentVerifications`
+ */
+export interface AgentVerificationRecord {
+  agentId: string;
+  status: 'pass' | 'fail';
+  markersFound: number;
+  proseFieldsFound: number;
+  error?: string;
+  runAt: string;        // ISO timestamp
+  industryKey: string;
+}
+
+// ============================================================================
 // AGENT-TYPE TRAINING CONFIGURATION
 // ============================================================================
 

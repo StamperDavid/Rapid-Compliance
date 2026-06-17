@@ -269,8 +269,6 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         return keys.audio?.replicate?.apiKey ?? null;
 
       // Video Services
-      case 'hedra':
-        return keys.video?.hedra?.apiKey ?? null;
       case 'kling':
         if (keys.video?.kling) {
           return `${keys.video.kling.accessKey}:${keys.video.kling.secretKey}`;

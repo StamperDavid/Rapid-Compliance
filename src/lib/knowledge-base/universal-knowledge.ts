@@ -233,7 +233,7 @@ export const KNOWLEDGE_BASE_FEATURES: KnowledgeBaseFeature[] = [
     category: 'content',
     summary: 'Produce AI avatar videos for marketing, sales pitches, and training content — no camera needed.',
     detail:
-      'Powered by Hedra Character-3, the video engine turns a script into a talking-avatar video. Upload a custom avatar image or use stock characters. ElevenLabs voice cloning optionally adds a custom voice. Videos are stored in the Media Library and can be embedded on the website or shared directly.',
+      'Powered by fal / Seedance, the video engine turns a script and a cast of characters into video — placing a saved character into new scenes shot-by-shot with last-frame chaining. Upload a custom avatar image or use stock characters. ElevenLabs voice cloning optionally adds a custom voice. Videos are stored in the Media Library and can be embedded on the website or shared directly.',
     examples: [
       'Create a 60-second product explainer video from a script in under 10 minutes',
       'Produce personalized video sales pitches featuring your own AI avatar clone',
@@ -407,7 +407,7 @@ export const KNOWLEDGE_BASE_FEATURES: KnowledgeBaseFeature[] = [
     category: 'ops',
     summary: 'Connect Stripe, PayPal, Zoom, Google Workspace, Microsoft 365, Twilio, and every major social platform.',
     detail:
-      'The integrations hub connects SalesVelocity to: payment processors (Stripe, PayPal), communication tools (Zoom), productivity suites (Google Workspace, Microsoft 365), email delivery (SendGrid), SMS (Twilio), AI providers (OpenRouter, OpenAI, Anthropic, fal.ai, ElevenLabs, Hedra), social platforms (X/Twitter, LinkedIn, Instagram, Facebook, TikTok, YouTube, Pinterest, Mastodon), and SEO data (DataForSEO, Serper, Clearbit). BYOK means you own your API keys and pay raw market rates.',
+      'The integrations hub connects SalesVelocity to: payment processors (Stripe, PayPal), communication tools (Zoom), productivity suites (Google Workspace, Microsoft 365), email delivery (SendGrid), SMS (Twilio), AI providers (OpenRouter, OpenAI, Anthropic, fal.ai, ElevenLabs), social platforms (X/Twitter, LinkedIn, Instagram, Facebook, TikTok, YouTube, Pinterest, Mastodon), and SEO data (DataForSEO, Serper, Clearbit). BYOK means you own your API keys and pay raw market rates.',
     examples: [
       'Connect Zoom so Jasper can schedule and send meeting links without leaving the platform',
       'Link SendGrid to send up to 5,000 emails per day through your own account',

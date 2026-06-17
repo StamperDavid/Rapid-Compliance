@@ -201,7 +201,7 @@ test.describe('Per-Module Settings Page', () => {
     await navigateTo(page, '/settings/module/video-production');
     await waitForLoadingToFinish(page);
 
-    // Video Production requires API keys (Hedra, etc.)
+    // Video Production requires API keys (fal / Seedance, etc.)
     const apiKeysSection = page.locator('h3').filter({ hasText: /api keys/i });
     if (await apiKeysSection.isVisible({ timeout: 5_000 }).catch(() => false)) {
       // Verify link to API Keys settings

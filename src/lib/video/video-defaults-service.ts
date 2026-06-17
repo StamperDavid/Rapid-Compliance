@@ -13,7 +13,7 @@ export interface VideoDefaults {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
-  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
   updatedAt: Date | null;
   updatedBy: string | null;
 }
