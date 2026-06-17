@@ -2,6 +2,82 @@
 
 ---
 
+# 🟢 GOVERNING PLAN (Jun 16 2026) — PARITY CERTIFICATION IS THE SPINE
+
+**This section governs everything below it.** The active plan is no longer "ship features" —
+it is **harden every existing vertical until it is certified as good or better than a named
+competitor.** No new features are added until the certification registry is green. Everything
+below this block (the video / Shot Doc spec, character system, etc.) is preserved working
+context and is now reframed as **Vertical #1 (Video)** running through the rubric defined here.
+
+## The new definition of "done"
+A feature is NOT done because it compiles, lints, or the UI looks wired. A feature is done only
+when it earns a **Parity Certificate**. "Code shipped" ≠ done. "Certified" = done.
+
+## The Parity Certificate (the rubric — all 7 required, or it's not signed)
+1. **Named benchmark.** The owner picks the competitor + the exact capability set being matched
+   (e.g. "Email = Klaviyo core campaigns + flows"). No benchmark → no cert.
+2. **Capability map FIRST (not name-matching).** Before any gap analysis, map the competitor's
+   feature vocabulary → our equivalent capability by *what it does for the user*, never by label.
+   Mapping is many-to-many. Only a capability that exists NOWHERE in our system is a real gap.
+   See memory: parity-is-floor-not-ceiling.
+3. **Functional parity ledger.** Every table-stakes capability of the incumbent marked:
+   Matched / Consciously-declined (THEIR feature we don't need, with a reason) / Gap-to-close.
+   Zero open gaps to certify. NEVER cut one of OUR abilities to match them — our extras are
+   protected ("as good OR BETTER, AND MORE").
+4. **Quality graded against theirs.** For every mapped capability, OUR version is judged against
+   the QUALITY of THEIR version. Existence is cheap; "as good or better than their version" is
+   the bar.
+5. **Real-path proof.** A verify script drives the ACTUAL product path on REAL infrastructure
+   (real Firestore via Admin SDK, real send/post/payment/render landing) — never "UI looks
+   wired." This is the antidote to the dual-data-path lie (browser works / server silently
+   returns []).
+6. **Brand-DNA proof + non-technical usability.** Output carries the tenant's voice (the bake).
+   A non-technical SMB owner can do it unaided: plain English, clarifying questions, no silent
+   failure, and a manual UI path for every AI path.
+7. **The named "better" + owner signature.** Each cert states the one thing where we BEAT the
+   incumbent. The owner walks it once and signs. Nothing is done until he signs.
+
+## The process loop (per vertical)
+- **Audit (parallel, read-only).** Subagents audit the vertical against the named competitor and
+  produce the capability map + gap ledger. Auditing CAN fan out across many verticals at once
+  (cheap, read-only) to build the full honest gap map early.
+- **Fix (serial, owner in the loop).** ONE vertical at a time. Claude orchestrates, subagents do
+  the brunt, Claude reviews EVERY output before it counts, owner approves direction. Fixing is
+  NOT parallelized across verticals — breadth-first is what produced the 60%-everywhere state.
+- **Prove.** Write the real-path verify script. Not provable on real infra → not done.
+- **Certify.** Owner walks + signs. Move on and don't look back.
+
+## Phase 0 — prerequisite before certifying ANY vertical
+1. **Honest inventory / triage** of the whole surface: every feature labeled
+   **Live / Connected-but-unproven / Scaffold / Dead.** We don't yet know the true denominator.
+2. **Fix the data-path debt** (client Firebase SDK on server routes → silent []). Until server
+   paths are trustworthy, every cert is potentially fiction.
+("Phase 0" is a prerequisite step in THIS plan — do not confuse it with the video build's
+internal P0–P4 phases further below, which are scoped only to the Shot Doc feature.)
+
+## The Certification Registry (single source of "are we there yet")
+A living matrix: every vertical × its named competitor × status (uncertified / in-cert /
+certified, date signed). A vertical with no cert is NOT shippable and NOT claimed as done.
+
+## Sequencing (owner owns the order + the benchmark choices)
+- **Phase 0 first** (inventory + data-path foundation).
+- **Vertical #1 = Video / Shot Doc** (the detailed spec below — it's closest to the bar already,
+  so it rides its momentum through the rubric and becomes the template for what "certified" feels
+  like). Benchmark TBD by owner (e.g. Synthesia / HeyGen / Arcads / OpenArt).
+- Then the remaining verticals one at a time, value-ordered (proposed: onboarding/identity →
+  CRM + lead capture → one outreach channel → social → website → commerce → reputation →
+  scheduling → analytics). Owner confirms order + each benchmark.
+
+## Binding rules (memory-backed, govern every cert)
+- Parity is the FLOOR not the ceiling; protect our extras; map by capability not name.
+- Standing Rule #1 (Brand DNA baked at seed, never runtime) + #2 (no GM change without a human
+  grade) are inviolable — no AI participant may "optimize" them away.
+- Plain English to non-technical SMB owners; AI must ask clarifying Qs + never fail silently.
+- Every AI capability has a manual UI equivalent.
+
+---
+
 # 🔴 Jun 15 2026 — HEDRA FULLY REMOVED (video engine = fal / Seedance via Shot Plan)
 
 Per the owner's go-ahead, the entire legacy Hedra pipeline was removed. The live video flow is
