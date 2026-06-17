@@ -364,6 +364,132 @@ const DEFAULT_LAYOUT: ShotPlanLayout = {
   ],
 };
 
+/** True when any of the given values is a non-empty (trimmed) string. */
+function filled(...values: Array<string | undefined>): boolean {
+  return values.some((v) => typeof v === 'string' && v.trim() !== '');
+}
+
+/**
+ * True when a block type actually HAS content to show for this plan — the
+ * guard that lets the layout engine drop empty blocks (HARD VISUAL RULE #1:
+ * no blank sections, ever). Mirrors each `renderBlock` case's own empty check.
+ */
+function blockHasContent(plan: ShotPlan, type: ShotPlanBlockType): boolean {
+  const sc = plan.sharedChoices;
+  const look = sc.lookBible ?? {};
+  switch (type) {
+    case 'characters':
+      return sc.cast.length > 0 || (sc.objects?.length ?? 0) > 0;
+    case 'notes':
+      return sc.cast.some((c) => Boolean(c.notes?.trim()));
+    case 'environment':
+      return (
+        (sc.environmentZones?.length ?? 0) > 0 ||
+        Boolean(sc.environmentHeroImageUrl) ||
+        (sc.environmentReferenceImageUrls?.length ?? 0) > 0 ||
+        Boolean(sc.environmentFingerprint?.trim())
+      );
+    case 'floorplan': {
+      const fp = plan.floorPlan;
+      return Boolean(
+        fp &&
+          ((fp.cameras?.length ?? 0) > 0 ||
+            (fp.elements?.length ?? 0) > 0 ||
+            (fp.subjectPaths?.length ?? 0) > 0 ||
+            fp.backdropImageUrl),
+      );
+    }
+    case 'storyboard':
+      return plan.shots.length > 0;
+    case 'lighting':
+      return (
+        (sc.lightingSwatches?.length ?? 0) > 0 ||
+        filled(look.lighting, look.atmosphere) ||
+        typeof look.temperature === 'number' ||
+        (look.filters?.length ?? 0) > 0
+      );
+    case 'cinematography':
+      return filled(
+        look.camera, look.lensType, look.focalLength, look.composition,
+        look.artStyle, sc.artStyle, look.movieLook, look.filmStock,
+        look.videographerStyle, look.photographerStyle, look.shotType,
+      );
+    case 'mood':
+      return sc.moodKeywords.length > 0 || sc.cinematographyNotes.length > 0;
+    case 'palette':
+      return sc.colorPalette.length > 0;
+    case 'prompt':
+      return plan.shots.length > 0;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Default placement + relative size for a block the planner OMITTED but which
+ * has content — so nothing important is silently missing. Curated order/weights.
+ */
+const APPEND_FALLBACK: { type: ShotPlanBlockType; title: string; heightWeight: number }[] = [
+  { type: 'characters', title: '1. Character Reference', heightWeight: 5 },
+  { type: 'environment', title: '2. Environment / Set Design', heightWeight: 5 },
+  { type: 'floorplan', title: 'Floor Plan · Camera Blocking', heightWeight: 4 },
+  { type: 'storyboard', title: 'Storyboard', heightWeight: 4 },
+  { type: 'cinematography', title: 'Cinematography', heightWeight: 3 },
+  { type: 'lighting', title: 'Lighting', heightWeight: 3 },
+  { type: 'mood', title: 'Mood & Notes', heightWeight: 3 },
+  { type: 'prompt', title: 'Video Prompt', heightWeight: 1 },
+];
+
+/**
+ * THE LAYOUT ENGINE — adaptive per prompt, always full + clean.
+ *
+ * The planner AUTHORS the page shape (`plan.layout`: which blocks, their order,
+ * relative width/height, adaptive titles). This honors that shape — so every
+ * prompt gets its own composition — but enforces the HARD VISUAL RULES the blind
+ * model can't be trusted with:
+ *   1. Drop every block with no content → never an empty cell (the gap/scatter
+ *      problem the old fixed template was avoiding — now solved without freezing
+ *      the layout).
+ *   2. Append any content-bearing block the planner forgot → nothing missing.
+ *   3. Never return empty.
+ * The row painter then fills the canvas by weight, so the page is always full.
+ * When the planner authored no layout (older docs), the curated default is the
+ * source — itself filtered by content. This is parity-as-floor: their adaptive
+ * structure, plus OUR editable sections + interactive floor plan on top.
+ */
+function composeLayoutRows(plan: ShotPlan): ShotPlanLayout['rows'] {
+  const source =
+    plan.layout && plan.layout.rows.length > 0 ? plan.layout.rows : DEFAULT_LAYOUT.rows;
+
+  const kept: ShotPlanLayout['rows'] = [];
+  const seen = new Set<ShotPlanBlockType>();
+  for (const row of source) {
+    const blocks = row.blocks.filter((b) => blockHasContent(plan, b.type));
+    for (const b of blocks) {
+      seen.add(b.type);
+    }
+    if (blocks.length > 0) {
+      kept.push({ heightWeight: row.heightWeight, blocks });
+    }
+  }
+
+  // Append any content-bearing block the planner left out (in curated order).
+  for (const entry of APPEND_FALLBACK) {
+    if (!seen.has(entry.type) && blockHasContent(plan, entry.type)) {
+      kept.push({
+        heightWeight: entry.heightWeight,
+        blocks: [{ type: entry.type, title: entry.title, widthWeight: 1 }],
+      });
+      seen.add(entry.type);
+    }
+  }
+
+  if (kept.length === 0) {
+    return [{ heightWeight: 1, blocks: [{ type: 'prompt', title: 'Video Prompt', widthWeight: 1 }] }];
+  }
+  return kept;
+}
+
 /** Which editor a block's "Edit" button opens (null = no section editor). */
 function sectionForBlock(type: ShotPlanBlockType): ShotPlanSection | null {
   if (type === 'characters' || type === 'notes') {
@@ -411,10 +537,12 @@ function ShotPlanLayoutCanvas({ plan, onEdit, onEditSection, onFloorPlanChange }
     .map((s) => s?.trim())
     .filter((s): s is string => Boolean(s));
   const videoPrompt = orderedShots[0] ? composeShotGenerationPrompt(plan, orderedShots[0]) : '';
-  // DETERMINISTIC: always use the curated template, never the AI's improvised layout.
-  // A blind text model can't arrange a page — it scatters content and leaves gaps.
-  // The specialist authors the CONTENT; this fixed template guarantees the ARRANGEMENT.
-  const rows = DEFAULT_LAYOUT.rows;
+  // ADAPTIVE: honor the planner's authored page shape (plan.layout), but run it
+  // through the layout engine that drops empty blocks, appends any missing content,
+  // and guarantees a full page. Per-prompt composition, never a blank cell. See
+  // composeLayoutRows. (Old docs with no authored layout fall back to the curated
+  // default, itself content-filtered.)
+  const rows = composeLayoutRows(plan);
 
   const objectsBlock =
     objects.length > 0 ? (
