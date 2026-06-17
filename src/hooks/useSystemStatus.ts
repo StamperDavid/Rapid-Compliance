@@ -48,11 +48,9 @@ export interface UseSystemStatusReturn {
     standalone: SystemAgentStatus[];
   };
   /** Overall system health */
-  overallHealth: 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE' | null;
+  overallHealth: 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | null;
   /** System metrics including by-tier breakdown */
   metrics: SystemStatusResponse['metrics'] | null;
-  /** Recent insights from agents */
-  insights: SystemStatusResponse['insights'];
   /** Loading state for initial fetch */
   loading: boolean;
   /** Error message if fetch failed */
@@ -81,19 +79,17 @@ const DEFAULT_POLLING_INTERVAL = 30000; // 30 seconds
 
 const EMPTY_METRICS: SystemStatusResponse['metrics'] = {
   totalAgents: 0,
-  functionalAgents: 0,
-  executingAgents: 0,
-  activeSagas: 0,
-  completedSagas: 0,
-  failedSagas: 0,
-  totalCommands: 0,
-  successRate: 0,
-  averageResponseTimeMs: 0,
+  llmAgents: 0,
+  verifiedAgents: 0,
+  agentsWithErrors: 0,
+  totalExecutions: 0,
+  overallSuccessRate: null,
+  periodDays: 30,
   byTier: {
-    L1: { total: 0, functional: 0 },
-    L2: { total: 0, functional: 0 },
-    L3: { total: 0, functional: 0 },
-    STANDALONE: { total: 0, functional: 0 },
+    L1: { total: 0, healthy: 0 },
+    L2: { total: 0, healthy: 0 },
+    L3: { total: 0, healthy: 0 },
+    STANDALONE: { total: 0, healthy: 0 },
   },
 };
 
@@ -124,10 +120,9 @@ export function useSystemStatus(
   const [agents, setAgents] = useState<SystemAgentStatus[]>([]);
   const [hierarchy, setHierarchy] = useState<UseSystemStatusReturn['hierarchy']>(EMPTY_HIERARCHY);
   const [overallHealth, setOverallHealth] = useState<
-    'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE' | null
+    'HEALTHY' | 'DEGRADED' | 'CRITICAL' | null
   >(null);
   const [metrics, setMetrics] = useState<SystemStatusResponse['metrics'] | null>(null);
-  const [insights, setInsights] = useState<SystemStatusResponse['insights']>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<'unauthorized' | 'forbidden' | null>(null);
@@ -217,7 +212,6 @@ export function useSystemStatus(
         setHierarchy(data.hierarchy ?? EMPTY_HIERARCHY);
         setOverallHealth(data.overallHealth);
         setMetrics(data.metrics);
-        setInsights(data.insights);
         setLastUpdated(new Date());
         setError(null);
         setConnectionError(null);
@@ -348,7 +342,6 @@ export function useSystemStatus(
     hierarchy,
     overallHealth,
     metrics: metrics ?? EMPTY_METRICS,
-    insights,
     loading,
     error,
     connectionError,
@@ -379,14 +372,6 @@ export function useSystemAgents(options?: UseSystemStatusOptions) {
 export function useSystemHealth(options?: UseSystemStatusOptions) {
   const { overallHealth, metrics, loading, error } = useSystemStatus(options);
   return { overallHealth, metrics, loading, error };
-}
-
-/**
- * Hook to get just the recent insights
- */
-export function useSystemInsights(options?: UseSystemStatusOptions) {
-  const { insights, loading, error, refresh } = useSystemStatus(options);
-  return { insights, loading, error, refresh };
 }
 
 // Re-export types for consumer convenience

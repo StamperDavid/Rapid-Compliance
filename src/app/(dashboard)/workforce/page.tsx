@@ -49,29 +49,29 @@ const AgentCard = memo(function AgentCard({
   onViewLogs,
   compact = false,
 }: AgentCardProps) {
-  const getStatusColor = (status: SystemAgentStatus['status']) => {
-    switch (status) {
-      case 'FUNCTIONAL': return 'var(--color-success)';
-      case 'EXECUTING': return 'var(--color-primary)';
-      case 'SHELL': return 'var(--color-warning)';
-      case 'GHOST': return 'var(--color-text-disabled)';
-    }
-  };
-
-  const getStatusLabel = (status: SystemAgentStatus['status']) => {
-    switch (status) {
-      case 'FUNCTIONAL': return 'READY';
-      case 'EXECUTING': return 'ACTIVE';
-      case 'SHELL': return 'SHELL';
-      case 'GHOST': return 'GHOST';
-    }
-  };
-
+  // Real health → dot/label color. Green = healthy, amber = idle/untested,
+  // red = degraded (real recent failures or a failed verification).
   const getHealthColor = (health: SystemAgentStatus['health']) => {
     switch (health) {
       case 'HEALTHY': return 'var(--color-success)';
-      case 'DEGRADED': return 'var(--color-warning)';
-      case 'OFFLINE': return 'var(--color-error)';
+      case 'IDLE': return 'var(--color-warning)';
+      case 'DEGRADED': return 'var(--color-error)';
+    }
+  };
+
+  const getHealthLabel = (health: SystemAgentStatus['health']) => {
+    switch (health) {
+      case 'HEALTHY': return 'HEALTHY';
+      case 'IDLE': return 'IDLE';
+      case 'DEGRADED': return 'DEGRADED';
+    }
+  };
+
+  const getKindLabel = (kind: SystemAgentStatus['kind']) => {
+    switch (kind) {
+      case 'llm': return 'LLM';
+      case 'dispatcher': return 'Dispatcher';
+      case 'deterministic': return 'Deterministic';
     }
   };
 
@@ -93,27 +93,19 @@ const AgentCard = memo(function AgentCard({
     STANDALONE: 'Standalone — Operates independently outside the swarm hierarchy.',
   };
 
-  const statusTooltips: Record<SystemAgentStatus['status'], string> = {
-    FUNCTIONAL: 'Agent is functional and ready to accept tasks.',
-    EXECUTING: 'Agent is currently executing a task.',
-    SHELL: 'Agent structure exists but implementation is incomplete.',
-    GHOST: 'Agent is defined but not yet built.',
-  };
-
-  const healthTooltips: Record<SystemAgentStatus['health'], string> = {
-    HEALTHY: 'Agent is operating normally.',
-    DEGRADED: 'Agent is operational but experiencing issues.',
-    OFFLINE: 'Agent is not responding.',
+  const kindTooltips: Record<SystemAgentStatus['kind'], string> = {
+    llm: 'LLM agent — reasons via a language model. Green requires a seeded Golden Master, a passing verification, and no recent failures.',
+    dispatcher: 'Dispatcher — delegates to specialists, no LLM generation of its own. Health reflects real delegation activity.',
+    deterministic: 'Deterministic — no LLM. Only flagged red on real recent execution failures.',
   };
 
   return (
     <div
       style={{
         backgroundColor: 'rgba(var(--color-bg-elevated-rgb), 0.8)',
-        border: `1px solid ${agent.status === 'EXECUTING' ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
+        border: `1px solid ${agent.health === 'DEGRADED' ? 'var(--color-error)' : 'var(--color-border-strong)'}`,
         borderRadius: '1rem',
         padding: compact ? '1rem' : '1.5rem',
-        opacity: agent.status === 'GHOST' ? 0.6 : 1,
         transition: 'border-color 0.2s, transform 0.2s',
       }}
     >
@@ -158,21 +150,21 @@ const AgentCard = memo(function AgentCard({
               gap: '0.5rem',
               marginTop: '0.25rem',
             }}>
+              {/* Real health dot + label, with the plain-English reason as a tooltip */}
               <span style={{
                 width: '6px',
                 height: '6px',
-                backgroundColor: getStatusColor(agent.status),
+                backgroundColor: getHealthColor(agent.health),
                 borderRadius: '50%',
-                animation: agent.status === 'EXECUTING' ? 'pulse 2s infinite' : 'none',
               }} />
-              <Tooltip content={statusTooltips[agent.status]} position="top">
+              <Tooltip content={agent.statusReason} position="top">
                 <span style={{
-                  color: getStatusColor(agent.status),
+                  color: getHealthColor(agent.health),
                   fontSize: '0.625rem',
                   fontWeight: '600',
                   letterSpacing: '0.05em',
                 }}>
-                  {getStatusLabel(agent.status)}
+                  {getHealthLabel(agent.health)}
                 </span>
               </Tooltip>
               <span style={{
@@ -180,38 +172,48 @@ const AgentCard = memo(function AgentCard({
                 height: '10px',
                 backgroundColor: 'var(--color-border-main)',
               }} />
-              <span style={{
-                width: '6px',
-                height: '6px',
-                backgroundColor: getHealthColor(agent.health),
-                borderRadius: '50%',
-              }} />
-              <Tooltip content={healthTooltips[agent.health]} position="top">
+              {/* Kind badge (Deterministic / Dispatcher / LLM) */}
+              <Tooltip content={kindTooltips[agent.kind]} position="top">
                 <span style={{
                   color: 'var(--color-text-disabled)',
                   fontSize: '0.625rem',
                 }}>
-                  {agent.health}
+                  {getKindLabel(agent.kind)}
                 </span>
               </Tooltip>
             </div>
           </div>
         </div>
 
-        {/* Active Workloads Badge */}
-        {agent.activeWorkloads > 0 && (
-          <span style={{
-            padding: '0.25rem 0.5rem',
-            backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)',
-            border: '1px solid var(--color-primary)',
-            borderRadius: '0.25rem',
-            color: 'var(--color-primary)',
-            fontSize: '0.625rem',
-            fontWeight: '600',
-          }}>
-            {agent.activeWorkloads} active
-          </span>
-        )}
+        {/* Verified / executions badge (real telemetry) */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+          {agent.verified && (
+            <Tooltip
+              content={agent.verifiedAt ? `Last verified ${agent.verifiedAt}` : 'Verification passed'}
+              position="top"
+            >
+              <span style={{
+                padding: '0.25rem 0.5rem',
+                backgroundColor: 'rgba(var(--color-success-rgb), 0.1)',
+                border: '1px solid var(--color-success)',
+                borderRadius: '0.25rem',
+                color: 'var(--color-success)',
+                fontSize: '0.625rem',
+                fontWeight: '600',
+              }}>
+                Verified
+              </span>
+            </Tooltip>
+          )}
+          {agent.executions > 0 && (
+            <span style={{
+              color: 'var(--color-text-disabled)',
+              fontSize: '0.625rem',
+            }}>
+              {agent.executions} run{agent.executions === 1 ? '' : 's'}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Role Description */}
@@ -267,22 +269,15 @@ const AgentCard = memo(function AgentCard({
         <Tooltip content="Trigger this agent to run a task." position="bottom">
           <button
             onClick={() => onExecute(agent.id)}
-            disabled={agent.status === 'GHOST' || agent.status === 'SHELL'}
             style={{
               flex: 1,
               padding: '0.5rem',
-              backgroundColor: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-                ? 'rgba(var(--color-success-rgb), 0.1)'
-                : 'var(--color-bg-paper)',
-              border: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-                ? '1px solid var(--color-success)'
-                : '1px solid var(--color-border-strong)',
+              backgroundColor: 'rgba(var(--color-success-rgb), 0.1)',
+              border: '1px solid var(--color-success)',
               borderRadius: '0.375rem',
-              color: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-                ? 'var(--color-success)'
-                : 'var(--color-text-disabled)',
+              color: 'var(--color-success)',
               fontSize: '0.75rem',
-              cursor: agent.status === 'GHOST' || agent.status === 'SHELL' ? 'not-allowed' : 'pointer',
+              cursor: 'pointer',
               fontWeight: '500',
             }}
           >
@@ -372,9 +367,7 @@ const HierarchySection = memo(function HierarchySection({
   onKnowledge,
   onViewLogs,
 }: HierarchySectionProps) {
-  const functionalCount = agents.filter(
-    a => a.status === 'FUNCTIONAL' || a.status === 'EXECUTING'
-  ).length;
+  const healthyCount = agents.filter(a => a.health === 'HEALTHY').length;
 
   return (
     <div style={{
@@ -415,7 +408,7 @@ const HierarchySection = memo(function HierarchySection({
             color: 'var(--color-text-disabled)',
             fontSize: '0.75rem',
           }}>
-            {functionalCount}/{agents.length} active
+            {healthyCount}/{agents.length} healthy
           </span>
         </div>
         <span style={{
@@ -537,11 +530,17 @@ export default function WorkforceCommandCenterPage() {
     router.push(`/admin/system/logs?agentId=${agentId}`);
   }, [router]);
 
-  // Calculate summary stats
-  const activeCount = metrics?.functionalAgents ?? 0;
-  const executingCount = metrics?.executingAgents ?? 0;
-  const totalTasks = metrics?.totalCommands ?? 0;
-  const successRate = metrics?.successRate ?? 100;
+  // Calculate summary stats from REAL metrics.
+  const healthyCount = agents.filter(a => a.health === 'HEALTHY').length;
+  const llmAgentCount = metrics?.llmAgents ?? 0;
+  const verifiedCount = metrics?.verifiedAgents ?? 0;
+  const totalExecutions = metrics?.totalExecutions ?? 0;
+  const agentsWithErrors = metrics?.agentsWithErrors ?? 0;
+  const overallSuccessRate = metrics?.overallSuccessRate ?? null;
+  const periodDays = metrics?.periodDays ?? 30;
+  const successRateLabel = overallSuccessRate !== null
+    ? `${(overallSuccessRate * 100).toFixed(0)}%`
+    : '—';
 
   // Loading state
   if (loading) {
@@ -749,13 +748,14 @@ export default function WorkforceCommandCenterPage() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
-            { label: 'Total Agents', value: agents.length.toString(), color: 'var(--color-primary)', icon: '🤖' },
-            { label: 'Functional', value: `${activeCount}/${agents.length}`, color: 'var(--color-success)', icon: '✅' },
-            { label: 'Executing', value: executingCount.toString(), color: 'var(--color-secondary)', icon: '⚡' },
-            { label: 'Commands', value: totalTasks.toLocaleString(), color: 'var(--color-warning)', icon: '📊' },
-            { label: 'Success Rate', value: `${successRate.toFixed(0)}%`, color: 'var(--color-success)', icon: '🎯' },
+            { label: 'Total Agents', value: agents.length.toString(), tooltip: 'Every agent in the registry.', color: 'var(--color-primary)', icon: '🤖' },
+            { label: 'Healthy', value: `${healthyCount}/${agents.length}`, tooltip: 'Agents currently reporting green health.', color: 'var(--color-success)', icon: '✅' },
+            { label: 'Verified', value: `${verifiedCount}/${llmAgentCount}`, tooltip: 'LLM agents whose last pirate verification passed.', color: 'var(--color-secondary)', icon: '🔬' },
+            { label: `Executions (${periodDays}d)`, value: totalExecutions.toLocaleString(), tooltip: `Real executions recorded in the last ${periodDays} days.`, color: 'var(--color-warning)', icon: '📊' },
+            { label: 'Success Rate', value: successRateLabel, tooltip: overallSuccessRate !== null ? 'Real approved/total across all executions.' : 'No executions recorded yet.', color: 'var(--color-success)', icon: '🎯' },
+            { label: 'Recent Errors', value: agentsWithErrors.toString(), tooltip: 'Agents with real recent execution failures.', color: agentsWithErrors > 0 ? 'var(--color-error)' : 'var(--color-text-secondary)', icon: '⚠️' },
           ].map((stat, i) => (
             <div
               key={i}
@@ -766,10 +766,12 @@ export default function WorkforceCommandCenterPage() {
                 padding: '1.25rem',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1.25rem' }}>{stat.icon}</span>
-                <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>{stat.label}</span>
-              </div>
+              <Tooltip content={stat.tooltip} position="top">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.25rem' }}>{stat.icon}</span>
+                  <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>{stat.label}</span>
+                </div>
+              </Tooltip>
               <div style={{ color: stat.color, fontSize: '1.5rem', fontWeight: '700' }}>
                 {stat.value}
               </div>

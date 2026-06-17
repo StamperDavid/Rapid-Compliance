@@ -87,8 +87,10 @@ interface ConversationStats {
 
 interface AgentHealth {
   total: number;
-  functional: number;
-  executing: number;
+  /** Agents currently reporting green (real per-agent health). */
+  healthy: number;
+  /** LLM agents whose last pirate verification passed (real). */
+  verified: number;
   health: string;
 }
 
@@ -130,8 +132,13 @@ interface AgentStatusResponse {
   success: boolean;
   metrics: {
     totalAgents: number;
-    functionalAgents: number;
-    executingAgents: number;
+    verifiedAgents: number;
+    byTier: {
+      L1: { total: number; healthy: number };
+      L2: { total: number; healthy: number };
+      L3: { total: number; healthy: number };
+      STANDALONE: { total: number; healthy: number };
+    };
   };
   overallHealth: string;
 }
@@ -160,7 +167,7 @@ export default function WorkspaceDashboardPage() {
     active: 0, recent: 0, total: 0, converted: 0,
   });
   const [agentHealth, setAgentHealth] = useState<AgentHealth>({
-    total: 0, functional: 0, executing: 0, health: 'UNKNOWN',
+    total: 0, healthy: 0, verified: 0, health: 'UNKNOWN',
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [pipeline, setPipeline] = useState<PipelineStage[]>([]);
@@ -290,10 +297,13 @@ export default function WorkspaceDashboardPage() {
           if (res.ok) {
             const data = await res.json() as AgentStatusResponse;
             if (data.success) {
+              const tiers = data.metrics.byTier;
+              const healthy = tiers.L1.healthy + tiers.L2.healthy
+                + tiers.L3.healthy + tiers.STANDALONE.healthy;
               setAgentHealth({
                 total: data.metrics.totalAgents,
-                functional: data.metrics.functionalAgents,
-                executing: data.metrics.executingAgents,
+                healthy,
+                verified: data.metrics.verifiedAgents,
                 health: data.overallHealth,
               });
             }
@@ -340,7 +350,7 @@ export default function WorkspaceDashboardPage() {
         <KPICard label="Leads" value={val(stats.totalLeads)} icon={<Target size={16} />} color="var(--color-info)" href="/leads" />
         <KPICard label="Win Rate" value={val(`${winRate}%`)} icon={<Trophy size={16} />} color="var(--color-warning)" href="/analytics" subtitle={`${stats.wonDeals}W / ${stats.lostDeals}L`} />
         <KPICard label="Conversations" value={val(convoStats.total)} icon={<MessageSquare size={16} />} color="var(--color-secondary)" href="/conversations" subtitle={`${convoStats.active} active`} />
-        <KPICard label="AI Agents" value={val(`${agentHealth.functional}/${agentHealth.total}`)} icon={<Bot size={16} />} color={agentHealth.health === 'HEALTHY' ? 'var(--color-success)' : 'var(--color-warning)'} href="/workforce" subtitle={agentHealth.health !== 'UNKNOWN' ? agentHealth.health : undefined} />
+        <KPICard label="AI Agents" value={val(`${agentHealth.healthy}/${agentHealth.total}`)} icon={<Bot size={16} />} color={agentHealth.health === 'HEALTHY' ? 'var(--color-success)' : 'var(--color-warning)'} href="/workforce" subtitle={agentHealth.health !== 'UNKNOWN' ? agentHealth.health : undefined} />
       </div>
 
       {/* Row 2: Conversations Monitor + Agent Health + Marketing Budget */}
@@ -365,8 +375,8 @@ export default function WorkspaceDashboardPage() {
           <SectionCard>
             <SectionHeader title="AI Workforce" icon={<Bot size={16} />} />
             <div className="grid grid-cols-3 gap-3 mt-4">
-              <MiniStat label="Functional" value={val(agentHealth.functional)} color="var(--color-success)" />
-              <MiniStat label="Executing" value={val(agentHealth.executing)} color="var(--color-primary)" />
+              <MiniStat label="Healthy" value={val(agentHealth.healthy)} color="var(--color-success)" />
+              <MiniStat label="Verified" value={val(agentHealth.verified)} color="var(--color-primary)" />
               <MiniStat label="Total" value={val(agentHealth.total)} color="var(--color-text-secondary)" />
             </div>
             <div className="mt-4 flex items-center justify-between">

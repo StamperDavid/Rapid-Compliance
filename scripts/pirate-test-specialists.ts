@@ -63,6 +63,7 @@ initAdmin();
 
 // Import after admin init so the Firebase import chain uses the configured default app.
 import { invalidateIndustryGMCache } from '../src/lib/training/specialist-golden-master-service';
+import { recordVerification } from '../src/lib/agents/shared/verification-ledger';
 import { getCopywriter } from '../src/lib/agents/content/copywriter/specialist';
 import { getSentimentAnalyst } from '../src/lib/agents/intelligence/sentiment/specialist';
 import { getReviewSpecialist } from '../src/lib/agents/trust/review/specialist';
@@ -88,6 +89,33 @@ import { getReviewManagerSpecialist } from '../src/lib/agents/trust/review-manag
 import { getGMBSpecialist } from '../src/lib/agents/trust/gmb/specialist';
 import { getCaseStudyBuilderSpecialist } from '../src/lib/agents/trust/case-study/specialist';
 import { getGrowthStrategist } from '../src/lib/agents/growth-strategist/specialist';
+// ── Coverage expansion (Jun 16 2026): all remaining LLM-backed specialists ──
+import { getFacebookAdsExpert } from '../src/lib/agents/marketing/facebook/specialist';
+import { getTwitterExpert } from '../src/lib/agents/marketing/twitter/specialist';
+import { getTikTokExpert } from '../src/lib/agents/marketing/tiktok/specialist';
+import { getThreadsExpert } from '../src/lib/agents/marketing/threads/specialist';
+import { getBlueskyExpert } from '../src/lib/agents/marketing/bluesky/specialist';
+import { getMastodonExpert } from '../src/lib/agents/marketing/mastodon/specialist';
+import { getDiscordExpert } from '../src/lib/agents/marketing/discord/specialist';
+import { getTwitchExpert } from '../src/lib/agents/marketing/twitch/specialist';
+import { getWhatsAppBusinessExpert } from '../src/lib/agents/marketing/whatsapp-business/specialist';
+import { getGoogleBusinessExpert } from '../src/lib/agents/marketing/google-business/specialist';
+import { getPaidAdsSpecialist } from '../src/lib/agents/marketing/paid-ads/specialist';
+import { getBudgetStrategist } from '../src/lib/agents/marketing/budget/specialist';
+import { getGrowthAnalyst } from '../src/lib/agents/marketing/growth-analyst/specialist';
+import { getSEOExpert } from '../src/lib/agents/marketing/seo/specialist';
+import { getCopySpecialist } from '../src/lib/agents/architect/copy/specialist';
+import { getFunnelPathologist } from '../src/lib/agents/architect/funnel/specialist';
+import { getUXUISpecialist } from '../src/lib/agents/architect/ux-ui/specialist';
+import { getFunnelEngineer } from '../src/lib/agents/builder/funnel/specialist';
+import { getUxUiArchitect } from '../src/lib/agents/builder/ux-ui/specialist';
+import { getWorkflowOptimizer } from '../src/lib/agents/builder/workflow/specialist';
+import { getCalendarCoordinator } from '../src/lib/agents/content/calendar/specialist';
+import { getVideoSpecialist } from '../src/lib/agents/content/video/specialist';
+import { getInsightsAnalyst } from '../src/lib/agents/intelligence/insights-analyst/specialist';
+import { getSmsSpecialist } from '../src/lib/agents/outreach/sms/specialist';
+import { getSalesChatSpecialist } from '../src/lib/agents/sales-chat/specialist';
+import { getPromptEngineer } from '../src/lib/agents/prompt-engineer/specialist';
 import type { BaseSpecialist } from '../src/lib/agents/base-specialist';
 import type { AgentMessage, AgentReport } from '../src/lib/agents/types';
 
@@ -107,6 +135,12 @@ Ye MUST write every free-text field in the JSON output in exaggerated pirate dia
 For text fields like rationale, reply, reasoning, content, body, subject, title, headline, copy, summary, analysis, strategy, recommendation — ALL must be in pirate dialect. No exceptions. No normal English allowed in these fields.
 
 For structured fields (enums, booleans, numbers, dates, URLs, IDs, category keys, scores) — keep them in normal English / normal values so the downstream Zod schema validator still passes. If a field has an enum constraint, pick a valid enum value. If a field has a number constraint, use a valid number.
+
+## RESPECT ALL LIMITS — be TERSELY piratey
+
+CRITICAL: Honor every length and count constraint the schema implies. If a text field has a maximum character length (e.g. a tweet/post capped at 280 chars), stay WELL UNDER it — short, punchy pirate works fine ("Arrr, stop wastin' yer doubloons!"). If an array has a maximum number of elements (e.g. at most 2 alternates), return NO MORE than that many. Brevity is mandatory: a 200-char pirate tweet beats a 320-char one that gets rejected. Pack the pirate flavor into FEW words.
+
+Output MUST be a single valid JSON object and nothing else — no markdown code fences, no commentary before or after, no trailing text. Keep it complete and well-formed.
 
 ## Your actual task
 
@@ -606,6 +640,484 @@ const TESTS: TestCase[] = [
     }),
     extractProseFields: extractAllProse,
   },
+  // ═══════════════════════════════════════════════════════════════════
+  // COVERAGE EXPANSION (Jun 16 2026) — all remaining LLM-backed specialists
+  // Excluded by design (not pirate-testable via execute()):
+  //   ASSET_GENERATOR  — generates images, not prose (image-API gated)
+  //   SHOT_PLAN_PLANNER — no execute() factory; planner.ts exports functions
+  //   SCHEDULING_SPECIALIST — LLM call gated behind real CRM/meeting I/O
+  // ═══════════════════════════════════════════════════════════════════
+  // ── Marketing (14) ──
+  {
+    specialistId: 'FACEBOOK_ADS_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_facebook_ads_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getFacebookAdsExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'AI sales agents that qualify leads before reps touch them',
+      contentType: 'single_image_ad',
+      targetAudience: 'SaaS founders and VP Sales at 50-500 person B2B SaaS companies',
+      tone: 'confident',
+      campaignGoal: 'drive free-trial signups for SalesVelocity.ai',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'X_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_x_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getTwitterExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'Why AI sales agents are replacing the traditional SDR stack',
+      contentType: 'thread',
+      targetAudience: 'SaaS founders and VP Sales',
+      tone: 'confident',
+      campaignGoal: 'thought leadership on autonomous outbound sales',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'TIKTOK_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_tiktok_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getTikTokExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'POV: your AI sales swarm closes deals while you sleep',
+      contentType: 'short_video',
+      targetAudience: 'Founders and small-business owners on TikTok',
+      tone: 'punchy and energetic',
+      campaignGoal: 'brand awareness for SalesVelocity.ai',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'THREADS_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_threads_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getThreadsExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'The end of manual lead qualification for B2B SaaS teams',
+      contentType: 'post',
+      targetAudience: 'Founders and revenue leaders on Threads',
+      tone: 'conversational',
+      campaignGoal: 'spark conversation about AI in the sales stack',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'BLUESKY_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_bluesky_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getBlueskyExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'Autonomous AI agents running a real B2B sales pipeline',
+      contentType: 'post',
+      targetAudience: 'Tech-fluent founders and builders on Bluesky',
+      tone: 'plain-spoken and anti-hype',
+      campaignGoal: 'credibility with a tech-savvy audience',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'MASTODON_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_mastodon_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getMastodonExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'How AI agents qualify and nurture B2B SaaS leads end to end',
+      contentType: 'post',
+      targetAudience: 'Open-source-minded technologists on Mastodon',
+      tone: 'authentic and conversational',
+      campaignGoal: 'awareness for SalesVelocity.ai among technical users',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: 'channel_post' avoids the embed/scheduled-event invariants.
+    specialistId: 'DISCORD_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_discord_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getDiscordExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'New SalesVelocity.ai feature: AI agents that draft proposals automatically',
+      contentType: 'channel_post',
+      targetAudience: 'SalesVelocity.ai community members in the Discord server',
+      tone: 'casual and community-first',
+      campaignGoal: 'drive engagement in the community channel',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: Twitch contentType is a strict enum; 'chat_announcement' = widest ceiling.
+    specialistId: 'TWITCH_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_twitch_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getTwitchExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'Live build session: wiring an AI sales agent swarm in real time',
+      contentType: 'chat_announcement',
+      targetAudience: 'Developers and founders watching the brand stream',
+      tone: 'casual and hype-without-cringe',
+      campaignGoal: 'announce the live stream in chat',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'WHATSAPP_BUSINESS_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_whatsapp_business_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getWhatsAppBusinessExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'Re-engagement broadcast: your SalesVelocity.ai trial is waiting',
+      contentType: 'broadcast_template',
+      targetAudience: 'Opted-in trial users from the past 30 days',
+      tone: 'warm and concise',
+      campaignGoal: 'bring lapsed trial users back into the product',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: preferredCta + ctaUrl steer the CALL/URL cross-field invariant to URL.
+    specialistId: 'GOOGLE_BUSINESS_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_google_business_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getGoogleBusinessExpert(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'SalesVelocity.ai: AI agents that run your B2B sales pipeline',
+      contentType: 'post',
+      targetAudience: 'Business owners searching Google for sales automation',
+      tone: 'professional',
+      campaignGoal: 'drive clicks to the free-trial signup page',
+      preferredCta: 'SIGN_UP',
+      ctaUrl: 'https://www.salesvelocity.ai',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: Paid Ads uses 'plan_campaign', not 'generate_content'.
+    specialistId: 'PAID_ADS_SPECIALIST',
+    department: 'Marketing',
+    gmDocId: `sgm_paid_ads_specialist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getPaidAdsSpecialist(),
+    buildPayload: () => ({
+      action: 'plan_campaign',
+      campaignGoal: 'leads',
+      totalBudget: 10000,
+      durationDays: 30,
+      targetAudience: 'SaaS founders and VP Sales at 50-500 person B2B SaaS companies looking for AI sales automation',
+      industry: 'B2B SaaS',
+      availablePlatforms: ['Google Ads', 'Meta Ads', 'LinkedIn Ads'],
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: Budget uses 'analyze_budget'; totalBudgetUsd = sum of currentSpendUsd
+    // so the allocation-math hard-guard passes through the prose-only swap.
+    specialistId: 'BUDGET_STRATEGIST',
+    department: 'Marketing',
+    gmDocId: `sgm_budget_strategist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getBudgetStrategist(),
+    buildPayload: () => ({
+      action: 'analyze_budget',
+      totalBudgetUsd: 10000,
+      windowDays: 30,
+      platforms: [
+        { platform: 'google_ads', displayName: 'Google Ads', currentSpendUsd: 5000, conversions: 70, conversionSource: 'crm' },
+        { platform: 'meta_ads', displayName: 'Meta Ads', currentSpendUsd: 3000, conversions: 35, conversionSource: 'ga4' },
+        { platform: 'linkedin_ads', displayName: 'LinkedIn Ads', currentSpendUsd: 2000, conversions: 15, conversionSource: 'platform_self_reported' },
+      ],
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'GROWTH_ANALYST',
+    department: 'Marketing',
+    gmDocId: `sgm_growth_analyst_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getGrowthAnalyst(),
+    buildPayload: () => ({
+      action: 'generate_content',
+      topic: 'Growth strategy for scaling SalesVelocity.ai trial-to-paid conversion',
+      contentType: 'growth_analysis',
+      targetAudience: 'SaaS founders evaluating AI sales automation',
+      tone: 'data-driven',
+      campaignGoal: 'identify the highest-leverage growth experiments for the next quarter',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: SEO uses 'keyword_research' (lighter LLM path), not 'generate_content'.
+    specialistId: 'SEO_EXPERT',
+    department: 'Marketing',
+    gmDocId: `sgm_seo_expert_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getSEOExpert(),
+    buildPayload: () => ({
+      action: 'keyword_research',
+      seed: 'AI sales automation',
+      industry: 'B2B SaaS sales operations',
+      targetCount: 8,
+    }),
+    extractProseFields: extractAllProse,
+  },
+  // ── Architect (3) ──
+  {
+    // NOTE: factory getCopySpecialist() → runtime SPECIALIST_ID 'COPY_STRATEGIST'.
+    specialistId: 'COPY_STRATEGIST',
+    department: 'Architect',
+    gmDocId: `sgm_copy_strategist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getCopySpecialist(),
+    buildPayload: () => ({
+      action: 'generate_copy',
+      pageType: 'homepage',
+      funnelType: 'free_trial self-serve SaaS funnel',
+      targetAudience: 'SaaS founders and VP Sales at 50-500 person B2B SaaS companies who are drowning in manual outbound',
+      toneOfVoice: 'confident, direct, no fluff',
+      industry: 'B2B SaaS sales automation',
+      brief: 'Pick the strategic messaging direction for the SalesVelocity.ai homepage. The product is an AI agent swarm that runs the sales pipeline: qualification, outreach, and proposals. $299/month flat, no tiers, 14-day free trial. The audience has been burned by traditional outbound tools and generic AI wrappers.',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: factory getFunnelPathologist() → SPECIALIST_ID 'FUNNEL_STRATEGIST'.
+    specialistId: 'FUNNEL_STRATEGIST',
+    department: 'Architect',
+    gmDocId: `sgm_funnel_strategist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getFunnelPathologist(),
+    buildPayload: () => ({
+      action: 'analyze_funnel',
+      funnelType: 'free_trial self-serve SaaS',
+      businessType: 'B2B SaaS sales automation platform',
+      stages: [
+        { name: 'Awareness', goal: 'Cold founders discover SalesVelocity via content and ads' },
+        { name: 'Trial Signup', goal: 'Visitor starts a 14-day free trial' },
+        { name: 'Activation', goal: 'User connects CRM and watches first AI agent qualify a lead' },
+        { name: 'Paid Conversion', goal: 'Trial converts to $299/month paid plan' },
+      ],
+      conversionPoints: [
+        { location: 'pricing page', action: 'click start free trial', target: 'trial signup form' },
+        { location: 'onboarding', action: 'connect CRM', target: 'activation' },
+      ],
+      brief: 'Diagnose the strategic funnel for SalesVelocity.ai. Self-serve B2B SaaS, $299/month flat, 14-day free trial. The biggest worry is trials sign up but never connect their CRM, so they never see the AI agents do real work before the trial expires.',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: factory getUXUISpecialist() → SPECIALIST_ID 'UX_UI_STRATEGIST'.
+    specialistId: 'UX_UI_STRATEGIST',
+    department: 'Architect',
+    gmDocId: `sgm_ux_ui_strategist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getUXUISpecialist(),
+    buildPayload: () => ({
+      action: 'design_page',
+      pageType: 'homepage',
+      industry: 'B2B SaaS sales automation',
+      toneOfVoice: 'confident, modern, enterprise-credible',
+      funnelType: 'free_trial self-serve SaaS',
+      sections: ['Hero', 'Social Proof', 'How the Agent Swarm Works', 'Pricing', 'Final CTA'],
+      brief: 'Pick the strategic design direction for the SalesVelocity.ai homepage. The audience is SaaS founders and VP Sales evaluating an AI agent swarm. Dark UI with blue accent highlights is the house style. The page must make a skeptical buyer trust autonomous AI agents with real revenue work.',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  // ── Builder (3; ASSET_GENERATOR excluded — image-first) ──
+  {
+    specialistId: 'FUNNEL_ENGINEER',
+    department: 'Builder',
+    gmDocId: `sgm_funnel_engineer_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getFunnelEngineer(),
+    buildPayload: () => ({
+      action: 'design_funnel',
+      context: 'Design a complete conversion funnel for SalesVelocity.ai — an AI agent swarm that runs the sales pipeline for B2B SaaS teams. $299/month flat, 14-day free trial. Audience: SaaS founders and VP Sales burned by manual outbound. Traffic from LinkedIn thought-leadership and content SEO. Need full stage breakdown, per-stage KPIs, A/B test roadmap, and CPA estimate.',
+      requirements: {
+        funnelType: 'free trial self-serve',
+        businessModel: 'B2B SaaS subscription',
+        targetAudience: 'SaaS founders and VP Sales at 50-500 person B2B SaaS companies',
+        pricePoint: 'mid',
+        productName: 'SalesVelocity.ai',
+        trafficSource: 'LinkedIn organic + content SEO',
+        currentConversionRate: 0.03,
+      },
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: factory getUxUiArchitect() (lowercase x/i) → 'UX_UI_ARCHITECT'.
+    specialistId: 'UX_UI_ARCHITECT',
+    department: 'Builder',
+    gmDocId: `sgm_ux_ui_architect_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getUxUiArchitect(),
+    buildPayload: () => ({
+      action: 'generate_design_system',
+      context: 'Generate a complete design system for SalesVelocity.ai, a B2B SaaS sales-automation platform. The product is an AI agent swarm dashboard. House style is a dark UI with a blue accent. Must feel enterprise-credible and modern, cover Button, Input, and Card at minimum, and serve data-dense pipeline and analytics views.',
+      requirements: {
+        targetAudience: 'SaaS founders and revenue operators using a data-dense AI agent dashboard',
+        accessibilityLevel: 'AA',
+        brandColors: ['#1E40AF', '#0F172A', '#38BDF8'],
+        industryHint: 'B2B SaaS sales automation',
+        styleDirection: 'dark UI, modern, enterprise-credible, blue accent',
+        priorityComponents: ['Button', 'Input', 'Card', 'Table', 'Badge'],
+      },
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    specialistId: 'WORKFLOW_OPTIMIZER',
+    department: 'Builder',
+    gmDocId: `sgm_workflow_optimizer_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getWorkflowOptimizer(),
+    buildPayload: () => ({
+      action: 'compose_workflow',
+      goal: 'Compose a multi-agent workflow that launches a full LinkedIn-led demand-generation campaign for SalesVelocity.ai: research target accounts, generate thought-leadership content, produce a short product-walkthrough video, schedule posts, and route engaged prospects into the AI qualification pipeline.',
+      context: 'SalesVelocity.ai is an AI agent swarm for B2B SaaS sales automation. $299/month flat, 14-day free trial. Audience: SaaS founders and VP Sales. Campaign must run within a 1-week setup window.',
+      constraints: {
+        maxDurationSeconds: 86400,
+        requiredAgents: ['LINKEDIN_EXPERT', 'COPYWRITER', 'VIDEO_SPECIALIST'],
+        priority: 'high',
+        maxParallelism: 4,
+      },
+      availableAgents: ['LINKEDIN_EXPERT', 'SEO_EXPERT', 'COPYWRITER', 'VIDEO_SPECIALIST', 'GROWTH_ANALYST', 'CALENDAR_COORDINATOR', 'ASSET_GENERATOR'],
+    }),
+    extractProseFields: extractAllProse,
+  },
+  // ── Content (2; SHOT_PLAN_PLANNER excluded — no execute() factory) ──
+  {
+    specialistId: 'CALENDAR_COORDINATOR',
+    department: 'Content',
+    gmDocId: `sgm_calendar_coordinator_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getCalendarCoordinator(),
+    buildPayload: () => ({
+      action: 'plan_calendar',
+      contentItems: [
+        { id: 'ci_blog_ai_sdr', type: 'blog_post', title: 'How AI Sales Agents Replace SDR Teams in 2026' },
+        { id: 'ci_case_growthco', type: 'case_study', title: 'GrowthCo cut response time from 18 hours to 4 minutes' },
+        { id: 'ci_demo_clip', type: 'video', title: '60-second SalesVelocity.ai agent swarm demo' },
+      ],
+      platforms: ['linkedin', 'twitter', 'youtube'],
+      startDate: '2026-07-06',
+      endDate: '2026-07-31',
+      timezone: 'America/New_York',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: 'script_to_storyboard' returns an editorial storyboard (prose), not video.
+    specialistId: 'VIDEO_SPECIALIST',
+    department: 'Content',
+    gmDocId: `sgm_video_specialist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getVideoSpecialist(),
+    buildPayload: () => ({
+      action: 'script_to_storyboard',
+      platform: 'linkedin',
+      style: 'cinematic',
+      targetDuration: 60,
+      brief: 'A short-form video introducing SalesVelocity.ai: AI agents qualify leads, run outreach, and draft proposals so reps only talk to hot prospects. 14-day free trial, $299/month flat. Target: SaaS founders and VP Sales tired of failed outbound tools.',
+      targetAudience: 'SaaS founders and VP Sales at 50-500 person B2B SaaS companies',
+      callToAction: 'Start a 14-day free trial at SalesVelocity.ai',
+      tone: 'confident, direct, no fluff',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  // ── Intelligence (1) ──
+  {
+    specialistId: 'INSIGHTS_ANALYST',
+    department: 'Intelligence',
+    gmDocId: `sgm_insights_analyst_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getInsightsAnalyst(),
+    buildPayload: () => ({
+      action: 'analyze_platform_activity',
+      snapshot: {
+        periodDays: 7,
+        pipeline: {
+          newLeads: 14,
+          stalledDeals: [
+            { name: 'Acme Corp', stage: 'Demo Booked', daysInStage: 9 },
+            { name: 'GrowthCo', stage: 'Proposal Sent', daysInStage: 12 },
+          ],
+        },
+        social: { postsPublished: 0, connectedAccounts: ['linkedin'] },
+        content: { draftsAwaitingReview: 3, lastPublishedDaysAgo: 21 },
+        calendar: { connected: true, upcomingMeetingsWithoutPrepDoc: 1 },
+        integrations: { sendgridSenderVerified: false, twilioTfnApproved: false },
+        catalog: { productCount: 0 },
+      },
+    }),
+    extractProseFields: extractAllProse,
+  },
+  // ── Outreach (1; SMS depends on seeded SMS purpose types) ──
+  {
+    specialistId: 'SMS_SPECIALIST',
+    department: 'Outreach',
+    gmDocId: `sgm_sms_specialist_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getSmsSpecialist(),
+    buildPayload: () => ({
+      action: 'compose_sms',
+      campaignName: 'Q2 trial reactivation',
+      targetAudience: 'SaaS founders and VP Sales who started a SalesVelocity.ai free trial but never connected their CRM',
+      goal: 'Get the prospect to reply YES to reactivate their trial and book a 15-minute setup call',
+      brief: 'Re-engagement SMS to a lapsed free-trial user. Remind them the AI agents qualify leads before reps touch them, the trial is still warm for 7 more days, and one reply books a setup call. Tone: confident, direct, no fluff. Include a single clear CTA and a STOP opt-out footer for US TCPA compliance.',
+    }),
+    extractProseFields: extractAllProse,
+  },
+  // ── Standalone LLM agents (2) ──
+  {
+    specialistId: 'AI_CHAT_SALES_AGENT',
+    department: 'Standalone',
+    gmDocId: `sgm_ai_chat_sales_agent_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getSalesChatSpecialist(),
+    buildPayload: () => ({
+      action: 'respond_to_visitor',
+      visitorId: 'v_pirate_test_chat',
+      channel: 'website',
+      userMessage: "Hi, I run sales at a 120-person B2B SaaS company and we're drowning in unqualified inbound leads. Does SalesVelocity actually qualify leads before my reps see them, and roughly what does it cost?",
+      conversationHistory: [
+        { role: 'assistant', content: 'Hey! Welcome to SalesVelocity.ai — happy to help. What are you trying to solve on the sales side?' },
+        { role: 'user', content: 'Mostly our reps waste hours on leads that go nowhere.' },
+      ],
+    }),
+    extractProseFields: extractAllProse,
+  },
+  {
+    // NOTE: vague correction nudges toward CLARIFICATION_NEEDED branch (no verbatim guard).
+    specialistId: 'PROMPT_ENGINEER',
+    department: 'Standalone',
+    gmDocId: `sgm_prompt_engineer_${INDUSTRY_KEY}_v1`,
+    specialistFactory: () => getPromptEngineer(),
+    buildPayload: () => ({
+      action: 'propose_prompt_edit',
+      targetSpecialistId: 'EMAIL_SPECIALIST',
+      targetSpecialistName: 'Email Specialist',
+      currentSystemPrompt: [
+        'You are the Email Specialist for SalesVelocity.ai, a B2B SaaS sales automation platform.',
+        '',
+        '## Tone and Voice',
+        'Write in a confident, professional tone. Keep emails concise and benefit-led.',
+        '',
+        '## Personalization',
+        'Reference the prospect company and role where possible. Avoid generic openers.',
+        '',
+        '## Call to Action',
+        'Every email ends with exactly one clear call to action that asks for a specific next step.',
+        '',
+        '## Brand DNA',
+        'SalesVelocity.ai: confident, direct, no fluff. Flat $299/month pricing, no tiers.',
+      ].join('\n'),
+      correctedReportExcerpt: 'Subject: Quick question. Body: Hi there, I wanted to reach out about our amazing product that can revolutionize your sales process. Let me know if you would like to learn more!',
+      humanCorrection: {
+        grade: 'request_revision',
+        explanation: 'This is way too vague and generic. It does not mention the prospect company or role anywhere, the opener is a tired cliche, and "let me know if you want to learn more" is not a real call to action.',
+      },
+      priorVersionCount: 0,
+    }),
+    extractProseFields: extractAllProse,
+  },
 ];
 
 async function findActiveGM(
@@ -766,12 +1278,12 @@ async function main(): Promise<void> {
 
   const results: TestResult[] = [];
   for (const tc of casesToRun) {
+    let r: TestResult;
     try {
-      const r = await runOneTest(db, tc);
-      results.push(r);
+      r = await runOneTest(db, tc);
     } catch (err) {
       console.error(`\n    ✗ UNHANDLED ERROR in ${tc.specialistId}:`, err instanceof Error ? err.message : err);
-      results.push({
+      r = {
         specialistId: tc.specialistId,
         department: tc.department,
         docId: tc.gmDocId,
@@ -780,7 +1292,29 @@ async function main(): Promise<void> {
         pirateMarkersTotal: 0,
         sampleProse: '',
         error: err instanceof Error ? err.message : String(err),
+      };
+    }
+    results.push(r);
+
+    // Persist this run's outcome to the verification ledger so the telemetry
+    // page can show each agent's real last-verified status. Runs for BOTH
+    // pass and fail (error string included on fail). A ledger-write failure
+    // must not abort the rest of the suite.
+    try {
+      await recordVerification({
+        agentId: tc.specialistId,
+        status: r.status === 'PASS' ? 'pass' : 'fail',
+        markersFound: r.pirateMarkersTotal,
+        proseFieldsFound: r.proseFieldsFound,
+        error: r.error,
+        runAt: new Date().toISOString(),
+        industryKey: INDUSTRY_KEY,
       });
+    } catch (ledgerErr) {
+      console.error(
+        `    ✗ FAILED TO RECORD VERIFICATION for ${tc.specialistId}:`,
+        ledgerErr instanceof Error ? ledgerErr.message : ledgerErr,
+      );
     }
   }
 

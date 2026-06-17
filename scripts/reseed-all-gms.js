@@ -47,13 +47,28 @@ const SCRIPTS = [
   'seed-intent-expander-gm.js',
 ];
 
+// Marketing specialists whose seed scripts are TypeScript (.ts) and must be run
+// via `npx tsx` — `node` cannot execute .ts directly. These were previously
+// skipped entirely, leaving 7 live specialists with stale Brand DNA after a
+// reseed. (Reddit and Telegram are intentionally excluded — marked for deletion.)
+const TS_SCRIPTS = [
+  'seed-google-business-expert-gm.ts',
+  'seed-threads-expert-gm.ts',
+  'seed-bluesky-expert-gm.ts',
+  'seed-mastodon-expert-gm.ts',
+  'seed-discord-expert-gm.ts',
+  'seed-twitch-expert-gm.ts',
+  'seed-whatsapp-business-expert-gm.ts',
+];
+
 const SCRIPTS_DIR = path.resolve(__dirname);
 
 async function main() {
-  // Total includes the Jasper orchestrator GM which lives in the Training Lab
-  // `goldenMasters` collection (separate from `specialistGoldenMasters`) and
-  // is reseeded via a TypeScript entrypoint.
-  const totalCount = SCRIPTS.length + 1;
+  // Total includes the TypeScript marketing-specialist seed scripts plus the
+  // Jasper orchestrator GM which lives in the Training Lab `goldenMasters`
+  // collection (separate from `specialistGoldenMasters`) and is reseeded via a
+  // TypeScript entrypoint.
+  const totalCount = SCRIPTS.length + TS_SCRIPTS.length + 1;
   console.log(`Reseeding ${totalCount} Golden Masters with Brand DNA baked in...\n`);
   const results = [];
   const startedAt = Date.now();
@@ -63,6 +78,26 @@ async function main() {
     const proc = spawnSync('node', [scriptPath, '--force'], {
       cwd: path.resolve(__dirname, '..'),
       encoding: 'utf-8',
+    });
+    const ok = proc.status === 0;
+    results.push({ script, ok, stdout: proc.stdout, stderr: proc.stderr });
+    const marker = ok ? '✓' : '✗';
+    const lastLine = (proc.stdout || '').trim().split('\n').slice(-2, -1)[0] || '';
+    console.log(`  ${marker} ${script.padEnd(38)} ${lastLine}`);
+    if (!ok) {
+      console.log(`    stderr: ${(proc.stderr || '').trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  }
+
+  // Reseed the TypeScript marketing-specialist GMs. These run via `npx tsx`
+  // (same invocation pattern as Jasper below) because `node` cannot execute
+  // .ts files. Args mirror the .js scripts above (`--force`).
+  for (const script of TS_SCRIPTS) {
+    const scriptPath = path.join(SCRIPTS_DIR, script);
+    const proc = spawnSync('npx', ['tsx', scriptPath, '--force'], {
+      cwd: path.resolve(__dirname, '..'),
+      encoding: 'utf-8',
+      shell: true,
     });
     const ok = proc.status === 0;
     results.push({ script, ok, stdout: proc.stdout, stderr: proc.stderr });
