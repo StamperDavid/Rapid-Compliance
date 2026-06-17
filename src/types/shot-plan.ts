@@ -532,6 +532,12 @@ export interface ShotPlan {
   createdAt: string;
   updatedAt: string;
   status: ShotPlanStatus;
+  /**
+   * The final, stitched deliverable video — every generated shot concatenated in
+   * order into ONE playable file on OUR storage. Written by `stitchShotPlan` after
+   * `generateAllShots`. Absent until the plan has been generated + stitched.
+   */
+  finalVideoUrl?: string;
 }
 
 // ============================================================================
@@ -767,6 +773,7 @@ export const ShotPlanSchema = z.object({
   createdAt: z.string().trim().min(1),
   updatedAt: z.string().trim().min(1),
   status: ShotPlanStatusSchema.default('draft'),
+  finalVideoUrl: z.string().trim().url().optional(),
 });
 
 // ============================================================================

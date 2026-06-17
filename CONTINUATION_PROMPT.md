@@ -78,6 +78,108 @@ certified, date signed). A vertical with no cert is NOT shippable and NOT claime
 
 ---
 
+# 🟢 PHASE 0 — HONEST INVENTORY + DATA-PATH DEBT LEDGER (Jun 17 2026)
+
+This is the Phase 0 deliverable mandated by the Governing Plan (the prerequisite before any
+vertical is certified). Produced by a 8-way parallel read-only audit of the whole surface.
+Status vocabulary: **LIVE** (proven end-to-end on real infra) · **CONNECTED-BUT-UNPROVEN**
+(wired to a real backend, no real-infra proof captured) · **SCAFFOLD** (UI only / mocked /
+returns stub) · **DEAD** (orphaned/unreachable/superseded). NOTE: most of the surface is
+**CONNECTED-BUT-UNPROVEN** — real code, real Admin SDK, but not yet driven on real infra by a
+verify script. That is exactly what each Parity Certificate must convert to LIVE.
+
+## The Certification Registry (single source of "are we there yet")
+Every vertical is **UNCERTIFIED** until it earns a 7-point Parity Certificate. Benchmarks below
+are PROPOSALS for the owner to confirm (he owns the order + the benchmark choices).
+
+| # | Vertical | Proposed benchmark | Cert status | Headline blocker(s) |
+|---|----------|--------------------|-------------|---------------------|
+| 1 | Video / Shot Doc | OpenArt Smart Shot + Arcads (delivered video) | IN-CERT | ~~No final multi-clip stitch~~ **P4 DONE + PROVEN (Jun 17)**; remaining: no explicit script layer (P1); generate-all is synchronous |
+| 2 | Identity / Onboarding / Brand | HubSpot setup + Durable-style URL prefill | UNCERTIFIED | Team-tasks collection mismatch; impersonation is a logging shell; dead /onboarding/industry link; Academy unseeded |
+| 3 | CRM + Lead capture | HubSpot CRM core | UNCERTIFIED | **Duplicate-detection client-SDK-on-server → silent []**; Conversations + Living Ledger unproven |
+| 4 | Outreach (Email/SMS/Sequences/Nurture) | Klaviyo campaigns + flows | UNCERTIFIED | Sequence/nurture engine gated OFF + unproven; **email-template-service client-SDK-on-server**; no visual flow builder |
+| 5 | Social | Buffer + Sprout Social | UNCERTIFIED | **schedule/queue client-SDK-on-server**; per-platform posting unproven on live creds |
+| 6 | Website builder | Webflow / Framer | UNCERTIFIED | Public /sites/* is client-rendered only (no SSR/SSG → SEO fail); custom domains unproven; store is config-only |
+| 7 | SEO / Growth | Semrush | UNCERTIFIED | (strongest area — real DataForSEO/Serper/GSC) agent data sources opaque; schema-markup template-only |
+| 8 | Commerce | Stripe Billing + Checkout | UNCERTIFIED | No proven live charge; **checkout config + coupon client-SDK-on-server**; recovery uses in-memory setTimeout (non-durable) |
+| 9 | Scheduling / Meetings | Calendly | UNCERTIFIED | Reminders on unverified cron; single video provider (Zoom only); no per-rep booking links |
+| 10 | Voice AI / Calls | Vapi / Bland.ai | UNCERTIFIED | ElevenLabs never reaches live call (robotic Polly); **call-context-service client-SDK-on-server**; voice agent NOT GM-driven (Standing Rule #1 violation) |
+| 11 | Analytics | HubSpot reports | UNCERTIFIED | Core is real-computed (good); 3 orphaned client-SDK analytics services are a dead future-trap; no snapshot history |
+| 12 | Agent swarm / Orchestration | Lindy.ai | UNCERTIFIED | **workflows/workflow-service + chat-session-service client-SDK-on-server**; duplicate lib/workflow (singular) dead dir |
+| 13 | Content gen (text/image/music) | Jasper / Copy.ai | UNCERTIFIED | Music blocked on Replicate credit (billing, not code); CM→image/music client hand-off unproven |
+| — | Integrations / OAuth / Webhooks / Cron | (foundation) | N/A | 7 OAuth providers + ~19 webhooks + ~24 crons code-complete but unproven; Zoom token stored plaintext; inbound-social-dispatcher cron missing from vercel.json |
+
+## DATA-PATH DEBT LEDGER (Phase 0 part 2 — fix BEFORE certifying any vertical)
+Root cause: `src/lib/db/firestore-service.ts` (`FirestoreService`) is the **client SDK**. On a
+server path it has no auth context → Firestore rules silently return `[]` / writes fail silently.
+The fix in every case = swap to `AdminFirestoreService` / `adminDb` (same API surface; mind the
+`set` semantics: client defaults `merge:true` + auto-stamps `createdAt/updatedAt`, Admin defaults
+`merge:false` + stamps nothing — pass `merge:true` and stamp explicitly with `FieldValue.serverTimestamp()`).
+
+**CONFIRMED live server-path bugs (traced server route → service → client SDK):**
+| File | Reached from | Impact |
+|------|--------------|--------|
+| `src/lib/crm/duplicate-detection.ts` | `/api/crm/duplicates` | Dedup always reports "no duplicates" |
+| `src/lib/email/email-template-service.ts` | `/api/email-templates`, `/[templateId]` | Template list/CRUD silently empty |
+| `src/lib/social/autonomous-posting-agent.ts` (queue/schedule/analytics methods via `FirestoreService`) | `/api/social/schedule`, `/api/social/queue` | Scheduling/queueing writes fail, GET returns [] |
+| `src/lib/workflows/workflow-service.ts` | `/api/workflows`, `/[workflowId]` | Primary workflow CRUD silently empty |
+
+VERIFIED on Jun 17 by importer-tracing before fixing (two audit claims were wrong):
+- `src/lib/agent/chat-session-service.ts` = **FALSE POSITIVE** — the score-session route imports
+  `triggerAgentAnalysis` from production-monitor, NOT this service; the service only *calls* the
+  route via fetch and is otherwise imported solely by the `conversations` client page (client SDK
+  correct there). Left untouched.
+- `src/lib/voice/call-context-service.ts` = **DEAD, not live** — `callContextService.` has zero
+  runtime consumers anywhere. Deferred to the Voice-vertical cert (convert when warm-transfer is wired).
+| `src/lib/ecommerce/types.ts` `getEcommerceConfig` + `tax-service.ts` + `shipping-service.ts` + `payment-service.ts` | live `checkout-service.processCheckout` | Config reads empty mid-checkout; refund lookup empty |
+| `src/lib/pricing/coupon-service.ts` | `agent/tools/discount-tool.ts` (AI agents at runtime) | Coupon validate/apply by agents fails (latent→live once agent tool runs server-side) |
+| `src/lib/email/email-service.ts` (dynamic client-SDK import for send-logging) | `/api/email/send` | Send works; send-log persistence may fail silently |
+
+**ORPHANED / DEAD client-SDK (delete after confirming zero importers — future traps, not live bugs):**
+`src/lib/analytics/analytics-service.ts`, `ecommerce-analytics.ts`, `workflow-analytics.ts`;
+`src/lib/outbound/nurture-service.ts`; `src/lib/forms/form-db-service.ts`;
+`src/lib/forms/form-service.ts` (unused client-SDK fns only); `src/lib/ecommerce/product-service.ts`;
+`src/lib/workflow` (singular dir — dead duplicate of `src/lib/workflows`).
+
+**FALSE POSITIVES (no fix — `where/orderBy/limit/Timestamp` imported only as constraint-builders/types,
+real I/O runs on Admin SDK):** the 7 flagged `/api/*` routes (dashboard/summary, calls, ai/fine-tuning,
+ai/datasets, settings/security, nurture, notifications/preferences); all `src/lib/crm/*` except
+duplicate-detection; `src/lib/crm/predictive-scoring.ts` (client-only consumer, correct).
+
+## Notable non-data-path defects found (per-vertical fix ledger)
+- **Identity:** Team Tasks broken e2e (`tasks` vs `teamTasks` collection mismatch); impersonation never
+  mints a custom token (logging shell); `/onboarding/industry` 404s; Academy collection unseeded.
+- **Voice:** Standing Rule #1 violation — voice agent uses static `PROSPECTOR_/CLOSER_SYSTEM_PROMPT`
+  templates with runtime Brand DNA merge instead of a GM. Must move to a GM (and route ElevenLabs into live calls).
+- **Risk/Reputation:** hardcoded fallbacks shown as real (`revenueAtRisk:0`, simulated history, sentiment `50/30/20`) — label honestly or compute.
+- **Commerce:** all 11 payment processors are REAL integrations + switchable via `isDefault`; but no live
+  charge proven and the "subs stay on original processor when switching" rule is not enforced in code.
+- **Video:** P0/P2/P3 (doc structure, renderer, popups) are real & deep; **P1 (script layer) and P4
+  (multi-doc final stitch) are NOT done** despite being implied complete. generate-all is synchronous (no submit→poll).
+
+## PROGRESS LOG — Vertical #1 (Video) cert in flight
+**Jun 17 2026 — P4 (final multi-clip stitch) CLOSED + PROVEN.** The #1 gap vs every video
+competitor ("generate all" produced loose clips, never a deliverable video) is fixed:
+- `stitchShotPlan(plan, ctx)` in `shot-plan-generation-service.ts` — concatenates every generated
+  shot IN ORDER into ONE video. Audio-preserving (the generic concat helper dropped audio):
+  each clip normalized to a uniform frame (scale/pad/fps/sar) + uniform audio; an audio-less shot
+  gets SILENCE synthesized at its exact duration so dialogue clips keep their sound. Ownership rule
+  honored (final file → OUR Storage + media library; `plan.finalVideoUrl` never a temp CDN URL).
+- New `ShotPlan.finalVideoUrl` (type + Zod + plan-edit union). Wired into
+  `/api/content/shot-plan/generate-all` (auto-stitch after all shots; on stitch failure the per-shot
+  clips are preserved + a plain-English warning returned — never silent). New manual/retry route
+  `/api/content/shot-plan/stitch`.
+- UI (`ShotPlanSheet.tsx`): final-video player + Download + a "Build / Rebuild final video" manual
+  button (UI-parity), plain-English non-silent errors.
+- **Real-infra proof:** `scripts/verify-shot-plan-stitch.ts` (no fal spend — synthesizes test clips
+  incl. a no-audio/different-size clip) → stitched 1280x720+audio + 640x480 no-audio into ONE 4.03s
+  1280x720 video WITH audio on real Firebase Storage. tsc + lint clean.
+- REMAINING for the Video cert: P1 explicit timed-script layer (a `script-generation-service.ts`
+  already exists — assess + finish); generate-all submit→poll split (currently synchronous); then the
+  formal OpenArt capability-map + gap-ledger + owner walkthrough/sign-off.
+
+---
+
 # 🔴 Jun 15 2026 — HEDRA FULLY REMOVED (video engine = fal / Seedance via Shot Plan)
 
 Per the owner's go-ahead, the entire legacy Hedra pipeline was removed. The live video flow is

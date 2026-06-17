@@ -586,6 +586,186 @@ export async function generateAllShots(
 }
 
 // ============================================================================
+// stitchShotPlan — concatenate every generated shot into ONE deliverable video
+// ============================================================================
+
+/** A generated shot's persisted clip, ready to stitch (in plan order). */
+interface StitchableClip {
+  shotId: string;
+  index: number;
+  videoUrl: string;
+}
+
+/**
+ * The generated clips in plan order, ready to stitch: every shot whose generation
+ * COMPLETED and has a persisted `videoUrl`, sorted by `index`. Shots that are not
+ * yet generated (or failed) are skipped — the stitch is over what actually exists.
+ */
+function collectStitchableClips(plan: ShotPlan): StitchableClip[] {
+  const out: StitchableClip[] = [];
+  for (const s of [...plan.shots].sort((a, b) => a.index - b.index)) {
+    const url = s.generated?.videoUrl;
+    if (s.generated?.status === 'completed' && url) {
+      out.push({ shotId: s.id, index: s.index, videoUrl: url });
+    }
+  }
+  return out;
+}
+
+/** Fallback frame size when the first clip cannot be probed (Seedance 720p · 16:9). */
+const STITCH_FALLBACK_WIDTH = 1280;
+const STITCH_FALLBACK_HEIGHT = 720;
+
+/**
+ * Concatenate EVERY generated shot of a plan, IN ORDER, into ONE deliverable
+ * video on OUR storage — the missing "final stitch" that turns a pile of clips
+ * into a watchable film.
+ *
+ * Audio-preserving by design (the generic concat helper drops audio): each clip
+ * is normalized to a uniform video frame (scale/pad/fps/sar) AND a uniform audio
+ * stream (44.1 kHz stereo). A clip with no audio track (a silent shot with no
+ * dialogue) gets a SILENT track synthesized at its exact duration, so the concat's
+ * stream counts line up and dialogue clips keep their sound.
+ *
+ * Ownership rule (NON-NEGOTIABLE): the stitched file is uploaded to OUR Firebase
+ * Storage with a permanent download-token URL and registered in the media library;
+ * `plan.finalVideoUrl` never references a temporary CDN URL.
+ *
+ * Throws a clear error when there is nothing generated to stitch. LONG-RUNNING:
+ * one ffmpeg re-encode over all clips (10-minute ceiling).
+ */
+export async function stitchShotPlan(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
+  const clips = collectStitchableClips(plan);
+  if (clips.length === 0) {
+    throw new Error(
+      'stitchShotPlan: no generated shots to stitch — generate the shots first.',
+    );
+  }
+
+  await ensureFfmpeg();
+  const workDir = await createWorkDir('shot-plan-stitch');
+
+  try {
+    // 1. Download every clip locally; probe each for frame size + audio presence.
+    const localPaths: string[] = [];
+    const probes: { hasAudio: boolean; duration: number }[] = [];
+    let targetW = 0;
+    let targetH = 0;
+    for (let i = 0; i < clips.length; i += 1) {
+      const clipPath = join(workDir, `clip-${i}.mp4`);
+      await downloadToFile(clips[i].videoUrl, clipPath, `stitch clip ${i} (shot ${clips[i].shotId})`);
+      const probe = await probeVideo(clipPath);
+      localPaths.push(clipPath);
+      probes.push({ hasAudio: probe.hasAudio, duration: probe.duration });
+      if (i === 0 && probe.width > 0 && probe.height > 0) {
+        targetW = probe.width;
+        targetH = probe.height;
+      }
+    }
+    if (targetW === 0 || targetH === 0) {
+      targetW = STITCH_FALLBACK_WIDTH;
+      targetH = STITCH_FALLBACK_HEIGHT;
+    }
+
+    // 2. Build a single concat pass: real clip inputs first (indices 0..N-1), then
+    //    one synthesized-silence lavfi input per audio-less clip (indices after N).
+    const outputPath = join(workDir, 'final.mp4');
+    const inputArgs: string[] = [];
+    for (let i = 0; i < clips.length; i += 1) {
+      inputArgs.push('-i', localPaths[i]);
+    }
+
+    const filterParts: string[] = [];
+    const concatLabels: string[] = [];
+    let nextInputIndex = clips.length;
+    for (let i = 0; i < clips.length; i += 1) {
+      // Video: letterbox/pad each clip to the exact target frame + uniform fps/sar.
+      filterParts.push(
+        `[${i}:v]scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,` +
+          `pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30[v${i}]`,
+      );
+      // Audio: keep the real track when present; otherwise synthesize silence of the
+      // clip's duration (an extra lavfi input) so every concat segment has audio.
+      if (probes[i].hasAudio) {
+        filterParts.push(
+          `[${i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a${i}]`,
+        );
+      } else {
+        const dur = probes[i].duration > 0 ? probes[i].duration : 1;
+        inputArgs.push('-f', 'lavfi', '-t', dur.toFixed(3), '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100');
+        const silentIdx = nextInputIndex;
+        nextInputIndex += 1;
+        filterParts.push(
+          `[${silentIdx}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a${i}]`,
+        );
+      }
+      concatLabels.push(`[v${i}][a${i}]`);
+    }
+    filterParts.push(`${concatLabels.join('')}concat=n=${clips.length}:v=1:a=1[outv][outa]`);
+
+    const args = [
+      ...inputArgs,
+      '-filter_complex', filterParts.join(';'),
+      '-map', '[outv]',
+      '-map', '[outa]',
+      '-c:v', 'libx264',
+      '-preset', 'medium',
+      '-crf', '18',
+      '-c:a', 'aac',
+      '-b:a', '192k',
+      '-movflags', '+faststart',
+      '-y',
+      outputPath,
+    ];
+
+    logger.info('[shot-plan-gen] stitching final video', {
+      file: FILE,
+      clips: clips.length,
+      targetW,
+      targetH,
+      tenantId: ctx.tenantId,
+    });
+    await runFfmpeg(args, 600_000);
+
+    const finalBuf = await readFile(outputPath);
+    if (finalBuf.length === 0) {
+      throw new Error('stitchShotPlan: ffmpeg produced an empty final video');
+    }
+
+    // 3. Persist the deliverable to OUR storage + media library (ownership rule).
+    const storagePath = `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`;
+    const finalUrl = await uploadPermanent(finalBuf, storagePath, 'video/mp4', 'shot-plan final video');
+
+    await createAsset({
+      type: 'video',
+      category: 'final-render',
+      name: `${plan.title || 'Shot Plan'} — final video`,
+      description:
+        `Final stitched video (${clips.length} shot${clips.length === 1 ? '' : 's'}) ` +
+        `from Shot Plan "${plan.title || plan.id}".`,
+      url: finalUrl,
+      mimeType: 'video/mp4',
+      fileSize: finalBuf.length,
+      source: 'ai-generated',
+      aiProvider: 'fal-seedance',
+      createdBy: 'system',
+      tags: ['shot-plan', 'final-video'],
+    });
+
+    logger.info('[shot-plan-gen] final video stitched + persisted', {
+      file: FILE,
+      finalUrl,
+      bytes: finalBuf.length,
+      clips: clips.length,
+    });
+
+    return applyShotPlanEdit(plan, { target: 'plan', field: 'finalVideoUrl', value: finalUrl });
+  } finally {
+    await cleanupWorkDir(workDir);
+  }
+}
+
+// ============================================================================
 // regenerateShot
 // ============================================================================
 

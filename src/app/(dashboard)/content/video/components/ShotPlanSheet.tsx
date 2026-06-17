@@ -54,6 +54,8 @@ import {
   CheckCircle2,
   Clapperboard,
   PlayCircle,
+  Download,
+  Film,
   FileUp,
   LibraryBig,
   FileVideo,
@@ -2092,6 +2094,8 @@ interface ShotGenerationResponse {
   plan?: ShotPlan;
   /** generate-all returns the partially-generated plan on a mid-run halt. */
   partialPlan?: ShotPlan;
+  /** generate-all sets this when every shot rendered but the final stitch failed. */
+  stitchError?: string;
   error?: string;
 }
 
@@ -2125,6 +2129,8 @@ export function ShotPlanSheet() {
   const [keyframingShotIds, setKeyframingShotIds] = useState<Set<string>>(new Set());
   // True while a Generate-all run is in flight (the whole plan is long-running).
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  // True while the final video is being stitched (manual "Build final video" path).
+  const [isStitching, setIsStitching] = useState(false);
   // Plain-English generation failure surfaced to the operator (never silent).
   const [shotGenError, setShotGenError] = useState<string | null>(null);
   // While the just-generated plan's images (floor plan + keyframes) are rendering
@@ -2360,7 +2366,7 @@ export function ShotPlanSheet() {
   );
 
   // ── Generation: any run in flight disables editing/competing generations ──
-  const busy = isGeneratingAll || generatingShotIds.size > 0 || keyframingShotIds.size > 0;
+  const busy = isGeneratingAll || isStitching || generatingShotIds.size > 0 || keyframingShotIds.size > 0;
 
   // Generate (or regenerate) ONE shot through the orchestrator route. The route
   // returns the updated plan with this shot's `generated` field written; we swap
@@ -2457,11 +2463,50 @@ export function ShotPlanSheet() {
         throw new Error(data.error ?? 'Generation stopped before all shots finished. Please try again.');
       }
       setShotPlan(data.plan);
+      // Every shot rendered but combining them into one video failed — surface it
+      // (non-fatal: the clips are saved, the operator can Build the final video).
+      if (data.stitchError) {
+        setShotGenError(data.stitchError);
+      }
     } catch (err) {
       setShotGenError(err instanceof Error ? err.message : 'Generation stopped before all shots finished. Please try again.');
     } finally {
       setIsGeneratingAll(false);
       setGeneratingShotIds(new Set());
+    }
+  }, [authFetch, setShotPlan, busy]);
+
+  // ── Build (or rebuild) the final video — the manual stitch path ──
+  // Combines every generated shot into ONE deliverable video. Also the retry path
+  // when the automatic stitch inside Generate-all failed, or after regenerating a
+  // single shot. Plain English on failure; never silent.
+  const stitchFinal = useCallback(async () => {
+    const plan = useVideoPipelineStore.getState().shotPlan;
+    if (!plan || busy) {
+      return;
+    }
+    const hasClips = plan.shots.some((s) => s.generated?.status === 'completed' && s.generated.videoUrl);
+    if (!hasClips) {
+      setShotGenError('Generate at least one shot before building the final video.');
+      return;
+    }
+    setShotGenError(null);
+    setIsStitching(true);
+    try {
+      const res = await authFetch('/api/content/shot-plan/stitch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = (await res.json()) as ShotGenerationResponse;
+      if (!res.ok || !data.success || !data.plan) {
+        throw new Error(data.error ?? 'Building the final video failed. Please try again.');
+      }
+      setShotPlan(data.plan);
+    } catch (err) {
+      setShotGenError(err instanceof Error ? err.message : 'Building the final video failed. Please try again.');
+    } finally {
+      setIsStitching(false);
     }
   }, [authFetch, setShotPlan, busy]);
 
@@ -2614,12 +2659,14 @@ export function ShotPlanSheet() {
       <div className="flex flex-col gap-3 rounded-2xl border border-border-strong bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clapperboard className="h-4 w-4 text-primary" />
-          {completedCount === orderedShots.length && orderedShots.length > 0 ? (
-            <span className="text-foreground">All {orderedShots.length} shots generated — ready to assemble.</span>
+          {shotPlan.finalVideoUrl ? (
+            <span className="text-foreground">Final video ready — all {orderedShots.length} shots combined into one film.</span>
+          ) : completedCount === orderedShots.length && orderedShots.length > 0 ? (
+            <span className="text-foreground">All {orderedShots.length} shots generated — build your final video.</span>
           ) : (
             <span>
               {completedCount}/{orderedShots.length} shots generated.
-              {' '}Generate every shot, then open the clips in the editor to stitch them.
+              {' '}Generate every shot — they’re automatically combined into one final video.
             </span>
           )}
         </div>
@@ -2651,14 +2698,48 @@ export function ShotPlanSheet() {
           <Button
             variant="outline"
             className="gap-1.5"
+            onClick={() => { void stitchFinal(); }}
+            disabled={busy || completedCount === 0}
+            title={completedCount === 0 ? 'Generate at least one shot first' : 'Combine every generated shot into one final video'}
+          >
+            {isStitching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
+            {isStitching ? 'Building…' : shotPlan.finalVideoUrl ? 'Rebuild final video' : 'Build final video'}
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1.5"
             onClick={openInEditor}
             disabled={busy || completedCount === 0}
-            title={completedCount === 0 ? 'Generate at least one shot first' : 'Open the generated clips in the editor to assemble'}
+            title={completedCount === 0 ? 'Generate at least one shot first' : 'Open the generated clips in the editor to fine-tune'}
           >
             <PlayCircle className="h-4 w-4" /> Open in editor
           </Button>
         </div>
       </div>
+
+      {/* ── Final stitched video — the deliverable ── */}
+      {shotPlan.finalVideoUrl && (
+        <div className="space-y-3 rounded-2xl border border-border-strong bg-card p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Film className="h-4 w-4 text-primary" /> Your final video
+            </div>
+            <a
+              href={shotPlan.finalVideoUrl}
+              download
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface-elevated px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-main"
+            >
+              <Download className="h-3.5 w-3.5" /> Download
+            </a>
+          </div>
+          <video
+            key={shotPlan.finalVideoUrl}
+            src={shotPlan.finalVideoUrl}
+            controls
+            className="w-full rounded-lg border border-border-light bg-black"
+          />
+        </div>
+      )}
 
       {/* The just-generated plan is rendering its images so the document arrives complete */}
       {isRenderingSheet && (

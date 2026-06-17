@@ -61,6 +61,11 @@ export type ShotPlanEdit =
       target: 'plan';
       field: 'floorPlan';
       value: ShotPlan['floorPlan'];
+    }
+  | {
+      target: 'plan';
+      field: 'finalVideoUrl';
+      value: ShotPlan['finalVideoUrl'];
     };
 
 /** The outcome of applying an edit. */
