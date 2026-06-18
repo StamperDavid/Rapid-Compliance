@@ -22,7 +22,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Scissors, Sparkles, Loader2, Calendar } from 'lucide-react';
+import { Scissors, Sparkles, Loader2, Calendar, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardTitle, Caption, SectionDescription } from '@/components/ui/typography';
@@ -32,6 +32,7 @@ import {
   formatTimecode,
   type ShortSegment,
 } from '../modes/social-repurpose/segment-utils';
+import { useClippableMoments } from './make-clips/useClippableMoments';
 import SegmentList from './make-clips/SegmentList';
 import FormatPicker from './make-clips/FormatPicker';
 import JobList from './make-clips/JobList';
@@ -56,8 +57,34 @@ export default function ClipsToolPanel({ state, authFetch }: EditorToolProps) {
   const [armedDeleteId, setArmedDeleteId] = useState<string | null>(null);
 
   const { jobs, isRunning, run } = useMakeClips(clips, authFetch);
+  const { isFinding, status: findStatus, find } = useClippableMoments(clips, authFetch);
 
   const hasTimeline = clips.length > 0 && timelineDuration > 0;
+
+  // ── Auto-highlight: ask the Video Editor Specialist for clippable moments,
+  //    then add each one as a short the operator can review → schedule → post.
+  async function handleFindMoments() {
+    const moments = await find();
+    if (moments.length === 0) {
+      return;
+    }
+    setSegments((prev) => {
+      const additions: ShortSegment[] = moments.map((m, i) => ({
+        id: nextSegmentId(),
+        name: `Highlight ${prev.length + i + 1}`,
+        startSec: Number(m.startSec.toFixed(1)),
+        endSec: Number(m.endSec.toFixed(1)),
+        autoCaptions,
+      }));
+      return [...prev, ...additions];
+    });
+    // Prefill the caption with the strongest moment's suggested caption (the
+    // route returns moments sorted by score, highest first) so the operator
+    // starts from the agent's on-brand copy and tweaks from there.
+    if (!caption.trim() && moments[0]?.suggestedCaption) {
+      setCaption(moments[0].suggestedCaption);
+    }
+  }
 
   // ── Segment editing ────────────────────────────────────────────────────
   function addSegment() {
@@ -148,6 +175,32 @@ export default function ClipsToolPanel({ state, authFetch }: EditorToolProps) {
         </div>
       ) : (
         <>
+          {/* ── Auto-highlight (the OpusClip-style "find clippable moments") ── */}
+          <section className="space-y-2 rounded-xl border border-border-strong bg-card p-4">
+            <CardTitle className="text-sm">Let AI find your best moments</CardTitle>
+            <SectionDescription>
+              Reviews what&apos;s said in your video and suggests the moments most worth
+              clipping — each becomes a short you can tweak, schedule, and post.
+            </SectionDescription>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => void handleFindMoments()}
+              disabled={isFinding || isRunning}
+            >
+              {isFinding ? (
+                <>
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Reviewing your video…
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-1 h-4 w-4" /> Find clippable moments
+                </>
+              )}
+            </Button>
+            {findStatus ? <Caption className="block">{findStatus}</Caption> : null}
+          </section>
+
           <SegmentList
             segments={segments}
             timelineDuration={timelineDuration}

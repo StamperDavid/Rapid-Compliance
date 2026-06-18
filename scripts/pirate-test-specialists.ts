@@ -1410,6 +1410,49 @@ const TESTS: TestCase[] = [
       }
     },
   },
+  {
+    // VIDEO_EDITOR_SPECIALIST — specialist.ts exports a plain function (no
+    // execute() factory). findClippableMoments loads its GM via
+    // getActiveSpecialistGMByIndustry, so the standard GM swap reaches it. We
+    // feed a fixed in-memory transcript so NO Deepgram call is made — only the
+    // GM-driven LLM step runs, and we grep the moments' reason/caption prose.
+    specialistId: 'VIDEO_EDITOR_SPECIALIST',
+    department: 'Content',
+    gmDocId: `sgm_video_editor_specialist_${INDUSTRY_KEY}_v1`,
+    llmOnlyRun: async (): Promise<string[]> => {
+      const { findClippableMoments } = await import(
+        '../src/lib/agents/content/video-editor/specialist'
+      );
+      // A simple word-timed transcript covering ~30s of a fake product talk.
+      const SCRIPT = [
+        'Most', 'sales', 'teams', 'waste', 'half', 'their', 'day', 'on', 'leads', 'that',
+        'go', 'nowhere', 'and', 'nobody', 'talks', 'about', 'it', 'here', 'is', 'the',
+        'fix', 'AI', 'agents', 'qualify', 'every', 'lead', 'before', 'a', 'rep', 'ever',
+        'sees', 'it', 'so', 'your', 'reps', 'only', 'ever', 'talk', 'to', 'hot',
+        'prospects', 'that', 'is', 'the', 'whole', 'game', 'start', 'a', 'free', 'trial',
+      ];
+      const words = SCRIPT.map((word, i) => ({
+        word,
+        start: i * 0.6,
+        end: i * 0.6 + 0.5,
+        confidence: 0.95,
+      }));
+      const durationSeconds = words[words.length - 1].end;
+      const moments = await findClippableMoments({
+        transcription: {
+          transcript: SCRIPT.join(' '),
+          words,
+          durationSeconds,
+          confidence: 0.95,
+        },
+        durationSeconds,
+        maxMoments: 4,
+      });
+      const out: string[] = [];
+      collectStrings(moments, out);
+      return out;
+    },
+  },
 ];
 
 async function findActiveGM(

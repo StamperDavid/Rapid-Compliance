@@ -19,7 +19,14 @@
 import { useState } from 'react';
 import { Plus, Trash2, Type, Captions, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { CardTitle, Caption, SectionDescription } from '@/components/ui/typography';
+import {
+  CAPTION_STYLES,
+  CAPTION_STYLE_LABELS,
+  CAPTION_STYLE_HINTS,
+  type CaptionStyle,
+} from '@/types/video-pipeline';
 import type { EditorToolProps } from '../editor-tools';
 import type { TextOverlay } from '../types';
 import OverlayFields, { type OverlayDraft } from './text/OverlayFields';
@@ -108,6 +115,7 @@ export default function TextToolPanel({ state, dispatch, authFetch }: EditorTool
   }
 
   // ── Auto-subtitles ─────────────────────────────────────────────────────
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyle>('bold-center');
   const [subtitleState, setSubtitleState] = useState<
     | { phase: 'idle' }
     | { phase: 'working'; done: number; total: number }
@@ -135,7 +143,7 @@ export default function TextToolPanel({ state, dispatch, authFetch }: EditorTool
         const response = await authFetch('/api/video/editor/captions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: clip.url, startOffset: offsets[i] }),
+          body: JSON.stringify({ url: clip.url, startOffset: offsets[i], style: captionStyle }),
         });
         const json: unknown = await response.json();
         if (!isCaptionsResponse(json)) {
@@ -265,6 +273,34 @@ export default function TextToolPanel({ state, dispatch, authFetch }: EditorTool
         <SectionDescription>
           Transcribe every clip and drop synced captions onto your timeline.
         </SectionDescription>
+
+        {/* ── Caption style picker ──────────────────────────────────────── */}
+        <div className="space-y-1.5">
+          <Label>Caption style</Label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {CAPTION_STYLES.map((style) => {
+              const isSelected = captionStyle === style;
+              return (
+                <button
+                  key={style}
+                  type="button"
+                  aria-pressed={isSelected}
+                  title={CAPTION_STYLE_HINTS[style]}
+                  onClick={() => setCaptionStyle(style)}
+                  disabled={isWorking}
+                  className={`rounded-md border px-2 py-1.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
+                    isSelected
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border-strong bg-background text-foreground hover:bg-accent'
+                  }`}
+                >
+                  {CAPTION_STYLE_LABELS[style]}
+                </button>
+              );
+            })}
+          </div>
+          <Caption className="block">{CAPTION_STYLE_HINTS[captionStyle]}</Caption>
+        </div>
 
         <Button
           size="sm"

@@ -1,345 +1,275 @@
 'use client';
 
 /**
- * VFX & B-Roll tool panel — the compact, right-column form of the Generative VFX
- * workspace. Describe the supporting shot you need → generate it from OUR own
- * fal/image (or fal/Seedance video) engine → drop it straight onto the SHARED
- * timeline. No stock-footage hunting — just describe it.
+ * Effects tool panel — applies special effects to the operator's EXISTING
+ * selected clip. This is an EFFECTS editor, not a generator: it never creates
+ * new footage. The operator picks a clip on the shared timeline, then taps a
+ * one-tap LOOK or fine-tunes individual sliders. Every change drives the shared
+ * reducer via UPDATE_CLIP with the complete `effect` object.
  *
- * This is the narrow-panel adaptation of `modes/GenerativeVfxMode.tsx`: it reuses
- * the exact same real generation hook (`useBrollGenerator`) and the same ADD_CLIP
- * wiring through the shared reducer. It renders NO Preview of its own — the unified
- * editor's shared Preview + Timeline are always on screen beside this column.
+ * Every control here maps to a field that is honoured in BOTH the live preview
+ * (components/video-editor/Preview.tsx, via CSS filters + overlays) AND the
+ * FFmpeg render (api/video/editor/render/route.ts). Nothing is faked: what the
+ * operator sees on the timeline preview is what the final video renders.
  *
- * REAL WIRING (unchanged from the full mode): Image generation calls
- * /api/content/asset-generator/generate (live, auth-gated, synchronous fal.ai
- * image); Video generation calls /api/video/editor/broll (live fal/Seedance
- * text-to-video). On success the permanent URL is added to the project with
- * ADD_CLIP through the shared reducer. Nothing is faked: if an endpoint errors, the
- * operator sees the exact reason and no clip is added.
+ * (B-roll generation used to live here. It now belongs to the Content Manager —
+ * the generator endpoint and hook stay on disk but are no longer wired into the
+ * editor.)
  */
 
-import { useCallback, useMemo, useState } from 'react';
-import Image from 'next/image';
-import {
-  Sparkles,
-  Plus,
-  Trash2,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  ImageIcon,
-  Film,
-} from 'lucide-react';
+import { useCallback, useMemo } from 'react';
+import { Sparkles, RotateCcw, MousePointerClick } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { SubsectionTitle, SectionDescription, Caption } from '@/components/ui/typography';
-import { DEFAULT_CLIP_DURATION } from '../types';
+import { NEUTRAL_EFFECT, type ClipEffect, type EditorClip } from '../types';
 import type { EditorToolProps } from '../editor-tools';
 import {
-  BROLL_ASPECTS,
-  useBrollGenerator,
-  type BrollAspect,
-  type BrollKind,
-  type GeneratedBroll,
-} from '../modes/generative-vfx/useBrollGenerator';
+  LOOK_PRESETS,
+  COLOR_CONTROLS,
+  FILTER_CONTROLS,
+  SPEED_CONTROL,
+  setEffectField,
+  readEffectValue,
+  type EffectControl,
+  type LookPreset,
+} from './effects/effect-presets';
 
-/** Short, concrete starter ideas so a non-technical operator isn't staring at a blank box. */
-const PROMPT_IDEAS: readonly string[] = [
-  'Slow aerial drone shot over a coastal city at golden hour',
-  'Close-up of hands typing on a laptop in a bright office',
-  'Soft-focus coffee being poured, warm morning light',
-  'Time-lapse of clouds over rolling green hills',
-];
+/** True when a clip's effect differs from the neutral (no-effect) baseline. */
+function hasAnyEffect(effect: ClipEffect | undefined): boolean {
+  if (!effect) {
+    return false;
+  }
+  return (
+    effect.brightness !== 0 ||
+    effect.contrast !== 1 ||
+    effect.saturation !== 1 ||
+    effect.hue !== 0 ||
+    (effect.sepia ?? 0) > 0 ||
+    (effect.grayscale ?? 0) > 0 ||
+    (effect.blur ?? 0) > 0 ||
+    (effect.sharpen ?? 0) > 0 ||
+    (effect.vignette ?? 0) > 0 ||
+    (effect.grain ?? 0) > 0 ||
+    (effect.speed ?? 1) !== 1
+  );
+}
 
-export default function VfxToolPanel({ state, dispatch, authFetch }: EditorToolProps) {
-  const { gallery, isGenerating, error, generate, markInserted, discard, clearError } =
-    useBrollGenerator(authFetch);
+/** Display a control's current value with its unit. */
+function formatValue(value: number, control: EffectControl): string {
+  const rounded = control.step >= 1 ? Math.round(value) : Number(value.toFixed(2));
+  return `${rounded}${control.unit ?? ''}`;
+}
 
-  const [prompt, setPrompt] = useState('');
-  const [aspectRatio, setAspectRatio] = useState<BrollAspect['value']>('16:9');
-  const [kind, setKind] = useState<BrollKind>('image');
+export default function VfxToolPanel({ state, dispatch }: EditorToolProps) {
+  const selectedClip: EditorClip | undefined = useMemo(
+    () => state.clips.find((c) => c.id === state.selectedClipId),
+    [state.clips, state.selectedClipId],
+  );
 
-  const trimmedPrompt = prompt.trim();
-  const canGenerate = trimmedPrompt.length > 0 && !isGenerating;
+  const effect = selectedClip?.effect;
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate) {
+  const applyControl = useCallback(
+    (control: EffectControl, value: number) => {
+      if (!selectedClip) {
+        return;
+      }
+      dispatch({
+        type: 'UPDATE_CLIP',
+        clipId: selectedClip.id,
+        updates: { effect: setEffectField(effect, control.field, value) },
+      });
+    },
+    [dispatch, selectedClip, effect],
+  );
+
+  const applyLook = useCallback(
+    (preset: LookPreset) => {
+      if (!selectedClip) {
+        return;
+      }
+      dispatch({
+        type: 'UPDATE_CLIP',
+        clipId: selectedClip.id,
+        updates: { effect: { ...preset.effect } },
+      });
+    },
+    [dispatch, selectedClip],
+  );
+
+  const resetAll = useCallback(() => {
+    if (!selectedClip) {
       return;
     }
-    await generate(trimmedPrompt, aspectRatio, kind);
-  }, [canGenerate, generate, trimmedPrompt, aspectRatio, kind]);
+    dispatch({
+      type: 'UPDATE_CLIP',
+      clipId: selectedClip.id,
+      updates: { effect: { ...NEUTRAL_EFFECT } },
+    });
+  }, [dispatch, selectedClip]);
 
-  const handleInsert = useCallback(
-    (item: GeneratedBroll) => {
-      const isVideo = item.kind === 'video';
-      dispatch({
-        type: 'ADD_CLIP',
-        clip: {
-          name: item.name,
-          url: item.url,
-          // A still image is its own thumbnail; a video has no still frame here, so
-          // the timeline derives one from the clip itself.
-          thumbnailUrl: isVideo ? null : item.url,
-          // A video clip carries the real generated duration; an image uses the
-          // editor's default still duration.
-          duration: isVideo ? item.durationSeconds ?? DEFAULT_CLIP_DURATION : DEFAULT_CLIP_DURATION,
-          source: 'url',
-        },
-      });
-      // The reducer assigns the real clip id; we only record THAT this B-roll is now
-      // on the timeline so the gallery can show "Added" without inventing an id.
-      markInserted(item.id);
-    },
-    [dispatch, markInserted],
-  );
+  // ── No clip selected ────────────────────────────────────────────────────
+  if (!selectedClip) {
+    return (
+      <div className="flex h-full flex-col gap-4 overflow-y-auto pb-4">
+        <Card className="border-dashed border-border-strong p-6 text-center">
+          <MousePointerClick className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+          <SubsectionTitle as="h4">Pick a clip to add effects</SubsectionTitle>
+          <SectionDescription className="mt-1">
+            Click a clip on the timeline below, then choose a look or fine-tune the
+            colour, filters, and speed here. Your changes show up in the preview right away.
+          </SectionDescription>
+          <Caption className="mt-3 block text-muted-foreground">
+            {state.clips.length} clip(s) in this project
+          </Caption>
+        </Card>
+      </div>
+    );
+  }
 
-  const insertedCount = useMemo(
-    () => gallery.filter((item) => item.inserted).length,
-    [gallery],
-  );
+  const effectActive = hasAnyEffect(effect);
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto pb-4">
-      {/* Prompt + controls */}
+      {/* Selected clip + reset */}
       <Card className="border-border-strong p-4">
-        <SubsectionTitle as="h4">Generate B-roll</SubsectionTitle>
-        <SectionDescription className="mt-1">
-          Describe the supporting shot you need. Your brand colors are applied automatically.
-        </SectionDescription>
-
-        {/* Image / Video toggle */}
-        <div className="mt-3">
-          <Caption className="mb-1.5 block text-muted-foreground">What should we make?</Caption>
-          <div className="flex w-full rounded-lg border border-border-light bg-background p-1">
-            <Button
-              type="button"
-              size="sm"
-              variant={kind === 'image' ? 'default' : 'ghost'}
-              onClick={() => setKind('image')}
-              disabled={isGenerating}
-              className="flex-1 gap-1.5"
-              aria-pressed={kind === 'image'}
-            >
-              <ImageIcon className="h-4 w-4" />
-              Image
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={kind === 'video' ? 'default' : 'ghost'}
-              onClick={() => setKind('video')}
-              disabled={isGenerating}
-              className="flex-1 gap-1.5"
-              aria-pressed={kind === 'video'}
-            >
-              <Film className="h-4 w-4" />
-              Video
-            </Button>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <SubsectionTitle as="h4">Effects</SubsectionTitle>
+            <SectionDescription className="mt-1 truncate">
+              Editing <span className="font-medium text-foreground">{selectedClip.name}</span>
+            </SectionDescription>
           </div>
-          <Caption className="mt-1.5 block text-muted-foreground">
-            {kind === 'video'
-              ? 'A real moving B-roll clip. This takes longer than a still — usually a minute or two.'
-              : 'A high-quality still frame you can drop on the timeline instantly.'}
-          </Caption>
-        </div>
-
-        {/* Prompt input */}
-        <div className="mt-3">
-          <Input
-            value={prompt}
-            onChange={(e) => {
-              setPrompt(e.target.value);
-              if (error) {
-                clearError();
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && canGenerate) {
-                void handleGenerate();
-              }
-            }}
-            placeholder="e.g. Slow aerial shot over a coastal city at golden hour"
-            disabled={isGenerating}
-            className="w-full"
-            aria-label="Describe the B-roll you want"
-          />
-        </div>
-
-        {/* Aspect ratio */}
-        <div className="mt-3">
-          <Caption className="mb-1.5 block text-muted-foreground">Shape</Caption>
-          <select
-            value={aspectRatio}
-            onChange={(e) => setAspectRatio(e.target.value as BrollAspect['value'])}
-            disabled={isGenerating}
-            aria-label="B-roll aspect ratio"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={resetAll}
+            disabled={!effectActive}
+            className="shrink-0 gap-1.5"
           >
-            {BROLL_ASPECTS.map((a) => (
-              <option key={a.value} value={a.value}>
-                {a.label}
-              </option>
-            ))}
-          </select>
+            <RotateCcw className="h-4 w-4" />
+            Reset
+          </Button>
         </div>
+      </Card>
 
-        {/* Generate */}
-        <Button
-          onClick={() => void handleGenerate()}
-          disabled={!canGenerate}
-          className="mt-4 w-full gap-2"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {kind === 'video' ? 'Generating clip...' : 'Generating...'}
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              {kind === 'video' ? 'Generate B-roll clip' : 'Generate B-roll'}
-            </>
-          )}
-        </Button>
-
-        {/* Starter ideas */}
-        <div className="mt-3 flex flex-wrap gap-2">
-          {PROMPT_IDEAS.map((idea) => (
+      {/* One-tap looks */}
+      <Card className="border-border-strong p-4">
+        <div className="mb-2 flex items-center gap-1.5">
+          <Sparkles className="h-4 w-4 text-muted-foreground" />
+          <SubsectionTitle as="h4">Quick looks</SubsectionTitle>
+        </div>
+        <SectionDescription className="mb-3">
+          One tap to style the whole clip. You can fine-tune afterwards.
+        </SectionDescription>
+        <div className="grid grid-cols-2 gap-2">
+          {LOOK_PRESETS.map((preset) => (
             <button
-              key={idea}
+              key={preset.id}
               type="button"
-              onClick={() => {
-                setPrompt(idea);
-                if (error) {
-                  clearError();
-                }
-              }}
-              disabled={isGenerating}
-              className="rounded-full border border-border-light bg-background px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => applyLook(preset)}
+              title={preset.description}
+              className="rounded-lg border border-border-light bg-background px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              {idea}
+              <span className="block font-medium">{preset.label}</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {preset.description}
+              </span>
             </button>
           ))}
         </div>
-
-        {error && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-            <div className="flex-1">
-              <Caption className="font-medium text-destructive">Generation didn&apos;t work</Caption>
-              <p className="mt-0.5 text-sm text-muted-foreground">{error}</p>
-            </div>
-          </div>
-        )}
       </Card>
 
-      {/* Gallery */}
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <SubsectionTitle as="h4">Generated B-roll</SubsectionTitle>
-          {gallery.length > 0 && (
-            <Caption className="text-muted-foreground">
-              {insertedCount}/{gallery.length} on timeline
-            </Caption>
+      {/* Speed */}
+      <Card className="border-border-strong p-4">
+        <SliderRow
+          control={SPEED_CONTROL}
+          value={readEffectValue(effect, SPEED_CONTROL)}
+          onChange={(v) => applyControl(SPEED_CONTROL, v)}
+          helper="Slow down or speed up this clip. Its length on the timeline changes to match."
+        />
+      </Card>
+
+      {/* Colour grade */}
+      <Card className="border-border-strong p-4">
+        <SubsectionTitle as="h4">Colour</SubsectionTitle>
+        <div className="mt-3 flex flex-col gap-4">
+          {COLOR_CONTROLS.map((control) => (
+            <SliderRow
+              key={control.field}
+              control={control}
+              value={readEffectValue(effect, control)}
+              onChange={(v) => applyControl(control, v)}
+            />
+          ))}
+        </div>
+      </Card>
+
+      {/* Filters */}
+      <Card className="border-border-strong p-4">
+        <SubsectionTitle as="h4">Filters</SubsectionTitle>
+        <div className="mt-3 flex flex-col gap-4">
+          {FILTER_CONTROLS.map((control) => (
+            <SliderRow
+              key={control.field}
+              control={control}
+              value={readEffectValue(effect, control)}
+              onChange={(v) => applyControl(control, v)}
+            />
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ============================================================================
+// Slider row
+// ============================================================================
+
+interface SliderRowProps {
+  control: EffectControl;
+  value: number;
+  onChange: (value: number) => void;
+  helper?: string;
+}
+
+function SliderRow({ control, value, onChange, helper }: SliderRowProps) {
+  const atNeutral = Math.abs(value - control.neutral) < control.step / 2;
+
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between">
+        <Caption className="text-foreground">{control.label}</Caption>
+        <div className="flex items-center gap-2">
+          <Caption className="tabular-nums text-muted-foreground">
+            {formatValue(value, control)}
+          </Caption>
+          {!atNeutral && (
+            <button
+              type="button"
+              onClick={() => onChange(control.neutral)}
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              aria-label={`Reset ${control.label}`}
+            >
+              reset
+            </button>
           )}
         </div>
-
-        {gallery.length === 0 ? (
-          <Card className="border-dashed border-border-strong p-6 text-center">
-            <Sparkles className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
-            <SectionDescription>
-              Nothing generated yet. Describe a shot above and your B-roll appears here, ready to
-              drop on the timeline.
-            </SectionDescription>
-            <Caption className="mt-2 block text-muted-foreground">
-              {state.clips.length} clip(s) in project
-            </Caption>
-          </Card>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {gallery.map((item) => {
-              const inserted = item.inserted;
-              return (
-                <Card key={item.id} className="overflow-hidden border-border-strong">
-                  <div className="relative aspect-video w-full bg-surface-elevated">
-                    {item.kind === 'video' ? (
-                      <video
-                        src={item.url}
-                        controls
-                        playsInline
-                        muted
-                        preload="metadata"
-                        className="h-full w-full object-cover"
-                        aria-label={item.name}
-                      />
-                    ) : (
-                      <Image
-                        src={item.url}
-                        alt={item.name}
-                        fill
-                        unoptimized
-                        sizes="380px"
-                        className="object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="line-clamp-2 text-sm font-medium text-foreground">{item.name}</p>
-                    <Caption className="mt-1 flex items-center gap-1.5 text-muted-foreground">
-                      {item.kind === 'video' ? (
-                        <>
-                          <Film className="h-3 w-3" />
-                          Video clip · {item.aspectRatio}
-                          {typeof item.durationSeconds === 'number'
-                            ? ` · ${item.durationSeconds}s`
-                            : ''}
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="h-3 w-3" />
-                          Still frame · {item.aspectRatio}
-                        </>
-                      )}
-                    </Caption>
-
-                    <div className="mt-3 flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant={inserted ? 'secondary' : 'default'}
-                        onClick={() => handleInsert(item)}
-                        className="flex-1 gap-1.5"
-                      >
-                        {inserted ? (
-                          <>
-                            <CheckCircle2 className="h-4 w-4" />
-                            Added — add again
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="h-4 w-4" />
-                            Add to timeline
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => discard(item.id)}
-                        aria-label={`Remove ${item.name} from the gallery`}
-                      >
-                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
       </div>
+      <input
+        type="range"
+        min={control.min}
+        max={control.max}
+        step={control.step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={control.label}
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-surface-elevated accent-primary"
+      />
+      {helper && <Caption className="mt-1 block text-muted-foreground">{helper}</Caption>}
     </div>
   );
 }

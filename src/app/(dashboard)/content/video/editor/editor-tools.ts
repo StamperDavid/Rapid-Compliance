@@ -11,7 +11,7 @@
  * panel receives the same `EditorToolProps` contract and drives the SHARED reducer.
  */
 
-import { SlidersHorizontal, Type, Wand2, FileText, Scissors, type LucideIcon } from 'lucide-react';
+import { SlidersHorizontal, Type, Sparkles, FileText, Scissors, type LucideIcon } from 'lucide-react';
 import type { EditorModeProps } from './editor-modes';
 
 export type EditorTool = 'edit' | 'text' | 'vfx' | 'transcript' | 'clips';
@@ -31,7 +31,7 @@ export interface EditorToolMeta {
 export const EDITOR_TOOLS: EditorToolMeta[] = [
   { id: 'edit', label: 'Edit', icon: SlidersHorizontal },
   { id: 'text', label: 'Text & Captions', icon: Type },
-  { id: 'vfx', label: 'VFX & B-Roll', icon: Wand2 },
+  { id: 'vfx', label: 'Effects', icon: Sparkles },
   { id: 'transcript', label: 'Transcript', icon: FileText },
   { id: 'clips', label: 'Make Clips', icon: Scissors },
 ];

@@ -30,7 +30,7 @@ import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { transcribeAudioBuffer } from '@/lib/video/transcription-service';
 import { generateCaptionOverlays } from '@/lib/video/caption-service';
-import type { CaptionStyle } from '@/types/video-pipeline';
+import { CAPTION_STYLES, type CaptionStyle } from '@/types/video-pipeline';
 import type { TextOverlay } from '@/app/(dashboard)/content/video/editor/types';
 
 export const dynamic = 'force-dynamic';
@@ -39,7 +39,9 @@ export const maxDuration = 300;
 const MAX_CLIP_BYTES = 200 * 1024 * 1024; // 200 MB guard
 const DOWNLOAD_TIMEOUT_MS = 60_000;
 
-const CAPTION_STYLES: readonly CaptionStyle[] = ['bold-center', 'bottom-bar', 'karaoke'];
+// Validate `style` against the single source of truth so adding a caption style
+// in src/types/video-pipeline.ts automatically widens this endpoint too.
+const STYLE_VALUES = CAPTION_STYLES as readonly [CaptionStyle, ...CaptionStyle[]];
 
 const CaptionsRequestSchema = z.object({
   url: z.string().url(),
@@ -50,7 +52,7 @@ const CaptionsRequestSchema = z.object({
    * merged into a longer timeline that starts later, pass that offset.
    */
   startOffset: z.number().min(0).default(0),
-  style: z.enum(['bold-center', 'bottom-bar', 'karaoke']).default('bold-center'),
+  style: z.enum(STYLE_VALUES).default('bold-center'),
 });
 
 interface CaptionsSuccess {
@@ -130,7 +132,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(failure, { status: 503 });
     }
 
-    const style: CaptionStyle = CAPTION_STYLES.includes(parsed.style) ? parsed.style : 'bold-center';
+    // Zod already constrained `style` to a valid CaptionStyle via STYLE_VALUES.
+    const style: CaptionStyle = parsed.style;
     const captionConfigs = generateCaptionOverlays(transcription.words, style);
 
     // Map the style-agnostic TextOverlayConfig output into the editor's
