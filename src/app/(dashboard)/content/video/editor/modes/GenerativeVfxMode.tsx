@@ -8,21 +8,33 @@
  * generative engines beat a plain editor: the operator doesn't go hunting for stock
  * footage, they describe the supporting shot and it appears in the project.
  *
- * REAL WIRING: generation calls /api/content/asset-generator/generate (the live,
- * auth-gated, synchronous fal.ai image endpoint) via authFetch. On success the
- * permanent image URL is added to the project with ADD_CLIP through the SHARED
- * reducer — never a private copy of project state. Nothing is ever faked: if the
- * endpoint errors, the operator sees the exact reason and no clip is added.
+ * REAL WIRING: the operator chooses Image or Video. Image generation calls
+ * /api/content/asset-generator/generate (the live, auth-gated, synchronous fal.ai
+ * image endpoint); Video generation calls /api/video/editor/broll (the live
+ * fal/Seedance text-to-video endpoint). On success the permanent URL is added to the
+ * project with ADD_CLIP through the SHARED reducer — never a private copy of project
+ * state. Nothing is ever faked: if an endpoint errors, the operator sees the exact
+ * reason and no clip is added.
  *
- * Note: this endpoint produces high-quality B-roll FRAMES (images). Each frame lands
- * as a still clip on the timeline at the default clip duration, which the operator can
- * then trim, transition, and reorder with the rest of the project. A dedicated
- * text-to-VIDEO B-roll endpoint can be layered in later behind the same UI.
+ * Image B-roll lands as a still clip at the default clip duration; Video B-roll lands
+ * as a real moving clip at the duration the engine returned. Either can be trimmed,
+ * transitioned, and reordered with the rest of the project. Video takes longer to
+ * generate than a still — the panel says so.
  */
 
 import { useCallback, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { Wand2, Sparkles, Plus, Trash2, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import {
+  Wand2,
+  Sparkles,
+  Plus,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  ImageIcon,
+  Film,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -34,6 +46,7 @@ import {
   BROLL_ASPECTS,
   useBrollGenerator,
   type BrollAspect,
+  type BrollKind,
   type GeneratedBroll,
 } from './generative-vfx/useBrollGenerator';
 
@@ -51,6 +64,7 @@ export default function GenerativeVfxMode({ state, dispatch, authFetch }: Editor
 
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState<BrollAspect['value']>('16:9');
+  const [kind, setKind] = useState<BrollKind>('image');
 
   const trimmedPrompt = prompt.trim();
   const canGenerate = trimmedPrompt.length > 0 && !isGenerating;
@@ -59,18 +73,23 @@ export default function GenerativeVfxMode({ state, dispatch, authFetch }: Editor
     if (!canGenerate) {
       return;
     }
-    await generate(trimmedPrompt, aspectRatio);
-  }, [canGenerate, generate, trimmedPrompt, aspectRatio]);
+    await generate(trimmedPrompt, aspectRatio, kind);
+  }, [canGenerate, generate, trimmedPrompt, aspectRatio, kind]);
 
   const handleInsert = useCallback(
     (item: GeneratedBroll) => {
+      const isVideo = item.kind === 'video';
       dispatch({
         type: 'ADD_CLIP',
         clip: {
           name: item.name,
           url: item.url,
-          thumbnailUrl: item.url,
-          duration: DEFAULT_CLIP_DURATION,
+          // A still image is its own thumbnail; a video has no still frame here, so
+          // the timeline derives one from the clip itself.
+          thumbnailUrl: isVideo ? null : item.url,
+          // A video clip carries the real generated duration; an image uses the
+          // editor's default still duration.
+          duration: isVideo ? item.durationSeconds ?? DEFAULT_CLIP_DURATION : DEFAULT_CLIP_DURATION,
           source: 'url',
         },
       });
@@ -97,8 +116,9 @@ export default function GenerativeVfxMode({ state, dispatch, authFetch }: Editor
           <div className="flex-1">
             <SectionTitle as="h3">Generative VFX &amp; B-Roll</SectionTitle>
             <SectionDescription className="mt-1 max-w-2xl">
-              Describe the supporting shot you need and our AI image engine generates it, then drop
-              it straight onto your timeline. No stock-footage hunting — just describe it.
+              Describe the supporting shot you need and our AI generates it as a still frame or a
+              real video clip, then drop it straight onto your timeline. No stock-footage hunting —
+              just describe it.
             </SectionDescription>
           </div>
           <Caption className="whitespace-nowrap text-muted-foreground">
@@ -114,6 +134,42 @@ export default function GenerativeVfxMode({ state, dispatch, authFetch }: Editor
           Be specific about the scene, mood, and lighting. Your brand colors are applied
           automatically.
         </SectionDescription>
+
+        {/* Image / Video toggle */}
+        <div className="mt-4">
+          <Caption className="mb-1.5 block text-muted-foreground">What should we make?</Caption>
+          <div className="inline-flex rounded-lg border border-border-light bg-background p-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={kind === 'image' ? 'default' : 'ghost'}
+              onClick={() => setKind('image')}
+              disabled={isGenerating}
+              className="gap-1.5"
+              aria-pressed={kind === 'image'}
+            >
+              <ImageIcon className="h-4 w-4" />
+              Image
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={kind === 'video' ? 'default' : 'ghost'}
+              onClick={() => setKind('video')}
+              disabled={isGenerating}
+              className="gap-1.5"
+              aria-pressed={kind === 'video'}
+            >
+              <Film className="h-4 w-4" />
+              Video
+            </Button>
+          </div>
+          <Caption className="mt-1.5 block text-muted-foreground">
+            {kind === 'video'
+              ? 'A real moving B-roll clip. This takes longer than a still — usually a minute or two.'
+              : 'A high-quality still frame you can drop on the timeline instantly.'}
+          </Caption>
+        </div>
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <Input
@@ -153,12 +209,12 @@ export default function GenerativeVfxMode({ state, dispatch, authFetch }: Editor
             {isGenerating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
+                {kind === 'video' ? 'Generating clip...' : 'Generating...'}
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                Generate B-roll
+                {kind === 'video' ? 'Generate B-roll clip' : 'Generate B-roll'}
               </>
             )}
           </Button>
@@ -221,19 +277,44 @@ export default function GenerativeVfxMode({ state, dispatch, authFetch }: Editor
               return (
                 <Card key={item.id} className="overflow-hidden border-border-strong">
                   <div className="relative aspect-video w-full bg-surface-elevated">
-                    <Image
-                      src={item.url}
-                      alt={item.name}
-                      fill
-                      unoptimized
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover"
-                    />
+                    {item.kind === 'video' ? (
+                      <video
+                        src={item.url}
+                        controls
+                        playsInline
+                        muted
+                        preload="metadata"
+                        className="h-full w-full object-cover"
+                        aria-label={item.name}
+                      />
+                    ) : (
+                      <Image
+                        src={item.url}
+                        alt={item.name}
+                        fill
+                        unoptimized
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                    )}
                   </div>
                   <div className="p-4">
                     <p className="line-clamp-2 text-sm font-medium text-foreground">{item.name}</p>
-                    <Caption className="mt-1 block text-muted-foreground">
-                      {item.aspectRatio}
+                    <Caption className="mt-1 flex items-center gap-1.5 text-muted-foreground">
+                      {item.kind === 'video' ? (
+                        <>
+                          <Film className="h-3 w-3" />
+                          Video clip · {item.aspectRatio}
+                          {typeof item.durationSeconds === 'number'
+                            ? ` · ${item.durationSeconds}s`
+                            : ''}
+                        </>
+                      ) : (
+                        <>
+                          <ImageIcon className="h-3 w-3" />
+                          Still frame · {item.aspectRatio}
+                        </>
+                      )}
                     </Caption>
 
                     <div className="mt-3 flex items-center gap-2">

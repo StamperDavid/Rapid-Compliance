@@ -15,15 +15,16 @@
  *  - Auto-highlight ("let AI pick the best moments") is NOT built — there is no
  *    highlight-detection service yet, so it is shown as disabled/"coming soon",
  *    never faked.
- *  - Auto-captions: a Deepgram transcription service exists in the codebase
- *    (src/lib/video/transcription-service.ts) but is server-only with no
- *    client-callable route, and the render route cannot generate captions from a
- *    transcript. So the toggle is present and honest about what it needs, and
- *    does not silently no-op or fake burned-in captions.
- *  - 9:16 vertical output: the render route only accepts resolution 720p/1080p
- *    (landscape) with no aspect/crop param. The 9:16 framing is shown in the
- *    preview, the render is wired for real, and the UI states plainly that the
- *    delivered file is currently landscape until the route gains a 9:16 param.
+ *  - Auto-captions: REAL. When the operator turns captions on for a short, we
+ *    call /api/video/editor/captions (a thin wrapper over the existing Deepgram
+ *    transcription service + caption generator) for each source span, window the
+ *    word timings to the kept portion, and merge the resulting overlays into the
+ *    render payload's textOverlays so they are burned in. If Deepgram isn't
+ *    connected the route returns 503 'not_connected'; we say so plainly and still
+ *    render the (uncaptioned) vertical short rather than failing.
+ *  - 9:16 vertical output: REAL. The render route now accepts aspect:'9:16' and
+ *    produces a true vertical frame (1080×1920 at 1080p); we request it for every
+ *    short.
  */
 
 import { useMemo, useState } from 'react';
@@ -37,10 +38,12 @@ import {
 } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import type { TextOverlay } from '../types';
 import type { EditorModeProps } from '../editor-modes';
 import {
   projectTimelineDuration,
   sliceTimelineToClips,
+  resolveShortSourceSpans,
   formatTimecode,
   type ShortSegment,
   type ShortRenderStatus,
@@ -54,6 +57,21 @@ interface RenderResponse {
   success: boolean;
   error?: string;
   item?: { url?: string };
+}
+
+/** Captions route response shape we rely on. */
+interface CaptionsResponse {
+  success: boolean;
+  code?: 'not_connected' | 'invalid_request' | 'error';
+  error?: string;
+  overlays?: TextOverlay[];
+}
+
+/** Result of trying to build a caption track for a short. */
+interface CaptionResult {
+  overlays: TextOverlay[];
+  /** True when captions were requested but the transcription service isn't connected. */
+  notConnected: boolean;
 }
 
 let shortCounter = 0;
@@ -103,6 +121,55 @@ export default function SocialRepurposeMode({ state, authFetch }: EditorModeProp
     });
   }
 
+  // --- Build the caption track for a short (REAL transcription) -------------
+
+  /**
+   * Transcribe each source span of the short and assemble a single caption
+   * track, windowed + re-based so the timings line up with the rendered short.
+   * Returns notConnected:true (with no overlays) if the transcription service
+   * isn't configured — the caller then renders the short without captions.
+   */
+  async function buildCaptions(segment: ShortSegment): Promise<CaptionResult> {
+    const spans = resolveShortSourceSpans(state.clips, segment.startSec, segment.endSec);
+    const overlays: TextOverlay[] = [];
+
+    for (const span of spans) {
+      const response = await authFetch('/api/video/editor/captions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Pass startOffset 0 — we fetch source-relative timings then window them
+        // to this span ourselves below (the route can't trim, only offset).
+        body: JSON.stringify({ url: span.url, startOffset: 0, style: 'bold-center' }),
+      });
+
+      const data = (await response.json()) as CaptionsResponse;
+
+      if (response.status === 503 && data.code === 'not_connected') {
+        return { overlays: [], notConnected: true };
+      }
+      if (!response.ok || !data.success || !data.overlays) {
+        throw new Error(data.error ?? 'The caption service returned an error.');
+      }
+
+      // Keep only the words spoken inside this span's kept window, then re-base
+      // them from source time onto the short's own timeline.
+      const rebase = span.offsetInShort - span.sourceStart;
+      for (const overlay of data.overlays) {
+        const mid = (overlay.startTime + overlay.endTime) / 2;
+        if (mid < span.sourceStart || mid >= span.sourceEnd) {
+          continue;
+        }
+        overlays.push({
+          ...overlay,
+          startTime: Math.max(span.offsetInShort, overlay.startTime + rebase),
+          endTime: overlay.endTime + rebase,
+        });
+      }
+    }
+
+    return { overlays, notConnected: false };
+  }
+
   // --- Render one short through the REAL route ------------------------------
 
   async function createShort(segment: ShortSegment) {
@@ -125,6 +192,26 @@ export default function SocialRepurposeMode({ state, authFetch }: EditorModeProp
     }));
 
     try {
+      // 1) Build captions first (if the operator asked for them). A connection
+      //    failure is NOT fatal — we render the vertical short without captions
+      //    and tell the operator plainly.
+      let captionOverlays: TextOverlay[] = [];
+      let captionsNote: string | undefined;
+      if (segment.autoCaptions) {
+        const result = await buildCaptions(segment);
+        if (result.notConnected) {
+          captionsNote =
+            'Auto-captions are turned on, but the transcription service isn’t connected, so this short was rendered vertical without captions. Add a Deepgram API key in Settings to turn captions on.';
+        } else {
+          captionOverlays = result.overlays;
+          if (captionOverlays.length === 0) {
+            captionsNote =
+              'No speech was detected in this segment, so no captions were added. The vertical short still rendered.';
+          }
+        }
+      }
+
+      // 2) Render the short — vertical 9:16 — with any caption overlays burned in.
       const response = await authFetch('/api/video/editor/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,9 +227,18 @@ export default function SocialRepurposeMode({ state, authFetch }: EditorModeProp
             ...(c.effect ? { effect: c.effect } : {}),
           })),
           transition: 'cut',
-          // The route maxes out at 1080p landscape today; see the pending note
-          // in the UI. We request the highest it supports.
           resolution: '1080p',
+          // True vertical output for social shorts (OpusClip-parity).
+          aspect: '9:16',
+          textOverlays: captionOverlays.map((o) => ({
+            text: o.text,
+            startTime: o.startTime,
+            endTime: o.endTime,
+            position: o.position,
+            fontSize: o.fontSize,
+            fontColor: o.fontColor,
+            backgroundColor: o.backgroundColor,
+          })),
           derivedFromMediaIds: state.clips.map((clip) => clip.id),
         }),
       });
@@ -154,7 +250,12 @@ export default function SocialRepurposeMode({ state, authFetch }: EditorModeProp
 
       setStatusById((prev) => ({
         ...prev,
-        [segment.id]: { phase: 'done', error: null, url: data.item?.url ?? null },
+        [segment.id]: {
+          phase: 'done',
+          error: null,
+          url: data.item?.url ?? null,
+          captionsNote,
+        },
       }));
     } catch (error) {
       setStatusById((prev) => ({
@@ -371,9 +472,9 @@ function ShortCard({
             <span>
               <CardTitle as="span" className="block">Auto-captions</CardTitle>
               <Caption className="mt-0.5 block">
-                Burned-in captions need a transcription route that returns word timings. That route
-                isn&apos;t connected here yet, so checking this records your intent but captions
-                won&apos;t be added until the backend is wired (see the note below).
+                We transcribe this segment&apos;s speech and burn word-timed captions into the
+                short. If the transcription service isn&apos;t connected, the short still renders
+                vertical and we tell you captions were skipped — nothing is ever faked.
               </Caption>
             </span>
           </label>
@@ -432,18 +533,24 @@ function RenderStatusLine({ status }: { status: ShortRenderStatus }) {
   }
   // done
   return (
-    <div className="flex items-start gap-2 text-sm text-foreground">
-      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-      <span>
-        Saved to your media library.{' '}
-        {status.url ? (
-          <a href={status.url} target="_blank" rel="noreferrer" className="text-primary underline-offset-4 hover:underline">
-            Open the short
-          </a>
-        ) : null}{' '}
-        Note: it&apos;s currently a landscape file — vertical 9:16 output needs the render-route
-        change described below.
-      </span>
+    <div className="space-y-1">
+      <div className="flex items-start gap-2 text-sm text-foreground">
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <span>
+          Saved to your media library as a vertical 9:16 short.{' '}
+          {status.url ? (
+            <a href={status.url} target="_blank" rel="noreferrer" className="text-primary underline-offset-4 hover:underline">
+              Open the short
+            </a>
+          ) : null}
+        </span>
+      </div>
+      {status.captionsNote ? (
+        <div className="flex items-start gap-2 pl-6 text-sm text-muted-foreground">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{status.captionsNote}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -77,12 +77,30 @@ const RenderRequestSchema = z.object({
   textOverlays: z.array(RenderTextOverlaySchema).default([]),
   transition: z.enum(['cut', 'fade', 'dissolve']).default('fade'),
   resolution: z.enum(['720p', '1080p']).default('1080p'),
+  /**
+   * Output aspect ratio. '16:9' is the existing landscape path (default, so
+   * every current caller keeps its behaviour). '9:16' produces a true vertical
+   * frame (e.g. 1080×1920) for social shorts — source clips are scaled to fit
+   * and padded, never stretched.
+   */
+  aspect: z.enum(['16:9', '9:16']).default('16:9'),
   derivedFromMediaIds: z.array(z.string()).optional(),
 });
 
-const RESOLUTION_MAP = {
-  '720p': { width: 1280, height: 720 },
-  '1080p': { width: 1920, height: 1080 },
+/**
+ * Real output dimensions per (resolution, aspect). The "short side" of the
+ * resolution drives the vertical width so 9:16 1080p is a full 1080×1920 frame
+ * rather than a downscaled one.
+ */
+const DIMENSION_MAP = {
+  '16:9': {
+    '720p': { width: 1280, height: 720 },
+    '1080p': { width: 1920, height: 1080 },
+  },
+  '9:16': {
+    '720p': { width: 720, height: 1280 },
+    '1080p': { width: 1080, height: 1920 },
+  },
 } as const;
 
 // ============================================================================
@@ -341,8 +359,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, clips, textOverlays, transition, resolution, derivedFromMediaIds } = parsed.data;
-    const { width, height } = RESOLUTION_MAP[resolution];
+    const { name, clips, textOverlays, transition, resolution, aspect, derivedFromMediaIds } =
+      parsed.data;
+    const { width, height } = DIMENSION_MAP[aspect][resolution];
 
     logger.info('Editor render started', {
       jobId,
@@ -350,6 +369,9 @@ export async function POST(request: NextRequest) {
       overlayCount: textOverlays.length,
       transition,
       resolution,
+      aspect,
+      width,
+      height,
       file: 'api/video/editor/render/route.ts',
     });
 
@@ -404,6 +426,8 @@ export async function POST(request: NextRequest) {
       overlayCount: String(textOverlays.length),
       transition,
       resolution,
+      aspect,
+      dimensions: `${width}x${height}`,
     };
     if (derivedFromMediaIds && derivedFromMediaIds.length > 0) {
       metadata.derivedFrom = derivedFromMediaIds.join(',');

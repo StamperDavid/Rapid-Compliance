@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FolderOpen,
@@ -81,7 +82,7 @@ function MediaItemCard({
   };
   const colorMap: Record<string, string> = {
     video: 'text-primary-light',
-    image: 'text-blue-400',
+    image: 'text-info-light',
     audio: 'text-primary-light',
   };
   const Icon = iconMap[item.type] ?? Film;
@@ -94,14 +95,14 @@ function MediaItemCard({
           item.type === 'video'
             ? 'bg-primary/10'
             : item.type === 'image'
-              ? 'bg-blue-500/10'
+              ? 'bg-info/10'
               : 'bg-primary/10'
         }`}
       >
         <Icon className={`w-3.5 h-3.5 ${color}`} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-white truncate">{item.name}</p>
+        <p className="text-[11px] text-foreground truncate">{item.name}</p>
         <p className="text-[9px] text-muted-foreground">{item.category}</p>
       </div>
       {onAddToTimeline && actionLabel && (
@@ -481,7 +482,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                       onClick={() => handleMediaTypeChange(t)}
                       className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                         mediaType === t
-                          ? 'bg-border-strong text-white'
+                          ? 'bg-border-strong text-foreground'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -512,12 +513,12 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-                  <input
+                  <Input
                     type="text"
                     value={mediaSearch}
                     onChange={(e) => setMediaSearch(e.target.value)}
                     placeholder="Search media..."
-                    className="w-full pl-7 pr-3 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                    className="h-auto w-full pl-7 pr-3 py-1.5 bg-surface-elevated border-border-strong rounded text-xs text-foreground"
                   />
                 </div>
 
@@ -599,7 +600,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                             : 'border-border-strong hover:border-border-strong bg-surface-elevated/30'
                         }`}
                       >
-                        <p className="text-xs font-medium text-white truncate">{project.name}</p>
+                        <p className="text-xs font-medium text-foreground truncate">{project.name}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           {project.sceneCount} scenes · {project.status}
                         </p>
@@ -654,7 +655,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                                         source: 'project',
                                       });
                                     }}
-                                    className="w-full text-left px-2 py-1.5 rounded border border-border-strong hover:border-primary/30 text-xs text-foreground hover:text-white transition-colors flex items-center gap-2"
+                                    className="w-full text-left px-2 py-1.5 rounded border border-border-strong hover:border-primary/30 text-xs text-foreground hover:text-foreground transition-colors flex items-center gap-2"
                                   >
                                     <Play className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                                     <span className="truncate">Scene {idx + 1}</span>
@@ -673,7 +674,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                                       source: 'project',
                                     });
                                   }}
-                                  className="w-full text-left px-2 py-1.5 rounded border border-green-800/30 hover:border-green-500/30 text-xs text-green-400 hover:text-green-300 transition-colors flex items-center gap-2"
+                                  className="w-full text-left px-2 py-1.5 rounded border border-success-dark/30 hover:border-success/30 text-xs text-success-light hover:text-success transition-colors flex items-center gap-2"
                                 >
                                   <Film className="w-3 h-3 flex-shrink-0" />
                                   <span className="truncate">Final Video</span>
@@ -728,7 +729,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-white truncate">{avatar.name}</p>
+                        <p className="text-xs font-medium text-foreground truncate">{avatar.name}</p>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Badge variant="outline" className="text-[9px] py-0 px-1">
                             {avatar.source}
@@ -760,7 +761,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                   <select
                     value={uploadCategory}
                     onChange={(e) => setUploadCategory(e.target.value)}
-                    className="w-full mt-1 px-2 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-white focus:outline-none focus:border-primary/50"
+                    className="w-full mt-1 px-2 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-foreground focus:outline-none focus:border-primary/50"
                   >
                     <optgroup label="Video">
                       <option value="clip">Video Clip</option>
@@ -821,20 +822,20 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                   <label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                     Import from URL
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={urlName}
                     onChange={(e) => setUrlName(e.target.value)}
                     placeholder="Clip name (optional)"
-                    className="w-full px-2 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                    className="h-auto w-full px-2 py-1.5 bg-surface-elevated border-border-strong rounded text-xs text-foreground"
                   />
                   <div className="flex gap-1">
-                    <input
+                    <Input
                       type="url"
                       value={urlInput}
                       onChange={(e) => setUrlInput(e.target.value)}
                       placeholder="https://... video URL"
-                      className="flex-1 px-2 py-1.5 bg-surface-elevated border border-border-strong rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                      className="h-auto flex-1 px-2 py-1.5 bg-surface-elevated border-border-strong rounded text-xs text-foreground"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           handleUrlImport();
