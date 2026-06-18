@@ -63,6 +63,7 @@ import {
   FileText,
   File as FileIcon,
   Package,
+  MapPin,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -87,6 +88,8 @@ import { CinematicControlsPanel } from '@/components/studio/CinematicControlsPan
 import { ConstructedPromptDisplay } from '@/components/studio/ConstructedPromptDisplay';
 import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/MediaLibraryPicker';
 import { AvatarPicker } from './AvatarPicker';
+import { LocationPicker } from './LocationPicker';
+import type { LocationProfile } from './location-types';
 import CharacterForm from '../../characters/CharacterForm';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { ShotPlanDocument } from './ShotPlanDocument';
@@ -1885,16 +1888,64 @@ function ReferenceMaterials({
 // Entry screen — Generate with AI / Start blank
 // ============================================================================
 
+// ============================================================================
+// Location chip card — a chosen set shown like a selected cast member: thumbnail
+// (first reference image), name, locked description preview, two-step remove.
+// ============================================================================
+
+function LocationChipCard({
+  location,
+  onRemove,
+}: {
+  location: LocationProfile;
+  onRemove: () => void;
+}) {
+  const [imgBroken, setImgBroken] = useState(false);
+  const thumb = location.referenceImageUrls[0];
+
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-border-strong bg-card p-3">
+      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-surface-elevated">
+        {thumb && !imgBroken ? (
+          <Image src={thumb} alt={location.name} fill unoptimized className="object-cover" onError={() => setImgBroken(true)} />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <MapPin className="h-5 w-5" />
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="truncate text-sm font-medium text-foreground">{location.name}</p>
+          <ConfirmRemoveButton
+            onConfirm={onRemove}
+            label={`Remove ${location.name}`}
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-destructive"
+            iconClassName="h-4 w-4"
+          />
+        </div>
+        {location.description && <Caption className="line-clamp-2">{location.description}</Caption>}
+      </div>
+    </div>
+  );
+}
+
 function EntryScreen({
   onGenerate,
   onStartBlank,
   isGenerating,
   error,
+  selectedLocations,
+  onOpenLocationPicker,
+  onRemoveLocation,
 }: {
   onGenerate: (brief: string, references: ShotPlanReferencePayload[]) => void;
   onStartBlank: () => void;
   isGenerating: boolean;
   error: string | null;
+  selectedLocations: LocationProfile[];
+  onOpenLocationPicker: () => void;
+  onRemoveLocation: (locationId: string) => void;
 }) {
   const [brief, setBrief] = useState('');
   const [references, setReferences] = useState<ShotPlanReferenceAttachment[]>([]);
@@ -1930,6 +1981,43 @@ function EntryScreen({
           className="w-full rounded-md border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y"
         />
         <ReferenceMaterials references={references} onChange={setReferences} />
+
+        {/* Locations — pick saved sets to build the plan around (rides along as
+            selectedLocationIds in the generate request). */}
+        <div className="space-y-2 rounded-2xl border border-border-strong bg-card p-4">
+          <div className="flex items-center justify-between gap-2">
+            <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 text-primary" /> Locations
+            </Caption>
+            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={onOpenLocationPicker}>
+              <Plus className="h-3.5 w-3.5" /> Add location
+            </Button>
+          </div>
+          {selectedLocations.length === 0 ? (
+            <Caption>Optional. Pick a saved set so the room stays consistent across every shot.</Caption>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {selectedLocations.map((location) => (
+                <span
+                  key={location.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border-light bg-surface-elevated px-2.5 py-1 text-xs text-foreground"
+                >
+                  <MapPin className="h-3 w-3 text-primary" />
+                  {location.name}
+                  <button
+                    type="button"
+                    onClick={() => onRemoveLocation(location.id)}
+                    aria-label={`Remove ${location.name}`}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         {stillReading && (
           <Caption className="flex items-center gap-1.5">
             <Loader2 className="h-3 w-3 animate-spin" /> Reading your references — they&apos;ll shape the plan.
@@ -2125,6 +2213,13 @@ export function ShotPlanSheet() {
   // "Create new" character — opens the full Character Studio creator; on save the
   // new (saved) character is added straight to this plan's cast.
   const [createCharacterOpen, setCreateCharacterOpen] = useState(false);
+  // Locations (digital sets) — chosen from the Location Library, sent to the
+  // planner as `selectedLocationIds` so it builds the plan around those sets. The
+  // chosen ids drive generation; the full profiles back the on-screen chips. State
+  // lives here (not in the plan) so a selection made on the entry screen survives
+  // into the generated plan's request body.
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [selectedLocations, setSelectedLocations] = useState<LocationProfile[]>([]);
   const [cameraShotId, setCameraShotId] = useState<string | null>(null);
   // The storyboard panel currently expanded into the full per-shot editor below the strip.
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
@@ -2178,10 +2273,16 @@ export function ShotPlanSheet() {
       setIsGenerating(true);
       setGenerateError(null);
       try {
+        // Selected locations (digital sets) ride along with the brief — the planner
+        // builds the plan around these saved sets.
+        const selectedLocationIds = selectedLocations.map((l) => l.id);
         const res = await authFetch('/api/content/shot-plan/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ brief }),
+          body: JSON.stringify({
+            brief,
+            ...(selectedLocationIds.length > 0 ? { selectedLocationIds } : {}),
+          }),
         });
         const data = (await res.json()) as GenerateResponse;
         if (!res.ok || !data.success || !data.plan) {
@@ -2237,7 +2338,7 @@ export function ShotPlanSheet() {
         setIsRenderingSheet(false);
       }
     },
-    [authFetch, setShotPlan],
+    [authFetch, setShotPlan, selectedLocations],
   );
 
   const handleStartBlank = useCallback(() => {
@@ -2585,6 +2686,19 @@ export function ShotPlanSheet() {
     [shotPlan, applyEdit],
   );
 
+  // ── Location helpers — toggle a saved set in/out of the chosen list ──
+  const toggleLocation = useCallback((location: LocationProfile) => {
+    setSelectedLocations((prev) =>
+      prev.some((l) => l.id === location.id)
+        ? prev.filter((l) => l.id !== location.id)
+        : [...prev, location],
+    );
+  }, []);
+
+  const removeLocation = useCallback((locationId: string) => {
+    setSelectedLocations((prev) => prev.filter((l) => l.id !== locationId));
+  }, []);
+
   // Replace the whole cast array — the commit path for per-member identity edits
   // (mirrors removeCast's whole-array replacement).
   const setCast = useCallback(
@@ -2651,15 +2765,43 @@ export function ShotPlanSheet() {
     [shotPlan, applyEdit],
   );
 
+  // ── Location picker dialog — shared by the entry screen and the live plan, so a
+  // set chosen before the plan exists survives into the generate request body. ──
+  const locationPickerDialog = (
+    <Dialog open={locationPickerOpen} onOpenChange={setLocationPickerOpen}>
+      <DialogContent className="bg-card border border-border-strong max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <MapPin className="w-4 h-4 text-primary" /> Choose locations
+          </DialogTitle>
+          <DialogDescription>
+            Pick one or more saved sets from your Location Library. They&apos;re used to build this
+            plan and stay consistent across every shot.
+          </DialogDescription>
+        </DialogHeader>
+        <LocationPicker
+          selectedLocationIds={selectedLocations.map((l) => l.id)}
+          onToggle={toggleLocation}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+
   // ── Empty state ──
   if (!shotPlan) {
     return (
-      <EntryScreen
-        onGenerate={(b) => { void handleGenerate(b); }}
-        onStartBlank={handleStartBlank}
-        isGenerating={isGenerating}
-        error={generateError}
-      />
+      <>
+        <EntryScreen
+          onGenerate={(b) => { void handleGenerate(b); }}
+          onStartBlank={handleStartBlank}
+          isGenerating={isGenerating}
+          error={generateError}
+          selectedLocations={selectedLocations}
+          onOpenLocationPicker={() => setLocationPickerOpen(true)}
+          onRemoveLocation={removeLocation}
+        />
+        {locationPickerDialog}
+      </>
     );
   }
 
@@ -2984,6 +3126,34 @@ export function ShotPlanSheet() {
 
         <SheetSection
           number={3}
+          title="Locations"
+          icon={MapPin}
+          action={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocationPickerOpen(true)}>
+              <Plus className="w-3.5 h-3.5" /> Add location
+            </Button>
+          }
+        >
+        {selectedLocations.length === 0 ? (
+          <SectionDescription>
+            No locations chosen. Pick a saved set from your Location Library so the room stays
+            consistent across every shot — or create a new set.
+          </SectionDescription>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {selectedLocations.map((location) => (
+              <LocationChipCard
+                key={location.id}
+                location={location}
+                onRemove={() => removeLocation(location.id)}
+              />
+            ))}
+          </div>
+        )}
+        </SheetSection>
+
+        <SheetSection
+          number={4}
           title="Objects &amp; Props"
           icon={Package}
           action={
@@ -3007,7 +3177,7 @@ export function ShotPlanSheet() {
         </SheetSection>
 
         <SheetSection
-          number={4}
+          number={5}
           title="Storyboard"
           icon={ListVideo}
           action={
@@ -3171,6 +3341,8 @@ export function ShotPlanSheet() {
           </Dialog>
         );
       })()}
+
+      {locationPickerDialog}
 
       <Dialog open={castPickerOpen} onOpenChange={setCastPickerOpen}>
         <DialogContent className="bg-card border border-border-strong max-w-4xl max-h-[85vh] overflow-y-auto">

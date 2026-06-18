@@ -181,6 +181,8 @@ export default function CharacterForm({
   const [libraryTarget, setLibraryTarget] = useState<
     null | 'frontal' | 'additional' | 'fullBody' | 'upperBody'
   >(null);
+  // True while a library image is being MOVED onto a saved character.
+  const [movingFromLibrary, setMovingFromLibrary] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -313,18 +315,49 @@ export default function CharacterForm({
     setAdditionalImageUrls((prev) => prev.filter((u) => u !== url));
   }, []);
 
-  // Fill the open slot from EXISTING library images (no re-upload).
+  // Reflect a saved character's slot state from the AvatarProfile the move
+  // endpoint returns. Keeps the UI in sync with what actually persisted without
+  // re-appending anything (the server already added the reference image).
+  const syncSlotsFromProfile = useCallback((updated: AvatarProfile) => {
+    setFrontalImageUrl(updated.frontalImageUrl ?? '');
+    setAdditionalImageUrls(updated.additionalImageUrls ?? []);
+    setFullBodyImageUrl(updated.fullBodyImageUrl ?? null);
+    setUpperBodyImageUrl(updated.upperBodyImageUrl ?? null);
+  }, []);
+
+  // Fill the open slot from EXISTING library images.
+  //
+  // EDIT mode (saved character → profile.id exists): MOVE the picked image.
+  // POST /api/video/avatar-profiles/[id]/add-image { assetId } appends it to the
+  // character's reference set AND deletes the media-library record, so the image
+  // lives in one place. We then re-sync the form slots from the returned profile
+  // (the server decides frontal vs. additional) so the move shows immediately and
+  // the normal save path never re-adds it (no double-add).
+  //
+  // CREATE mode (no profile.id yet): the move endpoint can't run pre-save — there
+  // is no character to move onto. So we just set the URL on the slot locally and
+  // the image stays in the library. Moving the picked image is acceptable to skip
+  // for a brand-new character; it can be re-picked and moved after first save.
   const applyLibrarySelection = useCallback(
     (assets: LibraryAsset[]) => {
-      const urls = assets.filter((a) => a.type === 'image').map((a) => a.url);
-      if (urls.length > 0) {
-        if (libraryTarget === 'frontal') {
+      const target = libraryTarget;
+      const imageAssets = assets.filter((a) => a.type === 'image');
+      // Capture the picker target before we close it.
+      setLibraryTarget(null);
+      if (imageAssets.length === 0 || target === null) {
+        return;
+      }
+
+      // ── CREATE mode: no character to move onto yet — copy the URL locally. ──
+      if (!isEdit || profile === null) {
+        const urls = imageAssets.map((a) => a.url);
+        if (target === 'frontal') {
           setFrontalImageUrl(urls[0]);
-        } else if (libraryTarget === 'fullBody') {
+        } else if (target === 'fullBody') {
           setFullBodyImageUrl(urls[0]);
-        } else if (libraryTarget === 'upperBody') {
+        } else if (target === 'upperBody') {
           setUpperBodyImageUrl(urls[0]);
-        } else if (libraryTarget === 'additional') {
+        } else {
           setAdditionalImageUrls((prev) => {
             const merged = [...prev];
             for (const u of urls) {
@@ -335,10 +368,54 @@ export default function CharacterForm({
             return merged;
           });
         }
+        return;
       }
-      setLibraryTarget(null);
+
+      // ── EDIT mode: MOVE each picked image onto the saved character. ──
+      const profileId = profile.id;
+      const assetsToMove =
+        target === 'additional' ? imageAssets : imageAssets.slice(0, 1);
+      setMovingFromLibrary(true);
+      setErrorMsg(null);
+      void (async () => {
+        try {
+          for (const asset of assetsToMove) {
+            const res = await authFetch(
+              `/api/video/avatar-profiles/${profileId}/add-image`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assetId: asset.id }),
+              },
+            );
+            const data = (await res.json()) as {
+              success: boolean;
+              error?: string;
+              profile?: AvatarProfile;
+            };
+            if (!res.ok || !data.success) {
+              setErrorMsg(
+                data.error ?? 'Could not move that image from the library. Try again.',
+              );
+              return;
+            }
+            // Re-sync from the authoritative profile after each move.
+            if (data.profile) {
+              syncSlotsFromProfile(data.profile);
+            }
+          }
+        } catch (err) {
+          setErrorMsg(
+            err instanceof Error
+              ? err.message
+              : 'Could not move that image from the library. Try again.',
+          );
+        } finally {
+          setMovingFromLibrary(false);
+        }
+      })();
     },
-    [libraryTarget],
+    [libraryTarget, isEdit, profile, authFetch, syncSlotsFromProfile],
   );
 
   // ── Looks (alter egos) ──────────────────────────────────────────────────────
@@ -679,6 +756,7 @@ export default function CharacterForm({
               type="button"
               variant="ghost"
               size="sm"
+              disabled={movingFromLibrary}
               onClick={() => setLibraryTarget('frontal')}
               className="mt-2 ml-2 gap-1.5 text-xs"
             >
@@ -736,8 +814,9 @@ export default function CharacterForm({
               {canAddMore && (
                 <button
                   type="button"
+                  disabled={movingFromLibrary}
                   onClick={() => setLibraryTarget('additional')}
-                  className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="text-[10px]">Library</span>
@@ -757,6 +836,15 @@ export default function CharacterForm({
                 void handleSlotUpload(e, 'fullBody');
               }}
               onClear={() => setFullBodyImageUrl(null)}
+              onPickLibrary={() => setLibraryTarget('fullBody')}
+              libraryDisabled={movingFromLibrary}
+              // In edit mode a moved library image lands in the character's
+              // reference set (face/angles), not strictly this body slot.
+              libraryHint={
+                isEdit
+                  ? 'Adds the image to this character and removes it from your library'
+                  : undefined
+              }
             />
             <BodyImageSlot
               label="Upper-body reference"
@@ -767,6 +855,13 @@ export default function CharacterForm({
                 void handleSlotUpload(e, 'upperBody');
               }}
               onClear={() => setUpperBodyImageUrl(null)}
+              onPickLibrary={() => setLibraryTarget('upperBody')}
+              libraryDisabled={movingFromLibrary}
+              libraryHint={
+                isEdit
+                  ? 'Adds the image to this character and removes it from your library'
+                  : undefined
+              }
             />
           </div>
 
@@ -876,6 +971,13 @@ export default function CharacterForm({
             </label>
           </div>
 
+          {movingFromLibrary && (
+            <div className="flex items-center gap-2 rounded-md border border-border-light bg-surface-elevated p-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              <Caption>Moving the image from your library onto this character…</Caption>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2">
               <Caption className="text-destructive">{errorMsg}</Caption>
@@ -892,7 +994,7 @@ export default function CharacterForm({
               onClick={() => {
                 void handleSave();
               }}
-              disabled={saving || uploadingSlot !== null}
+              disabled={saving || uploadingSlot !== null || movingFromLibrary}
               className="gap-2"
             >
               {saving ? (
@@ -936,39 +1038,99 @@ interface BodyImageSlotProps {
   inputRef: React.RefObject<HTMLInputElement>;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClear: () => void;
+  onPickLibrary: () => void;
+  libraryDisabled: boolean;
+  libraryHint?: string;
 }
 
-function BodyImageSlot({ label, url, uploading, inputRef, onUpload, onClear }: BodyImageSlotProps) {
+function BodyImageSlot({
+  label,
+  url,
+  uploading,
+  inputRef,
+  onUpload,
+  onClear,
+  onPickLibrary,
+  libraryDisabled,
+  libraryHint,
+}: BodyImageSlotProps) {
   return (
     <div>
       <Caption className="mb-1 block">{label}</Caption>
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onUpload} />
       {url ? (
-        <div className="relative inline-block">
-          <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-border-strong bg-surface-elevated">
-            <Image src={url} alt={label} fill unoptimized className="object-cover" />
+        <div className="space-y-2">
+          <div className="relative inline-block">
+            <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-border-strong bg-surface-elevated">
+              <Image src={url} alt={label} fill unoptimized className="object-cover" />
+            </div>
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label={`Remove ${label}`}
+              className="absolute right-0.5 top-0.5 rounded-md bg-black/55 p-0.5 text-white hover:bg-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClear}
-            aria-label={`Remove ${label}`}
-            className="absolute right-0.5 top-0.5 rounded-md bg-black/55 p-0.5 text-white hover:bg-destructive"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+              className="gap-1.5 text-xs"
+            >
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5" />
+              )}
+              Replace
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={libraryDisabled}
+              onClick={onPickLibrary}
+              title={libraryHint}
+              className="gap-1.5 text-xs"
+            >
+              <Plus className="h-3.5 w-3.5" /> From library
+            </Button>
+          </div>
         </div>
       ) : (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={uploading}
-          onClick={() => inputRef.current?.click()}
-          className="gap-1.5 text-xs"
-        >
-          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-          Upload
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className="gap-1.5 text-xs"
+          >
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
+            Upload
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={libraryDisabled}
+            onClick={onPickLibrary}
+            title={libraryHint}
+            className="gap-1.5 text-xs"
+          >
+            <Plus className="h-3.5 w-3.5" /> From library
+          </Button>
+        </div>
       )}
     </div>
   );

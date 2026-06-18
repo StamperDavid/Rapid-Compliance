@@ -29,6 +29,8 @@ import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
 import { listAvatarProfiles, type AvatarProfile } from '@/lib/video/avatar-profile-service';
+import { listLocationProfiles } from '@/lib/video/location-profile-service';
+import type { LocationProfile } from '@/types/location';
 import {
   ShotPlanSchema,
   ShotPlanSharedChoicesSchema,
@@ -106,6 +108,17 @@ const GenerateShotPlanInputSchema = z.object({
    * caused name collisions and the "always the same character" bug.)
    */
   selectedCharacterIds: z.array(z.string().trim().min(1)).max(50).optional(),
+  /**
+   * Saved Location-Library locations (digital sets) the operator EXPLICITLY chose.
+   * When provided, the plan's ENVIRONMENT is LOCKED to these sets: the planner authors
+   * the environment fingerprint / zones strictly from each location's LOCKED description
+   * (same furniture in the same places, same windows on the same walls, same layout) and
+   * the union of their reference images is pinned as `environmentReferenceImageUrls` (the
+   * set-identity anchors the generation service feeds to Seedance). Omitted/empty = the
+   * planner invents the environment as before. Multiple selections map one zone per
+   * location. This is the SET-equivalent of character identity-locking.
+   */
+  selectedLocationIds: z.array(z.string().trim().min(1)).max(20).optional(),
 });
 
 export type GenerateShotPlanInput = z.infer<typeof GenerateShotPlanInputSchema>;
@@ -515,6 +528,62 @@ function buildAvailableCastBlock(profiles: AvatarProfile[]): string {
     .join('\n');
 }
 
+// ============================================================================
+// LOCATION RESOLUTION (the LOCKED digital sets the operator selected)
+// ============================================================================
+
+/** A bare-http(s) URL is the only thing the contract's environmentReferenceImageUrls accepts. */
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
+/**
+ * The union of every SELECTED location's reference images — the ENVIRONMENT identity
+ * anchors. These are pinned onto `sharedChoices.environmentReferenceImageUrls`, which the
+ * generation service feeds into Seedance as the set anchors so the room renders the SAME
+ * way in every shot. De-duped, order-preserving, filtered to valid URLs, capped at the
+ * contract max (20).
+ */
+function collectEnvironmentReferenceImageUrls(locations: LocationProfile[]): string[] {
+  const urls: string[] = [];
+  for (const loc of locations) {
+    for (const url of loc.referenceImageUrls) {
+      if (isHttpUrl(url)) {
+        urls.push(url.trim());
+      }
+    }
+  }
+  return Array.from(new Set(urls)).slice(0, 20);
+}
+
+/**
+ * Describe the SELECTED, LOCKED locations for the model. The planner MUST author the
+ * environment (environmentFingerprint + each environmentZone) STRICTLY from these locked
+ * descriptions — same furniture in the same places, same windows on the same walls, same
+ * layout — and may NEVER invent, add, remove, or move a set element. With multiple
+ * locations selected, each becomes ONE environment zone anchored to its own description.
+ */
+function buildSelectedLocationsBlock(locations: LocationProfile[]): string {
+  if (locations.length === 0) {
+    return '  (NONE selected — no location is locked. INVENT the environment from the brief as before: author the environmentFingerprint and environmentZones freely.)';
+  }
+  const lines = locations.map((loc, i) => {
+    const desc = loc.description.trim() || '(no description was captured for this set)';
+    return [
+      `  ${i + 1}. LOCKED LOCATION "${loc.name}" (locationId "${loc.id}")`,
+      `       LOCKED SET DESCRIPTION (render EXACTLY this room every shot here — do NOT alter): ${desc}`,
+    ].join('\n');
+  });
+  const multi = locations.length > 1;
+  return [
+    ...lines,
+    '',
+    multi
+      ? `  The environment is LOCKED to these ${locations.length} sets. Map EACH location to its OWN environmentZone (one zone per location, in this order), and author that zone's setDesign STRICTLY from that location's LOCKED SET DESCRIPTION — same furniture in the same places, same windows on the same walls, same layout, same materials and lighting. NEVER add, remove, move, or change a set element between shots in the same location. Do NOT invent a different set. The environmentFingerprint must summarize these locked sets, not a new one.`
+      : '  The environment is LOCKED to this one set. Author the environmentFingerprint AND (if you use zones) the single environmentZone STRICTLY from its LOCKED SET DESCRIPTION — same furniture in the same places, same windows on the same walls, same layout, same materials and lighting. EVERY shot set here describes the EXACT same room. NEVER add, remove, move, or change a set element between shots. Do NOT invent a different set.',
+  ].join('\n');
+}
+
 /**
  * Map the model's cast picks back onto the contract. A pick that matches a SELECTED
  * saved profile re-resolves its referenceImageUrls from that profile (the model never
@@ -594,6 +663,8 @@ function buildReferencesBlock(references: ShotPlanReference[] | undefined): stri
 function buildGenerateUserPrompt(
   input: GenerateShotPlanInput,
   availableCastBlock: string,
+  selectedLocationsBlock: string,
+  hasSelectedLocations: boolean,
   priorZodErrors?: string,
 ): string {
   return [
@@ -607,6 +678,12 @@ function buildGenerateUserPrompt(
     'SELECTED SAVED CHARACTERS — the operator EXPLICITLY chose these to appear. Cast each by its EXACT characterId where the story calls for it. For ANY other person/creature/object the brief needs, INVENT a NEW profile with a fresh unique id (e.g. "new_1") and a FULL casting card — never reach into the library on your own, never reuse a saved id you were not given here:',
     availableCastBlock,
     '',
+    'SELECTED LOCATIONS (LOCKED DIGITAL SETS) — the operator EXPLICITLY chose these. The environment is LOCKED to them: author the environmentFingerprint and every environmentZone STRICTLY from each location\'s LOCKED SET DESCRIPTION below — same furniture in the same places, same windows on the same walls, same layout, same materials and lighting. NEVER add, remove, move, or change a set element between shots in the same location, and NEVER invent a different set. When NONE are selected, invent the environment from the brief as before:',
+    selectedLocationsBlock,
+    '',
+    hasSelectedLocations
+      ? 'ENVIRONMENT IS LOCKED — because locations were selected above, the SELECTED LOCATIONS are the authoritative environment. environmentFingerprint and environmentZones MUST be authored only from their LOCKED SET DESCRIPTIONS (one zone per location, in the order listed). Every shot\'s "environment" field must describe the EXACT same room as its location with the same furniture/windows/layout. Do NOT invent or alter the set.'
+      : '',
     'OUTPUT CONTRACT — return ONLY this JSON object (no markdown, no preamble):',
     '{',
     '  "title": string,',
@@ -687,6 +764,7 @@ function assembleShotPlan(
   body: LlmShotPlan,
   cast: ShotPlanCastMember[],
   titleHint: string | undefined,
+  environmentReferenceImageUrls: string[],
 ): ShotPlan {
   const now = isoNow();
   const validCastIds = new Set(cast.map((c) => c.characterId));
@@ -798,6 +876,10 @@ function assembleShotPlan(
       colorPalette: body.sharedChoices.colorPalette,
       environmentFingerprint: body.sharedChoices.environmentFingerprint,
       cast,
+      // When the operator LOCKED the environment to selected locations, pin their union
+      // of reference images as the set-identity anchors the generation service feeds into
+      // Seedance (so the room renders the SAME way in every shot). Omit when none selected.
+      ...(environmentReferenceImageUrls.length > 0 ? { environmentReferenceImageUrls } : {}),
       moodKeywords: body.sharedChoices.moodKeywords,
       cinematographyNotes: body.sharedChoices.cinematographyNotes,
       artStyle: body.sharedChoices.artStyle,
@@ -841,9 +923,29 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
       : [];
   const availableCastBlock = buildAvailableCastBlock(profiles);
 
+  // SET-CONSISTENCY: ONLY the locations the operator EXPLICITLY selected LOCK the
+  // environment. Their LOCKED descriptions become the authoritative set the planner must
+  // author from (never invent/alter), and the union of their reference images is pinned as
+  // the environment identity anchors. No selection → no locked set → invent the world.
+  const selectedLocationIds = validated.selectedLocationIds ?? [];
+  const locations =
+    selectedLocationIds.length > 0
+      ? (await listLocationProfiles(validated.userId, { ownOnly: true })).filter((l) =>
+          selectedLocationIds.includes(l.id),
+        )
+      : [];
+  const selectedLocationsBlock = buildSelectedLocationsBlock(locations);
+  const environmentReferenceImageUrls = collectEnvironmentReferenceImageUrls(locations);
+
   let priorZodErrors: string | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const userPrompt = buildGenerateUserPrompt(validated, availableCastBlock, priorZodErrors);
+    const userPrompt = buildGenerateUserPrompt(
+      validated,
+      availableCastBlock,
+      selectedLocationsBlock,
+      locations.length > 0,
+      priorZodErrors,
+    );
     const rawContent = await callOpenRouter(gm, userPrompt, gm.maxTokens);
 
     let parsedJson: unknown;
@@ -863,7 +965,12 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
     }
 
     const cast = resolveCast(bodyResult.data.sharedChoices.cast, profiles);
-    const candidate = assembleShotPlan(bodyResult.data, cast, validated.title);
+    const candidate = assembleShotPlan(
+      bodyResult.data,
+      cast,
+      validated.title,
+      environmentReferenceImageUrls,
+    );
 
     const finalResult = ShotPlanSchema.safeParse(candidate);
     if (!finalResult.success) {
@@ -992,6 +1099,8 @@ export const __internal = {
   loadGMConfig,
   stripJsonFences,
   buildAvailableCastBlock,
+  buildSelectedLocationsBlock,
+  collectEnvironmentReferenceImageUrls,
   buildReferencesBlock,
   buildGenerateUserPrompt,
   buildLookBibleContext,

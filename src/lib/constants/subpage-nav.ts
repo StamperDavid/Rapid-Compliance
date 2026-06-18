@@ -192,6 +192,7 @@ export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
   { label: 'Editor', href: '/content/video/editor' },
   { label: 'Library', href: '/content/video/library' },
   { label: 'Characters', href: '/content/characters' },
+  { label: 'Locations', href: '/content/locations' },
   { label: 'Audio Lab', href: '/content/voice-lab' },
 ];
 
