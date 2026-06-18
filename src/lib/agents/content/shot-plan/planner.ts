@@ -35,6 +35,7 @@ import {
   ShotPlanShotSchema,
   type ShotPlan,
   type ShotPlanCastMember,
+  type ShotPlanObject,
   type ShotPlanFloorPlan,
 } from '@/types/shot-plan';
 import type { ShotPlanEditTarget } from '@/lib/video/shot-plan-edit';
@@ -282,6 +283,20 @@ const LlmShotPlanSchema = z.object({
       .optional(),
     // Adaptive doc labels (e.g. "Material language" instead of "Character notes").
     adaptiveLabels: z.object({ characterNotes: z.string().trim().max(80).optional() }).optional(),
+    // Non-human subjects the story is ABOUT (animals, creatures, vehicles, robots,
+    // signature props) — anchored like cast. Each gets a fresh id + a model-sheet-grade
+    // description; reference art is GENERATED (no referenceImageUrls from the model).
+    objects: z
+      .array(
+        z.object({
+          id: z.string().trim().min(1),
+          name: z.string().trim().min(1),
+          subjectKind: z.enum(['object', 'creature']).optional(),
+          description: z.string().trim().max(2000).optional(),
+        }),
+      )
+      .max(40)
+      .optional(),
   }),
   shots: z
     .array(
@@ -289,6 +304,7 @@ const LlmShotPlanSchema = z.object({
         title: z.string().trim().min(1),
         action: z.string().trim().min(1),
         castMemberIds: z.array(z.string().trim().min(1)).default([]),
+        objectIds: z.array(z.string().trim().min(1)).optional(),
         environment: z.string().trim().min(1),
         // Continuity (Script Supervisor) — REQUIRED per beat, consistent within a scene/zone.
         timeOfDay: z.string().trim().min(1),
@@ -601,6 +617,7 @@ function buildGenerateUserPrompt(
     '    "colorPalette": [ { "name": string, "hex": "#rrggbb" } ]  // 2-6 named swatches, the look bible,',
     '    "environmentFingerprint": string  // the written signature of the world — the single strongest cross-shot consistency anchor,',
     '    "cast": [ { "characterId": "<exact id from AVAILABLE CHARACTERS>", "lookId": "<optional exact lookId>", "name": string, "role": string, "notes": string, "apparentAge": string, "gender": string, "ethnicity": string, "build": string, "hairColor": string, "hairStyle": string, "wardrobe": string, "accessories": [string] (optional), "wardrobeMode": "flexible" | "signature" (optional) } ],  // fill the FULL identity + scene-appropriate wardrobe for every member,',
+    '    "objects": [ { "id": "<fresh unique id, e.g. obj_1>", "name": string, "subjectKind": "object" | "creature", "description": string } ],  // REQUIRED whenever a NON-human subject matters to the story (an animal, creature, vehicle, robot, weapon, signature prop). Give each a model-sheet-grade physical description (materials, scale, distinguishing features). Omit referenceImageUrls — they are generated. Use [] only when the story has no such subject.',
     '    "moodKeywords": [string],',
     '    "cinematographyNotes": [string],',
     '    "artStyle": string',
@@ -610,6 +627,7 @@ function buildGenerateUserPrompt(
     '      "title": string,',
     '      "action": string  // the forward-motion description of what happens,',
     '      "castMemberIds": [ "<characterId values that appear in this shot, from sharedChoices.cast>" ],',
+    '      "objectIds": [ "<object ids from sharedChoices.objects that appear in this shot>" ],  // include every non-human subject present in the shot,',
     '      "environment": string  // consistent with environmentFingerprint,',
     '      "timeOfDay": string  // REQUIRED, consistent within a scene/zone,',
     '      "weather": string  // REQUIRED, consistent within a scene/zone,',
@@ -628,6 +646,7 @@ function buildGenerateUserPrompt(
     '',
     'HARD RULES:',
     '- Cast the SELECTED saved characters by their EXACT characterId. INVENT every OTHER character the story needs as a new sharedChoices.cast member with a FRESH unique id (e.g. "new_1", "new_2") and a full casting card; put non-human subjects (animals, creatures, vehicles, robots, signature props) in sharedChoices.objects with subjectKind. Reference every character per-shot in castMemberIds by its id. Do NOT output referenceImageUrls — they are resolved from a saved profile, or generated for an invented character.',
+    '- NON-HUMAN SUBJECTS ARE NOT OPTIONAL: if the brief features an animal, creature, vehicle, robot, weapon, or signature prop, it MUST appear in sharedChoices.objects with its own id, a model-sheet-grade description, and be referenced per-shot via objectIds. A war-bear, a drone, a muscle car are SUBJECTS — never leave them only in prose. Treat them as seriously as cast.',
     '- For every cast member write "notes": a vivid 1-2 sentence description (build, face, wardrobe, demeanor) that a director would read off the production sheet. Never leave it blank.',
     '- For EVERY cast member also fill the full casting card: apparentAge, gender, ethnicity, build, hairColor, hairStyle, and a scene-appropriate "wardrobe" (+ accessories when fitting). Wardrobe + hair must suit timePeriod and genre. Default wardrobeMode to "flexible"; use "signature" only when the outfit IS the identity (uniform, superhero suit, mascot).',
     '- Always set sharedChoices.timePeriod and sharedChoices.genre, and keep every department consistent with them.',
@@ -671,9 +690,16 @@ function assembleShotPlan(
 ): ShotPlan {
   const now = isoNow();
   const validCastIds = new Set(cast.map((c) => c.characterId));
-  // Objects are not authored by the LLM in this plan body, so the only valid object
-  // ids for propStates are those carried on the assembled plan (currently none).
-  const validObjectIds = new Set<string>();
+  // Non-human subjects the model authored (war-bear, drone, vehicle…). Reference art
+  // is generated later (referenceImageUrls start empty), exactly like invented cast.
+  const objects: ShotPlanObject[] = (body.sharedChoices.objects ?? []).map((o) => ({
+    id: o.id,
+    name: o.name,
+    referenceImageUrls: [],
+    ...(o.subjectKind ? { subjectKind: o.subjectKind } : {}),
+    ...(o.description ? { description: o.description } : {}),
+  }));
+  const validObjectIds = new Set(objects.map((o) => o.id));
 
   const shots = body.shots.map((shot, index) => {
     // Per-character continuity overlays — keep only references to cast that survived.
@@ -681,6 +707,8 @@ function assembleShotPlan(
     const costumeStates = shot.costumeStates?.filter((s) => validCastIds.has(s.characterId));
     // Per-prop continuity overlays — keep only references to known objects.
     const propStates = shot.propStates?.filter((s) => validObjectIds.has(s.objectId));
+    // Per-shot object presence — keep only ids that resolve to a real object.
+    const objectIds = shot.objectIds?.filter((id) => validObjectIds.has(id));
     return {
       id: makeShotId(index),
       index,
@@ -688,6 +716,7 @@ function assembleShotPlan(
       action: shot.action,
       // Keep only cast ids that survived resolution; the first shot can never "continue".
       castMemberIds: shot.castMemberIds.filter((id) => validCastIds.has(id)),
+      ...(objectIds && objectIds.length > 0 ? { objectIds } : {}),
       environment: shot.environment,
       timeOfDay: shot.timeOfDay,
       weather: shot.weather,
@@ -773,6 +802,7 @@ function assembleShotPlan(
       cinematographyNotes: body.sharedChoices.cinematographyNotes,
       artStyle: body.sharedChoices.artStyle,
       lookBible: body.sharedChoices.lookBible,
+      ...(objects.length > 0 ? { objects } : {}),
       ...(environmentZones ? { environmentZones } : {}),
       ...(body.sharedChoices.adaptiveLabels
         ? { adaptiveLabels: body.sharedChoices.adaptiveLabels }

@@ -61,6 +61,7 @@ import type {
   ShotPlanShotGenerated,
   ShotPlanFloorPlan,
   ShotPlanCastMember,
+  ShotPlanObject,
 } from '@/types/shot-plan';
 
 const FILE = 'video/shot-plan-generation-service.ts';
@@ -1424,12 +1425,137 @@ export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext
 }
 
 // ============================================================================
+// generateObjectSheets — reference art for invented OBJECTS (creatures/vehicles)
+// ============================================================================
+
+/** Alternate views rendered (via Kontext off the base) for an object's reference set. */
+const OBJECT_VIEWS: { label: string; view: string }[] = [
+  { label: 'SIDE', view: 'full side profile view, same subject' },
+  { label: 'DETAIL', view: 'close-up detail of materials, surface texture and distinguishing features, same subject' },
+];
+
+/** Text-to-image prompt for an invented object's BASE reference from its description. */
+function inventedObjectBasePrompt(plan: ShotPlan, obj: { name: string; subjectKind?: 'object' | 'creature'; description?: string }): string {
+  const sc = plan.sharedChoices;
+  const style = firstText(sc.lookBible?.artStyle, sc.artStyle) ?? 'photorealistic';
+  const kind = obj.subjectKind === 'creature' ? 'creature' : 'object';
+  const descr = firstText(obj.description);
+  return (
+    `Hero reference of ${obj.name}, a ${kind}.${descr ? ` ${descr}.` : ''} ` +
+    `Front three-quarter view, isolated on a clean light-grey studio background, even soft ` +
+    `studio lighting, sharp detail, ${style}. Single subject, full subject visible, no text.`
+  );
+}
+
+/**
+ * Generate reference art for every INVENTED object (one with no referenceImageUrls):
+ * a base hero render from its description, plus a couple of alternate views off that
+ * base (Kontext). The images fill the object/props block AND anchor the object's
+ * appearance in video generation (resolveObjectReferenceImageUrls). Best-effort per
+ * object/view. Ownership rule applies. Saved objects (already with refs) are untouched.
+ */
+export async function generateObjectSheets(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
+  const objects = plan.sharedChoices.objects ?? [];
+  if (objects.length === 0) {
+    return plan;
+  }
+
+  const updated: ShotPlanObject[] = [];
+  let changed = false;
+
+  for (const obj of objects) {
+    if (obj.referenceImageUrls.length > 0) {
+      updated.push(obj);
+      continue;
+    }
+    const refs: string[] = [];
+
+    // 1. Base hero render (text-to-image from the description).
+    const baseWorkDir = await createWorkDir('shot-plan-objbase');
+    try {
+      const basePrompt = inventedObjectBasePrompt(plan, obj);
+      logger.info('[shot-plan-gen] generating invented object base', { file: FILE, object: obj.name, tenantId: ctx.tenantId });
+      const result = await generateWithFal(basePrompt, { aspectRatio: '1:1' });
+      if (result.url) {
+        const buf = await downloadToFile(result.url, join(baseWorkDir, 'base.png'), `object ${obj.name} base`);
+        const url = await uploadPermanent(buf, `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`, 'image/png', `object ${obj.name} base`);
+        await createAsset({
+          type: 'image',
+          category: 'graphic',
+          name: `${obj.name} — reference`,
+          description: `Generated reference for ${obj.subjectKind ?? 'object'} in Shot Plan "${plan.title || plan.id}".`,
+          url,
+          mimeType: 'image/png',
+          fileSize: buf.length,
+          source: 'ai-generated',
+          aiProvider: 'fal',
+          aiPrompt: basePrompt,
+          createdBy: 'system',
+          tags: ['shot-plan', 'object', obj.subjectKind ?? 'object'],
+        });
+        refs.push(url);
+      }
+    } catch (err) {
+      logger.error('[shot-plan-gen] invented object base failed (continuing)', err instanceof Error ? err : new Error(String(err)), { file: FILE, object: obj.name });
+    } finally {
+      await cleanupWorkDir(baseWorkDir);
+    }
+
+    // 2. Alternate views off the base (best-effort each), only if a base exists.
+    if (refs.length > 0) {
+      for (const { label, view } of OBJECT_VIEWS) {
+        const viewWorkDir = await createWorkDir('shot-plan-objview');
+        try {
+          const prompt = `The exact same subject, ${view}, isolated on a clean light-grey studio background, even soft studio lighting, consistent identity, sharp detail.`;
+          const result = await generateFromReferenceWithFal(prompt, refs[0], {});
+          if (result.url) {
+            const buf = await downloadToFile(result.url, join(viewWorkDir, 'view.png'), `object ${obj.name} ${label}`);
+            const url = await uploadPermanent(buf, `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`, 'image/png', `object ${obj.name} ${label}`);
+            await createAsset({
+              type: 'image',
+              category: 'graphic',
+              name: `${obj.name} — ${label}`,
+              description: `Generated ${label} view for ${obj.subjectKind ?? 'object'} in Shot Plan "${plan.title || plan.id}".`,
+              url,
+              mimeType: 'image/png',
+              fileSize: buf.length,
+              source: 'ai-generated',
+              aiProvider: 'fal',
+              aiPrompt: prompt,
+              createdBy: 'system',
+              tags: ['shot-plan', 'object', label.toLowerCase()],
+            });
+            refs.push(url);
+          }
+        } catch (err) {
+          logger.error('[shot-plan-gen] invented object view failed (continuing)', err instanceof Error ? err : new Error(String(err)), { file: FILE, object: obj.name, label });
+        } finally {
+          await cleanupWorkDir(viewWorkDir);
+        }
+      }
+    }
+
+    if (refs.length > 0) {
+      updated.push({ ...obj, referenceImageUrls: refs });
+      changed = true;
+    } else {
+      updated.push(obj);
+    }
+  }
+
+  if (!changed) {
+    return plan;
+  }
+  return applyShotPlanEdit(plan, { target: 'shared', field: 'objects', value: updated });
+}
+
+// ============================================================================
 // renderShotPlanAssets — make the document COMPLETE for review (the "preview" step)
 // ============================================================================
 
 /** Progress for the full-sheet asset render (floor-plan image + every keyframe). */
 export interface ShotPlanAssetProgress {
-  phase: 'floor-plan' | 'environment-hero' | 'lighting-swatches' | 'character-sheets' | 'keyframe';
+  phase: 'floor-plan' | 'environment-hero' | 'lighting-swatches' | 'character-sheets' | 'object-sheets' | 'keyframe';
   shotId?: string;
   index?: number;
   total?: number;
@@ -1495,6 +1621,16 @@ export async function renderShotPlanAssets(
     const error = err instanceof Error ? err.message : String(err);
     logger.error('[shot-plan-gen] character sheets render failed (continuing)', err instanceof Error ? err : new Error(error), { file: FILE });
     onProgress?.({ phase: 'character-sheets', status: 'failed', error });
+  }
+
+  // 4b. Object/creature reference art (best-effort per object/view).
+  try {
+    current = await generateObjectSheets(current, ctx);
+    onProgress?.({ phase: 'object-sheets', status: 'completed' });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logger.error('[shot-plan-gen] object sheets render failed (continuing)', err instanceof Error ? err : new Error(error), { file: FILE });
+    onProgress?.({ phase: 'object-sheets', status: 'failed', error });
   }
 
   // 5. A keyframe still for every shot, in order (best-effort each).
