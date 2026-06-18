@@ -97,6 +97,14 @@ const GenerateShotPlanInputSchema = z.object({
   title: z.string().trim().max(300).optional(),
   /** Optional reference materials that define the desired look / style / world / characters. */
   references: z.array(ShotPlanReferenceSchema).max(20).optional(),
+  /**
+   * Saved Character-Library characters the operator EXPLICITLY chose to cast.
+   * ONLY these library characters are used; every other person/creature the brief
+   * needs is INVENTED as a new profile. Omitted/empty = invent all characters.
+   * (The planner never auto-pulls from the library by a name in the brief — that
+   * caused name collisions and the "always the same character" bug.)
+   */
+  selectedCharacterIds: z.array(z.string().trim().min(1)).max(50).optional(),
 });
 
 export type GenerateShotPlanInput = z.infer<typeof GenerateShotPlanInputSchema>;
@@ -470,7 +478,7 @@ function resolveReferenceImageUrls(profile: AvatarProfile, lookId?: string): str
 /** Describe the available cast for the model — real ids + looks, no invented data. */
 function buildAvailableCastBlock(profiles: AvatarProfile[]): string {
   if (profiles.length === 0) {
-    return '  (the operator has no saved characters — cast = [] and describe people generically in shot actions)';
+    return '  (NONE selected — the operator picked no saved character. INVENT every character the brief needs as a NEW cast member: give each a FRESH unique id like "new_1", "new_2", fill its full casting card, and put non-human subjects (animals, creatures, vehicles, robots) in sharedChoices.objects. Do NOT use any saved character.)';
   }
   return profiles
     .map((p) => {
@@ -492,10 +500,12 @@ function buildAvailableCastBlock(profiles: AvatarProfile[]): string {
 }
 
 /**
- * Map the model's cast picks back onto the contract, re-resolving referenceImageUrls
- * from the real profiles (the model never supplies image URLs). Picks that don't match
- * a real characterId are dropped, and matching per-shot castMemberIds are pruned to the
- * survivors so the plan stays internally consistent.
+ * Map the model's cast picks back onto the contract. A pick that matches a SELECTED
+ * saved profile re-resolves its referenceImageUrls from that profile (the model never
+ * supplies image URLs). A pick with NO matching profile is an INVENTED character —
+ * kept with empty referenceImageUrls (its reference art is generated later from the
+ * casting card), never dropped. This is what lets a brief author brand-new people /
+ * creatures instead of being forced onto a saved character.
  */
 function resolveCast(
   llmCast: LlmShotPlan['sharedChoices']['cast'],
@@ -505,18 +515,11 @@ function resolveCast(
   const resolved: ShotPlanCastMember[] = [];
   for (const member of llmCast) {
     const profile = byId.get(member.characterId);
-    if (!profile) {
-      logger.warn('[ShotPlanPlanner] dropping cast pick with unknown characterId', {
-        characterId: member.characterId,
-        file: FILE,
-      });
-      continue;
-    }
     resolved.push({
       characterId: member.characterId,
       lookId: member.lookId,
-      name: member.name || profile.name,
-      referenceImageUrls: resolveReferenceImageUrls(profile, member.lookId),
+      name: member.name.trim() ? member.name : (profile?.name ?? 'Unnamed'),
+      referenceImageUrls: profile ? resolveReferenceImageUrls(profile, member.lookId) : [],
       role: member.role,
       billing: member.billing,
       subjectKind: member.subjectKind,
@@ -585,7 +588,7 @@ function buildGenerateUserPrompt(
     input.shotCount ? `DESIRED SHOT COUNT: ${input.shotCount}` : 'DESIRED SHOT COUNT: you decide (typically 2-6 for an ad).',
     '',
     buildReferencesBlock(input.references),
-    'AVAILABLE CHARACTERS (the operator\'s saved cast — AUTO-CAST these by their EXACT characterId; never invent characters):',
+    'SELECTED SAVED CHARACTERS — the operator EXPLICITLY chose these to appear. Cast each by its EXACT characterId where the story calls for it. For ANY other person/creature/object the brief needs, INVENT a NEW profile with a fresh unique id (e.g. "new_1") and a FULL casting card — never reach into the library on your own, never reuse a saved id you were not given here:',
     availableCastBlock,
     '',
     'OUTPUT CONTRACT — return ONLY this JSON object (no markdown, no preamble):',
@@ -624,7 +627,7 @@ function buildGenerateUserPrompt(
     '}',
     '',
     'HARD RULES:',
-    '- Auto-cast the operator\'s real characters: any character that appears must be in sharedChoices.cast with its EXACT characterId, and referenced per-shot in castMemberIds by that same id. Do NOT output referenceImageUrls — those are resolved from the profile automatically.',
+    '- Cast the SELECTED saved characters by their EXACT characterId. INVENT every OTHER character the story needs as a new sharedChoices.cast member with a FRESH unique id (e.g. "new_1", "new_2") and a full casting card; put non-human subjects (animals, creatures, vehicles, robots, signature props) in sharedChoices.objects with subjectKind. Reference every character per-shot in castMemberIds by its id. Do NOT output referenceImageUrls — they are resolved from a saved profile, or generated for an invented character.',
     '- For every cast member write "notes": a vivid 1-2 sentence description (build, face, wardrobe, demeanor) that a director would read off the production sheet. Never leave it blank.',
     '- For EVERY cast member also fill the full casting card: apparentAge, gender, ethnicity, build, hairColor, hairStyle, and a scene-appropriate "wardrobe" (+ accessories when fitting). Wardrobe + hair must suit timePeriod and genre. Default wardrobeMode to "flexible"; use "signature" only when the outfit IS the identity (uniform, superhero suit, mascot).',
     '- Always set sharedChoices.timePeriod and sharedChoices.genre, and keep every department consistent with them.',
@@ -797,8 +800,15 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
   const validated = GenerateShotPlanInputSchema.parse(input);
   const gm = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
 
-  // Auto-cast source: the operator's OWN created characters only.
-  const profiles = await listAvatarProfiles(validated.userId, { ownOnly: true });
+  // ONLY the characters the operator EXPLICITLY selected are real saved cast.
+  // Everyone else the brief needs is invented fresh — the planner never auto-pulls
+  // the whole library (that forced the same character into every video and risked
+  // name collisions). No selection → no saved characters offered → invent all.
+  const selectedIds = new Set(validated.selectedCharacterIds ?? []);
+  const profiles =
+    selectedIds.size > 0
+      ? (await listAvatarProfiles(validated.userId, { ownOnly: true })).filter((p) => selectedIds.has(p.id))
+      : [];
   const availableCastBlock = buildAvailableCastBlock(profiles);
 
   let priorZodErrors: string | undefined;

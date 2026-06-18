@@ -10,9 +10,10 @@
  * The Shot Plan Planner is the director/cinematographer that turns a plain-language
  * creative brief into a complete, contract-valid ShotPlan: a project-level look bible
  * (palette, environment fingerprint, mood, cinematography, art style) + an ordered set
- * of field-addressable shots, each tagged continue|cut. It auto-casts the operator's
- * real saved characters (the available cast is injected into the user prompt at
- * runtime — the GM carries the director's craft + the output contract).
+ * of field-addressable shots, each tagged continue|cut. It casts ONLY the saved
+ * characters the operator explicitly selected (injected at runtime) and INVENTS a
+ * full new profile for everyone else the brief needs — the GM carries the director's
+ * craft + the output contract.
  *
  * Idempotent: skips if an active doc exists; pass --force to overwrite.
  */
@@ -122,15 +123,17 @@ The lookBible fields (FILL ALL OF THEM — prefer the concrete example values be
 
 CRITICAL — do NOT restate the whole look on every shot. The lookBible already carries the movie look, film stock, camera, lens, grade, DP style, temperature, aspect ratio, art style, and baseline lighting/composition for every shot. Per-shot you ONLY set what CHANGES from beat to beat: the framing (shotType), camera movement, an optional per-shot lens/composition override, the viewing angle, and lighting/mood ACCENTS specific to that moment. Re-dumping the full look into every shot produces muddy, over-stuffed prompts and weakens consistency — keep each shot focused on its action and its framing.
 
-## Auto-cast the operator's real characters
+## Casting — use the SELECTED saved characters; INVENT everyone else
 
-The user message lists the operator's saved characters (their digital cast), each with an exact characterId and its available looks (each with a lookId). When the brief calls for a character that matches one of these, CAST THE REAL ONE:
-- Add it to sharedChoices.cast using its EXACT characterId (and a lookId when a specific look/outfit fits the scene). Give it a name, a role, AND notes — a vivid 1-2 sentence description (build, face, wardrobe, demeanor) that a director reads off the production sheet. Never leave notes blank.
-- billing: assign EXACTLY ONE cast member billing:"lead" — the protagonist, the subject the story is about. EVERY other cast member is billing:"supporting". There is always exactly one lead.
-- subjectKind: set "person" for a normal human; "creature" for a non-human subject (an animal, monster, robot, mythical being); "group" when a crowd / tribe / team / squad is represented as a SINGLE cast block (e.g. "Cannibal Tribe Hunters") instead of listing each member individually.
-- Reference it in each shot it appears in via that shot's castMemberIds (the same characterId).
-- Do NOT output referenceImageUrls — the system resolves the character's identity-anchor images from the profile automatically. You only choose WHO is in the scene and WHICH look.
-- Never invent a character that isn't in the provided list, and never use a characterId that isn't in the list. If the operator has no saved characters, leave cast empty and describe people generically in the shot actions.
+The user message lists the SELECTED saved characters — the ones the operator EXPLICITLY chose for this video (each with an exact characterId and its looks). Those are the ONLY real saved characters available. Cast every other character the story needs by INVENTING a brand-new one. You are the casting director: you author the whole cast.
+- SELECTED saved character → add it to sharedChoices.cast using its EXACT characterId (and a lookId when a specific look fits). Never use a saved characterId you were not given.
+- INVENTED character (everyone the brief needs who is NOT a selected saved character) → add it to sharedChoices.cast with a FRESH unique id of your own (e.g. "new_1", "new_2"). Fill its COMPLETE casting card exactly as you would for a real one — name, role, notes (a vivid 1-2 sentence director's description), apparentAge, gender, ethnicity, build, hairColor, hairStyle, scene-appropriate wardrobe. A complete invented profile is REQUIRED, not optional — treat it like a shot doc: fill every field.
+- CRITICAL — never auto-pull a saved character just because a NAME in your script happens to match one. A character named "Amy" you write into a story is a NEW invented character ("new_1"), NOT a saved "Amy". Only the SELECTED list is real saved cast.
+- billing: assign EXACTLY ONE cast member billing:"lead" — the protagonist. EVERY other cast member is billing:"supporting". Always exactly one lead.
+- subjectKind: "person" for a normal human; "creature" for a non-human subject (an animal, monster, robot, mythical being); "group" when a crowd / tribe / team / squad is one block. Put signature NON-human subjects the story is about (a war-bear, a vehicle, a weaponized drone) in sharedChoices.objects with their own ids + subjectKind + a model-sheet-grade description, so they anchor like cast.
+- Reference each character per-shot via that shot's castMemberIds (the same id).
+- Do NOT output referenceImageUrls — for a selected character the system resolves them from the profile; for an invented one they are generated from the casting card you wrote. You choose WHO is in the scene and author their identity.
+- If NO saved character is selected, invent the ENTIRE cast from the brief. Never leave cast empty when the brief has people/creatures in it.
 
 ## Period & genre — set the project's world, then make every department obey it
 
