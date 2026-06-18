@@ -1,47 +1,55 @@
 'use client';
 
 /**
- * Video Editor — CapCut-feel layout for the YC demo.
+ * Video Editor — purpose-first shell.
  *
- *  ┌──────────────────────────────────────────────────────────────────────┐
- *  │  Toolbar  (transport, undo/redo, split, zoom, export)                │
- *  ├────────────────────────────────────────────────┬─────────────────────┤
- *  │                                                 │                     │
- *  │  Preview  (live with effects + draggable text) │  EffectsPanel       │
- *  │                                                 │  (clip / overlay /  │
- *  │                                                 │   upload context)   │
- *  │                                                 │                     │
- *  ├────────────────────────────────────────────────┴─────────────────────┤
- *  │  Timeline  (V / T / A tracks, ruler, playhead, drag-reorder, trim)   │
- *  └──────────────────────────────────────────────────────────────────────┘
+ * The editor is ONE shared core (the reducer below: clips, audio, text overlays,
+ * trim/split/transitions/effects/undo + the generation handoff + the
+ * export-to-Library path) with SEVERAL focused workspaces ("modes") layered on
+ * top. The operator first picks a purpose (EditorModeSelector); that mode renders
+ * its own tools against the SAME project, so the capabilities never collide in one
+ * crowded screen. Switching modes never loses the project.
  *
- * Design system: PageTitle / Card / Button. Tailwind classes only — no
- * inline `style` blocks for static values. Two-step delete confirmations
- * live inside EffectsPanel via `<ConfirmDialog>`.
+ * Modes + their parity floors live in editor-modes.ts:
+ *   pro · quick · script · social · vfx  → Premiere · CapCut · Descript · OpusClip · our AI
  */
 
-import { useReducer, useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useReducer, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, LayoutGrid } from 'lucide-react';
 
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import { Button } from '@/components/ui/button';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 
-import Toolbar from '@/components/video-editor/Toolbar';
-import Preview from '@/components/video-editor/Preview';
-import Timeline from '@/components/video-editor/Timeline';
-import EffectsPanel from '@/components/video-editor/EffectsPanel';
-
 import { editorReducer, initialEditorState } from './editor-reducer';
-import {
-  DEFAULT_CLIP_DURATION,
-  type EditorClip,
-} from './types';
+import { DEFAULT_CLIP_DURATION, type EditorClip } from './types';
 import type { MediaItem } from '@/types/media-library';
 import type { PipelineProject } from '@/types/video-pipeline';
 import { takeEditorSeed } from '@/lib/video/editor-seed';
+import {
+  EDITOR_MODES,
+  isEditorMode,
+  type EditorMode,
+  type EditorModeProps,
+  type ExportState,
+} from './editor-modes';
+import EditorModeSelector from './EditorModeSelector';
+import ProEditMode from './modes/ProEditMode';
+import QuickEditMode from './modes/QuickEditMode';
+import ScriptPodcastMode from './modes/ScriptPodcastMode';
+import SocialRepurposeMode from './modes/SocialRepurposeMode';
+import GenerativeVfxMode from './modes/GenerativeVfxMode';
+
+const MODE_COMPONENTS: Record<EditorMode, ComponentType<EditorModeProps>> = {
+  pro: ProEditMode,
+  quick: QuickEditMode,
+  script: ScriptPodcastMode,
+  social: SocialRepurposeMode,
+  vfx: GenerativeVfxMode,
+};
 
 interface RenderResponse {
   success: boolean;
@@ -57,22 +65,14 @@ function effectiveDuration(clip: EditorClip): number {
 export default function VideoEditorPage() {
   const authFetch = useAuthFetch();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const projectIdParam = searchParams.get('project');
+  const modeParam = searchParams.get('mode');
+  const mode: EditorMode | null = isEditorMode(modeParam) ? modeParam : null;
+
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
 
-  const {
-    clips,
-    audioTracks,
-    textOverlays,
-    selectedClipId,
-    selectedOverlayId,
-    playheadTime,
-    totalDuration,
-    zoomLevel,
-    isPlaying,
-    undoStack,
-    redoStack,
-  } = state;
+  const { clips, textOverlays, isPlaying, selectedClipId, playheadTime } = state;
 
   // ── Export state (separate from the legacy isAssembling — different endpoint) ─
   const [exportState, setExportState] = useState<ExportState>({
@@ -80,6 +80,21 @@ export default function VideoEditorPage() {
     error: null,
     item: null,
   });
+
+  // ── Switch / clear the active mode (preserves other query params, e.g. project) ─
+  const setMode = useCallback(
+    (next: EditorMode | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next) {
+        params.set('mode', next);
+      } else {
+        params.delete('mode');
+      }
+      const qs = params.toString();
+      router.replace(qs ? `/content/video/editor?${qs}` : '/content/video/editor');
+    },
+    [router, searchParams],
+  );
 
   // ── Project auto-load: when the editor is opened as the destination of a
   //    finished generation (`?project=<id>`), pull the project's completed
@@ -95,12 +110,18 @@ export default function VideoEditorPage() {
   //    later manual visit does not re-seed stale clips. ─────────────────────────
   const seedTakenRef = useRef(false);
   useEffect(() => {
-    if (seedTakenRef.current) { return; }
+    if (seedTakenRef.current) {
+      return;
+    }
     seedTakenRef.current = true;
     // Don't clobber an edit already in progress.
-    if (clips.length > 0) { return; }
+    if (clips.length > 0) {
+      return;
+    }
     const seed = takeEditorSeed();
-    if (!seed || seed.clips.length === 0) { return; }
+    if (!seed || seed.clips.length === 0) {
+      return;
+    }
     for (const clip of seed.clips) {
       dispatch({
         type: 'ADD_CLIP',
@@ -116,10 +137,16 @@ export default function VideoEditorPage() {
   }, [clips.length]);
 
   useEffect(() => {
-    if (projectLoadedRef.current) { return; }
-    if (!projectIdParam) { return; }
+    if (projectLoadedRef.current) {
+      return;
+    }
+    if (!projectIdParam) {
+      return;
+    }
     // Never clobber an edit already in progress — only seed an empty timeline.
-    if (clips.length > 0) { return; }
+    if (clips.length > 0) {
+      return;
+    }
 
     projectLoadedRef.current = true;
     setProjectLoad('loading');
@@ -127,9 +154,13 @@ export default function VideoEditorPage() {
     void (async () => {
       try {
         const res = await authFetch(`/api/video/project/${projectIdParam}`);
-        if (!res.ok) { throw new Error('Project load failed'); }
+        if (!res.ok) {
+          throw new Error('Project load failed');
+        }
         const data = (await res.json()) as { success: boolean; project?: PipelineProject };
-        if (!data.success || !data.project) { throw new Error('Project not found'); }
+        if (!data.success || !data.project) {
+          throw new Error('Project not found');
+        }
 
         const { scenes, generatedScenes } = data.project;
         const durationBySceneId = new Map(scenes.map((s) => [s.id, s.duration]));
@@ -137,8 +168,10 @@ export default function VideoEditorPage() {
 
         // Only completed scenes that actually rendered a video URL become clips.
         const ready = generatedScenes
-          .filter((g): g is typeof g & { videoUrl: string } =>
-            g.status === 'completed' && typeof g.videoUrl === 'string' && g.videoUrl.length > 0)
+          .filter(
+            (g): g is typeof g & { videoUrl: string } =>
+              g.status === 'completed' && typeof g.videoUrl === 'string' && g.videoUrl.length > 0,
+          )
           .map((g) => ({
             url: g.videoUrl,
             thumbnailUrl: g.thumbnailUrl,
@@ -168,7 +201,9 @@ export default function VideoEditorPage() {
 
   // ── Split at playhead — reused by toolbar + keyboard ────────────────────
   const splitAtPlayhead = useCallback(() => {
-    if (!selectedClipId) { return; }
+    if (!selectedClipId) {
+      return;
+    }
     let elapsed = 0;
     for (const clip of clips) {
       const dur = effectiveDuration(clip);
@@ -185,7 +220,9 @@ export default function VideoEditorPage() {
 
   // ── Export to /api/video/editor/render ──────────────────────────────────
   const handleExport = useCallback(async () => {
-    if (clips.length === 0) { return; }
+    if (clips.length === 0) {
+      return;
+    }
     setExportState({ phase: 'rendering', error: null, item: null });
     try {
       const body = {
@@ -230,7 +267,7 @@ export default function VideoEditorPage() {
         item: null,
       });
     }
-  }, [clips, textOverlays, authFetch, setExportState]);
+  }, [clips, textOverlays, authFetch]);
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────
   useEffect(() => {
@@ -273,21 +310,35 @@ export default function VideoEditorPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isPlaying, splitAtPlayhead]);
 
-  const exportingNow = exportState.phase === 'rendering';
+  // ── Shared contract handed to every mode workspace ──────────────────────
+  const modeProps: EditorModeProps = {
+    state,
+    dispatch,
+    authFetch,
+    exportState,
+    onExport: () => {
+      void handleExport();
+    },
+    onSplit: splitAtPlayhead,
+  };
 
-  // ── Render ──────────────────────────────────────────────────────────────
+  const activeMeta = mode ? EDITOR_MODES.find((m) => m.id === mode) : null;
+  const ActiveMode = mode ? MODE_COMPONENTS[mode] : null;
+
   return (
     <div className="p-6 space-y-4">
       <SubpageNav items={CONTENT_GENERATOR_TABS} />
 
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-4">
         <div>
           <PageTitle className="text-2xl flex items-center gap-2">
             <Scissors className="w-6 h-6 text-primary" />
             Video Editor
           </PageTitle>
           <SectionDescription className="mt-1 text-muted-foreground">
-            Trim, stitch, light, and caption — drop clips, drag the playhead, click Export.
+            {activeMeta
+              ? `${activeMeta.label} — matches ${activeMeta.competitor}.`
+              : 'Pick how you want to edit — each mode gives you the right tools for the job.'}
           </SectionDescription>
         </div>
         <div className="flex items-center gap-2">
@@ -303,88 +354,33 @@ export default function VideoEditorPage() {
               Couldn’t load that project — start from the library.
             </div>
           )}
+          {activeMeta && (
+            <Button variant="outline" size="sm" onClick={() => setMode(null)} className="gap-1.5">
+              <LayoutGrid className="w-4 h-4" />
+              Change mode
+            </Button>
+          )}
           <ExportStatusPill state={exportState} />
         </div>
       </header>
 
-      <Toolbar
-        isPlaying={isPlaying}
-        zoomLevel={zoomLevel}
-        canUndo={undoStack.length > 0}
-        canRedo={redoStack.length > 0}
-        isExporting={exportingNow}
-        hasClips={clips.length > 0}
-        selectedClipId={selectedClipId}
-        playheadTime={playheadTime}
-        totalDuration={totalDuration}
-        onSplit={splitAtPlayhead}
-        onExport={() => { void handleExport(); }}
-        dispatch={dispatch}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Preview — center/left, takes most of the width */}
-        <div className="lg:col-span-9 space-y-4">
-          <Preview
-            clips={clips}
-            textOverlays={textOverlays}
-            selectedOverlayId={selectedOverlayId}
-            playheadTime={playheadTime}
-            isPlaying={isPlaying}
-            totalDuration={totalDuration}
-            dispatch={dispatch}
-          />
-          <Timeline
-            clips={clips}
-            audioTracks={audioTracks}
-            textOverlays={textOverlays}
-            selectedClipId={selectedClipId}
-            selectedOverlayId={selectedOverlayId}
-            playheadTime={playheadTime}
-            totalDuration={totalDuration}
-            zoomLevel={zoomLevel}
-            dispatch={dispatch}
-          />
-        </div>
-
-        {/* EffectsPanel — right column */}
-        <div className="lg:col-span-3">
-          <EffectsPanel
-            clips={clips}
-            textOverlays={textOverlays}
-            selectedClipId={selectedClipId}
-            selectedOverlayId={selectedOverlayId}
-            playheadTime={playheadTime}
-            totalDuration={totalDuration}
-            dispatch={dispatch}
-          />
-        </div>
-      </div>
-
-      {/* Footer keyboard hint */}
-      <div className="text-[10px] text-muted-foreground flex flex-wrap gap-3 px-1">
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Space</kbd> Play/Pause</span>
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">S</kbd> Split at playhead</span>
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Ctrl+Z</kbd> Undo</span>
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Ctrl+Shift+Z</kbd> Redo</span>
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Esc</kbd> Deselect</span>
-      </div>
+      {mode === null || ActiveMode === null ? (
+        <EditorModeSelector onSelect={setMode} hasClips={clips.length > 0} />
+      ) : (
+        <ActiveMode {...modeProps} />
+      )}
     </div>
   );
 }
 
 // ============================================================================
-// Local types & sub-components
+// Local sub-components
 // ============================================================================
 
-interface ExportState {
-  phase: 'idle' | 'rendering' | 'done' | 'error';
-  error: string | null;
-  item: MediaItem | null;
-}
-
 function ExportStatusPill({ state }: { state: ExportState }) {
-  if (state.phase === 'idle') { return null; }
+  if (state.phase === 'idle') {
+    return null;
+  }
 
   if (state.phase === 'rendering') {
     return (
