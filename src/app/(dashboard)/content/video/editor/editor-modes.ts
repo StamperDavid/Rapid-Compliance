@@ -7,12 +7,9 @@
  * The operator picks a purpose; that mode renders its own tools against the SAME
  * project state, so the capabilities never collide in one crowded screen.
  *
- * Each capability is certified to its own competitor (parity = floor):
- *   pro    → Adobe Premiere Pro      (multi-track pro editing)
- *   quick  → CapCut                  (fast templated edits)
- *   script → Descript                (edit-by-transcript, filler/silence removal)
- *   social → Reap / OpusClip         (long → captioned vertical shorts)
- *   vfx    → our fal/Seedance engines (generative VFX + B-roll)
+ * Modes are named by WHAT THEY DO — never by competitor software. We never
+ * surface another product's name to operators or clients. (Our internal parity
+ * benchmarks per mode live in project memory, not in the product.)
  *
  * EVERY mode component receives the SAME `EditorModeProps` contract and must
  * drive the shared reducer — never fork its own project state.
@@ -55,8 +52,9 @@ export interface EditorModeProps {
 
 export interface EditorModeMeta {
   id: EditorMode;
+  /** Function-based name shown in the UI — never a competitor product name. */
   label: string;
-  competitor: string;
+  /** Short "what it does" line (competitor-free). */
   description: string;
   icon: LucideIcon;
 }
@@ -64,37 +62,32 @@ export interface EditorModeMeta {
 export const EDITOR_MODES: EditorModeMeta[] = [
   {
     id: 'pro',
-    label: 'Professional Editing',
-    competitor: 'Adobe Premiere Pro',
-    description: 'Multi-track timeline, trim, split, transitions, effects, and high-res export.',
+    label: 'Edit & Stitch',
+    description: 'Multi-track timeline — trim, split, transitions, effects, and high-res export.',
     icon: Clapperboard,
   },
   {
     id: 'quick',
     label: 'Quick Edits',
-    competitor: 'CapCut',
-    description: 'Fast templated edits, one-tap captions, effects, and quick export.',
+    description: 'Fast edits, one-tap captions, look filters, transitions, and quick export.',
     icon: Zap,
   },
   {
     id: 'script',
     label: 'Script & Podcast',
-    competitor: 'Descript',
     description: 'Edit by transcript — delete words to cut video, strip filler words and silences.',
     icon: FileText,
   },
   {
     id: 'social',
-    label: 'Social Repurposing',
-    competitor: 'Reap / OpusClip',
-    description: 'Turn a long video into captioned, vertical short clips automatically.',
+    label: 'Clipping & Shorts',
+    description: 'Turn a long video into captioned, vertical short clips.',
     icon: Share2,
   },
   {
     id: 'vfx',
-    label: 'Generative VFX & B-Roll',
-    competitor: 'Our AI engines',
-    description: 'Generate B-roll and generative effects from your scenes and drop them on the timeline.',
+    label: 'VFX & B-Roll',
+    description: 'Generate B-roll and effects from your scenes and drop them on the timeline.',
     icon: Wand2,
   },
 ];

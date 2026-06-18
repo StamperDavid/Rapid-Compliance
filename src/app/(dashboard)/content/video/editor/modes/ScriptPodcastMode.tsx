@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Script & Podcast mode (parity floor: Descript — edit by transcript).
+ * Script & Podcast mode — edit by transcript.
  *
  * Workflow:
  *   1. Operator clicks "Transcribe project". We POST every clip URL to

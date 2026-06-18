@@ -10,8 +10,8 @@
  * the five capabilities never collide in one crowded screen and switching never
  * loses the project.
  *
- * Modes + their parity floors live in editor-modes.ts:
- *   pro · quick · script · social · vfx  → Premiere · CapCut · Descript · OpusClip · our AI
+ * Modes are named by what they do (see editor-modes.ts):
+ *   Edit & Stitch · Quick Edits · Script & Podcast · Clipping & Shorts · VFX & B-Roll
  */
 
 import { useReducer, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
@@ -346,7 +346,7 @@ export default function VideoEditorPage() {
           >
             {EDITOR_MODES.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.label} · {m.competitor}
+                {m.label}
               </option>
             ))}
           </select>

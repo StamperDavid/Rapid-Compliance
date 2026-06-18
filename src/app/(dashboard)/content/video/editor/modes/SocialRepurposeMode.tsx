@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Social Repurposing mode (parity floor: Reap / OpusClip).
+ * Clipping & Shorts mode — turn a long video into vertical shorts.
  *
  * Turn a long project into captioned, vertical short clips. This workspace drives
  * the SHARED reducer's project (state.clips) — it never forks its own project
@@ -228,7 +228,7 @@ export default function SocialRepurposeMode({ state, authFetch }: EditorModeProp
           })),
           transition: 'cut',
           resolution: '1080p',
-          // True vertical output for social shorts (OpusClip-parity).
+          // True vertical output for social shorts.
           aspect: '9:16',
           textOverlays: captionOverlays.map((o) => ({
             text: o.text,

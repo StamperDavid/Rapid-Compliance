@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Pro Editing mode (parity floor: Adobe Premiere Pro).
+ * Edit & Stitch mode — the full multi-track editing workspace.
  *
  * The full multi-track workspace: transport/undo/redo/split/zoom/export toolbar,
  * a live preview with draggable text, the V/T/A timeline, and a context-sensitive

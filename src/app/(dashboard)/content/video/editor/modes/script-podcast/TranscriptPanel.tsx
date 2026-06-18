@@ -7,7 +7,7 @@
  * (click a start word, shift/drag to an end word). Filler words are tinted so
  * the operator can see what "Remove filler words" will take out. Clicking a
  * word also moves the playhead to that word — so reading and scrubbing are the
- * same gesture, the way Descript works.
+ * same gesture.
  */
 
 import { useMemo } from 'react';

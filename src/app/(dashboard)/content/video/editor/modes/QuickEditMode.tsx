@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Quick Edits mode (parity floor: CapCut).
+ * Quick Edits mode — fast, simplified one-screen editing.
  *
  * A fast, one-screen workspace: a large preview, a simple horizontal clip strip
  * (reorder / trim / duplicate / delete / select), and one-tap quick actions
@@ -42,7 +42,7 @@ import {
 import QuickClipStrip from './quick-edit/QuickClipStrip';
 import { LOOK_PRESETS, activePresetId } from './quick-edit/look-presets';
 
-// Sensible caption defaults — bottom, large, white-on-translucent (CapCut-style).
+// Sensible caption defaults — bottom, large, white-on-translucent.
 const CAPTION_DEFAULT_DURATION = 3; // seconds the caption stays on screen
 const CAPTION_FONT_SIZE = 32;
 const CAPTION_FONT_COLOR = '#ffffff';

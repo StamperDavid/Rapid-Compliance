@@ -3,7 +3,7 @@
 /**
  * QuickClipStrip — the simplified horizontal clip strip for Quick Edits.
  *
- * Parity floor: CapCut's bottom clip rail. Each clip is a tappable card with
+ * A bottom clip rail. Each clip is a tappable card with
  * thumbnail, name, and live duration. Selecting a clip surfaces inline reorder
  * (◀ ▶), duplicate, and delete affordances. Trimming lives in the parent panel
  * so the strip stays one-tap simple. Everything drives the SHARED reducer — the

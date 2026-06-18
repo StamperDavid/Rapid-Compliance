@@ -1,5 +1,5 @@
 /**
- * Quick-edit "look" presets (parity floor: CapCut one-tap filters).
+ * Quick-edit "look" presets — one-tap filters.
  *
  * Each preset is a complete ClipEffect that the Quick Edits workspace applies to
  * a clip via UPDATE_CLIP. The values map to the same brightness/contrast/
