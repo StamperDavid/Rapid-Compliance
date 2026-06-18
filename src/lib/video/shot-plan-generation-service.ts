@@ -40,6 +40,7 @@ import { adminStorage } from '@/lib/firebase/admin';
 import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
 import { generateWithFal, generateFromReferenceWithFal } from '@/lib/ai/providers/fal-provider';
 import { createAsset } from '@/lib/media/media-library-service';
+import { createAvatarProfile, getAvatarProfile } from '@/lib/video/avatar-profile-service';
 import {
   ensureFfmpeg,
   runFfmpeg,
@@ -1648,4 +1649,94 @@ export async function renderShotPlanAssets(
   }
 
   return current;
+}
+
+// ============================================================================
+// saveInventedCharactersToLibrary — opt-in persist of invented cast (the checkbox)
+// ============================================================================
+
+/** A one-paragraph character DNA description from the casting card (for the profile). */
+function buildCharacterDescription(member: ShotPlanCastMember): string {
+  const hair = [member.hairColor, member.hairStyle].map((s) => s?.trim()).filter(Boolean).join(' ');
+  return [
+    member.notes?.trim(),
+    member.apparentAge?.trim(),
+    member.ethnicity?.trim(),
+    member.gender?.trim(),
+    member.build?.trim() ? `${member.build.trim()} build` : '',
+    hair ? `${hair} hair` : '',
+    member.wardrobe?.trim() ? `wearing ${member.wardrobe.trim()}` : '',
+  ]
+    .filter((s): s is string => Boolean(s && s.length > 0))
+    .join('. ');
+}
+
+/**
+ * Persist every cast member the operator opted to keep (`saveToLibrary`) into the
+ * Character Library — AFTER its reference art exists, so the saved profile has a
+ * real frontal image. Runs at generation time (called by the route, which holds the
+ * userId). A character that is already a saved profile is skipped. On success the
+ * member's `saveToLibrary` flag is cleared so it is never double-saved. Best-effort
+ * per character; the saved profile gets a NEW library id (the plan keeps its own id).
+ */
+export async function saveInventedCharactersToLibrary(plan: ShotPlan, userId: string): Promise<ShotPlan> {
+  const cast = plan.sharedChoices.cast;
+  if (!cast.some((c) => c.saveToLibrary)) {
+    return plan;
+  }
+
+  const updated: ShotPlanCastMember[] = [];
+  let changed = false;
+  for (const member of cast) {
+    const base = member.referenceImageUrls[0];
+    if (!member.saveToLibrary || !base) {
+      updated.push(member);
+      continue;
+    }
+    // Already a saved profile (e.g. a library-sourced character) → just clear the flag.
+    const existing = await getAvatarProfile(member.characterId).catch(() => null);
+    if (existing) {
+      updated.push({ ...member, saveToLibrary: false });
+      changed = true;
+      continue;
+    }
+    try {
+      const result = await createAvatarProfile(userId, {
+        name: member.name,
+        frontalImageUrl: base,
+        additionalImageUrls: member.referenceImageUrls.slice(1, 5),
+        styleTag: 'real',
+        description: buildCharacterDescription(member),
+        source: 'custom',
+      });
+      if (result.success) {
+        logger.info('[shot-plan-gen] saved invented character to library', {
+          file: FILE,
+          character: member.name,
+          profileId: result.profile?.id,
+        });
+        updated.push({ ...member, saveToLibrary: false });
+        changed = true;
+      } else {
+        logger.warn('[shot-plan-gen] could not save invented character', {
+          file: FILE,
+          character: member.name,
+          error: result.error,
+        });
+        updated.push(member);
+      }
+    } catch (err) {
+      logger.error(
+        '[shot-plan-gen] save invented character threw (continuing)',
+        err instanceof Error ? err : new Error(String(err)),
+        { file: FILE, character: member.name },
+      );
+      updated.push(member);
+    }
+  }
+
+  if (!changed) {
+    return plan;
+  }
+  return applyShotPlanEdit(plan, { target: 'shared', field: 'cast', value: updated });
 }

@@ -129,8 +129,9 @@ interface CharacterFormProps {
   profile: AvatarProfile | null;
   open: boolean;
   onClose: () => void;
-  /** Resolves true on a successful save so the parent can refresh + close. */
-  onSaved: () => void;
+  /** Called on a successful save; receives the saved profile (when the API returns it)
+   *  so a caller like the Shot Doc can add the new character straight to the cast. */
+  onSaved: (profile?: AvatarProfile) => void;
 }
 
 // ============================================================================
@@ -512,12 +513,12 @@ export default function CharacterForm({
             body: JSON.stringify(payload),
           });
 
-      const data = (await res.json()) as { success: boolean; error?: string };
+      const data = (await res.json()) as { success: boolean; error?: string; profile?: AvatarProfile };
       if (!res.ok || !data.success) {
         setErrorMsg(data.error ?? 'Could not save the character. Try again.');
         return;
       }
-      onSaved();
+      onSaved(data.profile);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Could not save the character.');
     } finally {

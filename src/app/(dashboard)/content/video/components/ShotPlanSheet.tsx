@@ -56,6 +56,7 @@ import {
   PlayCircle,
   Download,
   Film,
+  UserPlus,
   FileUp,
   LibraryBig,
   FileVideo,
@@ -86,6 +87,7 @@ import { CinematicControlsPanel } from '@/components/studio/CinematicControlsPan
 import { ConstructedPromptDisplay } from '@/components/studio/ConstructedPromptDisplay';
 import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/MediaLibraryPicker';
 import { AvatarPicker } from './AvatarPicker';
+import CharacterForm from '../../characters/CharacterForm';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { ShotPlanDocument } from './ShotPlanDocument';
 import { ZoomPanViewport } from './ZoomPanViewport';
@@ -816,6 +818,15 @@ function CastCard({
               <option value="signature">Signature — keep this outfit constant</option>
             </select>
           </div>
+          <label className="flex cursor-pointer items-center gap-2 border-t border-border-light pt-3 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={Boolean(member.saveToLibrary)}
+              onChange={(e) => patchMember({ saveToLibrary: e.target.checked })}
+              className="h-4 w-4 rounded border-border-strong accent-primary"
+            />
+            <span>Save this character to my Character Library when I generate</span>
+          </label>
         </div>
       )}
     </div>
@@ -2111,6 +2122,9 @@ export function ShotPlanSheet() {
   const [askAiSubmitting, setAskAiSubmitting] = useState(false);
   const [askAiError, setAskAiError] = useState<string | null>(null);
   const [castPickerOpen, setCastPickerOpen] = useState(false);
+  // "Create new" character — opens the full Character Studio creator; on save the
+  // new (saved) character is added straight to this plan's cast.
+  const [createCharacterOpen, setCreateCharacterOpen] = useState(false);
   const [cameraShotId, setCameraShotId] = useState<string | null>(null);
   // The storyboard panel currently expanded into the full per-shot editor below the strip.
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
@@ -2940,13 +2954,18 @@ export function ShotPlanSheet() {
           title="Cast"
           icon={Users}
           action={
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCastPickerOpen(true)}>
-              <Plus className="w-3.5 h-3.5" /> Add cast
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCastPickerOpen(true)}>
+                <Plus className="w-3.5 h-3.5" /> From library
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCreateCharacterOpen(true)}>
+                <UserPlus className="w-3.5 h-3.5" /> Create new
+              </Button>
+            </div>
           }
         >
         {sharedChoices.cast.length === 0 ? (
-          <SectionDescription>No cast yet. Add your saved characters to use them across shots.</SectionDescription>
+          <SectionDescription>No cast yet. Pick a saved character from your library, or create a new one — new characters can be saved back to your library.</SectionDescription>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {sharedChoices.cast.map((member) => (
@@ -3170,6 +3189,20 @@ export function ShotPlanSheet() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Create New character — the full Character Studio creator. On save the new
+          (saved) character is added straight to the cast. */}
+      <CharacterForm
+        profile={null}
+        open={createCharacterOpen}
+        onClose={() => setCreateCharacterOpen(false)}
+        onSaved={(profile) => {
+          if (profile) {
+            addCast(castMemberFromProfile(profile));
+          }
+          setCreateCharacterOpen(false);
+        }}
+      />
 
       <AddObjectDialog
         open={objectDialogOpen}
