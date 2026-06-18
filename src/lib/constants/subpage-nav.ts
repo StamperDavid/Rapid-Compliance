@@ -190,10 +190,18 @@ export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
   { label: 'Video', href: '/content/video' },
   { label: 'Image', href: '/content/image-generator' },
   { label: 'Editor', href: '/content/video/editor' },
-  { label: 'Library', href: '/content/video/library' },
-  { label: 'Characters', href: '/content/characters' },
-  { label: 'Locations', href: '/content/locations' },
+  // Media, Characters and Locations are all libraries → consolidated under one
+  // "Library" tab with internal sections (see LIBRARY_SECTIONS + /content/library).
+  { label: 'Library', href: '/content/library' },
   { label: 'Audio Lab', href: '/content/voice-lab' },
+];
+
+// The sections inside the unified Library (rendered as a second-level nav by the
+// /content/library layout). Each is its own route under /content/library/*.
+export const LIBRARY_SECTIONS: SubpageNavItem[] = [
+  { label: 'Media', href: '/content/library/media' },
+  { label: 'Characters', href: '/content/library/characters' },
+  { label: 'Locations', href: '/content/library/locations' },
 ];
 
 // ── AI Workforce Hub (May 19 2026: added Workflows) ─────────────────────────
