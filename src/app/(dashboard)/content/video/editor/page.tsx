@@ -1,25 +1,24 @@
 'use client';
 
 /**
- * Video Editor — purpose-first shell.
+ * Video Editor — opens straight into the editor (Pro workspace by default).
  *
  * The editor is ONE shared core (the reducer below: clips, audio, text overlays,
  * trim/split/transitions/effects/undo + the generation handoff + the
- * export-to-Library path) with SEVERAL focused workspaces ("modes") layered on
- * top. The operator first picks a purpose (EditorModeSelector); that mode renders
- * its own tools against the SAME project, so the capabilities never collide in one
- * crowded screen. Switching modes never loses the project.
+ * export-to-Library path). A compact MODE dropdown in the header swaps which
+ * focused workspace is shown — instantly, in local state, with no navigation — so
+ * the five capabilities never collide in one crowded screen and switching never
+ * loses the project.
  *
  * Modes + their parity floors live in editor-modes.ts:
  *   pro · quick · script · social · vfx  → Premiere · CapCut · Descript · OpusClip · our AI
  */
 
 import { useReducer, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, LayoutGrid } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
-import { PageTitle, SectionDescription } from '@/components/ui/typography';
-import { Button } from '@/components/ui/button';
+import { PageTitle } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
@@ -31,12 +30,10 @@ import type { PipelineProject } from '@/types/video-pipeline';
 import { takeEditorSeed } from '@/lib/video/editor-seed';
 import {
   EDITOR_MODES,
-  isEditorMode,
   type EditorMode,
   type EditorModeProps,
   type ExportState,
 } from './editor-modes';
-import EditorModeSelector from './EditorModeSelector';
 import ProEditMode from './modes/ProEditMode';
 import QuickEditMode from './modes/QuickEditMode';
 import ScriptPodcastMode from './modes/ScriptPodcastMode';
@@ -65,12 +62,12 @@ function effectiveDuration(clip: EditorClip): number {
 export default function VideoEditorPage() {
   const authFetch = useAuthFetch();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const projectIdParam = searchParams.get('project');
-  const modeParam = searchParams.get('mode');
-  const mode: EditorMode | null = isEditorMode(modeParam) ? modeParam : null;
 
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
+  // Mode is local UI state — the editor opens on the Pro workspace and the header
+  // dropdown swaps workspaces instantly without navigating or losing the project.
+  const [mode, setMode] = useState<EditorMode>('pro');
 
   const { clips, textOverlays, isPlaying, selectedClipId, playheadTime } = state;
 
@@ -80,21 +77,6 @@ export default function VideoEditorPage() {
     error: null,
     item: null,
   });
-
-  // ── Switch / clear the active mode (preserves other query params, e.g. project) ─
-  const setMode = useCallback(
-    (next: EditorMode | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (next) {
-        params.set('mode', next);
-      } else {
-        params.delete('mode');
-      }
-      const qs = params.toString();
-      router.replace(qs ? `/content/video/editor?${qs}` : '/content/video/editor');
-    },
-    [router, searchParams],
-  );
 
   // ── Project auto-load: when the editor is opened as the destination of a
   //    finished generation (`?project=<id>`), pull the project's completed
@@ -322,26 +304,36 @@ export default function VideoEditorPage() {
     onSplit: splitAtPlayhead,
   };
 
-  const activeMeta = mode ? EDITOR_MODES.find((m) => m.id === mode) : null;
-  const ActiveMode = mode ? MODE_COMPONENTS[mode] : null;
+  const ActiveMode = MODE_COMPONENTS[mode];
 
   return (
     <div className="p-6 space-y-4">
       <SubpageNav items={CONTENT_GENERATOR_TABS} />
 
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <PageTitle className="text-2xl flex items-center gap-2">
-            <Scissors className="w-6 h-6 text-primary" />
-            Video Editor
-          </PageTitle>
-          <SectionDescription className="mt-1 text-muted-foreground">
-            {activeMeta
-              ? `${activeMeta.label} — matches ${activeMeta.competitor}.`
-              : 'Pick how you want to edit — each mode gives you the right tools for the job.'}
-          </SectionDescription>
-        </div>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <PageTitle className="text-2xl flex items-center gap-2">
+          <Scissors className="w-6 h-6 text-primary" />
+          Video Editor
+        </PageTitle>
+
         <div className="flex items-center gap-2">
+          {/* Mode dropdown — swaps the focused workspace in place */}
+          <label htmlFor="editor-mode" className="text-xs text-muted-foreground">
+            Mode
+          </label>
+          <select
+            id="editor-mode"
+            value={mode}
+            onChange={(e) => setMode(e.target.value as EditorMode)}
+            className="h-9 rounded-md border border-border-strong bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {EDITOR_MODES.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label} · {m.competitor}
+              </option>
+            ))}
+          </select>
+
           {projectLoad === 'loading' && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -354,21 +346,11 @@ export default function VideoEditorPage() {
               Couldn’t load that project — start from the library.
             </div>
           )}
-          {activeMeta && (
-            <Button variant="outline" size="sm" onClick={() => setMode(null)} className="gap-1.5">
-              <LayoutGrid className="w-4 h-4" />
-              Change mode
-            </Button>
-          )}
           <ExportStatusPill state={exportState} />
         </div>
       </header>
 
-      {mode === null || ActiveMode === null ? (
-        <EditorModeSelector onSelect={setMode} hasClips={clips.length > 0} />
-      ) : (
-        <ActiveMode {...modeProps} />
-      )}
+      <ActiveMode {...modeProps} />
     </div>
   );
 }
