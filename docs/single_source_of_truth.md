@@ -1932,7 +1932,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 
 **Smoke test:** 48/48 passing (100%) after migration.
 
-**API Keys to Firestore:** All service API keys (OpenRouter, SendGrid, Stripe, Twilio, ElevenLabs, HeyGen, Serper, DataForSEO, Twitter/X, Slack, PageSpeed) are now stored in Firestore via `apiKeyService` rather than `.env` files. `process.env` remains as fallback for development and for system secrets (webhook verification keys, Firebase admin credentials, encryption keys).
+**API Keys to Firestore:** All service API keys (OpenRouter, SendGrid, Stripe, Twilio, ElevenLabs, Serper, DataForSEO, Twitter/X, Slack, PageSpeed) are now stored in Firestore via `apiKeyService` rather than `.env` files. `process.env` remains as fallback for development and for system secrets (webhook verification keys, Firebase admin credentials, encryption keys).
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 

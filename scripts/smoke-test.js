@@ -120,7 +120,7 @@ async function run() {
 
   // Test individual keys via the test endpoint
   console.log('\n--- API: Key Validation ---');
-  const keysToTest = ['openrouter', 'sendgrid', 'stripe_secret', 'elevenlabs', 'heygen', 'serper'];
+  const keysToTest = ['openrouter', 'sendgrid', 'stripe_secret', 'elevenlabs', 'serper'];
   for (const svc of keysToTest) {
     const r = await hit(`Test ${svc}`, 'GET', `/api/settings/api-keys/test?PLATFORM_ID=rapid-compliance-root&service=${svc}`, token);
     results.push(r);

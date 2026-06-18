@@ -64,7 +64,7 @@ certified, date signed). A vertical with no cert is NOT shippable and NOT claime
 - **Phase 0 first** (inventory + data-path foundation).
 - **Vertical #1 = Video / Shot Doc** (the detailed spec below — it's closest to the bar already,
   so it rides its momentum through the rubric and becomes the template for what "certified" feels
-  like). Benchmark TBD by owner (e.g. Synthesia / HeyGen / Arcads / OpenArt).
+  like). Benchmark TBD by owner (e.g. Synthesia / Arcads / OpenArt).
 - Then the remaining verticals one at a time, value-ordered (proposed: onboarding/identity →
   CRM + lead capture → one outreach channel → social → website → commerce → reputation →
   scheduling → analytics). Owner confirms order + each benchmark.

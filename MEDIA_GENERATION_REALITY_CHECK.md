@@ -9,7 +9,7 @@
 
 **TL;DR:** The AI agent swarm has extensive text-generation capabilities but **ZERO actual image/video generation** in production. Everything is either:
 1. **Mock responses** (returns placeholder URLs)
-2. **API wrappers** that call external services (HeyGen, Runway, Sora) IF keys are configured
+2. **API wrappers** that call external services (fal / Seedance, Runway, Sora) IF keys are configured
 3. **Planning/strategy** agents that produce JSON descriptions, not actual media
 
 ---
@@ -63,7 +63,7 @@ npm list sharp jimp canvas fluent-ffmpeg
 
 ### Video Service (`src/lib/video/video-service.ts`)
 **Has API integrations for:**
-1. **HeyGen** - Avatar videos (IF API key configured)
+1. **fal / Seedance** - AI video generation (IF API key configured)
 2. **Sora** - Text-to-video (IF OpenAI key configured)
 3. **Runway** - Gen-3 video (IF Runway key configured)
 
@@ -75,7 +75,7 @@ async function generateVideo(request: VideoGenerationRequest): Promise<VideoGene
 
   // Check if provider is configured
   if (await isProviderConfigured(request.provider)) {
-    // Try to call external API (HeyGen/Sora/Runway)
+    // Try to call external API (fal/Sora/Runway)
     // IF it fails or isn't configured:
   }
 
@@ -85,7 +85,7 @@ async function generateVideo(request: VideoGenerationRequest): Promise<VideoGene
 ```
 
 **What actually happens:**
-- If HeyGen/Sora/Runway keys are configured → Makes real API calls to external services
+- If fal/Sora/Runway keys are configured → Makes real API calls to external services
 - If NOT configured → Returns "Coming Soon" stub response
 - The platform does NOT generate videos itself - it's a **proxy to external paid APIs**
 
@@ -94,7 +94,7 @@ async function generateVideo(request: VideoGenerationRequest): Promise<VideoGene
 
 **Architecture:**
 1. Load storyboard from Firestore
-2. Route shots to providers via `MultiModelPicker` (Runway, Veo, Sora, Kling, Pika, HeyGen, Stable Video)
+2. Route shots to providers via `MultiModelPicker` (Runway, Veo, Sora, Kling, Pika, fal / Seedance, Stable Video)
 3. Call provider APIs to generate clips
 4. Poll for completion with exponential backoff
 5. Trigger `StitcherService` for post-production
@@ -244,7 +244,7 @@ They would need to:
 3. **Which creates a VideoJob in Firestore**
 4. A worker process (TBD) would:
    - Read the storyboard
-   - Call HeyGen/Runway/Sora APIs for each shot (IF configured)
+   - Call fal / Seedance / Runway / Sora APIs for each shot (IF configured)
    - Wait for clips to generate (minutes to hours)
    - Run stitcher to combine clips (IF ffmpeg is set up)
    - Upload final video to Firebase Storage
@@ -265,8 +265,8 @@ They would need to:
 | **Video Scripts** | ✅ Claimed | ✅ **WORKS** | Text script with timing |
 | **Video SEO** | ✅ Claimed | ✅ **WORKS** | Optimized titles, tags, descriptions |
 | **Thumbnail Concepts** | ✅ Claimed | ✅ **WORKS** | Design specs (not images) |
-| **Actual Video Rendering** | ✅ Claimed | ⚠️ **PARTIAL** | Works IF HeyGen/Runway configured |
-| **HeyGen Avatar Videos** | ✅ Claimed | ✅ **CAN WORK** | Real API integration (needs key) |
+| **Actual Video Rendering** | ✅ Claimed | ⚠️ **PARTIAL** | Works IF fal/Runway configured |
+| **fal / Seedance Videos** | ✅ Claimed | ✅ **CAN WORK** | Real API integration (needs key) |
 | **Runway Gen-3 Videos** | ✅ Claimed | ✅ **CAN WORK** | Real API integration (needs key) |
 | **Sora Text-to-Video** | ✅ Claimed | ✅ **CAN WORK** | Real API integration (needs key) |
 | **Thumbnail Image Files** | ✅ Implied | ❌ No implementation | None - only strategy text |
@@ -279,7 +279,7 @@ They would need to:
 
 ### ✅ What DOES Work
 1. **AI-powered content planning** - Excellent storyboards, scripts, shot lists
-2. **API proxy architecture** - Can delegate to HeyGen/Runway/Sora IF configured
+2. **API proxy architecture** - Can delegate to fal / Seedance / Runway / Sora IF configured
 3. **Structured output** - Returns well-formed JSON for every request
 4. **Analytics tracking** - Logs feature interest to Firestore
 5. **Waitlist management** - Captures user intent for future features
@@ -304,7 +304,7 @@ They would need to:
 **Update the dashboard to show:**
 ```
 ✅ We can create detailed video plans (storyboards, scripts, shot lists)
-⚠️ Video rendering requires HeyGen/Runway API keys (you provide)
+⚠️ Video rendering requires fal / Runway API keys (you provide)
 ❌ Image generation coming soon (currently generates prompts only)
 ```
 
@@ -348,7 +348,7 @@ They would need to:
 - **Output:** JSON storyboard, text scripts, strategy docs
 
 ### If External APIs Configured
-- **HeyGen:** ~$0.01/second = $6 for 10-minute video
+- **fal / Seedance:** pricing per generation run (see fal.ai dashboard)
 - **Runway Gen-3:** ~$0.05/second = $30 for 10-minute video
 - **Sora:** ~$0.015/second = $9 for 10-minute video
 - **Plus:** Stitching costs (Cloud Run compute), storage (Firebase)
@@ -404,7 +404,7 @@ User must:
 - `src/lib/agents/content/manager.ts` - Content orchestration
 
 ### Video Infrastructure
-- `src/lib/video/video-service.ts` - HeyGen/Sora/Runway API wrappers
+- `src/lib/video/video-service.ts` - fal / Seedance / Sora / Runway API wrappers
 - `src/lib/video/engine/render-pipeline.ts` - Multi-provider orchestration (stubbed)
 - `src/lib/video/engine/stitcher-service.ts` - Post-production (no ffmpeg)
 - `src/lib/video/video-job-service.ts` - Job tracking (works)

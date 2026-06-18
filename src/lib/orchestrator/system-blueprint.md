@@ -189,7 +189,7 @@ Multi-provider voice system with AI phone conversations.
 
 ### 8. Video Generation (Operational — Provider Keys Required)
 AI video creation with storyboard pipeline.
-- **Providers:** HeyGen (avatar videos), Runway ML (AI generation), Sora
+- **Providers:** fal / Seedance (primary), Runway ML (AI generation), Sora
 - **Pipeline:** Script decomposition → Scene generation → Multi-model rendering → Stitching → Upload
 - **Storyboard:** AI-powered storyboard creation with Brand DNA integration
 - **Project Management:** Save, list, track video projects
@@ -310,7 +310,7 @@ OAuth integrations with major business platforms.
 - **Payments:** Stripe (primary), PayPal, Square, Mollie, Authorize.net, 2Checkout
 - **Email:** SendGrid, Resend, SMTP
 - **SMS:** Twilio, Vonage
-- **Video:** HeyGen, Runway ML, Sora
+- **Video:** fal / Seedance (primary), Runway ML, Sora
 - **SEO:** Serper API, Google Search Console, PageSpeed Insights, DataForSEO
 - **Storage:** Firebase Storage (uploads, video assets)
 - **Domains:** Vercel API for custom domain management

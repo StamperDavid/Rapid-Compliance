@@ -221,7 +221,7 @@ Features every competitor has that we match or exceed:
 | **Voice AI Marketplace** | TTS with multiple providers, voice agent deployment | Limited or none | Customer service automation |
 | **Multi-Model AI** | OpenAI, Anthropic, Google, OpenRouter support | Locked to single AI provider | Enterprises wanting flexibility |
 | **Workflow AI Actions** | AI agents as workflow action types | None | Complex automation needs |
-| **Video Generation** | HeyGen, Sora, Runway framework | None | Personalized outreach at scale |
+| **Video Generation** | fal / Seedance, Sora, Runway framework | None | Personalized outreach at scale |
 | **SMS-first Workflows** | Full SMS automation in sequences | Limited/add-on | Mobile-first markets |
 | **Accounting Integration** | QuickBooks, Xero native | None | Finance-integrated sales |
 
