@@ -16,12 +16,14 @@
 
 import { useReducer, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, Upload } from 'lucide-react';
 
 import { PageTitle } from '@/components/ui/typography';
+import { Button } from '@/components/ui/button';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
+import { EditorMediaPanel } from './components/EditorMediaPanel';
 
 import { editorReducer, initialEditorState } from './editor-reducer';
 import { DEFAULT_CLIP_DURATION, type EditorClip } from './types';
@@ -68,6 +70,10 @@ export default function VideoEditorPage() {
   // Mode is local UI state — the editor opens on the Pro workspace and the header
   // dropdown swaps workspaces instantly without navigating or losing the project.
   const [mode, setMode] = useState<EditorMode>('pro');
+  // The Add-media rail (upload / library / projects / characters / URL import) is a
+  // SHARED on-ramp — available in every mode so you can bring in your own footage,
+  // an earlier video, or a project's scenes and then edit it however you like.
+  const [mediaOpen, setMediaOpen] = useState(false);
 
   const { clips, textOverlays, isPlaying, selectedClipId, playheadTime } = state;
 
@@ -317,6 +323,17 @@ export default function VideoEditorPage() {
         </PageTitle>
 
         <div className="flex items-center gap-2">
+          {/* Add media — shared import/upload rail, available in every mode */}
+          <Button
+            variant={mediaOpen ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setMediaOpen((open) => !open)}
+            className="gap-1.5"
+          >
+            <Upload className="w-4 h-4" />
+            Add media
+          </Button>
+
           {/* Mode dropdown — swaps the focused workspace in place */}
           <label htmlFor="editor-mode" className="text-xs text-muted-foreground">
             Mode
@@ -350,7 +367,18 @@ export default function VideoEditorPage() {
         </div>
       </header>
 
-      <ActiveMode {...modeProps} />
+      {mediaOpen ? (
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-4">
+          <aside className="h-fit lg:sticky lg:top-4">
+            <EditorMediaPanel dispatch={dispatch} defaultTransition={state.defaultTransition} />
+          </aside>
+          <div className="min-w-0">
+            <ActiveMode {...modeProps} />
+          </div>
+        </div>
+      ) : (
+        <ActiveMode {...modeProps} />
+      )}
     </div>
   );
 }
