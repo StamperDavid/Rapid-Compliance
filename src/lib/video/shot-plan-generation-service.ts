@@ -149,6 +149,42 @@ function resolveSpeakingCastMember(plan: ShotPlan, shot: ShotPlanShot): ShotPlan
 }
 
 /**
+ * Premade ElevenLabs voices, split by presentation. These are used ONLY to give an
+ * AI-invented character (a speaker with no saved/recorded voice) a voice the system
+ * "creates" for it. A Character-Library member that has a recorded voice always uses
+ * that recorded voice and never one of these.
+ */
+const AI_FEMALE_VOICES: string[] = ['Rachel', 'Bella', 'Elli', 'Dorothy', 'Sarah', 'Charlotte', 'Matilda', 'Alice'];
+const AI_MALE_VOICES: string[] = ['Antoni', 'Arnold', 'Adam', 'Sam', 'Josh', 'Daniel', 'Charlie', 'George', 'Liam'];
+
+/**
+ * Stable 32-bit FNV-1a hash so the SAME character maps to the SAME voice on every
+ * shot — an invented character must not change voice between shots.
+ */
+function stableHash(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Give a speaker WITHOUT an assigned voice an AI-created voice: a premade ElevenLabs
+ * voice chosen by gender presentation, keyed off `characterId` so the same invented
+ * character keeps the same voice across every shot. Library characters with a
+ * recorded voice never reach here — they always speak in their own voice.
+ */
+function pickAiVoiceForCharacter(member: ShotPlanCastMember): string {
+  const gender = member.gender?.toLowerCase() ?? '';
+  const isFemale = gender.includes('female') || gender.includes('woman') || gender.includes('girl');
+  const isMale = !isFemale && (gender.includes('male') || gender.includes('man') || gender.includes('boy'));
+  const pool = isFemale ? AI_FEMALE_VOICES : isMale ? AI_MALE_VOICES : [...AI_FEMALE_VOICES, ...AI_MALE_VOICES];
+  return pool[stableHash(member.characterId) % pool.length];
+}
+
+/**
  * Resolve the appearance-anchor reference images for every OBJECT/prop the shot
  * lists in `objectIds`, in order, de-duplicated — so the engine renders the same
  * object each shot, exactly like cast identity anchoring.
@@ -674,21 +710,31 @@ export async function generateShot(
     });
 
     // ── Speaking lip-sync (best-effort) ───────────────────────────────────────
-    // When the shot has a spoken line AND its lead cast member has an ASSIGNED
-    // voice, re-sync the silent clip to that voice and chain off the talking
-    // frame. Gated strictly on an assigned voice: an invented character with no
-    // saved profile (or no voice) keeps Seedance's native audio, untouched.
+    // Every spoken line is lip-synced to its speaker's voice. Voice resolution
+    // follows the operator rule:
+    //   • A Character-Library member with a RECORDED/assigned voice uses ONLY that
+    //     voice, always (e.g. Velocity once his voice is recorded).
+    //   • Any other speaker — a character the AI invented for the scene, or a
+    //     library member that has no voice yet — gets an AI-CREATED voice: a premade
+    //     voice picked by gender, keyed off characterId so the same character keeps
+    //     the same voice every shot.
+    // Seedance never generates a competing voice (generateAudio is false), so the
+    // ONLY dialogue audio in the final is the recorded/AI voice we sync here.
     let finalVideoUrl = permanentVideoUrl;
     let finalLastFrameUrl = permanentLastFrameUrl;
     const dialogue = shot.dialogue?.trim();
     if (dialogue) {
       const speaker = resolveSpeakingCastMember(plan, shot);
       const profile = speaker ? await getAvatarProfile(speaker.characterId).catch(() => null) : null;
-      // Strict voice gate: prefer the display voiceName, fall back to voiceId.
-      // Empty/whitespace-only values count as "no voice" → skip lip-sync.
+      // Prefer the display voiceName, fall back to voiceId; empty/whitespace = none.
       const voiceName = profile?.voiceName?.trim();
       const voiceId = profile?.voiceId?.trim();
-      const voice = voiceName && voiceName.length > 0 ? voiceName : voiceId && voiceId.length > 0 ? voiceId : '';
+      const recordedVoice =
+        voiceName && voiceName.length > 0 ? voiceName : voiceId && voiceId.length > 0 ? voiceId : '';
+      // Recorded voice wins; otherwise the AI assigns one (only if there is a speaker).
+      const voice =
+        recordedVoice.length > 0 ? recordedVoice : speaker ? pickAiVoiceForCharacter(speaker) : '';
+      const voiceSource = recordedVoice.length > 0 ? 'recorded' : 'ai-created';
       if (voice) {
         try {
           const falKey = await requireFalKey();
@@ -707,6 +753,7 @@ export async function generateShot(
             shotId,
             character: speaker?.name,
             voice,
+            voiceSource,
           });
         } catch (err) {
           // Best-effort: keep the original silent clip + frame; never fail the shot.
@@ -717,10 +764,10 @@ export async function generateShot(
           );
         }
       } else {
-        logger.info('[shot-plan-gen] shot has dialogue but no assigned voice — skipping lip-sync', {
+        // Dialogue with no resolvable speaker (e.g. an off-screen/scenery line).
+        logger.info('[shot-plan-gen] shot has dialogue but no resolvable speaker — skipping lip-sync', {
           file: FILE,
           shotId,
-          character: speaker?.name,
         });
       }
     }
