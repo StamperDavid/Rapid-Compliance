@@ -569,7 +569,11 @@ export async function generateShot(
         resolution: DEFAULT_RESOLUTION,
         aspectRatio: DEFAULT_ASPECT_RATIO,
         durationSeconds: shot.durationSeconds,
-        generateAudio: Boolean(shot.dialogue),
+        // No Seedance-generated audio: dialogue comes ONLY from the cloned-voice
+        // lip-sync (a coherent single voice), never a competing voice the engine
+        // invents. Non-speaking shots are silent here (music/ambient added in the
+        // editor); the stitch silence-pads them so the final has one clean voice track.
+        generateAudio: false,
         ...(typeof shot.generated?.seed === 'number' ? { seed: shot.generated.seed } : {}),
       };
       logger.info('[shot-plan-gen] submitting CUT shot', {
@@ -607,7 +611,11 @@ export async function generateShot(
         resolution: DEFAULT_RESOLUTION,
         aspectRatio: DEFAULT_ASPECT_RATIO,
         durationSeconds: shot.durationSeconds,
-        generateAudio: Boolean(shot.dialogue),
+        // No Seedance-generated audio: dialogue comes ONLY from the cloned-voice
+        // lip-sync (a coherent single voice), never a competing voice the engine
+        // invents. Non-speaking shots are silent here (music/ambient added in the
+        // editor); the stitch silence-pads them so the final has one clean voice track.
+        generateAudio: false,
         ...(typeof shot.generated?.seed === 'number' ? { seed: shot.generated.seed } : {}),
       };
       logger.info('[shot-plan-gen] submitting CONTINUE shot (identity-locked)', {
