@@ -709,20 +709,10 @@ export function AssetActionsMenu({
           // root
           return (
             <>
-              <MenuItem
-                icon={Users}
-                label="Assign to character"
-                trailing={<ChevronRight className="h-3.5 w-3.5 opacity-50" />}
-                onClick={() => {
-                  onLoadCharacters();
-                  setCharDialog(true);
-                  close();
-                }}
-              />
               {isImage && (
                 <MenuItem
                   icon={UserPlus}
-                  label="Add to character"
+                  label="Add to a character (moves it here)"
                   trailing={
                     <ChevronRight className="h-3.5 w-3.5 opacity-50" />
                   }
@@ -733,6 +723,16 @@ export function AssetActionsMenu({
                   }}
                 />
               )}
+              <MenuItem
+                icon={Users}
+                label="Tag with a character (stays in library)"
+                trailing={<ChevronRight className="h-3.5 w-3.5 opacity-50" />}
+                onClick={() => {
+                  onLoadCharacters();
+                  setCharDialog(true);
+                  close();
+                }}
+              />
               <MenuItem
                 icon={FolderPlus}
                 label="Assign to project"

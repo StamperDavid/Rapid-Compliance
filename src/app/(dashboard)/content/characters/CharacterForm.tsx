@@ -386,7 +386,9 @@ export default function CharacterForm({
               {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assetId: asset.id }),
+                // Pass the exact slot the operator picked so a full-body / upper-body
+                // pick lands in that slot — not silently in "additional".
+                body: JSON.stringify({ assetId: asset.id, slot: target }),
               },
             );
             const data = (await res.json()) as {

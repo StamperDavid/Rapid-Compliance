@@ -21,6 +21,8 @@ const FILE = 'api/video/avatar-profiles/[profileId]/add-image/route.ts';
 
 const MoveImageSchema = z.object({
   assetId: z.string().min(1),
+  // Which reference slot to fill. Optional — defaults to 'additional' downstream.
+  slot: z.enum(['frontal', 'additional', 'fullBody', 'upperBody']).optional(),
 });
 
 export async function POST(
@@ -58,15 +60,16 @@ export async function POST(
       );
     }
 
-    const { assetId } = parsed.data;
+    const { assetId, slot } = parsed.data;
 
     logger.info('Moving media image onto character', {
       file: FILE,
       profileId,
       assetId,
+      slot: slot ?? 'additional',
     });
 
-    const result = await moveImageToCharacter(userId, assetId, profileId);
+    const result = await moveImageToCharacter(userId, assetId, profileId, slot);
 
     if (!result.success) {
       const message = result.error ?? 'Failed to add image to character';

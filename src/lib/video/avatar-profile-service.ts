@@ -739,6 +739,10 @@ export async function moveImageToCharacter(
   userId: string,
   assetId: string,
   characterId: string,
+  // Which reference slot the moved image fills. Defaults to 'additional' (the
+  // media-library "Add to character" path, which has no slot concept); the
+  // character edit form passes the exact slot the operator picked.
+  slot: 'frontal' | 'additional' | 'fullBody' | 'upperBody' = 'additional',
 ): Promise<{ success: boolean; profile?: AvatarProfile; error?: string }> {
   try {
     if (!adminDb) {
@@ -791,12 +795,26 @@ export async function moveImageToCharacter(
     };
 
     if (!alreadyReferenced) {
-      if (!currentFrontal) {
-        // First reference for this character → becomes the primary face.
-        updateData.frontalImageUrl = imageUrl;
-      } else {
-        // Unlimited additional references — append every moved image.
-        updateData.additionalImageUrls = [...currentAdditional, imageUrl];
+      switch (slot) {
+        case 'frontal':
+          updateData.frontalImageUrl = imageUrl;
+          break;
+        case 'fullBody':
+          updateData.fullBodyImageUrl = imageUrl;
+          break;
+        case 'upperBody':
+          updateData.upperBodyImageUrl = imageUrl;
+          break;
+        case 'additional':
+        default:
+          if (!currentFrontal) {
+            // No primary face yet → the first reference becomes the face.
+            updateData.frontalImageUrl = imageUrl;
+          } else {
+            // Unlimited additional references — append every moved image.
+            updateData.additionalImageUrls = [...currentAdditional, imageUrl];
+          }
+          break;
       }
       await adminDb
         .collection(COLLECTION_PATH)
