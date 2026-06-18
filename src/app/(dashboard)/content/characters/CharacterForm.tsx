@@ -7,7 +7,7 @@
  *   - name + description (the character's DNA prompt)
  *   - role + styleTag selects
  *   - face anchor upload (required) → frontalImageUrl
- *   - up to 4 additional/body reference images → additionalImageUrls
+ *   - unlimited additional/body reference images → additionalImageUrls
  *   - optional full-body + upper-body references
  *   - voice assignment from the existing /api/video/voices roster
  *   - favorite + default toggles
@@ -76,7 +76,7 @@ const STYLE_OPTIONS: Array<{ value: CharacterStyleTag; label: string }> = [
   { value: 'stylized', label: 'Stylized' },
 ];
 
-const MAX_ADDITIONAL_IMAGES = 4;
+// Reference angles are unlimited — no per-character cap on additional images.
 
 const VOICE_PROVIDERS = ['elevenlabs', 'unrealspeech', 'custom'] as const;
 type VoiceProvider = (typeof VOICE_PROVIDERS)[number];
@@ -299,9 +299,7 @@ export default function CharacterForm({
             } else if (slot === 'upperBody') {
               setUpperBodyImageUrl(url);
             } else {
-              setAdditionalImageUrls((prev) =>
-                prev.length >= MAX_ADDITIONAL_IMAGES ? prev : [...prev, url],
-              );
+              setAdditionalImageUrls((prev) => [...prev, url]);
             }
           }
         } finally {
@@ -364,7 +362,7 @@ export default function CharacterForm({
           setAdditionalImageUrls((prev) => {
             const merged = [...prev];
             for (const u of urls) {
-              if (!merged.includes(u) && merged.length < MAX_ADDITIONAL_IMAGES) {
+              if (!merged.includes(u)) {
                 merged.push(u);
               }
             }
@@ -644,8 +642,6 @@ export default function CharacterForm({
     onSaved,
   ]);
 
-  const canAddMore = additionalImageUrls.length < MAX_ADDITIONAL_IMAGES;
-
   return (
     <>
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -790,7 +786,8 @@ export default function CharacterForm({
           <div>
             <CardTitle className="mb-1">Additional angles</CardTitle>
             <Caption className="mb-2 block">
-              Optional side / body angles (up to {MAX_ADDITIONAL_IMAGES}) that sharpen consistency.
+              Optional side / body angles — add as many as you like. More references sharpen
+              consistency.
             </Caption>
             <input
               ref={additionalInputRef}
@@ -818,32 +815,28 @@ export default function CharacterForm({
                   </button>
                 </div>
               ))}
-              {canAddMore && (
-                <button
-                  type="button"
-                  disabled={uploadingSlot === 'additional'}
-                  onClick={() => additionalInputRef.current?.click()}
-                  className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
-                >
-                  {uploadingSlot === 'additional' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                  <span className="text-[10px]">Add</span>
-                </button>
-              )}
-              {canAddMore && (
-                <button
-                  type="button"
-                  disabled={movingFromLibrary}
-                  onClick={() => setLibraryTarget('additional')}
-                  className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
-                >
+              <button
+                type="button"
+                disabled={uploadingSlot === 'additional'}
+                onClick={() => additionalInputRef.current?.click()}
+                className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+              >
+                {uploadingSlot === 'additional' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
                   <Plus className="h-4 w-4" />
-                  <span className="text-[10px]">Library</span>
-                </button>
-              )}
+                )}
+                <span className="text-[10px]">Add</span>
+              </button>
+              <button
+                type="button"
+                disabled={movingFromLibrary}
+                onClick={() => setLibraryTarget('additional')}
+                className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="text-[10px]">Library</span>
+              </button>
             </div>
           </div>
 

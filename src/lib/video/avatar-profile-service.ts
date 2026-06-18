@@ -79,7 +79,7 @@ export interface AvatarProfile {
 
   // Reference images for character consistency
   frontalImageUrl: string; // Primary face photo (required)
-  additionalImageUrls: string[]; // Side angles, full body, etc. (up to 4)
+  additionalImageUrls: string[]; // Side angles, full body, etc. (unlimited)
   fullBodyImageUrl: string | null; // Full body reference
   upperBodyImageUrl: string | null; // Upper body reference
 
@@ -176,7 +176,9 @@ interface FirestoreAvatarProfileDoc {
 // ============================================================================
 
 const COLLECTION_PATH = getSubCollection('avatar_profiles');
-const MAX_ADDITIONAL_IMAGES = 4;
+// Reference angles are UNLIMITED: the more references the operator gives a
+// character, the better the video specialist holds its identity. (Per-model
+// input caps are applied downstream at generation time, not stored here.)
 
 // ============================================================================
 // Helper Functions
@@ -253,7 +255,7 @@ export async function createAvatarProfile(
       styleTag: data.styleTag ?? 'real',
       tier,
       frontalImageUrl: data.frontalImageUrl,
-      additionalImageUrls: (data.additionalImageUrls ?? []).slice(0, MAX_ADDITIONAL_IMAGES),
+      additionalImageUrls: data.additionalImageUrls ?? [],
       fullBodyImageUrl: data.fullBodyImageUrl ?? null,
       upperBodyImageUrl: data.upperBodyImageUrl ?? null,
       greenScreenClips,
@@ -465,7 +467,7 @@ export async function updateAvatarProfile(
       updateData.frontalImageUrl = updates.frontalImageUrl;
     }
     if (updates.additionalImageUrls !== undefined) {
-      updateData.additionalImageUrls = updates.additionalImageUrls.slice(0, MAX_ADDITIONAL_IMAGES);
+      updateData.additionalImageUrls = updates.additionalImageUrls;
     }
     if (updates.fullBodyImageUrl !== undefined) {
       updateData.fullBodyImageUrl = updates.fullBodyImageUrl;
@@ -648,7 +650,7 @@ export async function getDefaultProfile(userId: string): Promise<AvatarProfile |
  * Add or update a reference image on an avatar profile.
  *
  * - 'frontal': replaces frontalImageUrl
- * - 'additional': appends to additionalImageUrls (up to 4)
+ * - 'additional': appends to additionalImageUrls (unlimited)
  * - 'fullBody': replaces fullBodyImageUrl
  * - 'upperBody': replaces upperBodyImageUrl
  */
@@ -683,13 +685,8 @@ export async function addReferenceImage(
         break;
 
       case 'additional': {
+        // Unlimited reference angles — every added reference sharpens identity.
         const currentAdditional = data.additionalImageUrls ?? [];
-        if (currentAdditional.length >= MAX_ADDITIONAL_IMAGES) {
-          return {
-            success: false,
-            error: `Maximum of ${MAX_ADDITIONAL_IMAGES} additional images allowed`,
-          };
-        }
         updateData.additionalImageUrls = [...currentAdditional, imageUrl];
         break;
       }
@@ -729,9 +726,9 @@ export async function addReferenceImage(
  * two places; its location changes to the character." So we:
  *   1. Load the media asset to read its image URL (and confirm it's an image).
  *   2. Confirm the target character belongs to the requesting user.
- *   3. Append the URL to the character's reference set (de-duped, capped). The
- *      first image a character has lands as its frontal/primary reference; any
- *      further images fill `additionalImageUrls` (up to MAX_ADDITIONAL_IMAGES).
+ *   3. Append the URL to the character's reference set (de-duped). The first
+ *      image a character has lands as its frontal/primary reference; any
+ *      further images fill `additionalImageUrls` (unlimited).
  *   4. Delete the media-library record so the image no longer shows in the
  *      general browse. The underlying Storage file / URL is NOT deleted — the
  *      character now references that same URL, so it stays alive there.
@@ -797,15 +794,9 @@ export async function moveImageToCharacter(
       if (!currentFrontal) {
         // First reference for this character → becomes the primary face.
         updateData.frontalImageUrl = imageUrl;
-      } else if (currentAdditional.length < MAX_ADDITIONAL_IMAGES) {
-        updateData.additionalImageUrls = [...currentAdditional, imageUrl];
       } else {
-        return {
-          success: false,
-          error: `This character already has the maximum of ${
-            MAX_ADDITIONAL_IMAGES + 1
-          } reference images.`,
-        };
+        // Unlimited additional references — append every moved image.
+        updateData.additionalImageUrls = [...currentAdditional, imageUrl];
       }
       await adminDb
         .collection(COLLECTION_PATH)
