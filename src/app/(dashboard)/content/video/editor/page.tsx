@@ -1,17 +1,16 @@
 'use client';
 
 /**
- * Video Editor — opens straight into the editor (Pro workspace by default).
+ * Video Editor — ONE unified CapCut-style editor.
  *
- * The editor is ONE shared core (the reducer below: clips, audio, text overlays,
- * trim/split/transitions/effects/undo + the generation handoff + the
- * export-to-Library path). A compact MODE dropdown in the header swaps which
- * focused workspace is shown — instantly, in local state, with no navigation — so
- * the five capabilities never collide in one crowded screen and switching never
- * loses the project.
+ * The Preview + Timeline are always on screen (stitch + edit the project). A tool
+ * rail on the right swaps which TOOL PANEL is open beside them — Edit, Text &
+ * Captions, VFX & B-Roll, Transcript, Make Clips. These are tools of ONE editor,
+ * not separate modes. Content arrives from the generation flow, an upload, or the
+ * Library (the "Add media" rail), all driving the same shared reducer.
  *
- * Modes are named by what they do (see editor-modes.ts):
- *   Edit & Stitch · Quick Edits · Script & Podcast · Clipping & Shorts · VFX & B-Roll
+ * CapCut-style surface, pro-grade tools — each tool meets its own capability bar
+ * (internal benchmarks live in project memory, never in the product).
  */
 
 import { useReducer, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
@@ -23,31 +22,31 @@ import { Button } from '@/components/ui/button';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
-import { EditorMediaPanel } from './components/EditorMediaPanel';
+
+import Toolbar from '@/components/video-editor/Toolbar';
+import Preview from '@/components/video-editor/Preview';
+import Timeline from '@/components/video-editor/Timeline';
+import EffectsPanel from '@/components/video-editor/EffectsPanel';
 
 import { editorReducer, initialEditorState } from './editor-reducer';
 import { DEFAULT_CLIP_DURATION, type EditorClip } from './types';
 import type { MediaItem } from '@/types/media-library';
 import type { PipelineProject } from '@/types/video-pipeline';
 import { takeEditorSeed } from '@/lib/video/editor-seed';
-import {
-  EDITOR_MODES,
-  type EditorMode,
-  type EditorModeProps,
-  type ExportState,
-} from './editor-modes';
-import ProEditMode from './modes/ProEditMode';
-import QuickEditMode from './modes/QuickEditMode';
-import ScriptPodcastMode from './modes/ScriptPodcastMode';
-import SocialRepurposeMode from './modes/SocialRepurposeMode';
-import GenerativeVfxMode from './modes/GenerativeVfxMode';
+import type { EditorModeProps, ExportState } from './editor-modes';
+import { EDITOR_TOOLS, type EditorTool, type EditorToolProps } from './editor-tools';
+import { EditorMediaPanel } from './components/EditorMediaPanel';
+import VfxToolPanel from './tools/VfxToolPanel';
+import TextToolPanel from './tools/TextToolPanel';
+import TranscriptToolPanel from './tools/TranscriptToolPanel';
+import ClipsToolPanel from './tools/ClipsToolPanel';
 
-const MODE_COMPONENTS: Record<EditorMode, ComponentType<EditorModeProps>> = {
-  pro: ProEditMode,
-  quick: QuickEditMode,
-  script: ScriptPodcastMode,
-  social: SocialRepurposeMode,
-  vfx: GenerativeVfxMode,
+/** The non-Edit tool panels (Edit uses EffectsPanel directly). */
+const TOOL_PANELS: Record<Exclude<EditorTool, 'edit'>, ComponentType<EditorToolProps>> = {
+  text: TextToolPanel,
+  vfx: VfxToolPanel,
+  transcript: TranscriptToolPanel,
+  clips: ClipsToolPanel,
 };
 
 interface RenderResponse {
@@ -67,42 +66,32 @@ export default function VideoEditorPage() {
   const projectIdParam = searchParams.get('project');
 
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
-  // Mode is local UI state — the editor opens on the Pro workspace and the header
-  // dropdown swaps workspaces instantly without navigating or losing the project.
-  const [mode, setMode] = useState<EditorMode>('pro');
+  // The open tool on the right rail (the timeline is always visible).
+  const [tool, setTool] = useState<EditorTool>('edit');
   // The Add-media rail (upload / library / projects / characters / URL import) is a
-  // SHARED on-ramp — available in every mode so you can bring in your own footage,
-  // an earlier video, or a project's scenes and then edit it however you like.
+  // SHARED on-ramp: bring in your own footage, an earlier video, or a project's scenes.
   const [mediaOpen, setMediaOpen] = useState(false);
 
   const { clips, textOverlays, isPlaying, selectedClipId, playheadTime } = state;
 
-  // ── Export state (separate from the legacy isAssembling — different endpoint) ─
   const [exportState, setExportState] = useState<ExportState>({
     phase: 'idle',
     error: null,
     item: null,
   });
 
-  // ── Project auto-load: when the editor is opened as the destination of a
-  //    finished generation (`?project=<id>`), pull the project's completed
-  //    scenes onto the timeline in scene order so the operator lands here with
-  //    a starting cut already laid down. The lip-synced dialogue audio is baked
-  //    into each scene's video, so it rides along with the clip. ───────────────
+  // ── Project auto-load (`?project=<id>`): seed the timeline with the project's
+  //    completed scenes in order. ──────────────────────────────────────────────
   const projectLoadedRef = useRef(false);
   const [projectLoad, setProjectLoad] = useState<'idle' | 'loading' | 'error'>('idle');
 
-  // ── Shot Plan handoff: when the operator clicks "Open in editor" on the Shot
-  //    Plan, the generated clips are passed through sessionStorage. Read + clear
-  //    them once on mount and seed the timeline in plan order. One-shot so a
-  //    later manual visit does not re-seed stale clips. ─────────────────────────
+  // ── Shot Plan handoff via sessionStorage ("Open in editor"). ────────────────
   const seedTakenRef = useRef(false);
   useEffect(() => {
     if (seedTakenRef.current) {
       return;
     }
     seedTakenRef.current = true;
-    // Don't clobber an edit already in progress.
     if (clips.length > 0) {
       return;
     }
@@ -131,7 +120,6 @@ export default function VideoEditorPage() {
     if (!projectIdParam) {
       return;
     }
-    // Never clobber an edit already in progress — only seed an empty timeline.
     if (clips.length > 0) {
       return;
     }
@@ -154,7 +142,6 @@ export default function VideoEditorPage() {
         const durationBySceneId = new Map(scenes.map((s) => [s.id, s.duration]));
         const numberBySceneId = new Map(scenes.map((s) => [s.id, s.sceneNumber]));
 
-        // Only completed scenes that actually rendered a video URL become clips.
         const ready = generatedScenes
           .filter(
             (g): g is typeof g & { videoUrl: string } =>
@@ -269,7 +256,6 @@ export default function VideoEditorPage() {
       ) {
         return;
       }
-
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         dispatch({ type: 'UNDO' });
@@ -298,8 +284,8 @@ export default function VideoEditorPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isPlaying, splitAtPlayhead]);
 
-  // ── Shared contract handed to every mode workspace ──────────────────────
-  const modeProps: EditorModeProps = {
+  // ── Shared contract handed to every tool panel ──────────────────────────
+  const toolProps: EditorModeProps = {
     state,
     dispatch,
     authFetch,
@@ -310,7 +296,11 @@ export default function VideoEditorPage() {
     onSplit: splitAtPlayhead,
   };
 
-  const ActiveMode = MODE_COMPONENTS[mode];
+  const ActivePanel = tool === 'edit' ? null : TOOL_PANELS[tool];
+
+  const mainGridClass = mediaOpen
+    ? 'grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)_380px] gap-4'
+    : 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-4';
 
   return (
     <div className="p-6 space-y-4">
@@ -323,7 +313,6 @@ export default function VideoEditorPage() {
         </PageTitle>
 
         <div className="flex items-center gap-2">
-          {/* Add media — shared import/upload rail, available in every mode */}
           <Button
             variant={mediaOpen ? 'default' : 'outline'}
             size="sm"
@@ -333,24 +322,6 @@ export default function VideoEditorPage() {
             <Upload className="w-4 h-4" />
             Add media
           </Button>
-
-          {/* Mode dropdown — swaps the focused workspace in place */}
-          <label htmlFor="editor-mode" className="text-xs text-muted-foreground">
-            Mode
-          </label>
-          <select
-            id="editor-mode"
-            value={mode}
-            onChange={(e) => setMode(e.target.value as EditorMode)}
-            className="h-9 rounded-md border border-border-strong bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {EDITOR_MODES.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-
           {projectLoad === 'loading' && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -367,18 +338,93 @@ export default function VideoEditorPage() {
         </div>
       </header>
 
-      {mediaOpen ? (
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-4">
+      <Toolbar
+        isPlaying={state.isPlaying}
+        zoomLevel={state.zoomLevel}
+        canUndo={state.undoStack.length > 0}
+        canRedo={state.redoStack.length > 0}
+        isExporting={exportState.phase === 'rendering'}
+        hasClips={state.clips.length > 0}
+        selectedClipId={state.selectedClipId}
+        playheadTime={state.playheadTime}
+        totalDuration={state.totalDuration}
+        onSplit={splitAtPlayhead}
+        onExport={() => {
+          void handleExport();
+        }}
+        dispatch={dispatch}
+      />
+
+      <div className={mainGridClass}>
+        {mediaOpen && (
           <aside className="h-fit lg:sticky lg:top-4">
             <EditorMediaPanel dispatch={dispatch} defaultTransition={state.defaultTransition} />
           </aside>
-          <div className="min-w-0">
-            <ActiveMode {...modeProps} />
-          </div>
+        )}
+
+        {/* Always-on core: Preview + Timeline */}
+        <div className="min-w-0 space-y-4">
+          <Preview
+            clips={state.clips}
+            textOverlays={state.textOverlays}
+            selectedOverlayId={state.selectedOverlayId}
+            playheadTime={state.playheadTime}
+            isPlaying={state.isPlaying}
+            totalDuration={state.totalDuration}
+            dispatch={dispatch}
+          />
+          <Timeline
+            clips={state.clips}
+            audioTracks={state.audioTracks}
+            textOverlays={state.textOverlays}
+            selectedClipId={state.selectedClipId}
+            selectedOverlayId={state.selectedOverlayId}
+            playheadTime={state.playheadTime}
+            totalDuration={state.totalDuration}
+            zoomLevel={state.zoomLevel}
+            dispatch={dispatch}
+          />
         </div>
-      ) : (
-        <ActiveMode {...modeProps} />
-      )}
+
+        {/* Tool column: the rail + the open tool's panel */}
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-wrap gap-1.5">
+            {EDITOR_TOOLS.map((t) => {
+              const Icon = t.icon;
+              const active = tool === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTool(t.id)}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    active
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:bg-surface-elevated hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {tool === 'edit' || ActivePanel === null ? (
+            <EffectsPanel
+              clips={state.clips}
+              textOverlays={state.textOverlays}
+              selectedClipId={state.selectedClipId}
+              selectedOverlayId={state.selectedOverlayId}
+              playheadTime={state.playheadTime}
+              totalDuration={state.totalDuration}
+              dispatch={dispatch}
+            />
+          ) : (
+            <ActivePanel {...toolProps} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -391,7 +437,6 @@ function ExportStatusPill({ state }: { state: ExportState }) {
   if (state.phase === 'idle') {
     return null;
   }
-
   if (state.phase === 'rendering') {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">
