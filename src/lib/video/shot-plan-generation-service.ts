@@ -1214,11 +1214,124 @@ const CHARACTER_VIEWS: { label: string; view: string; framing: string }[] = [
   },
 ];
 
+/** First non-empty (trimmed) value, or undefined. */
+function firstText(...values: Array<string | undefined>): string | undefined {
+  for (const v of values) {
+    if (v?.trim()) {
+      return v.trim();
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Build a text-to-image prompt for an INVENTED character's BASE reference from its
+ * casting card (no uploaded source image exists). Reads the full identity the
+ * planner authored — age, ethnicity, gender, build, hair, wardrobe, accessories,
+ * notes — so the generated person matches the written profile.
+ */
+function inventedCharacterBasePrompt(plan: ShotPlan, member: ShotPlanCastMember): string {
+  const sc = plan.sharedChoices;
+  const style = firstText(sc.lookBible?.artStyle, sc.artStyle) ?? 'photorealistic';
+  const subject = firstText(member.name) ?? 'a character';
+  const identity = [member.apparentAge, member.ethnicity, member.gender]
+    .map((s) => s?.trim())
+    .filter((s): s is string => Boolean(s))
+    .join(' ');
+  const bits: string[] = [];
+  if (identity) {
+    bits.push(`a ${identity}`);
+  }
+  const build = firstText(member.build);
+  if (build) {
+    bits.push(`${build} build`);
+  }
+  const hair = [member.hairColor, member.hairStyle].map((s) => s?.trim()).filter(Boolean).join(' ');
+  if (hair) {
+    bits.push(`${hair} hair`);
+  }
+  const wardrobe = firstText(member.wardrobe);
+  if (wardrobe) {
+    bits.push(`wearing ${wardrobe}`);
+  }
+  if (member.accessories && member.accessories.length > 0) {
+    bits.push(`with ${member.accessories.join(', ')}`);
+  }
+  const notes = firstText(member.notes);
+  return (
+    `Full-body character reference of ${subject}${bits.length > 0 ? `, ${bits.join(', ')}` : ''}.` +
+    `${notes ? ` ${notes}` : ''} Standing front-facing in a neutral A-pose, head to toe, on a clean ` +
+    `light-grey studio cyclorama, evenly lit soft studio lighting, no dramatic shadows, sharp detail, ` +
+    `${style}. Single character, full body visible, no text.`
+  );
+}
+
+/**
+ * Generate + persist a BASE reference image for an invented character (text-to-image
+ * via Flux from its casting card). Returns the permanent URL on OUR storage, or null
+ * on failure (best-effort — a missing base just means no model sheet for this one).
+ */
+async function generateInventedCharacterBase(
+  plan: ShotPlan,
+  member: ShotPlanCastMember,
+  ctx: TenantContext,
+): Promise<string | null> {
+  const prompt = inventedCharacterBasePrompt(plan, member);
+  const workDir = await createWorkDir('shot-plan-charbase');
+  try {
+    logger.info('[shot-plan-gen] generating invented character base', {
+      file: FILE,
+      character: member.name,
+      tenantId: ctx.tenantId,
+    });
+    const result = await generateWithFal(prompt, { aspectRatio: '9:16' });
+    if (!result.url) {
+      return null;
+    }
+    const buf = await downloadToFile(result.url, join(workDir, 'base.png'), `char ${member.name} base`);
+    const url = await uploadPermanent(
+      buf,
+      `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
+      'image/png',
+      `char ${member.name} base`,
+    );
+    await createAsset({
+      type: 'image',
+      category: 'character',
+      name: `${member.name} — base reference`,
+      description: `Generated base reference for invented character in Shot Plan "${plan.title || plan.id}".`,
+      url,
+      mimeType: 'image/png',
+      fileSize: buf.length,
+      source: 'ai-generated',
+      aiProvider: 'fal',
+      aiPrompt: prompt,
+      createdBy: 'system',
+      characterId: member.characterId,
+      characterName: member.name,
+      tags: ['shot-plan', 'character', 'base-reference'],
+    });
+    return url;
+  } catch (err) {
+    logger.error(
+      '[shot-plan-gen] invented character base failed (continuing)',
+      err instanceof Error ? err : new Error(String(err)),
+      { file: FILE, character: member.name },
+    );
+    return null;
+  } finally {
+    await cleanupWorkDir(workDir);
+  }
+}
+
 /**
  * Render a clean model/turnaround sheet for every cast member (FRONT · 3⁄4 ·
- * PROFILE · BACK) from their reference image via Flux Kontext, so the production
- * sheet shows a rich character reference like a real model sheet — not just the
- * operator's uploads. Best-effort per view + per character. Ownership rule applies.
+ * PROFILE · BACK) via Flux Kontext, so the production sheet shows a rich character
+ * reference like a real model sheet. For a SAVED character the source is the
+ * operator's uploaded reference; for an INVENTED character (no uploads) a base
+ * portrait is FIRST synthesized from the casting card and written back onto the
+ * member's referenceImageUrls (so video identity-anchoring uses it too). Best-effort
+ * per view + per character. Ownership rule applies.
  */
 export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
   const cast = plan.sharedChoices.cast;
@@ -1230,7 +1343,18 @@ export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext
   let changed = false;
 
   for (const member of cast) {
-    const ref = member.referenceImageUrls[0];
+    let ref = member.referenceImageUrls[0];
+    // Invented character (no uploaded refs): synthesize a base portrait from the
+    // casting card FIRST, so the model sheet + video identity-anchoring have a
+    // consistent source. The base is written back onto referenceImageUrls below.
+    let generatedBase: string | undefined;
+    if (!ref) {
+      const base = await generateInventedCharacterBase(plan, member, ctx);
+      if (base) {
+        ref = base;
+        generatedBase = base;
+      }
+    }
     if (!ref) {
       updated.push(member);
       continue;
@@ -1278,8 +1402,15 @@ export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext
         await cleanupWorkDir(workDir);
       }
     }
+    // Persist a generated base into referenceImageUrls (lead position) so video
+    // generation anchors identity on it — for both the sheet-succeeded and
+    // sheet-failed-but-base-made cases.
+    const refs = generatedBase ? [generatedBase, ...member.referenceImageUrls] : member.referenceImageUrls;
     if (sheet.length > 0) {
-      updated.push({ ...member, modelSheet: sheet });
+      updated.push({ ...member, referenceImageUrls: refs, modelSheet: sheet });
+      changed = true;
+    } else if (generatedBase) {
+      updated.push({ ...member, referenceImageUrls: refs });
       changed = true;
     } else {
       updated.push(member);
