@@ -154,8 +154,29 @@ function textToScript(text: string, template: ScriptSection[]): ScriptSection[] 
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function CloneVoiceStudio() {
+interface CloneVoiceStudioProps {
+  /**
+   * Lock the studio to one character: hides the character dropdown and
+   * auto-assigns the new clone to this character. Used when the studio is
+   * launched from a character's edit screen ("record this character's voice").
+   */
+  targetCharacter?: { id: string; name: string };
+  /** Hide the big page header when embedded inside another surface (e.g. a dialog). */
+  embedded?: boolean;
+  /**
+   * Fired after the clone is created AND assigned to the target character, so an
+   * embedding form can sync its own voice state and close the studio.
+   */
+  onAssigned?: (result: { voiceId: string; voiceName: string }) => void;
+}
+
+export function CloneVoiceStudio({
+  targetCharacter,
+  embedded = false,
+  onAssigned,
+}: CloneVoiceStudioProps = {}) {
   const authFetch = useAuthFetch();
+  const targetCharacterIdProp = targetCharacter?.id;
 
   // Script (editable). We keep both the structured form (for the teleprompter)
   // and a plain-text draft (for the edit textarea).
@@ -170,16 +191,22 @@ export function CloneVoiceStudio() {
   const expressive = usePassRecorder();
 
   // Voice clone + assignment state.
-  const [voiceName, setVoiceName] = useState('');
+  const [voiceName, setVoiceName] = useState(
+    targetCharacter ? `${targetCharacter.name}'s voice` : '',
+  );
   const [characters, setCharacters] = useState<CharacterOption[]>([]);
   const [charactersLoading, setCharactersLoading] = useState(false);
-  const [targetCharacterId, setTargetCharacterId] = useState('');
+  const [targetCharacterId, setTargetCharacterId] = useState(targetCharacter?.id ?? '');
   const [stage, setStage] = useState<CloneStage>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [createdVoiceLabel, setCreatedVoiceLabel] = useState('');
 
   // ── Load the operator's characters (for the assignment dropdown) ───────────
+  // Skipped entirely when locked to one character — we already know the target.
   useEffect(() => {
+    if (targetCharacterIdProp) {
+      return;
+    }
     let cancelled = false;
     setCharactersLoading(true);
     void (async () => {
@@ -210,7 +237,7 @@ export function CloneVoiceStudio() {
     return () => {
       cancelled = true;
     };
-  }, [authFetch]);
+  }, [authFetch, targetCharacterIdProp]);
 
   // ── Script editing ─────────────────────────────────────────────────────────
   const startEditing = useCallback(() => {
@@ -323,7 +350,10 @@ export function CloneVoiceStudio() {
       return;
     }
 
-    const charName = characters.find((c) => c.id === targetCharacterId)?.name ?? 'your character';
+    const charName =
+      targetCharacter?.name ??
+      characters.find((c) => c.id === targetCharacterId)?.name ??
+      'your character';
     setCreatedVoiceLabel(clonedName);
     setStage('done');
     setStatusMessage(`Done! "${clonedName}" is now ${charName}'s voice. It is also in your voice library.`);
@@ -331,7 +361,18 @@ export function CloneVoiceStudio() {
     setCharacters((prev) =>
       prev.map((c) => (c.id === targetCharacterId ? { ...c, voiceName: clonedName } : c)),
     );
-  }, [voiceName, steady.recording, expressive.recording, targetCharacterId, characters, authFetch]);
+    // Let an embedding form (the character edit screen) sync + close.
+    onAssigned?.({ voiceId, voiceName: clonedName });
+  }, [
+    voiceName,
+    steady.recording,
+    expressive.recording,
+    targetCharacterId,
+    characters,
+    authFetch,
+    targetCharacter,
+    onAssigned,
+  ]);
 
   const busy = stage === 'cloning' || stage === 'assigning';
 
@@ -342,18 +383,27 @@ export function CloneVoiceStudio() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <PageTitle className="flex items-center gap-3">
-          <Mic className="h-7 w-7 text-primary" />
-          Clone Voice Studio
-        </PageTitle>
-        <SectionDescription className="mt-1 max-w-3xl">
-          Read the script aloud while it scrolls. You&apos;ll record it twice — once steady and
-          once expressive — and we&apos;ll build an ElevenLabs voice clone and assign it to a
-          character. Find a quiet room and stay 6–12 inches from your microphone.
+      {/* Header — hidden when embedded (the host surface provides its own title) */}
+      {!embedded && (
+        <div>
+          <PageTitle className="flex items-center gap-3">
+            <Mic className="h-7 w-7 text-primary" />
+            Clone Voice Studio
+          </PageTitle>
+          <SectionDescription className="mt-1 max-w-3xl">
+            Read the script aloud while it scrolls. You&apos;ll record it twice — once steady and
+            once expressive — and we&apos;ll build an ElevenLabs voice clone and assign it to a
+            character. Find a quiet room and stay 6–12 inches from your microphone.
+          </SectionDescription>
+        </div>
+      )}
+      {embedded && targetCharacter && (
+        <SectionDescription className="max-w-3xl">
+          Read the script aloud while it scrolls — once steady, once expressive. We&apos;ll build
+          the voice clone and set it as <span className="text-foreground font-medium">{targetCharacter.name}</span>&apos;s
+          voice. Find a quiet room and stay 6–12 inches from your microphone.
         </SectionDescription>
-      </div>
+      )}
 
       {/* Script editor toggle */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -452,29 +502,40 @@ export function CloneVoiceStudio() {
             />
           </div>
 
-          {/* Character to assign */}
+          {/* Character to assign — a fixed target when launched from a character */}
           <div>
-            <Caption className="mb-1 block">Assign to character (optional)</Caption>
-            <select
-              value={targetCharacterId}
-              onChange={(e) => setTargetCharacterId(e.target.value)}
-              disabled={charactersLoading}
-              className="w-full rounded-md border border-border-strong bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-            >
-              <option value="">
-                {charactersLoading ? 'Loading characters…' : "Don't assign — just save to library"}
-              </option>
-              {characters.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.voiceName ? ` · currently: ${c.voiceName}` : ''}
-                </option>
-              ))}
-            </select>
-            {!charactersLoading && characters.length === 0 && (
-              <Caption className="mt-1 block">
-                No characters yet — create one in the Character Library to assign a voice.
-              </Caption>
+            <Caption className="mb-1 block">
+              {targetCharacter ? 'Assigning to' : 'Assign to character (optional)'}
+            </Caption>
+            {targetCharacter ? (
+              <div className="flex items-center gap-2 rounded-md border border-border-strong bg-surface-elevated px-3 py-2">
+                <UserSquare2 className="h-4 w-4 flex-shrink-0 text-primary" />
+                <span className="truncate text-sm text-foreground">{targetCharacter.name}</span>
+              </div>
+            ) : (
+              <>
+                <select
+                  value={targetCharacterId}
+                  onChange={(e) => setTargetCharacterId(e.target.value)}
+                  disabled={charactersLoading}
+                  className="w-full rounded-md border border-border-strong bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  <option value="">
+                    {charactersLoading ? 'Loading characters…' : "Don't assign — just save to library"}
+                  </option>
+                  {characters.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.voiceName ? ` · currently: ${c.voiceName}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {!charactersLoading && characters.length === 0 && (
+                  <Caption className="mt-1 block">
+                    No characters yet — create one in the Character Library to assign a voice.
+                  </Caption>
+                )}
+              </>
             )}
           </div>
         </div>

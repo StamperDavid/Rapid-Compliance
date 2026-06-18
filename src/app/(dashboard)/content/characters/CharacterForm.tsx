@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Caption, CardTitle, SectionDescription } from '@/components/ui/typography';
 import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/MediaLibraryPicker';
+import { CloneVoiceStudio } from '@/app/(dashboard)/content/voice-lab/components/clone-voice-studio/CloneVoiceStudio';
 import {
   Dialog,
   DialogContent,
@@ -174,6 +175,8 @@ export default function CharacterForm({
   // ── Voices ────────────────────────────────────────────────────────────────
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
+  // Clone Voice Studio (record a custom voice for this character) — edit mode only.
+  const [voiceStudioOpen, setVoiceStudioOpen] = useState(false);
 
   // ── Upload + save state ─────────────────────────────────────────────────────
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
@@ -543,6 +546,25 @@ export default function CharacterForm({
     [voices],
   );
 
+  // Called when the Clone Voice Studio finishes recording + cloning + assigning.
+  // The studio already PATCHed this character's voice; we just reflect it in the
+  // form (select the new voice, inject it into the roster so the dropdown shows it)
+  // and close the studio.
+  const handleVoiceAssigned = useCallback(
+    ({ voiceId: newVoiceId, voiceName: newVoiceName }: { voiceId: string; voiceName: string }) => {
+      setVoiceId(newVoiceId);
+      setVoiceName(newVoiceName);
+      setVoiceProvider('custom');
+      setVoices((prev) =>
+        prev.some((v) => v.id === newVoiceId)
+          ? prev
+          : [{ id: newVoiceId, name: newVoiceName, language: '', provider: 'custom' }, ...prev],
+      );
+      setVoiceStudioOpen(false);
+    },
+    [],
+  );
+
   // ── Save (create or update) ─────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     setErrorMsg(null);
@@ -869,7 +891,7 @@ export default function CharacterForm({
           <div>
             <CardTitle className="mb-1">Voice</CardTitle>
             <Caption className="mb-2 block">
-              Optional. Pick the voice this character speaks with.
+              Optional. Pick a voice from the roster, or record this character&apos;s own voice.
             </Caption>
             <select
               value={voiceId ?? ''}
@@ -888,7 +910,33 @@ export default function CharacterForm({
             </select>
             {!voicesLoading && voices.length === 0 && (
               <Caption className="mt-1 block">
-                No voices available yet — connect a voice provider in settings to populate this list.
+                No voices available yet — connect a voice provider in settings, or record one below.
+              </Caption>
+            )}
+
+            {/* Record a custom (cloned) voice — needs a saved character to assign to */}
+            {isEdit ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setVoiceStudioOpen(true)}
+                  className="gap-2"
+                >
+                  <Music className="h-4 w-4" />
+                  Record this character&apos;s voice
+                </Button>
+                {voiceProvider === 'custom' && voiceName ? (
+                  <Caption className="text-foreground">
+                    Recorded voice: <span className="font-medium">{voiceName}</span>
+                  </Caption>
+                ) : (
+                  <Caption>Read a short script aloud to clone a voice just for this character.</Caption>
+                )}
+              </div>
+            ) : (
+              <Caption className="mt-2 block">
+                Save this character first, then you can record a custom voice for it.
               </Caption>
             )}
           </div>
@@ -1023,6 +1071,30 @@ export default function CharacterForm({
       onSelect={applyLibrarySelection}
       authFetch={authFetch}
     />
+    {/* Clone Voice Studio — record a custom voice and assign it to this character.
+        Edit-mode only: the studio assigns via PATCH /avatar-profiles/[id], so a
+        saved profile id must exist. */}
+    {isEdit && profile && (
+      <Dialog open={voiceStudioOpen} onOpenChange={setVoiceStudioOpen}>
+        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Music className="h-5 w-5 text-primary" />
+              Record {name || profile.name}&apos;s voice
+            </DialogTitle>
+            <DialogDescription>
+              Read the script aloud — once steady, once expressive. We build the voice clone and
+              set it as this character&apos;s voice.
+            </DialogDescription>
+          </DialogHeader>
+          <CloneVoiceStudio
+            embedded
+            targetCharacter={{ id: profile.id, name: name || profile.name }}
+            onAssigned={handleVoiceAssigned}
+          />
+        </DialogContent>
+      </Dialog>
+    )}
     </>
   );
 }
