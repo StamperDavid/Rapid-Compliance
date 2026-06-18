@@ -22,6 +22,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import SubpageNav from '@/components/ui/SubpageNav';
@@ -243,6 +244,7 @@ interface MediaApiSingleResponse {
 
 export default function MediaLibraryUnifiedPage() {
   const authFetch = useAuthFetch();
+  const toast = useToast();
 
   // ── Filters / data ──────────────────────────────────────────────────────
   const [assets, setAssets] = useState<UnifiedMediaAsset[]>([]);
@@ -846,6 +848,50 @@ export default function MediaLibraryUnifiedPage() {
     }
   }, [assets, checkedIds, authFetch]);
 
+  // MOVE an image onto a character: it becomes a reference image on that
+  // character and LEAVES the media library (the record is deleted server-side).
+  // On success we drop it from the grid so the move is visible immediately.
+  const moveImageToCharacter = useCallback(
+    async (asset: UnifiedMediaAsset, character: CharacterOption) => {
+      try {
+        const res = await authFetch(
+          `/api/video/avatar-profiles/${character.id}/add-image`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assetId: asset.id }),
+          },
+        );
+        const data = (await res.json().catch(() => null)) as
+          | { success?: boolean; error?: string }
+          | null;
+        if (!res.ok || !data?.success) {
+          toast.error(
+            data?.error ?? `Could not add "${asset.name}" to ${character.name}.`,
+          );
+          return;
+        }
+        // It moved — remove it from the library grid + any selection.
+        setAssets((prev) => prev.filter((a) => a.id !== asset.id));
+        setCheckedIds((prev) => {
+          if (!prev.has(asset.id)) {
+            return prev;
+          }
+          const next = new Set(prev);
+          next.delete(asset.id);
+          return next;
+        });
+        setSelectedId((prev) => (prev === asset.id ? null : prev));
+        toast.success(
+          `Added "${asset.name}" to ${character.name}. It now lives on that character.`,
+        );
+      } catch {
+        toast.error('Something went wrong adding that image to the character.');
+      }
+    },
+    [authFetch, toast],
+  );
+
   // Build the full action set for a SINGLE asset. Each action PATCHes that one
   // asset via `patchAsset` (which also updates local grid state).
   const buildAssetActions = useCallback(
@@ -898,8 +944,11 @@ export default function MediaLibraryUnifiedPage() {
       onDelete: async () => {
         await handleTileDelete(asset.id);
       },
+      onMoveToCharacter: async (character) => {
+        await moveImageToCharacter(asset, character);
+      },
     }),
-    [patchAsset, handleDownloadOne, handleTileDelete],
+    [patchAsset, handleDownloadOne, handleTileDelete, moveImageToCharacter],
   );
 
   // Apply a per-asset patch builder across every checked asset, sequentially,
@@ -982,8 +1031,52 @@ export default function MediaLibraryUnifiedPage() {
         runBulkPatch(() => ({ intendedUse }), 'Updating'),
       onDownload: () => handleBulkDownload(),
       onDelete: () => handleBulkDelete(),
+      onMoveToCharacter: async (character) => {
+        // Move every checked IMAGE onto the character (non-image assets can't be
+        // character references and are skipped). Each move deletes its library
+        // record server-side; we refetch once at the end to reflect the result.
+        const ids = Array.from(checkedIds);
+        if (ids.length === 0) {
+          return;
+        }
+        setBulkBusy(true);
+        try {
+          let done = 0;
+          for (const id of ids) {
+            const asset = assets.find((a) => a.id === id);
+            done += 1;
+            setBulkProgress(`Adding ${done} of ${ids.length}…`);
+            if (asset?.type !== 'image') {
+              continue;
+            }
+            await authFetch(
+              `/api/video/avatar-profiles/${character.id}/add-image`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assetId: asset.id }),
+              },
+            ).catch(() => null);
+          }
+          await fetchAssets();
+          setCheckedIds(new Set());
+          toast.success(`Added the selected images to ${character.name}.`);
+        } finally {
+          setBulkBusy(false);
+          setBulkProgress(null);
+        }
+      },
     }),
-    [runBulkPatch, handleBulkDownload, handleBulkDelete],
+    [
+      runBulkPatch,
+      handleBulkDownload,
+      handleBulkDelete,
+      assets,
+      checkedIds,
+      authFetch,
+      fetchAssets,
+      toast,
+    ],
   );
 
   // Auto-disarm the per-tile + bulk delete confirmations (same 5s window).

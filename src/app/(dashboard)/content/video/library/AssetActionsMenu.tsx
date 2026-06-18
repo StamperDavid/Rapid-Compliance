@@ -33,6 +33,7 @@ import {
   Download,
   Trash2,
   Users,
+  UserPlus,
   FolderPlus,
   Tag as TagIcon,
   Layers,
@@ -79,6 +80,13 @@ export interface AssetActions {
   onSetIntendedUse: (intendedUse: string) => Promise<void>;
   onDownload: () => Promise<void>;
   onDelete: () => Promise<void>;
+  /**
+   * MOVE this image onto a character as a reference image. Unlike
+   * `onAssignCharacter` (which only tags the asset), this RELOCATES the image:
+   * it lands on the character's reference set and leaves the media library.
+   * Image assets only.
+   */
+  onMoveToCharacter: (character: CharacterOption) => Promise<void>;
 }
 
 // ============================================================================
@@ -349,6 +357,76 @@ function CharacterDialog({
   );
 }
 
+/**
+ * MoveToCharacterDialog — pick a character to MOVE this image onto.
+ *
+ * Distinct from `CharacterDialog`: this relocates the image (it becomes a
+ * reference image on the character and leaves the library), so the copy is
+ * explicit about that and there is no "clear" option.
+ */
+function MoveToCharacterDialog({
+  open,
+  onOpenChange,
+  characters,
+  loading,
+  busy,
+  onPick,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  characters: CharacterOption[];
+  loading: boolean;
+  busy: boolean;
+  onPick: (c: CharacterOption) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add this image to a character</DialogTitle>
+          <DialogDescription>
+            Pick a character and this image moves onto it as one of its
+            reference photos. It will leave your media library — its home is now
+            the character.
+          </DialogDescription>
+        </DialogHeader>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : characters.length === 0 ? (
+          <Caption className="block py-4 text-center">
+            No characters yet. Create one in the Characters tab first.
+          </Caption>
+        ) : (
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {characters.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  onPick(c);
+                  onOpenChange(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg border border-border-strong bg-card px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-elevated disabled:opacity-50"
+              >
+                <Users className="h-4 w-4 text-primary" />
+                <span className="truncate">{c.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProjectDialog({
   open,
   onOpenChange,
@@ -545,8 +623,11 @@ export function AssetActionsMenu({
   const [view, setView] = useState<SubView>('root');
   const [busy, setBusy] = useState(false);
   const [charDialog, setCharDialog] = useState(false);
+  const [moveCharDialog, setMoveCharDialog] = useState(false);
   const [projDialog, setProjDialog] = useState(false);
   const [useDialog, setUseDialog] = useState(false);
+
+  const isImage = asset.type === 'image';
 
   const run = useCallback(async (fn: () => Promise<void>, close?: () => void) => {
     setBusy(true);
@@ -638,6 +719,20 @@ export function AssetActionsMenu({
                   close();
                 }}
               />
+              {isImage && (
+                <MenuItem
+                  icon={UserPlus}
+                  label="Add to character"
+                  trailing={
+                    <ChevronRight className="h-3.5 w-3.5 opacity-50" />
+                  }
+                  onClick={() => {
+                    onLoadCharacters();
+                    setMoveCharDialog(true);
+                    close();
+                  }}
+                />
+              )}
               <MenuItem
                 icon={FolderPlus}
                 label="Assign to project"
@@ -703,6 +798,16 @@ export function AssetActionsMenu({
         }}
         onClear={() => {
           void actions.onAssignCharacter(null);
+        }}
+      />
+      <MoveToCharacterDialog
+        open={moveCharDialog}
+        onOpenChange={setMoveCharDialog}
+        characters={characters}
+        loading={charactersLoading}
+        busy={busy}
+        onPick={(c) => {
+          void run(() => actions.onMoveToCharacter(c));
         }}
       />
       <ProjectDialog

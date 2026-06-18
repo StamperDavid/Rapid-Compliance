@@ -16,6 +16,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { getAsset, deleteAsset } from '@/lib/media/media-library-service';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -718,6 +719,126 @@ export async function addReferenceImage(
       file: 'avatar-profile-service.ts',
     });
     return { success: false, error: 'Failed to add reference image' };
+  }
+}
+
+/**
+ * MOVE a media-library image onto a character as a reference image.
+ *
+ * This is a RELOCATION, not a copy. The owner's rule: "I don't need it saved in
+ * two places; its location changes to the character." So we:
+ *   1. Load the media asset to read its image URL (and confirm it's an image).
+ *   2. Confirm the target character belongs to the requesting user.
+ *   3. Append the URL to the character's reference set (de-duped, capped). The
+ *      first image a character has lands as its frontal/primary reference; any
+ *      further images fill `additionalImageUrls` (up to MAX_ADDITIONAL_IMAGES).
+ *   4. Delete the media-library record so the image no longer shows in the
+ *      general browse. The underlying Storage file / URL is NOT deleted — the
+ *      character now references that same URL, so it stays alive there.
+ *
+ * Returns the refreshed character on success.
+ */
+export async function moveImageToCharacter(
+  userId: string,
+  assetId: string,
+  characterId: string,
+): Promise<{ success: boolean; profile?: AvatarProfile; error?: string }> {
+  try {
+    if (!adminDb) {
+      return { success: false, error: 'Database not available' };
+    }
+
+    // 1. Load the media asset and read its URL.
+    const asset = await getAsset(assetId);
+    if (!asset) {
+      return { success: false, error: 'Media asset not found' };
+    }
+    if (asset.type !== 'image') {
+      return {
+        success: false,
+        error: 'Only image assets can be added to a character',
+      };
+    }
+    if (!asset.url) {
+      return { success: false, error: 'Media asset has no image URL' };
+    }
+
+    // 2. Confirm the target character exists and belongs to this user.
+    const docSnap = await adminDb
+      .collection(COLLECTION_PATH)
+      .doc(characterId)
+      .get();
+    if (!docSnap.exists) {
+      return { success: false, error: 'Character not found' };
+    }
+    const data = docSnap.data() as FirestoreAvatarProfileDoc | undefined;
+    if (!data) {
+      return { success: false, error: 'Character data is empty' };
+    }
+    if (data.userId !== userId) {
+      return { success: false, error: 'Character does not belong to this user' };
+    }
+
+    const imageUrl = asset.url;
+    const currentFrontal = data.frontalImageUrl ?? '';
+    const currentAdditional = data.additionalImageUrls ?? [];
+
+    // De-dupe: if the character already references this exact URL, skip the
+    // append but still remove the duplicate library record so the move's
+    // visible outcome (gone from the browse) still holds.
+    const alreadyReferenced =
+      currentFrontal === imageUrl || currentAdditional.includes(imageUrl);
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    if (!alreadyReferenced) {
+      if (!currentFrontal) {
+        // First reference for this character → becomes the primary face.
+        updateData.frontalImageUrl = imageUrl;
+      } else if (currentAdditional.length < MAX_ADDITIONAL_IMAGES) {
+        updateData.additionalImageUrls = [...currentAdditional, imageUrl];
+      } else {
+        return {
+          success: false,
+          error: `This character already has the maximum of ${
+            MAX_ADDITIONAL_IMAGES + 1
+          } reference images.`,
+        };
+      }
+      await adminDb
+        .collection(COLLECTION_PATH)
+        .doc(characterId)
+        .update(updateData);
+    }
+
+    // 3. Remove the media-library record so the image leaves the general browse.
+    // The Storage file / URL stays alive (the character now references it).
+    await deleteAsset(assetId);
+
+    logger.info('Image moved from media library onto character', {
+      userId,
+      characterId,
+      assetId,
+      alreadyReferenced,
+      file: 'avatar-profile-service.ts',
+    });
+
+    const profile = await getAvatarProfile(characterId);
+    if (!profile) {
+      return { success: false, error: 'Failed to reload character after move' };
+    }
+
+    return { success: true, profile };
+  } catch (error) {
+    logger.error('Failed to move image to character', error as Error, {
+      userId,
+      characterId,
+      assetId,
+      file: 'avatar-profile-service.ts',
+    });
+    return { success: false, error: 'Failed to add image to character' };
   }
 }
 

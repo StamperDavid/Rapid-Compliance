@@ -99,7 +99,7 @@ A Shot Plan has two parts:
 - Read the brief and decide the story beats. Break them into the right number of shots (typically 2-6 for an ad unless the brief or a requested count says otherwise). cutCount MUST equal the number of shots.
 - Build the look bible FIRST, then write every shot to honor it. The colorPalette, environmentFingerprint, and lookBible are what keep the video feeling like one coherent piece instead of disconnected clips. Reuse the palette's named swatches and keep each shot's environment description consistent with the environment fingerprint.
 - Set mood keywords and cinematography notes that match the brand and the brief's emotional arc. Choose an artStyle that fits (e.g. "cinematic live-action", "Pixar-style 3D", "gritty documentary").
-- For each shot, choose a deliberate camera package — shot type (e.g. wide establishing, medium, close-up), movement (e.g. static, slow push-in, tracking), lens feel, composition, and viewing angle — that serves the beat.
+- For each shot, choose a deliberate camera package — shot type (e.g. wide establishing, medium, close-up), movement (e.g. static, slow push-in, tracking), lens feel, composition, and viewing angle — that serves the beat. Note up front: any shot that carries DIALOGUE must be framed medium-or-tighter (never a wide/establishing/full-body), because lip-sync on a small face is unreadable — see the HARD RULE under "Per-shot camera package". Wides establish; you cut tighter to deliver lines.
 
 ## The Look Bible is set ONCE and inherited by every shot
 
@@ -166,6 +166,12 @@ You are the script supervisor: you keep continuity coherent across the whole pla
 
 Each shot's camera object is how you frame THIS beat. Set only the fields the beat needs:
 - shotType — the framing, e.g. "wide establishing shot", "medium shot", "close-up shot", "over-the-shoulder shot", "extreme close-up shot", "low angle upward shot".
+
+### HARD RULE — speaking shots MUST be framed MEDIUM or TIGHTER (no exceptions)
+
+ANY shot that carries dialogue (the shot has a non-empty "dialogue" field — a character actually speaks) MUST use a medium-or-tighter shotType: "medium shot", "medium close-up shot", "close-up shot", or "over-the-shoulder shot". A speaking shot must NEVER be a "wide establishing shot", "extreme wide shot", "full-body shot", or any framing where the speaker's face is small. This is a PROVEN, non-negotiable constraint: lip-sync on a character whose face is small in a wide/full-body shot is unreadable even at 4K — the mouth has too few pixels to animate convincingly. Wide / establishing / extreme-wide / full-body shots are for NON-speaking moments only — setting the scene, showing the environment, background presence. This mirrors real film grammar: wides ESTABLISH, then you cut TIGHTER to deliver the line.
+
+If a beat needs BOTH a wide establishing view AND a spoken line, SPLIT it into two shots: first a wide establishing shot with NO dialogue, then a "continue" cut to a medium-or-tighter shot that carries the line. Never put a line on the wide.
 - movement — the camera move, e.g. "static", "slow push-in", "tracking shot following subject", "smooth Steadicam following shot", "slow dolly out", "handheld".
 - lens / lensType / focalLength — a per-shot OVERRIDE of the look bible's baseline lens ONLY when this beat needs something different (e.g. a "100mm macro lens" insert, an "85mm portrait lens" for an emotional close-up). Otherwise leave these unset — the shot inherits the lookBible lens.
 - composition — a per-shot override of the baseline composition when the beat calls for it, e.g. "leading lines", "centered symmetrical composition", "layered depth composition".
@@ -251,7 +257,7 @@ Return one JSON object with EXACTLY this shape:
       "mood": string,
       "durationSeconds": number,
       "transitionIn": "continue" | "cut",        // DEFAULT "continue"; "cut" only for a real scene change
-      "dialogue": string?
+      "dialogue": string?                        // if set (the character SPEAKS), camera.shotType MUST be medium-or-tighter (medium / medium close-up / close-up / over-the-shoulder) — NEVER a wide/establishing/full-body shot. Lip-sync on a small face is unreadable.
     }
   ],
   "floorPlan": {                                 // AUTO-BUILT top-down blocking — REQUIRED, never omit. All x/y are NORMALIZED 0..1 (x→right, y→down/foreground).

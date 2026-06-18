@@ -39,6 +39,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { adminStorage } from '@/lib/firebase/admin';
 import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
 import { generateWithFal, generateFromReferenceWithFal } from '@/lib/ai/providers/fal-provider';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { createAsset } from '@/lib/media/media-library-service';
 import { createAvatarProfile, getAvatarProfile } from '@/lib/video/avatar-profile-service';
 import {
@@ -70,8 +71,12 @@ const FILE = 'video/shot-plan-generation-service.ts';
 /** The storage bucket all artifacts land in (matches the proven chaining scripts). */
 const BUCKET = 'rapid-compliance-65f87.firebasestorage.app';
 
-/** Resolution / aspect defaults applied when a shot does not specify them. */
-const DEFAULT_RESOLUTION: NonNullable<VideoGenerateRequest['resolution']> = '720p';
+/**
+ * Resolution / aspect defaults applied when a shot does not specify them.
+ * 1080p is Seedance's max — generating at full 1080p is the source the final
+ * stitch then upscales to 4K (3840x2160) via Topaz (upscale_factor 2).
+ */
+const DEFAULT_RESOLUTION: NonNullable<VideoGenerateRequest['resolution']> = '1080p';
 const DEFAULT_ASPECT_RATIO = '16:9';
 
 /** Poll cadence + ceiling: 5s interval, ~15 min ceiling (generous for a clip). */
@@ -121,6 +126,26 @@ function resolveCastReferenceImageUrls(plan: ShotPlan, shot: ShotPlanShot): stri
     }
   }
   return urls;
+}
+
+/**
+ * Resolve the SPEAKER of a shot: the lead cast member present in the shot. We walk
+ * `shot.castMemberIds` in order, resolving each to its `ShotPlanCastMember`, and
+ * return the first one billed `lead`; if none is billed lead, the first resolvable
+ * member. Returns null when the shot lists no resolvable cast (e.g. a scenery shot).
+ */
+function resolveSpeakingCastMember(plan: ShotPlan, shot: ShotPlanShot): ShotPlanCastMember | null {
+  const present: ShotPlanCastMember[] = [];
+  for (const memberId of shot.castMemberIds) {
+    const member = plan.sharedChoices.cast.find((c) => c.characterId === memberId);
+    if (member) {
+      present.push(member);
+    }
+  }
+  if (present.length === 0) {
+    return null;
+  }
+  return present.find((m) => m.billing === 'lead') ?? present[0];
 }
 
 /**
@@ -251,6 +276,83 @@ async function uploadPermanent(
   return firebaseDownloadUrl(BUCKET, storagePath, token);
 }
 
+// ============================================================================
+// fal queue helpers (lip-sync / TTS / upscale) — proven pattern reused from
+// scripts/pretest-inscene-lipsync.ts + scripts/bakeoff-lipsync-models.ts:
+//   POST queue.fal.run/{model} → {status_url, response_url} → poll → GET response.
+// ============================================================================
+
+/** fal lip-sync model: re-sync existing footage to an audio track. */
+const FAL_LIPSYNC_MODEL = 'fal-ai/sync-lipsync/v3';
+/** fal TTS model: synthesize a voice line (default voice "Rachel"). */
+const FAL_TTS_MODEL = 'fal-ai/elevenlabs/tts/eleven-v3';
+/** fal 4K upscaler: factor 2 on a 1080p source → exactly 3840x2160. */
+const FAL_UPSCALE_MODEL = 'fal-ai/topaz/upscale/video';
+
+/** fal queue submit response shape (the two URLs we poll / read). */
+interface FalQueueSubmit {
+  status_url: string;
+  response_url: string;
+}
+/** fal queue status shape (only `status` matters for our poll loop). */
+interface FalQueueStatus {
+  status: string;
+}
+
+/**
+ * Submit to fal's queue, poll to completion, return the raw output JSON.
+ * Mirrors the proven `falQueue(model, input, key, label)` helper in the pretest
+ * scripts: POST → {status_url,response_url}, poll status_url every 3s, GET
+ * response_url on COMPLETED.
+ */
+async function falQueue(
+  model: string,
+  input: Record<string, unknown>,
+  key: string,
+  label: string,
+): Promise<Record<string, unknown>> {
+  const submit = await fetch(`https://queue.fal.run/${model}`, {
+    method: 'POST',
+    headers: { Authorization: `Key ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!submit.ok) {
+    throw new Error(`${label} submit ${submit.status}: ${(await submit.text()).slice(0, 300)}`);
+  }
+  const sub = (await submit.json()) as FalQueueSubmit;
+  for (let i = 0; i < POLL_MAX_ATTEMPTS; i += 1) {
+    await sleep(POLL_INTERVAL_MS);
+    const statusResp = await fetch(sub.status_url, { headers: { Authorization: `Key ${key}` } });
+    const statusJson = (await statusResp.json()) as FalQueueStatus;
+    if (statusJson.status === 'COMPLETED') {
+      const resp = await fetch(sub.response_url, { headers: { Authorization: `Key ${key}` } });
+      return (await resp.json()) as Record<string, unknown>;
+    }
+    if (statusJson.status === 'FAILED' || statusJson.status === 'ERROR') {
+      throw new Error(`${label} failed: ${JSON.stringify(statusJson).slice(0, 300)}`);
+    }
+  }
+  throw new Error(`${label} timed out`);
+}
+
+/** Pull `video.url` (or `audio.url`) out of a fal output object, or throw. */
+function falMediaUrl(out: Record<string, unknown>, kind: 'video' | 'audio'): string {
+  const node = out[kind];
+  if (node && typeof node === 'object' && typeof (node as { url?: unknown }).url === 'string') {
+    return (node as { url: string }).url;
+  }
+  throw new Error(`no ${kind}.url in fal output: ${JSON.stringify(out).slice(0, 200)}`);
+}
+
+/** Resolve the platform fal API key (a string), or throw a clear error. */
+async function requireFalKey(): Promise<string> {
+  const key = await apiKeyService.getServiceKey(PLATFORM_ID, 'fal');
+  if (typeof key !== 'string' || key.length === 0) {
+    throw new Error('no fal API key in Firestore (apiKeyService.getServiceKey)');
+  }
+  return key;
+}
+
 /**
  * Extract the LAST FRAME of a local clip as a PNG. Uses the proven two-step
  * approach from the chaining script: an end-relative seek first, then a
@@ -327,6 +429,91 @@ async function pollToCompletion(generationId: string, ctx: TenantContext, label:
   throw new Error(
     `${label} poll timed out after ~${Math.round((POLL_INTERVAL_MS * POLL_MAX_ATTEMPTS) / 60000)} minutes`,
   );
+}
+
+// ============================================================================
+// In-scene lip-sync (speaking characters)
+// ============================================================================
+
+/** The lip-synced result for a shot: new persisted clip + re-extracted last frame. */
+interface LipSyncResult {
+  videoUrl: string;
+  lastFrameUrl: string;
+}
+
+/**
+ * Lip-sync a shot's already-persisted silent clip to a SPOKEN line in the
+ * character's assigned voice, persist the talking clip + its re-extracted last
+ * frame to OUR storage (ownership rule), and return both URLs.
+ *
+ *   1. TTS the line in the character's voice  (fal-ai/elevenlabs/tts/eleven-v3)
+ *   2. lip-sync the clip to that audio        (fal-ai/sync-lipsync/v3)
+ *   3. download → persist clip + re-extract & persist last frame (talking frame)
+ *
+ * The last frame is re-extracted off the TALKING clip so a downstream `continue`
+ * shot chains off the speaking frame, not the silent one. Caller owns the workDir.
+ */
+async function lipSyncShotClip(
+  args: {
+    shotId: string;
+    clipUrl: string;
+    dialogue: string;
+    voice: string;
+    falKey: string;
+    workDir: string;
+  },
+): Promise<LipSyncResult> {
+  const { shotId, clipUrl, dialogue, voice, falKey, workDir } = args;
+
+  // 1. TTS the line in the character's voice.
+  logger.info('[shot-plan-gen] lip-sync: synthesizing line', { file: FILE, shotId, voice });
+  const ttsOut = await falQueue(FAL_TTS_MODEL, { text: dialogue, voice }, falKey, `shot ${shotId} tts`);
+  const audioUrl = falMediaUrl(ttsOut, 'audio');
+
+  // 2. Lip-sync the persisted clip to that audio.
+  logger.info('[shot-plan-gen] lip-sync: re-syncing clip to voice', { file: FILE, shotId });
+  const syncOut = await falQueue(
+    FAL_LIPSYNC_MODEL,
+    { video_url: clipUrl, audio_url: audioUrl },
+    falKey,
+    `shot ${shotId} lip-sync`,
+  );
+  const syncedFalUrl = falMediaUrl(syncOut, 'video');
+
+  // 3. Download → persist the talking clip + re-extract & persist its last frame.
+  const syncedPath = join(workDir, 'lipsynced.mp4');
+  const syncedBuf = await downloadToFile(syncedFalUrl, syncedPath, `shot ${shotId} lip-synced clip`);
+  const syncedVideoUrl = await uploadPermanent(
+    syncedBuf,
+    `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`,
+    'video/mp4',
+    `shot ${shotId} lip-synced clip`,
+  );
+
+  const talkingFramePath = join(workDir, 'lipsynced-lastframe.png');
+  const talkingFrameBuf = await extractLastFrame(syncedPath, talkingFramePath);
+  const talkingFrameUrl = await uploadPermanent(
+    talkingFrameBuf,
+    `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
+    'image/png',
+    `shot ${shotId} talking last frame`,
+  );
+
+  await createAsset({
+    type: 'video',
+    category: 'video-clip',
+    name: `Shot ${shotId} — lip-synced`,
+    description: 'Lip-synced (speaking) clip — the silent shot re-synced to the character voice.',
+    url: syncedVideoUrl,
+    mimeType: 'video/mp4',
+    fileSize: syncedBuf.length,
+    source: 'ai-generated',
+    aiProvider: FAL_LIPSYNC_MODEL,
+    createdBy: 'system',
+    tags: ['shot-plan', 'lip-sync'],
+  });
+
+  return { videoUrl: syncedVideoUrl, lastFrameUrl: talkingFrameUrl };
 }
 
 // ============================================================================
@@ -478,10 +665,62 @@ export async function generateShot(
       tags: ['shot-plan'],
     });
 
+    // ── Speaking lip-sync (best-effort) ───────────────────────────────────────
+    // When the shot has a spoken line AND its lead cast member has an ASSIGNED
+    // voice, re-sync the silent clip to that voice and chain off the talking
+    // frame. Gated strictly on an assigned voice: an invented character with no
+    // saved profile (or no voice) keeps Seedance's native audio, untouched.
+    let finalVideoUrl = permanentVideoUrl;
+    let finalLastFrameUrl = permanentLastFrameUrl;
+    const dialogue = shot.dialogue?.trim();
+    if (dialogue) {
+      const speaker = resolveSpeakingCastMember(plan, shot);
+      const profile = speaker ? await getAvatarProfile(speaker.characterId).catch(() => null) : null;
+      // Strict voice gate: prefer the display voiceName, fall back to voiceId.
+      // Empty/whitespace-only values count as "no voice" → skip lip-sync.
+      const voiceName = profile?.voiceName?.trim();
+      const voiceId = profile?.voiceId?.trim();
+      const voice = voiceName && voiceName.length > 0 ? voiceName : voiceId && voiceId.length > 0 ? voiceId : '';
+      if (voice) {
+        try {
+          const falKey = await requireFalKey();
+          const synced = await lipSyncShotClip({
+            shotId,
+            clipUrl: permanentVideoUrl,
+            dialogue,
+            voice,
+            falKey,
+            workDir,
+          });
+          finalVideoUrl = synced.videoUrl;
+          finalLastFrameUrl = synced.lastFrameUrl;
+          logger.info('[shot-plan-gen] shot lip-synced to character voice', {
+            file: FILE,
+            shotId,
+            character: speaker?.name,
+            voice,
+          });
+        } catch (err) {
+          // Best-effort: keep the original silent clip + frame; never fail the shot.
+          logger.error(
+            '[shot-plan-gen] lip-sync failed (keeping original clip)',
+            err instanceof Error ? err : new Error(String(err)),
+            { file: FILE, shotId },
+          );
+        }
+      } else {
+        logger.info('[shot-plan-gen] shot has dialogue but no assigned voice — skipping lip-sync', {
+          file: FILE,
+          shotId,
+          character: speaker?.name,
+        });
+      }
+    }
+
     // ── Write the successful result back onto the shot ────────────────────────
     const generated: ShotPlanShotGenerated = {
-      videoUrl: permanentVideoUrl,
-      lastFrameUrl: permanentLastFrameUrl,
+      videoUrl: finalVideoUrl,
+      lastFrameUrl: finalLastFrameUrl,
       status: 'completed',
       generationId,
       ...(typeof shot.generated?.seed === 'number' ? { seed: shot.generated.seed } : {}),
@@ -490,7 +729,7 @@ export async function generateShot(
     logger.info('[shot-plan-gen] shot completed + persisted', {
       file: FILE,
       shotId,
-      videoUrl: permanentVideoUrl,
+      videoUrl: finalVideoUrl,
     });
 
     return writeGenerated(plan, shotId, generated);
@@ -734,31 +973,70 @@ export async function stitchShotPlan(plan: ShotPlan, ctx: TenantContext): Promis
       throw new Error('stitchShotPlan: ffmpeg produced an empty final video');
     }
 
-    // 3. Persist the deliverable to OUR storage + media library (ownership rule).
+    // 3. Persist the stitched 1080p deliverable to OUR storage (ownership rule).
+    //    This is the upscaler's source AND our guaranteed fallback.
     const storagePath = `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`;
-    const finalUrl = await uploadPermanent(finalBuf, storagePath, 'video/mp4', 'shot-plan final video');
+    const stitched1080Url = await uploadPermanent(finalBuf, storagePath, 'video/mp4', 'shot-plan stitched 1080p video');
 
+    // 4. Topaz 4K upscale pass (best-effort). factor 2 on a 1080p source →
+    //    exactly 3840x2160. If it fails we deliver the 1080p stitch + log, never
+    //    losing the work. The 4K result is downloaded → persisted (ownership rule).
+    let finalUrl = stitched1080Url;
+    let finalBytes = finalBuf.length;
+    let upscaledTo4K = false;
+    try {
+      const falKey = await requireFalKey();
+      logger.info('[shot-plan-gen] upscaling stitched video to 4K (Topaz)', { file: FILE, clips: clips.length });
+      const upscaleOut = await falQueue(
+        FAL_UPSCALE_MODEL,
+        { video_url: stitched1080Url, upscale_factor: 2 },
+        falKey,
+        'shot-plan 4K upscale',
+      );
+      const upscaledFalUrl = falMediaUrl(upscaleOut, 'video');
+      const upscaledPath = join(workDir, 'final-4k.mp4');
+      const upscaledBuf = await downloadToFile(upscaledFalUrl, upscaledPath, 'shot-plan 4K video');
+      finalUrl = await uploadPermanent(
+        upscaledBuf,
+        `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`,
+        'video/mp4',
+        'shot-plan 4K final video',
+      );
+      finalBytes = upscaledBuf.length;
+      upscaledTo4K = true;
+      logger.info('[shot-plan-gen] 4K upscale completed + persisted', { file: FILE, finalUrl, bytes: finalBytes });
+    } catch (err) {
+      // Best-effort: fall back to the 1080p stitch; never lose the work.
+      logger.error(
+        '[shot-plan-gen] 4K upscale failed (delivering 1080p stitch)',
+        err instanceof Error ? err : new Error(String(err)),
+        { file: FILE },
+      );
+    }
+
+    // 5. Register the delivered video in the media library (ownership rule).
     await createAsset({
       type: 'video',
       category: 'final-render',
-      name: `${plan.title || 'Shot Plan'} — final video`,
+      name: `${plan.title || 'Shot Plan'} — final video${upscaledTo4K ? ' (4K)' : ''}`,
       description:
-        `Final stitched video (${clips.length} shot${clips.length === 1 ? '' : 's'}) ` +
-        `from Shot Plan "${plan.title || plan.id}".`,
+        `Final stitched video (${clips.length} shot${clips.length === 1 ? '' : 's'}, ` +
+        `${upscaledTo4K ? '4K upscaled' : '1080p'}) from Shot Plan "${plan.title || plan.id}".`,
       url: finalUrl,
       mimeType: 'video/mp4',
-      fileSize: finalBuf.length,
+      fileSize: finalBytes,
       source: 'ai-generated',
-      aiProvider: 'fal-seedance',
+      aiProvider: upscaledTo4K ? `fal-seedance + ${FAL_UPSCALE_MODEL}` : 'fal-seedance',
       createdBy: 'system',
-      tags: ['shot-plan', 'final-video'],
+      tags: upscaledTo4K ? ['shot-plan', 'final-video', '4k'] : ['shot-plan', 'final-video'],
     });
 
-    logger.info('[shot-plan-gen] final video stitched + persisted', {
+    logger.info('[shot-plan-gen] final video persisted', {
       file: FILE,
       finalUrl,
-      bytes: finalBuf.length,
+      bytes: finalBytes,
       clips: clips.length,
+      upscaledTo4K,
     });
 
     return applyShotPlanEdit(plan, { target: 'plan', field: 'finalVideoUrl', value: finalUrl });
