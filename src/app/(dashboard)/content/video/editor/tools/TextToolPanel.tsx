@@ -30,6 +30,7 @@ import {
 import type { EditorToolProps } from '../editor-tools';
 import type { TextOverlay } from '../types';
 import OverlayFields, { type OverlayDraft } from './text/OverlayFields';
+import CaptionStyleCard from './text/CaptionStyleCard';
 import {
   buildDefaultOverlay,
   clipTimelineOffsets,
@@ -274,32 +275,23 @@ export default function TextToolPanel({ state, dispatch, authFetch }: EditorTool
           Transcribe every clip and drop synced captions onto your timeline.
         </SectionDescription>
 
-        {/* ── Caption style picker ──────────────────────────────────────── */}
+        {/* ── Caption style picker — visual gallery ─────────────────────── */}
         <div className="space-y-1.5">
           <Label>Caption style</Label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {CAPTION_STYLES.map((style) => {
-              const isSelected = captionStyle === style;
-              return (
-                <button
-                  key={style}
-                  type="button"
-                  aria-pressed={isSelected}
-                  title={CAPTION_STYLE_HINTS[style]}
-                  onClick={() => setCaptionStyle(style)}
-                  disabled={isWorking}
-                  className={`rounded-md border px-2 py-1.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
-                    isSelected
-                      ? 'border-primary bg-primary/10 text-foreground'
-                      : 'border-border-strong bg-background text-foreground hover:bg-accent'
-                  }`}
-                >
-                  {CAPTION_STYLE_LABELS[style]}
-                </button>
-              );
-            })}
+          <Caption className="block">Pick a look — each card shows how your captions will appear.</Caption>
+          <div className="grid max-h-[28rem] grid-cols-2 gap-2 overflow-y-auto pr-0.5">
+            {CAPTION_STYLES.map((style) => (
+              <CaptionStyleCard
+                key={style}
+                style={style}
+                label={CAPTION_STYLE_LABELS[style]}
+                hint={CAPTION_STYLE_HINTS[style]}
+                selected={captionStyle === style}
+                disabled={isWorking}
+                onSelect={setCaptionStyle}
+              />
+            ))}
           </div>
-          <Caption className="block">{CAPTION_STYLE_HINTS[captionStyle]}</Caption>
         </div>
 
         <Button

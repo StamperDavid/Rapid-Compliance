@@ -17,7 +17,7 @@ import { useReducer, useCallback, useEffect, useRef, useState, type ComponentTyp
 import { useSearchParams } from 'next/navigation';
 import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, Upload } from 'lucide-react';
 
-import { PageTitle } from '@/components/ui/typography';
+import { PageTitle, Caption } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
@@ -70,7 +70,9 @@ export default function VideoEditorPage() {
   const [tool, setTool] = useState<EditorTool>('edit');
   // The Add-media rail (upload / library / projects / characters / URL import) is a
   // SHARED on-ramp: bring in your own footage, an earlier video, or a project's scenes.
-  const [mediaOpen, setMediaOpen] = useState(false);
+  // Open by DEFAULT — a video editor needs its media bin visible, like CapCut. The
+  // operator can collapse it with the header toggle.
+  const [mediaOpen, setMediaOpen] = useState(true);
 
   const { clips, textOverlays, isPlaying, selectedClipId, playheadTime } = state;
 
@@ -364,6 +366,18 @@ export default function VideoEditorPage() {
 
         {/* Always-on core: Preview + Timeline */}
         <div className="min-w-0 space-y-4">
+          {state.clips.length === 0 && (
+            <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-center">
+              <Caption className="block">
+                Your timeline is empty. Bring in footage from the{' '}
+                <span className="font-medium text-foreground">Media</span> panel
+                {mediaOpen ? ' on the left' : ' (the “Add media” button)'} — your{' '}
+                <span className="font-medium text-foreground">Library</span>, your{' '}
+                <span className="font-medium text-foreground">Projects</span> (generated scenes), or{' '}
+                <span className="font-medium text-foreground">Upload</span> your own.
+              </Caption>
+            </div>
+          )}
           <Preview
             clips={state.clips}
             textOverlays={state.textOverlays}

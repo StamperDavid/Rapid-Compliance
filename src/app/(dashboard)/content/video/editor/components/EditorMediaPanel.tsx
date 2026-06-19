@@ -6,7 +6,7 @@
  * Dispatches ADD_CLIP / ADD_AUDIO_TRACK actions directly to the editor reducer.
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -20,9 +20,7 @@ import {
   Upload,
   Search,
   Plus,
-  Play,
   Loader2,
-  Image as ImageIcon,
   Music,
 } from 'lucide-react';
 
@@ -30,6 +28,7 @@ import type { EditorAction } from '../types';
 import type { TransitionType, PipelineProject } from '@/types/video-pipeline';
 import type { MediaItem, MediaType, AudioCategory } from '@/types/media-library';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { MediaThumbnail } from './MediaThumbnail';
 
 // ============================================================================
 // Types
@@ -75,49 +74,65 @@ function MediaItemCard({
   onAddToTimeline?: () => void;
   actionLabel?: string;
 }) {
-  const iconMap: Record<string, React.ElementType> = {
-    video: Film,
-    image: ImageIcon,
-    audio: Music,
-  };
-  const colorMap: Record<string, string> = {
-    video: 'text-primary-light',
-    image: 'text-info-light',
-    audio: 'text-primary-light',
-  };
-  const Icon = iconMap[item.type] ?? Film;
-  const color = colorMap[item.type] ?? 'text-muted-foreground';
+  const isAddable = Boolean(onAddToTimeline && actionLabel);
 
-  return (
-    <div className="flex items-center gap-2 p-1.5 rounded border border-border-strong hover:border-border-strong bg-surface-elevated/20 group">
-      <div
-        className={`w-7 h-7 rounded flex items-center justify-center flex-shrink-0 ${
-          item.type === 'video'
-            ? 'bg-primary/10'
-            : item.type === 'image'
-              ? 'bg-info/10'
-              : 'bg-primary/10'
+  // Audio items have no useful thumbnail — keep them as a compact row.
+  if (item.type === 'audio') {
+    return (
+      <button
+        type="button"
+        disabled={!isAddable}
+        onClick={() => onAddToTimeline?.()}
+        title={actionLabel}
+        className={`group flex w-full items-center gap-2 rounded-md border border-border-strong bg-surface-elevated/30 p-2 text-left transition-colors ${
+          isAddable ? 'cursor-pointer hover:border-primary/40 hover:bg-surface-elevated/60' : ''
         }`}
       >
-        <Icon className={`w-3.5 h-3.5 ${color}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-foreground truncate">{item.name}</p>
-        <p className="text-[9px] text-muted-foreground">{item.category}</p>
-      </div>
-      {onAddToTimeline && actionLabel && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddToTimeline();
-          }}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded bg-primary/10 text-primary-light hover:bg-primary/20 transition-all flex-shrink-0"
-          title={actionLabel}
-        >
-          <Plus className="w-3 h-3" />
-        </button>
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary/10">
+          <Music className="h-4 w-4 text-primary-light" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-medium text-foreground">{item.name}</p>
+          <p className="text-[10px] capitalize text-muted-foreground">{item.category}</p>
+        </div>
+        {isAddable && (
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary-light transition-colors group-hover:bg-primary/20">
+            <Plus className="h-3 w-3" />
+            Add track
+          </span>
+        )}
+      </button>
+    );
+  }
+
+  // Video + image: a clickable visual tile with a real thumbnail.
+  return (
+    <button
+      type="button"
+      disabled={!isAddable}
+      onClick={() => onAddToTimeline?.()}
+      title={actionLabel}
+      className={`group relative block w-full overflow-hidden rounded-lg border border-border-strong bg-surface-elevated/30 text-left transition-all ${
+        isAddable ? 'cursor-pointer hover:border-primary/50 hover:bg-surface-elevated/60' : ''
+      }`}
+    >
+      <MediaThumbnail type={item.type} thumbnailUrl={item.thumbnailUrl} alt={item.name} />
+
+      {/* Hover "Add" overlay — clearly signals the whole tile is clickable. */}
+      {isAddable && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/0 opacity-0 transition-all group-hover:bg-background/40 group-hover:opacity-100">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-lg">
+            <Plus className="h-3.5 w-3.5" />
+            {actionLabel}
+          </span>
+        </div>
       )}
-    </div>
+
+      <div className="p-2">
+        <p className="truncate text-xs font-medium text-foreground">{item.name}</p>
+        <p className="text-[10px] capitalize text-muted-foreground">{item.category}</p>
+      </div>
+    </button>
   );
 }
 
@@ -130,7 +145,9 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
 
   // ── Library state ──────────────────────────────────────────────────────
   const [panelTab, setPanelTab] = useState<MediaPanelTab>('library');
-  const [mediaType, setMediaType] = useState<LibraryMediaType>('all');
+  // Lead with Video — clips are the operator's most common add, and the
+  // bin should show them first rather than a wall of images.
+  const [mediaType, setMediaType] = useState<LibraryMediaType>('video');
   const [audioFilter, setAudioFilter] = useState<LibraryAudioFilter>('all');
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
@@ -150,6 +167,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
   // ── Upload state ───────────────────────────────────────────────────────
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCategory, setUploadCategory] = useState<string>('clip');
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── URL import state ───────────────────────────────────────────────────
@@ -238,6 +256,13 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
     },
     [fetchMedia],
   );
+
+  // Load the default (Video) library on mount so the bin isn't empty when the
+  // editor opens with the panel already showing. `fetchMedia` is stable
+  // (memoized on authFetch), so this effectively runs once.
+  useEffect(() => {
+    void fetchMedia('video', 'all');
+  }, [fetchMedia]);
 
   // ========================================================================
   // Projects Loading
@@ -331,13 +356,8 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
   // File Upload
   // ========================================================================
 
-  const handleFileUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) {
-        return;
-      }
-
+  const uploadFile = useCallback(
+    async (file: File) => {
       setIsUploading(true);
       try {
         const formData = new FormData();
@@ -400,6 +420,28 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
       }
     },
     [authFetch, uploadCategory, addClipFromMedia, addAudioFromMedia, fetchMedia, mediaType, audioFilter],
+  );
+
+  const handleFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        void uploadFile(file);
+      }
+    },
+    [uploadFile],
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file) {
+        void uploadFile(file);
+      }
+    },
+    [uploadFile],
   );
 
   // ========================================================================
@@ -474,19 +516,26 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
             {/* ── Library Tab ──────────────────────────────────────── */}
             {panelTab === 'library' && (
               <>
-                {/* Type Filter */}
+                {/* Type Filter — leads with Video, the most common add. */}
                 <div className="flex gap-1">
-                  {(['all', 'video', 'image', 'audio'] as const).map((t) => (
+                  {(
+                    [
+                      { key: 'video', label: 'Videos' },
+                      { key: 'all', label: 'All' },
+                      { key: 'image', label: 'Images' },
+                      { key: 'audio', label: 'Audio' },
+                    ] as const
+                  ).map((t) => (
                     <button
-                      key={t}
-                      onClick={() => handleMediaTypeChange(t)}
+                      key={t.key}
+                      onClick={() => handleMediaTypeChange(t.key)}
                       className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                        mediaType === t
-                          ? 'bg-border-strong text-foreground'
-                          : 'text-muted-foreground hover:text-foreground'
+                        mediaType === t.key
+                          ? 'bg-primary/20 text-primary-light'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated'
                       }`}
                     >
-                      {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
+                      {t.label}
                     </button>
                   ))}
                 </div>
@@ -522,22 +571,47 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                   />
                 </div>
 
-                {/* Media List */}
-                <div className="max-h-[400px] overflow-y-auto space-y-1.5">
+                {/* Media List — grid of clickable tiles; audio spans full width. */}
+                <div className="max-h-[400px] overflow-y-auto">
                   {loadingMedia ? (
                     <div className="flex justify-center py-8">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     </div>
                   ) : filteredMedia.length === 0 ? (
-                    <div className="text-center py-8">
-                      <FolderOpen className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-xs text-muted-foreground">No media found</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">Upload files or add from projects</p>
+                    <div className="rounded-lg border border-dashed border-border-strong px-3 py-8 text-center">
+                      <FolderOpen className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                      <p className="text-xs font-medium text-foreground">
+                        {mediaType === 'video'
+                          ? 'No videos here yet'
+                          : mediaType === 'audio'
+                            ? 'No audio here yet'
+                            : mediaType === 'image'
+                              ? 'No images here yet'
+                              : 'Nothing in your library yet'}
+                      </p>
+                      <p className="mx-auto mt-1 max-w-[200px] text-[10px] leading-relaxed text-muted-foreground">
+                        {mediaSearch.trim()
+                          ? 'No matches for your search. Try a different term.'
+                          : 'Upload your own footage from the Upload tab, or import finished scenes from a Project.'}
+                      </p>
+                      {!mediaSearch.trim() && (
+                        <div className="mt-3 flex justify-center gap-2">
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => handlePanelTabChange('upload')}>
+                            <Upload className="h-3 w-3" />
+                            Upload
+                          </Button>
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => handlePanelTabChange('projects')}>
+                            <Film className="h-3 w-3" />
+                            Projects
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    filteredMedia.map((item) => (
+                    <div className="grid grid-cols-2 gap-2">
+                      {filteredMedia.map((item) => (
+                      <div key={item.id} className={item.type === 'audio' ? 'col-span-2' : ''}>
                       <MediaItemCard
-                        key={item.id}
                         item={item}
                         onAddToTimeline={() => {
                           if (item.type === 'video') {
@@ -569,7 +643,9 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                               : undefined
                         }
                       />
-                    ))
+                      </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </>
@@ -578,14 +654,23 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
             {/* ── Projects Tab ─────────────────────────────────────── */}
             {panelTab === 'projects' && (
               <div className="max-h-[450px] overflow-y-auto space-y-1.5">
+                {!loadingProjects && projects.length > 0 && (
+                  <p className="px-0.5 pb-1 text-[10px] text-muted-foreground">
+                    Pick a project to import its finished scenes or final video.
+                  </p>
+                )}
                 {loadingProjects ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
                   </div>
                 ) : projects.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Film className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">No projects found</p>
+                  <div className="rounded-lg border border-dashed border-border-strong px-3 py-8 text-center">
+                    <Film className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                    <p className="text-xs font-medium text-foreground">No projects yet</p>
+                    <p className="mx-auto mt-1 max-w-[210px] text-[10px] leading-relaxed text-muted-foreground">
+                      Import scenes from one of your projects. Once you generate a video project,
+                      its scenes and final cut show up here ready to drop on the timeline.
+                    </p>
                   </div>
                 ) : (
                   projects.map((project) => (
@@ -642,26 +727,41 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                                 scenes
                               </button>
 
-                              {expandedProject.generatedScenes
-                                .filter((s) => s.videoUrl)
-                                .map((scene, idx) => (
-                                  <button
-                                    key={scene.sceneId}
-                                    onClick={() => {
-                                      addClipFromMedia({
-                                        name: `${project.name} — Scene ${idx + 1}`,
-                                        url: scene.videoUrl ?? '',
-                                        thumbnailUrl: scene.thumbnailUrl,
-                                        source: 'project',
-                                      });
-                                    }}
-                                    className="w-full text-left px-2 py-1.5 rounded border border-border-strong hover:border-primary/30 text-xs text-foreground hover:text-foreground transition-colors flex items-center gap-2"
-                                  >
-                                    <Play className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                                    <span className="truncate">Scene {idx + 1}</span>
-                                    <Plus className="w-3 h-3 text-muted-foreground ml-auto flex-shrink-0" />
-                                  </button>
-                                ))}
+                              <div className="grid grid-cols-2 gap-2">
+                                {expandedProject.generatedScenes
+                                  .filter((s) => s.videoUrl)
+                                  .map((scene, idx) => (
+                                    <button
+                                      key={scene.sceneId}
+                                      type="button"
+                                      title={`Add Scene ${idx + 1} to timeline`}
+                                      onClick={() => {
+                                        addClipFromMedia({
+                                          name: `${project.name} — Scene ${idx + 1}`,
+                                          url: scene.videoUrl ?? '',
+                                          thumbnailUrl: scene.thumbnailUrl,
+                                          source: 'project',
+                                        });
+                                      }}
+                                      className="group relative block w-full cursor-pointer overflow-hidden rounded-lg border border-border-strong bg-surface-elevated/30 text-left transition-all hover:border-primary/50 hover:bg-surface-elevated/60"
+                                    >
+                                      <MediaThumbnail
+                                        type="video"
+                                        thumbnailUrl={scene.thumbnailUrl}
+                                        alt={`Scene ${idx + 1}`}
+                                      />
+                                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-all group-hover:bg-background/40 group-hover:opacity-100">
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-lg">
+                                          <Plus className="h-3 w-3" />
+                                          Add
+                                        </span>
+                                      </div>
+                                      <p className="truncate p-1.5 text-[11px] font-medium text-foreground">
+                                        Scene {idx + 1}
+                                      </p>
+                                    </button>
+                                  ))}
+                              </div>
 
                               {/* Add final video if exists */}
                               {expandedProject.finalVideoUrl && (
@@ -703,10 +803,12 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
                   </div>
                 ) : avatars.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">No characters found</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">Create characters in the Studio</p>
+                  <div className="rounded-lg border border-dashed border-border-strong px-3 py-8 text-center">
+                    <Users className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                    <p className="text-xs font-medium text-foreground">No characters yet</p>
+                    <p className="mx-auto mt-1 max-w-[200px] text-[10px] leading-relaxed text-muted-foreground">
+                      Create reusable characters in the Studio and they will show up here.
+                    </p>
                   </div>
                 ) : (
                   avatars.map((avatar) => (
@@ -781,34 +883,53 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
                   </select>
                 </div>
 
-                {/* Upload Button */}
+                {/* Drag-and-drop / choose-file drop zone */}
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="video/*,image/*,audio/*"
-                  onChange={(e) => {
-                    void handleFileUpload(e);
-                  }}
+                  onChange={handleFileUpload}
                   className="hidden"
                 />
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
+                <div
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={handleDrop}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors ${
+                    isDragOver
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border-strong bg-surface-elevated/30 hover:border-primary/50 hover:bg-surface-elevated/60'
+                  }`}
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Uploading...
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <p className="text-xs font-medium text-foreground">Uploading…</p>
                     </>
                   ) : (
                     <>
-                      <Upload className="w-4 h-4" />
-                      Choose File
+                      <Upload className="h-6 w-6 text-primary-light" />
+                      <p className="text-xs font-medium text-foreground">
+                        Drag in or choose a video file to start
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Video, image, or audio. Videos drop straight onto the timeline.
+                      </p>
                     </>
                   )}
-                </Button>
+                </div>
 
                 {/* Divider */}
                 <div className="flex items-center gap-2">
