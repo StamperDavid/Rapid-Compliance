@@ -1306,9 +1306,9 @@ export async function generateShotKeyframe(
         ? `Cinematic film still: keep the EXACT same person/people from the reference image — ` +
           `identical face(s), hair, and wardrobe — placed inside ${envProse || 'the scene environment'}. ` +
           `${basePrompt} Photographic, film-grade, sharp focus, on-model recognizable cast in the ` +
-          `actual set, no text.`
+          `actual set, no text. No invented brand logos, brand names, or fake signage text in frame.`
         : `Cinematic film still in ${envProse || 'the scene environment'}. ${basePrompt} ` +
-          `Photographic, film-grade, sharp focus, no text.`;
+          `Photographic, film-grade, sharp focus, no text. No invented brand logos, brand names, or fake signage text in frame.`;
 
     logger.info('[shot-plan-gen] submitting keyframe still', {
       file: FILE,
@@ -1487,7 +1487,7 @@ async function renderEnvironmentHeroImage(
 ): Promise<string> {
   const prompt =
     `Wide cinematic establishing shot of ${description}. ${lookBits}. ` +
-    'Atmospheric, film-still quality, no people, no text.';
+    'Atmospheric, film-still quality, no people, no text. No invented brand logos, brand names, or fake signage text on any sign, screen, or surface.';
   const workDir = await createWorkDir('shot-plan-envhero');
   try {
     logger.info('[shot-plan-gen] submitting environment hero', { file: FILE, tenantId: ctx.tenantId, label });
