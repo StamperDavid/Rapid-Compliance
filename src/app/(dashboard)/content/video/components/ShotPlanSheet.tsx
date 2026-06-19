@@ -28,7 +28,7 @@
  * existing /content/video Storyboard step (toggled from StepStoryboard).
  */
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
@@ -122,16 +122,40 @@ import type { CinematicConfig } from '@/types/creative-studio';
 // API response shapes
 // ============================================================================
 
-interface GenerateResponse {
-  success: boolean;
-  plan?: ShotPlan;
-  error?: string;
-}
-
 interface EditFieldResponse {
   success: boolean;
   plan?: ShotPlan;
   flaggedDownstreamShotIds?: string[];
+  error?: string;
+}
+
+/** Plain-English progress the server writes onto the project doc as it builds. */
+interface ShotPlanBuildProgress {
+  phase: string;
+  label: string;
+  done: number;
+  total: number;
+  failed?: number;
+}
+
+/**
+ * GET /api/video/project/[projectId] response — the project plus the server-side
+ * shot-doc build fields the client polls to watch the build fill in.
+ */
+interface ProjectPollResponse {
+  success: boolean;
+  shotPlan?: ShotPlan | null;
+  shotPlanStatus?: 'generating' | 'complete' | 'error' | null;
+  shotPlanProgress?: ShotPlanBuildProgress | null;
+  shotPlanError?: string | null;
+  error?: string;
+}
+
+/** POST /api/content/shot-plan/build response. */
+interface BuildResponse {
+  success: boolean;
+  started?: boolean;
+  projectId?: string;
   error?: string;
 }
 
@@ -2203,6 +2227,13 @@ export function ShotPlanSheet() {
   const router = useRouter();
   const shotPlan = useVideoPipelineStore((s) => s.shotPlan);
   const setShotPlan = useVideoPipelineStore((s) => s.setShotPlan);
+  const setProjectId = useVideoPipelineStore((s) => s.setProjectId);
+  // Server-side shot-doc build status/progress (transient store fields). The
+  // build runs on the server; we fire ONE request then poll the project doc.
+  const shotPlanBuildStatus = useVideoPipelineStore((s) => s.shotPlanBuildStatus);
+  const setShotPlanBuildStatus = useVideoPipelineStore((s) => s.setShotPlanBuildStatus);
+  const shotPlanBuildProgress = useVideoPipelineStore((s) => s.shotPlanBuildProgress);
+  const setShotPlanBuildProgress = useVideoPipelineStore((s) => s.setShotPlanBuildProgress);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -2242,9 +2273,17 @@ export function ShotPlanSheet() {
   const [isStitching, setIsStitching] = useState(false);
   // Plain-English generation failure surfaced to the operator (never silent).
   const [shotGenError, setShotGenError] = useState<string | null>(null);
-  // While the just-generated plan's images (floor plan + keyframes) are rendering
-  // so the document arrives COMPLETE for review.
-  const [isRenderingSheet, setIsRenderingSheet] = useState(false);
+  // True while the SERVER-SIDE shot-doc build is rendering its images (mirrors
+  // the build status — the document arrives COMPLETE for review as polls land).
+  const isRenderingSheet = shotPlanBuildStatus === 'generating';
+
+  // ── Server-side build polling ──
+  // Holds the active poll interval so we can clear it on unmount / completion.
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Guards against overlapping polls (a slow fetch must not stack on the next tick).
+  const pollInFlightRef = useRef(false);
+  // Ensures the resume-on-mount re-attach only fires once.
+  const resumeAttemptedRef = useRef(false);
 
   const cameraShot = useMemo(
     () => (cameraShotId ? shotPlan?.shots.find((s) => s.id === cameraShotId) ?? null : null),
@@ -2267,141 +2306,183 @@ export function ShotPlanSheet() {
     [shotPlan, setShotPlan],
   );
 
+  // ── Server-side build polling ──
+  // Stop any active poll loop. Safe to call repeatedly.
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current !== null) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    pollInFlightRef.current = false;
+  }, []);
+
+  // One poll: GET the project, fold in the latest plan/progress, and react to a
+  // terminal build status. A failed FETCH (network) does NOT stop the loop — the
+  // server build keeps running, so we just try again next tick. The in-flight
+  // guard is managed by `runPoll` (below), not here, so this stays a clean
+  // fetch-and-apply with no ref writes after an await.
+  const pollOnce = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        const res = await authFetch(`/api/video/project/${id}`);
+        const data = (await res.json()) as ProjectPollResponse;
+        if (!res.ok || !data.success) {
+          // A failed read is non-fatal — keep polling.
+          return;
+        }
+        // Fold in whatever the server has rendered so far.
+        if (data.shotPlan) {
+          setShotPlan(data.shotPlan);
+        }
+        setShotPlanBuildProgress(data.shotPlanProgress ?? null);
+
+        if (data.shotPlanStatus === 'complete') {
+          stopPolling();
+          setShotPlanBuildStatus('complete');
+        } else if (data.shotPlanStatus === 'error') {
+          stopPolling();
+          setShotPlanBuildStatus('error');
+          setShotGenError(
+            data.shotPlanError ?? 'The shot doc build failed. Please try again.',
+          );
+        }
+      } catch {
+        // Network blip — the server build is still running; retry next tick.
+      }
+    },
+    [authFetch, setShotPlan, setShotPlanBuildProgress, setShotPlanBuildStatus, stopPolling],
+  );
+
+  // Synchronous wrapper that enforces the no-overlap guard. Sets the in-flight
+  // flag before the promise starts and clears it on settle via `.finally()` — no
+  // `await` in this scope, so polls never stack even if one runs long.
+  const runPoll = useCallback(
+    (id: string): void => {
+      if (pollInFlightRef.current) {
+        return;
+      }
+      pollInFlightRef.current = true;
+      void pollOnce(id).finally(() => {
+        pollInFlightRef.current = false;
+      });
+    },
+    [pollOnce],
+  );
+
+  // Start (or restart) the 3-second poll loop for a project's server build.
+  const pollBuild = useCallback(
+    (id: string): void => {
+      // Don't double-start; an existing loop already covers this build.
+      if (pollIntervalRef.current !== null) {
+        return;
+      }
+      // Fire one immediately so the operator sees progress without a 3s wait…
+      runPoll(id);
+      // …then keep polling every 3s until a terminal status clears the interval.
+      pollIntervalRef.current = setInterval(() => {
+        runPoll(id);
+      }, 3000);
+    },
+    [runPoll],
+  );
+
+  // Tidy up the interval if the component unmounts mid-build (the SERVER build
+  // keeps running regardless — re-mounting re-attaches via the resume effect).
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, [stopPolling]);
+
   // ── Generate / start blank ──
+  // Fire ONE server-side build request, then POLL the project doc to watch the
+  // build fill in. This survives the operator navigating away / refreshing /
+  // closing the tab — the server owns the build; the browser just re-attaches.
   const handleGenerate = useCallback(
     async (brief: string) => {
       setIsGenerating(true);
       setGenerateError(null);
+      setShotGenError(null);
       try {
         // Selected locations (digital sets) ride along with the brief — the planner
         // builds the plan around these saved sets.
         const selectedLocationIds = selectedLocations.map((l) => l.id);
-        const res = await authFetch('/api/content/shot-plan/generate', {
+        const currentProjectId = useVideoPipelineStore.getState().projectId;
+        const res = await authFetch('/api/content/shot-plan/build', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             brief,
+            ...(currentProjectId ? { projectId: currentProjectId } : {}),
             ...(selectedLocationIds.length > 0 ? { selectedLocationIds } : {}),
           }),
         });
-        const data = (await res.json()) as GenerateResponse;
-        if (!res.ok || !data.success || !data.plan) {
-          throw new Error(data.error ?? 'Could not generate a Shot Doc');
+        const data = (await res.json()) as BuildResponse;
+        if (!res.ok || !data.success || !data.projectId) {
+          throw new Error(data.error ?? 'Could not start the Shot Doc build');
         }
-        // Show the structured plan immediately…
-        setShotPlan(data.plan);
+        // Remember the (possibly newly-created) project so saves + polls target it.
+        setProjectId(data.projectId);
+        // The build is live on the server — switch to the generating state and
+        // start polling. isGenerating drops; isRenderingSheet (derived from the
+        // build status) takes over the progress indicator.
+        setShotPlanBuildStatus('generating');
+        setShotPlanBuildProgress(null);
         setIsGenerating(false);
-
-        // …then render the image spread PROGRESSIVELY — one short request per asset,
-        // applying each result as it lands (so images pop in one-by-one and persist),
-        // instead of one multi-minute request that can drop before the browser gets it.
-        // Best-effort per step: a failed asset is skipped, never aborting the rest.
-        setIsRenderingSheet(true);
-        setShotGenError(null);
-        // Each step reads the LATEST plan from the store (set by the prior step) so
-        // results accumulate without a closure variable racing across awaits.
-        // Returns a plain-English label when the step dropped, or null on success —
-        // callers collect these so a missing asset is surfaced, never hidden.
-        const renderStep = async (
-          step: string,
-          shotId?: string,
-          castMemberId?: string,
-        ): Promise<string | null> => {
-          const current = useVideoPipelineStore.getState().shotPlan;
-          if (!current) {
-            return null;
-          }
-          const label =
-            step === 'keyframe' && shotId
-              ? `still for shot ${shotId}`
-              : step === 'characters' && castMemberId
-                ? `character sheet for ${castMemberId}`
-                : step;
-          try {
-            const res = await authFetch('/api/content/shot-plan/render-asset', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                plan: current,
-                step,
-                ...(shotId ? { shotId } : {}),
-                ...(castMemberId ? { castMemberId } : {}),
-              }),
-            });
-            const d = (await res.json()) as GenerateResponse;
-            if (res.ok && d.success && d.plan) {
-              setShotPlan(d.plan);
-              return null;
-            }
-            // Surface the dropped step (Rule: never silent). `warn` is allowed by eslint.
-            console.warn(`Shot Doc render step failed: ${label}`, d.error ?? res.status);
-            return label;
-          } catch (stepErr) {
-            // Surface the dropped step (Rule: never silent). `warn` is allowed by eslint.
-            console.warn(`Shot Doc render step errored: ${label}`, stepErr);
-            return label;
-          }
-        };
-        try {
-          // Collect every dropped step so the operator sees exactly what is missing.
-          const failed: string[] = [];
-          const note = (label: string | null): void => {
-            if (label) {
-              failed.push(label);
-            }
-          };
-
-          // 1) Cheap world-level assets first (each one short).
-          note(await renderStep('floor-plan'));
-          note(await renderStep('environment-hero'));
-          note(await renderStep('lighting'));
-
-          // 2) Character sheets, one short request per cast member (the server splits
-          //    the old multi-minute `characters` step per member). These run BEFORE
-          //    the keyframes so every member's reference images exist when the
-          //    storyboard stills are drawn — otherwise keyframes fall back to
-          //    text-to-image (castRefCount 0) and the people in the storyboard don't
-          //    match the cast. Each returned plan must land via setShotPlan before the
-          //    next call reads it, so this stays sequential by construction.
-          const cast = useVideoPipelineStore.getState().shotPlan?.sharedChoices.cast ?? [];
-          for (const member of cast) {
-            note(await renderStep('characters', undefined, member.characterId));
-          }
-
-          // 3) Object/prop reference sheets — fills the KEY PROPS block (invented
-          //    props get a base hero render + alternate views; saved props with refs
-          //    are skipped). One short request for the whole object set.
-          note(await renderStep('objects'));
-
-          // 4) Per-shot keyframe stills LAST, now that the cast reference images
-          //    exist so each still is anchored (Kontext image-to-image) to the real
-          //    cast instead of a generic stand-in. Kept SEQUENTIAL: every step
-          //    round-trips the WHOLE plan, so parallel writes would clobber each
-          //    other's keyframes (last-write-wins). Order by shot index.
-          const shotIds = [...(useVideoPipelineStore.getState().shotPlan?.shots ?? [])]
-            .sort((a, b) => a.index - b.index)
-            .map((s) => s.id);
-          for (const id of shotIds) {
-            note(await renderStep('keyframe', id));
-          }
-
-          if (failed.length > 0) {
-            setShotGenError(
-              `The Shot Doc is ready, but ${failed.length} image${failed.length === 1 ? '' : 's'} did not render: ` +
-                `${failed.join(', ')}. You can re-run those from the document.`,
-            );
-          }
-        } finally {
-          setIsRenderingSheet(false);
-        }
+        pollBuild(data.projectId);
       } catch (err) {
-        setGenerateError(err instanceof Error ? err.message : 'Could not generate a Shot Doc');
+        setGenerateError(err instanceof Error ? err.message : 'Could not start the Shot Doc build');
         setIsGenerating(false);
-        setIsRenderingSheet(false);
+        setShotPlanBuildStatus('idle');
       }
     },
-    [authFetch, setShotPlan, selectedLocations],
+    [
+      authFetch,
+      selectedLocations,
+      setProjectId,
+      setShotPlanBuildStatus,
+      setShotPlanBuildProgress,
+      pollBuild,
+    ],
   );
+
+  // ── Resume on mount — what makes the build survive navigation/refresh ──
+  // On mount, if we have a project id, do ONE read. If the SERVER build is still
+  // 'generating', hydrate the plan/progress and re-attach the poll loop so the
+  // document keeps filling in. Runs once (resumeAttemptedRef guards re-runs).
+  useEffect(() => {
+    if (resumeAttemptedRef.current) {
+      return;
+    }
+    resumeAttemptedRef.current = true;
+    const id = useVideoPipelineStore.getState().projectId;
+    if (!id) {
+      return;
+    }
+    // Already polling (e.g. handleGenerate started it) — don't double-start.
+    if (pollIntervalRef.current !== null) {
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/video/project/${id}`);
+        const data = (await res.json()) as ProjectPollResponse;
+        if (!res.ok || !data.success) {
+          return;
+        }
+        if (data.shotPlanStatus === 'generating') {
+          if (data.shotPlan) {
+            setShotPlan(data.shotPlan);
+          }
+          setShotPlanBuildProgress(data.shotPlanProgress ?? null);
+          setShotPlanBuildStatus('generating');
+          pollBuild(id);
+        }
+      } catch {
+        // No re-attach if the read fails — the user can re-run Generate.
+      }
+    })();
+  }, [authFetch, setShotPlan, setShotPlanBuildProgress, setShotPlanBuildStatus, pollBuild]);
 
   const handleStartBlank = useCallback(() => {
     setShotPlan(makeBlankShotPlan());
@@ -2856,8 +2937,10 @@ export function ShotPlanSheet() {
         <EntryScreen
           onGenerate={(b) => { void handleGenerate(b); }}
           onStartBlank={handleStartBlank}
-          isGenerating={isGenerating}
-          error={generateError}
+          // Keep the entry screen in its "drafting" state while the server-side
+          // build is running but hasn't yet polled back a plan to render.
+          isGenerating={isGenerating || isRenderingSheet}
+          error={generateError ?? shotGenError}
           selectedLocations={selectedLocations}
           onOpenLocationPicker={() => setLocationPickerOpen(true)}
           onRemoveLocation={removeLocation}
@@ -2959,11 +3042,18 @@ export function ShotPlanSheet() {
         </div>
       )}
 
-      {/* The just-generated plan is rendering its images so the document arrives complete */}
+      {/* The SERVER-SIDE build is rendering its images so the document arrives complete.
+          Survives navigating away / refreshing — re-attaches on mount and keeps polling. */}
       {isRenderingSheet && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
           <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-primary" />
-          Rendering your production sheet — generating the floor plan and every shot still so the document is complete and ready to edit…
+          <span>
+            {shotPlanBuildProgress?.label
+              ? shotPlanBuildProgress.total > 0
+                ? `${shotPlanBuildProgress.label} (${shotPlanBuildProgress.done}/${shotPlanBuildProgress.total})`
+                : shotPlanBuildProgress.label
+              : 'Building your production sheet — you can leave this page and come back; it keeps working.'}
+          </span>
         </div>
       )}
 

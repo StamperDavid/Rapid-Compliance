@@ -134,6 +134,9 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
   // The Shot Plan is its own content source — a plan (with its rendered images)
   // must persist even when there are no legacy pipeline "scenes".
   const shotPlan = useVideoPipelineStore((s) => s.shotPlan);
+  // While a server-side shot-doc build runs, the server owns the doc — skip
+  // autosaving so a stale polled plan never clobbers a newer server write.
+  const shotPlanBuildStatus = useVideoPipelineStore((s) => s.shotPlanBuildStatus);
 
   const [saveStatus, setSaveStatus] = useState<ProjectSaveStatus>('idle');
 
@@ -158,6 +161,13 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
    */
   const buildPayload = useCallback((): Record<string, unknown> | null => {
     const state = useVideoPipelineStore.getState();
+    // While a SERVER-SIDE shot-doc build is running, the server owns the project
+    // doc — it writes the plan + progress as each asset renders. A client autosave
+    // here would write a slightly-stale POLLED plan back over a newer server write,
+    // so skip saving entirely until the build is no longer 'generating'.
+    if (state.shotPlanBuildStatus === 'generating') {
+      return null;
+    }
     // Save when there are real scenes OR a Shot Plan (the shot-plan flow has no
     // pipeline scenes, so gating only on scenes meant plans never persisted).
     if (!hasRealContent(state.scenes) && !state.shotPlan) {
@@ -279,6 +289,10 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
 
   // ── Debounced auto-save on content change ────────────────────────────────
   useEffect(() => {
+    // Server-side build in flight → the server owns the doc; do not autosave.
+    if (shotPlanBuildStatus === 'generating') {
+      return;
+    }
     if (!hasRealContent(scenes) && !shotPlan) {
       return;
     }
@@ -313,6 +327,7 @@ export function useVideoProjectAutoSave(): UseVideoProjectAutoSaveResult {
     transitionType,
     currentStep,
     shotPlan,
+    shotPlanBuildStatus,
   ]);
 
   // ── Immediate save (key events) ──────────────────────────────────────────
