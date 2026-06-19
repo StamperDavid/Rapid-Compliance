@@ -129,7 +129,7 @@ const EditShotPlanFieldInputSchema = z.object({
   /** Which level the edit targets. */
   target: z.enum(['shared', 'shot', 'plan']),
   /** Required when target === 'shot'. */
-  shotId: z.string().trim().min(1).optional(),
+  shotId: z.string().trim().optional(),
   /** The property name on the targeted object (e.g. 'action', 'colorPalette', 'title'). */
   field: z.string().trim().min(1),
   /** The operator instruction in plain language. */
@@ -151,9 +151,9 @@ export type EditShotPlanFieldInput = z.infer<typeof EditShotPlanFieldInputSchema
  */
 const LlmCastMemberSchema = z.object({
   characterId: z.string().trim().min(1),
-  lookId: z.string().trim().min(1).optional(),
+  lookId: z.string().trim().optional(),
   name: z.string().trim().min(1),
-  role: z.string().trim().min(1).optional(),
+  role: z.string().trim().optional(),
   billing: z.enum(['lead', 'supporting']).optional(),
   subjectKind: z.enum(['person', 'creature', 'group']).optional(),
   notes: z.string().trim().min(1).max(2000).optional(),
@@ -256,7 +256,7 @@ const LlmLookBibleSchema = z.object({
   composition: z.string().trim().min(1),
   lighting: z.string().trim().min(1),
   atmosphere: z.string().trim().min(1),
-  photographerStyle: z.string().trim().min(1).optional(),
+  photographerStyle: z.string().trim().optional(),
 });
 
 /** The plan body the model returns (envelope fields id/createdAt/updatedAt are ours). */
@@ -279,7 +279,7 @@ const LlmShotPlanSchema = z.object({
     cast: z.array(LlmCastMemberSchema).default([]),
     moodKeywords: z.array(z.string().trim().min(1)).min(3),
     cinematographyNotes: z.array(z.string().trim().min(1)).min(2),
-    artStyle: z.string().trim().min(1).optional(),
+    artStyle: z.string().trim().optional(),
     // The deep, SET-ONCE cinematic look bible — every field REQUIRED (strict schema).
     lookBible: LlmLookBibleSchema,
     // Consolidated ordered set of locations. The model references shots by 0-based
@@ -353,10 +353,10 @@ const LlmShotPlanSchema = z.object({
           shotType: z.string().trim().min(1),
           movement: z.string().trim().min(1),
           // Optional per-shot overrides of the look bible (fall back to lookBible when omitted).
-          lens: z.string().trim().min(1).optional(),
-          lensType: z.string().trim().min(1).optional(),
-          focalLength: z.string().trim().min(1).optional(),
-          composition: z.string().trim().min(1).optional(),
+          lens: z.string().trim().optional(),
+          lensType: z.string().trim().optional(),
+          focalLength: z.string().trim().optional(),
+          composition: z.string().trim().optional(),
           viewingDirection: z.enum(['front', 'back', 'left', 'right']).optional(),
           subjectUnawareOfCamera: z.boolean().optional(),
         }),
@@ -365,7 +365,11 @@ const LlmShotPlanSchema = z.object({
         mood: z.string().trim().min(1),
         durationSeconds: z.number().min(1).max(120),
         transitionIn: z.enum(['continue', 'cut']),
-        dialogue: z.string().trim().min(1).optional(),
+        // A shot may have NO spoken line (visual / action / cutaway). The LLM emits
+        // "" for those, and `.optional()` only permits `undefined` — so `.min(1)`
+        // rejected the entire plan whenever an action shot returned empty dialogue.
+        // Allow empty: empty string simply means "no dialogue".
+        dialogue: z.string().trim().max(4000).optional(),
       }),
     )
     .min(1),
@@ -711,17 +715,18 @@ function buildGenerateUserPrompt(
     '      "characterStates": [ { "characterId": string, "state": string } ]  // optional emotional+physical state per character present,',
     '      "costumeStates": [ { "characterId": string, "state": string } ]  // optional costume condition per character,',
     '      "propStates": [ { "objectId": string, "state": string } ]  // optional key-prop condition,',
-    '      "camera": { "shotType": string, "movement": string, "lens": string },',
+    '      "camera": { "shotType": string, "movement": string, "lens": string, "lensType": string, "focalLength": string, "composition": string },  // fill ALL six — never blank',
     '      "lighting": string,',
     '      "mood": string,',
     '      "durationSeconds": number,',
     '      "transitionIn": "continue" | "cut",',
-    '      "dialogue": string (optional)',
+    '      "dialogue": string  // the spoken line; if no one speaks, the voiceover/narration line or a brief on-screen-audio note — NEVER blank',
     '    }',
     '  ]',
     '}',
     '',
     'HARD RULES:',
+    '- FILL EVERY FIELD with specific, concrete content — never leave any field blank, empty (""), or generic. A sheet with empty boxes is a FAILURE. Every camera detail, lighting, mood, time of day, weather, character/costume/prop state, every note, AND the dialogue/voiceover line must be filled for EVERY shot. The richer and more complete the sheet, the better.',
     '- Cast the SELECTED saved characters by their EXACT characterId. INVENT every OTHER character the story needs as a new sharedChoices.cast member with a FRESH unique id (e.g. "new_1", "new_2") and a full casting card; put non-human subjects (animals, creatures, vehicles, robots, signature props) in sharedChoices.objects with subjectKind. Reference every character per-shot in castMemberIds by its id. Do NOT output referenceImageUrls — they are resolved from a saved profile, or generated for an invented character.',
     '- NON-HUMAN SUBJECTS ARE NOT OPTIONAL: if the brief features an animal, creature, vehicle, robot, weapon, or signature prop, it MUST appear in sharedChoices.objects with its own id, a model-sheet-grade description, and be referenced per-shot via objectIds. A war-bear, a drone, a muscle car are SUBJECTS — never leave them only in prose. Treat them as seriously as cast.',
     '- For every cast member write "notes": a vivid 1-2 sentence description (build, face, wardrobe, demeanor) that a director would read off the production sheet. Never leave it blank.',

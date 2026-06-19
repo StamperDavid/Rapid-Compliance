@@ -78,8 +78,11 @@ function Tile({ children, className }: { children: ReactNode; className?: string
  *  their real height (CSS multi-column + break-inside-avoid), so no equal-height row
  *  coupling and no voids. This is OpenArt's "columns always equal the content" rule. */
 function Masonry({ colCount, children }: { colCount: number; children: ReactNode }) {
+  // Guard hard against NaN/0/undefined — an invalid columnCount throws a console
+  // warning and breaks the column layout. Always resolve to a finite ≥1 integer.
+  const cols = Number.isFinite(colCount) && colCount >= 1 ? Math.floor(colCount) : 1;
   return (
-    <div style={{ columnCount: Math.max(1, colCount), columnGap: '0.75rem' }}>
+    <div style={{ columnCount: cols, columnGap: '0.75rem' }}>
       {children}
     </div>
   );
