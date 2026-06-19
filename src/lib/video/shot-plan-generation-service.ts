@@ -42,6 +42,9 @@ import { generateWithFal, generateFromReferenceWithFal } from '@/lib/ai/provider
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { createAsset } from '@/lib/media/media-library-service';
 import { createAvatarProfile, getAvatarProfile } from '@/lib/video/avatar-profile-service';
+import { getBrandKit } from '@/lib/video/brand-kit-service';
+import { compositeBrandLogoCentered } from '@/lib/video/logo-compositor';
+import type { BrandLogo } from '@/types/brand-kit';
 import {
   ensureFfmpeg,
   runFfmpeg,
@@ -1987,17 +1990,107 @@ const OBJECT_VIEWS: { label: string; view: string }[] = [
   { label: 'DETAIL', view: 'close-up detail of materials, surface texture and distinguishing features, same subject' },
 ];
 
+/**
+ * A prop is a BRANDED SURFACE when its name or description names a surface that, in
+ * the real world, carries the company's logo (a screen, packaging, merch, signage…).
+ * For these props we (a) tell the generator to leave the surface clean/unbranded so it
+ * does NOT invent a fake logo, then (b) composite the operator's REAL logo on top.
+ */
+const BRANDED_SURFACE_REGEX = /dashboard|screen|display|monitor|branded|logo|app\b|tablet|laptop|mug|cup|bottle|merch|packaging|sign|banner/i;
+
+function isBrandedSurfaceProp(obj: { name: string; description?: string }): boolean {
+  return BRANDED_SURFACE_REGEX.test(`${obj.name} ${obj.description ?? ''}`);
+}
+
+/** Appended to branded-surface prop prompts so the AI leaves the surface logo-free. */
+const CLEAN_SURFACE_INSTRUCTION =
+  ', clean unbranded surface, no text, no logos, no brand marks, blank screen';
+
 /** Text-to-image prompt for an invented object's BASE reference from its description. */
 function inventedObjectBasePrompt(plan: ShotPlan, obj: { name: string; subjectKind?: 'object' | 'creature'; description?: string }): string {
   const sc = plan.sharedChoices;
   const style = firstText(sc.lookBible?.artStyle, sc.artStyle) ?? 'photorealistic';
   const kind = obj.subjectKind === 'creature' ? 'creature' : 'object';
   const descr = firstText(obj.description);
+  const cleanSurface = isBrandedSurfaceProp(obj) ? CLEAN_SURFACE_INSTRUCTION : '';
   return (
     `Hero reference of ${obj.name}, a ${kind}.${descr ? ` ${descr}.` : ''} ` +
     `Front three-quarter view, isolated on a clean light-grey studio background, even soft ` +
-    `studio lighting, sharp detail, ${style}. Single subject, full subject visible, no text.`
+    `studio lighting, sharp detail, ${style}. Single subject, full subject visible, no text${cleanSurface}.`
   );
+}
+
+/**
+ * Load the operator's real brand logo once per generation pass. Returns a usable
+ * `BrandLogo` (with a non-empty url) or null when there's no logo to composite.
+ * Best-effort — any error means "no logo", never a thrown failure.
+ */
+async function loadCompositableLogo(): Promise<BrandLogo | null> {
+  try {
+    const kit = await getBrandKit();
+    if (kit.logo?.url) {
+      return kit.logo;
+    }
+    return null;
+  } catch (err) {
+    logger.warn('[shot-plan-gen] could not load brand logo for prop compositing (continuing)', {
+      file: FILE,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
+/**
+ * For a branded-surface prop image: composite the operator's REAL logo onto the
+ * generated (clean-surface) image, persist the result to our storage + media library,
+ * and return the COMPOSITED url. Best-effort — returns the original url on any failure
+ * so prop generation never breaks. Non-branded props never call this.
+ */
+async function compositeLogoOntoPropImage(
+  generatedUrl: string,
+  logo: BrandLogo,
+  obj: { name: string; subjectKind?: 'object' | 'creature' },
+  plan: ShotPlan,
+  label: string,
+): Promise<string> {
+  const workDir = await createWorkDir('shot-plan-objlogo');
+  try {
+    const composited = await compositeBrandLogoCentered(generatedUrl, logo);
+    if (!composited) {
+      return generatedUrl;
+    }
+    const url = await uploadPermanent(
+      composited,
+      `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
+      'image/png',
+      `object ${obj.name} ${label} (branded)`,
+    );
+    await createAsset({
+      type: 'image',
+      category: 'graphic',
+      name: `${obj.name} — ${label} (branded)`,
+      description: `Branded ${label} for ${obj.subjectKind ?? 'object'} in Shot Plan "${plan.title || plan.id}" — real brand logo composited.`,
+      url,
+      mimeType: 'image/png',
+      fileSize: composited.length,
+      source: 'ai-generated',
+      aiProvider: 'fal',
+      createdBy: 'system',
+      tags: ['shot-plan', 'object', 'brand-logo'],
+    });
+    return url;
+  } catch (err) {
+    logger.warn('[shot-plan-gen] prop logo composite failed (using clean image)', {
+      file: FILE,
+      object: obj.name,
+      label,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return generatedUrl;
+  } finally {
+    await cleanupWorkDir(workDir);
+  }
 }
 
 /**
@@ -2016,12 +2109,25 @@ export async function generateObjectSheets(plan: ShotPlan, ctx: TenantContext): 
   const updated: ShotPlanObject[] = [];
   let changed = false;
 
+  // Real brand logo for compositing onto branded-surface props. Load it ONCE up front,
+  // but only when at least one prop without refs is actually a branded surface. null =
+  // no usable logo (compositing is skipped entirely, props keep their clean render).
+  const anyBrandedProp = objects.some(
+    (o) => o.referenceImageUrls.length === 0 && isBrandedSurfaceProp(o),
+  );
+  const brandLogo: BrandLogo | null = anyBrandedProp ? await loadCompositableLogo() : null;
+
   for (const obj of objects) {
     if (obj.referenceImageUrls.length > 0) {
       updated.push(obj);
       continue;
     }
     const refs: string[] = [];
+    // The CLEAN (un-composited) base — used as the anchor for the alternate VIEWS so
+    // Kontext never re-renders our composited logo (which would warp it and double-
+    // stack with the clean overlay we add to each view). Views anchor on THIS, not refs[0].
+    let cleanBaseUrl: string | null = null;
+    const branded = isBrandedSurfaceProp(obj) && brandLogo !== null;
 
     // 1. Base hero render (text-to-image from the description).
     const baseWorkDir = await createWorkDir('shot-plan-objbase');
@@ -2046,7 +2152,14 @@ export async function generateObjectSheets(plan: ShotPlan, ctx: TenantContext): 
           createdBy: 'system',
           tags: ['shot-plan', 'object', obj.subjectKind ?? 'object'],
         });
-        refs.push(url);
+        // Keep the CLEAN base for view generation; composite our logo only onto the
+        // displayed reference.
+        cleanBaseUrl = url;
+        let refUrl = url;
+        if (branded && brandLogo) {
+          refUrl = await compositeLogoOntoPropImage(url, brandLogo, obj, plan, 'reference');
+        }
+        refs.push(refUrl);
       }
     } catch (err) {
       logger.error('[shot-plan-gen] invented object base failed (continuing)', err instanceof Error ? err : new Error(String(err)), { file: FILE, object: obj.name });
@@ -2059,8 +2172,9 @@ export async function generateObjectSheets(plan: ShotPlan, ctx: TenantContext): 
       for (const { label, view } of OBJECT_VIEWS) {
         const viewWorkDir = await createWorkDir('shot-plan-objview');
         try {
-          const prompt = `The exact same subject, ${view}, isolated on a clean light-grey studio background, even soft studio lighting, consistent identity, sharp detail.`;
-          const result = await generateFromReferenceWithFal(prompt, refs[0], {});
+          const cleanSurface = branded ? CLEAN_SURFACE_INSTRUCTION : '';
+          const prompt = `The exact same subject, ${view}, isolated on a clean light-grey studio background, even soft studio lighting, consistent identity, sharp detail${cleanSurface}.`;
+          const result = await generateFromReferenceWithFal(prompt, cleanBaseUrl ?? refs[0], {});
           if (result.url) {
             const buf = await downloadToFile(result.url, join(viewWorkDir, 'view.png'), `object ${obj.name} ${label}`);
             const url = await uploadPermanent(buf, `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`, 'image/png', `object ${obj.name} ${label}`);
@@ -2078,7 +2192,12 @@ export async function generateObjectSheets(plan: ShotPlan, ctx: TenantContext): 
               createdBy: 'system',
               tags: ['shot-plan', 'object', label.toLowerCase()],
             });
-            refs.push(url);
+            // Branded surface → composite the operator's REAL logo onto this view too.
+            let refUrl = url;
+            if (branded && brandLogo) {
+              refUrl = await compositeLogoOntoPropImage(url, brandLogo, obj, plan, label);
+            }
+            refs.push(refUrl);
           }
         } catch (err) {
           logger.error('[shot-plan-gen] invented object view failed (continuing)', err instanceof Error ? err : new Error(String(err)), { file: FILE, object: obj.name, label });

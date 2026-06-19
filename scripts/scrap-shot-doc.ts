@@ -219,9 +219,33 @@ async function scrapOrphans(doDelete: boolean): Promise<void> {
   console.log(`\nDeleted ${snap.size} shot-plan media docs, ${storageDeleted} storage files.\n`);
 }
 
+async function inspectLayout(projectId: string): Promise<void> {
+  const db = admin.firestore();
+  const snap = await db.collection(PROJECTS).doc(projectId).get();
+  const plan = (snap.data()?.shotPlan ?? {}) as { layout?: { rows?: Array<{ heightWeight: number; blocks: Array<{ type: string; title?: string; widthWeight: number }> }> } };
+  const rows = plan.layout?.rows;
+  if (!rows) {
+    console.log(`\nProject ${projectId}: shotPlan.layout is ABSENT (the AI did not author a layout).\n`);
+    return;
+  }
+  console.log(`\nProject ${projectId} — AI-authored layout: ${rows.length} rows\n`);
+  rows.forEach((r, i) => {
+    const blocks = r.blocks.map((b) => `${b.type}(${b.widthWeight}${b.title ? ` "${b.title}"` : ''})`).join('  |  ');
+    console.log(`  Row ${i + 1} [h=${r.heightWeight}]: ${blocks}`);
+  });
+  console.log('');
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const doDelete = args.includes('--delete');
+  if (args.includes('--layout')) {
+    const pid = args.find((a) => /^[A-Za-z0-9]{15,}$/.test(a));
+    if (pid) {
+      await inspectLayout(pid);
+    }
+    process.exit(0);
+  }
   if (args.includes('--orphans')) {
     await scrapOrphans(doDelete);
     process.exit(0);
