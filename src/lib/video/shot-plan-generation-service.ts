@@ -155,8 +155,11 @@ function resolveSpeakingCastMember(plan: ShotPlan, shot: ShotPlanShot): ShotPlan
  * "creates" for it. A Character-Library member that has a recorded voice always uses
  * that recorded voice and never one of these.
  */
-const AI_FEMALE_VOICES: string[] = ['Rachel', 'Bella', 'Elli', 'Dorothy', 'Sarah', 'Charlotte', 'Matilda', 'Alice'];
-const AI_MALE_VOICES: string[] = ['Antoni', 'Arnold', 'Adam', 'Sam', 'Josh', 'Daniel', 'Charlie', 'George', 'Liam'];
+// These MUST be names in the fal `eleven-v3` voice library (FAL_TTS_MODEL). The
+// legacy ElevenLabs names (Rachel, Bella, Antoni, Arnold, Adam, Elli, Dorothy, Sam,
+// Josh) are NOT in v3 and fail with "Voice not found". Only v3-valid names here.
+const AI_FEMALE_VOICES: string[] = ['Aria', 'Sarah', 'Laura', 'Charlotte', 'Alice', 'Matilda', 'Jessica', 'Lily'];
+const AI_MALE_VOICES: string[] = ['Roger', 'Charlie', 'George', 'Callum', 'Liam', 'Will', 'Eric', 'Brian', 'Daniel', 'Bill'];
 
 /**
  * Stable 32-bit FNV-1a hash so the SAME character maps to the SAME voice on every
