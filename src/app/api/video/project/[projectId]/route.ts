@@ -15,22 +15,29 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Read the raw `shotPlan` + server-side-build status fields straight off the
- * project doc. The typed `getProject`/`docToProject` does NOT map these, so the
- * client (which polls this GET to watch the server-side build fill in) would
- * never see them otherwise. Best-effort: on any read failure we return all-null
- * so the GET stays backward-compatible.
+ * project doc — for BOTH server-side builds: the shot-doc build (`shotPlan*`)
+ * and the VIDEO clip build (`videoBuild*`). The typed `getProject`/`docToProject`
+ * does NOT map these, so the client (which polls this GET to watch each build
+ * fill in) would never see them otherwise. Best-effort: on any read failure we
+ * return all-null so the GET stays backward-compatible.
  */
 async function readShotPlanFields(projectId: string): Promise<{
   shotPlan: unknown;
   shotPlanStatus: unknown;
   shotPlanProgress: unknown;
   shotPlanError: unknown;
+  videoBuildStatus: unknown;
+  videoBuildProgress: unknown;
+  videoBuildError: unknown;
 }> {
   const empty = {
     shotPlan: null,
     shotPlanStatus: null,
     shotPlanProgress: null,
     shotPlanError: null,
+    videoBuildStatus: null,
+    videoBuildProgress: null,
+    videoBuildError: null,
   };
   try {
     if (!adminDb) {
@@ -49,6 +56,9 @@ async function readShotPlanFields(projectId: string): Promise<{
       shotPlanStatus: data.shotPlanStatus ?? null,
       shotPlanProgress: data.shotPlanProgress ?? null,
       shotPlanError: data.shotPlanError ?? null,
+      videoBuildStatus: data.videoBuildStatus ?? null,
+      videoBuildProgress: data.videoBuildProgress ?? null,
+      videoBuildError: data.videoBuildError ?? null,
     };
   } catch (error) {
     logger.warn('Failed to read raw shotPlan fields', {
@@ -124,6 +134,9 @@ export async function GET(
       shotPlanStatus: shotPlanFields.shotPlanStatus,
       shotPlanProgress: shotPlanFields.shotPlanProgress,
       shotPlanError: shotPlanFields.shotPlanError,
+      videoBuildStatus: shotPlanFields.videoBuildStatus,
+      videoBuildProgress: shotPlanFields.videoBuildProgress,
+      videoBuildError: shotPlanFields.videoBuildError,
     });
   } catch (error) {
     logger.error('Failed to load video pipeline project', error as Error, {

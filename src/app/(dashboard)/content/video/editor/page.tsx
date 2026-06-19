@@ -55,6 +55,30 @@ interface RenderResponse {
   error?: string;
 }
 
+/** One shot as returned by GET /api/video/project/[projectId] (the live build contract). */
+interface PollShot {
+  id: string;
+  index: number;
+  durationSeconds: number;
+  title?: string;
+  generated?: {
+    videoUrl?: string;
+    lastFrameUrl?: string;
+    keyframeUrl?: string;
+    status?: string;
+  };
+}
+
+/** GET /api/video/project/[projectId] response, including the live video-build fields. */
+interface ProjectPollResponse {
+  success: boolean;
+  project?: PipelineProject;
+  shotPlan?: { shots: PollShot[] } | null;
+  videoBuildStatus?: 'generating' | 'complete' | 'error' | null;
+  videoBuildProgress?: { phase: string; label: string; done: number; total: number; failed?: number } | null;
+  videoBuildError?: string | null;
+}
+
 function effectiveDuration(clip: EditorClip): number {
   const raw = clip.duration || DEFAULT_CLIP_DURATION;
   return Math.max(0.1, raw - clip.trimStart - clip.trimEnd);
@@ -82,10 +106,15 @@ export default function VideoEditorPage() {
     item: null,
   });
 
-  // ── Project auto-load (`?project=<id>`): seed the timeline with the project's
-  //    completed scenes in order. ──────────────────────────────────────────────
+  // ── Project auto-load (`?project=<id>`): LIVE-POLL the shot plan so each rendered
+  //    clip drops onto the timeline the moment the server finishes it. ───────────
   const projectLoadedRef = useRef(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const addedClipUrlsRef = useRef<Set<string>>(new Set());
   const [projectLoad, setProjectLoad] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [buildStatus, setBuildStatus] = useState<'generating' | 'complete' | 'error' | null>(null);
+  const [buildProgress, setBuildProgress] = useState<{ done: number; total: number } | null>(null);
+  const [buildError, setBuildError] = useState<string | null>(null);
 
   // ── Shot Plan handoff via sessionStorage ("Open in editor"). ────────────────
   const seedTakenRef = useRef(false);
@@ -115,6 +144,50 @@ export default function VideoEditorPage() {
     }
   }, [clips.length]);
 
+  // BACKWARD COMPAT path: older projects expose finished clips on `generatedScenes`
+  // (no live shot plan). Load them once, in scene order, same as the legacy behavior.
+  const loadFromGeneratedScenes = useCallback(
+    (project: PipelineProject | undefined) => {
+      if (!project) {
+        return;
+      }
+      const { scenes, generatedScenes } = project;
+      const durationBySceneId = new Map(scenes.map((s) => [s.id, s.duration]));
+      const numberBySceneId = new Map(scenes.map((s) => [s.id, s.sceneNumber]));
+
+      const ready = generatedScenes
+        .filter(
+          (g): g is typeof g & { videoUrl: string } =>
+            g.status === 'completed' && typeof g.videoUrl === 'string' && g.videoUrl.length > 0,
+        )
+        .map((g) => ({
+          url: g.videoUrl,
+          thumbnailUrl: g.thumbnailUrl,
+          sceneNumber: numberBySceneId.get(g.sceneId) ?? Number.MAX_SAFE_INTEGER,
+          duration: durationBySceneId.get(g.sceneId) ?? DEFAULT_CLIP_DURATION,
+        }))
+        .sort((a, b) => a.sceneNumber - b.sceneNumber);
+
+      for (const clip of ready) {
+        if (addedClipUrlsRef.current.has(clip.url)) {
+          continue;
+        }
+        addedClipUrlsRef.current.add(clip.url);
+        dispatch({
+          type: 'ADD_CLIP',
+          clip: {
+            name: `Scene ${clip.sceneNumber}`,
+            url: clip.url,
+            thumbnailUrl: clip.thumbnailUrl,
+            duration: clip.duration,
+            source: 'project',
+          },
+        });
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     if (projectLoadedRef.current) {
       return;
@@ -122,6 +195,8 @@ export default function VideoEditorPage() {
     if (!projectIdParam) {
       return;
     }
+    // A sessionStorage seed (manual "Open in editor") already populated the timeline —
+    // don't also poll. The seed effect runs first and the url dedup set guards overlap.
     if (clips.length > 0) {
       return;
     }
@@ -129,52 +204,85 @@ export default function VideoEditorPage() {
     projectLoadedRef.current = true;
     setProjectLoad('loading');
 
-    void (async () => {
+    const stopPolling = () => {
+      if (pollRef.current !== null) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+
+    // One poll tick: pull the project, drop any newly-finished clips onto the timeline
+    // in plan order, surface build status, and stop once the build is done or errored.
+    const poll = async () => {
       try {
         const res = await authFetch(`/api/video/project/${projectIdParam}`);
         if (!res.ok) {
           throw new Error('Project load failed');
         }
-        const data = (await res.json()) as { success: boolean; project?: PipelineProject };
-        if (!data.success || !data.project) {
+        const data = (await res.json()) as ProjectPollResponse;
+        if (!data.success) {
           throw new Error('Project not found');
         }
 
-        const { scenes, generatedScenes } = data.project;
-        const durationBySceneId = new Map(scenes.map((s) => [s.id, s.duration]));
-        const numberBySceneId = new Map(scenes.map((s) => [s.id, s.sceneNumber]));
-
-        const ready = generatedScenes
-          .filter(
-            (g): g is typeof g & { videoUrl: string } =>
-              g.status === 'completed' && typeof g.videoUrl === 'string' && g.videoUrl.length > 0,
-          )
-          .map((g) => ({
-            url: g.videoUrl,
-            thumbnailUrl: g.thumbnailUrl,
-            sceneNumber: numberBySceneId.get(g.sceneId) ?? Number.MAX_SAFE_INTEGER,
-            duration: durationBySceneId.get(g.sceneId) ?? DEFAULT_CLIP_DURATION,
-          }))
-          .sort((a, b) => a.sceneNumber - b.sceneNumber);
-
-        for (const clip of ready) {
-          dispatch({
-            type: 'ADD_CLIP',
-            clip: {
-              name: `Scene ${clip.sceneNumber}`,
-              url: clip.url,
-              thumbnailUrl: clip.thumbnailUrl,
-              duration: clip.duration,
-              source: 'project',
-            },
-          });
+        // BACKWARD COMPAT: older projects have no live shot plan — fall back to the
+        // one-shot generatedScenes load and stop (no live build to follow).
+        if (!data.shotPlan) {
+          stopPolling();
+          loadFromGeneratedScenes(data.project);
+          setProjectLoad('idle');
+          return;
         }
+
+        setBuildStatus(data.videoBuildStatus ?? null);
+        setBuildProgress(
+          data.videoBuildProgress
+            ? { done: data.videoBuildProgress.done, total: data.videoBuildProgress.total }
+            : null,
+        );
+        setBuildError(data.videoBuildError ?? null);
+
+        const ordered = [...data.shotPlan.shots].sort((a, b) => a.index - b.index);
+        for (const shot of ordered) {
+          const url = shot.generated?.videoUrl;
+          if (
+            shot.generated?.status === 'completed' &&
+            typeof url === 'string' &&
+            url.length > 0 &&
+            !addedClipUrlsRef.current.has(url)
+          ) {
+            addedClipUrlsRef.current.add(url);
+            const trimmedTitle = shot.title?.trim();
+            dispatch({
+              type: 'ADD_CLIP',
+              clip: {
+                name: trimmedTitle && trimmedTitle.length > 0 ? trimmedTitle : `Shot ${shot.index + 1}`,
+                url,
+                thumbnailUrl: shot.generated.lastFrameUrl ?? shot.generated.keyframeUrl ?? null,
+                duration: shot.durationSeconds,
+                source: 'project',
+              },
+            });
+          }
+        }
+
         setProjectLoad('idle');
+
+        if (data.videoBuildStatus === 'complete' || data.videoBuildStatus === 'error') {
+          stopPolling();
+        }
       } catch {
         setProjectLoad('error');
+        stopPolling();
       }
-    })();
-  }, [projectIdParam, clips.length, authFetch]);
+    };
+
+    void poll();
+    pollRef.current = setInterval(() => {
+      void poll();
+    }, 4000);
+
+    return stopPolling;
+  }, [projectIdParam, clips.length, authFetch, loadFromGeneratedScenes]);
 
   // ── Split at playhead — reused by toolbar + keyboard ────────────────────
   const splitAtPlayhead = useCallback(() => {
@@ -339,6 +447,20 @@ export default function VideoEditorPage() {
           <ExportStatusPill state={exportState} />
         </div>
       </header>
+
+      {buildStatus === 'generating' && (
+        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary-light">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Rendering your shots — clips drop in as they finish
+          {buildProgress ? ` (${buildProgress.done}/${buildProgress.total})` : ''}.
+        </div>
+      )}
+      {buildStatus === 'error' && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5" />
+          {buildError ?? 'Some shots didn’t finish rendering. The clips that did are on your timeline.'}
+        </div>
+      )}
 
       <Toolbar
         isPlaying={state.isPlaying}

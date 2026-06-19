@@ -2695,44 +2695,39 @@ export function ShotPlanSheet() {
     [authFetch, setShotPlan, busy],
   );
 
-  // Generate EVERY shot in order. Long-running (one render + persist per shot);
-  // all shot badges show "Generating…" while it runs. On a mid-run halt the route
-  // returns the partially-generated plan so completed shots are still shown.
+  // Generate EVERY shot. Fires a durable, fire-and-forget SERVER build (one render +
+  // persist per shot, written back to the project doc after each clip) and takes the
+  // operator straight into the editor, where each clip drops onto the timeline live as
+  // the server finishes it. No long client loop — the editor polls for finished clips.
   const generateAll = useCallback(async () => {
     const plan = useVideoPipelineStore.getState().shotPlan;
     if (!plan || busy || plan.shots.length === 0) {
       return;
     }
+    const projectId = useVideoPipelineStore.getState().projectId;
+    if (!projectId) {
+      setShotGenError('Save the shot doc before generating videos.');
+      return;
+    }
     setShotGenError(null);
     setIsGeneratingAll(true);
-    setGeneratingShotIds(new Set(plan.shots.map((s) => s.id)));
     try {
-      const res = await authFetch('/api/content/shot-plan/generate-all', {
+      const res = await authFetch('/api/content/shot-plan/generate-videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ projectId }),
       });
-      const data = (await res.json()) as ShotGenerationResponse;
-      if (!res.ok || !data.success || !data.plan) {
-        // Surface the failure AND keep whatever did generate (partialPlan).
-        if (data.partialPlan) {
-          setShotPlan(data.partialPlan);
-        }
-        throw new Error(data.error ?? 'Generation stopped before all shots finished. Please try again.');
+      const data = (await res.json()) as { success?: boolean; error?: string };
+      if (!res.ok || !data.success) {
+        throw new Error(data.error ?? 'Generation could not be started. Please try again.');
       }
-      setShotPlan(data.plan);
-      // Every shot rendered but combining them into one video failed — surface it
-      // (non-fatal: the clips are saved, the operator can Build the final video).
-      if (data.stitchError) {
-        setShotGenError(data.stitchError);
-      }
+      // Server build is running — go to the editor, where clips drop in as they render.
+      router.push(`/content/video/editor?project=${projectId}`);
     } catch (err) {
-      setShotGenError(err instanceof Error ? err.message : 'Generation stopped before all shots finished. Please try again.');
-    } finally {
+      setShotGenError(err instanceof Error ? err.message : 'Generation could not be started. Please try again.');
       setIsGeneratingAll(false);
-      setGeneratingShotIds(new Set());
     }
-  }, [authFetch, setShotPlan, busy]);
+  }, [authFetch, busy, router]);
 
   // ── Build (or rebuild) the final video — the manual stitch path ──
   // Combines every generated shot into ONE deliverable video. Also the retry path
@@ -2967,7 +2962,7 @@ export function ShotPlanSheet() {
           ) : (
             <span>
               {completedCount}/{orderedShots.length} shots generated.
-              {' '}Generate every shot — they’re automatically combined into one final video.
+              {' '}Generate all shots opens the editor — your clips drop onto the timeline as they finish rendering.
             </span>
           )}
         </div>
