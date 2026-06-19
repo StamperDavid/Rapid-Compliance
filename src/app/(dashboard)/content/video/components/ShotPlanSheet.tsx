@@ -2297,37 +2297,90 @@ export function ShotPlanSheet() {
         // instead of one multi-minute request that can drop before the browser gets it.
         // Best-effort per step: a failed asset is skipped, never aborting the rest.
         setIsRenderingSheet(true);
+        setShotGenError(null);
         // Each step reads the LATEST plan from the store (set by the prior step) so
         // results accumulate without a closure variable racing across awaits.
-        const renderStep = async (step: string, shotId?: string): Promise<void> => {
+        // Returns a plain-English label when the step dropped, or null on success —
+        // callers collect these so a missing asset is surfaced, never hidden.
+        const renderStep = async (
+          step: string,
+          shotId?: string,
+          castMemberId?: string,
+        ): Promise<string | null> => {
           const current = useVideoPipelineStore.getState().shotPlan;
           if (!current) {
-            return;
+            return null;
           }
+          const label =
+            step === 'keyframe' && shotId
+              ? `still for shot ${shotId}`
+              : step === 'characters' && castMemberId
+                ? `character sheet for ${castMemberId}`
+                : step;
           try {
             const res = await authFetch('/api/content/shot-plan/render-asset', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ plan: current, step, ...(shotId ? { shotId } : {}) }),
+              body: JSON.stringify({
+                plan: current,
+                step,
+                ...(shotId ? { shotId } : {}),
+                ...(castMemberId ? { castMemberId } : {}),
+              }),
             });
             const d = (await res.json()) as GenerateResponse;
             if (res.ok && d.success && d.plan) {
               setShotPlan(d.plan);
+              return null;
             }
-          } catch {
-            /* best-effort — skip this asset, keep rendering the rest */
+            // Surface the dropped step (Rule: never silent). `warn` is allowed by eslint.
+            console.warn(`Shot Doc render step failed: ${label}`, d.error ?? res.status);
+            return label;
+          } catch (stepErr) {
+            // Surface the dropped step (Rule: never silent). `warn` is allowed by eslint.
+            console.warn(`Shot Doc render step errored: ${label}`, stepErr);
+            return label;
           }
         };
         try {
-          await renderStep('floor-plan');
-          await renderStep('environment-hero');
-          await renderStep('lighting');
-          await renderStep('characters');
+          // Collect every dropped step so the operator sees exactly what is missing.
+          const failed: string[] = [];
+          const note = (label: string | null): void => {
+            if (label) {
+              failed.push(label);
+            }
+          };
+
+          // 1) Cheap world-level assets first (each one short).
+          note(await renderStep('floor-plan'));
+          note(await renderStep('environment-hero'));
+          note(await renderStep('lighting'));
+
+          // 2) Per-shot keyframe stills BEFORE the heavy character sheets, so the
+          //    storyboard strip fills with thumbnails fast. Kept SEQUENTIAL: every
+          //    step round-trips the WHOLE plan, so parallel writes would clobber
+          //    each other's keyframes (last-write-wins). Order by shot index.
           const shotIds = [...(useVideoPipelineStore.getState().shotPlan?.shots ?? [])]
             .sort((a, b) => a.index - b.index)
             .map((s) => s.id);
           for (const id of shotIds) {
-            await renderStep('keyframe', id);
+            note(await renderStep('keyframe', id));
+          }
+
+          // 3) Character sheets LAST, one short request per cast member (the server
+          //    splits the old multi-minute `characters` step per member). Each
+          //    returned plan must land via setShotPlan before the next call reads
+          //    it, so this stays sequential by construction.
+          const cast = useVideoPipelineStore.getState().shotPlan?.sharedChoices.cast ?? [];
+          for (const member of cast) {
+            note(await renderStep('characters', undefined, member.characterId));
+          }
+
+          if (failed.length > 0) {
+            setShotGenError(
+              `The Shot Doc is ready, but ${failed.length} image${failed.length === 1 ? '' : 's'} did not render: ` +
+                `${failed.join(', ')}. You can re-run those from the document.`,
+            );
           }
         } finally {
           setIsRenderingSheet(false);

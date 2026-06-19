@@ -1383,41 +1383,49 @@ export async function generateFloorPlanImage(plan: ShotPlan, ctx: TenantContext)
 // generateEnvironmentHero — the establishing render of the world
 // ============================================================================
 
-/**
- * Render a wide establishing "hero" image of the environment (the production-sheet
- * env render) from the environment fingerprint + look bible, and store it on
- * `sharedChoices.environmentHeroImageUrl`. Ownership rule applies.
- */
-export async function generateEnvironmentHero(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
-  const sc = plan.sharedChoices;
-  const look = sc.lookBible ?? {};
-  const fingerprint = sc.environmentFingerprint?.trim() || 'the scene environment';
-  const lookBits = [look.movieLook, look.filmStock, look.lighting, look.atmosphere, look.artStyle]
+/** The shared look-bible descriptor bits, woven into every environment-hero prompt. */
+function environmentLookBits(plan: ShotPlan): string {
+  const look = plan.sharedChoices.lookBible ?? {};
+  return [look.movieLook, look.filmStock, look.lighting, look.atmosphere, look.artStyle]
     .map((s) => s?.trim())
-    .filter((s): s is string => Boolean(s));
-  const prompt =
-    `Wide cinematic establishing shot of ${fingerprint}. ${lookBits.join(', ')}. ` +
-    'Atmospheric, film-still quality, no people, no text.';
+    .filter((s): s is string => Boolean(s))
+    .join(', ');
+}
 
+/**
+ * Render + persist ONE wide establishing "hero" image for an environment from a
+ * description string (the world fingerprint, or a single zone's look), and return
+ * its permanent URL on OUR storage. Ownership rule applies. Throws on a missing url.
+ */
+async function renderEnvironmentHeroImage(
+  plan: ShotPlan,
+  description: string,
+  lookBits: string,
+  label: string,
+  ctx: TenantContext,
+): Promise<string> {
+  const prompt =
+    `Wide cinematic establishing shot of ${description}. ${lookBits}. ` +
+    'Atmospheric, film-still quality, no people, no text.';
   const workDir = await createWorkDir('shot-plan-envhero');
   try {
-    logger.info('[shot-plan-gen] submitting environment hero', { file: FILE, tenantId: ctx.tenantId });
+    logger.info('[shot-plan-gen] submitting environment hero', { file: FILE, tenantId: ctx.tenantId, label });
     const result = await generateWithFal(prompt, { aspectRatio: '16:9' });
     if (!result.url) {
-      throw new Error('environment hero generation returned no image url');
+      throw new Error(`environment hero generation returned no image url (${label})`);
     }
-    const buf = await downloadToFile(result.url, join(workDir, 'envhero.png'), 'environment hero');
+    const buf = await downloadToFile(result.url, join(workDir, 'envhero.png'), `environment hero ${label}`);
     const url = await uploadPermanent(
       buf,
       `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
       'image/png',
-      'environment hero',
+      `environment hero ${label}`,
     );
     await createAsset({
       type: 'image',
       category: 'photo',
-      name: `Environment — ${plan.title || plan.id}`,
-      description: `Establishing environment render for Shot Plan "${plan.title || plan.id}".`,
+      name: `Environment (${label}) — ${plan.title || plan.id}`,
+      description: `Establishing environment render (${label}) for Shot Plan "${plan.title || plan.id}".`,
       url,
       mimeType: 'image/png',
       fileSize: buf.length,
@@ -1427,10 +1435,72 @@ export async function generateEnvironmentHero(plan: ShotPlan, ctx: TenantContext
       createdBy: 'system',
       tags: ['shot-plan', 'environment'],
     });
-    return applyShotPlanEdit(plan, { target: 'shared', field: 'environmentHeroImageUrl', value: url });
+    return url;
   } finally {
     await cleanupWorkDir(workDir);
   }
+}
+
+/**
+ * Render a wide establishing "hero" image of the environment (the production-sheet
+ * env render) from the environment fingerprint + look bible, and store it on
+ * `sharedChoices.environmentHeroImageUrl`.
+ *
+ * For a MULTI-ZONE plan this ALSO renders one hero per `sharedChoices.environmentZones[]`
+ * and writes each `zone.heroImageUrl` — the doc renders a hero per zone from that
+ * field, so without this every zone after the first stays blank. Each zone hero is
+ * best-effort (a single zone failure never loses the others or the top-level hero).
+ * With no zones, behaves exactly as before. Ownership rule applies.
+ */
+export async function generateEnvironmentHero(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
+  const sc = plan.sharedChoices;
+  const fingerprint = sc.environmentFingerprint?.trim() || 'the scene environment';
+  const lookBits = environmentLookBits(plan);
+
+  // 1. Top-level world hero (unchanged behavior).
+  const topUrl = await renderEnvironmentHeroImage(plan, fingerprint, lookBits, 'world', ctx);
+  let current = applyShotPlanEdit(plan, {
+    target: 'shared',
+    field: 'environmentHeroImageUrl',
+    value: topUrl,
+  });
+
+  // 2. Per-zone heroes — one render per zone, written back onto zone.heroImageUrl.
+  const zones = current.sharedChoices.environmentZones ?? [];
+  if (zones.length === 0) {
+    return current;
+  }
+
+  const updatedZones = [...zones];
+  let zonesChanged = false;
+  for (let i = 0; i < updatedZones.length; i += 1) {
+    const zone = updatedZones[i];
+    // Describe the zone by its set-design + label, falling back to the world
+    // fingerprint so a sparsely-authored zone still gets a coherent render.
+    const setDesign = (zone.setDesign ?? []).map((s) => s.trim()).filter(Boolean).join(', ');
+    const description =
+      [zone.label?.trim(), setDesign].filter(Boolean).join(' — ') || fingerprint;
+    try {
+      const zoneUrl = await renderEnvironmentHeroImage(plan, description, lookBits, zone.label || `zone ${i + 1}`, ctx);
+      updatedZones[i] = { ...zone, heroImageUrl: zoneUrl };
+      zonesChanged = true;
+    } catch (err) {
+      logger.error(
+        '[shot-plan-gen] environment zone hero failed (continuing)',
+        err instanceof Error ? err : new Error(String(err)),
+        { file: FILE, zoneId: zone.id, label: zone.label },
+      );
+    }
+  }
+
+  if (zonesChanged) {
+    current = applyShotPlanEdit(current, {
+      target: 'shared',
+      field: 'environmentZones',
+      value: updatedZones,
+    });
+  }
+  return current;
 }
 
 // ============================================================================
@@ -1659,93 +1729,159 @@ async function generateInventedCharacterBase(
   }
 }
 
+/** Render ONE turnaround view off a reference image; returns its persisted URL or null. */
+async function renderCharacterView(
+  plan: ShotPlan,
+  member: ShotPlanCastMember,
+  ref: string,
+  view: { label: string; view: string; framing: string },
+  ctx: TenantContext,
+): Promise<{ label: string; imageUrl: string } | null> {
+  const { label, view: viewDir, framing } = view;
+  const workDir = await createWorkDir('shot-plan-charsheet');
+  try {
+    const prompt =
+      `The exact same character, ${viewDir}, ${framing}, ` +
+      'on a clean light-grey studio cyclorama, character turnaround model sheet, evenly lit ' +
+      'soft studio lighting, no dramatic shadows, consistent identity and wardrobe, sharp detail.';
+    logger.info('[shot-plan-gen] submitting character view', { file: FILE, tenantId: ctx.tenantId, character: member.name, label });
+    const result = await generateFromReferenceWithFal(prompt, ref, {});
+    if (!result.url) {
+      return null;
+    }
+    const buf = await downloadToFile(result.url, join(workDir, 'view.png'), `char ${member.name} ${label}`);
+    const url = await uploadPermanent(
+      buf,
+      `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
+      'image/png',
+      `char ${member.name} ${label}`,
+    );
+    await createAsset({
+      type: 'image',
+      category: 'character',
+      name: `${member.name} — ${label}`,
+      description: `Character model-sheet view for Shot Plan "${plan.title || plan.id}".`,
+      url,
+      mimeType: 'image/png',
+      fileSize: buf.length,
+      source: 'ai-generated',
+      aiProvider: 'fal',
+      aiPrompt: prompt,
+      createdBy: 'system',
+      characterId: member.characterId,
+      characterName: member.name,
+      tags: ['shot-plan', 'character-sheet', 'character', label.toLowerCase()],
+    });
+    return { label, imageUrl: url };
+  } catch (err) {
+    logger.error('[shot-plan-gen] character view failed (continuing)', err instanceof Error ? err : new Error(String(err)), { file: FILE, character: member.name, label });
+    return null;
+  } finally {
+    await cleanupWorkDir(workDir);
+  }
+}
+
 /**
- * Render a clean model/turnaround sheet for every cast member (FRONT · 3⁄4 ·
- * PROFILE · BACK) via Flux Kontext, so the production sheet shows a rich character
- * reference like a real model sheet. For a SAVED character the source is the
- * operator's uploaded reference; for an INVENTED character (no uploads) a base
- * portrait is FIRST synthesized from the casting card and written back onto the
- * member's referenceImageUrls (so video identity-anchoring uses it too). Best-effort
- * per view + per character. Ownership rule applies.
+ * Render ONE cast member's full model sheet (base + every turnaround view) and
+ * return the updated member, or `null` when nothing could be produced (no ref and
+ * the base synth failed). For an INVENTED character (no uploads) a base portrait is
+ * FIRST synthesized from the casting card and written back onto referenceImageUrls
+ * (so video identity-anchoring uses it too). The 5 views are rendered in PARALLEL
+ * via `Promise.allSettled` so one failed view never loses the others, and the views
+ * are emitted in the canonical CHARACTER_VIEWS order. Best-effort per view.
  */
-export async function generateCharacterSheets(plan: ShotPlan, ctx: TenantContext): Promise<ShotPlan> {
+async function renderCastMemberSheet(
+  plan: ShotPlan,
+  member: ShotPlanCastMember,
+  ctx: TenantContext,
+): Promise<ShotPlanCastMember | null> {
+  let ref = member.referenceImageUrls[0];
+  // Invented character (no uploaded refs): synthesize a base portrait from the
+  // casting card FIRST, so the model sheet + video identity-anchoring have a
+  // consistent source. The base is written back onto referenceImageUrls below.
+  let generatedBase: string | undefined;
+  if (!ref) {
+    const base = await generateInventedCharacterBase(plan, member, ctx);
+    if (base) {
+      ref = base;
+      generatedBase = base;
+    }
+  }
+  if (!ref) {
+    return null;
+  }
+
+  // Parallelize the views off the (now-guaranteed) reference; one failed view does
+  // not lose the rest. Re-order the settled results back into CHARACTER_VIEWS order.
+  const anchor = ref;
+  const settled = await Promise.allSettled(
+    CHARACTER_VIEWS.map((v) => renderCharacterView(plan, member, anchor, v, ctx)),
+  );
+  const sheet: { label: string; imageUrl: string }[] = [];
+  for (const outcome of settled) {
+    if (outcome.status === 'fulfilled' && outcome.value) {
+      sheet.push(outcome.value);
+    }
+  }
+
+  // Persist a generated base into referenceImageUrls (lead position) so video
+  // generation anchors identity on it — for both the sheet-succeeded and
+  // sheet-failed-but-base-made cases.
+  const refs = generatedBase ? [generatedBase, ...member.referenceImageUrls] : member.referenceImageUrls;
+  if (sheet.length > 0) {
+    return { ...member, referenceImageUrls: refs, modelSheet: sheet };
+  }
+  if (generatedBase) {
+    return { ...member, referenceImageUrls: refs };
+  }
+  return null;
+}
+
+/**
+ * Render a clean model/turnaround sheet via Flux Kontext, so the production sheet
+ * shows a rich character reference like a real model sheet. For a SAVED character
+ * the source is the operator's uploaded reference; for an INVENTED character (no
+ * uploads) a base portrait is FIRST synthesized from the casting card and written
+ * back onto the member's referenceImageUrls. Best-effort per view + per character.
+ * Ownership rule applies.
+ *
+ * When `castMemberId` is given, renders ONLY that one member's base + views and
+ * writes its `modelSheet` back — the per-member contract that keeps each HTTP
+ * request short so the client reliably receives the updated plan. When omitted,
+ * renders EVERY cast member (the original all-at-once behavior, kept for callers
+ * like `renderShotPlanAssets`).
+ */
+export async function generateCharacterSheets(
+  plan: ShotPlan,
+  ctx: TenantContext,
+  castMemberId?: string,
+): Promise<ShotPlan> {
   const cast = plan.sharedChoices.cast;
   if (cast.length === 0) {
     return plan;
   }
 
+  // ── Per-member path: render exactly the requested member, write it back ────────
+  if (castMemberId) {
+    const member = cast.find((c) => c.characterId === castMemberId);
+    if (!member) {
+      throw new Error(`generateCharacterSheets: cast member not found in plan: ${castMemberId}`);
+    }
+    const rendered = await renderCastMemberSheet(plan, member, ctx);
+    if (!rendered) {
+      return plan;
+    }
+    const updated = cast.map((c) => (c.characterId === castMemberId ? rendered : c));
+    return applyShotPlanEdit(plan, { target: 'shared', field: 'cast', value: updated });
+  }
+
+  // ── All-members path (backward compatible) ─────────────────────────────────────
   const updated: ShotPlanCastMember[] = [];
   let changed = false;
-
   for (const member of cast) {
-    let ref = member.referenceImageUrls[0];
-    // Invented character (no uploaded refs): synthesize a base portrait from the
-    // casting card FIRST, so the model sheet + video identity-anchoring have a
-    // consistent source. The base is written back onto referenceImageUrls below.
-    let generatedBase: string | undefined;
-    if (!ref) {
-      const base = await generateInventedCharacterBase(plan, member, ctx);
-      if (base) {
-        ref = base;
-        generatedBase = base;
-      }
-    }
-    if (!ref) {
-      updated.push(member);
-      continue;
-    }
-    const sheet: { label: string; imageUrl: string }[] = [];
-    for (const { label, view, framing } of CHARACTER_VIEWS) {
-      const workDir = await createWorkDir('shot-plan-charsheet');
-      try {
-        const prompt =
-          `The exact same character, ${view}, ${framing}, ` +
-          'on a clean light-grey studio cyclorama, character turnaround model sheet, evenly lit ' +
-          'soft studio lighting, no dramatic shadows, consistent identity and wardrobe, sharp detail.';
-        logger.info('[shot-plan-gen] submitting character view', { file: FILE, tenantId: ctx.tenantId, character: member.name, label });
-        const result = await generateFromReferenceWithFal(prompt, ref, {});
-        if (!result.url) {
-          continue;
-        }
-        const buf = await downloadToFile(result.url, join(workDir, 'view.png'), `char ${member.name} ${label}`);
-        const url = await uploadPermanent(
-          buf,
-          `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`,
-          'image/png',
-          `char ${member.name} ${label}`,
-        );
-        await createAsset({
-          type: 'image',
-          category: 'character',
-          name: `${member.name} — ${label}`,
-          description: `Character model-sheet view for Shot Plan "${plan.title || plan.id}".`,
-          url,
-          mimeType: 'image/png',
-          fileSize: buf.length,
-          source: 'ai-generated',
-          aiProvider: 'fal',
-          aiPrompt: prompt,
-          createdBy: 'system',
-          characterId: member.characterId,
-          characterName: member.name,
-          tags: ['shot-plan', 'character-sheet', 'character', label.toLowerCase()],
-        });
-        sheet.push({ label, imageUrl: url });
-      } catch (err) {
-        logger.error('[shot-plan-gen] character view failed (continuing)', err instanceof Error ? err : new Error(String(err)), { file: FILE, character: member.name, label });
-      } finally {
-        await cleanupWorkDir(workDir);
-      }
-    }
-    // Persist a generated base into referenceImageUrls (lead position) so video
-    // generation anchors identity on it — for both the sheet-succeeded and
-    // sheet-failed-but-base-made cases.
-    const refs = generatedBase ? [generatedBase, ...member.referenceImageUrls] : member.referenceImageUrls;
-    if (sheet.length > 0) {
-      updated.push({ ...member, referenceImageUrls: refs, modelSheet: sheet });
-      changed = true;
-    } else if (generatedBase) {
-      updated.push({ ...member, referenceImageUrls: refs });
+    const rendered = await renderCastMemberSheet(plan, member, ctx);
+    if (rendered) {
+      updated.push(rendered);
       changed = true;
     } else {
       updated.push(member);

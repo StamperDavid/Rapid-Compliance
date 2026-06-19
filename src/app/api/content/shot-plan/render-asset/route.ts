@@ -36,6 +36,12 @@ const BodySchema = z.object({
   plan: ShotPlanSchema,
   step: z.enum(['floor-plan', 'environment-hero', 'lighting', 'characters', 'keyframe']),
   shotId: z.string().trim().min(1).optional(),
+  /**
+   * Optional: when the `characters` step targets ONE cast member, only that member's
+   * model sheet is rendered (a short request the client reliably receives). Omit to
+   * render every cast member at once (backward compatible).
+   */
+  castMemberId: z.string().trim().min(1).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const { plan, step, shotId } = parsed.data;
+    const { plan, step, shotId, castMemberId } = parsed.data;
     const ctx = { tenantId: PLATFORM_ID };
 
     let updated: ShotPlan;
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
         updated = await generateLightingSwatches(plan, ctx);
         break;
       case 'characters':
-        updated = await generateCharacterSheets(plan, ctx);
+        updated = await generateCharacterSheets(plan, ctx, castMemberId);
         break;
       case 'keyframe':
         if (!shotId) {
@@ -80,7 +86,7 @@ export async function POST(request: NextRequest) {
         break;
     }
 
-    logger.info('[shot-plan/render-asset] step rendered', { file: FILE, step, shotId });
+    logger.info('[shot-plan/render-asset] step rendered', { file: FILE, step, shotId, castMemberId });
     return NextResponse.json({ success: true, plan: updated });
   } catch (error) {
     logger.error(
