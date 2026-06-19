@@ -27,11 +27,12 @@ import { z } from 'zod';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
-import { generateShotPlan } from '@/lib/agents/content/shot-plan/planner';
+import { generateShotPlan, type ShotPlanReference } from '@/lib/agents/content/shot-plan/planner';
 import { renderShotPlanAssets } from '@/lib/video/shot-plan-generation-service';
 import { createVideoProject } from '@/lib/video/video-project-service';
 import type { VideoProject } from '@/types/video-project';
 import type { ShotPlan } from '@/types/shot-plan';
+import type { IntentSubject } from '@/lib/content/content-intent';
 
 const FILE = 'video/video-project-segmentation-service.ts';
 
@@ -56,8 +57,26 @@ export interface GenerateProjectDocsInput {
   title?: string;
   /** Owner of the Character Library each doc auto-casts from (passed through to the planner). */
   userId: string;
+  /**
+   * Optional CONFIRMED intent subjects (Content Manager path). Subjects bound to a
+   * saved Character Library character (`characterId`) are threaded into EVERY doc's
+   * `selectedCharacterIds`, so the planner LOCKS that saved cast into the Shot Doc's
+   * `sharedChoices.cast` instead of inventing fresh people. The Projects page caller
+   * passes nothing — the planner then auto-invents the cast as before.
+   */
+  subjects?: IntentSubject[];
+  /**
+   * Optional reference materials (Content Manager path) — the operator's attached
+   * images/videos/docs as the planner's text-only `references`. The Projects page
+   * caller passes nothing.
+   */
+  attachments?: ShotPlanReference[];
 }
 
+// Only the three core scalars are Zod-gated here; `subjects` / `attachments` are
+// already typed by the interface and threaded through to the planner, which runs
+// its own Zod validation on them (IntentSubject / ShotPlanReference). Backward-
+// compatible: the Projects page caller passes neither.
 const GenerateProjectDocsInputSchema = z.object({
   brief: z.string().trim().min(1),
   title: z.string().trim().max(300).optional(),
@@ -275,6 +294,13 @@ function clampShotCount(n: number): number {
  *
  * A single-segment brief yields a one-doc project — that is correct, not an error.
  *
+ * CAST BINDING (Content Manager path): when `subjects` carry saved-character
+ * `characterId`s (the operator already cast their own characters in the chat),
+ * those ids are threaded into EVERY doc's `selectedCharacterIds`, so the planner
+ * locks that saved cast into each Shot Doc's `sharedChoices.cast` rather than
+ * inventing fresh people. `attachments` ride along as the planner's references.
+ * Omitting both (the Projects page caller) preserves the original behavior.
+ *
  * LONG-RUNNING: per segment it authors a doc (one LLM call) and renders its stills
  * (several image generations), sequentially. That is acceptable for this flow; a
  * queue/poll split can come later without changing this signature.
@@ -282,10 +308,22 @@ function clampShotCount(n: number): number {
 export async function generateProjectDocs(input: GenerateProjectDocsInput): Promise<VideoProject> {
   const validated = GenerateProjectDocsInputSchema.parse(input);
 
+  // Cast binding (Content Manager path): the saved characters the operator already
+  // bound in the chat (subjects with a `characterId`) are the ONLY library cast the
+  // planner may use — it LOCKS them into every doc's `sharedChoices.cast`. Empty /
+  // omitted (Projects page path) → the planner invents the cast as before.
+  const selectedCharacterIds = Array.from(
+    new Set((input.subjects ?? []).map((s) => s.characterId).filter((id): id is string => Boolean(id))),
+  );
+  // The operator's attached references, as the planner's text-only reference inputs.
+  const references = input.attachments ?? [];
+
   logger.info('[video-project-segmentation] generateProjectDocs started', {
     file: FILE,
     userId: validated.userId,
     briefLength: validated.brief.length,
+    selectedCharacters: selectedCharacterIds.length,
+    references: references.length,
   });
 
   // 1. Segment the brief into ordered scene segments.
@@ -304,11 +342,15 @@ export async function generateProjectDocs(input: GenerateProjectDocsInput): Prom
     });
 
     // Author the full Shot Doc from this segment's self-contained scene brief.
+    // Thread the bound cast + references into EVERY doc so the operator's saved
+    // characters survive into every scene's `sharedChoices.cast`.
     const authored = await generateShotPlan({
       brief: segment.sceneBrief,
       userId: validated.userId,
       shotCount: clampShotCount(segment.approxShots),
       title: segment.title,
+      ...(selectedCharacterIds.length > 0 ? { selectedCharacterIds } : {}),
+      ...(references.length > 0 ? { references } : {}),
     });
 
     // Render THIS doc's stills only (floor plan, env hero, character/object sheets,
