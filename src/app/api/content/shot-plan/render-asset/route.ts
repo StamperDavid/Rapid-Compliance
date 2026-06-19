@@ -5,7 +5,7 @@
  * client can render the whole spread PROGRESSIVELY (one short request per asset)
  * instead of a single multi-minute request that can drop before the browser
  * receives it. Steps: floor-plan backdrop, environment hero, lighting swatches,
- * character model-sheets, or a single shot's keyframe.
+ * character model-sheets, object/prop reference sheets, or a single shot's keyframe.
  *
  * Thin route: auth, validate (Zod), delegate to the generation service, map errors.
  * All images persist to OUR storage + media library (ownership rule).
@@ -24,6 +24,7 @@ import {
   generateEnvironmentHero,
   generateLightingSwatches,
   generateCharacterSheets,
+  generateObjectSheets,
   generateShotKeyframe,
 } from '@/lib/video/shot-plan-generation-service';
 import { type ShotPlan, ShotPlanSchema } from '@/types/shot-plan';
@@ -34,7 +35,7 @@ const FILE = 'api/content/shot-plan/render-asset/route.ts';
 
 const BodySchema = z.object({
   plan: ShotPlanSchema,
-  step: z.enum(['floor-plan', 'environment-hero', 'lighting', 'characters', 'keyframe']),
+  step: z.enum(['floor-plan', 'environment-hero', 'lighting', 'characters', 'objects', 'keyframe']),
   shotId: z.string().trim().min(1).optional(),
   /**
    * Optional: when the `characters` step targets ONE cast member, only that member's
@@ -74,6 +75,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'characters':
         updated = await generateCharacterSheets(plan, ctx, castMemberId);
+        break;
+      case 'objects':
+        updated = await generateObjectSheets(plan, ctx);
         break;
       case 'keyframe':
         if (!shotId) {

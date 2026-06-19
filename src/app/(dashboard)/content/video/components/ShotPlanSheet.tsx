@@ -2356,24 +2356,33 @@ export function ShotPlanSheet() {
           note(await renderStep('environment-hero'));
           note(await renderStep('lighting'));
 
-          // 2) Per-shot keyframe stills BEFORE the heavy character sheets, so the
-          //    storyboard strip fills with thumbnails fast. Kept SEQUENTIAL: every
-          //    step round-trips the WHOLE plan, so parallel writes would clobber
-          //    each other's keyframes (last-write-wins). Order by shot index.
+          // 2) Character sheets, one short request per cast member (the server splits
+          //    the old multi-minute `characters` step per member). These run BEFORE
+          //    the keyframes so every member's reference images exist when the
+          //    storyboard stills are drawn — otherwise keyframes fall back to
+          //    text-to-image (castRefCount 0) and the people in the storyboard don't
+          //    match the cast. Each returned plan must land via setShotPlan before the
+          //    next call reads it, so this stays sequential by construction.
+          const cast = useVideoPipelineStore.getState().shotPlan?.sharedChoices.cast ?? [];
+          for (const member of cast) {
+            note(await renderStep('characters', undefined, member.characterId));
+          }
+
+          // 3) Object/prop reference sheets — fills the KEY PROPS block (invented
+          //    props get a base hero render + alternate views; saved props with refs
+          //    are skipped). One short request for the whole object set.
+          note(await renderStep('objects'));
+
+          // 4) Per-shot keyframe stills LAST, now that the cast reference images
+          //    exist so each still is anchored (Kontext image-to-image) to the real
+          //    cast instead of a generic stand-in. Kept SEQUENTIAL: every step
+          //    round-trips the WHOLE plan, so parallel writes would clobber each
+          //    other's keyframes (last-write-wins). Order by shot index.
           const shotIds = [...(useVideoPipelineStore.getState().shotPlan?.shots ?? [])]
             .sort((a, b) => a.index - b.index)
             .map((s) => s.id);
           for (const id of shotIds) {
             note(await renderStep('keyframe', id));
-          }
-
-          // 3) Character sheets LAST, one short request per cast member (the server
-          //    splits the old multi-minute `characters` step per member). Each
-          //    returned plan must land via setShotPlan before the next call reads
-          //    it, so this stays sequential by construction.
-          const cast = useVideoPipelineStore.getState().shotPlan?.sharedChoices.cast ?? [];
-          for (const member of cast) {
-            note(await renderStep('characters', undefined, member.characterId));
           }
 
           if (failed.length > 0) {
