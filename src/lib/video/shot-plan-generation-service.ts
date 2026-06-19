@@ -64,6 +64,7 @@ import type {
   ShotPlanFloorPlan,
   ShotPlanCastMember,
   ShotPlanObject,
+  ShotPlanEnvironmentZone,
 } from '@/types/shot-plan';
 
 const FILE = 'video/shot-plan-generation-service.ts';
@@ -208,6 +209,53 @@ function resolveObjectReferenceImageUrls(plan: ShotPlan, shot: ShotPlanShot): st
 /** The shared environment establishing-reference images (world look anchors). */
 function environmentReferenceImageUrls(plan: ShotPlan): string[] {
   return [...new Set(plan.sharedChoices.environmentReferenceImageUrls ?? [])].filter(Boolean);
+}
+
+/**
+ * The environment ZONE a shot belongs to: the zone whose `cutIds` lists the shot id.
+ * Multi-location plans group shots into `environmentZones[]`; each zone carries its
+ * own `heroImageUrl` (the establishing render of that set) + `setDesign[]`. A shot
+ * with no zone match (single-environment plan, or unzoned shot) returns null and
+ * the caller falls back to the top-level `environmentHeroImageUrl`.
+ */
+function resolveShotEnvironmentZone(plan: ShotPlan, shot: ShotPlanShot): ShotPlanEnvironmentZone | null {
+  const zones = plan.sharedChoices.environmentZones ?? [];
+  return zones.find((z) => (z.cutIds ?? []).includes(shot.id)) ?? null;
+}
+
+/**
+ * The environment-hero image to condition a shot's keyframe on: the shot's zone hero
+ * when it belongs to a zone that has one rendered, else the shared world hero. Null
+ * when neither exists yet (the prompt then carries the environment in prose only).
+ */
+function resolveShotEnvironmentHeroUrl(plan: ShotPlan, shot: ShotPlanShot): string | null {
+  const zone = resolveShotEnvironmentZone(plan, shot);
+  const zoneHero = zone?.heroImageUrl?.trim();
+  if (zoneHero) {
+    return zoneHero;
+  }
+  const worldHero = plan.sharedChoices.environmentHeroImageUrl?.trim();
+  return worldHero && worldHero.length > 0 ? worldHero : null;
+}
+
+/**
+ * The set-detail prose for a shot's environment, woven into the keyframe prompt so
+ * the still reads as the CORRECT set even when only a single reference image (the
+ * cast identity anchor) can be passed to Kontext. Prefers the zone's label +
+ * set-design bullets, falls back to the shot's own `environment` + the world
+ * fingerprint, so the environment is always described regardless of zone authoring.
+ */
+function shotEnvironmentProse(plan: ShotPlan, shot: ShotPlanShot): string {
+  const zone = resolveShotEnvironmentZone(plan, shot);
+  const setDesign = (zone?.setDesign ?? []).map((s) => s.trim()).filter(Boolean).join(', ');
+  const parts = [
+    zone?.label?.trim(),
+    setDesign,
+    shot.environment?.trim(),
+    plan.sharedChoices.environmentFingerprint?.trim(),
+  ].filter((s): s is string => Boolean(s && s.length > 0));
+  // De-duplicate while preserving order (label/fingerprint can overlap).
+  return [...new Set(parts)].join('. ');
 }
 
 /**
@@ -1226,29 +1274,56 @@ export async function generateShotKeyframe(
   // ── Generate path: a fresh still from the prompt + cast identity refs ───────
   const castRefs = resolveCastReferenceImageUrls(plan, shot);
   const basePrompt = buildShotPrompt(plan, shot);
+  // The shot's environment-zone hero (or the world hero) — the SET the on-model
+  // cast must appear inside, so the frame is the real cast in the real environment.
+  const envHeroUrl = resolveShotEnvironmentHeroUrl(plan, shot);
+  const envProse = shotEnvironmentProse(plan, shot);
   const workDir = await createWorkDir('shot-plan-keyframe');
 
   try {
-    // When the shot has cast refs, anchor identity off the first ref via Flux
-    // Kontext (image-to-image). With no cast refs, fall back to text-to-image.
     // ctx is referenced explicitly: these fal image helpers resolve the key from
     // the platform credential store (single-tenant), so there is no per-call ctx
     // arg, but we log it so the multi-tenant metering seam is visible here too.
     const seed = typeof shot.generated?.seed === 'number' ? shot.generated.seed : undefined;
+
+    // STORYBOARD KEYFRAME = a cinematic photographic still of the ACTUAL on-model
+    // cast INSIDE the ACTUAL set for this shot. Two reference signals matter: the
+    // cast identity (kept exact) AND the environment hero (the set look). Flux Pro
+    // Kontext (`generateFromReferenceWithFal`) accepts a SINGLE source image only —
+    // there is no multi-image / additionalImageUrls path on the fal provider — so we
+    // anchor on the cast ref for identity (the single biggest quality differentiator)
+    // and fold the environment hero in through strong prose, naming the set
+    // explicitly. Without cast refs we fall back to a pure text-to-image still.
+    const mode = castRefs.length > 0 ? 'kontext' : 'text-to-image';
+    const keyframePrompt =
+      castRefs.length > 0
+        ? `Cinematic film still: keep the EXACT same person/people from the reference image — ` +
+          `identical face(s), hair, and wardrobe — placed inside ${envProse || 'the scene environment'}. ` +
+          `${basePrompt} Photographic, film-grade, sharp focus, on-model recognizable cast in the ` +
+          `actual set, no text.`
+        : `Cinematic film still in ${envProse || 'the scene environment'}. ${basePrompt} ` +
+          `Photographic, film-grade, sharp focus, no text.`;
+
     logger.info('[shot-plan-gen] submitting keyframe still', {
       file: FILE,
       shotId,
       tenantId: ctx.tenantId,
-      mode: castRefs.length > 0 ? 'kontext' : 'text-to-image',
+      mode,
       castRefCount: castRefs.length,
+      // Multi-ref readout: cast identity ref + environment hero. The provider is
+      // single-reference, so envHero rides in prose (envHeroResolved) — both counts
+      // are logged so the owner can confirm the keyframe saw the right set.
+      envHeroResolved: envHeroUrl ? 1 : 0,
+      envZone: resolveShotEnvironmentZone(plan, shot)?.label ?? null,
     });
 
     const result =
       castRefs.length > 0
-        ? await generateFromReferenceWithFal(basePrompt, castRefs[0], {
+        ? await generateFromReferenceWithFal(keyframePrompt, castRefs[0], {
+            aspectRatio: '16:9',
             ...(seed !== undefined ? { seed } : {}),
           })
-        : await generateWithFal(basePrompt, {
+        : await generateWithFal(keyframePrompt, {
             aspectRatio: '16:9',
             ...(seed !== undefined ? { seed } : {}),
           });
@@ -1282,7 +1357,7 @@ export async function generateShotKeyframe(
       fileSize: frameBuf.length,
       source: 'ai-generated',
       aiProvider: 'fal',
-      aiPrompt: basePrompt,
+      aiPrompt: keyframePrompt,
       createdBy: 'system',
       tags: ['shot-plan', 'keyframe'],
     });
@@ -1665,9 +1740,10 @@ function inventedCharacterBasePrompt(plan: ShotPlan, member: ShotPlanCastMember)
   const notes = firstText(member.notes);
   return (
     `Full-body character reference of ${subject}${bits.length > 0 ? `, ${bits.join(', ')}` : ''}.` +
-    `${notes ? ` ${notes}` : ''} Standing front-facing in a neutral A-pose, head to toe, on a clean ` +
-    `light-grey studio cyclorama, evenly lit soft studio lighting, no dramatic shadows, sharp detail, ` +
-    `${style}. Single character, full body visible, no text.`
+    `${notes ? ` ${notes}` : ''} A single neutral standing full-body subject, head to toe, ` +
+    `front-facing in a neutral A-pose, isolated on a seamless light-grey (#d9d9d9) photographic ` +
+    `studio background, even soft studio lighting, photorealistic, sharp focus, no props, no text. ` +
+    `${style}. Single character, full body visible.`
   );
 }
 
@@ -1740,11 +1816,15 @@ async function renderCharacterView(
   const { label, view: viewDir, framing } = view;
   const workDir = await createWorkDir('shot-plan-charsheet');
   try {
+    // Kontext edit OFF THE SAME BASE: hard identity lock. The instruction names the
+    // base subject as "the EXACT same person" so face/hair/wardrobe carry over while
+    // only the camera angle changes — a real production turnaround, same backdrop.
     const prompt =
-      `The exact same character, ${viewDir}, ${framing}, ` +
-      'on a clean light-grey studio cyclorama, character turnaround model sheet, evenly lit ' +
-      'soft studio lighting, no dramatic shadows, consistent identity and wardrobe, sharp detail.';
-    logger.info('[shot-plan-gen] submitting character view', { file: FILE, tenantId: ctx.tenantId, character: member.name, label });
+      `Keep the EXACT same person from the reference image — identical face, hairstyle, and wardrobe — ` +
+      `${viewDir}, ${framing}, full body, isolated on the same seamless light-grey (#d9d9d9) ` +
+      `photographic studio background, even soft studio lighting, consistent identity, ` +
+      `photorealistic, sharp focus, no props, no text. Character turnaround model sheet.`;
+    logger.info('[shot-plan-gen] submitting character view (identity-locked off base)', { file: FILE, tenantId: ctx.tenantId, character: member.name, label });
     const result = await generateFromReferenceWithFal(prompt, ref, {});
     if (!result.url) {
       return null;
