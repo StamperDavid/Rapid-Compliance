@@ -28,7 +28,7 @@
  * existing /content/video Storyboard step (toggled from StepStoryboard).
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
@@ -64,7 +64,6 @@ import {
   File as FileIcon,
   Package,
   MapPin,
-  type LucideIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -2075,42 +2074,6 @@ function EntryScreen({
 // Production-sheet section frame — numbered, dense, film-studio styling
 // ============================================================================
 
-/**
- * One numbered section of the production sheet (e.g. "SECTION 1 · CHARACTERS &
- * OBJECTS"), styled like a real shot-sheet: a primary number badge, an uppercase
- * tracked title, an optional right-aligned action, and a bordered body. Sections
- * stack inside the single sheet container divided by borders (not floating cards).
- */
-function SheetSection({
-  number,
-  title,
-  icon: Icon,
-  action,
-  children,
-}: {
-  number: number;
-  title: string;
-  icon: LucideIcon;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section className="border-b border-border-strong px-6 py-5 last:border-b-0">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/15 text-xs font-bold text-primary">
-            {number}
-          </span>
-          <Icon className="h-4 w-4 text-primary" />
-          <h3 className="text-xs font-bold uppercase tracking-widest text-foreground">{title}</h3>
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
 // ============================================================================
 // Storyboard strip panel — a compact numbered keyframe card (OpenArt-style)
 // ============================================================================
@@ -2257,12 +2220,11 @@ export function ShotPlanSheet() {
   // The Shot Doc stays the visual reference; clicking a storyboard opens THIS shot's
   // details in a scrollable popup (not a whole-page mode switch).
   const [detailShotId, setDetailShotId] = useState<string | null>(null);
-  // Review = the cinematic production-sheet document (default); Edit = the full form.
-  const [viewMode, setViewMode] = useState<'review' | 'edit'>('review');
   const [objectDialogOpen, setObjectDialogOpen] = useState(false);
   const [envLibraryOpen, setEnvLibraryOpen] = useState(false);
-  // The camera-blocking editor popup — the floor plan section's Edit button opens this.
-  const [blockingEditorOpen, setBlockingEditorOpen] = useState(false);
+  // The shot doc is read-only; each section's Edit button opens THIS per-section
+  // popup (null = no popup open). The floor plan / blocking editor is one of them.
+  const [editingSection, setEditingSection] = useState<ShotPlanSection | null>(null);
 
   // ── Shot-generation state (wires the orchestrator routes) ──
   // The set of shot ids currently rendering (single-shot or part of an all-run).
@@ -2969,22 +2931,6 @@ export function ShotPlanSheet() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border border-border-strong bg-surface-elevated p-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode('review')}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'review' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Review
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('edit')}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Edit
-            </button>
-          </div>
           <Button
             className="gap-1.5"
             onClick={() => { void generateAll(); }}
@@ -3071,386 +3017,323 @@ export function ShotPlanSheet() {
           </button>
         </div>
       )}
-      {/* ══ REVIEW — the cinematic production-sheet document ══ */}
-      {viewMode === 'review' && (
-        <ZoomPanViewport>
-          <ShotPlanDocument
-            plan={shotPlan}
-            onEdit={(id) => setDetailShotId((prev) => (prev === id ? null : id))}
-            onEditSection={(section: ShotPlanSection) => {
-              // The floor plan edits in a popup (the toolbar lives there now); every
-              // other section drops into the full edit form.
-              if (section === 'floorplan') {
-                setBlockingEditorOpen(true);
-              } else {
-                setViewMode('edit');
-              }
-            }}
-          />
-        </ZoomPanViewport>
-      )}
+      {/* ══ The cinematic production-sheet document — always shown (read-only). Each
+           section's Edit button opens its own per-section popup below. ══ */}
+      <ZoomPanViewport>
+        <ShotPlanDocument
+          plan={shotPlan}
+          onEdit={(id) => setDetailShotId((prev) => (prev === id ? null : id))}
+          onEditSection={(section: ShotPlanSection) => setEditingSection(section)}
+        />
+      </ZoomPanViewport>
 
-      {/* ══ Camera-blocking editor popup — the EDITABLE floor plan canvas (toolbar,
-           add actor/zone/camera) lives here; the document only VIEWS it. ══ */}
-      <Dialog open={blockingEditorOpen} onOpenChange={setBlockingEditorOpen}>
-        <DialogContent className="max-w-[1100px]">
+      {/* ══ Per-section editor popup — the shot doc is read-only; each section's Edit
+           button opens just THAT section's editor here. One controlled Dialog whose
+           content switches on `editingSection`. ══ */}
+      <Dialog open={editingSection !== null} onOpenChange={(o) => { if (!o) { setEditingSection(null); } }}>
+        <DialogContent className="bg-card border border-border-strong max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit camera blocking</DialogTitle>
+            <DialogTitle>
+              {editingSection === 'shared' && 'Shared choices'}
+              {editingSection === 'environment' && 'Locations & Environment'}
+              {editingSection === 'characters' && 'Cast & Props'}
+              {editingSection === 'lighting' && 'Lighting, Mood & Style'}
+              {editingSection === 'storyboard' && 'Storyboard'}
+              {editingSection === 'floorplan' && 'Edit camera blocking'}
+            </DialogTitle>
           </DialogHeader>
-          <FloorPlanCanvas
-            floorPlan={shotPlan.floorPlan}
-            shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
-            cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
-            objects={(sharedChoices.objects ?? []).map((o) => ({ id: o.id, name: o.name }))}
-            onChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
-          />
-        </DialogContent>
-      </Dialog>
 
-      {/* ══ EDIT — the full production-sheet form ══ */}
-      {viewMode === 'edit' && (
-      <>
-      <div className="overflow-hidden rounded-2xl border border-border-strong bg-card">
-        {/* SHARED CHOICES header bar — the at-a-glance look bible every cut inherits */}
-        <div className="border-b border-border-strong bg-surface-elevated px-6 py-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">Shared choices</span>
-            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">the look bible every cut inherits</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <div className="flex items-center gap-2">
-              <Caption className="uppercase tracking-wider text-muted-foreground">Cut count</Caption>
-              <span className="rounded-md bg-primary/15 px-2 py-0.5 text-sm font-bold text-primary">{orderedShots.length}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Caption className="uppercase tracking-wider text-muted-foreground">Palette</Caption>
-              {sharedChoices.colorPalette.length > 0 ? (
-                <div className="flex items-center gap-1">
-                  {sharedChoices.colorPalette.slice(0, 8).map((sw, i) => (
-                    <span
-                      key={`${sw.hex}-${i}`}
-                      title={`${sw.name} (${sw.hex})`}
-                      className="h-5 w-5 rounded border border-border-light"
-                      style={{ backgroundColor: sw.hex }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <Caption>—</Caption>
-              )}
-            </div>
-            <div className="flex min-w-[220px] flex-1 items-center gap-2">
-              <Caption className="uppercase tracking-wider text-muted-foreground">Environment</Caption>
-              <span className="truncate text-sm text-foreground">{sharedChoices.environmentFingerprint || '—'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Plan title */}
-        <div className="border-b border-border-strong px-6 py-3">
-          <EditableText
-            label="Plan title"
-            value={shotPlan.title}
-            placeholder="Untitled Shot Doc"
-            onCommit={(v) => applyEdit({ target: 'plan', field: 'title', value: v })}
-            onAskAi={() => setAskAi({ target: 'plan', field: 'title', label: 'the plan title' })}
-          />
-        </div>
-
-        <SheetSection number={1} title="Look &amp; World" icon={Clapperboard}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <PaletteEditor
-            swatches={sharedChoices.colorPalette}
-            onCommit={(v) => applyEdit({ target: 'shared', field: 'colorPalette', value: v })}
-            onAskAi={() => setAskAi({ target: 'shared', field: 'colorPalette', label: 'the color palette' })}
-          />
-          <EditableText
-            label="Environment fingerprint"
-            value={sharedChoices.environmentFingerprint}
-            multiline
-            placeholder="The written signature of the world — your strongest consistency anchor…"
-            onCommit={(v) => applyEdit({ target: 'shared', field: 'environmentFingerprint', value: v })}
-            onAskAi={() => setAskAi({ target: 'shared', field: 'environmentFingerprint', label: 'the environment fingerprint' })}
-          />
-          <TagListEditor
-            label="Mood keywords"
-            items={sharedChoices.moodKeywords}
-            placeholder="Add a mood keyword…"
-            onCommit={(v) => applyEdit({ target: 'shared', field: 'moodKeywords', value: v })}
-            onAskAi={() => setAskAi({ target: 'shared', field: 'moodKeywords', label: 'the mood keywords' })}
-          />
-          <TagListEditor
-            label="Cinematography notes"
-            items={sharedChoices.cinematographyNotes}
-            placeholder="Add a cinematography note…"
-            onCommit={(v) => applyEdit({ target: 'shared', field: 'cinematographyNotes', value: v })}
-            onAskAi={() => setAskAi({ target: 'shared', field: 'cinematographyNotes', label: 'the cinematography notes' })}
-          />
-          <EditableText
-            label="Time period"
-            value={sharedChoices.timePeriod ?? ''}
-            placeholder="e.g. 1947 post-war, near-future 2090"
-            onCommit={(v) => applyEdit({ target: 'shared', field: 'timePeriod', value: v.trim() ? v.trim() : undefined })}
-            onAskAi={() => setAskAi({ target: 'shared', field: 'timePeriod', label: 'the time period' })}
-          />
-          <EditableText
-            label="Genre"
-            value={sharedChoices.genre ?? ''}
-            placeholder="e.g. neo-noir, corporate explainer"
-            onCommit={(v) => applyEdit({ target: 'shared', field: 'genre', value: v.trim() ? v.trim() : undefined })}
-            onAskAi={() => setAskAi({ target: 'shared', field: 'genre', label: 'the genre' })}
-          />
-        </div>
-
-        {/* Environment reference images — establishing-shot anchors that pin the
-            look of the world alongside the written fingerprint. Library-based. */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
-              <ImageIcon className="w-3.5 h-3.5" /> Environment reference images
-            </Caption>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEnvLibraryOpen(true)}>
-              <Plus className="w-3.5 h-3.5" /> Add image
-            </Button>
-          </div>
-          {(sharedChoices.environmentReferenceImageUrls ?? []).length === 0 ? (
-            <Caption>Add images of the world/set to anchor its look across every shot.</Caption>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {(sharedChoices.environmentReferenceImageUrls ?? []).map((url, i) => (
-                <div
-                  key={`${url}-${i}`}
-                  className="relative h-20 w-20 overflow-hidden rounded-lg border border-border-light bg-surface-elevated"
-                >
-                  <Image src={url} alt={`Environment reference ${i + 1}`} fill sizes="80px" unoptimized className="object-cover" />
-                  <div className="absolute right-0.5 top-0.5 rounded-md bg-background/80">
-                    <ConfirmRemoveButton
-                      onConfirm={() => removeEnvironmentImage(url)}
-                      label={`Remove environment reference ${i + 1}`}
-                      className="rounded-md p-0.5 text-muted-foreground transition-colors hover:text-destructive"
-                      iconClassName="h-3.5 w-3.5"
-                    />
-                  </div>
-                </div>
-              ))}
+          {/* ── Shared choices ── */}
+          {editingSection === 'shared' && (
+            <div className="space-y-5">
+              <EditableText
+                label="Plan title"
+                value={shotPlan.title}
+                placeholder="Untitled Shot Doc"
+                onCommit={(v) => applyEdit({ target: 'plan', field: 'title', value: v })}
+                onAskAi={() => setAskAi({ target: 'plan', field: 'title', label: 'the plan title' })}
+              />
+              <EditableText
+                label="Time period"
+                value={sharedChoices.timePeriod ?? ''}
+                placeholder="e.g. 1947 post-war, near-future 2090"
+                onCommit={(v) => applyEdit({ target: 'shared', field: 'timePeriod', value: v.trim() ? v.trim() : undefined })}
+                onAskAi={() => setAskAi({ target: 'shared', field: 'timePeriod', label: 'the time period' })}
+              />
+              <EditableText
+                label="Genre"
+                value={sharedChoices.genre ?? ''}
+                placeholder="e.g. neo-noir, corporate explainer"
+                onCommit={(v) => applyEdit({ target: 'shared', field: 'genre', value: v.trim() ? v.trim() : undefined })}
+                onAskAi={() => setAskAi({ target: 'shared', field: 'genre', label: 'the genre' })}
+              />
             </div>
           )}
-        </div>
 
-        {/* Look Bible — the deep, image-backed cinematic controls, set ONCE and
-            inherited by every shot. This is the RenderZero depth, and it owns
-            art style (so there is no duplicate standalone art-style field). */}
-        <div className="space-y-2 border-t border-border-light pt-5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <Clapperboard className="w-4 h-4 text-primary" /> Cinematic look
-            </CardTitle>
-            <span className="rounded-full border border-border-light bg-surface-elevated px-2 py-0.5 text-[11px] text-muted-foreground">
-              Set once · every shot inherits this
-            </span>
-          </div>
-          <SectionDescription>
-            The deep look bible — movie look, film stock, camera body, lens, color grade,
-            photographer/videographer style and more, chosen from visual options. Each shot
-            can fine-tune its own framing in its camera editor.
-          </SectionDescription>
-          <CinematicControlsPanel
-            config={sharedChoices.lookBible ?? {}}
-            onChange={(c) => applyEdit({ target: 'shared', field: 'lookBible', value: c })}
-            compact={false}
-            studioMode="advanced"
-            medium="video"
-          />
-        </div>
-        </SheetSection>
+          {/* ── Locations & Environment ── */}
+          {editingSection === 'environment' && (
+            <div className="space-y-6">
+              <EditableText
+                label="Environment fingerprint"
+                value={sharedChoices.environmentFingerprint}
+                multiline
+                placeholder="The written signature of the world — your strongest consistency anchor…"
+                onCommit={(v) => applyEdit({ target: 'shared', field: 'environmentFingerprint', value: v })}
+                onAskAi={() => setAskAi({ target: 'shared', field: 'environmentFingerprint', label: 'the environment fingerprint' })}
+              />
 
-        <SheetSection
-          number={2}
-          title="Cast"
-          icon={Users}
-          action={
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCastPickerOpen(true)}>
-                <Plus className="w-3.5 h-3.5" /> From library
-              </Button>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCreateCharacterOpen(true)}>
-                <UserPlus className="w-3.5 h-3.5" /> Create new
-              </Button>
+              {/* Environment reference images — establishing-shot anchors that pin the
+                  look of the world alongside the written fingerprint. Library-based. */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <ImageIcon className="w-3.5 h-3.5" /> Environment reference images
+                  </Caption>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEnvLibraryOpen(true)}>
+                    <Plus className="w-3.5 h-3.5" /> Add image
+                  </Button>
+                </div>
+                {(sharedChoices.environmentReferenceImageUrls ?? []).length === 0 ? (
+                  <Caption>Add images of the world/set to anchor its look across every shot.</Caption>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {(sharedChoices.environmentReferenceImageUrls ?? []).map((url, i) => (
+                      <div
+                        key={`${url}-${i}`}
+                        className="relative h-20 w-20 overflow-hidden rounded-lg border border-border-light bg-surface-elevated"
+                      >
+                        <Image src={url} alt={`Environment reference ${i + 1}`} fill sizes="80px" unoptimized className="object-cover" />
+                        <div className="absolute right-0.5 top-0.5 rounded-md bg-background/80">
+                          <ConfirmRemoveButton
+                            onConfirm={() => removeEnvironmentImage(url)}
+                            label={`Remove environment reference ${i + 1}`}
+                            className="rounded-md p-0.5 text-muted-foreground transition-colors hover:text-destructive"
+                            iconClassName="h-3.5 w-3.5"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Locations (digital sets) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5" /> Locations
+                  </Caption>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocationPickerOpen(true)}>
+                    <Plus className="w-3.5 h-3.5" /> Add location
+                  </Button>
+                </div>
+                {selectedLocations.length === 0 ? (
+                  <SectionDescription>
+                    No locations chosen. Pick a saved set from your Location Library so the room stays
+                    consistent across every shot — or create a new set.
+                  </SectionDescription>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {selectedLocations.map((location) => (
+                      <LocationChipCard
+                        key={location.id}
+                        location={location}
+                        onRemove={() => removeLocation(location.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          }
-        >
-        {sharedChoices.cast.length === 0 ? (
-          <SectionDescription>No cast yet. Pick a saved character from your library, or create a new one — new characters can be saved back to your library.</SectionDescription>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sharedChoices.cast.map((member) => (
-              <CastCard
-                key={member.characterId}
-                member={member}
-                cast={sharedChoices.cast}
-                editing
-                onRemove={() => removeCast(member.characterId)}
-                onCastChange={setCast}
-              />
-            ))}
-          </div>
-        )}
-        </SheetSection>
+          )}
 
-        <SheetSection
-          number={3}
-          title="Locations"
-          icon={MapPin}
-          action={
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLocationPickerOpen(true)}>
-              <Plus className="w-3.5 h-3.5" /> Add location
-            </Button>
-          }
-        >
-        {selectedLocations.length === 0 ? (
-          <SectionDescription>
-            No locations chosen. Pick a saved set from your Location Library so the room stays
-            consistent across every shot — or create a new set.
-          </SectionDescription>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {selectedLocations.map((location) => (
-              <LocationChipCard
-                key={location.id}
-                location={location}
-                onRemove={() => removeLocation(location.id)}
-              />
-            ))}
-          </div>
-        )}
-        </SheetSection>
+          {/* ── Cast & Props ── */}
+          {editingSection === 'characters' && (
+            <div className="space-y-6">
+              {/* Cast */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <Users className="w-3.5 h-3.5" /> Cast
+                  </Caption>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCastPickerOpen(true)}>
+                      <Plus className="w-3.5 h-3.5" /> From library
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCreateCharacterOpen(true)}>
+                      <UserPlus className="w-3.5 h-3.5" /> Create new
+                    </Button>
+                  </div>
+                </div>
+                {sharedChoices.cast.length === 0 ? (
+                  <SectionDescription>No cast yet. Pick a saved character from your library, or create a new one — new characters can be saved back to your library.</SectionDescription>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {sharedChoices.cast.map((member) => (
+                      <CastCard
+                        key={member.characterId}
+                        member={member}
+                        cast={sharedChoices.cast}
+                        editing
+                        onRemove={() => removeCast(member.characterId)}
+                        onCastChange={setCast}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
 
-        <SheetSection
-          number={4}
-          title="Objects &amp; Props"
-          icon={Package}
-          action={
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setObjectDialogOpen(true)}>
-              <Plus className="w-3.5 h-3.5" /> Add object
-            </Button>
-          }
-        >
-        {(sharedChoices.objects ?? []).length === 0 ? (
-          <SectionDescription>
-            No objects yet. Add a recurring prop, vehicle or product with reference images so the
-            engine renders it the same way across shots.
-          </SectionDescription>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(sharedChoices.objects ?? []).map((object) => (
-              <ObjectCard key={object.id} object={object} onRemove={() => removeObject(object.id)} />
-            ))}
-          </div>
-        )}
-        </SheetSection>
+              {/* Objects & Props */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <Package className="w-3.5 h-3.5" /> Objects &amp; Props
+                  </Caption>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setObjectDialogOpen(true)}>
+                    <Plus className="w-3.5 h-3.5" /> Add object
+                  </Button>
+                </div>
+                {(sharedChoices.objects ?? []).length === 0 ? (
+                  <SectionDescription>
+                    No objects yet. Add a recurring prop, vehicle or product with reference images so the
+                    engine renders it the same way across shots.
+                  </SectionDescription>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(sharedChoices.objects ?? []).map((object) => (
+                      <ObjectCard key={object.id} object={object} onRemove={() => removeObject(object.id)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-        <SheetSection
-          number={5}
-          title="Storyboard"
-          icon={ListVideo}
-          action={
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={addShot} disabled={busy}>
-              <Plus className="w-3.5 h-3.5" /> Add shot
-            </Button>
-          }
-        >
-        {/* Horizontal numbered keyframe strip — the storyboard at a glance */}
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {orderedShots.map((shot, i) => (
-            <StoryboardPanel
-              key={shot.id}
-              shot={shot}
-              position={i}
-              selected={selectedShotId === shot.id}
-              isGenerating={generatingShotIds.has(shot.id) || keyframingShotIds.has(shot.id)}
-              onSelect={() => setSelectedShotId((prev) => (prev === shot.id ? null : shot.id))}
+          {/* ── Lighting, Mood & Style ── */}
+          {editingSection === 'lighting' && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <PaletteEditor
+                  swatches={sharedChoices.colorPalette}
+                  onCommit={(v) => applyEdit({ target: 'shared', field: 'colorPalette', value: v })}
+                  onAskAi={() => setAskAi({ target: 'shared', field: 'colorPalette', label: 'the color palette' })}
+                />
+                <TagListEditor
+                  label="Mood keywords"
+                  items={sharedChoices.moodKeywords}
+                  placeholder="Add a mood keyword…"
+                  onCommit={(v) => applyEdit({ target: 'shared', field: 'moodKeywords', value: v })}
+                  onAskAi={() => setAskAi({ target: 'shared', field: 'moodKeywords', label: 'the mood keywords' })}
+                />
+                <TagListEditor
+                  label="Cinematography notes"
+                  items={sharedChoices.cinematographyNotes}
+                  placeholder="Add a cinematography note…"
+                  onCommit={(v) => applyEdit({ target: 'shared', field: 'cinematographyNotes', value: v })}
+                  onAskAi={() => setAskAi({ target: 'shared', field: 'cinematographyNotes', label: 'the cinematography notes' })}
+                />
+              </div>
+
+              {/* Look Bible — the deep, image-backed cinematic controls, set ONCE and
+                  inherited by every shot. This is the RenderZero depth, and it owns
+                  art style (so there is no duplicate standalone art-style field). */}
+              <div className="space-y-2 border-t border-border-light pt-5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <Clapperboard className="w-4 h-4 text-primary" /> Cinematic look
+                  </CardTitle>
+                  <span className="rounded-full border border-border-light bg-surface-elevated px-2 py-0.5 text-[11px] text-muted-foreground">
+                    Set once · every shot inherits this
+                  </span>
+                </div>
+                <SectionDescription>
+                  The deep look bible — movie look, film stock, camera body, lens, color grade,
+                  photographer/videographer style and more, chosen from visual options. Each shot
+                  can fine-tune its own framing in its camera editor.
+                </SectionDescription>
+                <CinematicControlsPanel
+                  config={sharedChoices.lookBible ?? {}}
+                  onChange={(c) => applyEdit({ target: 'shared', field: 'lookBible', value: c })}
+                  compact={false}
+                  studioMode="advanced"
+                  medium="video"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ── Storyboard ── */}
+          {editingSection === 'storyboard' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-end">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={addShot} disabled={busy}>
+                  <Plus className="w-3.5 h-3.5" /> Add shot
+                </Button>
+              </div>
+              {/* Horizontal numbered keyframe strip — the storyboard at a glance */}
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {orderedShots.map((shot, i) => (
+                  <StoryboardPanel
+                    key={shot.id}
+                    shot={shot}
+                    position={i}
+                    selected={selectedShotId === shot.id}
+                    isGenerating={generatingShotIds.has(shot.id) || keyframingShotIds.has(shot.id)}
+                    onSelect={() => setSelectedShotId((prev) => (prev === shot.id ? null : shot.id))}
+                  />
+                ))}
+              </div>
+
+              {/* Click a panel to open its full per-shot editor here */}
+              {(() => {
+                const selected = orderedShots.find((s) => s.id === selectedShotId);
+                const selectedIndex = orderedShots.findIndex((s) => s.id === selectedShotId);
+                if (!selected) {
+                  return (
+                    <Caption className="mt-3 block">
+                      Select a shot above to edit its action, camera, lighting and dialogue — or regenerate its still.
+                    </Caption>
+                  );
+                }
+                return (
+                  <div className="mt-4">
+                    <ShotCard
+                      plan={shotPlan}
+                      shot={selected}
+                      position={selectedIndex}
+                      total={orderedShots.length}
+                      isGenerating={generatingShotIds.has(selected.id)}
+                      isKeyframing={keyframingShotIds.has(selected.id)}
+                      busy={busy}
+                      onEditField={(field, value) => editShotField(selected.id, field, value)}
+                      onAskAi={(field, label) => setAskAi({ target: 'shot', shotId: selected.id, field, label })}
+                      onMove={(dir) => moveShot(selected.id, dir)}
+                      onDelete={() => { deleteShot(selected.id); setSelectedShotId(null); }}
+                      onKeepUpstream={() => keepUpstream(selected.id)}
+                      onRerun={() => { void generateOneShot(selected.id); }}
+                      onRegenerate={() => { void generateOneShot(selected.id); }}
+                      onGenerateKeyframe={() => { void generateOneKeyframe(selected.id); }}
+                      onOpenCamera={() => setCameraShotId(selected.id)}
+                    />
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* ── Floor plan / camera blocking — the EDITABLE canvas (toolbar, add
+              actor/zone/camera). The document only VIEWS it. ── */}
+          {editingSection === 'floorplan' && (
+            <FloorPlanCanvas
+              floorPlan={shotPlan.floorPlan}
+              shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
+              cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
+              objects={(sharedChoices.objects ?? []).map((o) => ({ id: o.id, name: o.name }))}
+              onChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
             />
-          ))}
-        </div>
-
-        {/* Click a panel to open its full per-shot editor here */}
-        {(() => {
-          const selected = orderedShots.find((s) => s.id === selectedShotId);
-          const selectedIndex = orderedShots.findIndex((s) => s.id === selectedShotId);
-          if (!selected) {
-            return (
-              <Caption className="mt-3 block">
-                Select a shot above to edit its action, camera, lighting and dialogue — or regenerate its still.
-              </Caption>
-            );
-          }
-          return (
-            <div className="mt-4">
-              <ShotCard
-                plan={shotPlan}
-                shot={selected}
-                position={selectedIndex}
-                total={orderedShots.length}
-                isGenerating={generatingShotIds.has(selected.id)}
-                isKeyframing={keyframingShotIds.has(selected.id)}
-                busy={busy}
-                onEditField={(field, value) => editShotField(selected.id, field, value)}
-                onAskAi={(field, label) => setAskAi({ target: 'shot', shotId: selected.id, field, label })}
-                onMove={(dir) => moveShot(selected.id, dir)}
-                onDelete={() => { deleteShot(selected.id); setSelectedShotId(null); }}
-                onKeepUpstream={() => keepUpstream(selected.id)}
-                onRerun={() => { void generateOneShot(selected.id); }}
-                onRegenerate={() => { void generateOneShot(selected.id); }}
-                onGenerateKeyframe={() => { void generateOneKeyframe(selected.id); }}
-                onOpenCamera={() => setCameraShotId(selected.id)}
-              />
-            </div>
-          );
-        })()}
-        </SheetSection>
-
-        <SheetSection number={5} title="Floor Plan &amp; Camera Blocking" icon={ListVideo}>
-        <SectionDescription>
-          A top-down map of your set — the AI places your actors, objects, zones and a numbered
-          camera for each shot with its movement; you fine-tune by dragging. This blocking is
-          translated into precise camera direction for every shot, so the map actually directs the
-          camera, not just decorates the plan.
-        </SectionDescription>
-        <div className="mt-3">
-        <FloorPlanCanvas
-          floorPlan={shotPlan.floorPlan}
-          shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
-          cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
-          objects={(sharedChoices.objects ?? []).map((o) => ({ id: o.id, name: o.name }))}
-          onChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
-        />
-        </div>
-        </SheetSection>
-
-        <SheetSection number={6} title="Lighting, Mood &amp; Style" icon={Sparkles}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <Caption className="font-medium text-muted-foreground">Mood</Caption>
-            <p className="text-sm text-foreground">
-              {sharedChoices.moodKeywords.length > 0 ? sharedChoices.moodKeywords.join(', ') : '—'}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <Caption className="font-medium text-muted-foreground">Cinematography</Caption>
-            <p className="text-sm text-foreground">
-              {sharedChoices.cinematographyNotes.length > 0 ? sharedChoices.cinematographyNotes.join('. ') : '—'}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <Caption className="font-medium text-muted-foreground">Art style</Caption>
-            <p className="text-sm text-foreground">{sharedChoices.lookBible?.artStyle ?? sharedChoices.artStyle ?? '—'}</p>
-          </div>
-        </div>
-        </SheetSection>
-      </div>
-      {/* ══ end production sheet ══ */}
-      </>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Dialogs ── */}
       <AskAiDialog

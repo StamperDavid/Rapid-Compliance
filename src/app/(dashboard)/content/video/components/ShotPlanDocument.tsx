@@ -40,7 +40,7 @@ import type {
 } from '@/types/shot-plan';
 
 /** Which section's editor to open when a section is clicked. */
-export type ShotPlanSection = 'shared' | 'characters' | 'environment' | 'lighting' | 'floorplan';
+export type ShotPlanSection = 'shared' | 'characters' | 'environment' | 'lighting' | 'floorplan' | 'storyboard';
 
 interface ShotPlanDocumentProps {
   plan: ShotPlan;
@@ -232,7 +232,7 @@ const BLOCK_EDIT_SECTION: Record<ShotPlanBlockType, ShotPlanSection | null> = {
   cinematography: 'lighting',
   mood: 'lighting',
   palette: 'lighting',
-  storyboard: null,
+  storyboard: 'storyboard',
   prompt: null,
 };
 
