@@ -24,15 +24,15 @@
 
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Clapperboard, Link2, Scissors, Pencil, ImageOff } from 'lucide-react';
+import { Clapperboard, Link2, Scissors, Pencil, ImageOff, Maximize } from 'lucide-react';
 
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { composeShotGenerationPrompt } from '@/lib/video/shot-plan-mapping';
 import type {
   ShotPlan,
   ShotPlanShot,
-  ShotPlanFloorPlan,
   ShotPlanCastMember,
   ShotPlanLayout,
   ShotPlanLayoutRow,
@@ -40,7 +40,7 @@ import type {
 } from '@/types/shot-plan';
 
 /** Which section's editor to open when a section is clicked. */
-export type ShotPlanSection = 'shared' | 'characters' | 'environment' | 'lighting';
+export type ShotPlanSection = 'shared' | 'characters' | 'environment' | 'lighting' | 'floorplan';
 
 interface ShotPlanDocumentProps {
   plan: ShotPlan;
@@ -48,8 +48,6 @@ interface ShotPlanDocumentProps {
   onEdit: (shotId: string) => void;
   /** Open the editor for a whole section (section header / block click). */
   onEditSection: (section: ShotPlanSection) => void;
-  /** Floor plan is editable inline on the document (drag), committed via this. */
-  onFloorPlanChange: (floorPlan: ShotPlanFloorPlan) => void;
 }
 
 /** The labeled views to show for a subject (model sheet, or refs as a fallback). */
@@ -67,22 +65,30 @@ function filled(...values: Array<string | undefined>): boolean {
 
 // ── Atoms ────────────────────────────────────────────────────────────────────
 
-/** An edge-to-edge image cell: the image fills the cell (object-cover), uniform
- *  aspect, with an optional tiny caption underneath. No card margin/rounding. */
+/** An edge-to-edge image cell: the image fills the cell (object-cover), with an
+ *  optional tiny caption underneath. No card margin/rounding. Pass a fixed `aspect`
+ *  for a natural-height tile, or `fill` to consume the full height of its parent
+ *  (so the image stretches to remove blank space in a tall layout cell). */
 function Cell({
   src,
   alt,
   caption,
   aspect,
+  fill,
 }: {
   src?: string;
   alt: string;
   caption?: string;
-  aspect: string;
+  aspect?: string;
+  fill?: boolean;
 }) {
   return (
-    <figure className="min-w-0">
-      <div className={`relative ${aspect} w-full overflow-hidden border border-stone-300 bg-stone-200`}>
+    <figure className={`min-w-0${fill ? ' flex h-full min-h-0 flex-col' : ''}`}>
+      <div
+        className={`relative w-full overflow-hidden border border-stone-300 bg-stone-200 ${
+          fill ? 'min-h-0 flex-1' : aspect ?? 'aspect-video'
+        }`}
+      >
         {src ? (
           <Image src={src} alt={alt} fill sizes="320px" unoptimized className="object-cover" />
         ) : (
@@ -165,9 +171,9 @@ function StoryboardFrame({ shot, position, onEdit }: { shot: ShotPlanShot; posit
     <button
       type="button"
       onClick={onEdit}
-      className="group relative flex min-w-0 flex-col overflow-hidden border border-stone-300 bg-white text-left transition-colors hover:border-amber-600/70"
+      className="group relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden border border-stone-300 bg-white text-left transition-colors hover:border-amber-600/70"
     >
-      <div className="relative aspect-video w-full bg-stone-200">
+      <div className="relative min-h-0 w-full flex-1 bg-stone-200">
         {still ? (
           <Image src={still} alt={`Cut ${position + 1}`} fill sizes="320px" unoptimized className="object-cover" />
         ) : (
@@ -221,7 +227,7 @@ const BLOCK_EDIT_SECTION: Record<ShotPlanBlockType, ShotPlanSection | null> = {
   characters: 'characters',
   notes: 'characters',
   environment: 'environment',
-  floorplan: 'environment',
+  floorplan: 'floorplan',
   lighting: 'lighting',
   cinematography: 'lighting',
   mood: 'lighting',
@@ -274,7 +280,98 @@ const DEFAULT_LAYOUT: ShotPlanLayout = {
 
 // ── The document ───────────────────────────────────────────────────────────────
 
-export function ShotPlanDocument({ plan, onEdit, onEditSection, onFloorPlanChange }: ShotPlanDocumentProps) {
+/**
+ * In-place scroll-to-zoom for the read-only blocking diagram. The operator scrolls
+ * over the diagram to magnify it WITHOUT leaving the shot doc (no popup). The doc's
+ * ZoomPanViewport pans on wheel via a native, non-passive listener, so this uses its
+ * own native non-passive wheel listener that `stopPropagation`s — scrolling over the
+ * diagram zooms IT and never pans the sheet. Drag pans once zoomed in.
+ */
+function BlockingZoom({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const onWheel = (e: globalThis.WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setScale((s) => {
+        const next = Math.min(5, Math.max(1, Math.round((s + (e.deltaY < 0 ? 0.3 : -0.3)) * 100) / 100));
+        if (next === 1) {
+          setPan({ x: 0, y: 0 });
+        }
+        return next;
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (scale <= 1) {
+      return;
+    }
+    drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) {
+      return;
+    }
+    setPan({ x: drag.current.px + (e.clientX - drag.current.x), y: drag.current.py + (e.clientY - drag.current.y) });
+  };
+  const endDrag = () => {
+    drag.current = null;
+  };
+
+  return (
+    <div
+      ref={ref}
+      data-no-pan
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerLeave={endDrag}
+      className="relative h-full w-full overflow-hidden"
+      style={{ cursor: scale > 1 ? 'grab' : 'default' }}
+    >
+      <div
+        className="h-full w-full"
+        style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: 'center center' }}
+      >
+        {children}
+      </div>
+      <div
+        data-no-pan
+        className="pointer-events-none absolute bottom-1 left-1 z-10 rounded bg-white/85 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-stone-500"
+      >
+        Scroll to zoom{scale > 1 ? ` · ${Math.round(scale * 100)}%` : ''}
+      </div>
+      {scale > 1 && (
+        <button
+          type="button"
+          data-no-pan
+          onClick={() => {
+            setScale(1);
+            setPan({ x: 0, y: 0 });
+          }}
+          title="Reset zoom"
+          className="absolute right-1 top-1 z-10 inline-flex items-center gap-1 rounded border border-stone-300 bg-white/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-stone-600 transition-colors hover:border-amber-600 hover:text-amber-700"
+        >
+          <Maximize className="h-3 w-3" /> Reset
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function ShotPlanDocument({ plan, onEdit, onEditSection }: ShotPlanDocumentProps) {
   const { sharedChoices } = plan;
   const look = sharedChoices.lookBible ?? {};
   const orderedShots = [...plan.shots].sort((a, b) => a.index - b.index);
@@ -357,36 +454,44 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onFloorPlanChang
 
   // ── Per-block-type content renderers (reuse of the old per-Section JSX). ──────
 
-  /** Cast columns + object study + palette. */
+  /** Cast columns + object study + palette. Each character is a HERO image with a
+   *  small thumbnail row of its remaining views beneath, so the cast reads like a
+   *  call sheet — one prominent portrait per actor, not an equal-size view grid. */
   const renderCharacters = (): React.ReactNode => (
-    <div className="space-y-3">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       {subjects.length > 0 && (
-        <div className="grid items-start gap-2" style={cols(Math.min(Math.max(subjects.length, 1), 5))}>
+        <div className="grid min-h-0 flex-1 items-stretch gap-2" style={cols(Math.min(Math.max(subjects.length, 1), 5))}>
           {subjects.map((member) => {
             const views = subjectViews(member);
             const notes = (member.notes ?? '').trim();
             const tier = member.billing === 'lead' ? 'Lead' : member.billing === 'supporting' ? 'Support' : null;
-            const vn = Math.min(Math.max(views.length, 1), 5);
+            // The first view is the hero (front turnaround); the rest become a thin
+            // thumbnail strip beneath it. With no views, show a single placeholder hero.
+            const hero = views[0];
+            const thumbs = views.slice(1, 5);
+            const tn = Math.min(Math.max(thumbs.length, 1), 4);
             return (
-              <div key={member.characterId} className="min-w-0">
-                <div className="mb-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+              <div key={member.characterId} className="flex h-full min-h-0 min-w-0 flex-col">
+                <div className="mb-1 flex shrink-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                   <span className="text-[12px] font-bold uppercase tracking-wider text-stone-900">{member.name}</span>
                   {member.role && <span className="truncate text-[9px] uppercase tracking-wider text-amber-700">{member.role}</span>}
                   {tier && <span className="rounded-sm bg-stone-200 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-stone-500">{tier}</span>}
                 </div>
-                {views.length > 0 ? (
-                  <div className="grid gap-0.5" style={cols(vn)}>
-                    {views.slice(0, 5).map((v, i) => (
+                <Cell
+                  src={hero?.imageUrl}
+                  alt={hero ? `${member.name} ${hero.label}` : 'generating'}
+                  caption={hero?.label}
+                  fill
+                />
+                {thumbs.length > 0 && (
+                  <div className="mt-0.5 grid shrink-0 gap-0.5" style={cols(tn)}>
+                    {thumbs.map((v, i) => (
                       <Cell key={`${v.imageUrl}-${i}`} src={v.imageUrl} alt={`${member.name} ${v.label}`} caption={v.label} aspect="aspect-[3/4]" />
                     ))}
                   </div>
-                ) : (
-                  <div className="grid gap-0.5" style={cols(4)}>
-                    {[0, 1, 2, 3].map((i) => (<Cell key={i} alt="generating" aspect="aspect-[3/4]" />))}
-                  </div>
                 )}
-                <div className="mt-1"><IdentityStrip member={member} /></div>
-                {notes && <p className="mt-0.5 line-clamp-3 text-[10px] leading-snug text-stone-600">{notes}</p>}
+                <div className="mt-1 shrink-0"><IdentityStrip member={member} /></div>
+                {notes && <p className="mt-0.5 line-clamp-3 shrink-0 text-[10px] leading-snug text-stone-600">{notes}</p>}
               </div>
             );
           })}
@@ -394,18 +499,23 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onFloorPlanChang
       )}
 
       {objects.length > 0 && (
-        <div>
+        <div className="shrink-0">
           <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-stone-500">Costume &amp; Prop Study</div>
-          <div className="grid gap-1" style={cols(Math.min(Math.max(objects.length, 1), 8))}>
-            {objects.slice(0, 8).map((obj) => (
-              <Cell key={obj.id} src={obj.referenceImageUrls[0]} alt={obj.name} caption={obj.name} aspect="aspect-square" />
+          {/* A thin band of SMALL captioned thumbnails — never a featured grid. The
+              row is left-aligned and the thumbs are width-capped so they stay small
+              regardless of count, so the props never compete with the cast above. */}
+          <div className="flex flex-wrap gap-1.5">
+            {objects.slice(0, 12).map((obj) => (
+              <div key={obj.id} className="w-16 shrink-0">
+                <Cell src={obj.referenceImageUrls[0]} alt={obj.name} caption={obj.name} aspect="aspect-square" />
+              </div>
             ))}
           </div>
         </div>
       )}
 
       {sharedChoices.colorPalette.length > 0 && (
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-stone-500">Palette</span>
           <PaletteRow swatches={sharedChoices.colorPalette} />
         </div>
@@ -413,18 +523,18 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onFloorPlanChang
     </div>
   );
 
-  /** Environment hero(es) per zone + reference strip. */
+  /** Environment hero(es) per zone + reference strip — heroes fill the cell. */
   const renderEnvironment = (): React.ReactNode => {
     const envCellCount = zones.length > 0 ? zones.length : 1;
     return (
-      <div>
-        <div className="grid items-start gap-1" style={cols(envCellCount)}>
+      <div className="flex h-full min-h-0 flex-col gap-1.5">
+        <div className="grid min-h-0 flex-1 items-stretch gap-1" style={cols(envCellCount)}>
           {(zones.length > 0
             ? zones.map((zone, zi) => ({ id: zone.id, label: zone.label, hero: zone.heroImageUrl ?? (zi === 0 ? heroFallback : undefined), setDesign: zone.setDesign }))
             : [{ id: 'env', label: `EXT. — ${(sharedChoices.environmentFingerprint || 'Environment').slice(0, 60)}`, hero: heroFallback, setDesign: undefined as string[] | undefined }]
           ).map((z) => (
-            <div key={z.id} className="min-w-0">
-              <Cell src={z.hero} alt={z.label} caption={z.label} aspect="aspect-video" />
+            <div key={z.id} className="flex h-full min-h-0 min-w-0 flex-col">
+              <Cell src={z.hero} alt={z.label} caption={z.label} fill />
               {z.setDesign && z.setDesign.length > 0 && (
                 <ul className="mt-1 list-disc space-y-0.5 pl-4 marker:text-amber-600/60">
                   {z.setDesign.slice(0, 4).map((item, i) => (<li key={i} className="line-clamp-1 text-[9px] leading-snug text-stone-600" title={item}>{item}</li>))}
@@ -434,7 +544,7 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onFloorPlanChang
           ))}
         </div>
         {envImages.length > 0 && (
-          <div className="mt-1.5 grid gap-1" style={cols(Math.min(Math.max(envImages.length, 1), 8))}>
+          <div className="grid shrink-0 gap-1" style={cols(Math.min(Math.max(envImages.length, 1), 8))}>
             {envImages.slice(0, 8).map((url, i) => (<Cell key={`${url}-${i}`} src={url} alt={`Reference ${i + 1}`} aspect="aspect-video" />))}
           </div>
         )}
@@ -442,31 +552,35 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onFloorPlanChang
     );
   };
 
-  /** Editable overhead camera map + establishing render. Scales to its cell. */
+  /** Read-only overhead camera map + establishing render. The map is a fully-visible
+   *  document view (no toolbar, fit-to-container); editing happens in the section
+   *  popup via the Edit button, so the document never mutates the plan inline. */
   const renderFloorplan = (): React.ReactNode => (
-    <div className="grid h-full grid-cols-[3fr_2fr] items-start gap-3">
-      <div data-no-pan className="min-w-0">
-        <div className="mb-1 text-[8px] font-bold uppercase tracking-[0.12em] text-stone-500">Overhead camera blocking — drag to edit</div>
-        <div className="overflow-hidden rounded border border-stone-300 bg-white">
-          <FloorPlanCanvas
-            floorPlan={plan.floorPlan}
-            shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
-            cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
-            objects={objects.map((o) => ({ id: o.id, name: o.name }))}
-            onChange={onFloorPlanChange}
-          />
+    <div className="grid h-full min-h-0 grid-cols-[3fr_2fr] gap-3">
+      <div data-no-pan className="flex h-full min-h-0 min-w-0 flex-col">
+        <div className="mb-1 shrink-0 text-[8px] font-bold uppercase tracking-[0.12em] text-stone-500">Overhead camera blocking</div>
+        <div className="min-h-0 flex-1 overflow-hidden rounded border border-stone-300 bg-white">
+          <BlockingZoom>
+            <FloorPlanCanvas
+              floorPlan={plan.floorPlan}
+              shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
+              cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
+              objects={objects.map((o) => ({ id: o.id, name: o.name }))}
+              readOnly
+            />
+          </BlockingZoom>
         </div>
       </div>
-      <div className="min-w-0">
-        <div className="mb-1 text-[8px] font-bold uppercase tracking-[0.12em] text-stone-500">Establishing shot — how the scene reads</div>
-        <Cell src={establishingHero} alt="Establishing shot" aspect="aspect-video" />
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <div className="mb-1 shrink-0 text-[8px] font-bold uppercase tracking-[0.12em] text-stone-500">Establishing shot — how the scene reads</div>
+        <Cell src={establishingHero} alt="Establishing shot" fill />
       </div>
     </div>
   );
 
-  /** The ordered storyboard strip. */
+  /** The ordered storyboard strip — frames stretch to fill the cell height. */
   const renderStoryboard = (): React.ReactNode => (
-    <div className="grid gap-1" style={cols(Math.min(Math.max(orderedShots.length, 1), 6))}>
+    <div className="grid h-full min-h-0 gap-1" style={cols(Math.min(Math.max(orderedShots.length, 1), 6))}>
       {orderedShots.map((shot, i) => (<StoryboardFrame key={shot.id} shot={shot} position={i} onEdit={() => onEdit(shot.id)} />))}
     </div>
   );
@@ -607,13 +721,45 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onFloorPlanChang
     type === 'cinematography' || type === 'mood' || type === 'notes' || type === 'prompt' || type === 'palette';
 
   // ── Build the painted rows from the AI's layout (with empty-block/row drops). ─
+  // The AI designs the composition (which blocks, their order and arrangement);
+  // the guardrails below are usability FLOORS applied to every layout so the sheet
+  // is always editable and never wastes space — the parity floor, enforced.
   const layout = plan.layout && plan.layout.rows.length > 0 ? plan.layout : DEFAULT_LAYOUT;
-  const renderRows: ShotPlanLayoutRow[] = layout.rows
+  const hasCharactersBlock =
+    blockHasContent('characters') && layout.rows.some((r) => r.blocks.some((b) => b.type === 'characters'));
+  const baseRows: ShotPlanLayoutRow[] = layout.rows
     .map((row) => ({
       ...row,
-      blocks: row.blocks.filter((b) => blockHasContent(b.type)),
+      // Character notes and the palette already render INSIDE the characters block.
+      // A standalone notes/palette block just duplicates them and lets a one-swatch
+      // "color arc" claim a whole cell — so when a cast block exists, drop the
+      // redundant standalones. Notes therefore always stay WITH the characters.
+      blocks: row.blocks.filter(
+        (b) => blockHasContent(b.type) && !(hasCharactersBlock && (b.type === 'notes' || b.type === 'palette')),
+      ),
     }))
     .filter((row) => row.blocks.length > 0);
+
+  // The blocking diagram is an interactive tool the operator edits — it must always
+  // render large enough to read and use. Floor its row height (~a third of the page)
+  // and make the diagram dominate its row's width.
+  const totalHeightWeight = baseRows.reduce((s, r) => s + r.heightWeight, 0) || 1;
+  const renderRows: ShotPlanLayoutRow[] = baseRows.map((row) => {
+    const floorIdx = row.blocks.findIndex((b) => b.type === 'floorplan');
+    if (floorIdx !== -1) {
+      const others = row.blocks.reduce((s, b, i) => (i === floorIdx ? s : s + b.widthWeight), 0);
+      const blocks = row.blocks.map((b, i) =>
+        i === floorIdx ? { ...b, widthWeight: Math.max(b.widthWeight, (others || 1) * 1.6) } : b,
+      );
+      return { ...row, blocks, heightWeight: Math.max(row.heightWeight, totalHeightWeight * 0.32) };
+    }
+    // The assembled prompt is a thin row, but it must still show ~2–3 lines (then
+    // scroll) — floor its height so it can't be squeezed to nothing by taller rows.
+    if (row.blocks.some((b) => b.type === 'prompt')) {
+      return { ...row, heightWeight: Math.max(row.heightWeight, totalHeightWeight * 0.08) };
+    }
+    return row;
+  });
 
   return (
     <div className="flex w-[1920px] flex-col overflow-hidden rounded-xl border border-stone-300 bg-stone-100 text-stone-800 shadow-2xl">

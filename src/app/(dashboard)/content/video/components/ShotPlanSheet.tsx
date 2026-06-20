@@ -92,7 +92,7 @@ import { LocationPicker } from './LocationPicker';
 import type { LocationProfile } from './location-types';
 import CharacterForm from '../../characters/CharacterForm';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
-import { ShotPlanDocument } from './ShotPlanDocument';
+import { ShotPlanDocument, type ShotPlanSection } from './ShotPlanDocument';
 import { ZoomPanViewport } from './ZoomPanViewport';
 import {
   applyShotPlanEdit,
@@ -2261,6 +2261,8 @@ export function ShotPlanSheet() {
   const [viewMode, setViewMode] = useState<'review' | 'edit'>('review');
   const [objectDialogOpen, setObjectDialogOpen] = useState(false);
   const [envLibraryOpen, setEnvLibraryOpen] = useState(false);
+  // The camera-blocking editor popup — the floor plan section's Edit button opens this.
+  const [blockingEditorOpen, setBlockingEditorOpen] = useState(false);
 
   // ── Shot-generation state (wires the orchestrator routes) ──
   // The set of shot ids currently rendering (single-shot or part of an all-run).
@@ -3075,11 +3077,35 @@ export function ShotPlanSheet() {
           <ShotPlanDocument
             plan={shotPlan}
             onEdit={(id) => setDetailShotId((prev) => (prev === id ? null : id))}
-            onEditSection={() => { setViewMode('edit'); }}
-            onFloorPlanChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
+            onEditSection={(section: ShotPlanSection) => {
+              // The floor plan edits in a popup (the toolbar lives there now); every
+              // other section drops into the full edit form.
+              if (section === 'floorplan') {
+                setBlockingEditorOpen(true);
+              } else {
+                setViewMode('edit');
+              }
+            }}
           />
         </ZoomPanViewport>
       )}
+
+      {/* ══ Camera-blocking editor popup — the EDITABLE floor plan canvas (toolbar,
+           add actor/zone/camera) lives here; the document only VIEWS it. ══ */}
+      <Dialog open={blockingEditorOpen} onOpenChange={setBlockingEditorOpen}>
+        <DialogContent className="max-w-[1100px]">
+          <DialogHeader>
+            <DialogTitle>Edit camera blocking</DialogTitle>
+          </DialogHeader>
+          <FloorPlanCanvas
+            floorPlan={shotPlan.floorPlan}
+            shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
+            cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
+            objects={(sharedChoices.objects ?? []).map((o) => ({ id: o.id, name: o.name }))}
+            onChange={(fp) => applyEdit({ target: 'plan', field: 'floorPlan', value: fp })}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* ══ EDIT — the full production-sheet form ══ */}
       {viewMode === 'edit' && (

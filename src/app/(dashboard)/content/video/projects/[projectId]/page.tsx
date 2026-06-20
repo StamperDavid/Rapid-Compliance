@@ -321,7 +321,6 @@ function DocCard({
             plan={doc}
             onEdit={() => undefined}
             onEditSection={() => undefined}
-            onFloorPlanChange={() => undefined}
           />
         </div>
       )}

@@ -25,7 +25,7 @@
  */
 
 import { z } from 'zod';
-import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { OpenRouterProvider, type ChatMessageContentPart } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
 import { listAvatarProfiles, type AvatarProfile } from '@/lib/video/avatar-profile-service';
@@ -65,6 +65,13 @@ interface ShotPlanPlannerGMConfig {
   model: ModelName;
   temperature: number;
   maxTokens: number;
+  /**
+   * Example shot-plan sheets (image URLs + an optional content note) baked into the
+   * GM. They are passed to the vision-capable model as REAL images on every generate,
+   * so the Planner LEARNS the layout craft from worked examples — it actually sees
+   * them, not a text description.
+   */
+  layoutExamples: Array<{ url: string; note?: string }>;
 }
 
 // ============================================================================
@@ -441,6 +448,7 @@ async function loadGMConfig(industryKey: string): Promise<ShotPlanPlannerGMConfi
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.5,
     maxTokens: Math.max(config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_PLAN, MIN_OUTPUT_TOKENS_FOR_PLAN),
+    layoutExamples: Array.isArray(config.layoutExamples) ? config.layoutExamples : [],
   };
 }
 
@@ -455,14 +463,50 @@ async function callOpenRouter(
   gm: ShotPlanPlannerGMConfig,
   userPrompt: string,
   maxTokens: number,
+  layoutExamples?: Array<{ url: string; note?: string }>,
 ): Promise<string> {
   const provider = new OpenRouterProvider(PLATFORM_ID);
+  const messages: Array<{ role: 'system' | 'user'; content: string | ChatMessageContentPart[] }> = [
+    { role: 'system', content: gm.systemPrompt },
+  ];
+
+  // Vision few-shot: when the GM carries example shot-plan sheets, SHOW them to the
+  // (vision-capable) model as REAL images so it learns how an expert varies the page
+  // layout to fit the content — not a text description of them.
+  if (layoutExamples && layoutExamples.length > 0) {
+    const parts: ChatMessageContentPart[] = [
+      {
+        type: 'text',
+        text:
+          'EXAMPLE SHOT-PLAN SHEETS from an expert system. The lesson: DIFFERENT stories produce ' +
+          'DIFFERENT sheets — WHAT information is shown and HOW it is arranged changes with the subject. ' +
+          'A single human lead fills the cast section with ONE wide turnaround; an ensemble splits it ' +
+          'into several columns plus a consolidated group block; a creature/object subject replaces ' +
+          'wardrobe with a model-sheet + material notes; an environment-led journey leads with the ' +
+          'WORLD (biome/location tiles) instead of a cast. Note also: the top-down BLOCKING diagram and ' +
+          'the environment are sized LARGE, the page is always LANDSCAPE (wider than tall), and every ' +
+          'block is sized to fill its space with NO white gaps. READ THIS video’s content and ' +
+          'compose its layout to fit it the same way — ADAPT these principles, never copy a sheet literally:',
+      },
+    ];
+    for (const ex of layoutExamples) {
+      parts.push({ type: 'image_url', image_url: { url: ex.url } });
+      if (ex.note && ex.note.trim().length > 0) {
+        parts.push({ type: 'text', text: `(${ex.note.trim()})` });
+      }
+    }
+    messages.push({ role: 'user', content: parts });
+    logger.info('[ShotPlanPlanner] showing layout examples to the model', {
+      file: FILE,
+      exampleCount: layoutExamples.length,
+    });
+  }
+
+  messages.push({ role: 'user', content: userPrompt });
+
   const response = await provider.chat({
     model: gm.model,
-    messages: [
-      { role: 'system', content: gm.systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
+    messages,
     temperature: gm.temperature,
     maxTokens,
   });
@@ -951,7 +995,7 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
       locations.length > 0,
       priorZodErrors,
     );
-    const rawContent = await callOpenRouter(gm, userPrompt, gm.maxTokens);
+    const rawContent = await callOpenRouter(gm, userPrompt, gm.maxTokens, gm.layoutExamples);
 
     let parsedJson: unknown;
     try {
