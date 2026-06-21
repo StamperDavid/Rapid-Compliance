@@ -109,9 +109,9 @@ function plainProjectStatus(project: VideoProject): string {
     return `${project.docs.length} ${project.docs.length === 1 ? 'doc is' : 'docs are'} ready to review. Cast your characters, mark each ready, then make its video.`;
   }
   if (made >= project.docs.length) {
-    return 'Every doc has a video. You can stitch them together in the editor.';
+    return 'All your clips are made. Open the editor to arrange them into your final video.';
   }
-  return `${made} of ${project.docs.length} videos made. Keep going to finish the project.`;
+  return `${made} of ${project.docs.length} ${project.docs.length === 1 ? 'doc has' : 'docs have'} their clips. Keep going to finish the project.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +204,12 @@ function DocCard({
   const hasVideo = docHasVideo(doc);
   const ready = docIsReady(doc);
   const still = firstKeyframe(doc);
+  // No engine stitch — preview the scene's first generated clip (clips are
+  // assembled in the editor, not pre-merged here).
+  const firstClip =
+    [...doc.shots]
+      .sort((a, b) => a.index - b.index)
+      .find((shot) => shot.generated?.videoUrl)?.generated?.videoUrl ?? null;
   const title = doc.title.trim() || `Doc ${index + 1}`;
   const cast = doc.sharedChoices.cast;
   const busy = generating || saving;
@@ -227,12 +233,12 @@ function DocCard({
         </div>
       </div>
 
-      {/* Preview: the doc's own video if it has one, else its first still. */}
+      {/* Preview: the scene's first generated clip if it has one, else its first still. */}
       <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-surface-elevated flex items-center justify-center">
-        {hasVideo && doc.finalVideoUrl ? (
+        {firstClip ? (
           <video
-            src={doc.finalVideoUrl}
-            poster={still}
+            src={firstClip}
+            poster={still ?? undefined}
             controls
             playsInline
             preload="metadata"
@@ -251,7 +257,7 @@ function DocCard({
 
       <Caption>
         {doc.shots.length} {doc.shots.length === 1 ? 'shot' : 'shots'}
-        {hasVideo ? ' · video made' : ' · still preview'}
+        {hasVideo ? ' · clips made' : ' · still preview'}
       </Caption>
 
       {/* Cast — assign a saved character onto this doc. */}
@@ -639,9 +645,9 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
           <div className="flex items-start gap-3">
             <Clapperboard className="mt-0.5 h-6 w-6 shrink-0 text-primary" aria-hidden />
             <div className="space-y-0.5">
-              <CardTitle>Every doc has a video</CardTitle>
+              <CardTitle>All your clips are ready</CardTitle>
               <SectionDescription>
-                Open the project in the editor to stitch the videos together with
+                Open the editor to arrange your clips on the timeline and add
                 transitions and music.
               </SectionDescription>
             </div>

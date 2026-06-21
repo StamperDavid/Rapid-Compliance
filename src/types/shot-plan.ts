@@ -262,6 +262,11 @@ export interface ShotPlanShotGenerated {
   status?: ShotPlanShotGenerationStatus;
   /** Provider/job id for polling + round-trip. */
   generationId?: string;
+  /**
+   * When `status` is 'failed', a short human-readable reason (e.g. the engine's
+   * content-policy rejection) so the review/editor can show why and offer a retry.
+   */
+  error?: string;
 }
 
 /**
@@ -650,6 +655,7 @@ export const ShotPlanShotGeneratedSchema = z.object({
   seed: z.number().int().optional(),
   status: ShotPlanShotGenerationStatusSchema.optional(),
   generationId: z.string().trim().max(200).optional(),
+  error: z.string().trim().max(2000).optional(),
 });
 
 export const ShotPlanShotCameraSchema = z.object({

@@ -291,6 +291,25 @@ function priorShot(plan: ShotPlan, shot: ShotPlanShot): ShotPlanShot | null {
 }
 
 /**
+ * The most recent saved last frame BEFORE this shot (walking backwards), for a
+ * `continue` shot to chain from. Unlike `priorShot` this skips any earlier shot
+ * that failed / has no last frame, so a single failed shot does not break the
+ * whole continue chain — the next continue simply anchors to the last good frame.
+ * Returns null when no earlier shot has a frame (then the caller treats it as a cut).
+ */
+function priorChainFrame(plan: ShotPlan, shot: ShotPlanShot): { shotId: string; url: string } | null {
+  const ordered = [...plan.shots].sort((a, b) => a.index - b.index);
+  const pos = ordered.findIndex((s) => s.id === shot.id);
+  for (let i = pos - 1; i >= 0; i -= 1) {
+    const url = ordered[i].generated?.lastFrameUrl;
+    if (url) {
+      return { shotId: ordered[i].id, url };
+    }
+  }
+  return null;
+}
+
+/**
  * Build the engine prompt for a shot — the LAST MILE before the fal call.
  *
  * The full captured detail (the shot's `assembledPrompt` override, or the composed
@@ -669,6 +688,10 @@ export async function generateShot(
   const provider = getVideoEngineProvider('fal');
   const shot = requireShot(plan, shotId);
   const cut = isCutShot(plan, shot);
+  // A continue shot chains from the most recent good last frame. If none exists yet
+  // (e.g. every earlier shot failed), we degrade to a cut rather than throwing — a
+  // failed shot must not be able to break the rest of the build.
+  const chainFrame = cut ? null : priorChainFrame(plan, shot);
   const castRefs = resolveCastReferenceImageUrls(plan, shot);
   const objectRefs = resolveObjectReferenceImageUrls(plan, shot);
   const envRefs = environmentReferenceImageUrls(plan);
@@ -681,8 +704,11 @@ export async function generateShot(
 
   try {
     // ── Submit the generation (cut vs. identity-locked continue) ──────────────
+    // A continue shot with no good frame to chain from (e.g. every earlier shot
+    // failed) degrades to a cut rather than throwing — a failed shot must not be
+    // able to break the rest of the build.
     let generationId: string;
-    if (cut) {
+    if (cut || !chainFrame) {
       // CUT = fresh scene: cast identity first, then object + environment anchors.
       const cutRefs = capReferenceImages([...castRefs, ...objectRefs, ...envRefs]);
       const req: VideoGenerateRequest = {
@@ -714,14 +740,8 @@ export async function generateShot(
           : await provider.generateTextToVideo(req, ctx);
       generationId = submitted.generationId;
     } else {
-      const prior = priorShot(plan, shot);
-      const priorLastFrame = prior?.generated?.lastFrameUrl;
-      if (!priorLastFrame) {
-        throw new Error(
-          `generateShot: CONTINUE shot "${shotId}" requires the prior shot's last frame, ` +
-            'but the prior shot has not been generated yet. Generate the prior shot first.',
-        );
-      }
+      // Reached only when chainFrame is present (narrowed by the `if` above).
+      const priorLastFrame = chainFrame.url;
       // Identity-locked continue: last frame FIRST (continuity, @Image1), then
       // cast refs (identity), then object anchors. reference-to-video, not pure
       // image-to-video. The environment carries over from the continuation frame,
@@ -743,7 +763,7 @@ export async function generateShot(
       logger.info('[shot-plan-gen] submitting CONTINUE shot (identity-locked)', {
         file: FILE,
         shotId,
-        priorShotId: prior?.id,
+        chainFromShotId: chainFrame.shotId,
         castRefCount: castRefs.length,
         objectRefCount: objectRefs.length,
       });
@@ -912,14 +932,19 @@ export interface ShotPlanGenerationProgress {
 }
 
 /**
- * Generate every shot IN ORDER (continue shots depend on the prior shot's last
- * frame, so order matters). The plan is accumulated shot-by-shot — each shot's
- * persisted result is written before the next shot runs, so a continue shot sees
- * its predecessor's freshly-saved last frame.
+ * Generate every shot IN ORDER (continue shots chain from the most recent good
+ * last frame, so order matters). The plan is accumulated shot-by-shot.
  *
- * On a shot failure the run STOPS and re-throws (it does not silently continue
- * past a failed dependency). The partially-generated plan is preserved on the
- * thrown error's `partialPlan` so a caller can resume / inspect.
+ * RESILIENT: a shot that fails is retried ONCE (fal content-policy false-positives
+ * and transient fetch errors often clear on a second attempt); if it still fails
+ * it is FLAGGED (`generated.status = 'failed'` + reason) and the run CONTINUES — a
+ * single bad shot must not abort the whole video. The clip is simply missing and
+ * the operator can regenerate just that shot. A later continue shot anchors to the
+ * last good frame (see `priorChainFrame`), so one failure does not cascade.
+ *
+ * `onShotComplete` (optional) fires with the accumulated plan after EVERY shot
+ * (success or failure) so the caller can persist progress incrementally — partial
+ * work survives a later failure or interruption instead of being lost at the end.
  *
  * NOTE: this is long-running (one synchronous fal generation + persist per shot).
  * That is acceptable for now; a queue/poll split can come later (see the route).
@@ -928,39 +953,63 @@ export async function generateAllShots(
   plan: ShotPlan,
   ctx: TenantContext,
   onProgress?: (progress: ShotPlanGenerationProgress) => void,
+  onShotComplete?: (plan: ShotPlan) => Promise<void> | void,
 ): Promise<ShotPlan> {
   const ordered = [...plan.shots].sort((a, b) => a.index - b.index);
   let current = plan;
 
   for (let i = 0; i < ordered.length; i += 1) {
     const shotId = ordered[i].id;
-    try {
-      current = await generateShot(current, shotId, ctx);
-      onProgress?.({
-        shotId,
-        index: i,
-        total: ordered.length,
-        status: 'completed',
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      onProgress?.({
-        shotId,
-        index: i,
-        total: ordered.length,
+
+    // One generation, with a single retry.
+    let lastErr: unknown;
+    let ok = false;
+    for (let attempt = 1; attempt <= 2 && !ok; attempt += 1) {
+      try {
+        current = await generateShot(current, shotId, ctx);
+        ok = true;
+      } catch (err) {
+        lastErr = err;
+        logger.warn('[shot-plan-gen] shot attempt failed', {
+          file: FILE,
+          shotId,
+          index: i,
+          total: ordered.length,
+          attempt,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    if (ok) {
+      onProgress?.({ shotId, index: i, total: ordered.length, status: 'completed' });
+    } else {
+      // Flag the shot failed (with reason) and KEEP GOING.
+      const message = lastErr instanceof Error ? lastErr.message : String(lastErr);
+      current = writeGenerated(current, shotId, {
+        ...requireShot(current, shotId).generated,
         status: 'failed',
-        error: message,
+        error: message.slice(0, 2000),
       });
+      onProgress?.({ shotId, index: i, total: ordered.length, status: 'failed', error: message });
       logger.error(
-        '[shot-plan-gen] generateAllShots halted on shot failure',
-        err instanceof Error ? err : new Error(message),
+        '[shot-plan-gen] shot failed after retry — flagged and continuing',
+        lastErr instanceof Error ? lastErr : new Error(message),
         { file: FILE, shotId, index: i, total: ordered.length },
       );
-      const halted = new Error(
-        `Shot Plan generation halted at shot ${i + 1}/${ordered.length} ("${shotId}"): ${message}`,
-      ) as Error & { partialPlan?: ShotPlan };
-      halted.partialPlan = current;
-      throw halted;
+    }
+
+    // Persist after EVERY shot so partial work survives — never all-or-nothing.
+    if (onShotComplete) {
+      try {
+        await onShotComplete(current);
+      } catch (persistErr) {
+        logger.warn('[shot-plan-gen] onShotComplete persist failed (continuing)', {
+          file: FILE,
+          shotId,
+          error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+        });
+      }
     }
   }
 
@@ -1687,7 +1736,10 @@ export async function generateLightingSwatches(plan: ShotPlan, ctx: TenantContex
         createdBy: 'system',
         tags: ['shot-plan', 'lighting'],
       });
-      swatches.push({ label: setup, imageUrl: url });
+      // The schema caps a swatch label at 200 chars; the model's lighting `setup`
+      // can run longer, so clamp it (the full setup still drives the image prompt).
+      const label = setup.length > 200 ? `${setup.slice(0, 197)}…` : setup;
+      swatches.push({ label, imageUrl: url });
     } finally {
       await cleanupWorkDir(workDir);
     }

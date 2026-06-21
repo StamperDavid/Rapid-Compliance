@@ -82,32 +82,35 @@ export function takeEditorSeed(): EditorSeed | null {
 }
 
 /**
- * Seed the editor from a whole multi-document PROJECT: each doc that already has its
- * own generated video becomes ONE clip, in project order, so the editor opens with
- * the full film laid out and ready to stitch / add transitions / score. Docs without
- * a video yet are skipped. The clip thumbnail is the doc's first available keyframe /
- * last frame; the clip duration is the sum of the doc's shot durations.
+ * Seed the editor from a whole multi-document PROJECT: every shot's INDIVIDUAL clip
+ * becomes one timeline clip, in play order (docs in project order, shots in shot
+ * order). The engine does not stitch — the editor receives the separate clips and
+ * the operator arranges / trims / reorders / scores them like a normal video editor.
+ * Shots without a clip yet are skipped. Each clip's thumbnail is the shot's last
+ * frame (falling back to its keyframe still).
  */
 export function seedEditorFromProject(project: VideoProject): void {
   const clips: EditorSeedClip[] = [];
+  let sceneNumber = 0;
   for (const doc of project.docs) {
-    const url = doc.finalVideoUrl;
-    if (!url) {
-      continue;
-    }
+    sceneNumber += 1;
     const ordered = [...doc.shots].sort((a, b) => a.index - b.index);
-    let duration = 0;
-    let thumbnailUrl: string | null = null;
     for (const shot of ordered) {
-      duration += shot.durationSeconds;
-      thumbnailUrl ??= shot.generated?.keyframeUrl ?? shot.generated?.lastFrameUrl ?? null;
+      const url = shot.generated?.videoUrl;
+      if (!url) {
+        continue;
+      }
+      const shotTitle = shot.title?.trim();
+      clips.push({
+        url,
+        thumbnailUrl: shot.generated?.lastFrameUrl ?? shot.generated?.keyframeUrl ?? null,
+        name:
+          shotTitle && shotTitle.length > 0
+            ? shotTitle
+            : `Scene ${sceneNumber} — Shot ${shot.index + 1}`,
+        duration: shot.durationSeconds > 0 ? shot.durationSeconds : 5,
+      });
     }
-    clips.push({
-      url,
-      thumbnailUrl,
-      name: doc.title.trim() ? doc.title : 'Scene',
-      duration: duration > 0 ? duration : 5,
-    });
   }
   writeEditorSeed({ clips });
 }
