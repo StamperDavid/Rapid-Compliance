@@ -85,6 +85,51 @@ unless a human operator explicitly submitted a grade/correction on a specific ou
 
 ---
 
+## 🔴 STANDING RULE #3: The live worktree must be synced after every dev commit
+
+The operator's running app at **`localhost:3000` is served from the `D:\rapid-dev`
+worktree, NOT from primary (`D:\Future Rapid Compliance` / `dev`).** Claude commits to
+`dev`; the operator tests on `rapid-dev`. These diverge instantly. Work that lands on
+`dev` is invisible to the operator until `dev` is merged into `rapid-dev`. This rule is
+absolute because a missed sync looks exactly like a regression — on June 21, 2026 the
+operator saw the library consolidation AND the Shot Doc layout agent "revert" when in
+fact they were never synced from `dev` (last sync was June 17; four days of content work
+stranded on `dev`).
+
+1. **After ANY commit/push to `dev`, immediately sync every active worktree that runs a
+   dev server** — at minimum `D:\rapid-dev`. Do not consider the work delivered until the
+   live worktree has it. This supersedes the softer "§5b Sync Active Worktrees" note.
+
+2. **Before telling the operator that any UI/feature change is "done," "live," or
+   "visible," PROVE the live worktree has it:**
+   ```bash
+   cd /d/rapid-dev && git merge-base --is-ancestor <commit-sha> HEAD && echo "live worktree has it"
+   ```
+   If that prints nothing, it is NOT live for the operator — sync first.
+
+3. **Protect in-progress work in the target worktree before merging.** Check
+   `git status` in `rapid-dev` first. If it has uncommitted edits, COMMIT them on
+   `rapid-dev` (a `wip(...)` checkpoint) or stash them — never merge over them, and
+   **NEVER `git reset --hard`** the live worktree. Untracked files (e.g. RenderZero work)
+   survive a merge; tracked uncommitted edits do not.
+
+4. **Cherry-picking a single commit across the divergence is usually WRONG** — recent
+   features depend on each other (the library consolidation depends on the Location
+   Library commit; the Shot Doc work is a chain). When in doubt, merge all of `origin/dev`
+   into `rapid-dev` (the tree merge is typically conflict-free; only the operator's WIP
+   files conflict). Resolve WIP conflicts by COMBINING both sides, then `tsc` to prove it.
+
+5. **After any merge into a live worktree, clear its `.next` cache** (`rm -rf .next`) and
+   tell the operator to restart the server. **Never restart `localhost:3000` yourself** —
+   see [[project_localhost3000_served_from_rapid_dev_worktree]]. Re-arm the dev-log Monitor
+   after the operator restarts.
+
+6. **Definition of done for any `dev`-branch UI/feature change:** the change is committed
+   on `dev`, merged into `rapid-dev`, `tsc`/lint clean in `rapid-dev`, `.next` cleared, and
+   the merge-base check in §2 passes. Only THEN is it "done" for the operator.
+
+---
+
 ## Manager Rebuild — Phase 1-4 (April 15, 2026) + Auto-Review Removal (May 8, 2026)
 
 The 10 managers are dispatchers that delegate to specialists, track which specialists ran
@@ -340,6 +385,11 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 
 ### 5b. Sync Active Worktrees
+
+> **This is now governed by 🔴 STANDING RULE #3 (top of this file) — read it.** Syncing
+> the live `rapid-dev` worktree is mandatory after every `dev` commit, not just at
+> end-of-session, and "done" is not "done" until the merge-base check proves the live
+> worktree has the change.
 
 After pushing to `dev`, Claude must also merge `dev` into any active worktree branches that are running a local dev server (e.g., `rapid-dev` at `D:\rapid-dev`). This ensures `localhost:3000` reflects the latest changes immediately.
 
