@@ -1,13 +1,9 @@
 'use client';
 
 /**
- * StepStoryboard — the Shot Plan creation step (the SOLE video-creation flow).
+ * StepStoryboard — the Shot Plan creation step (the manual video-creation surface).
  *
- * The old RenderZero storyboard-strip authoring UI was phased out: its value
- * (the deep cinematographer-grade controls) now lives inside the Shot Plan as
- * each shot's ADVANCED camera editor (ShotPlanSheet → CinematicControlsPanel).
- *
- * This step is a thin shell around <ShotPlanSheet/>:
+ * Thin shell around <ShotPlanSheet/>:
  *   - A header describing the flow.
  *   - A two-step "Scrap video" action (deletes the saved project, if any, and
  *     clears the in-progress plan) per the destructive-action rule.

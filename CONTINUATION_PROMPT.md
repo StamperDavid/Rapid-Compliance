@@ -180,6 +180,97 @@ competitor ("generate all" produced loose clips, never a deliverable video) is f
 
 ---
 
+# 🟢 RESUME HERE — Jun 20 2026 — VIDEO FRONT-DOOR REWIRE (owner-confirmed decisions)
+
+**Why:** Manual video creation currently DROPS THE USER STRAIGHT ONTO THE SHOT DOC
+(`StepStoryboard` → `ShotPlanSheet`) with an empty "Untitled shot" — it skips the RenderZero
+scene-detail form entirely (that form, `StudioModePanel`, still exists but is wired only to the
+Image Generator page as a one-shot generator, not to the video pipeline). The earlier "phase-out"
+of the RenderZero authoring UI was wrong; it is being RECONNECTED as the ordered front door.
+
+**Owner-confirmed pipeline (the spec — locked Jun 20):**
+`Prompt → Screenwriter/Director agent → RenderZero form (the timed script, scene-by-scene,
+AI-prefilled + human-editable) → "Generate Shot Doc" → Shot Doc agent → review/edit → generate
+clips → editor (trim handles make stitching clean) → post-production (tag / reformat per platform /
+schedule to social hub calendar).`
+
+**Confirmed design decisions (do not re-litigate):**
+1. **Two ordered stages, two brains.** Stage 1 = a dedicated **Screenwriter/Director agent**:
+   prompt + baked Brand DNA → a **timed script** (the source of truth for duration + scene/shot
+   structure). Stage 2 = the **Shot Doc agent** (the existing `SHOT_PLAN_PLANNER`): approved
+   script → the visual Shot Doc. Owner explicitly confirmed a dedicated screenwriter stage (the
+   old plan left this as "not a new agent unless owner confirms" — he now confirms). Split exists
+   so the cheap creative+timing review (read/edit the script) happens BEFORE expensive keyframe
+   render. Standing Rule #1 (Brand DNA baked into the new agent's GM at seed) + #2 apply.
+2. **Scenes are STORY BEATS, not locations.** One location can host many scenes. ⇒ Locations are
+   a **reusable list at the VIDEO level**; each scene references a `locationId`. Scenes sharing a
+   location reuse the same environment look (free visual continuity). Do NOT model one-scene-per-
+   location.
+3. **The RenderZero form is the editable face of the timed script.** It is multi-scene (the AI
+   director decides how many scenes + pre-fills every field; human reviews/edits). It is the
+   "every possible detail is accounted for" guarantee so the Shot Doc agent has everything.
+4. **No preview-render buttons on the form.** Strip Queue Image / Queue Scene / Queue Video from
+   the form's video-pipeline role — generation is the Shot Doc's responsibility. Only forward
+   action = "Generate Shot Doc". (The Image Generator page keeps its own generator instance.)
+5. **Timed-script fields that DON'T exist yet (the real gap):** per-line spoken dialogue with
+   **speaker identity**, **start/end time per line**, **delivery note**; **on-screen text/captions**;
+   **per-clip frame-trim handles** (pre-roll/post-roll for clean cuts + audio crossfade — absent
+   today; the stitcher just butt-joins); **timed SFX/stingers**. Today voiceover is untracked
+   narration.
+6. **Consolidate the duplicate brains.** Three agents currently produce overlapping storyboards:
+   `SHOT_PLAN_PLANNER` (keep — the modern one), `VIDEO_SPECIALIST` (retire or repurpose),
+   `script-generation-service` (fold into the new Screenwriter agent), and `DirectorService`
+   (`src/lib/video/engine/director-service.ts` — DEAD hardcoded non-LLM code, delete). One brain
+   per stage; no competing storyboards. `VIDEO_EDITOR_SPECIALIST` (OpusClip-style highlight finder)
+   is a different stage — keep.
+
+**Approved FIELD LIST (the "every detail" spec — owner approved Jun 20):**
+- *Video level (once):* brand (auto from Brand DNA), goal/objective, core message/key points,
+  audience, platform(s), runtime, tone/vibe, overall look bible (palette/mood/film look), music
+  direction, CTA, cast (saved Characters), **Locations[] (reusable; scenes reference these).**
+- *Scene level (story beat; references a locationId):* scene purpose, location(ref), time of day,
+  weather/light, environment/hero look, characters present + wardrobe/state, ambience/sound bed,
+  scene mood.
+- *Shot/cut level (the camera-grade controls that already exist):* shot type, camera/movement,
+  focal length, lens type, lighting, film stock/movie look/videographer style, composition, art
+  style, action/blocking, duration, transition in/out.
+- *Timed-script layer (NEW):* spoken lines {speaker, text, startSec, endSec, deliveryNote},
+  on-screen text/captions, per-clip frame-trim handles {preRoll, postRoll}, timed SFX/stingers.
+
+**BUILD SEQUENCE (foundation-first; subagents do the brunt, Claude hard-reviews each before the
+next fires; owner reviews each delivery). Each phase: tsc + lint clean, seed-run if a GM changed,
+real-path verify script, no shortcuts named-or-hidden.**
+- **VP-A — Data model/types (FOUNDATION, do first): ✅ DONE + VERIFIED (Jun 20).** Types in
+  `src/types/video-script.ts` (ScriptDocument / ScriptScene[story-beat, locationId] /
+  ScriptShot / ScriptLine[speaker,startSec,endSec,deliveryNote] / trim-handles / on-screen-text /
+  timed-SFX) + reusable VideoLocation[] + `VideoProject.script?` extension. Reuses CinematicConfig.
+  Zod + parity guards + `endSec>startSec` refines. tsc + lint green (re-verified by Claude).
+- **VP-B — Screenwriter/Director agent (Stage 1): ✅ DONE + PROVEN LIVE (Jun 20).** New real-LLM
+  specialist `src/lib/agents/content/screenwriter/specialist.ts` (`generateScript`) reads
+  `gm.systemPrompt` verbatim (no runtime Brand DNA). GM seeded:
+  `sgm_screenwriter_director_saas_sales_ops_v1` (Brand DNA baked, 10792→12066 chars). Live proof:
+  real Opus call → valid ScriptDocument (4 scenes/7 shots/30s, 1 location reused across beats,
+  timed speaker lines + trim handles, on-brand). All prebuild guards green (tsc/lint/brand-dna/
+  pirate-coverage/registry). Model: claude-opus-4.6 (top Opus the ModelName union exposes).
+- **VP-C — RenderZero form = editable face of the script: ✅ DONE + REVIEWED (Jun 20).** New
+  `src/app/(dashboard)/content/video/components/VideoScriptForm.tsx` (multi-scene editable face of
+  a ScriptDocument: video-level fields, reusable locations[], story-beat scenes w/ locationId
+  SELECT, shots reusing `CinematicControlsPanel`, timed lines w/ speaker SELECT, on-screen text,
+  SFX, trim handles; live derived runtime; AI-prefill via new `POST /api/content/video-script/
+  generate`; NO preview buttons; "Generate Shot Doc" stubbed for VP-D). `StepStoryboard` now opens
+  the form FIRST (entry bug fixed), Shot Doc reachable via stage toggle. StudioModePanel untouched.
+  tsc + lint green (re-run by Claude); design-system compliant. FOLLOW-UP: invented characters show
+  as raw ids (e.g. "new_1") in speaker dropdowns — carry invented-character display names later.
+- **VP-D — Handoff + entry fix:** "Generate Shot Doc" → Shot Doc agent (SHOT_PLAN_PLANNER) consumes
+  the approved script → Shot Doc review. Re-wire the manual-creation entry to OPEN THE FORM (fix the
+  bug where it jumps to the Shot Doc). AI-assisted path lands on the same prefilled form.
+- **VP-E — Editor handoff w/ trim handles + post-production stage** (tags, platform reformat,
+  social-hub calendar).
+- **VP-F — Consolidation/cleanup** (retire VIDEO_SPECIALIST + script-generation-service into the new
+  agent; delete dead DirectorService).
+
+---
+
 # 🔴 Jun 15 2026 — HEDRA FULLY REMOVED (video engine = fal / Seedance via Shot Plan)
 
 Per the owner's go-ahead, the entire legacy Hedra pipeline was removed. The live video flow is

@@ -114,18 +114,86 @@ function pickRandomShotTypes(count: number): string[] {
   return shuffled.slice(0, count);
 }
 
+// ─── Scene-detail value (the controlled slice for the video-script flow) ──
+
+/**
+ * The subset of dashboard state that represents ONE scene's visual detail. When
+ * the video-script flow drives this dashboard, it owns this slice (one per scene)
+ * so switching scenes persists each scene's subject / environment / look / cast.
+ * The standalone Image Generator leaves these props undefined and the dashboard
+ * keeps its own internal state exactly as before (purely additive).
+ */
+export interface StudioSceneValue {
+  subject: string;
+  environment: string;
+  cinematicConfig: CinematicConfig;
+  characters: CharacterReference[];
+}
+
+interface StudioModePanelProps {
+  /** When provided, the scene-detail fields are CONTROLLED by the parent (the
+   *  multi-scene video-script flow). Omit for the standalone Image Generator. */
+  sceneValue?: StudioSceneValue;
+  /** Patch callback for the controlled scene-detail slice. */
+  onSceneChange?: (patch: Partial<StudioSceneValue>) => void;
+  /** Extra content rendered ABOVE the dashboard (e.g. the scene navigator). */
+  headerSlot?: React.ReactNode;
+  /** Extra content rendered BELOW the dashboard (e.g. timed-script + Generate Shot Doc). */
+  footerSlot?: React.ReactNode;
+}
+
 // ─── Component ──────────────────────────────────────────────────────
 
-export function StudioModePanel() {
+export function StudioModePanel({
+  sceneValue,
+  onSceneChange,
+  headerSlot,
+  footerSlot,
+}: StudioModePanelProps = {}) {
   const authFetch = useAuthFetch();
 
   // ── Core prompt state ───────────────────────────────────────────
-  const [subject, setSubject] = useState('');
-  const [environment, setEnvironment] = useState('');
-  const [cinematicConfig, setCinematicConfig] = useState<CinematicConfig>({});
+  // Scene-detail fields are CONTROLLED when `sceneValue` is provided (video-script
+  // flow), else they use internal state (Image Generator — unchanged behavior).
+  const [internalSubject, setInternalSubject] = useState('');
+  const [internalEnvironment, setInternalEnvironment] = useState('');
+  const [internalCinematicConfig, setInternalCinematicConfig] = useState<CinematicConfig>({});
+  const [internalCharacters, setInternalCharacters] = useState<CharacterReference[]>([]);
 
-  // ── Character / reference state ─────────────────────────────────
-  const [characters, setCharacters] = useState<CharacterReference[]>([]);
+  const subject = sceneValue ? sceneValue.subject : internalSubject;
+  const environment = sceneValue ? sceneValue.environment : internalEnvironment;
+  const cinematicConfig = sceneValue ? sceneValue.cinematicConfig : internalCinematicConfig;
+  const characters = sceneValue ? sceneValue.characters : internalCharacters;
+
+  const setSubject = useCallback(
+    (v: string) => {
+      if (sceneValue) { onSceneChange?.({ subject: v }); } else { setInternalSubject(v); }
+    },
+    [sceneValue, onSceneChange],
+  );
+  const setEnvironment = useCallback(
+    (v: string) => {
+      if (sceneValue) { onSceneChange?.({ environment: v }); } else { setInternalEnvironment(v); }
+    },
+    [sceneValue, onSceneChange],
+  );
+  const setCinematicConfig = useCallback(
+    (v: CinematicConfig) => {
+      if (sceneValue) { onSceneChange?.({ cinematicConfig: v }); } else { setInternalCinematicConfig(v); }
+    },
+    [sceneValue, onSceneChange],
+  );
+  const setCharacters = useCallback(
+    (next: CharacterReference[] | ((prev: CharacterReference[]) => CharacterReference[])) => {
+      if (sceneValue) {
+        const resolved = typeof next === 'function' ? next(sceneValue.characters) : next;
+        onSceneChange?.({ characters: resolved });
+      } else {
+        setInternalCharacters(next);
+      }
+    },
+    [sceneValue, onSceneChange],
+  );
   const [globalReference, setGlobalReference] = useState<string | undefined>();
   const [additionalReferences, setAdditionalReferences] = useState<string[]>([]);
   const [narrativeAnglePrompting, setNarrativeAnglePrompting] = useState(false);
@@ -198,7 +266,7 @@ export function StudioModePanel() {
     setEditedPrompt(null);
     setPrimaryRender(null);
     setSceneVariations([]);
-  }, []);
+  }, [setSubject, setEnvironment, setCinematicConfig, setCharacters]);
 
   const handleProviderChange = useCallback((provider: string) => {
     setSelectedProvider(provider);
@@ -365,12 +433,12 @@ export function StudioModePanel() {
     } else {
       setCharacters((prev) => prev.map((c, i) => (i === 0 ? character : c)));
     }
-  }, [characters.length]);
+  }, [characters.length, setCharacters]);
 
   const handleLoadPreset = useCallback((config: CinematicConfig) => {
     setCinematicConfig(config);
     setEditedPrompt(null);
-  }, []);
+  }, [setCinematicConfig]);
 
   const handleCopySceneJson = useCallback(() => {
     const sceneData = {
@@ -406,6 +474,9 @@ export function StudioModePanel() {
 
   return (
     <>
+      {/* Optional header (e.g. the video-script flow's scene navigator). */}
+      {headerSlot}
+
       {/* ── Top Toolbar ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border-strong">
         <div>
@@ -805,6 +876,9 @@ export function StudioModePanel() {
           </div>
         </div>
       </div>
+
+      {/* Optional footer (e.g. the video-script flow's timed-script + Generate Shot Doc). */}
+      {footerSlot}
 
       {/* ── Modals ─────────────────────────────────────────────── */}
       <CharacterLibraryModal
