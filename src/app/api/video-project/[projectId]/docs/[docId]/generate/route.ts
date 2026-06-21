@@ -1,16 +1,17 @@
 /**
  * POST /api/video-project/[projectId]/docs/[docId]/generate
  *
- * Generate ONE Shot Doc's video within a project. The act of generating IS the
- * approval for that doc: its shots render on fal / Seedance and stitch into the
- * doc's single video (the per-doc P4 stitch → the doc's `finalVideoUrl`). The
+ * Generate ONE Shot Doc's clips within a project. The act of generating IS the
+ * approval for that doc: its shots render on fal / Seedance as INDIVIDUAL clips.
+ * We deliberately do NOT stitch — each clip flows into the editor on its own,
+ * where the operator assembles them (using the script's marked clip frames). The
  * updated doc is persisted back into the project, and the re-derived project is
- * returned — reaching the last doc's video flips project status to 'assembled'.
+ * returned — once every doc's shots have clips the project flips to 'assembled'.
  *
  * Next 14 async params: `params` is a Promise that must be awaited.
  *
- * LONG-RUNNING: one synchronous fal generation + persist per shot plus the final
- * stitch, so this request can take several minutes for a multi-shot doc.
+ * LONG-RUNNING: one synchronous fal generation + persist per shot, so this
+ * request can take several minutes for a multi-shot doc.
  *
  * Thin route: authenticate, load + locate the doc, delegate, map errors to HTTP.
  * On a generation failure we return 500 with a plain-English message and leave
@@ -22,7 +23,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { generateAllShots, stitchShotPlan } from '@/lib/video/shot-plan-generation-service';
+import { generateAllShots } from '@/lib/video/shot-plan-generation-service';
 import { getVideoProject, replaceProjectDoc } from '@/lib/video/video-project-service';
 
 export const dynamic = 'force-dynamic';
@@ -57,20 +58,26 @@ export async function POST(
       );
     }
 
-    // Render every shot in order, then stitch them into the doc's single video.
-    const stitched = await stitchShotPlan(
-      await generateAllShots(doc, { tenantId: PLATFORM_ID }),
+    // Render every shot in order as INDIVIDUAL clips — no stitch. The operator
+    // assembles them in the editor. A failed shot is flagged and skipped (the run
+    // does not abort), and we persist after EVERY shot so partial progress survives.
+    const generated = await generateAllShots(
+      doc,
       { tenantId: PLATFORM_ID },
+      undefined,
+      async (progressDoc) => {
+        await replaceProjectDoc(projectId, progressDoc);
+      },
     );
 
-    // Persist the updated doc; the service re-derives project status (last doc → 'assembled').
-    const updatedProject = await replaceProjectDoc(projectId, stitched);
+    // Final persist; the service re-derives project status (all docs done → 'assembled').
+    const updatedProject = await replaceProjectDoc(projectId, generated);
 
-    logger.info('[video-project] doc video generated', {
+    logger.info('[video-project] doc clips generated', {
       file: FILE,
       projectId,
       docId,
-      finalVideoUrl: stitched.finalVideoUrl,
+      shotsGenerated: generated.shots.filter((s) => s.generated?.videoUrl).length,
       status: updatedProject.status,
     });
 

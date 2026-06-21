@@ -4,17 +4,17 @@
  * A VideoProject is an ORDERED collection of Shot Docs (each a full `ShotPlan`).
  * It is the layer that turns "one storyboard" into "a film": a brief is segmented
  * into several ordered Shot Docs, each authored + reviewed independently, each
- * generating ITS OWN video (the per-doc P4 stitch → `ShotPlan.finalVideoUrl`), and
- * only once every doc has its video does the whole project hand off to the editor
- * for the cross-document stitch + transitions + music.
+ * generating ITS OWN clips (one per shot — the engine does NOT stitch). Only once
+ * every doc's shots have clips does the whole project hand off to the editor, where
+ * the operator arranges the clips on the timeline and adds transitions / music.
  *
- * The flow this models (owner-confirmed, Jun 17 2026):
+ * The flow this models (owner-confirmed, Jun 21 2026):
  *   1. Generate ALL the project's Shot Docs first — STILLS ONLY, no video.
  *   2. Review/edit each doc surgically (per-section edit, never a whole-doc re-roll).
- *   3. "Generate" a doc's video (the act of generating IS the approval) → that doc's
- *      shots render + stitch into the doc's single video, stored on the project.
- *   4. When EVERY doc has its video, the project is "assembled" → open in the editor
- *      to stitch the doc-videos together with transitions / effects / music.
+ *   3. "Generate" a doc's clips (the act of generating IS the approval) → that doc's
+ *      shots render into INDIVIDUAL clips, stored on the project. No engine stitch.
+ *   4. When EVERY doc's shots have clips, the project is "assembled" → open in the
+ *      editor, which receives all clips in order to arrange / stitch / score.
  *
  * ADDITIVE: reuses `ShotPlan` verbatim as the per-doc model (so the existing
  * planner, surgical-edit, still-render and P4 stitch all apply per doc unchanged).
@@ -102,9 +102,19 @@ export const VIDEO_PROJECT_TYPE_GUARD: { _project: _ProjectParity } = { _project
 // Derived helpers (pure — safe on client + server)
 // ============================================================================
 
-/** True when a doc has its own generated video (the per-doc P4 stitch ran). */
+/**
+ * True when every shot in a doc has its own generated clip. We do NOT stitch the
+ * clips together — they flow into the editor individually — so a doc is "done"
+ * when all its shots have a clip, not when a single stitched `finalVideoUrl` exists.
+ */
 export function docHasVideo(doc: ShotPlan): boolean {
-  return typeof doc.finalVideoUrl === 'string' && doc.finalVideoUrl.length > 0;
+  return (
+    doc.shots.length > 0 &&
+    doc.shots.every(
+      (shot) =>
+        typeof shot.generated?.videoUrl === 'string' && shot.generated.videoUrl.length > 0,
+    )
+  );
 }
 
 /** Count of docs that already have their video. */
