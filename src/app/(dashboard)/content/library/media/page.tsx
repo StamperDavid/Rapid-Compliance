@@ -355,7 +355,14 @@ export default function MediaLibraryUnifiedPage() {
           ? list.filter((a) => categoryFilter.has(a.category))
           : list;
 
-      setAssets(filtered);
+      // Dedup by id — the media API can surface the same logical asset from
+      // more than one source collection, which produced duplicate React keys
+      // and silently duplicated/omitted tiles. Keep first occurrence.
+      const deduped = Array.from(
+        new Map(filtered.map((a) => [a.id, a])).values(),
+      );
+
+      setAssets(deduped);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to load media');
       setAssets([]);

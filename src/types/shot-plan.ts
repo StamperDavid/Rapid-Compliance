@@ -56,8 +56,9 @@ export interface ShotPlanColorSwatch {
 export interface ShotPlanCastMember {
   /** AvatarProfile id (Character Library). */
   characterId: string;
-  /** CharacterLook id when a specific look/outfit/state is chosen. */
-  lookId?: string;
+  /** CharacterLook id when a specific look/outfit/state is chosen. `null` = the
+   *  planner explicitly chose no specific look (treated the same as absent). */
+  lookId?: string | null;
   /** Display name, e.g. "David (civilian)". */
   name: string;
   /** Identity-anchor reference images resolved from the profile/look. */
@@ -561,7 +562,7 @@ export const ShotPlanColorSwatchSchema = z.object({
 
 export const ShotPlanCastMemberSchema = z.object({
   characterId: z.string().trim().min(1).max(200),
-  lookId: z.string().trim().max(200).optional(),
+  lookId: z.string().trim().max(200).nullable().optional(),
   name: z.string().trim().min(1).max(200),
   referenceImageUrls: z.array(z.string().trim().url()).max(20).default([]),
   role: z.string().trim().max(200).optional(),

@@ -876,6 +876,7 @@ export function BulkActionsBar({
   onClear,
 }: BulkActionsBarProps) {
   const [charDialog, setCharDialog] = useState(false);
+  const [moveCharDialog, setMoveCharDialog] = useState(false);
   const [projDialog, setProjDialog] = useState(false);
   const [useDialog, setUseDialog] = useState(false);
   const [tagMode, setTagMode] = useState<'add' | 'remove' | null>(null);
@@ -908,19 +909,47 @@ export function BulkActionsBar({
           Clear
         </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => {
-            onLoadCharacters();
-            setCharDialog(true);
-          }}
-          className="gap-1.5"
+        <MenuPopover
+          align="right"
+          trigger={({ toggle, ref }) => (
+            <Button
+              ref={ref}
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={toggle}
+              className="gap-1.5"
+            >
+              <Users className="h-4 w-4" />
+              Character
+            </Button>
+          )}
         >
-          <Users className="h-4 w-4" />
-          Character
-        </Button>
+          {(close) => (
+            <>
+              <MenuItem
+                icon={UserPlus}
+                label="Add to a character (moves them here)"
+                disabled={busy}
+                onClick={() => {
+                  onLoadCharacters();
+                  setMoveCharDialog(true);
+                  close();
+                }}
+              />
+              <MenuItem
+                icon={Users}
+                label="Tag with a character (stays in library)"
+                disabled={busy}
+                onClick={() => {
+                  onLoadCharacters();
+                  setCharDialog(true);
+                  close();
+                }}
+              />
+            </>
+          )}
+        </MenuPopover>
 
         <Button
           variant="outline"
@@ -1103,12 +1132,22 @@ export function BulkActionsBar({
         onOpenChange={setCharDialog}
         characters={characters}
         loading={charactersLoading}
-        title={`Assign ${count} to character`}
+        title={`Tag ${count} with a character`}
         onPick={(c) => {
           void actions.onAssignCharacter(c);
         }}
         onClear={() => {
           void actions.onAssignCharacter(null);
+        }}
+      />
+      <MoveToCharacterDialog
+        open={moveCharDialog}
+        onOpenChange={setMoveCharDialog}
+        characters={characters}
+        loading={charactersLoading}
+        busy={busy}
+        onPick={(c) => {
+          void actions.onMoveToCharacter(c);
         }}
       />
       <ProjectDialog
