@@ -1,30 +1,24 @@
 'use client';
 
 /**
- * Video Editor — CapCut-feel layout for the YC demo.
+ * Video Editor — ONE unified CapCut-style editor.
  *
- *  ┌──────────────────────────────────────────────────────────────────────┐
- *  │  Toolbar  (transport, undo/redo, split, zoom, export)                │
- *  ├────────────────────────────────────────────────┬─────────────────────┤
- *  │                                                 │                     │
- *  │  Preview  (live with effects + draggable text) │  EffectsPanel       │
- *  │                                                 │  (clip / overlay /  │
- *  │                                                 │   upload context)   │
- *  │                                                 │                     │
- *  ├────────────────────────────────────────────────┴─────────────────────┤
- *  │  Timeline  (V / T / A tracks, ruler, playhead, drag-reorder, trim)   │
- *  └──────────────────────────────────────────────────────────────────────┘
+ * The Preview + Timeline are always on screen (stitch + edit the project). A tool
+ * rail on the right swaps which TOOL PANEL is open beside them — Edit, Text &
+ * Captions, VFX & B-Roll, Transcript, Make Clips. These are tools of ONE editor,
+ * not separate modes. Content arrives from the generation flow, an upload, or the
+ * Library (the "Add media" rail), all driving the same shared reducer.
  *
- * Design system: PageTitle / Card / Button. Tailwind classes only — no
- * inline `style` blocks for static values. Two-step delete confirmations
- * live inside EffectsPanel via `<ConfirmDialog>`.
+ * CapCut-style surface, pro-grade tools — each tool meets its own capability bar
+ * (internal benchmarks live in project memory, never in the product).
  */
 
-import { useReducer, useCallback, useEffect, useRef, useState } from 'react';
+import { useReducer, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, Upload } from 'lucide-react';
 
-import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import { PageTitle, Caption } from '@/components/ui/typography';
+import { Button } from '@/components/ui/button';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
@@ -35,18 +29,54 @@ import Timeline from '@/components/video-editor/Timeline';
 import EffectsPanel from '@/components/video-editor/EffectsPanel';
 
 import { editorReducer, initialEditorState } from './editor-reducer';
-import {
-  DEFAULT_CLIP_DURATION,
-  type EditorClip,
-} from './types';
+import { DEFAULT_CLIP_DURATION, type EditorClip } from './types';
 import type { MediaItem } from '@/types/media-library';
 import type { PipelineProject } from '@/types/video-pipeline';
 import { takeEditorSeed } from '@/lib/video/editor-seed';
+import type { EditorModeProps, ExportState } from './editor-modes';
+import { EDITOR_TOOLS, type EditorTool, type EditorToolProps } from './editor-tools';
+import { EditorMediaPanel } from './components/EditorMediaPanel';
+import VfxToolPanel from './tools/VfxToolPanel';
+import TextToolPanel from './tools/TextToolPanel';
+import TranscriptToolPanel from './tools/TranscriptToolPanel';
+import ClipsToolPanel from './tools/ClipsToolPanel';
+
+/** The non-Edit tool panels (Edit uses EffectsPanel directly). */
+const TOOL_PANELS: Record<Exclude<EditorTool, 'edit'>, ComponentType<EditorToolProps>> = {
+  text: TextToolPanel,
+  vfx: VfxToolPanel,
+  transcript: TranscriptToolPanel,
+  clips: ClipsToolPanel,
+};
 
 interface RenderResponse {
   success: boolean;
   item?: MediaItem;
   error?: string;
+}
+
+/** One shot as returned by GET /api/video/project/[projectId] (the live build contract). */
+interface PollShot {
+  id: string;
+  index: number;
+  durationSeconds: number;
+  title?: string;
+  generated?: {
+    videoUrl?: string;
+    lastFrameUrl?: string;
+    keyframeUrl?: string;
+    status?: string;
+  };
+}
+
+/** GET /api/video/project/[projectId] response, including the live video-build fields. */
+interface ProjectPollResponse {
+  success: boolean;
+  project?: PipelineProject;
+  shotPlan?: { shots: PollShot[] } | null;
+  videoBuildStatus?: 'generating' | 'complete' | 'error' | null;
+  videoBuildProgress?: { phase: string; label: string; done: number; total: number; failed?: number } | null;
+  videoBuildError?: string | null;
 }
 
 function effectiveDuration(clip: EditorClip): number {
@@ -58,49 +88,48 @@ export default function VideoEditorPage() {
   const authFetch = useAuthFetch();
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('project');
+
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
+  // The open tool on the right rail (the timeline is always visible).
+  const [tool, setTool] = useState<EditorTool>('edit');
+  // The Add-media rail (upload / library / projects / characters / URL import) is a
+  // SHARED on-ramp: bring in your own footage, an earlier video, or a project's scenes.
+  // Open by DEFAULT — a video editor needs its media bin visible, like CapCut. The
+  // operator can collapse it with the header toggle.
+  const [mediaOpen, setMediaOpen] = useState(true);
 
-  const {
-    clips,
-    audioTracks,
-    textOverlays,
-    selectedClipId,
-    selectedOverlayId,
-    playheadTime,
-    totalDuration,
-    zoomLevel,
-    isPlaying,
-    undoStack,
-    redoStack,
-  } = state;
+  const { clips, textOverlays, isPlaying, selectedClipId, playheadTime } = state;
 
-  // ── Export state (separate from the legacy isAssembling — different endpoint) ─
   const [exportState, setExportState] = useState<ExportState>({
     phase: 'idle',
     error: null,
     item: null,
   });
 
-  // ── Project auto-load: when the editor is opened as the destination of a
-  //    finished generation (`?project=<id>`), pull the project's completed
-  //    scenes onto the timeline in scene order so the operator lands here with
-  //    a starting cut already laid down. The lip-synced dialogue audio is baked
-  //    into each scene's video, so it rides along with the clip. ───────────────
+  // ── Project auto-load (`?project=<id>`): LIVE-POLL the shot plan so each rendered
+  //    clip drops onto the timeline the moment the server finishes it. ───────────
   const projectLoadedRef = useRef(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const addedClipUrlsRef = useRef<Set<string>>(new Set());
   const [projectLoad, setProjectLoad] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [buildStatus, setBuildStatus] = useState<'generating' | 'complete' | 'error' | null>(null);
+  const [buildProgress, setBuildProgress] = useState<{ done: number; total: number } | null>(null);
+  const [buildError, setBuildError] = useState<string | null>(null);
 
-  // ── Shot Plan handoff: when the operator clicks "Open in editor" on the Shot
-  //    Plan, the generated clips are passed through sessionStorage. Read + clear
-  //    them once on mount and seed the timeline in plan order. One-shot so a
-  //    later manual visit does not re-seed stale clips. ─────────────────────────
+  // ── Shot Plan handoff via sessionStorage ("Open in editor"). ────────────────
   const seedTakenRef = useRef(false);
   useEffect(() => {
-    if (seedTakenRef.current) { return; }
+    if (seedTakenRef.current) {
+      return;
+    }
     seedTakenRef.current = true;
-    // Don't clobber an edit already in progress.
-    if (clips.length > 0) { return; }
+    if (clips.length > 0) {
+      return;
+    }
     const seed = takeEditorSeed();
-    if (!seed || seed.clips.length === 0) { return; }
+    if (!seed || seed.clips.length === 0) {
+      return;
+    }
     for (const clip of seed.clips) {
       dispatch({
         type: 'ADD_CLIP',
@@ -115,60 +144,151 @@ export default function VideoEditorPage() {
     }
   }, [clips.length]);
 
+  // BACKWARD COMPAT path: older projects expose finished clips on `generatedScenes`
+  // (no live shot plan). Load them once, in scene order, same as the legacy behavior.
+  const loadFromGeneratedScenes = useCallback(
+    (project: PipelineProject | undefined) => {
+      if (!project) {
+        return;
+      }
+      const { scenes, generatedScenes } = project;
+      const durationBySceneId = new Map(scenes.map((s) => [s.id, s.duration]));
+      const numberBySceneId = new Map(scenes.map((s) => [s.id, s.sceneNumber]));
+
+      const ready = generatedScenes
+        .filter(
+          (g): g is typeof g & { videoUrl: string } =>
+            g.status === 'completed' && typeof g.videoUrl === 'string' && g.videoUrl.length > 0,
+        )
+        .map((g) => ({
+          url: g.videoUrl,
+          thumbnailUrl: g.thumbnailUrl,
+          sceneNumber: numberBySceneId.get(g.sceneId) ?? Number.MAX_SAFE_INTEGER,
+          duration: durationBySceneId.get(g.sceneId) ?? DEFAULT_CLIP_DURATION,
+        }))
+        .sort((a, b) => a.sceneNumber - b.sceneNumber);
+
+      for (const clip of ready) {
+        if (addedClipUrlsRef.current.has(clip.url)) {
+          continue;
+        }
+        addedClipUrlsRef.current.add(clip.url);
+        dispatch({
+          type: 'ADD_CLIP',
+          clip: {
+            name: `Scene ${clip.sceneNumber}`,
+            url: clip.url,
+            thumbnailUrl: clip.thumbnailUrl,
+            duration: clip.duration,
+            source: 'project',
+          },
+        });
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
-    if (projectLoadedRef.current) { return; }
-    if (!projectIdParam) { return; }
-    // Never clobber an edit already in progress — only seed an empty timeline.
-    if (clips.length > 0) { return; }
+    if (projectLoadedRef.current) {
+      return;
+    }
+    if (!projectIdParam) {
+      return;
+    }
+    // A sessionStorage seed (manual "Open in editor") already populated the timeline —
+    // don't also poll. The seed effect runs first and the url dedup set guards overlap.
+    if (clips.length > 0) {
+      return;
+    }
 
     projectLoadedRef.current = true;
     setProjectLoad('loading');
 
-    void (async () => {
+    const stopPolling = () => {
+      if (pollRef.current !== null) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+
+    // One poll tick: pull the project, drop any newly-finished clips onto the timeline
+    // in plan order, surface build status, and stop once the build is done or errored.
+    const poll = async () => {
       try {
         const res = await authFetch(`/api/video/project/${projectIdParam}`);
-        if (!res.ok) { throw new Error('Project load failed'); }
-        const data = (await res.json()) as { success: boolean; project?: PipelineProject };
-        if (!data.success || !data.project) { throw new Error('Project not found'); }
-
-        const { scenes, generatedScenes } = data.project;
-        const durationBySceneId = new Map(scenes.map((s) => [s.id, s.duration]));
-        const numberBySceneId = new Map(scenes.map((s) => [s.id, s.sceneNumber]));
-
-        // Only completed scenes that actually rendered a video URL become clips.
-        const ready = generatedScenes
-          .filter((g): g is typeof g & { videoUrl: string } =>
-            g.status === 'completed' && typeof g.videoUrl === 'string' && g.videoUrl.length > 0)
-          .map((g) => ({
-            url: g.videoUrl,
-            thumbnailUrl: g.thumbnailUrl,
-            sceneNumber: numberBySceneId.get(g.sceneId) ?? Number.MAX_SAFE_INTEGER,
-            duration: durationBySceneId.get(g.sceneId) ?? DEFAULT_CLIP_DURATION,
-          }))
-          .sort((a, b) => a.sceneNumber - b.sceneNumber);
-
-        for (const clip of ready) {
-          dispatch({
-            type: 'ADD_CLIP',
-            clip: {
-              name: `Scene ${clip.sceneNumber}`,
-              url: clip.url,
-              thumbnailUrl: clip.thumbnailUrl,
-              duration: clip.duration,
-              source: 'project',
-            },
-          });
+        if (!res.ok) {
+          throw new Error('Project load failed');
         }
+        const data = (await res.json()) as ProjectPollResponse;
+        if (!data.success) {
+          throw new Error('Project not found');
+        }
+
+        // BACKWARD COMPAT: older projects have no live shot plan — fall back to the
+        // one-shot generatedScenes load and stop (no live build to follow).
+        if (!data.shotPlan) {
+          stopPolling();
+          loadFromGeneratedScenes(data.project);
+          setProjectLoad('idle');
+          return;
+        }
+
+        setBuildStatus(data.videoBuildStatus ?? null);
+        setBuildProgress(
+          data.videoBuildProgress
+            ? { done: data.videoBuildProgress.done, total: data.videoBuildProgress.total }
+            : null,
+        );
+        setBuildError(data.videoBuildError ?? null);
+
+        const ordered = [...data.shotPlan.shots].sort((a, b) => a.index - b.index);
+        for (const shot of ordered) {
+          const url = shot.generated?.videoUrl;
+          if (
+            shot.generated?.status === 'completed' &&
+            typeof url === 'string' &&
+            url.length > 0 &&
+            !addedClipUrlsRef.current.has(url)
+          ) {
+            addedClipUrlsRef.current.add(url);
+            const trimmedTitle = shot.title?.trim();
+            dispatch({
+              type: 'ADD_CLIP',
+              clip: {
+                name: trimmedTitle && trimmedTitle.length > 0 ? trimmedTitle : `Shot ${shot.index + 1}`,
+                url,
+                thumbnailUrl: shot.generated.lastFrameUrl ?? shot.generated.keyframeUrl ?? null,
+                duration: shot.durationSeconds,
+                source: 'project',
+              },
+            });
+          }
+        }
+
         setProjectLoad('idle');
+
+        if (data.videoBuildStatus === 'complete' || data.videoBuildStatus === 'error') {
+          stopPolling();
+        }
       } catch {
         setProjectLoad('error');
+        stopPolling();
       }
-    })();
-  }, [projectIdParam, clips.length, authFetch]);
+    };
+
+    void poll();
+    pollRef.current = setInterval(() => {
+      void poll();
+    }, 4000);
+
+    return stopPolling;
+  }, [projectIdParam, clips.length, authFetch, loadFromGeneratedScenes]);
 
   // ── Split at playhead — reused by toolbar + keyboard ────────────────────
   const splitAtPlayhead = useCallback(() => {
-    if (!selectedClipId) { return; }
+    if (!selectedClipId) {
+      return;
+    }
     let elapsed = 0;
     for (const clip of clips) {
       const dur = effectiveDuration(clip);
@@ -185,7 +305,9 @@ export default function VideoEditorPage() {
 
   // ── Export to /api/video/editor/render ──────────────────────────────────
   const handleExport = useCallback(async () => {
-    if (clips.length === 0) { return; }
+    if (clips.length === 0) {
+      return;
+    }
     setExportState({ phase: 'rendering', error: null, item: null });
     try {
       const body = {
@@ -230,7 +352,7 @@ export default function VideoEditorPage() {
         item: null,
       });
     }
-  }, [clips, textOverlays, authFetch, setExportState]);
+  }, [clips, textOverlays, authFetch]);
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────
   useEffect(() => {
@@ -244,7 +366,6 @@ export default function VideoEditorPage() {
       ) {
         return;
       }
-
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         dispatch({ type: 'UNDO' });
@@ -273,24 +394,44 @@ export default function VideoEditorPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isPlaying, splitAtPlayhead]);
 
-  const exportingNow = exportState.phase === 'rendering';
+  // ── Shared contract handed to every tool panel ──────────────────────────
+  const toolProps: EditorModeProps = {
+    state,
+    dispatch,
+    authFetch,
+    exportState,
+    onExport: () => {
+      void handleExport();
+    },
+    onSplit: splitAtPlayhead,
+  };
 
-  // ── Render ──────────────────────────────────────────────────────────────
+  const ActivePanel = tool === 'edit' ? null : TOOL_PANELS[tool];
+
+  const mainGridClass = mediaOpen
+    ? 'grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)_380px] gap-4'
+    : 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-4';
+
   return (
     <div className="p-6 space-y-4">
       <SubpageNav items={CONTENT_GENERATOR_TABS} />
 
-      <header className="flex items-center justify-between">
-        <div>
-          <PageTitle className="text-2xl flex items-center gap-2">
-            <Scissors className="w-6 h-6 text-primary" />
-            Video Editor
-          </PageTitle>
-          <SectionDescription className="mt-1 text-muted-foreground">
-            Trim, stitch, light, and caption — drop clips, drag the playhead, click Export.
-          </SectionDescription>
-        </div>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <PageTitle className="text-2xl flex items-center gap-2">
+          <Scissors className="w-6 h-6 text-primary" />
+          Video Editor
+        </PageTitle>
+
         <div className="flex items-center gap-2">
+          <Button
+            variant={mediaOpen ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setMediaOpen((open) => !open)}
+            className="gap-1.5"
+          >
+            <Upload className="w-4 h-4" />
+            Add media
+          </Button>
           {projectLoad === 'loading' && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -307,85 +448,131 @@ export default function VideoEditorPage() {
         </div>
       </header>
 
+      {buildStatus === 'generating' && (
+        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary-light">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Rendering your shots — clips drop in as they finish
+          {buildProgress ? ` (${buildProgress.done}/${buildProgress.total})` : ''}.
+        </div>
+      )}
+      {buildStatus === 'error' && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5" />
+          {buildError ?? 'Some shots didn’t finish rendering. The clips that did are on your timeline.'}
+        </div>
+      )}
+
       <Toolbar
-        isPlaying={isPlaying}
-        zoomLevel={zoomLevel}
-        canUndo={undoStack.length > 0}
-        canRedo={redoStack.length > 0}
-        isExporting={exportingNow}
-        hasClips={clips.length > 0}
-        selectedClipId={selectedClipId}
-        playheadTime={playheadTime}
-        totalDuration={totalDuration}
+        isPlaying={state.isPlaying}
+        zoomLevel={state.zoomLevel}
+        canUndo={state.undoStack.length > 0}
+        canRedo={state.redoStack.length > 0}
+        isExporting={exportState.phase === 'rendering'}
+        hasClips={state.clips.length > 0}
+        selectedClipId={state.selectedClipId}
+        playheadTime={state.playheadTime}
+        totalDuration={state.totalDuration}
         onSplit={splitAtPlayhead}
-        onExport={() => { void handleExport(); }}
+        onExport={() => {
+          void handleExport();
+        }}
         dispatch={dispatch}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Preview — center/left, takes most of the width */}
-        <div className="lg:col-span-9 space-y-4">
+      <div className={mainGridClass}>
+        {mediaOpen && (
+          <aside className="h-fit lg:sticky lg:top-4">
+            <EditorMediaPanel dispatch={dispatch} defaultTransition={state.defaultTransition} />
+          </aside>
+        )}
+
+        {/* Always-on core: Preview + Timeline */}
+        <div className="min-w-0 space-y-4">
+          {state.clips.length === 0 && (
+            <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-center">
+              <Caption className="block">
+                Your timeline is empty. Bring in footage from the{' '}
+                <span className="font-medium text-foreground">Media</span> panel
+                {mediaOpen ? ' on the left' : ' (the “Add media” button)'} — your{' '}
+                <span className="font-medium text-foreground">Library</span>, your{' '}
+                <span className="font-medium text-foreground">Projects</span> (generated scenes), or{' '}
+                <span className="font-medium text-foreground">Upload</span> your own.
+              </Caption>
+            </div>
+          )}
           <Preview
-            clips={clips}
-            textOverlays={textOverlays}
-            selectedOverlayId={selectedOverlayId}
-            playheadTime={playheadTime}
-            isPlaying={isPlaying}
-            totalDuration={totalDuration}
+            clips={state.clips}
+            textOverlays={state.textOverlays}
+            selectedOverlayId={state.selectedOverlayId}
+            playheadTime={state.playheadTime}
+            isPlaying={state.isPlaying}
+            totalDuration={state.totalDuration}
             dispatch={dispatch}
           />
           <Timeline
-            clips={clips}
-            audioTracks={audioTracks}
-            textOverlays={textOverlays}
-            selectedClipId={selectedClipId}
-            selectedOverlayId={selectedOverlayId}
-            playheadTime={playheadTime}
-            totalDuration={totalDuration}
-            zoomLevel={zoomLevel}
+            clips={state.clips}
+            audioTracks={state.audioTracks}
+            textOverlays={state.textOverlays}
+            selectedClipId={state.selectedClipId}
+            selectedOverlayId={state.selectedOverlayId}
+            playheadTime={state.playheadTime}
+            totalDuration={state.totalDuration}
+            zoomLevel={state.zoomLevel}
             dispatch={dispatch}
           />
         </div>
 
-        {/* EffectsPanel — right column */}
-        <div className="lg:col-span-3">
-          <EffectsPanel
-            clips={clips}
-            textOverlays={textOverlays}
-            selectedClipId={selectedClipId}
-            selectedOverlayId={selectedOverlayId}
-            playheadTime={playheadTime}
-            totalDuration={totalDuration}
-            dispatch={dispatch}
-          />
-        </div>
-      </div>
+        {/* Tool column: the rail + the open tool's panel */}
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-wrap gap-1.5">
+            {EDITOR_TOOLS.map((t) => {
+              const Icon = t.icon;
+              const active = tool === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTool(t.id)}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    active
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:bg-surface-elevated hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
 
-      {/* Footer keyboard hint */}
-      <div className="text-[10px] text-muted-foreground flex flex-wrap gap-3 px-1">
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Space</kbd> Play/Pause</span>
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">S</kbd> Split at playhead</span>
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Ctrl+Z</kbd> Undo</span>
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Ctrl+Shift+Z</kbd> Redo</span>
-        <span><kbd className="px-1 py-0.5 bg-surface-elevated rounded text-muted-foreground">Esc</kbd> Deselect</span>
+          {tool === 'edit' || ActivePanel === null ? (
+            <EffectsPanel
+              clips={state.clips}
+              textOverlays={state.textOverlays}
+              selectedClipId={state.selectedClipId}
+              selectedOverlayId={state.selectedOverlayId}
+              playheadTime={state.playheadTime}
+              totalDuration={state.totalDuration}
+              dispatch={dispatch}
+            />
+          ) : (
+            <ActivePanel {...toolProps} />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 // ============================================================================
-// Local types & sub-components
+// Local sub-components
 // ============================================================================
 
-interface ExportState {
-  phase: 'idle' | 'rendering' | 'done' | 'error';
-  error: string | null;
-  item: MediaItem | null;
-}
-
 function ExportStatusPill({ state }: { state: ExportState }) {
-  if (state.phase === 'idle') { return null; }
-
+  if (state.phase === 'idle') {
+    return null;
+  }
   if (state.phase === 'rendering') {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">

@@ -2,8 +2,8 @@
  * Avatar Creation API
  * POST /api/video/avatar/create
  *
- * HeyGen Instant Avatar creation has been removed. Avatar profiles are now
- * managed via the Kling-based Avatar Profiles system.
+ * Instant Avatar creation via the old third-party provider has been removed.
+ * Avatar profiles are now managed via the Avatar Profiles system (Character Library).
  * Use POST /api/video/avatar-profiles instead.
  */
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       success: false,
-      error: 'HeyGen has been replaced by Kling Avatar. Use Avatar Profiles instead.',
+      error: 'This path has been removed. Use Avatar Profiles (the Character Library) instead.',
       migration: 'POST /api/video/avatar-profiles',
     },
     { status: 410 },

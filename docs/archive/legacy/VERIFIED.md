@@ -374,7 +374,7 @@ src/lib/voice/
 | # | Feature | Owner | Effort |
 |---|---------|-------|--------|
 | 1 | Visual Workflow Builder | WORKFLOW-ENGINEER | 12 weeks |
-| 2 | Video Factory (Sora/HeyGen) | CONTENT-PM | 4 weeks |
+| 2 | Video Factory (Sora/fal) | CONTENT-PM | 4 weeks |
 | 3 | Full Social Media API Integration | SOCIAL-IMPLEMENTER | 6 weeks |
 | 4 | Bandwidth/Vonage VoIP providers | VOIP-SPECIALIST | 2 weeks |
 
@@ -436,7 +436,7 @@ Old features replaced with AI-Native Workforce capabilities:
 3. **Social Media AI** - Direct LinkedIn & X integrations
 4. **SEO & Lead Intel** - Scraping, enrichment, competitor analysis
 5. **Content Factory** - AI blogs, posts, ad copy
-6. **Video Generation** - Coming Soon (Sora/HeyGen)
+6. **Video Generation** - Coming Soon (Sora/fal)
 
 ### 3.4 Pricing Page Updates (`src/app/(public)/pricing/page.tsx`)
 
@@ -447,7 +447,7 @@ Old features replaced with AI-Native Workforce capabilities:
 
 ### 3.5 Video Generator Roadmap
 - Added "Coming Soon" capability card with amber styling
-- Features: AI Avatar Videos (HeyGen), Text-to-Video (Sora), Automated Video Ads
+- Features: AI Avatar Videos (fal / Seedance), Text-to-Video (Sora), Automated Video Ads
 - Differentiates from current capabilities with ⏳ icons
 
 ---
@@ -597,7 +597,7 @@ GREETING → QUALIFYING → PITCHING → OBJECTION_HANDLING → TRANSFER/CLOSE
 
 **Remaining to 100/100:**
 - Visual Workflow Builder UI
-- Video Generation (Sora/HeyGen)
+- Video Generation (Sora/fal)
 - Full social scheduling calendar UI
 - Mobile responsive testing
 
@@ -680,7 +680,7 @@ const apiKeys = await apiKeyService.getKeys(organizationId);
 
 **Remaining to 100/100:**
 - Visual Workflow Builder UI
-- Video Generation (Sora/HeyGen)
+- Video Generation (Sora/fal)
 - Mobile responsive testing
 - Production deployment hardening
 
@@ -722,7 +722,7 @@ const apiKeys = await apiKeyService.getKeys(organizationId);
 - Beautiful amber-styled "Coming Soon" card
 - Interest selection (AI Avatars, Text-to-Video, Automated Ads)
 - Waitlist signup saves to Firestore
-- Types already existed for HeyGen, Sora, Runway
+- Types already existed for fal, Sora, Runway
 
 ### 6.3 Dynamic App Wrapper
 **Status:** ✅ **COMPLETE**

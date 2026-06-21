@@ -7,7 +7,7 @@
  *   - name + description (the character's DNA prompt)
  *   - role + styleTag selects
  *   - face anchor upload (required) → frontalImageUrl
- *   - up to 4 additional/body reference images → additionalImageUrls
+ *   - unlimited additional/body reference images → additionalImageUrls
  *   - optional full-body + upper-body references
  *   - voice assignment from the existing /api/video/voices roster
  *   - favorite + default toggles
@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Caption, CardTitle, SectionDescription } from '@/components/ui/typography';
 import { MediaLibraryPicker, type LibraryAsset } from '@/components/content/MediaLibraryPicker';
+import { CloneVoiceStudio } from '@/app/(dashboard)/content/voice-lab/components/clone-voice-studio/CloneVoiceStudio';
 import {
   Dialog,
   DialogContent,
@@ -75,7 +76,7 @@ const STYLE_OPTIONS: Array<{ value: CharacterStyleTag; label: string }> = [
   { value: 'stylized', label: 'Stylized' },
 ];
 
-const MAX_ADDITIONAL_IMAGES = 4;
+// Reference angles are unlimited — no per-character cap on additional images.
 
 const VOICE_PROVIDERS = ['elevenlabs', 'unrealspeech', 'custom'] as const;
 type VoiceProvider = (typeof VOICE_PROVIDERS)[number];
@@ -129,8 +130,9 @@ interface CharacterFormProps {
   profile: AvatarProfile | null;
   open: boolean;
   onClose: () => void;
-  /** Resolves true on a successful save so the parent can refresh + close. */
-  onSaved: () => void;
+  /** Called on a successful save; receives the saved profile (when the API returns it)
+   *  so a caller like the Shot Doc can add the new character straight to the cast. */
+  onSaved: (profile?: AvatarProfile) => void;
 }
 
 // ============================================================================
@@ -173,6 +175,8 @@ export default function CharacterForm({
   // ── Voices ────────────────────────────────────────────────────────────────
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
+  // Clone Voice Studio (record a custom voice for this character) — edit mode only.
+  const [voiceStudioOpen, setVoiceStudioOpen] = useState(false);
 
   // ── Upload + save state ─────────────────────────────────────────────────────
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
@@ -180,6 +184,8 @@ export default function CharacterForm({
   const [libraryTarget, setLibraryTarget] = useState<
     null | 'frontal' | 'additional' | 'fullBody' | 'upperBody'
   >(null);
+  // True while a library image is being MOVED onto a saved character.
+  const [movingFromLibrary, setMovingFromLibrary] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -293,9 +299,7 @@ export default function CharacterForm({
             } else if (slot === 'upperBody') {
               setUpperBodyImageUrl(url);
             } else {
-              setAdditionalImageUrls((prev) =>
-                prev.length >= MAX_ADDITIONAL_IMAGES ? prev : [...prev, url],
-              );
+              setAdditionalImageUrls((prev) => [...prev, url]);
             }
           }
         } finally {
@@ -312,32 +316,109 @@ export default function CharacterForm({
     setAdditionalImageUrls((prev) => prev.filter((u) => u !== url));
   }, []);
 
-  // Fill the open slot from EXISTING library images (no re-upload).
+  // Reflect a saved character's slot state from the AvatarProfile the move
+  // endpoint returns. Keeps the UI in sync with what actually persisted without
+  // re-appending anything (the server already added the reference image).
+  const syncSlotsFromProfile = useCallback((updated: AvatarProfile) => {
+    setFrontalImageUrl(updated.frontalImageUrl ?? '');
+    setAdditionalImageUrls(updated.additionalImageUrls ?? []);
+    setFullBodyImageUrl(updated.fullBodyImageUrl ?? null);
+    setUpperBodyImageUrl(updated.upperBodyImageUrl ?? null);
+  }, []);
+
+  // Fill the open slot from EXISTING library images.
+  //
+  // EDIT mode (saved character → profile.id exists): MOVE the picked image.
+  // POST /api/video/avatar-profiles/[id]/add-image { assetId } appends it to the
+  // character's reference set AND deletes the media-library record, so the image
+  // lives in one place. We then re-sync the form slots from the returned profile
+  // (the server decides frontal vs. additional) so the move shows immediately and
+  // the normal save path never re-adds it (no double-add).
+  //
+  // CREATE mode (no profile.id yet): the move endpoint can't run pre-save — there
+  // is no character to move onto. So we just set the URL on the slot locally and
+  // the image stays in the library. Moving the picked image is acceptable to skip
+  // for a brand-new character; it can be re-picked and moved after first save.
   const applyLibrarySelection = useCallback(
     (assets: LibraryAsset[]) => {
-      const urls = assets.filter((a) => a.type === 'image').map((a) => a.url);
-      if (urls.length > 0) {
-        if (libraryTarget === 'frontal') {
+      const target = libraryTarget;
+      const imageAssets = assets.filter((a) => a.type === 'image');
+      // Capture the picker target before we close it.
+      setLibraryTarget(null);
+      if (imageAssets.length === 0 || target === null) {
+        return;
+      }
+
+      // ── CREATE mode: no character to move onto yet — copy the URL locally. ──
+      if (!isEdit || profile === null) {
+        const urls = imageAssets.map((a) => a.url);
+        if (target === 'frontal') {
           setFrontalImageUrl(urls[0]);
-        } else if (libraryTarget === 'fullBody') {
+        } else if (target === 'fullBody') {
           setFullBodyImageUrl(urls[0]);
-        } else if (libraryTarget === 'upperBody') {
+        } else if (target === 'upperBody') {
           setUpperBodyImageUrl(urls[0]);
-        } else if (libraryTarget === 'additional') {
+        } else {
           setAdditionalImageUrls((prev) => {
             const merged = [...prev];
             for (const u of urls) {
-              if (!merged.includes(u) && merged.length < MAX_ADDITIONAL_IMAGES) {
+              if (!merged.includes(u)) {
                 merged.push(u);
               }
             }
             return merged;
           });
         }
+        return;
       }
-      setLibraryTarget(null);
+
+      // ── EDIT mode: MOVE each picked image onto the saved character. ──
+      const profileId = profile.id;
+      const assetsToMove =
+        target === 'additional' ? imageAssets : imageAssets.slice(0, 1);
+      setMovingFromLibrary(true);
+      setErrorMsg(null);
+      void (async () => {
+        try {
+          for (const asset of assetsToMove) {
+            const res = await authFetch(
+              `/api/video/avatar-profiles/${profileId}/add-image`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // Pass the exact slot the operator picked so a full-body / upper-body
+                // pick lands in that slot — not silently in "additional".
+                body: JSON.stringify({ assetId: asset.id, slot: target }),
+              },
+            );
+            const data = (await res.json()) as {
+              success: boolean;
+              error?: string;
+              profile?: AvatarProfile;
+            };
+            if (!res.ok || !data.success) {
+              setErrorMsg(
+                data.error ?? 'Could not move that image from the library. Try again.',
+              );
+              return;
+            }
+            // Re-sync from the authoritative profile after each move.
+            if (data.profile) {
+              syncSlotsFromProfile(data.profile);
+            }
+          }
+        } catch (err) {
+          setErrorMsg(
+            err instanceof Error
+              ? err.message
+              : 'Could not move that image from the library. Try again.',
+          );
+        } finally {
+          setMovingFromLibrary(false);
+        }
+      })();
     },
-    [libraryTarget],
+    [libraryTarget, isEdit, profile, authFetch, syncSlotsFromProfile],
   );
 
   // ── Looks (alter egos) ──────────────────────────────────────────────────────
@@ -465,6 +546,25 @@ export default function CharacterForm({
     [voices],
   );
 
+  // Called when the Clone Voice Studio finishes recording + cloning + assigning.
+  // The studio already PATCHed this character's voice; we just reflect it in the
+  // form (select the new voice, inject it into the roster so the dropdown shows it)
+  // and close the studio.
+  const handleVoiceAssigned = useCallback(
+    ({ voiceId: newVoiceId, voiceName: newVoiceName }: { voiceId: string; voiceName: string }) => {
+      setVoiceId(newVoiceId);
+      setVoiceName(newVoiceName);
+      setVoiceProvider('custom');
+      setVoices((prev) =>
+        prev.some((v) => v.id === newVoiceId)
+          ? prev
+          : [{ id: newVoiceId, name: newVoiceName, language: '', provider: 'custom' }, ...prev],
+      );
+      setVoiceStudioOpen(false);
+    },
+    [],
+  );
+
   // ── Save (create or update) ─────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     setErrorMsg(null);
@@ -512,12 +612,12 @@ export default function CharacterForm({
             body: JSON.stringify(payload),
           });
 
-      const data = (await res.json()) as { success: boolean; error?: string };
+      const data = (await res.json()) as { success: boolean; error?: string; profile?: AvatarProfile };
       if (!res.ok || !data.success) {
         setErrorMsg(data.error ?? 'Could not save the character. Try again.');
         return;
       }
-      onSaved();
+      onSaved(data.profile);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Could not save the character.');
     } finally {
@@ -543,8 +643,6 @@ export default function CharacterForm({
     authFetch,
     onSaved,
   ]);
-
-  const canAddMore = additionalImageUrls.length < MAX_ADDITIONAL_IMAGES;
 
   return (
     <>
@@ -678,6 +776,7 @@ export default function CharacterForm({
               type="button"
               variant="ghost"
               size="sm"
+              disabled={movingFromLibrary}
               onClick={() => setLibraryTarget('frontal')}
               className="mt-2 ml-2 gap-1.5 text-xs"
             >
@@ -689,7 +788,8 @@ export default function CharacterForm({
           <div>
             <CardTitle className="mb-1">Additional angles</CardTitle>
             <Caption className="mb-2 block">
-              Optional side / body angles (up to {MAX_ADDITIONAL_IMAGES}) that sharpen consistency.
+              Optional side / body angles — add as many as you like. More references sharpen
+              consistency.
             </Caption>
             <input
               ref={additionalInputRef}
@@ -717,31 +817,28 @@ export default function CharacterForm({
                   </button>
                 </div>
               ))}
-              {canAddMore && (
-                <button
-                  type="button"
-                  disabled={uploadingSlot === 'additional'}
-                  onClick={() => additionalInputRef.current?.click()}
-                  className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
-                >
-                  {uploadingSlot === 'additional' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                  <span className="text-[10px]">Add</span>
-                </button>
-              )}
-              {canAddMore && (
-                <button
-                  type="button"
-                  onClick={() => setLibraryTarget('additional')}
-                  className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                >
+              <button
+                type="button"
+                disabled={uploadingSlot === 'additional'}
+                onClick={() => additionalInputRef.current?.click()}
+                className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+              >
+                {uploadingSlot === 'additional' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
                   <Plus className="h-4 w-4" />
-                  <span className="text-[10px]">Library</span>
-                </button>
-              )}
+                )}
+                <span className="text-[10px]">Add</span>
+              </button>
+              <button
+                type="button"
+                disabled={movingFromLibrary}
+                onClick={() => setLibraryTarget('additional')}
+                className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-surface-elevated text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="text-[10px]">Library</span>
+              </button>
             </div>
           </div>
 
@@ -756,6 +853,15 @@ export default function CharacterForm({
                 void handleSlotUpload(e, 'fullBody');
               }}
               onClear={() => setFullBodyImageUrl(null)}
+              onPickLibrary={() => setLibraryTarget('fullBody')}
+              libraryDisabled={movingFromLibrary}
+              // In edit mode a moved library image lands in the character's
+              // reference set (face/angles), not strictly this body slot.
+              libraryHint={
+                isEdit
+                  ? 'Adds the image to this character and removes it from your library'
+                  : undefined
+              }
             />
             <BodyImageSlot
               label="Upper-body reference"
@@ -766,6 +872,13 @@ export default function CharacterForm({
                 void handleSlotUpload(e, 'upperBody');
               }}
               onClear={() => setUpperBodyImageUrl(null)}
+              onPickLibrary={() => setLibraryTarget('upperBody')}
+              libraryDisabled={movingFromLibrary}
+              libraryHint={
+                isEdit
+                  ? 'Adds the image to this character and removes it from your library'
+                  : undefined
+              }
             />
           </div>
 
@@ -773,7 +886,7 @@ export default function CharacterForm({
           <div>
             <CardTitle className="mb-1">Voice</CardTitle>
             <Caption className="mb-2 block">
-              Optional. Pick the voice this character speaks with.
+              Optional. Pick a voice from the roster, or record this character&apos;s own voice.
             </Caption>
             <select
               value={voiceId ?? ''}
@@ -792,7 +905,33 @@ export default function CharacterForm({
             </select>
             {!voicesLoading && voices.length === 0 && (
               <Caption className="mt-1 block">
-                No voices available yet — connect a voice provider in settings to populate this list.
+                No voices available yet — connect a voice provider in settings, or record one below.
+              </Caption>
+            )}
+
+            {/* Record a custom (cloned) voice — needs a saved character to assign to */}
+            {isEdit ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setVoiceStudioOpen(true)}
+                  className="gap-2"
+                >
+                  <Music className="h-4 w-4" />
+                  Record this character&apos;s voice
+                </Button>
+                {voiceProvider === 'custom' && voiceName ? (
+                  <Caption className="text-foreground">
+                    Recorded voice: <span className="font-medium">{voiceName}</span>
+                  </Caption>
+                ) : (
+                  <Caption>Read a short script aloud to clone a voice just for this character.</Caption>
+                )}
+              </div>
+            ) : (
+              <Caption className="mt-2 block">
+                Save this character first, then you can record a custom voice for it.
               </Caption>
             )}
           </div>
@@ -875,6 +1014,13 @@ export default function CharacterForm({
             </label>
           </div>
 
+          {movingFromLibrary && (
+            <div className="flex items-center gap-2 rounded-md border border-border-light bg-surface-elevated p-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              <Caption>Moving the image from your library onto this character…</Caption>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2">
               <Caption className="text-destructive">{errorMsg}</Caption>
@@ -891,7 +1037,7 @@ export default function CharacterForm({
               onClick={() => {
                 void handleSave();
               }}
-              disabled={saving || uploadingSlot !== null}
+              disabled={saving || uploadingSlot !== null || movingFromLibrary}
               className="gap-2"
             >
               {saving ? (
@@ -920,6 +1066,30 @@ export default function CharacterForm({
       onSelect={applyLibrarySelection}
       authFetch={authFetch}
     />
+    {/* Clone Voice Studio — record a custom voice and assign it to this character.
+        Edit-mode only: the studio assigns via PATCH /avatar-profiles/[id], so a
+        saved profile id must exist. */}
+    {isEdit && profile && (
+      <Dialog open={voiceStudioOpen} onOpenChange={setVoiceStudioOpen}>
+        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Music className="h-5 w-5 text-primary" />
+              Record {name || profile.name}&apos;s voice
+            </DialogTitle>
+            <DialogDescription>
+              Read the script aloud — once steady, once expressive. We build the voice clone and
+              set it as this character&apos;s voice.
+            </DialogDescription>
+          </DialogHeader>
+          <CloneVoiceStudio
+            embedded
+            targetCharacter={{ id: profile.id, name: name || profile.name }}
+            onAssigned={handleVoiceAssigned}
+          />
+        </DialogContent>
+      </Dialog>
+    )}
     </>
   );
 }
@@ -935,39 +1105,99 @@ interface BodyImageSlotProps {
   inputRef: React.RefObject<HTMLInputElement>;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClear: () => void;
+  onPickLibrary: () => void;
+  libraryDisabled: boolean;
+  libraryHint?: string;
 }
 
-function BodyImageSlot({ label, url, uploading, inputRef, onUpload, onClear }: BodyImageSlotProps) {
+function BodyImageSlot({
+  label,
+  url,
+  uploading,
+  inputRef,
+  onUpload,
+  onClear,
+  onPickLibrary,
+  libraryDisabled,
+  libraryHint,
+}: BodyImageSlotProps) {
   return (
     <div>
       <Caption className="mb-1 block">{label}</Caption>
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onUpload} />
       {url ? (
-        <div className="relative inline-block">
-          <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-border-strong bg-surface-elevated">
-            <Image src={url} alt={label} fill unoptimized className="object-cover" />
+        <div className="space-y-2">
+          <div className="relative inline-block">
+            <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-border-strong bg-surface-elevated">
+              <Image src={url} alt={label} fill unoptimized className="object-cover" />
+            </div>
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label={`Remove ${label}`}
+              className="absolute right-0.5 top-0.5 rounded-md bg-black/55 p-0.5 text-white hover:bg-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClear}
-            aria-label={`Remove ${label}`}
-            className="absolute right-0.5 top-0.5 rounded-md bg-black/55 p-0.5 text-white hover:bg-destructive"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+              className="gap-1.5 text-xs"
+            >
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5" />
+              )}
+              Replace
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={libraryDisabled}
+              onClick={onPickLibrary}
+              title={libraryHint}
+              className="gap-1.5 text-xs"
+            >
+              <Plus className="h-3.5 w-3.5" /> From library
+            </Button>
+          </div>
         </div>
       ) : (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={uploading}
-          onClick={() => inputRef.current?.click()}
-          className="gap-1.5 text-xs"
-        >
-          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-          Upload
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className="gap-1.5 text-xs"
+          >
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
+            Upload
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={libraryDisabled}
+            onClick={onPickLibrary}
+            title={libraryHint}
+            className="gap-1.5 text-xs"
+          >
+            <Plus className="h-3.5 w-3.5" /> From library
+          </Button>
+        </div>
       )}
     </div>
   );

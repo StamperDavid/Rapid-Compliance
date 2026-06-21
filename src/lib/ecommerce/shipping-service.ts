@@ -3,7 +3,7 @@
  * Calculates shipping costs
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import type { Cart, Address, ShippingConfig, ShippingMethod } from '@/types/ecommerce';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -36,7 +36,7 @@ export async function calculateShipping(
   methodId?: string
 ): Promise<ShippingCalculation> {
   // Get e-commerce config
-  const rawConfig = await FirestoreService.get(
+  const rawConfig = await AdminFirestoreService.get(
     getSubCollection('ecommerce'),
     'config'
   );

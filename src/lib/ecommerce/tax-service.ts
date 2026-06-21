@@ -3,7 +3,7 @@
  * Calculates tax for orders
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import type { Cart, Address } from '@/types/ecommerce';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -26,7 +26,7 @@ export async function calculateTax(
   shippingAddress: Address
 ): Promise<TaxCalculation> {
   // Get e-commerce config
-  const ecommerceConfig = await FirestoreService.get(
+  const ecommerceConfig = await AdminFirestoreService.get(
     getSubCollection('ecommerce'),
     'config'
   );

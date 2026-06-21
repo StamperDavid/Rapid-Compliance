@@ -21,9 +21,7 @@ const nextConfig = {
     domains: [
       'localhost',
       'firebasestorage.googleapis.com',
-      'files2.heygen.ai',
-      'files.heygen.ai',
-      'imagedelivery.net',
+'imagedelivery.net',
       'placehold.co',
       'picsum.photos',
       'images.unsplash.com',

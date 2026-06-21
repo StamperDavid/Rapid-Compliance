@@ -42,6 +42,9 @@ dev-server.log
 *.tsbuildinfo
 next-env.d.ts
 
+# Windows build temp redirect (see scripts/next-build.js)
+.buildtmp/
+
 # IDE
 .vscode/
 .idea/

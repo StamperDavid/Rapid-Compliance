@@ -16,6 +16,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { getAsset, deleteAsset } from '@/lib/media/media-library-service';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -78,7 +79,7 @@ export interface AvatarProfile {
 
   // Reference images for character consistency
   frontalImageUrl: string; // Primary face photo (required)
-  additionalImageUrls: string[]; // Side angles, full body, etc. (up to 4)
+  additionalImageUrls: string[]; // Side angles, full body, etc. (unlimited)
   fullBodyImageUrl: string | null; // Full body reference
   upperBodyImageUrl: string | null; // Upper body reference
 
@@ -175,7 +176,9 @@ interface FirestoreAvatarProfileDoc {
 // ============================================================================
 
 const COLLECTION_PATH = getSubCollection('avatar_profiles');
-const MAX_ADDITIONAL_IMAGES = 4;
+// Reference angles are UNLIMITED: the more references the operator gives a
+// character, the better the video specialist holds its identity. (Per-model
+// input caps are applied downstream at generation time, not stored here.)
 
 // ============================================================================
 // Helper Functions
@@ -252,7 +255,7 @@ export async function createAvatarProfile(
       styleTag: data.styleTag ?? 'real',
       tier,
       frontalImageUrl: data.frontalImageUrl,
-      additionalImageUrls: (data.additionalImageUrls ?? []).slice(0, MAX_ADDITIONAL_IMAGES),
+      additionalImageUrls: data.additionalImageUrls ?? [],
       fullBodyImageUrl: data.fullBodyImageUrl ?? null,
       upperBodyImageUrl: data.upperBodyImageUrl ?? null,
       greenScreenClips,
@@ -464,7 +467,7 @@ export async function updateAvatarProfile(
       updateData.frontalImageUrl = updates.frontalImageUrl;
     }
     if (updates.additionalImageUrls !== undefined) {
-      updateData.additionalImageUrls = updates.additionalImageUrls.slice(0, MAX_ADDITIONAL_IMAGES);
+      updateData.additionalImageUrls = updates.additionalImageUrls;
     }
     if (updates.fullBodyImageUrl !== undefined) {
       updateData.fullBodyImageUrl = updates.fullBodyImageUrl;
@@ -647,7 +650,7 @@ export async function getDefaultProfile(userId: string): Promise<AvatarProfile |
  * Add or update a reference image on an avatar profile.
  *
  * - 'frontal': replaces frontalImageUrl
- * - 'additional': appends to additionalImageUrls (up to 4)
+ * - 'additional': appends to additionalImageUrls (unlimited)
  * - 'fullBody': replaces fullBodyImageUrl
  * - 'upperBody': replaces upperBodyImageUrl
  */
@@ -682,13 +685,8 @@ export async function addReferenceImage(
         break;
 
       case 'additional': {
+        // Unlimited reference angles — every added reference sharpens identity.
         const currentAdditional = data.additionalImageUrls ?? [];
-        if (currentAdditional.length >= MAX_ADDITIONAL_IMAGES) {
-          return {
-            success: false,
-            error: `Maximum of ${MAX_ADDITIONAL_IMAGES} additional images allowed`,
-          };
-        }
         updateData.additionalImageUrls = [...currentAdditional, imageUrl];
         break;
       }
@@ -718,6 +716,138 @@ export async function addReferenceImage(
       file: 'avatar-profile-service.ts',
     });
     return { success: false, error: 'Failed to add reference image' };
+  }
+}
+
+/**
+ * MOVE a media-library image onto a character as a reference image.
+ *
+ * This is a RELOCATION, not a copy. The owner's rule: "I don't need it saved in
+ * two places; its location changes to the character." So we:
+ *   1. Load the media asset to read its image URL (and confirm it's an image).
+ *   2. Confirm the target character belongs to the requesting user.
+ *   3. Append the URL to the character's reference set (de-duped). The first
+ *      image a character has lands as its frontal/primary reference; any
+ *      further images fill `additionalImageUrls` (unlimited).
+ *   4. Delete the media-library record so the image no longer shows in the
+ *      general browse. The underlying Storage file / URL is NOT deleted — the
+ *      character now references that same URL, so it stays alive there.
+ *
+ * Returns the refreshed character on success.
+ */
+export async function moveImageToCharacter(
+  userId: string,
+  assetId: string,
+  characterId: string,
+  // Which reference slot the moved image fills. Defaults to 'additional' (the
+  // media-library "Add to character" path, which has no slot concept); the
+  // character edit form passes the exact slot the operator picked.
+  slot: 'frontal' | 'additional' | 'fullBody' | 'upperBody' = 'additional',
+): Promise<{ success: boolean; profile?: AvatarProfile; error?: string }> {
+  try {
+    if (!adminDb) {
+      return { success: false, error: 'Database not available' };
+    }
+
+    // 1. Load the media asset and read its URL.
+    const asset = await getAsset(assetId);
+    if (!asset) {
+      return { success: false, error: 'Media asset not found' };
+    }
+    if (asset.type !== 'image') {
+      return {
+        success: false,
+        error: 'Only image assets can be added to a character',
+      };
+    }
+    if (!asset.url) {
+      return { success: false, error: 'Media asset has no image URL' };
+    }
+
+    // 2. Confirm the target character exists and belongs to this user.
+    const docSnap = await adminDb
+      .collection(COLLECTION_PATH)
+      .doc(characterId)
+      .get();
+    if (!docSnap.exists) {
+      return { success: false, error: 'Character not found' };
+    }
+    const data = docSnap.data() as FirestoreAvatarProfileDoc | undefined;
+    if (!data) {
+      return { success: false, error: 'Character data is empty' };
+    }
+    if (data.userId !== userId) {
+      return { success: false, error: 'Character does not belong to this user' };
+    }
+
+    const imageUrl = asset.url;
+    const currentFrontal = data.frontalImageUrl ?? '';
+    const currentAdditional = data.additionalImageUrls ?? [];
+
+    // De-dupe: if the character already references this exact URL, skip the
+    // append but still remove the duplicate library record so the move's
+    // visible outcome (gone from the browse) still holds.
+    const alreadyReferenced =
+      currentFrontal === imageUrl || currentAdditional.includes(imageUrl);
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    if (!alreadyReferenced) {
+      switch (slot) {
+        case 'frontal':
+          updateData.frontalImageUrl = imageUrl;
+          break;
+        case 'fullBody':
+          updateData.fullBodyImageUrl = imageUrl;
+          break;
+        case 'upperBody':
+          updateData.upperBodyImageUrl = imageUrl;
+          break;
+        case 'additional':
+        default:
+          if (!currentFrontal) {
+            // No primary face yet → the first reference becomes the face.
+            updateData.frontalImageUrl = imageUrl;
+          } else {
+            // Unlimited additional references — append every moved image.
+            updateData.additionalImageUrls = [...currentAdditional, imageUrl];
+          }
+          break;
+      }
+      await adminDb
+        .collection(COLLECTION_PATH)
+        .doc(characterId)
+        .update(updateData);
+    }
+
+    // 3. Remove the media-library record so the image leaves the general browse.
+    // The Storage file / URL stays alive (the character now references it).
+    await deleteAsset(assetId);
+
+    logger.info('Image moved from media library onto character', {
+      userId,
+      characterId,
+      assetId,
+      alreadyReferenced,
+      file: 'avatar-profile-service.ts',
+    });
+
+    const profile = await getAvatarProfile(characterId);
+    if (!profile) {
+      return { success: false, error: 'Failed to reload character after move' };
+    }
+
+    return { success: true, profile };
+  } catch (error) {
+    logger.error('Failed to move image to character', error as Error, {
+      userId,
+      characterId,
+      assetId,
+      file: 'avatar-profile-service.ts',
+    });
+    return { success: false, error: 'Failed to add image to character' };
   }
 }
 

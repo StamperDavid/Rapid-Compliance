@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate, Trash2, Check, CloudOff } from 'lucide-react';
+import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate, Trash2, Check, CloudOff, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useVideoProjectAutoSave } from '@/hooks/useVideoProjectAutoSave';
 import { StepStoryboard } from './components/StepStoryboard';
@@ -44,6 +44,7 @@ export default function VideoStudioPage() {
   } = useVideoPipelineStore();
 
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Auto-save: persists the project to Firestore (debounced) whenever it has
   // real content, so work is never lost and is always recallable.
@@ -225,6 +226,16 @@ export default function VideoStudioPage() {
                 )}
               </span>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/content/video/projects')}
+              className="gap-2 border-border-strong"
+              title="Multi-scene projects — generate a whole film as several shot docs, then stitch"
+            >
+              <Layers className="w-4 h-4" />
+              Projects
+            </Button>
             <Button
               variant="outline"
               size="sm"

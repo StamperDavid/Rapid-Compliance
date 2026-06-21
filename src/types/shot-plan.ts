@@ -104,6 +104,12 @@ export interface ShotPlanCastMember {
    * time so the production sheet shows a rich character reference, not just uploads.
    */
   modelSheet?: { label: string; imageUrl: string }[];
+  /**
+   * Operator opt-in: when true, this (invented) character is saved to the Character
+   * Library at generation time — once its reference art exists — so it can be reused
+   * in future videos. Already-saved (library-sourced) characters ignore this.
+   */
+  saveToLibrary?: boolean;
 }
 
 /**
@@ -532,6 +538,12 @@ export interface ShotPlan {
   createdAt: string;
   updatedAt: string;
   status: ShotPlanStatus;
+  /**
+   * The final, stitched deliverable video — every generated shot concatenated in
+   * order into ONE playable file on OUR storage. Written by `stitchShotPlan` after
+   * `generateAllShots`. Absent until the plan has been generated + stitched.
+   */
+  finalVideoUrl?: string;
 }
 
 // ============================================================================
@@ -569,6 +581,7 @@ export const ShotPlanCastMemberSchema = z.object({
     .array(z.object({ label: z.string().trim().min(1).max(80), imageUrl: z.string().trim().url() }))
     .max(8)
     .optional(),
+  saveToLibrary: z.boolean().optional(),
 });
 
 export const ShotPlanObjectSchema = z.object({
@@ -767,6 +780,7 @@ export const ShotPlanSchema = z.object({
   createdAt: z.string().trim().min(1),
   updatedAt: z.string().trim().min(1),
   status: ShotPlanStatusSchema.default('draft'),
+  finalVideoUrl: z.string().trim().url().optional(),
 });
 
 // ============================================================================

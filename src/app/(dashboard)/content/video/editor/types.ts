@@ -10,18 +10,40 @@ import type { TransitionType } from '@/types/video-pipeline';
 // ============================================================================
 
 /**
- * Lighting / color effect parameters applied to a single clip.
+ * Effects applied to a single clip. Every field maps to BOTH a live CSS preview
+ * filter AND an FFmpeg render filter, so what the operator sees is what renders.
  * Defaults map to "no change" so an effect-less clip renders unchanged.
+ *
+ * Colour grade (original four):
  *  - brightness: -1.0 .. 1.0 (CSS brightness offset; 0 = none)
  *  - contrast:    0.0 .. 2.0 (CSS contrast multiplier; 1 = none)
  *  - saturation:  0.0 .. 2.0 (CSS saturate multiplier; 1 = none)
  *  - hue:        -180 .. 180 (degrees; 0 = none)
+ *
+ * Stylising filters (all optional — absent = off):
+ *  - sepia:      0.0 .. 1.0 (mix amount; 0 = none, 1 = full sepia)
+ *  - grayscale:  0.0 .. 1.0 (mix amount; 0 = colour, 1 = full B&W)
+ *  - blur:       0.0 .. 20.0 (pixels of gaussian blur; 0 = sharp)
+ *  - sharpen:    0.0 .. 2.0 (unsharp strength; 0 = none)
+ *  - vignette:   0.0 .. 1.0 (darkened-corner strength; 0 = none)
+ *  - grain:      0.0 .. 1.0 (film-grain noise strength; 0 = none)
+ *
+ * Playback:
+ *  - speed:      0.5 .. 2.0 (playback rate multiplier; 1 = normal). A clip at
+ *                2× plays in half its source time; preview + render both honour it.
  */
 export interface ClipEffect {
   brightness: number;
   contrast: number;
   saturation: number;
   hue: number;
+  sepia?: number;
+  grayscale?: number;
+  blur?: number;
+  sharpen?: number;
+  vignette?: number;
+  grain?: number;
+  speed?: number;
 }
 
 export const NEUTRAL_EFFECT: ClipEffect = {
@@ -29,6 +51,13 @@ export const NEUTRAL_EFFECT: ClipEffect = {
   contrast: 1,
   saturation: 1,
   hue: 0,
+  sepia: 0,
+  grayscale: 0,
+  blur: 0,
+  sharpen: 0,
+  vignette: 0,
+  grain: 0,
+  speed: 1,
 };
 
 export interface EditorClip {

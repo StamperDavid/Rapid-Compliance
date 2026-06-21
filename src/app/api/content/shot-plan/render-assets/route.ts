@@ -22,7 +22,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { renderShotPlanAssets } from '@/lib/video/shot-plan-generation-service';
+import { renderShotPlanAssets, saveInventedCharactersToLibrary } from '@/lib/video/shot-plan-generation-service';
 import { ShotPlanSchema } from '@/types/shot-plan';
 
 export const dynamic = 'force-dynamic';
@@ -50,12 +50,16 @@ export async function POST(request: NextRequest) {
 
     const updatedPlan = await renderShotPlanAssets(parsed.data.plan, { tenantId: PLATFORM_ID });
 
+    // Opt-in: persist any invented characters the operator checked "Save to library"
+    // — now that their reference art exists. Best-effort; never fails the render.
+    const finalPlan = await saveInventedCharactersToLibrary(updatedPlan, authResult.user.uid);
+
     logger.info('[shot-plan/render-assets] sheet assets rendered', {
       file: FILE,
-      shots: updatedPlan.shots.length,
+      shots: finalPlan.shots.length,
     });
 
-    return NextResponse.json({ success: true, plan: updatedPlan });
+    return NextResponse.json({ success: true, plan: finalPlan });
   } catch (error) {
     logger.error(
       'Shot Plan render-assets failed',

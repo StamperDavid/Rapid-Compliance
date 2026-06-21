@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { generateAllShots } from '@/lib/video/shot-plan-generation-service';
+import { generateAllShots, stitchShotPlan } from '@/lib/video/shot-plan-generation-service';
 import { type ShotPlan, ShotPlanSchema } from '@/types/shot-plan';
 
 export const dynamic = 'force-dynamic';
@@ -62,14 +62,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const finalPlan = await generateAllShots(parsed.data.plan, { tenantId: PLATFORM_ID });
+    const generatedPlan = await generateAllShots(parsed.data.plan, { tenantId: PLATFORM_ID });
 
     logger.info('[shot-plan/generate-all] all shots generated', {
       file: FILE,
-      shots: finalPlan.shots.length,
+      shots: generatedPlan.shots.length,
     });
 
-    return NextResponse.json({ success: true, plan: finalPlan });
+    // Stitch every generated shot into ONE deliverable video. A stitch failure must
+    // NOT discard the per-shot clips the operator just paid to render — return the
+    // generated plan with a plain-English warning so they can retry the stitch.
+    try {
+      const stitchedPlan = await stitchShotPlan(generatedPlan, { tenantId: PLATFORM_ID });
+      logger.info('[shot-plan/generate-all] final video stitched', {
+        file: FILE,
+        finalVideoUrl: stitchedPlan.finalVideoUrl,
+      });
+      return NextResponse.json({ success: true, plan: stitchedPlan });
+    } catch (stitchError) {
+      const message = stitchError instanceof Error ? stitchError.message : 'Stitching the final video failed';
+      logger.error(
+        'Shot Plan stitch failed after generating all shots',
+        stitchError instanceof Error ? stitchError : new Error(message),
+        { file: FILE },
+      );
+      return NextResponse.json({
+        success: true,
+        plan: generatedPlan,
+        stitchError:
+          `All shots generated, but combining them into one final video failed: ${message}. ` +
+          'Your individual shot clips are saved — you can try building the final video again.',
+      });
+    }
   } catch (error) {
     logger.error(
       'Shot Plan generate-all failed',

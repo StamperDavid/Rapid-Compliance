@@ -351,12 +351,46 @@ export type ColorGradePreset =
 // Caption Types
 // ============================================================================
 
-export type CaptionStyle = 'bold-center' | 'bottom-bar' | 'karaoke';
+export type CaptionStyle =
+  | 'bold-center'
+  | 'bottom-bar'
+  | 'karaoke'
+  | 'word-highlight'
+  | 'big-impact'
+  | 'boxed'
+  | 'minimal';
+
+/** Every caption style, in display order. Single source of truth for UI pickers
+ *  and request validation so a new style only has to be added in one place. */
+export const CAPTION_STYLES: readonly CaptionStyle[] = [
+  'bold-center',
+  'bottom-bar',
+  'karaoke',
+  'word-highlight',
+  'big-impact',
+  'boxed',
+  'minimal',
+] as const;
 
 export const CAPTION_STYLE_LABELS: Record<CaptionStyle, string> = {
   'bold-center': 'Bold Center (TikTok)',
   'bottom-bar': 'Bottom Bar (YouTube)',
   'karaoke': 'Karaoke (Word Highlight)',
+  'word-highlight': 'Word Pop (active word)',
+  'big-impact': 'Big Impact (huge & bold)',
+  'boxed': 'Boxed (solid bar)',
+  'minimal': 'Minimal (small, no box)',
+} as const;
+
+/** One-line description of how each style looks, for picker hints. */
+export const CAPTION_STYLE_HINTS: Record<CaptionStyle, string> = {
+  'bold-center': 'Big centered lines, a few words each.',
+  'bottom-bar': 'Smaller lines along the bottom with a dark bar.',
+  'karaoke': 'One golden word at a time, centered.',
+  'word-highlight': 'A few words centered with the spoken word emphasized.',
+  'big-impact': 'Huge bold centered text for punchy hooks.',
+  'boxed': 'Short lines on a solid black box near the bottom.',
+  'minimal': 'Small, clean captions at the bottom, no background.',
 } as const;
 
 export interface CaptionConfig {

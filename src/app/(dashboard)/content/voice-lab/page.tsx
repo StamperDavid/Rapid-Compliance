@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mic, Music, AudioWaveform, Wand2 } from 'lucide-react';
+import { Mic, Music, AudioWaveform, Wand2, UserSquare2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
@@ -9,11 +9,13 @@ import { VoiceRecorderStudio } from './components/VoiceRecorderStudio';
 import { VoiceLibrary } from './components/VoiceLibrary';
 import { VoiceDesigner } from './components/VoiceDesigner';
 import { AIMusicStudio } from './components/AIMusicStudio';
+import { CloneVoiceStudio } from './components/clone-voice-studio/CloneVoiceStudio';
 
-type VoiceLabTab = 'studio' | 'voices' | 'designer' | 'music';
+type VoiceLabTab = 'studio' | 'clone' | 'voices' | 'designer' | 'music';
 
 const TABS: { key: VoiceLabTab; label: string; icon: React.ElementType; description: string }[] = [
   { key: 'studio', label: 'Voice Studio', icon: Mic, description: 'Record & edit' },
+  { key: 'clone', label: 'Clone Voice Studio', icon: UserSquare2, description: 'Teleprompter clone' },
   { key: 'voices', label: 'My Voices', icon: AudioWaveform, description: 'Voice library' },
   { key: 'designer', label: 'Designer', icon: Wand2, description: 'Create voices' },
   { key: 'music', label: 'AI Music', icon: Music, description: 'Generate songs' },
@@ -87,6 +89,7 @@ export default function VoiceLabPage() {
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'studio' && <VoiceRecorderStudio />}
+            {activeTab === 'clone' && <CloneVoiceStudio />}
             {activeTab === 'voices' && <VoiceLibrary />}
             {activeTab === 'designer' && <VoiceDesigner />}
             {activeTab === 'music' && <AIMusicStudio />}

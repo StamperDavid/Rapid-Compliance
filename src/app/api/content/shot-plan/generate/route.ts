@@ -1,10 +1,12 @@
 /**
  * POST /api/content/shot-plan/generate
  *
- * Thin route: requireAuth → validate { brief, shotCount?, title? } with Zod →
- * delegate to `generateShotPlan` (the real Shot Plan Planner specialist, which
- * auto-casts the operator's own Character Library and loads its Golden Master
- * from Firestore per Standing Rule #1). Returns the contract-valid ShotPlan.
+ * Thin route: requireAuth → validate { brief, shotCount?, title?, references?,
+ * selectedCharacterIds?, selectedLocationIds? } with Zod → delegate to
+ * `generateShotPlan` (the real Shot Plan Planner specialist, which casts the
+ * operator's selected saved characters, LOCKS the environment to any selected
+ * saved locations, and loads its Golden Master from Firestore per Standing Rule
+ * #1). Returns the contract-valid ShotPlan.
  *
  * No business logic lives here — the planner owns generation. The route only
  * authenticates, validates the input shape, binds the authed uid, and maps
@@ -33,6 +35,13 @@ const BodySchema = z.object({
   shotCount: z.number().int().min(1).max(50).optional(),
   title: z.string().trim().max(300).optional(),
   references: z.array(ReferenceSchema).max(20).optional(),
+  /** Saved Character-Library characters the operator explicitly chose to cast. */
+  selectedCharacterIds: z.array(z.string().trim().min(1)).max(50).optional(),
+  /**
+   * Saved Location-Library locations (digital sets) the operator explicitly chose.
+   * When present, the planner LOCKS the environment to them (same set every shot).
+   */
+  selectedLocationIds: z.array(z.string().trim().min(1)).max(20).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -58,6 +67,12 @@ export async function POST(request: NextRequest) {
       ...(body.shotCount !== undefined ? { shotCount: body.shotCount } : {}),
       ...(body.title ? { title: body.title } : {}),
       ...(body.references && body.references.length > 0 ? { references: body.references } : {}),
+      ...(body.selectedCharacterIds && body.selectedCharacterIds.length > 0
+        ? { selectedCharacterIds: body.selectedCharacterIds }
+        : {}),
+      ...(body.selectedLocationIds && body.selectedLocationIds.length > 0
+        ? { selectedLocationIds: body.selectedLocationIds }
+        : {}),
     });
 
     logger.info('[shot-plan/generate] plan generated', {

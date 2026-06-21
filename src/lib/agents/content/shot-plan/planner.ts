@@ -25,16 +25,19 @@
  */
 
 import { z } from 'zod';
-import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { OpenRouterProvider, type ChatMessageContentPart } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
 import { listAvatarProfiles, type AvatarProfile } from '@/lib/video/avatar-profile-service';
+import { listLocationProfiles } from '@/lib/video/location-profile-service';
+import type { LocationProfile } from '@/types/location';
 import {
   ShotPlanSchema,
   ShotPlanSharedChoicesSchema,
   ShotPlanShotSchema,
   type ShotPlan,
   type ShotPlanCastMember,
+  type ShotPlanObject,
   type ShotPlanFloorPlan,
 } from '@/types/shot-plan';
 import type { ShotPlanEditTarget } from '@/lib/video/shot-plan-edit';
@@ -62,6 +65,13 @@ interface ShotPlanPlannerGMConfig {
   model: ModelName;
   temperature: number;
   maxTokens: number;
+  /**
+   * Example shot-plan sheets (image URLs + an optional content note) baked into the
+   * GM. They are passed to the vision-capable model as REAL images on every generate,
+   * so the Planner LEARNS the layout craft from worked examples — it actually sees
+   * them, not a text description.
+   */
+  layoutExamples: Array<{ url: string; note?: string }>;
 }
 
 // ============================================================================
@@ -97,6 +107,25 @@ const GenerateShotPlanInputSchema = z.object({
   title: z.string().trim().max(300).optional(),
   /** Optional reference materials that define the desired look / style / world / characters. */
   references: z.array(ShotPlanReferenceSchema).max(20).optional(),
+  /**
+   * Saved Character-Library characters the operator EXPLICITLY chose to cast.
+   * ONLY these library characters are used; every other person/creature the brief
+   * needs is INVENTED as a new profile. Omitted/empty = invent all characters.
+   * (The planner never auto-pulls from the library by a name in the brief — that
+   * caused name collisions and the "always the same character" bug.)
+   */
+  selectedCharacterIds: z.array(z.string().trim().min(1)).max(50).optional(),
+  /**
+   * Saved Location-Library locations (digital sets) the operator EXPLICITLY chose.
+   * When provided, the plan's ENVIRONMENT is LOCKED to these sets: the planner authors
+   * the environment fingerprint / zones strictly from each location's LOCKED description
+   * (same furniture in the same places, same windows on the same walls, same layout) and
+   * the union of their reference images is pinned as `environmentReferenceImageUrls` (the
+   * set-identity anchors the generation service feeds to Seedance). Omitted/empty = the
+   * planner invents the environment as before. Multiple selections map one zone per
+   * location. This is the SET-equivalent of character identity-locking.
+   */
+  selectedLocationIds: z.array(z.string().trim().min(1)).max(20).optional(),
 });
 
 export type GenerateShotPlanInput = z.infer<typeof GenerateShotPlanInputSchema>;
@@ -107,7 +136,7 @@ const EditShotPlanFieldInputSchema = z.object({
   /** Which level the edit targets. */
   target: z.enum(['shared', 'shot', 'plan']),
   /** Required when target === 'shot'. */
-  shotId: z.string().trim().min(1).optional(),
+  shotId: z.string().trim().optional(),
   /** The property name on the targeted object (e.g. 'action', 'colorPalette', 'title'). */
   field: z.string().trim().min(1),
   /** The operator instruction in plain language. */
@@ -129,9 +158,9 @@ export type EditShotPlanFieldInput = z.infer<typeof EditShotPlanFieldInputSchema
  */
 const LlmCastMemberSchema = z.object({
   characterId: z.string().trim().min(1),
-  lookId: z.string().trim().min(1).optional(),
+  lookId: z.string().trim().optional(),
   name: z.string().trim().min(1),
-  role: z.string().trim().min(1).optional(),
+  role: z.string().trim().optional(),
   billing: z.enum(['lead', 'supporting']).optional(),
   subjectKind: z.enum(['person', 'creature', 'group']).optional(),
   notes: z.string().trim().min(1).max(2000).optional(),
@@ -234,7 +263,7 @@ const LlmLookBibleSchema = z.object({
   composition: z.string().trim().min(1),
   lighting: z.string().trim().min(1),
   atmosphere: z.string().trim().min(1),
-  photographerStyle: z.string().trim().min(1).optional(),
+  photographerStyle: z.string().trim().optional(),
 });
 
 /** The plan body the model returns (envelope fields id/createdAt/updatedAt are ours). */
@@ -257,7 +286,7 @@ const LlmShotPlanSchema = z.object({
     cast: z.array(LlmCastMemberSchema).default([]),
     moodKeywords: z.array(z.string().trim().min(1)).min(3),
     cinematographyNotes: z.array(z.string().trim().min(1)).min(2),
-    artStyle: z.string().trim().min(1).optional(),
+    artStyle: z.string().trim().optional(),
     // The deep, SET-ONCE cinematic look bible — every field REQUIRED (strict schema).
     lookBible: LlmLookBibleSchema,
     // Consolidated ordered set of locations. The model references shots by 0-based
@@ -274,6 +303,20 @@ const LlmShotPlanSchema = z.object({
       .optional(),
     // Adaptive doc labels (e.g. "Material language" instead of "Character notes").
     adaptiveLabels: z.object({ characterNotes: z.string().trim().max(80).optional() }).optional(),
+    // Non-human subjects the story is ABOUT (animals, creatures, vehicles, robots,
+    // signature props) — anchored like cast. Each gets a fresh id + a model-sheet-grade
+    // description; reference art is GENERATED (no referenceImageUrls from the model).
+    objects: z
+      .array(
+        z.object({
+          id: z.string().trim().min(1),
+          name: z.string().trim().min(1),
+          subjectKind: z.enum(['object', 'creature']).optional(),
+          description: z.string().trim().max(2000).optional(),
+        }),
+      )
+      .max(40)
+      .optional(),
   }),
   shots: z
     .array(
@@ -281,6 +324,7 @@ const LlmShotPlanSchema = z.object({
         title: z.string().trim().min(1),
         action: z.string().trim().min(1),
         castMemberIds: z.array(z.string().trim().min(1)).default([]),
+        objectIds: z.array(z.string().trim().min(1)).optional(),
         environment: z.string().trim().min(1),
         // Continuity (Script Supervisor) — REQUIRED per beat, consistent within a scene/zone.
         timeOfDay: z.string().trim().min(1),
@@ -316,10 +360,10 @@ const LlmShotPlanSchema = z.object({
           shotType: z.string().trim().min(1),
           movement: z.string().trim().min(1),
           // Optional per-shot overrides of the look bible (fall back to lookBible when omitted).
-          lens: z.string().trim().min(1).optional(),
-          lensType: z.string().trim().min(1).optional(),
-          focalLength: z.string().trim().min(1).optional(),
-          composition: z.string().trim().min(1).optional(),
+          lens: z.string().trim().optional(),
+          lensType: z.string().trim().optional(),
+          focalLength: z.string().trim().optional(),
+          composition: z.string().trim().optional(),
           viewingDirection: z.enum(['front', 'back', 'left', 'right']).optional(),
           subjectUnawareOfCamera: z.boolean().optional(),
         }),
@@ -328,7 +372,11 @@ const LlmShotPlanSchema = z.object({
         mood: z.string().trim().min(1),
         durationSeconds: z.number().min(1).max(120),
         transitionIn: z.enum(['continue', 'cut']),
-        dialogue: z.string().trim().min(1).optional(),
+        // A shot may have NO spoken line (visual / action / cutaway). The LLM emits
+        // "" for those, and `.optional()` only permits `undefined` — so `.min(1)`
+        // rejected the entire plan whenever an action shot returned empty dialogue.
+        // Allow empty: empty string simply means "no dialogue".
+        dialogue: z.string().trim().max(4000).optional(),
       }),
     )
     .min(1),
@@ -400,6 +448,7 @@ async function loadGMConfig(industryKey: string): Promise<ShotPlanPlannerGMConfi
     model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.5,
     maxTokens: Math.max(config.maxTokens ?? MIN_OUTPUT_TOKENS_FOR_PLAN, MIN_OUTPUT_TOKENS_FOR_PLAN),
+    layoutExamples: Array.isArray(config.layoutExamples) ? config.layoutExamples : [],
   };
 }
 
@@ -414,14 +463,50 @@ async function callOpenRouter(
   gm: ShotPlanPlannerGMConfig,
   userPrompt: string,
   maxTokens: number,
+  layoutExamples?: Array<{ url: string; note?: string }>,
 ): Promise<string> {
   const provider = new OpenRouterProvider(PLATFORM_ID);
+  const messages: Array<{ role: 'system' | 'user'; content: string | ChatMessageContentPart[] }> = [
+    { role: 'system', content: gm.systemPrompt },
+  ];
+
+  // Vision few-shot: when the GM carries example shot-plan sheets, SHOW them to the
+  // (vision-capable) model as REAL images so it learns how an expert varies the page
+  // layout to fit the content — not a text description of them.
+  if (layoutExamples && layoutExamples.length > 0) {
+    const parts: ChatMessageContentPart[] = [
+      {
+        type: 'text',
+        text:
+          'EXAMPLE SHOT-PLAN SHEETS from an expert system. The lesson: DIFFERENT stories produce ' +
+          'DIFFERENT sheets — WHAT information is shown and HOW it is arranged changes with the subject. ' +
+          'A single human lead fills the cast section with ONE wide turnaround; an ensemble splits it ' +
+          'into several columns plus a consolidated group block; a creature/object subject replaces ' +
+          'wardrobe with a model-sheet + material notes; an environment-led journey leads with the ' +
+          'WORLD (biome/location tiles) instead of a cast. Note also: the top-down BLOCKING diagram and ' +
+          'the environment are sized LARGE, the page is always LANDSCAPE (wider than tall), and every ' +
+          'block is sized to fill its space with NO white gaps. READ THIS video’s content and ' +
+          'compose its layout to fit it the same way — ADAPT these principles, never copy a sheet literally:',
+      },
+    ];
+    for (const ex of layoutExamples) {
+      parts.push({ type: 'image_url', image_url: { url: ex.url } });
+      if (ex.note && ex.note.trim().length > 0) {
+        parts.push({ type: 'text', text: `(${ex.note.trim()})` });
+      }
+    }
+    messages.push({ role: 'user', content: parts });
+    logger.info('[ShotPlanPlanner] showing layout examples to the model', {
+      file: FILE,
+      exampleCount: layoutExamples.length,
+    });
+  }
+
+  messages.push({ role: 'user', content: userPrompt });
+
   const response = await provider.chat({
     model: gm.model,
-    messages: [
-      { role: 'system', content: gm.systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
+    messages,
     temperature: gm.temperature,
     maxTokens,
   });
@@ -470,7 +555,7 @@ function resolveReferenceImageUrls(profile: AvatarProfile, lookId?: string): str
 /** Describe the available cast for the model — real ids + looks, no invented data. */
 function buildAvailableCastBlock(profiles: AvatarProfile[]): string {
   if (profiles.length === 0) {
-    return '  (the operator has no saved characters — cast = [] and describe people generically in shot actions)';
+    return '  (NONE selected — the operator picked no saved character. INVENT every character the brief needs as a NEW cast member: give each a FRESH unique id like "new_1", "new_2", fill its full casting card, and put non-human subjects (animals, creatures, vehicles, robots) in sharedChoices.objects. Do NOT use any saved character.)';
   }
   return profiles
     .map((p) => {
@@ -491,11 +576,69 @@ function buildAvailableCastBlock(profiles: AvatarProfile[]): string {
     .join('\n');
 }
 
+// ============================================================================
+// LOCATION RESOLUTION (the LOCKED digital sets the operator selected)
+// ============================================================================
+
+/** A bare-http(s) URL is the only thing the contract's environmentReferenceImageUrls accepts. */
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
 /**
- * Map the model's cast picks back onto the contract, re-resolving referenceImageUrls
- * from the real profiles (the model never supplies image URLs). Picks that don't match
- * a real characterId are dropped, and matching per-shot castMemberIds are pruned to the
- * survivors so the plan stays internally consistent.
+ * The union of every SELECTED location's reference images — the ENVIRONMENT identity
+ * anchors. These are pinned onto `sharedChoices.environmentReferenceImageUrls`, which the
+ * generation service feeds into Seedance as the set anchors so the room renders the SAME
+ * way in every shot. De-duped, order-preserving, filtered to valid URLs, capped at the
+ * contract max (20).
+ */
+function collectEnvironmentReferenceImageUrls(locations: LocationProfile[]): string[] {
+  const urls: string[] = [];
+  for (const loc of locations) {
+    for (const url of loc.referenceImageUrls) {
+      if (isHttpUrl(url)) {
+        urls.push(url.trim());
+      }
+    }
+  }
+  return Array.from(new Set(urls)).slice(0, 20);
+}
+
+/**
+ * Describe the SELECTED, LOCKED locations for the model. The planner MUST author the
+ * environment (environmentFingerprint + each environmentZone) STRICTLY from these locked
+ * descriptions — same furniture in the same places, same windows on the same walls, same
+ * layout — and may NEVER invent, add, remove, or move a set element. With multiple
+ * locations selected, each becomes ONE environment zone anchored to its own description.
+ */
+function buildSelectedLocationsBlock(locations: LocationProfile[]): string {
+  if (locations.length === 0) {
+    return '  (NONE selected — no location is locked. INVENT the environment from the brief as before: author the environmentFingerprint and environmentZones freely.)';
+  }
+  const lines = locations.map((loc, i) => {
+    const desc = loc.description.trim() || '(no description was captured for this set)';
+    return [
+      `  ${i + 1}. LOCKED LOCATION "${loc.name}" (locationId "${loc.id}")`,
+      `       LOCKED SET DESCRIPTION (render EXACTLY this room every shot here — do NOT alter): ${desc}`,
+    ].join('\n');
+  });
+  const multi = locations.length > 1;
+  return [
+    ...lines,
+    '',
+    multi
+      ? `  The environment is LOCKED to these ${locations.length} sets. Map EACH location to its OWN environmentZone (one zone per location, in this order), and author that zone's setDesign STRICTLY from that location's LOCKED SET DESCRIPTION — same furniture in the same places, same windows on the same walls, same layout, same materials and lighting. NEVER add, remove, move, or change a set element between shots in the same location. Do NOT invent a different set. The environmentFingerprint must summarize these locked sets, not a new one.`
+      : '  The environment is LOCKED to this one set. Author the environmentFingerprint AND (if you use zones) the single environmentZone STRICTLY from its LOCKED SET DESCRIPTION — same furniture in the same places, same windows on the same walls, same layout, same materials and lighting. EVERY shot set here describes the EXACT same room. NEVER add, remove, move, or change a set element between shots. Do NOT invent a different set.',
+  ].join('\n');
+}
+
+/**
+ * Map the model's cast picks back onto the contract. A pick that matches a SELECTED
+ * saved profile re-resolves its referenceImageUrls from that profile (the model never
+ * supplies image URLs). A pick with NO matching profile is an INVENTED character —
+ * kept with empty referenceImageUrls (its reference art is generated later from the
+ * casting card), never dropped. This is what lets a brief author brand-new people /
+ * creatures instead of being forced onto a saved character.
  */
 function resolveCast(
   llmCast: LlmShotPlan['sharedChoices']['cast'],
@@ -505,18 +648,11 @@ function resolveCast(
   const resolved: ShotPlanCastMember[] = [];
   for (const member of llmCast) {
     const profile = byId.get(member.characterId);
-    if (!profile) {
-      logger.warn('[ShotPlanPlanner] dropping cast pick with unknown characterId', {
-        characterId: member.characterId,
-        file: FILE,
-      });
-      continue;
-    }
     resolved.push({
       characterId: member.characterId,
       lookId: member.lookId,
-      name: member.name || profile.name,
-      referenceImageUrls: resolveReferenceImageUrls(profile, member.lookId),
+      name: member.name.trim() ? member.name : (profile?.name ?? 'Unnamed'),
+      referenceImageUrls: profile ? resolveReferenceImageUrls(profile, member.lookId) : [],
       role: member.role,
       billing: member.billing,
       subjectKind: member.subjectKind,
@@ -575,6 +711,8 @@ function buildReferencesBlock(references: ShotPlanReference[] | undefined): stri
 function buildGenerateUserPrompt(
   input: GenerateShotPlanInput,
   availableCastBlock: string,
+  selectedLocationsBlock: string,
+  hasSelectedLocations: boolean,
   priorZodErrors?: string,
 ): string {
   return [
@@ -585,9 +723,15 @@ function buildGenerateUserPrompt(
     input.shotCount ? `DESIRED SHOT COUNT: ${input.shotCount}` : 'DESIRED SHOT COUNT: you decide (typically 2-6 for an ad).',
     '',
     buildReferencesBlock(input.references),
-    'AVAILABLE CHARACTERS (the operator\'s saved cast — AUTO-CAST these by their EXACT characterId; never invent characters):',
+    'SELECTED SAVED CHARACTERS — the operator EXPLICITLY chose these to appear. Cast each by its EXACT characterId where the story calls for it. For ANY other person/creature/object the brief needs, INVENT a NEW profile with a fresh unique id (e.g. "new_1") and a FULL casting card — never reach into the library on your own, never reuse a saved id you were not given here:',
     availableCastBlock,
     '',
+    'SELECTED LOCATIONS (LOCKED DIGITAL SETS) — the operator EXPLICITLY chose these. The environment is LOCKED to them: author the environmentFingerprint and every environmentZone STRICTLY from each location\'s LOCKED SET DESCRIPTION below — same furniture in the same places, same windows on the same walls, same layout, same materials and lighting. NEVER add, remove, move, or change a set element between shots in the same location, and NEVER invent a different set. When NONE are selected, invent the environment from the brief as before:',
+    selectedLocationsBlock,
+    '',
+    hasSelectedLocations
+      ? 'ENVIRONMENT IS LOCKED — because locations were selected above, the SELECTED LOCATIONS are the authoritative environment. environmentFingerprint and environmentZones MUST be authored only from their LOCKED SET DESCRIPTIONS (one zone per location, in the order listed). Every shot\'s "environment" field must describe the EXACT same room as its location with the same furniture/windows/layout. Do NOT invent or alter the set.'
+      : '',
     'OUTPUT CONTRACT — return ONLY this JSON object (no markdown, no preamble):',
     '{',
     '  "title": string,',
@@ -598,6 +742,7 @@ function buildGenerateUserPrompt(
     '    "colorPalette": [ { "name": string, "hex": "#rrggbb" } ]  // 2-6 named swatches, the look bible,',
     '    "environmentFingerprint": string  // the written signature of the world — the single strongest cross-shot consistency anchor,',
     '    "cast": [ { "characterId": "<exact id from AVAILABLE CHARACTERS>", "lookId": "<optional exact lookId>", "name": string, "role": string, "notes": string, "apparentAge": string, "gender": string, "ethnicity": string, "build": string, "hairColor": string, "hairStyle": string, "wardrobe": string, "accessories": [string] (optional), "wardrobeMode": "flexible" | "signature" (optional) } ],  // fill the FULL identity + scene-appropriate wardrobe for every member,',
+    '    "objects": [ { "id": "<fresh unique id, e.g. obj_1>", "name": string, "subjectKind": "object" | "creature", "description": string } ],  // REQUIRED whenever a NON-human subject matters to the story (an animal, creature, vehicle, robot, weapon, signature prop). Give each a model-sheet-grade physical description (materials, scale, distinguishing features). Omit referenceImageUrls — they are generated. Use [] only when the story has no such subject.',
     '    "moodKeywords": [string],',
     '    "cinematographyNotes": [string],',
     '    "artStyle": string',
@@ -607,24 +752,27 @@ function buildGenerateUserPrompt(
     '      "title": string,',
     '      "action": string  // the forward-motion description of what happens,',
     '      "castMemberIds": [ "<characterId values that appear in this shot, from sharedChoices.cast>" ],',
+    '      "objectIds": [ "<object ids from sharedChoices.objects that appear in this shot>" ],  // include every non-human subject present in the shot,',
     '      "environment": string  // consistent with environmentFingerprint,',
     '      "timeOfDay": string  // REQUIRED, consistent within a scene/zone,',
     '      "weather": string  // REQUIRED, consistent within a scene/zone,',
     '      "characterStates": [ { "characterId": string, "state": string } ]  // optional emotional+physical state per character present,',
     '      "costumeStates": [ { "characterId": string, "state": string } ]  // optional costume condition per character,',
     '      "propStates": [ { "objectId": string, "state": string } ]  // optional key-prop condition,',
-    '      "camera": { "shotType": string, "movement": string, "lens": string },',
+    '      "camera": { "shotType": string, "movement": string, "lens": string, "lensType": string, "focalLength": string, "composition": string },  // fill ALL six — never blank',
     '      "lighting": string,',
     '      "mood": string,',
     '      "durationSeconds": number,',
     '      "transitionIn": "continue" | "cut",',
-    '      "dialogue": string (optional)',
+    '      "dialogue": string  // the spoken line; if no one speaks, the voiceover/narration line or a brief on-screen-audio note — NEVER blank',
     '    }',
     '  ]',
     '}',
     '',
     'HARD RULES:',
-    '- Auto-cast the operator\'s real characters: any character that appears must be in sharedChoices.cast with its EXACT characterId, and referenced per-shot in castMemberIds by that same id. Do NOT output referenceImageUrls — those are resolved from the profile automatically.',
+    '- FILL EVERY FIELD with specific, concrete content — never leave any field blank, empty (""), or generic. A sheet with empty boxes is a FAILURE. Every camera detail, lighting, mood, time of day, weather, character/costume/prop state, every note, AND the dialogue/voiceover line must be filled for EVERY shot. The richer and more complete the sheet, the better.',
+    '- Cast the SELECTED saved characters by their EXACT characterId. INVENT every OTHER character the story needs as a new sharedChoices.cast member with a FRESH unique id (e.g. "new_1", "new_2") and a full casting card; put non-human subjects (animals, creatures, vehicles, robots, signature props) in sharedChoices.objects with subjectKind. Reference every character per-shot in castMemberIds by its id. Do NOT output referenceImageUrls — they are resolved from a saved profile, or generated for an invented character.',
+    '- NON-HUMAN SUBJECTS ARE NOT OPTIONAL: if the brief features an animal, creature, vehicle, robot, weapon, or signature prop, it MUST appear in sharedChoices.objects with its own id, a model-sheet-grade description, and be referenced per-shot via objectIds. A war-bear, a drone, a muscle car are SUBJECTS — never leave them only in prose. Treat them as seriously as cast.',
     '- For every cast member write "notes": a vivid 1-2 sentence description (build, face, wardrobe, demeanor) that a director would read off the production sheet. Never leave it blank.',
     '- For EVERY cast member also fill the full casting card: apparentAge, gender, ethnicity, build, hairColor, hairStyle, and a scene-appropriate "wardrobe" (+ accessories when fitting). Wardrobe + hair must suit timePeriod and genre. Default wardrobeMode to "flexible"; use "signature" only when the outfit IS the identity (uniform, superhero suit, mascot).',
     '- Always set sharedChoices.timePeriod and sharedChoices.genre, and keep every department consistent with them.',
@@ -665,12 +813,20 @@ function assembleShotPlan(
   body: LlmShotPlan,
   cast: ShotPlanCastMember[],
   titleHint: string | undefined,
+  environmentReferenceImageUrls: string[],
 ): ShotPlan {
   const now = isoNow();
   const validCastIds = new Set(cast.map((c) => c.characterId));
-  // Objects are not authored by the LLM in this plan body, so the only valid object
-  // ids for propStates are those carried on the assembled plan (currently none).
-  const validObjectIds = new Set<string>();
+  // Non-human subjects the model authored (war-bear, drone, vehicle…). Reference art
+  // is generated later (referenceImageUrls start empty), exactly like invented cast.
+  const objects: ShotPlanObject[] = (body.sharedChoices.objects ?? []).map((o) => ({
+    id: o.id,
+    name: o.name,
+    referenceImageUrls: [],
+    ...(o.subjectKind ? { subjectKind: o.subjectKind } : {}),
+    ...(o.description ? { description: o.description } : {}),
+  }));
+  const validObjectIds = new Set(objects.map((o) => o.id));
 
   const shots = body.shots.map((shot, index) => {
     // Per-character continuity overlays — keep only references to cast that survived.
@@ -678,6 +834,8 @@ function assembleShotPlan(
     const costumeStates = shot.costumeStates?.filter((s) => validCastIds.has(s.characterId));
     // Per-prop continuity overlays — keep only references to known objects.
     const propStates = shot.propStates?.filter((s) => validObjectIds.has(s.objectId));
+    // Per-shot object presence — keep only ids that resolve to a real object.
+    const objectIds = shot.objectIds?.filter((id) => validObjectIds.has(id));
     return {
       id: makeShotId(index),
       index,
@@ -685,6 +843,7 @@ function assembleShotPlan(
       action: shot.action,
       // Keep only cast ids that survived resolution; the first shot can never "continue".
       castMemberIds: shot.castMemberIds.filter((id) => validCastIds.has(id)),
+      ...(objectIds && objectIds.length > 0 ? { objectIds } : {}),
       environment: shot.environment,
       timeOfDay: shot.timeOfDay,
       weather: shot.weather,
@@ -766,10 +925,15 @@ function assembleShotPlan(
       colorPalette: body.sharedChoices.colorPalette,
       environmentFingerprint: body.sharedChoices.environmentFingerprint,
       cast,
+      // When the operator LOCKED the environment to selected locations, pin their union
+      // of reference images as the set-identity anchors the generation service feeds into
+      // Seedance (so the room renders the SAME way in every shot). Omit when none selected.
+      ...(environmentReferenceImageUrls.length > 0 ? { environmentReferenceImageUrls } : {}),
       moodKeywords: body.sharedChoices.moodKeywords,
       cinematographyNotes: body.sharedChoices.cinematographyNotes,
       artStyle: body.sharedChoices.artStyle,
       lookBible: body.sharedChoices.lookBible,
+      ...(objects.length > 0 ? { objects } : {}),
       ...(environmentZones ? { environmentZones } : {}),
       ...(body.sharedChoices.adaptiveLabels
         ? { adaptiveLabels: body.sharedChoices.adaptiveLabels }
@@ -797,14 +961,41 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
   const validated = GenerateShotPlanInputSchema.parse(input);
   const gm = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
 
-  // Auto-cast source: the operator's OWN created characters only.
-  const profiles = await listAvatarProfiles(validated.userId, { ownOnly: true });
+  // ONLY the characters the operator EXPLICITLY selected are real saved cast.
+  // Everyone else the brief needs is invented fresh — the planner never auto-pulls
+  // the whole library (that forced the same character into every video and risked
+  // name collisions). No selection → no saved characters offered → invent all.
+  const selectedIds = new Set(validated.selectedCharacterIds ?? []);
+  const profiles =
+    selectedIds.size > 0
+      ? (await listAvatarProfiles(validated.userId, { ownOnly: true })).filter((p) => selectedIds.has(p.id))
+      : [];
   const availableCastBlock = buildAvailableCastBlock(profiles);
+
+  // SET-CONSISTENCY: ONLY the locations the operator EXPLICITLY selected LOCK the
+  // environment. Their LOCKED descriptions become the authoritative set the planner must
+  // author from (never invent/alter), and the union of their reference images is pinned as
+  // the environment identity anchors. No selection → no locked set → invent the world.
+  const selectedLocationIds = validated.selectedLocationIds ?? [];
+  const locations =
+    selectedLocationIds.length > 0
+      ? (await listLocationProfiles(validated.userId, { ownOnly: true })).filter((l) =>
+          selectedLocationIds.includes(l.id),
+        )
+      : [];
+  const selectedLocationsBlock = buildSelectedLocationsBlock(locations);
+  const environmentReferenceImageUrls = collectEnvironmentReferenceImageUrls(locations);
 
   let priorZodErrors: string | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const userPrompt = buildGenerateUserPrompt(validated, availableCastBlock, priorZodErrors);
-    const rawContent = await callOpenRouter(gm, userPrompt, gm.maxTokens);
+    const userPrompt = buildGenerateUserPrompt(
+      validated,
+      availableCastBlock,
+      selectedLocationsBlock,
+      locations.length > 0,
+      priorZodErrors,
+    );
+    const rawContent = await callOpenRouter(gm, userPrompt, gm.maxTokens, gm.layoutExamples);
 
     let parsedJson: unknown;
     try {
@@ -823,7 +1014,12 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
     }
 
     const cast = resolveCast(bodyResult.data.sharedChoices.cast, profiles);
-    const candidate = assembleShotPlan(bodyResult.data, cast, validated.title);
+    const candidate = assembleShotPlan(
+      bodyResult.data,
+      cast,
+      validated.title,
+      environmentReferenceImageUrls,
+    );
 
     const finalResult = ShotPlanSchema.safeParse(candidate);
     if (!finalResult.success) {
@@ -952,6 +1148,8 @@ export const __internal = {
   loadGMConfig,
   stripJsonFences,
   buildAvailableCastBlock,
+  buildSelectedLocationsBlock,
+  collectEnvironmentReferenceImageUrls,
   buildReferencesBlock,
   buildGenerateUserPrompt,
   buildLookBibleContext,

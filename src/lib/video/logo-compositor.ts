@@ -110,3 +110,67 @@ export async function compositeBrandLogo(baseImageUrl: string, logo: BrandLogo):
     return null;
   }
 }
+
+/**
+ * Download a base image + load the brand logo and composite the logo CENTERED
+ * (both horizontally and vertically), scaled larger than the corner watermark so
+ * it reads as the product's own branding on an isolated studio prop shot. Reuses
+ * the same alpha-fade pipeline as `compositeBrandLogo`. Returns the composited PNG
+ * buffer, or null on any failure (caller falls back to the un-composited image).
+ *
+ * @param scale Logo width as a fraction of the base width. Defaults to ~0.34,
+ *              clamped to the 0.12–0.5 range.
+ */
+export async function compositeBrandLogoCentered(
+  baseImageUrl: string,
+  logo: BrandLogo,
+  scale = 0.34,
+): Promise<Buffer | null> {
+  try {
+    const [baseRes, logoBuf] = await Promise.all([
+      fetch(baseImageUrl, { redirect: 'follow' }),
+      loadLogoBuffer(logo.url),
+    ]);
+    if (!baseRes.ok || !logoBuf) {
+      return null;
+    }
+    const baseBuf = Buffer.from(await baseRes.arrayBuffer());
+
+    const base = sharp(baseBuf);
+    const baseMeta = await base.metadata();
+    const baseW = baseMeta.width ?? 1024;
+    const baseH = baseMeta.height ?? 1024;
+
+    const clampedScale = Math.min(0.5, Math.max(0.12, scale || 0.34));
+    const logoW = Math.round(baseW * clampedScale);
+
+    // Same alpha-fade technique as the corner compositor: multiply the logo's
+    // alpha by the configured opacity via a 'dest-in' white tile.
+    const opacity = Math.min(1, Math.max(0, logo.opacity ?? 0.85));
+    const resized = await sharp(logoBuf).resize({ width: logoW }).ensureAlpha().png().toBuffer();
+    const faded = await sharp(resized)
+      .composite([
+        {
+          input: Buffer.from([255, 255, 255, Math.round(opacity * 255)]),
+          raw: { width: 1, height: 1, channels: 4 },
+          tile: true,
+          blend: 'dest-in',
+        },
+      ])
+      .png()
+      .toBuffer();
+
+    const fadedMeta = await sharp(faded).metadata();
+    const logoH = fadedMeta.height ?? Math.round(logoW * 0.4);
+    const left = Math.max(0, Math.round((baseW - logoW) / 2));
+    const top = Math.max(0, Math.round((baseH - logoH) / 2));
+
+    return await base.composite([{ input: faded, top, left }]).png().toBuffer();
+  } catch (err) {
+    logger.warn('[logo-compositor] Failed to composite centered brand logo; using image as-is', {
+      error: err instanceof Error ? err.message : String(err),
+      file: 'logo-compositor.ts',
+    });
+    return null;
+  }
+}

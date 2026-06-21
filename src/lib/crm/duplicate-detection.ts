@@ -4,8 +4,7 @@
  * Uses fuzzy matching for name, email, phone, company
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Lead } from './lead-service';
@@ -20,12 +19,12 @@ async function fetchAllPaginated<T extends { id: string }>(
   batchSize: number = 500
 ): Promise<T[]> {
   const allRecords: T[] = [];
-  let cursor: QueryDocumentSnapshot<DocumentData, DocumentData> | undefined = undefined;
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined = undefined;
   let hasMore = true;
 
   while (hasMore) {
-    const page: { data: T[]; lastDoc: QueryDocumentSnapshot<DocumentData, DocumentData> | null; hasMore: boolean } =
-      await FirestoreService.getAllPaginated<T>(collectionPath, [], batchSize, cursor);
+    const page: { data: T[]; lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null; hasMore: boolean } =
+      await AdminFirestoreService.getAllPaginated<T>(collectionPath, [], batchSize, cursor);
     allRecords.push(...page.data);
     hasMore = page.hasMore;
     cursor = page.lastDoc ?? undefined;
@@ -163,7 +162,7 @@ export async function detectLeadDuplicates(
 
     const leadsPath = getSubCollection('leads');
     const existingLeads: Lead[] = constraints.length > 0
-      ? await FirestoreService.getAll<Lead>(leadsPath, constraints)
+      ? await AdminFirestoreService.getAll<Lead>(leadsPath, constraints)
       : await fetchAllPaginated<Lead>(leadsPath);
 
     const matches: DuplicateMatch[] = [];
@@ -312,7 +311,7 @@ export async function detectContactDuplicates(
 
     const contactsPath = getSubCollection('contacts');
     const existingContacts: Contact[] = constraints.length > 0
-      ? await FirestoreService.getAll<Contact>(contactsPath, constraints)
+      ? await AdminFirestoreService.getAll<Contact>(contactsPath, constraints)
       : await fetchAllPaginated<Contact>(contactsPath);
 
     const matches: DuplicateMatch[] = [];
@@ -409,7 +408,7 @@ export async function detectCompanyDuplicates(
 
     const companiesPath = getSubCollection('companies');
     const existingCompanies: Company[] = constraints.length > 0
-      ? await FirestoreService.getAll<Company>(companiesPath, constraints)
+      ? await AdminFirestoreService.getAll<Company>(companiesPath, constraints)
       : await fetchAllPaginated<Company>(companiesPath);
 
     const matches: DuplicateMatch[] = [];
@@ -509,8 +508,8 @@ export async function mergeRecords(
     const collectionPath = getSubCollection(`${entityType}s` as 'leads' | 'contacts' | 'deals' | 'companies');
 
     // Get both records - use Record<string, unknown> as base type
-    const keepRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, keepId);
-    const mergeRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, mergeId);
+    const keepRecord = await AdminFirestoreService.get<Record<string, unknown>>(collectionPath, keepId);
+    const mergeRecord = await AdminFirestoreService.get<Record<string, unknown>>(collectionPath, mergeId);
 
     if (!keepRecord || !mergeRecord) {
       throw new Error('One or both records not found');
@@ -543,10 +542,10 @@ export async function mergeRecords(
     merged.updatedAt = new Date();
 
     // Update the keep record with merged data
-    await FirestoreService.update(collectionPath, keepId, merged);
+    await AdminFirestoreService.update(collectionPath, keepId, merged);
 
     // Delete the merged record
-    await FirestoreService.delete(collectionPath, mergeId);
+    await AdminFirestoreService.delete(collectionPath, mergeId);
 
     logger.info('Records merged successfully', {
             entityType,

@@ -11,6 +11,8 @@
  * No I/O, no generation — data + a tiny read/write helper only.
  */
 
+import type { VideoProject } from '@/types/video-project';
+
 /** sessionStorage key the Shot Plan writes and the editor reads (then clears). */
 export const EDITOR_SEED_STORAGE_KEY = 'video-editor-seed';
 
@@ -77,4 +79,35 @@ export function takeEditorSeed(): EditorSeed | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Seed the editor from a whole multi-document PROJECT: each doc that already has its
+ * own generated video becomes ONE clip, in project order, so the editor opens with
+ * the full film laid out and ready to stitch / add transitions / score. Docs without
+ * a video yet are skipped. The clip thumbnail is the doc's first available keyframe /
+ * last frame; the clip duration is the sum of the doc's shot durations.
+ */
+export function seedEditorFromProject(project: VideoProject): void {
+  const clips: EditorSeedClip[] = [];
+  for (const doc of project.docs) {
+    const url = doc.finalVideoUrl;
+    if (!url) {
+      continue;
+    }
+    const ordered = [...doc.shots].sort((a, b) => a.index - b.index);
+    let duration = 0;
+    let thumbnailUrl: string | null = null;
+    for (const shot of ordered) {
+      duration += shot.durationSeconds;
+      thumbnailUrl ??= shot.generated?.keyframeUrl ?? shot.generated?.lastFrameUrl ?? null;
+    }
+    clips.push({
+      url,
+      thumbnailUrl,
+      name: doc.title.trim() ? doc.title : 'Scene',
+      duration: duration > 0 ? duration : 5,
+    });
+  }
+  writeEditorSeed({ clips });
 }

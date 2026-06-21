@@ -8,6 +8,7 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 
 export interface EmailOptions {
   to: string | string[];
@@ -269,18 +270,16 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
 
   // Store tracking mapping if tracking is enabled
   if (options.tracking?.trackOpens) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
-      void FirestoreService.set(
-        getSubCollection('emailTrackingMappings'),
-        messageIdValue,
-        {
-          messageId: messageIdValue,
-          createdAt: new Date().toISOString(),
-        },
-        false
-      ).catch(() => {
-        // Silently fail
-      });
+    void AdminFirestoreService.set(
+      getSubCollection('emailTrackingMappings'),
+      messageIdValue,
+      {
+        messageId: messageIdValue,
+        createdAt: new Date().toISOString(),
+      },
+      false
+    ).catch(() => {
+      // Silently fail — logging is best-effort
     });
   }
 
@@ -378,18 +377,16 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
 
   // Store tracking mapping if tracking is enabled
   if (options.tracking?.trackOpens) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
-      void FirestoreService.set(
-        getSubCollection('emailTrackingMappings'),
+    void AdminFirestoreService.set(
+      getSubCollection('emailTrackingMappings'),
+      messageId,
+      {
         messageId,
-        {
-          messageId,
-          createdAt: new Date().toISOString(),
-        },
-        false
-      ).catch(() => {
-        // Silently fail
-      });
+        createdAt: new Date().toISOString(),
+      },
+      false
+    ).catch(() => {
+      // Silently fail — logging is best-effort
     });
   }
 
@@ -484,18 +481,16 @@ async function sendViaSMTP(options: EmailOptions, credentials: Record<string, un
   const messageId = typeof info.messageId === 'string' ? info.messageId : `smtp_${Date.now()}`;
 
   if (options.tracking?.trackOpens) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
-      void FirestoreService.set(
-        getSubCollection('emailTrackingMappings'),
+    void AdminFirestoreService.set(
+      getSubCollection('emailTrackingMappings'),
+      messageId,
+      {
         messageId,
-        {
-          messageId,
-          createdAt: new Date().toISOString(),
-        },
-        false
-      ).catch(() => {
-        // Tracking storage is best-effort
-      });
+        createdAt: new Date().toISOString(),
+      },
+      false
+    ).catch(() => {
+      // Tracking storage is best-effort — logging failure never breaks a successful send
     });
   }
 
@@ -524,18 +519,16 @@ function addTrackingPixel(
 
   // Store tracking mapping in Firestore
   if (messageId) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
-      void FirestoreService.set(
-        getSubCollection('emailTrackingMappings'),
-        trackingId,
-        {
-          messageId,
-          createdAt: new Date().toISOString(),
-        },
-        false
-      ).catch((error: unknown) => {
-        logger.error('Failed to store tracking mapping:', error instanceof Error ? error : new Error(String(error)), { file: 'email-service.ts' });
-      });
+    void AdminFirestoreService.set(
+      getSubCollection('emailTrackingMappings'),
+      trackingId,
+      {
+        messageId,
+        createdAt: new Date().toISOString(),
+      },
+      false
+    ).catch((error: unknown) => {
+      logger.error('Failed to store tracking mapping:', error instanceof Error ? error : new Error(String(error)), { file: 'email-service.ts' });
     });
   }
   
@@ -588,9 +581,7 @@ export async function sendBulkEmails(
  * REAL: Queries Firestore for tracking data
  */
 export async function getEmailTracking(messageId: string): Promise<EmailTracking | null> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-
-  const trackingData = await FirestoreService.get(
+  const trackingData = await AdminFirestoreService.get<TrackingData>(
     getSubCollection('emailTracking'),
     messageId
   );
@@ -609,7 +600,7 @@ export async function getEmailTracking(messageId: string): Promise<EmailTracking
     clickLinks?: Array<{ url: string; clickedAt: string }>;
   }
 
-  const data = trackingData as TrackingData;
+  const data = trackingData;
 
   return {
     emailId: data.emailId,
@@ -633,11 +624,8 @@ export async function recordEmailOpen(
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-
   // Get existing tracking or create new
-
-  const existing = await FirestoreService.get(
+  const existing = await AdminFirestoreService.get(
     getSubCollection('emailTracking'),
     messageId
   );
@@ -649,7 +637,7 @@ export async function recordEmailOpen(
 
   const existingData = (existing ?? {}) as ExistingTracking;
 
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     getSubCollection('emailTracking'),
     messageId,
     {
@@ -675,11 +663,8 @@ export async function recordEmailClick(
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> {
-  const { FirestoreService } = await import('@/lib/db/firestore-service');
-
   // Get existing tracking or create new
-
-  const existing = await FirestoreService.get(
+  const existing = await AdminFirestoreService.get(
     getSubCollection('emailTracking'),
     messageId
   );
@@ -699,7 +684,7 @@ export async function recordEmailClick(
     clickedAt: new Date().toISOString(),
   });
 
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     getSubCollection('emailTracking'),
     messageId,
     {

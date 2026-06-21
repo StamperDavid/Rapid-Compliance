@@ -22,7 +22,8 @@ import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
-import { buildStoryboardFromBrief } from '@/lib/video/storyboard-build-service';
+import { generateProjectDocs } from '@/lib/video/video-project-segmentation-service';
+import type { ShotPlanReference } from '@/lib/agents/content/shot-plan/planner';
 import { listAvatarProfiles, type AvatarProfile } from '@/lib/video/avatar-profile-service';
 import { listAssets } from '@/lib/media/media-library-service';
 import { removeBackgroundAndSave } from '@/lib/media/remove-background-asset';
@@ -92,14 +93,6 @@ function isContentGeneratorTab(activeTab: string | undefined): boolean {
 // structured ContentIntent in the chat (always pausing for approval first); on
 // approval we turn that intent into the brief the Video Specialist builds from.
 // ────────────────────────────────────────────────────────────────────────────
-
-const BUILD_PLATFORMS = ['youtube', 'tiktok', 'instagram_reels', 'shorts', 'linkedin', 'generic'] as const;
-type BuildPlatform = (typeof BUILD_PLATFORMS)[number];
-
-function mapPlatform(platform: string | undefined): BuildPlatform {
-  const p = (platform ?? '').toLowerCase().replace(/[^a-z]/g, '');
-  return BUILD_PLATFORMS.find((bp) => bp.replace(/[^a-z]/g, '') === p) ?? 'youtube';
-}
 
 /** Compose a rich, specialist-ready brief from the approved structured intent. */
 function mapIntentToBrief(intent: ContentIntent): string {
@@ -595,34 +588,46 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           // Subjects bound to a saved Character Library character (Step 1 binding).
           boundCharacters: priorIntent.subjects.filter((s) => s.characterId).length,
         });
-        const built = await buildStoryboardFromBrief({
-          brief: mapIntentToBrief(priorIntent),
-          platform: mapPlatform(priorIntent.format.platform),
-          style: 'cinematic',
-          targetDuration:
-            priorIntent.format.durationSeconds && priorIntent.format.durationSeconds >= 5
-              ? priorIntent.format.durationSeconds
-              : 30,
-          ...(priorIntent.callToAction ? { callToAction: priorIntent.callToAction } : {}),
-          ...(buildAttachments.length > 0 ? { attachments: buildAttachments } : {}),
-          // Subjects carry any saved-character bindings (characterId/lookId); the build
-          // resolves them to face + Look anchors and sets each scene's avatarId.
-          ...(priorIntent.subjects.length > 0 ? { subjects: priorIntent.subjects } : {}),
-        });
-        if ('error' in built) {
-          logger.warn('[ContentManager] Video build failed', { file: FILE, error: built.error });
+
+        // Build a CANONICAL System B VideoProject — the SAME path the Projects page
+        // uses (segment the brief → author one full Shot Doc per scene → render stills
+        // → persist a VideoProject). The operator's confirmed subjects carry their
+        // saved-character bindings (characterId/lookId); those are threaded into the
+        // planner so each doc's cast LOCKS to the operator's saved cast. The attached
+        // references ride along as the planner's text-only references.
+        const projectReferences: ShotPlanReference[] = buildAttachments.map((a) => ({
+          url: a.url,
+          ...(a.aiSummary ? { description: a.aiSummary } : {}),
+          ...(a.kind ? { kind: a.kind } : {}),
+        }));
+        try {
+          const project = await generateProjectDocs({
+            title: priorIntent.summary.slice(0, 120),
+            brief: mapIntentToBrief(priorIntent),
+            userId: authResult.user.uid,
+            ...(priorIntent.subjects.length > 0 ? { subjects: priorIntent.subjects } : {}),
+            ...(projectReferences.length > 0 ? { attachments: projectReferences } : {}),
+          });
+          logger.info('[ContentManager] video project created', {
+            file: FILE,
+            projectId: project.id,
+            docs: project.docs.length,
+            status: project.status,
+          });
           return NextResponse.json({
             success: true,
-            reply: `I started building, but the Video Specialist hit a problem: ${built.error}`,
+            reply:
+              "Building your shot docs now — I'm opening the project so you can review each scene as it fills in.",
+            videoProjectId: project.id,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'unknown error';
+          logger.warn('[ContentManager] Video project build failed', { file: FILE, error: message });
+          return NextResponse.json({
+            success: true,
+            reply: `I started building your video project, but hit a problem: ${message}`,
           });
         }
-        logger.info('[ContentManager] video build complete', { file: FILE, scenes: built.storyboards.length });
-        return NextResponse.json({
-          success: true,
-          reply: 'Building it now — your storyboards are on the way.',
-          storyboards: built.storyboards,
-          subjects: priorIntent.subjects,
-        });
       }
       if (priorIntent?.mediaType === 'image') {
         // One image per subject. References come from the chat or, if it was emptied,

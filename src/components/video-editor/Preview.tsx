@@ -47,9 +47,17 @@ interface ActiveClipState {
 // Helpers
 // ============================================================================
 
+/** Playback-rate multiplier for a clip, clamped to the supported range. */
+function clipSpeed(clip: EditorClip): number {
+  const s = clip.effect?.speed ?? 1;
+  return Math.min(2, Math.max(0.5, s || 1));
+}
+
 function effectiveDuration(clip: EditorClip): number {
   const raw = clip.duration || DEFAULT_CLIP_DURATION;
-  return Math.max(0.1, raw - clip.trimStart - clip.trimEnd);
+  const trimmed = Math.max(0.1, raw - clip.trimStart - clip.trimEnd);
+  // A clip played at 2× occupies half the timeline; 0.5× occupies double.
+  return Math.max(0.1, trimmed / clipSpeed(clip));
 }
 
 /** Resolve which clip is on screen at a given timeline second + the offset
@@ -59,10 +67,11 @@ function resolveActiveClip(clips: EditorClip[], playheadTime: number): ActiveCli
   for (const clip of clips) {
     const dur = effectiveDuration(clip);
     if (playheadTime < elapsed + dur) {
-      const localTime = playheadTime - elapsed;
+      const localTime = Math.max(0, playheadTime - elapsed);
+      // Timeline time runs at the clip's speed inside the source video.
       return {
         clip,
-        sourceTime: clip.trimStart + Math.max(0, localTime),
+        sourceTime: clip.trimStart + localTime * clipSpeed(clip),
       };
     }
     elapsed += dur;
@@ -70,17 +79,61 @@ function resolveActiveClip(clips: EditorClip[], playheadTime: number): ActiveCli
   return null;
 }
 
-/** Map ClipEffect to a CSS filter string. Mirrors the FFmpeg eq+hue chain
- *  used on the server so what you see is what you render. */
+/** SVG filter id for the in-DOM sharpen convolution. One shared definition is
+ *  enough — the strength is fixed at render parity (see SharpenFilterDef). */
+const SHARPEN_FILTER_ID = 'editor-clip-sharpen';
+
+/** Map ClipEffect to a CSS filter string. Mirrors the FFmpeg filter chain used
+ *  on the server (eq + hue + colorchannelmixer + gblur + unsharp) so what the
+ *  operator sees is what renders. Vignette and grain are not expressible as CSS
+ *  `filter()` primitives, so they render as overlays (see the component body). */
 function effectToCssFilter(effect: ClipEffect | undefined): string {
   const e = effect ?? NEUTRAL_EFFECT;
   // CSS brightness uses 1 = unchanged with 0..2 range; our state uses
   // -1..1 offsets, so map to (1 + offset).
-  const brightness = Math.max(0, 1 + e.brightness).toFixed(3);
-  const contrast = Math.max(0, e.contrast).toFixed(3);
-  const saturate = Math.max(0, e.saturation).toFixed(3);
-  const hue = e.hue.toFixed(1);
-  return `brightness(${brightness}) contrast(${contrast}) saturate(${saturate}) hue-rotate(${hue}deg)`;
+  const parts: string[] = [
+    `brightness(${Math.max(0, 1 + e.brightness).toFixed(3)})`,
+    `contrast(${Math.max(0, e.contrast).toFixed(3)})`,
+    `saturate(${Math.max(0, e.saturation).toFixed(3)})`,
+    `hue-rotate(${e.hue.toFixed(1)}deg)`,
+  ];
+  if (e.grayscale && e.grayscale > 0) {
+    parts.push(`grayscale(${Math.min(1, e.grayscale).toFixed(3)})`);
+  }
+  if (e.sepia && e.sepia > 0) {
+    parts.push(`sepia(${Math.min(1, e.sepia).toFixed(3)})`);
+  }
+  if (e.blur && e.blur > 0) {
+    parts.push(`blur(${Math.min(20, e.blur).toFixed(2)}px)`);
+  }
+  if (e.sharpen && e.sharpen > 0) {
+    parts.push(`url(#${SHARPEN_FILTER_ID})`);
+  }
+  return parts.join(' ');
+}
+
+/** Radial-gradient overlay that mirrors FFmpeg's `vignette` darkened corners. */
+function vignetteOverlayStyle(strength: number): React.CSSProperties {
+  const s = Math.min(1, Math.max(0, strength));
+  // Inner clear radius shrinks and outer darkness deepens as strength rises.
+  const innerStop = (62 - s * 22).toFixed(0);
+  const outerAlpha = (s * 0.85).toFixed(3);
+  return {
+    background: `radial-gradient(ellipse at center, rgba(0,0,0,0) ${innerStop}%, rgba(0,0,0,${outerAlpha}) 100%)`,
+  };
+}
+
+/** Film-grain overlay built from SVG turbulence — an honest preview of FFmpeg's
+ *  `noise` filter (no external asset, no fakery). */
+function grainOverlayStyle(strength: number): React.CSSProperties {
+  const s = Math.min(1, Math.max(0, strength));
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>`;
+  return {
+    backgroundImage: `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`,
+    backgroundRepeat: 'repeat',
+    opacity: (s * 0.4).toFixed(3),
+    mixBlendMode: 'overlay',
+  };
 }
 
 /** Position alias → percentage offset from the top. */
@@ -130,6 +183,12 @@ export default function Preview({
     if (lastClipUrlRef.current !== active.clip.url) {
       video.src = active.clip.url;
       lastClipUrlRef.current = active.clip.url;
+    }
+
+    // Honour the clip's playback speed during live playback.
+    const speed = Math.min(2, Math.max(0.5, active.clip.effect?.speed ?? 1));
+    if (video.playbackRate !== speed) {
+      video.playbackRate = speed;
     }
 
     // When paused or scrubbing, seek so the preview matches the playhead.
@@ -241,17 +300,47 @@ export default function Preview({
       ref={containerRef}
       className="relative aspect-video bg-black border border-zinc-800 rounded-lg overflow-hidden"
     >
+      {/* SVG sharpen convolution — referenced by the video's CSS `filter`.
+          A standard 3×3 sharpen kernel that mirrors FFmpeg's unsharp pass. */}
+      <svg className="absolute h-0 w-0" aria-hidden="true">
+        <filter id={SHARPEN_FILTER_ID}>
+          <feConvolveMatrix
+            order="3"
+            preserveAlpha="true"
+            kernelMatrix="0 -1 0 -1 5 -1 0 -1 0"
+          />
+        </filter>
+      </svg>
+
       {active ? (
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-contain"
-          style={{ filter: effectToCssFilter(active.clip.effect) }}
-          // NOT muted: each scene's lip-synced dialogue is baked into its video,
-          // so the timeline preview must play sound. Playback is only ever
-          // started by a user gesture (Space / Play), so autoplay policy is fine.
-          playsInline
-          preload="metadata"
-        />
+        <>
+          <video
+            ref={videoRef}
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{ filter: effectToCssFilter(active.clip.effect) }}
+            // NOT muted: each scene's lip-synced dialogue is baked into its video,
+            // so the timeline preview must play sound. Playback is only ever
+            // started by a user gesture (Space / Play), so autoplay policy is fine.
+            playsInline
+            preload="metadata"
+          />
+          {/* Vignette overlay (CSS gradient mirror of FFmpeg `vignette`). */}
+          {active.clip.effect?.vignette ? (
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={vignetteOverlayStyle(active.clip.effect.vignette)}
+              aria-hidden="true"
+            />
+          ) : null}
+          {/* Film-grain overlay (SVG turbulence mirror of FFmpeg `noise`). */}
+          {active.clip.effect?.grain ? (
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={grainOverlayStyle(active.clip.effect.grain)}
+              aria-hidden="true"
+            />
+          ) : null}
+        </>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-sm">
           End of timeline

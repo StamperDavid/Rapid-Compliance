@@ -674,6 +674,7 @@ export function ContentAssistant() {
       const data = (await res.json()) as {
         success: boolean;
         reply?: string;
+        videoProjectId?: string;
         storyboards?: AssistantStoryboard[];
         subjects?: IntentSubject[];
         targetSceneNumber?: number;
@@ -791,6 +792,25 @@ export function ContentAssistant() {
             },
           ]);
         })();
+        return;
+      }
+
+      // Video build (System B): the director segmented the brief into a real shot-doc
+      // project server-side (shot docs + stills already rendered). Instead of pushing flat
+      // scenes into the legacy pipeline strip, open the new project on its review page so
+      // the operator reviews the actual shot docs. The legacy storyboard path below only
+      // runs as a fallback for older responses that still return flat `storyboards`.
+      if (data.videoProjectId) {
+        clearAttachments();
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: data.reply as string },
+          {
+            role: 'assistant',
+            content: '✓ Built your shot docs — opening them for review.',
+          },
+        ]);
+        router.push(`/content/video/projects/${data.videoProjectId}`);
         return;
       }
 

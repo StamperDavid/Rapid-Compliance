@@ -109,7 +109,15 @@ interface FloorPlanCanvasProps {
   shots: { id: string; index: number; title: string }[];
   cast: { characterId: string; name: string }[];
   objects: { id: string; name: string }[];
-  onChange: (next: ShotPlanFloorPlan) => void;
+  /** Commit handler for edits. Omitted in `readOnly` mode (the diagram is inert). */
+  onChange?: (next: ShotPlanFloorPlan) => void;
+  /**
+   * Display-only mode: hides the toolbar + all inline editing chrome and makes
+   * every pointer interaction an inert no-op. The full 1000×600 diagram is still
+   * rendered and SCALES TO FIT its parent (height-filling, no clipping) so it can
+   * be embedded in a short document cell. Defaults to false (full editor).
+   */
+  readOnly?: boolean;
 }
 
 export function FloorPlanCanvas({
@@ -118,6 +126,7 @@ export function FloorPlanCanvas({
   cast,
   objects,
   onChange,
+  readOnly = false,
 }: FloorPlanCanvasProps) {
   const plan = floorPlan ?? EMPTY_FLOOR_PLAN;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -135,19 +144,19 @@ export function FloorPlanCanvas({
   // ── Immutable mutators — every edit goes through onChange ──
   const setElements = useCallback(
     (elements: FloorPlanElement[]) => {
-      onChange({ ...plan, elements });
+      onChange?.({ ...plan, elements });
     },
     [plan, onChange],
   );
   const setCameras = useCallback(
     (cameras: FloorPlanCamera[]) => {
-      onChange({ ...plan, cameras });
+      onChange?.({ ...plan, cameras });
     },
     [plan, onChange],
   );
   const setSubjectPaths = useCallback(
     (subjectPaths: FloorPlanSubjectPath[]) => {
-      onChange({ ...plan, subjectPaths });
+      onChange?.({ ...plan, subjectPaths });
     },
     [plan, onChange],
   );
@@ -230,6 +239,10 @@ export function FloorPlanCanvas({
       e: React.PointerEvent,
       target: { kind: 'element'; id: string } | { kind: 'camera'; shotId: string },
     ) => {
+      // Display-only: markers are inert (no select, no drag).
+      if (readOnly) {
+        return;
+      }
       // A drag should never also register as a stage click (route/path append).
       e.stopPropagation();
       // While in a draw mode, a marker press selects but does not drag.
@@ -245,11 +258,14 @@ export function FloorPlanCanvas({
       );
       (e.target as Element).setPointerCapture?.(e.pointerId);
     },
-    [drawMode],
+    [readOnly, drawMode],
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (readOnly) {
+        return;
+      }
       const drag = dragRef.current;
       if (!drag) {
         return;
@@ -261,20 +277,23 @@ export function FloorPlanCanvas({
         patchCamera(drag.shotId, { x, y });
       }
     },
-    [pointerToNorm, patchElement, patchCamera],
+    [readOnly, pointerToNorm, patchElement, patchCamera],
   );
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (readOnly) {
+      return;
+    }
     if (dragRef.current) {
       (e.target as Element).releasePointerCapture?.(e.pointerId);
       dragRef.current = null;
     }
-  }, []);
+  }, [readOnly]);
 
   // ── Stage click — appends a point when a draw mode is active ──
   const handleStageClick = useCallback(
     (e: React.PointerEvent) => {
-      if (!drawMode) {
+      if (readOnly || !drawMode) {
         return;
       }
       const point = pointerToNorm(e.clientX, e.clientY);
@@ -297,7 +316,7 @@ export function FloorPlanCanvas({
         }
       }
     },
-    [drawMode, pointerToNorm, plan.cameras, plan.subjectPaths, patchCamera, setSubjectPaths],
+    [readOnly, drawMode, pointerToNorm, plan.cameras, plan.subjectPaths, patchCamera, setSubjectPaths],
   );
 
   // ── Derived selection objects ──
@@ -330,35 +349,37 @@ export function FloorPlanCanvas({
   );
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => addElement('actor')}>
-          <User className="h-3.5 w-3.5" /> Add actor
-        </Button>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => addElement('object')}>
-          <Box className="h-3.5 w-3.5" /> Add object
-        </Button>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => addElement('zone')}>
-          <Square className="h-3.5 w-3.5" /> Add zone
-        </Button>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => addElement('entry')}>
-          <DoorOpen className="h-3.5 w-3.5" /> Add entry
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={autoPlaceCameras}
-          disabled={orderedShots.length === 0}
-          title="Drop a camera node for every shot that doesn't have one"
-        >
-          <LayoutGrid className="h-3.5 w-3.5" /> Auto-place cameras
-        </Button>
-      </div>
+    <div className={readOnly ? 'flex h-full min-h-0 flex-col gap-2' : 'space-y-4'}>
+      {/* Toolbar — editor only */}
+      {!readOnly && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700" onClick={() => addElement('actor')}>
+            <User className="h-3.5 w-3.5" /> Add actor
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700" onClick={() => addElement('object')}>
+            <Box className="h-3.5 w-3.5" /> Add object
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700" onClick={() => addElement('zone')}>
+            <Square className="h-3.5 w-3.5" /> Add zone
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700" onClick={() => addElement('entry')}>
+            <DoorOpen className="h-3.5 w-3.5" /> Add entry
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700"
+            onClick={autoPlaceCameras}
+            disabled={orderedShots.length === 0}
+            title="Drop a camera node for every shot that doesn't have one"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" /> Auto-place cameras
+          </Button>
+        </div>
+      )}
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+      {/* Legend (compact + non-shrinking in read-only so markers stay readable) */}
+      <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5${readOnly ? ' shrink-0' : ''}`}>
         <LegendItem swatch={<span className="h-3 w-3 rounded-full bg-primary" />} label="Actor" />
         <LegendItem swatch={<span className="h-3 w-3 rounded-sm border border-foreground" />} label="Object" />
         <LegendItem swatch={<span className="h-3 w-3 rotate-45 border border-foreground" />} label="Entry" />
@@ -371,16 +392,25 @@ export function FloorPlanCanvas({
         />
       </div>
 
-      {/* The SVG stage */}
+      {/* The SVG stage — in read-only mode it fills the parent height and the
+          whole viewBox scales to fit (centered, never clipped) inside a
+          min-h-0 flex-1 wrapper; in the editor it keeps its fixed 5:3 aspect
+          derived from width with no wrapper. */}
+      <SvgStageFrame readOnly={readOnly}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${STAGE_W} ${STAGE_H}`}
-        className={`aspect-[5/3] w-full rounded-xl border border-border-strong bg-surface-elevated ${
-          drawMode ? 'cursor-crosshair' : 'cursor-default'
-        }`}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerDown={handleStageClick}
+        preserveAspectRatio="xMidYMid meet"
+        className={
+          readOnly
+            ? 'h-full w-full rounded-xl border border-border-strong bg-surface-elevated cursor-default'
+            : `aspect-[5/3] w-full rounded-xl border border-border-strong bg-surface-elevated ${
+                drawMode ? 'cursor-crosshair' : 'cursor-default'
+              }`
+        }
+        onPointerMove={readOnly ? undefined : handlePointerMove}
+        onPointerUp={readOnly ? undefined : handlePointerUp}
+        onPointerDown={readOnly ? undefined : handleStageClick}
       >
         {/* Semi-transparent top-down render underlaying the blocking — a birds-eye
             of the set so the camera/marker overlay reads clearly on top of it. */}
@@ -459,30 +489,39 @@ export function FloorPlanCanvas({
           )),
         )}
 
-        {/* Elements */}
+        {/* Elements — no selection chrome / drag wiring in read-only mode */}
         {plan.elements.map((el) => (
           <ElementMarker
             key={el.id}
             element={el}
-            selected={selection?.kind === 'element' && selection.id === el.id}
-            onPointerDown={(e) => handleMarkerPointerDown(e, { kind: 'element', id: el.id })}
+            selected={!readOnly && selection?.kind === 'element' && selection.id === el.id}
+            onPointerDown={
+              readOnly
+                ? undefined
+                : (e) => handleMarkerPointerDown(e, { kind: 'element', id: el.id })
+            }
           />
         ))}
 
-        {/* Camera nodes */}
+        {/* Camera nodes — no selection chrome / drag wiring in read-only mode */}
         {plan.cameras.map((cam) => (
           <CameraMarker
             key={`cam-${cam.shotId}`}
             camera={cam}
             number={shotNumberFor(cam.shotId)}
-            selected={selection?.kind === 'camera' && selection.shotId === cam.shotId}
-            onPointerDown={(e) => handleMarkerPointerDown(e, { kind: 'camera', shotId: cam.shotId })}
+            selected={!readOnly && selection?.kind === 'camera' && selection.shotId === cam.shotId}
+            onPointerDown={
+              readOnly
+                ? undefined
+                : (e) => handleMarkerPointerDown(e, { kind: 'camera', shotId: cam.shotId })
+            }
           />
         ))}
       </svg>
+      </SvgStageFrame>
 
-      {/* Active draw-mode banner */}
-      {drawMode && (
+      {/* Active draw-mode banner — editor only */}
+      {!readOnly && drawMode && (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2">
           <Caption className="text-primary">
             {drawMode.kind === 'camera-route'
@@ -495,8 +534,8 @@ export function FloorPlanCanvas({
         </div>
       )}
 
-      {/* Inline control row for the current selection */}
-      {selectedElement && (
+      {/* Inline control row for the current selection — editor only */}
+      {!readOnly && selectedElement && (
         <ElementControls
           element={selectedElement}
           cast={cast}
@@ -526,7 +565,7 @@ export function FloorPlanCanvas({
         />
       )}
 
-      {selectedCamera && (
+      {!readOnly && selectedCamera && (
         <CameraControls
           camera={selectedCamera}
           shotNumber={selectedCameraShotIndex === -1 ? shotNumberFor(selectedCamera.shotId) : selectedCameraShotIndex + 1}
@@ -555,7 +594,7 @@ export function FloorPlanCanvas({
         />
       )}
 
-      {!selectedElement && !selectedCamera && (
+      {!readOnly && !selectedElement && !selectedCamera && (
         <SectionDescription>
           Click a marker to select it. Drag any marker to move it. Use the toolbar to add
           actors, objects, zones and entries, and &quot;Auto-place cameras&quot; to drop a camera
@@ -564,6 +603,25 @@ export function FloorPlanCanvas({
       )}
     </div>
   );
+}
+
+// ============================================================================
+// SVG stage frame — in read-only mode the diagram must fill the parent height
+// and scale to fit, so the <svg> is wrapped in a `min-h-0 flex-1` div. In the
+// editor there is no wrapper (the <svg> keeps its width-derived 5:3 aspect).
+// ============================================================================
+
+function SvgStageFrame({
+  readOnly,
+  children,
+}: {
+  readOnly: boolean;
+  children: React.ReactNode;
+}) {
+  if (readOnly) {
+    return <div className="min-h-0 flex-1">{children}</div>;
+  }
+  return <>{children}</>;
 }
 
 // ============================================================================
@@ -590,7 +648,8 @@ function ElementMarker({
 }: {
   element: FloorPlanElement;
   selected: boolean;
-  onPointerDown: (e: React.PointerEvent) => void;
+  /** Omitted in read-only mode — the marker is then a non-interactive glyph. */
+  onPointerDown?: (e: React.PointerEvent) => void;
 }) {
   const cx = sx(element.x);
   const cy = sy(element.y);
@@ -668,7 +727,7 @@ function ElementMarker({
   }
 
   return (
-    <g onPointerDown={onPointerDown} style={{ cursor: 'grab' }}>
+    <g onPointerDown={onPointerDown} style={onPointerDown ? { cursor: 'grab' } : undefined}>
       {selRing}
       {facingLine}
       {shape}
@@ -699,7 +758,8 @@ function CameraMarker({
   camera: FloorPlanCamera;
   number: number;
   selected: boolean;
-  onPointerDown: (e: React.PointerEvent) => void;
+  /** Omitted in read-only mode — the marker is then a non-interactive glyph. */
+  onPointerDown?: (e: React.PointerEvent) => void;
 }) {
   const cx = sx(camera.x);
   const cy = sy(camera.y);
@@ -717,7 +777,7 @@ function CameraMarker({
   const facingEnd = { x: cx + 40 * Math.sin(facingRad), y: cy - 40 * Math.cos(facingRad) };
 
   return (
-    <g onPointerDown={onPointerDown} style={{ cursor: 'grab' }}>
+    <g onPointerDown={onPointerDown} style={onPointerDown ? { cursor: 'grab' } : undefined}>
       {/* Lens cone */}
       <path
         d={`M ${cx} ${cy} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y} Z`}
@@ -902,14 +962,14 @@ function ElementControls({
         <Button
           variant={drawingPath ? 'default' : 'outline'}
           size="sm"
-          className="gap-1.5"
+          className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700"
           onClick={onToggleDrawPath}
         >
           <Footprints className="h-3.5 w-3.5" />
           {drawingPath ? 'Click stage to add points' : 'Draw motion path'}
         </Button>
         {hasPath && (
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={onClearPath}>
+          <Button variant="outline" size="sm" className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700" onClick={onClearPath}>
             <Eraser className="h-3.5 w-3.5" /> Clear path
           </Button>
         )}
@@ -990,14 +1050,14 @@ function CameraControls({
         <Button
           variant={drawingRoute ? 'default' : 'outline'}
           size="sm"
-          className="gap-1.5"
+          className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700"
           onClick={onToggleDrawRoute}
         >
           <RouteIcon className="h-3.5 w-3.5" />
           {drawingRoute ? 'Click stage to add points' : 'Draw route'}
         </Button>
         {hasRoute && (
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={onClearRoute}>
+          <Button variant="outline" size="sm" className="gap-1.5 border-stone-300 bg-white text-stone-700 hover:border-amber-600 hover:bg-amber-50 hover:text-amber-700" onClick={onClearRoute}>
             <Eraser className="h-3.5 w-3.5" /> Clear route
           </Button>
         )}

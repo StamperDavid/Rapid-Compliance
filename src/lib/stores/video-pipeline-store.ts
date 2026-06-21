@@ -80,6 +80,18 @@ export interface VideoPipelineState {
   isGenerating: boolean;
   isAssembling: boolean;
 
+  // Server-side shot-doc build (transient — NOT persisted). The build runs on
+  // the server; the client fires ONE request then polls the project doc. These
+  // mirror the polled `shotPlanStatus`/`shotPlanProgress` so the UI can react.
+  shotPlanBuildStatus: 'idle' | 'generating' | 'complete' | 'error';
+  shotPlanBuildProgress: {
+    phase: string;
+    label: string;
+    done: number;
+    total: number;
+    failed?: number;
+  } | null;
+
   // Actions
   setBrief: (brief: Partial<PipelineBrief>) => void;
   setProjectId: (id: string) => void;
@@ -100,6 +112,10 @@ export interface VideoPipelineState {
   setTransitionType: (type: TransitionType) => void;
   setIsGenerating: (val: boolean) => void;
   setIsAssembling: (val: boolean) => void;
+  setShotPlanBuildStatus: (val: 'idle' | 'generating' | 'complete' | 'error') => void;
+  setShotPlanBuildProgress: (
+    val: { phase: string; label: string; done: number; total: number; failed?: number } | null,
+  ) => void;
   setPostProductionConfig: (config: Partial<PostProductionConfig>) => void;
   setPostProductionVideoUrl: (url: string) => void;
   setIsPostProcessing: (val: boolean) => void;
@@ -171,6 +187,8 @@ const initialState = {
   isPublishing: false,
   isGenerating: false,
   isAssembling: false,
+  shotPlanBuildStatus: 'idle' as const,
+  shotPlanBuildProgress: null,
 };
 
 // ============================================================================
@@ -272,6 +290,10 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
       setIsGenerating: (val) => set({ isGenerating: val }),
 
       setIsAssembling: (val) => set({ isAssembling: val }),
+
+      setShotPlanBuildStatus: (val) => set({ shotPlanBuildStatus: val }),
+
+      setShotPlanBuildProgress: (val) => set({ shotPlanBuildProgress: val }),
 
       setPostProductionConfig: (config) =>
         set({

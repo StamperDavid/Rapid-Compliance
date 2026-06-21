@@ -28,10 +28,8 @@ import {
   uploadToStorage,
   cleanupWorkDir,
   buildSmartConcatArgs,
-  applyColorGrade,
   runFfmpeg,
   getStoragePath,
-  type ColorGradeParams,
 } from '@/lib/video/ffmpeg-utils';
 import type { MediaItem } from '@/types/media-library';
 
@@ -47,6 +45,16 @@ const ClipEffectSchema = z.object({
   contrast: z.number().min(0).max(2),
   saturation: z.number().min(0).max(2),
   hue: z.number().min(-180).max(180),
+  // Stylising filters (optional — absent/zero = off). Each has a CSS preview
+  // mirror in components/video-editor/Preview.tsx so preview matches render.
+  sepia: z.number().min(0).max(1).optional(),
+  grayscale: z.number().min(0).max(1).optional(),
+  blur: z.number().min(0).max(20).optional(),
+  sharpen: z.number().min(0).max(2).optional(),
+  vignette: z.number().min(0).max(1).optional(),
+  grain: z.number().min(0).max(1).optional(),
+  // Playback rate (0.5×–2×; 1 = normal). Adjusts video + audio tempo.
+  speed: z.number().min(0.5).max(2).optional(),
 });
 
 const RenderClipSchema = z.object({
@@ -77,12 +85,30 @@ const RenderRequestSchema = z.object({
   textOverlays: z.array(RenderTextOverlaySchema).default([]),
   transition: z.enum(['cut', 'fade', 'dissolve']).default('fade'),
   resolution: z.enum(['720p', '1080p']).default('1080p'),
+  /**
+   * Output aspect ratio. '16:9' is the existing landscape path (default, so
+   * every current caller keeps its behaviour). '9:16' produces a true vertical
+   * frame (e.g. 1080×1920) for social shorts — source clips are scaled to fit
+   * and padded, never stretched.
+   */
+  aspect: z.enum(['16:9', '9:16']).default('16:9'),
   derivedFromMediaIds: z.array(z.string()).optional(),
 });
 
-const RESOLUTION_MAP = {
-  '720p': { width: 1280, height: 720 },
-  '1080p': { width: 1920, height: 1080 },
+/**
+ * Real output dimensions per (resolution, aspect). The "short side" of the
+ * resolution drives the vertical width so 9:16 1080p is a full 1080×1920 frame
+ * rather than a downscaled one.
+ */
+const DIMENSION_MAP = {
+  '16:9': {
+    '720p': { width: 1280, height: 720 },
+    '1080p': { width: 1920, height: 1080 },
+  },
+  '9:16': {
+    '720p': { width: 720, height: 1280 },
+    '1080p': { width: 1080, height: 1920 },
+  },
 } as const;
 
 // ============================================================================
@@ -90,9 +116,10 @@ const RESOLUTION_MAP = {
 // ============================================================================
 
 /**
- * Trim a clip and apply its lighting effect in a single FFmpeg invocation.
- * If trimStart/trimEnd are 0 and the effect is neutral we still produce a
- * normalized intermediate so concat assumptions hold.
+ * Trim a clip, then bake in its effect chain. Two passes: a trim pass that
+ * normalizes the intermediate (so concat assumptions hold even with a neutral
+ * effect), then a single combined effect pass (colour grade + stylising filters
+ * + speed) built by buildVideoFilterChain / buildAudioFilterChain.
  */
 async function prepareClip(
   inputPath: string,
@@ -119,16 +146,10 @@ async function prepareClip(
   // probe and let ffmpeg consume the file when trimEnd is 0; otherwise probe.
 
   // We always re-encode here so the per-clip effect can be baked in.
-  const hasEffect =
-    effect !== undefined &&
-    (effect.brightness !== 0 ||
-      effect.contrast !== 1 ||
-      effect.saturation !== 1 ||
-      effect.hue !== 0);
+  const hasEffect = effect !== undefined && effectIsActive(effect);
 
-  // To trim from the end without probing, we use ffprobe-equivalent inside
-  // applyColorGrade's pipeline. Simpler approach: do trim first, then effect.
-  // Two-pass keeps the code readable and matches existing pipeline style.
+  // Trim first, then apply the effect chain. Two-pass keeps the code readable
+  // and matches the existing pipeline style.
   const trimmedTmp = outputPath.replace(/\.mp4$/, '.trimmed.mp4');
 
   trimArgs.push(
@@ -171,7 +192,7 @@ async function prepareClip(
   await runFfmpeg(trimArgs);
 
   // Step 2: apply effect (or just rename the trimmed file)
-  if (!hasEffect) {
+  if (!hasEffect || effect === undefined) {
     // Rename — we still need outputPath populated. Read+write is cheap for
     // a few MB and avoids platform-specific rename quirks in the worker.
     const data = await readFile(trimmedTmp);
@@ -179,33 +200,144 @@ async function prepareClip(
     return;
   }
 
-  // Mirror the CSS filter math: brightness offset maps to FFmpeg eq's
-  // `brightness` (-1..1), contrast/saturation are multipliers, hue is
-  // the hue filter's `h` argument in degrees.
-  const params: ColorGradeParams = {
-    contrast: effect.contrast,
-    saturation: effect.saturation,
-    brightness: effect.brightness,
-    gamma: 1.0,
-    temperature: 0,
-  };
-  await applyColorGrade(trimmedTmp, outputPath, params);
+  // Build ONE video-filter chain that bakes in every active effect in a single
+  // pass. The chain mirrors the CSS preview in Preview.tsx filter-for-filter so
+  // what the operator saw is what renders.
+  const videoFilters = buildVideoFilterChain(effect);
+  const audioFilters = buildAudioFilterChain(effect);
 
-  // If hue rotation is non-zero, run a second pass for the hue filter.
-  if (effect.hue !== 0) {
-    const huedPath = outputPath.replace(/\.mp4$/, '.hue.mp4');
-    await runFfmpeg([
-      '-i', outputPath,
-      '-vf', `hue=h=${effect.hue.toFixed(1)}`,
-      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
-      '-c:a', 'copy',
-      '-movflags', '+faststart',
-      '-y',
-      huedPath,
-    ]);
-    const data = await readFile(huedPath);
-    await writeFile(outputPath, data);
+  const args: string[] = ['-i', trimmedTmp];
+  if (videoFilters.length > 0) {
+    args.push('-vf', videoFilters.join(','));
   }
+  if (audioFilters.length > 0) {
+    args.push('-af', audioFilters.join(','));
+    args.push('-c:a', 'aac', '-b:a', '160k');
+  } else {
+    args.push('-c:a', 'copy');
+  }
+  args.push(
+    '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
+    '-movflags', '+faststart',
+    '-y',
+    outputPath,
+  );
+  await runFfmpeg(args);
+}
+
+/** True when at least one effect field departs from its neutral value. */
+function effectIsActive(effect: z.infer<typeof ClipEffectSchema>): boolean {
+  return (
+    effect.brightness !== 0 ||
+    effect.contrast !== 1 ||
+    effect.saturation !== 1 ||
+    effect.hue !== 0 ||
+    (effect.sepia ?? 0) > 0 ||
+    (effect.grayscale ?? 0) > 0 ||
+    (effect.blur ?? 0) > 0 ||
+    (effect.sharpen ?? 0) > 0 ||
+    (effect.vignette ?? 0) > 0 ||
+    (effect.grain ?? 0) > 0 ||
+    (effect.speed ?? 1) !== 1
+  );
+}
+
+/**
+ * Build the FFmpeg video-filter list for a clip effect. Order matters: colour
+ * grade first, then stylising filters, then speed (setpts) last so the time
+ * remap applies to the fully-graded frames.
+ */
+function buildVideoFilterChain(effect: z.infer<typeof ClipEffectSchema>): string[] {
+  const filters: string[] = [];
+
+  // 1) Colour grade — eq (brightness/contrast/saturation) + hue rotation.
+  //    Matches the previous applyColorGrade + hue passes exactly.
+  if (
+    effect.brightness !== 0 ||
+    effect.contrast !== 1 ||
+    effect.saturation !== 1
+  ) {
+    filters.push(
+      `eq=contrast=${effect.contrast}:brightness=${effect.brightness}:saturation=${effect.saturation}`,
+    );
+  }
+  if (effect.hue !== 0) {
+    filters.push(`hue=h=${effect.hue.toFixed(1)}`);
+  }
+
+  // 2) Grayscale (B&W) — desaturate. Mirrors CSS grayscale(amount).
+  const grayscale = effect.grayscale ?? 0;
+  if (grayscale > 0) {
+    // hue=s drops saturation; partial mix isn't native, so blend via lutyuv
+    // is overkill — for the supported 0..1 range we scale saturation down.
+    filters.push(`hue=s=${(1 - Math.min(1, grayscale)).toFixed(3)}`);
+  }
+
+  // 3) Sepia — colorchannelmixer sepia matrix, scaled by amount.
+  const sepia = effect.sepia ?? 0;
+  if (sepia > 0) {
+    const a = Math.min(1, sepia);
+    // Interpolate between identity and the classic sepia matrix.
+    const mix = (ident: number, sep: number): string =>
+      (ident + (sep - ident) * a).toFixed(4);
+    filters.push(
+      `colorchannelmixer=` +
+        `rr=${mix(1, 0.393)}:rg=${mix(0, 0.769)}:rb=${mix(0, 0.189)}:` +
+        `gr=${mix(0, 0.349)}:gg=${mix(1, 0.686)}:gb=${mix(0, 0.168)}:` +
+        `br=${mix(0, 0.272)}:bg=${mix(0, 0.534)}:bb=${mix(1, 0.131)}`,
+    );
+  }
+
+  // 4) Blur — gaussian. CSS blur(px) ≈ gblur sigma at roughly px/2.
+  const blur = effect.blur ?? 0;
+  if (blur > 0) {
+    const sigma = Math.min(20, blur) / 2;
+    filters.push(`gblur=sigma=${sigma.toFixed(2)}`);
+  }
+
+  // 5) Sharpen — unsharp mask. Strength 0..2 maps to luma amount.
+  const sharpen = effect.sharpen ?? 0;
+  if (sharpen > 0) {
+    const amount = Math.min(2, sharpen).toFixed(2);
+    filters.push(`unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=${amount}`);
+  }
+
+  // 6) Vignette — darkened corners. Strength scales the falloff angle.
+  const vignette = effect.vignette ?? 0;
+  if (vignette > 0) {
+    // angle PI/5..PI/2.2 across 0..1; larger angle = stronger darkening.
+    const angle = (Math.PI / 5 + (Math.PI / 2.2 - Math.PI / 5) * Math.min(1, vignette)).toFixed(4);
+    filters.push(`vignette=angle=${angle}`);
+  }
+
+  // 7) Grain — additive noise. Strength scales the noise amplitude.
+  const grain = effect.grain ?? 0;
+  if (grain > 0) {
+    const strength = Math.round(Math.min(1, grain) * 40); // 0..40
+    filters.push(`noise=alls=${strength}:allf=t`);
+  }
+
+  // 8) Speed — remap presentation timestamps. setpts*(1/speed): 2× → halves PTS.
+  const speed = effect.speed ?? 1;
+  if (speed !== 1) {
+    filters.push(`setpts=${(1 / speed).toFixed(4)}*PTS`);
+  }
+
+  return filters;
+}
+
+/**
+ * Build the FFmpeg audio-filter list. Only speed touches audio (atempo keeps
+ * pitch natural). atempo supports 0.5..2.0 in a single stage — our clamp keeps
+ * us inside that, so no chaining is needed.
+ */
+function buildAudioFilterChain(effect: z.infer<typeof ClipEffectSchema>): string[] {
+  const speed = effect.speed ?? 1;
+  if (speed === 1) {
+    return [];
+  }
+  const tempo = Math.min(2, Math.max(0.5, speed));
+  return [`atempo=${tempo.toFixed(4)}`];
 }
 
 /**
@@ -341,8 +473,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, clips, textOverlays, transition, resolution, derivedFromMediaIds } = parsed.data;
-    const { width, height } = RESOLUTION_MAP[resolution];
+    const { name, clips, textOverlays, transition, resolution, aspect, derivedFromMediaIds } =
+      parsed.data;
+    const { width, height } = DIMENSION_MAP[aspect][resolution];
 
     logger.info('Editor render started', {
       jobId,
@@ -350,6 +483,9 @@ export async function POST(request: NextRequest) {
       overlayCount: textOverlays.length,
       transition,
       resolution,
+      aspect,
+      width,
+      height,
       file: 'api/video/editor/render/route.ts',
     });
 
@@ -404,6 +540,8 @@ export async function POST(request: NextRequest) {
       overlayCount: String(textOverlays.length),
       transition,
       resolution,
+      aspect,
+      dimensions: `${width}x${height}`,
     };
     if (derivedFromMediaIds && derivedFromMediaIds.length > 0) {
       metadata.derivedFrom = derivedFromMediaIds.join(',');

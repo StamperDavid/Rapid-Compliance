@@ -206,10 +206,31 @@ export async function updateProject(
     // Remove fields that shouldn't be updated directly
     const { id: _id, createdAt: _createdAt, createdBy: _createdBy, ...safeUpdates } = updates;
 
-    await adminDb.collection(COLLECTION_PATH).doc(projectId).update({
-      ...safeUpdates,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    const ref = adminDb.collection(COLLECTION_PATH).doc(projectId);
+    const snap = await ref.get();
+
+    if (snap.exists) {
+      await ref.update({
+        ...safeUpdates,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      // The doc no longer exists (e.g. it was deleted from the projects list while
+      // still open in the editor). Rather than 500 — which would silently drop the
+      // operator's in-progress work and loop on every autosave — recreate it from
+      // the autosave payload so the work persists and saving recovers.
+      await ref.set({
+        ...safeUpdates,
+        id: projectId,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      logger.info('Pipeline project recreated on save (doc was missing)', {
+        projectId,
+        file: 'pipeline-project-service.ts',
+      });
+      return { success: true };
+    }
 
     logger.info('Pipeline project updated', {
       projectId,

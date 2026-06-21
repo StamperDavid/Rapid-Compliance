@@ -104,17 +104,7 @@ async function run() {
     results.push(['Unreal Speech', `FAIL: ${e.message}`]);
   }
 
-  // 7. HeyGen
-  try {
-    const r = await fetch('https://api.heygen.com/v2/user/remaining_quota', {
-      headers: { 'X-Api-Key': d.video.heygen.apiKey },
-    });
-    results.push(['HeyGen', r.ok ? 'PASS' : `FAIL (${r.status})`]);
-  } catch (e) {
-    results.push(['HeyGen', `FAIL: ${e.message}`]);
-  }
-
-  // 8. Runway
+  // 7. Runway
   try {
     const r = await fetch('https://api.dev.runwayml.com/v1/tasks', {
       headers: {

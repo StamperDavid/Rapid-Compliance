@@ -1,37 +1,46 @@
 /**
  * Shot Doc — the cinematic, film-studio "production sheet" view.
  *
- * This is a DISPLAY-first rendering of a ShotPlan (the OpenArt-style document):
- * image-forward, dense, with small uppercase technical labels — NOT a form.
- * Editing lives in the form view (toggled by the parent); this surface is for
- * review, plus the inline-interactive floor-plan canvas and click-a-shot-to-edit.
+ * LAYOUT-DRIVEN (Jun 19 2026 rebuild): the page composition is AUTHORED BY THE AI.
+ * The Shot Plan Planner emits `plan.layout` — an ordered stack of rows, each row a
+ * set of blocks carrying relative width/height weights. This renderer is a generic
+ * PAINTER: it lays the body out as a FIXED LANDSCAPE canvas (1920×1280 = 3:2),
+ * distributes the AI's rows down that canvas by their `heightWeight` (fr units), and
+ * inside each row distributes the blocks across by their `widthWeight` (fr units).
+ * Each block is drawn by its `type` via `renderBlock`, which reuses the per-section
+ * content renderers (cast columns, environment heroes, the editable floor plan, the
+ * storyboard strip, the look-bible field columns, palette, prompt).
  *
- * Styling latitude (operator-approved, Jun 13 2026): this surface uses a
- * medium-charcoal "production sheet" palette (Tailwind zinc/amber scale, no raw
- * hex) — a dark slate paper with bright ink. §1 (Character Reference) and §2
- * (Environment / Set Design) are ADAPTIVE: §1 reflows by subject count, §2 by
- * environment-zone count, with no empty/placeholder cells.
+ * So the page is EXACTLY the AI's composition stretched to fill a landscape sheet —
+ * never a hard-coded vertical template. When `plan.layout` is absent or has no rows,
+ * a sensible `DEFAULT_LAYOUT` covers the content-bearing blocks. Empty blocks (no
+ * data for this plan) are dropped, and a row whose blocks are all empty is dropped
+ * entirely, so the AI's layout never produces a blank panel.
+ *
+ * Light "production-paper" skin (stone/amber, no raw hex; palette swatches use the
+ * dynamic computed colour, the sanctioned inline exception). Each block keeps its
+ * Edit button mapped to the right section editor.
  */
 
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Clapperboard, Link2, Scissors, Camera as CameraIcon, Pencil, ImageOff } from 'lucide-react';
+import { Clapperboard, Link2, Scissors, Pencil, ImageOff, Maximize } from 'lucide-react';
 
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { composeShotGenerationPrompt } from '@/lib/video/shot-plan-mapping';
 import type {
   ShotPlan,
   ShotPlanShot,
-  ShotPlanFloorPlan,
   ShotPlanCastMember,
   ShotPlanLayout,
+  ShotPlanLayoutRow,
   ShotPlanBlockType,
 } from '@/types/shot-plan';
 
 /** Which section's editor to open when a section is clicked. */
-export type ShotPlanSection = 'shared' | 'characters' | 'environment' | 'lighting';
+export type ShotPlanSection = 'shared' | 'characters' | 'environment' | 'lighting' | 'floorplan' | 'storyboard';
 
 interface ShotPlanDocumentProps {
   plan: ShotPlan;
@@ -39,16 +48,6 @@ interface ShotPlanDocumentProps {
   onEdit: (shotId: string) => void;
   /** Open the editor for a whole section (section header / block click). */
   onEditSection: (section: ShotPlanSection) => void;
-  /** Floor plan is editable inline on the document (drag), committed via this. */
-  onFloorPlanChange: (floorPlan: ShotPlanFloorPlan) => void;
-}
-
-/** Featured (close-up / costume) view labels vs. full-body turnaround views. */
-const FEATURED_VIEW = /close|detail|face|costume/i;
-
-/** Doc layout weight for a subject column: leads and groups get more width. */
-function subjectWeight(member: ShotPlanCastMember): number {
-  return member.subjectKind === 'group' || member.billing === 'lead' ? 1.4 : 1;
 }
 
 /** The labeled views to show for a subject (model sheet, or refs as a fallback). */
@@ -59,26 +58,51 @@ function subjectViews(member: ShotPlanCastMember): { label: string; imageUrl: st
   return member.referenceImageUrls.map((url) => ({ label: 'REF', imageUrl: url }));
 }
 
-// ── Small presentational atoms ──────────────────────────────────────────────
+/** True when any of the given values is a non-empty (trimmed) string. */
+function filled(...values: Array<string | undefined>): boolean {
+  return values.some((v) => typeof v === 'string' && v.trim() !== '');
+}
 
-function SectionLabel({ n, children, onEdit }: { n: number; children: ReactNode; onEdit?: () => void }) {
+// ── Atoms ────────────────────────────────────────────────────────────────────
+
+/** An edge-to-edge image cell: the image fills the cell (object-cover), with an
+ *  optional tiny caption underneath. No card margin/rounding. Pass a fixed `aspect`
+ *  for a natural-height tile, or `fill` to consume the full height of its parent
+ *  (so the image stretches to remove blank space in a tall layout cell). */
+function Cell({
+  src,
+  alt,
+  caption,
+  aspect,
+  fill,
+}: {
+  src?: string;
+  alt: string;
+  caption?: string;
+  aspect?: string;
+  fill?: boolean;
+}) {
   return (
-    <div className="mb-3 flex items-center gap-2">
-      <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-zinc-900 text-[11px] font-bold text-amber-400">
-        {n}
-      </span>
-      <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-200">{children}</h3>
-      {onEdit && (
-        <button
-          type="button"
-          onClick={onEdit}
-          className="ml-auto inline-flex items-center gap-1 rounded border border-zinc-600 px-2 py-0.5 text-[9px] uppercase tracking-wider text-zinc-400 transition-colors hover:border-amber-400/60 hover:text-amber-400"
-          data-no-pan
-        >
-          <Pencil className="h-2.5 w-2.5" /> Edit
-        </button>
+    <figure className={`min-w-0${fill ? ' flex h-full min-h-0 flex-col' : ''}`}>
+      <div
+        className={`relative w-full overflow-hidden border border-stone-300 bg-stone-200 ${
+          fill ? 'min-h-0 flex-1' : aspect ?? 'aspect-video'
+        }`}
+      >
+        {src ? (
+          <Image src={src} alt={alt} fill sizes="320px" unoptimized className="object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-stone-400">
+            <ImageOff className="h-5 w-5" />
+          </div>
+        )}
+      </div>
+      {caption && (
+        <figcaption className="truncate pt-0.5 text-center text-[8px] font-bold uppercase tracking-[0.1em] text-stone-500" title={caption}>
+          {caption}
+        </figcaption>
       )}
-    </div>
+    </figure>
   );
 }
 
@@ -88,85 +112,39 @@ function Field({ label, value }: { label: string; value?: string }) {
   }
   return (
     <div className="min-w-0">
-      <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">{label}</div>
-      <div className="text-xs leading-snug text-zinc-100" title={value}>{value}</div>
+      <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-stone-500">{label}</div>
+      <div className="text-xs leading-snug text-stone-800" title={value}>{value}</div>
     </div>
   );
 }
 
-function RefImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
-  return (
-    <div className={`relative overflow-hidden rounded border border-zinc-600 bg-zinc-800 ${className ?? 'h-20 w-20'}`}>
-      <Image src={src} alt={alt} fill sizes="160px" unoptimized className="object-cover" />
-    </div>
-  );
-}
-
-function EmptyImage({ label, className }: { label: string; className?: string }) {
-  return (
-    <div
-      className={`flex flex-col items-center justify-center gap-1 rounded border border-dashed border-zinc-600 bg-zinc-800 text-zinc-500 ${className ?? 'h-20 w-full'}`}
-    >
-      <ImageOff className="h-5 w-5" />
-      <span className="text-[9px] uppercase tracking-wider">{label}</span>
-    </div>
-  );
-}
-
-/**
- * A compact one-line identity strip for a cast member — `apparentAge · build ·
- * hairColor hairStyle` plus a short wardrobe line (with a "signature" tag when
- * the wardrobe is locked). Lean by design: every piece is omitted if absent, and
- * the strip renders nothing at all when no identity fields are present. Full
- * detail lives in the editor popup, not here.
- */
 function IdentityStrip({ member }: { member: ShotPlanCastMember }) {
   const hair = [member.hairColor, member.hairStyle]
     .map((s) => s?.trim())
     .filter((s): s is string => Boolean(s))
     .join(' ');
-  const identityBits = [member.apparentAge, member.build, hair]
+  const bits = [member.apparentAge, member.build, hair]
     .map((s) => s?.trim())
     .filter((s): s is string => Boolean(s));
   const wardrobe = member.wardrobe?.trim();
-  const isSignature = member.wardrobeMode === 'signature';
-
-  if (identityBits.length === 0 && !wardrobe) {
+  const all = [...bits, wardrobe].filter(Boolean).join(' · ');
+  if (!all) {
     return null;
   }
-  return (
-    <div className="space-y-0.5">
-      {identityBits.length > 0 && (
-        <div className="text-[10px] leading-snug text-zinc-300" title={identityBits.join(' · ')}>
-          {identityBits.join(' · ')}
-        </div>
-      )}
-      {wardrobe && (
-        <div className="flex items-center gap-1.5 text-[10px] leading-snug text-zinc-300">
-          <span className="min-w-0 truncate" title={wardrobe}>{wardrobe}</span>
-          {isSignature && (
-            <span className="shrink-0 rounded-sm border border-amber-400/60 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-amber-400">
-              Signature
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  return <div className="truncate text-[10px] leading-snug text-stone-600" title={all}>{all}</div>;
 }
 
-/** A reusable palette swatch strip (used in §1, both single- and multi-subject). */
 function PaletteRow({ swatches }: { swatches: { name: string; hex: string }[] }) {
   if (swatches.length === 0) {
-    return <span className="text-xs text-zinc-500">—</span>;
+    return <span className="text-xs text-stone-400">—</span>;
   }
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {swatches.slice(0, 8).map((sw, i) => (
+    <div className="flex flex-wrap gap-1">
+      {swatches.slice(0, 12).map((sw, i) => (
         <span
           key={`${sw.hex}-${i}`}
           title={`${sw.name} (${sw.hex})`}
-          className="h-8 w-8 rounded-sm border border-zinc-600"
+          className="h-7 w-7 rounded-sm border border-stone-300"
           style={{ backgroundColor: sw.hex }}
         />
       ))}
@@ -174,71 +152,48 @@ function PaletteRow({ swatches }: { swatches: { name: string; hex: string }[] })
   );
 }
 
-// ── Storyboard panel (display) ──────────────────────────────────────────────
+function HeaderMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-stone-500">{label}</div>
+      <div className="text-xs text-stone-800" title={value}>{value}</div>
+    </div>
+  );
+}
 
-function DocStoryboardPanel({
-  shot,
-  position,
-  onEdit,
-}: {
-  shot: ShotPlanShot;
-  position: number;
-  onEdit: () => void;
-}) {
+/** A storyboard frame — edge-to-edge, click to edit. */
+function StoryboardFrame({ shot, position, onEdit }: { shot: ShotPlanShot; position: number; onEdit: () => void }) {
   const still = shot.generated?.keyframeUrl ?? shot.generated?.lastFrameUrl ?? null;
-  const specs = [
-    shot.camera.lensType ?? shot.camera.lens ?? shot.camera.focalLength,
-    shot.camera.movement,
-    shot.camera.shotType,
-  ]
+  const specs = [shot.camera.shotType, shot.camera.movement, shot.camera.lensType ?? shot.camera.lens ?? shot.camera.focalLength]
     .map((s) => s?.trim())
     .filter((s): s is string => Boolean(s));
-
   return (
     <button
       type="button"
       onClick={onEdit}
-      className="group relative flex w-full flex-col overflow-hidden rounded border border-zinc-600 bg-zinc-800 text-left transition-colors hover:border-amber-400/60"
+      className="group relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden border border-stone-300 bg-white text-left transition-colors hover:border-amber-600/70"
     >
-      <div className="relative aspect-video bg-zinc-800">
+      <div className="relative min-h-0 w-full flex-1 bg-stone-200">
         {still ? (
           <Image src={still} alt={`Cut ${position + 1}`} fill sizes="320px" unoptimized className="object-cover" />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-zinc-500">
-            <ImageOff className="h-6 w-6" />
-          </div>
+          <div className="flex h-full items-center justify-center text-stone-400"><ImageOff className="h-5 w-5" /></div>
         )}
-        <div className="absolute left-1.5 top-1.5 flex items-center gap-1">
-          <span className="rounded-sm bg-black/80 px-1.5 py-0.5 text-[11px] font-bold text-amber-400">
-            {position + 1}
+        <div className="absolute left-1 top-1 flex items-center gap-1">
+          <span className="rounded-sm bg-black/80 px-1.5 py-0.5 text-[11px] font-bold text-amber-300">{position + 1}</span>
+          <span className="inline-flex items-center gap-0.5 rounded-sm bg-black/80 px-1 py-0.5 text-[9px] uppercase tracking-wide text-white">
+            {shot.transitionIn === 'continue' ? (<><Link2 className="h-2.5 w-2.5 text-amber-300" /> cont</>) : (<><Scissors className="h-2.5 w-2.5 text-amber-300" /> cut</>)}
           </span>
-          <span className="inline-flex items-center gap-0.5 rounded-sm bg-black/80 px-1 py-0.5 text-[9px] uppercase tracking-wide text-zinc-100">
-            {shot.transitionIn === 'continue' ? (
-              <><Link2 className="h-2.5 w-2.5 text-amber-400" /> cont</>
-            ) : (
-              <><Scissors className="h-2.5 w-2.5 text-amber-400" /> cut</>
-            )}
-          </span>
-          {shot.timeOfDay?.trim() && (
-            <span className="rounded-sm bg-black/80 px-1 py-0.5 text-[9px] uppercase tracking-wide text-zinc-100" title={shot.timeOfDay}>
-              {shot.timeOfDay}
-            </span>
-          )}
-          {shot.weather?.trim() && (
-            <span className="rounded-sm bg-black/80 px-1 py-0.5 text-[9px] uppercase tracking-wide text-zinc-100" title={shot.weather}>
-              {shot.weather}
-            </span>
-          )}
         </div>
-        <span className="absolute right-1.5 top-1.5 rounded-sm bg-black/70 p-1 text-zinc-100 opacity-0 transition-opacity group-hover:opacity-100">
+        <span className="absolute right-1 top-1 rounded-sm bg-black/70 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100">
           <Pencil className="h-3 w-3" />
         </span>
       </div>
-      <div className="space-y-1 border-t border-zinc-600 p-2">
-        <div className="truncate font-mono text-[10px] uppercase tracking-wide text-amber-400">
+      <div className="space-y-0.5 border-t border-stone-200 p-1.5">
+        <div className="truncate font-mono text-[9px] uppercase tracking-wide text-amber-700">
           {specs.length > 0 ? specs.join(' · ') : 'camera —'} · {shot.durationSeconds}s
         </div>
-        <div className="line-clamp-3 text-[11px] leading-snug text-zinc-200">
+        <div className="line-clamp-2 text-[10px] leading-snug text-stone-700">
           {shot.action?.trim() || shot.title?.trim() || 'Untitled shot'}
         </div>
       </div>
@@ -246,160 +201,190 @@ function DocStoryboardPanel({
   );
 }
 
-// ── §1 — a single subject's column (used in the multi-subject grid) ──────────
+// ── Layout primitives ────────────────────────────────────────────────────────
 
-function SubjectColumn({ member }: { member: ShotPlanCastMember }) {
-  const views = subjectViews(member);
-  const fullBody = views.filter((v) => !FEATURED_VIEW.test(v.label));
-  const closeUps = views.filter((v) => FEATURED_VIEW.test(v.label));
-  const noteLines = (member.notes ?? '')
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  return (
-    <div className="flex min-w-0 flex-col gap-3">
-      {/* 1. Header — name + role + optional GROUP tag */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[12px] font-bold uppercase tracking-wider text-zinc-50">{member.name}</span>
-        {member.role && <span className="text-[9px] uppercase tracking-wider text-amber-400">{member.role}</span>}
-        {member.subjectKind === 'group' && (
-          <span className="rounded-sm border border-amber-400/60 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-amber-400">
-            Group
-          </span>
-        )}
-      </div>
-
-      {/* 1b. Compact identity strip — age · build · hair, + wardrobe (omit-if-empty) */}
-      <IdentityStrip member={member} />
-
-      {/* 2. Full-body turnaround row — tall 3:8 frames */}
-      {fullBody.length > 0 ? (
-        <div className="grid grid-cols-3 gap-1.5">
-          {fullBody.slice(0, 6).map((v, i) => (
-            <figure key={`${v.imageUrl}-${i}`} className="min-w-0">
-              <div className="relative aspect-[3/8] overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-                <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes="96px" unoptimized className="object-cover" />
-              </div>
-              <figcaption className="mt-0.5 truncate text-center text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-                {v.label}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      ) : (
-        <EmptyImage label="no refs" className="aspect-[3/8] w-full" />
-      )}
-
-      {/* 3. Close-up row — wider 3:4 frames (omitted entirely if none) */}
-      {closeUps.length > 0 && (
-        <div className="grid grid-cols-2 gap-1.5">
-          {closeUps.slice(0, 4).map((v, i) => (
-            <figure key={`${v.imageUrl}-${i}`} className="min-w-0">
-              <div className="relative aspect-[3/4] overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-                <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes="160px" unoptimized className="object-cover" />
-              </div>
-              <figcaption className="mt-0.5 truncate text-center text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-                {v.label}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      )}
-
-      {/* 4. Notes — 2–3 lines, omitted if empty */}
-      {noteLines.length > 0 && (
-        <p className="line-clamp-3 text-[11px] leading-snug text-zinc-300">{noteLines.join(' ')}</p>
-      )}
-    </div>
-  );
+/** Inline style for an N-column edge-to-edge grid. */
+function cols(n: number): React.CSSProperties {
+  return { gridTemplateColumns: `repeat(${Math.max(1, n)}, minmax(0, 1fr))` };
 }
 
-// ── The document ────────────────────────────────────────────────────────────
+/** A default section heading per block type, used when the AI omits `block.title`. */
+const DEFAULT_BLOCK_TITLE: Record<ShotPlanBlockType, string> = {
+  characters: 'Character Reference',
+  environment: 'Environment / Set Design',
+  floorplan: 'Floor Plan · Camera Blocking',
+  storyboard: 'Storyboard',
+  lighting: 'Lighting Setups',
+  cinematography: 'Cinematography · Look',
+  mood: 'Mood & Notes',
+  palette: 'Color Palette',
+  notes: 'Character Notes',
+  prompt: 'Video Prompt',
+};
 
-// ── AI-COMPOSED LAYOUT CANVAS ────────────────────────────────────────────────
-// The planner DESIGNS the page (plan.layout). This paints whatever it designed:
-// a fixed landscape canvas, rows distributed by heightWeight (so the page ALWAYS
-// fills — no dead space), columns by widthWeight, each block drawn by its type.
+/** Which section editor a block type opens, or `null` for non-editable blocks. */
+const BLOCK_EDIT_SECTION: Record<ShotPlanBlockType, ShotPlanSection | null> = {
+  characters: 'characters',
+  notes: 'characters',
+  environment: 'environment',
+  floorplan: 'floorplan',
+  lighting: 'lighting',
+  cinematography: 'lighting',
+  mood: 'lighting',
+  palette: 'lighting',
+  storyboard: 'storyboard',
+  prompt: null,
+};
 
-/** Deterministic layout rule (not left to the blind AI): the floor plan is a rich,
- * editable diagram, so it ALWAYS gets its OWN full-width row at natural size — never
- * crammed into a shared cell where it shrinks to a scrollbox. */
-function withFloorplanOwnRow(rows: ShotPlanLayout['rows']): ShotPlanLayout['rows'] {
-  const out: ShotPlanLayout['rows'] = [];
-  for (const row of rows) {
-    const fps = row.blocks.filter((b) => b.type === 'floorplan');
-    const rest = row.blocks.filter((b) => b.type !== 'floorplan');
-    if (rest.length > 0) {
-      out.push({ ...row, blocks: rest });
-    }
-    for (const fp of fps) {
-      out.push({ heightWeight: row.heightWeight, blocks: [{ ...fp, widthWeight: 1 }] });
-    }
-  }
-  return out.length > 0 ? out : rows;
-}
-
-/** Fallback composition when the planner didn't author one (older docs). */
+/**
+ * The fallback page composition when the AI did not author a `layout`. Covers the
+ * content-bearing blocks in a landscape-friendly stack: a characters|environment
+ * row, a four-up look-bible row, the floor plan, the storyboard strip, and the
+ * assembled prompt.
+ */
 const DEFAULT_LAYOUT: ShotPlanLayout = {
   rows: [
     {
-      heightWeight: 5,
+      heightWeight: 3,
       blocks: [
-        { type: 'characters', title: '1. Character Reference', widthWeight: 6 },
-        { type: 'environment', title: '2. Environment / Set Design', widthWeight: 7 },
+        { type: 'characters', widthWeight: 3 },
+        { type: 'environment', widthWeight: 2 },
       ],
     },
-    { heightWeight: 4, blocks: [{ type: 'floorplan', title: 'Floor Plan · Camera Blocking', widthWeight: 1 }] },
+    {
+      heightWeight: 2,
+      blocks: [
+        { type: 'lighting', widthWeight: 1 },
+        { type: 'cinematography', widthWeight: 1 },
+        { type: 'mood', widthWeight: 1 },
+        { type: 'palette', widthWeight: 1 },
+      ],
+    },
     {
       heightWeight: 3,
       blocks: [
-        { type: 'cinematography', title: 'Cinematography', widthWeight: 1 },
-        { type: 'lighting', title: 'Lighting', widthWeight: 1 },
-        { type: 'mood', title: 'Mood & Notes', widthWeight: 1 },
+        { type: 'floorplan', widthWeight: 3 },
+        { type: 'notes', widthWeight: 2 },
       ],
     },
-    { heightWeight: 4, blocks: [{ type: 'storyboard', title: 'Storyboard', widthWeight: 1 }] },
-    { heightWeight: 1, blocks: [{ type: 'prompt', title: 'Video Prompt', widthWeight: 1 }] },
+    {
+      heightWeight: 3,
+      blocks: [{ type: 'storyboard', widthWeight: 1 }],
+    },
+    {
+      heightWeight: 2,
+      blocks: [{ type: 'prompt', widthWeight: 1 }],
+    },
   ],
 };
 
-/** Which editor a block's "Edit" button opens (null = no section editor). */
-function sectionForBlock(type: ShotPlanBlockType): ShotPlanSection | null {
-  if (type === 'characters' || type === 'notes') {
-    return 'characters';
-  }
-  if (type === 'environment' || type === 'floorplan') {
-    return 'environment';
-  }
-  if (type === 'lighting' || type === 'cinematography' || type === 'mood' || type === 'palette') {
-    return 'lighting';
-  }
-  return null;
-}
+// ── The document ───────────────────────────────────────────────────────────────
 
-function HeaderMeta({ label, value }: { label: string; value: string }) {
+/**
+ * In-place scroll-to-zoom for the read-only blocking diagram. The operator scrolls
+ * over the diagram to magnify it WITHOUT leaving the shot doc (no popup). The doc's
+ * ZoomPanViewport pans on wheel via a native, non-passive listener, so this uses its
+ * own native non-passive wheel listener that `stopPropagation`s — scrolling over the
+ * diagram zooms IT and never pans the sheet. Drag pans once zoomed in.
+ */
+function BlockingZoom({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const onWheel = (e: globalThis.WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setScale((s) => {
+        const next = Math.min(5, Math.max(1, Math.round((s + (e.deltaY < 0 ? 0.3 : -0.3)) * 100) / 100));
+        if (next === 1) {
+          setPan({ x: 0, y: 0 });
+        }
+        return next;
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (scale <= 1) {
+      return;
+    }
+    drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) {
+      return;
+    }
+    setPan({ x: drag.current.px + (e.clientX - drag.current.x), y: drag.current.py + (e.clientY - drag.current.y) });
+  };
+  const endDrag = () => {
+    drag.current = null;
+  };
+
   return (
-    <div>
-      <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">{label}</div>
-      <div className="text-xs text-zinc-100" title={value}>{value}</div>
+    <div
+      ref={ref}
+      data-no-pan
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerLeave={endDrag}
+      className="relative h-full w-full overflow-hidden"
+      style={{ cursor: scale > 1 ? 'grab' : 'default' }}
+    >
+      <div
+        className="h-full w-full"
+        style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: 'center center' }}
+      >
+        {children}
+      </div>
+      <div
+        data-no-pan
+        className="pointer-events-none absolute bottom-1 left-1 z-10 rounded bg-white/85 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-stone-500"
+      >
+        Scroll to zoom{scale > 1 ? ` · ${Math.round(scale * 100)}%` : ''}
+      </div>
+      {scale > 1 && (
+        <button
+          type="button"
+          data-no-pan
+          onClick={() => {
+            setScale(1);
+            setPan({ x: 0, y: 0 });
+          }}
+          title="Reset zoom"
+          className="absolute right-1 top-1 z-10 inline-flex items-center gap-1 rounded border border-stone-300 bg-white/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-stone-600 transition-colors hover:border-amber-600 hover:text-amber-700"
+        >
+          <Maximize className="h-3 w-3" /> Reset
+        </button>
+      )}
     </div>
   );
 }
 
-function ShotPlanLayoutCanvas({ plan, onEdit, onEditSection, onFloorPlanChange }: ShotPlanDocumentProps) {
+export function ShotPlanDocument({ plan, onEdit, onEditSection }: ShotPlanDocumentProps) {
   const { sharedChoices } = plan;
   const look = sharedChoices.lookBible ?? {};
   const orderedShots = [...plan.shots].sort((a, b) => a.index - b.index);
   const objects = sharedChoices.objects ?? [];
   const envImages = sharedChoices.environmentReferenceImageUrls ?? [];
   const zones = sharedChoices.environmentZones ?? [];
+  const heroFallback = sharedChoices.environmentHeroImageUrl;
   const billingRank = (m: ShotPlanCastMember): number => (m.billing === 'lead' ? 0 : m.billing === 'supporting' ? 1 : 2);
   const subjects = [...sharedChoices.cast]
     .map((member, i) => ({ member, i }))
     .sort((a, b) => billingRank(a.member) - billingRank(b.member) || a.i - b.i)
     .map((e) => e.member);
-  const notesLabel = sharedChoices.adaptiveLabels?.characterNotes ?? 'Character notes';
+
   const lensValue = look.lensType ?? look.focalLength;
   const dpStyle = look.videographerStyle ?? look.photographerStyle;
   const tempValue = typeof look.temperature === 'number' ? `${look.temperature}K` : undefined;
@@ -411,776 +396,444 @@ function ShotPlanLayoutCanvas({ plan, onEdit, onEditSection, onFloorPlanChange }
     .map((s) => s?.trim())
     .filter((s): s is string => Boolean(s));
   const videoPrompt = orderedShots[0] ? composeShotGenerationPrompt(plan, orderedShots[0]) : '';
-  // DETERMINISTIC: always use the curated template, never the AI's improvised layout.
-  // A blind text model can't arrange a page — it scatters content and leaves gaps.
-  // The specialist authors the CONTENT; this fixed template guarantees the ARRANGEMENT.
-  const rows = DEFAULT_LAYOUT.rows;
 
-  const objectsBlock =
-    objects.length > 0 ? (
-      <div className="space-y-3 border-t border-zinc-600 pt-4">
-        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">Key props</div>
-        {objects.map((obj) => (
-          <div key={obj.id}>
-            <div className="mb-1.5 flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-50">{obj.name}</span>
-              <span className="text-[9px] uppercase tracking-wider text-zinc-400">
-                {obj.subjectKind === 'creature' ? 'Creature' : 'Object'}
-              </span>
-            </div>
-            {obj.referenceImageUrls.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {obj.referenceImageUrls.slice(0, 5).map((url, i) => (
-                  <RefImage key={`${url}-${i}`} src={url} alt={`${obj.name} reference ${i + 1}`} className="h-24 w-24" />
-                ))}
-              </div>
-            ) : (
-              <EmptyImage label="no refs" className="h-16 w-full" />
-            )}
-          </div>
-        ))}
-      </div>
-    ) : null;
+  // ── Per-block presence flags (the empty-block guard). A block only renders if
+  //    it actually carries content for THIS plan. ───────────────────────────────
+  const lightingSwatches = sharedChoices.lightingSwatches ?? [];
+  const hasCharacters = subjects.length > 0;
+  const hasEnvironment =
+    zones.length > 0 || Boolean(heroFallback) || envImages.length > 0 || Boolean(sharedChoices.environmentFingerprint?.trim());
+  const establishingHero = heroFallback ?? zones.find((z) => z.heroImageUrl)?.heroImageUrl;
+  const hasFloorplan = Boolean(
+    plan.floorPlan &&
+      ((plan.floorPlan.cameras?.length ?? 0) > 0 ||
+        (plan.floorPlan.elements?.length ?? 0) > 0 ||
+        (plan.floorPlan.subjectPaths?.length ?? 0) > 0 ||
+        plan.floorPlan.backdropImageUrl),
+  );
+  const showBlocking = hasFloorplan || Boolean(establishingHero) || Boolean(plan.floorPlan);
+  const hasLightingFields = lightingSwatches.length > 0 || filled(look.lighting, look.atmosphere) || typeof look.temperature === 'number' || (look.filters?.length ?? 0) > 0;
+  const hasCamera = filled(look.camera, lensValue, look.composition, look.aspectRatio) || framingBits.length > 0;
+  const hasStyle = filled(look.artStyle, sharedChoices.artStyle, look.movieLook, look.filmStock, dpStyle);
+  const hasCinematography = hasCamera || hasStyle;
+  const hasMoodTags = sharedChoices.moodKeywords.length > 0;
+  const hasNotes = sharedChoices.cinematographyNotes.length > 0;
+  const hasMood = hasMoodTags || hasNotes;
+  const hasPalette = sharedChoices.colorPalette.length > 0;
+  const hasObjects = objects.length > 0;
+  const hasStoryboard = orderedShots.length > 0;
+  const hasPrompt = orderedShots.length > 0;
 
-  const renderBlock = (type: ShotPlanBlockType): ReactNode => {
+  /** True when a block of `type` carries content for this plan. */
+  const blockHasContent = (type: ShotPlanBlockType): boolean => {
     switch (type) {
       case 'characters':
-        return subjects.length === 0 && objects.length === 0 ? (
-          <p className="text-xs text-zinc-500">No cast or objects yet.</p>
-        ) : (
-          <div className="flex flex-col gap-5">
-            {subjects.length <= 1 ? (
-              <>
-                <div className="space-y-5">
-                  {subjects.map((member) => {
-                    const views = subjectViews(member);
-                    return (
-                      <div key={member.characterId}>
-                        {views.length > 0 ? (
-                          <div className="flex flex-wrap items-start gap-2">
-                            {views.slice(0, 5).map((v, i) => {
-                              const featured = FEATURED_VIEW.test(v.label);
-                              return (
-                                <figure key={`${v.imageUrl}-${i}`} className={featured ? 'w-40' : 'w-24'}>
-                                  <div className={`relative h-64 overflow-hidden rounded border border-zinc-600 bg-zinc-800 ${featured ? 'w-40' : 'w-24'}`}>
-                                    <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes={featured ? '160px' : '96px'} unoptimized className="object-cover" />
-                                  </div>
-                                  <figcaption className="mt-1 text-center text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">{v.label}</figcaption>
-                                </figure>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <EmptyImage label="no refs" className="h-16 w-full" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="grid grid-cols-[auto_1fr] gap-6 border-t border-zinc-600 pt-4">
-                  <div>
-                    <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">Palette</div>
-                    <div className="w-28"><PaletteRow swatches={sharedChoices.colorPalette} /></div>
-                  </div>
-                  <div className="min-w-0">
-                    {subjects.length === 1 && <div className="mb-2"><IdentityStrip member={subjects[0]} /></div>}
-                    <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">{notesLabel}</div>
-                    <ul className="list-disc space-y-1 pl-4 marker:text-amber-400/60">
-                      {subjects.flatMap((m) => {
-                        const sentences = (m.notes ?? '').split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-                        if (sentences.length === 0) {
-                          return [
-                            <li key={m.characterId} className="text-[11px] leading-snug text-zinc-400">
-                              <span className="font-semibold text-zinc-50">{m.name}</span>
-                              {m.role ? ` — ${m.role}` : ''}
-                            </li>,
-                          ];
-                        }
-                        return sentences.map((s, i) => (
-                          <li key={`${m.characterId}-${i}`} className="text-[11px] leading-snug text-zinc-200">{s}</li>
-                        ));
-                      })}
-                    </ul>
-                  </div>
-                </div>
-                {objectsBlock}
-              </>
-            ) : (
-              <>
-                <div className="grid gap-5" style={{ gridTemplateColumns: subjects.map((s) => `${subjectWeight(s)}fr`).join(' ') }}>
-                  {subjects.map((member) => (<SubjectColumn key={member.characterId} member={member} />))}
-                </div>
-                <div className="border-t border-zinc-600 pt-4">
-                  <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">Palette</div>
-                  <PaletteRow swatches={sharedChoices.colorPalette} />
-                </div>
-                {objectsBlock}
-              </>
-            )}
-          </div>
-        );
+        return hasCharacters || hasObjects || hasPalette;
+      case 'environment':
+        return hasEnvironment;
+      case 'floorplan':
+        return showBlocking;
+      case 'storyboard':
+        return hasStoryboard;
+      case 'lighting':
+        return hasLightingFields;
+      case 'cinematography':
+        return hasCinematography;
+      case 'mood':
+        return hasMood;
+      case 'palette':
+        return hasPalette;
+      case 'notes':
+        return hasNotes || hasObjects;
+      case 'prompt':
+        return hasPrompt;
+      default:
+        return false;
+    }
+  };
 
-      case 'environment': {
-        const heroFallback = sharedChoices.environmentHeroImageUrl;
-        if (zones.length > 0) {
-          return (
-            <div className="grid h-full gap-3" style={{ gridTemplateColumns: `repeat(${zones.length}, minmax(0, 1fr))` }}>
-              {zones.map((zone, zi) => {
-                const hero = zone.heroImageUrl ?? (zi === 0 ? heroFallback : undefined);
-                return (
-                  <div key={zone.id} className="flex min-h-0 flex-col gap-2">
-                    <div className="relative min-h-0 flex-1 overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-                      {hero ? (
-                        <Image src={hero} alt={`${zone.label} hero render`} fill sizes="600px" unoptimized className="object-cover" />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-zinc-600"><ImageOff className="h-6 w-6" /></div>
-                      )}
-                    </div>
-                    <div className="truncate text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400" title={zone.label}>{zone.label}</div>
-                    {zone.setDesign && zone.setDesign.length > 0 && (
-                      <ul className="list-disc space-y-0.5 pl-4 marker:text-amber-400/60">
-                        {zone.setDesign.slice(0, 5).map((item, i) => (<li key={i} className="text-[10px] leading-snug text-zinc-300">{item}</li>))}
-                      </ul>
-                    )}
+  // ── Per-block-type content renderers (reuse of the old per-Section JSX). ──────
+
+  /** Cast columns + object study + palette. Each character is a HERO image with a
+   *  small thumbnail row of its remaining views beneath, so the cast reads like a
+   *  call sheet — one prominent portrait per actor, not an equal-size view grid. */
+  const renderCharacters = (): React.ReactNode => (
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      {subjects.length > 0 && (
+        <div className="grid min-h-0 flex-1 items-stretch gap-2" style={cols(Math.min(Math.max(subjects.length, 1), 5))}>
+          {subjects.map((member) => {
+            const views = subjectViews(member);
+            const notes = (member.notes ?? '').trim();
+            const tier = member.billing === 'lead' ? 'Lead' : member.billing === 'supporting' ? 'Support' : null;
+            // The first view is the hero (front turnaround); the rest become a thin
+            // thumbnail strip beneath it. With no views, show a single placeholder hero.
+            const hero = views[0];
+            const thumbs = views.slice(1, 5);
+            const tn = Math.min(Math.max(thumbs.length, 1), 4);
+            return (
+              <div key={member.characterId} className="flex h-full min-h-0 min-w-0 flex-col">
+                <div className="mb-1 flex shrink-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                  <span className="text-[12px] font-bold uppercase tracking-wider text-stone-900">{member.name}</span>
+                  {member.role && <span className="truncate text-[9px] uppercase tracking-wider text-amber-700">{member.role}</span>}
+                  {tier && <span className="rounded-sm bg-stone-200 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-stone-500">{tier}</span>}
+                </div>
+                <Cell
+                  src={hero?.imageUrl}
+                  alt={hero ? `${member.name} ${hero.label}` : 'generating'}
+                  caption={hero?.label}
+                  fill
+                />
+                {thumbs.length > 0 && (
+                  <div className="mt-0.5 grid shrink-0 gap-0.5" style={cols(tn)}>
+                    {thumbs.map((v, i) => (
+                      <Cell key={`${v.imageUrl}-${i}`} src={v.imageUrl} alt={`${member.name} ${v.label}`} caption={v.label} aspect="aspect-[3/4]" />
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          );
-        }
-        return (
-          <div className="flex h-full flex-col gap-2">
-            <div className="relative min-h-0 flex-1 overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-              {heroFallback ? (
-                <Image src={heroFallback} alt="Environment hero render" fill sizes="900px" unoptimized className="object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-zinc-600"><ImageOff className="h-8 w-8" /></div>
+                )}
+                <div className="mt-1 shrink-0"><IdentityStrip member={member} /></div>
+                {notes && <p className="mt-0.5 line-clamp-3 shrink-0 text-[10px] leading-snug text-stone-600">{notes}</p>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {objects.length > 0 && (
+        <div className="shrink-0">
+          <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-stone-500">Costume &amp; Prop Study</div>
+          {/* A thin band of SMALL captioned thumbnails — never a featured grid. The
+              row is left-aligned and the thumbs are width-capped so they stay small
+              regardless of count, so the props never compete with the cast above. */}
+          <div className="flex flex-wrap gap-1.5">
+            {objects.slice(0, 12).map((obj) => (
+              <div key={obj.id} className="w-16 shrink-0">
+                <Cell src={obj.referenceImageUrls[0]} alt={obj.name} caption={obj.name} aspect="aspect-square" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sharedChoices.colorPalette.length > 0 && (
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-stone-500">Palette</span>
+          <PaletteRow swatches={sharedChoices.colorPalette} />
+        </div>
+      )}
+    </div>
+  );
+
+  /** Environment hero(es) per zone + reference strip — heroes fill the cell. */
+  const renderEnvironment = (): React.ReactNode => {
+    const envCellCount = zones.length > 0 ? zones.length : 1;
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-1.5">
+        <div className="grid min-h-0 flex-1 items-stretch gap-1" style={cols(envCellCount)}>
+          {(zones.length > 0
+            ? zones.map((zone, zi) => ({ id: zone.id, label: zone.label, hero: zone.heroImageUrl ?? (zi === 0 ? heroFallback : undefined), setDesign: zone.setDesign }))
+            : [{ id: 'env', label: `EXT. — ${(sharedChoices.environmentFingerprint || 'Environment').slice(0, 60)}`, hero: heroFallback, setDesign: undefined as string[] | undefined }]
+          ).map((z) => (
+            <div key={z.id} className="flex h-full min-h-0 min-w-0 flex-col">
+              <Cell src={z.hero} alt={z.label} caption={z.label} fill />
+              {z.setDesign && z.setDesign.length > 0 && (
+                <ul className="mt-1 list-disc space-y-0.5 pl-4 marker:text-amber-600/60">
+                  {z.setDesign.slice(0, 4).map((item, i) => (<li key={i} className="line-clamp-1 text-[9px] leading-snug text-stone-600" title={item}>{item}</li>))}
+                </ul>
               )}
             </div>
-            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-              EXT. — {(sharedChoices.environmentFingerprint || 'Environment').slice(0, 90)}
-            </div>
-            {envImages.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {envImages.slice(0, 4).map((url, i) => (<RefImage key={`${url}-${i}`} src={url} alt={`Environment ${i + 1}`} className="h-12 w-20" />))}
-              </div>
-            )}
+          ))}
+        </div>
+        {envImages.length > 0 && (
+          <div className="grid shrink-0 gap-1" style={cols(Math.min(Math.max(envImages.length, 1), 8))}>
+            {envImages.slice(0, 8).map((url, i) => (<Cell key={`${url}-${i}`} src={url} alt={`Reference ${i + 1}`} aspect="aspect-video" />))}
           </div>
-        );
-      }
+        )}
+      </div>
+    );
+  };
 
-      case 'floorplan':
-        return (
-          <div className="mx-auto w-full max-w-[1180px]">
+  /** Read-only overhead camera map + establishing render. The map is a fully-visible
+   *  document view (no toolbar, fit-to-container); editing happens in the section
+   *  popup via the Edit button, so the document never mutates the plan inline. */
+  const renderFloorplan = (): React.ReactNode => (
+    <div className="grid h-full min-h-0 grid-cols-[3fr_2fr] gap-3">
+      <div data-no-pan className="flex h-full min-h-0 min-w-0 flex-col">
+        <div className="mb-1 shrink-0 text-[8px] font-bold uppercase tracking-[0.12em] text-stone-500">Overhead camera blocking</div>
+        <div className="min-h-0 flex-1 overflow-hidden rounded border border-stone-300 bg-white">
+          <BlockingZoom>
             <FloorPlanCanvas
               floorPlan={plan.floorPlan}
               shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
               cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
               objects={objects.map((o) => ({ id: o.id, name: o.name }))}
-              onChange={onFloorPlanChange}
+              readOnly
             />
+          </BlockingZoom>
+        </div>
+      </div>
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <div className="mb-1 shrink-0 text-[8px] font-bold uppercase tracking-[0.12em] text-stone-500">Establishing shot — how the scene reads</div>
+        <Cell src={establishingHero} alt="Establishing shot" fill />
+      </div>
+    </div>
+  );
+
+  /** The ordered storyboard strip — frames stretch to fill the cell height. */
+  const renderStoryboard = (): React.ReactNode => (
+    <div className="grid h-full min-h-0 gap-1" style={cols(Math.min(Math.max(orderedShots.length, 1), 6))}>
+      {orderedShots.map((shot, i) => (<StoryboardFrame key={shot.id} shot={shot} position={i} onEdit={() => onEdit(shot.id)} />))}
+    </div>
+  );
+
+  /** Lighting swatches + the lighting/atmosphere field column. */
+  const renderLighting = (): React.ReactNode => (
+    <div className="space-y-3">
+      {lightingSwatches.length > 0 && (
+        <div className="grid gap-1" style={cols(Math.min(Math.max(lightingSwatches.length, 1), 8))}>
+          {lightingSwatches.slice(0, 8).map((sw, i) => (
+            <Cell key={`${sw.imageUrl}-${i}`} src={sw.imageUrl} alt={sw.label} caption={sw.label} aspect="aspect-square" />
+          ))}
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-700">Lighting &amp; atmosphere</div>
+        <Field label="Base lighting" value={look.lighting} />
+        <Field label="Atmosphere" value={look.atmosphere} />
+        <Field label="Color temperature" value={tempValue} />
+        <Field label="Filters / grade" value={look.filters && look.filters.length > 0 ? look.filters.join(', ') : undefined} />
+      </div>
+    </div>
+  );
+
+  /** Camera + look/style field columns. */
+  const renderCinematography = (): React.ReactNode => (
+    <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+      {hasCamera && (
+        <div className="space-y-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-700">Camera &amp; lens</div>
+          <Field label="Camera body" value={look.camera} />
+          <Field label="Lens / focal" value={lensValue} />
+          <Field label="Framing" value={framingBits.length > 0 ? framingBits.join(' · ') : undefined} />
+          <Field label="Composition" value={look.composition} />
+          <Field label="Aspect ratio" value={look.aspectRatio} />
+        </div>
+      )}
+      {hasStyle && (
+        <div className="space-y-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-700">Look &amp; style</div>
+          <Field label="Art style" value={look.artStyle ?? sharedChoices.artStyle} />
+          <Field label="Movie look" value={look.movieLook} />
+          <Field label="Film stock" value={look.filmStock} />
+          <Field label="DP style" value={dpStyle} />
+        </div>
+      )}
+    </div>
+  );
+
+  /** Mood keyword tags + cinematography notes. */
+  const renderMood = (): React.ReactNode => (
+    <div className="space-y-1.5">
+      {hasMoodTags && (
+        <div className="flex flex-wrap gap-1">
+          {sharedChoices.moodKeywords.map((k) => (
+            <span key={k} className="rounded-sm border border-stone-300 bg-stone-50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-stone-700">{k}</span>
+          ))}
+        </div>
+      )}
+      {hasNotes && (
+        <ul className="list-disc space-y-0.5 pl-4 marker:text-amber-600/60">
+          {sharedChoices.cinematographyNotes.slice(0, 8).map((note, i) => (<li key={i} className="text-[11px] leading-snug text-stone-700">{note}</li>))}
+        </ul>
+      )}
+    </div>
+  );
+
+  /** Color palette swatches. */
+  const renderPalette = (): React.ReactNode => (
+    <PaletteRow swatches={sharedChoices.colorPalette} />
+  );
+
+  /** Character / continuity notes — the per-character identity + notes column. */
+  const renderNotes = (): React.ReactNode => (
+    <div className="space-y-2">
+      {subjects.map((member) => {
+        const notes = (member.notes ?? '').trim();
+        return (
+          <div key={member.characterId} className="min-w-0 border-b border-stone-200 pb-1.5 last:border-b-0">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-stone-900">{member.name}</div>
+            <IdentityStrip member={member} />
+            {notes && <p className="mt-0.5 text-[10px] leading-snug text-stone-600">{notes}</p>}
           </div>
         );
+      })}
+      {sharedChoices.cinematographyNotes.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-4 marker:text-amber-600/60">
+          {sharedChoices.cinematographyNotes.slice(0, 8).map((note, i) => (<li key={i} className="text-[11px] leading-snug text-stone-700">{note}</li>))}
+        </ul>
+      )}
+    </div>
+  );
 
+  /** The assembled opening-shot video prompt. */
+  const renderPrompt = (): React.ReactNode => (
+    <div>
+      <div className="mb-1 flex items-center gap-2">
+        <Clapperboard className="h-3.5 w-3.5 text-amber-700" />
+        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-500">Assembled video prompt — opening shot</span>
+      </div>
+      <p className="font-mono text-[11px] leading-relaxed text-stone-700">{videoPrompt || '—'}</p>
+    </div>
+  );
+
+  /**
+   * Render a block's content by type. Text-heavy blocks let their content scroll
+   * inside the cell; image/floorplan blocks fit the cell.
+   */
+  const renderBlock = (type: ShotPlanBlockType): React.ReactNode => {
+    switch (type) {
+      case 'characters':
+        return renderCharacters();
+      case 'environment':
+        return renderEnvironment();
+      case 'floorplan':
+        return renderFloorplan();
       case 'storyboard':
-        return orderedShots.length === 0 ? (
-          <p className="text-xs text-zinc-500">No shots yet.</p>
-        ) : (
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(orderedShots.length, 5)}, minmax(0, 1fr))` }}>
-            {orderedShots.map((shot, i) => (<DocStoryboardPanel key={shot.id} shot={shot} position={i} onEdit={() => onEdit(shot.id)} />))}
-          </div>
-        );
-
+        return renderStoryboard();
       case 'lighting':
-        return (
-          <div className="space-y-4">
-            {sharedChoices.lightingSwatches && sharedChoices.lightingSwatches.length > 0 && (
-              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}>
-                {sharedChoices.lightingSwatches.map((sw, i) => (
-                  <figure key={`${sw.imageUrl}-${i}`}>
-                    <div className="relative aspect-square w-full overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-                      <Image src={sw.imageUrl} alt={sw.label} fill sizes="160px" unoptimized className="object-cover" />
-                    </div>
-                    <figcaption className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-zinc-400" title={sw.label}>{sw.label}</figcaption>
-                  </figure>
-                ))}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Field label="Base lighting" value={look.lighting} />
-              <Field label="Atmosphere" value={look.atmosphere} />
-              <Field label="Color temperature" value={tempValue} />
-              <Field label="Filters / grade" value={look.filters && look.filters.length > 0 ? look.filters.join(', ') : undefined} />
-            </div>
-          </div>
-        );
-
+        return renderLighting();
       case 'cinematography':
-        return (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div className="space-y-2">
-              <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Camera &amp; lens</div>
-              <Field label="Camera body" value={look.camera} />
-              <Field label="Lens / focal" value={lensValue} />
-              <Field label="Framing" value={framingBits.length > 0 ? framingBits.join(' · ') : undefined} />
-              <Field label="Composition" value={look.composition} />
-              <Field label="Aspect ratio" value={look.aspectRatio} />
-            </div>
-            <div className="space-y-2">
-              <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Look &amp; style</div>
-              <Field label="Art style" value={look.artStyle ?? sharedChoices.artStyle} />
-              <Field label="Movie look" value={look.movieLook} />
-              <Field label="Film stock" value={look.filmStock} />
-              <Field label="DP style" value={dpStyle} />
-            </div>
-          </div>
-        );
-
+        return renderCinematography();
       case 'mood':
-        return (
-          <div className="space-y-3">
-            <div>
-              <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Mood</div>
-              <div className="flex flex-wrap gap-1.5">
-                {sharedChoices.moodKeywords.length > 0 ? (
-                  sharedChoices.moodKeywords.map((k) => (
-                    <span key={k} className="rounded-sm border border-zinc-600 bg-zinc-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-200">{k}</span>
-                  ))
-                ) : (
-                  <span className="text-xs text-zinc-500">—</span>
-                )}
-              </div>
-            </div>
-            {sharedChoices.cinematographyNotes.length > 0 && (
-              <div>
-                <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Cinematography notes</div>
-                <ul className="list-disc space-y-1 pl-4 marker:text-amber-400/60">
-                  {sharedChoices.cinematographyNotes.map((note, i) => (<li key={i} className="text-[11px] leading-snug text-zinc-200">{note}</li>))}
-                </ul>
-              </div>
-            )}
-          </div>
-        );
-
+        return renderMood();
       case 'palette':
-        return <PaletteRow swatches={sharedChoices.colorPalette} />;
-
+        return renderPalette();
       case 'notes':
-        return (
-          <ul className="space-y-2">
-            {subjects.map((m) => (
-              <li key={m.characterId}>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-50">{m.name}</span>
-                  {m.role && <span className="text-[9px] uppercase tracking-wider text-amber-400">{m.role}</span>}
-                </div>
-                <IdentityStrip member={m} />
-                {m.notes?.trim() && <p className="mt-0.5 text-[11px] leading-snug text-zinc-300">{m.notes}</p>}
-              </li>
-            ))}
-          </ul>
-        );
-
+        return renderNotes();
       case 'prompt':
-        return (
-          <div>
-            <div className="mb-1 flex items-center gap-2">
-              <Clapperboard className="h-3.5 w-3.5 text-amber-400" />
-              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-400">Assembled video prompt — opening shot</span>
-            </div>
-            <p className="font-mono text-[11px] leading-relaxed text-zinc-300">{videoPrompt || '—'}</p>
-          </div>
-        );
-
+        return renderPrompt();
       default:
         return null;
     }
   };
 
+  /** Text-heavy blocks scroll their content inside the cell rather than overflow it. */
+  const isScrollableBlock = (type: ShotPlanBlockType): boolean =>
+    type === 'cinematography' || type === 'mood' || type === 'notes' || type === 'prompt' || type === 'palette';
+
+  // ── Build the painted rows from the AI's layout (with empty-block/row drops). ─
+  // The AI designs the composition (which blocks, their order and arrangement);
+  // the guardrails below are usability FLOORS applied to every layout so the sheet
+  // is always editable and never wastes space — the parity floor, enforced.
+  const layout = plan.layout && plan.layout.rows.length > 0 ? plan.layout : DEFAULT_LAYOUT;
+  const hasCharactersBlock =
+    blockHasContent('characters') && layout.rows.some((r) => r.blocks.some((b) => b.type === 'characters'));
+  const baseRows: ShotPlanLayoutRow[] = layout.rows
+    .map((row) => ({
+      ...row,
+      // Character notes and the palette already render INSIDE the characters block.
+      // A standalone notes/palette block just duplicates them and lets a one-swatch
+      // "color arc" claim a whole cell — so when a cast block exists, drop the
+      // redundant standalones. Notes therefore always stay WITH the characters.
+      blocks: row.blocks.filter(
+        (b) => blockHasContent(b.type) && !(hasCharactersBlock && (b.type === 'notes' || b.type === 'palette')),
+      ),
+    }))
+    .filter((row) => row.blocks.length > 0);
+
+  // The blocking diagram is an interactive tool the operator edits — it must always
+  // render large enough to read and use. Floor its row height (~a third of the page)
+  // and make the diagram dominate its row's width.
+  const totalHeightWeight = baseRows.reduce((s, r) => s + r.heightWeight, 0) || 1;
+  const renderRows: ShotPlanLayoutRow[] = baseRows.map((row) => {
+    const floorIdx = row.blocks.findIndex((b) => b.type === 'floorplan');
+    if (floorIdx !== -1) {
+      const others = row.blocks.reduce((s, b, i) => (i === floorIdx ? s : s + b.widthWeight), 0);
+      const blocks = row.blocks.map((b, i) =>
+        i === floorIdx ? { ...b, widthWeight: Math.max(b.widthWeight, (others || 1) * 1.6) } : b,
+      );
+      return { ...row, blocks, heightWeight: Math.max(row.heightWeight, totalHeightWeight * 0.32) };
+    }
+    // The assembled prompt is a thin row, but it must still show ~2–3 lines (then
+    // scroll) — floor its height so it can't be squeezed to nothing by taller rows.
+    if (row.blocks.some((b) => b.type === 'prompt')) {
+      return { ...row, heightWeight: Math.max(row.heightWeight, totalHeightWeight * 0.08) };
+    }
+    return row;
+  });
+
   return (
-    <div className="flex w-[1920px] flex-col overflow-hidden rounded-2xl border border-zinc-600 bg-zinc-700 text-zinc-100 shadow-2xl">
+    <div className="flex w-[1920px] flex-col overflow-hidden rounded-xl border border-stone-300 bg-stone-100 text-stone-800 shadow-2xl">
       {/* Header chrome */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-zinc-600 bg-gradient-to-b from-zinc-800 to-zinc-700 px-6 py-3">
-        <span className="text-xs font-bold uppercase tracking-[0.25em] text-amber-400">Shot Doc</span>
-        <span className="text-[10px] uppercase tracking-wider text-zinc-400">{plan.title || 'Untitled production'}</span>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-stone-300 bg-gradient-to-b from-white to-stone-100 px-6 py-3">
+        <span className="text-xs font-bold uppercase tracking-[0.25em] text-amber-700">Shot Doc</span>
+        <span className="text-[10px] uppercase tracking-wider text-stone-500">{plan.title || 'Untitled production'}</span>
         <HeaderMeta label="Cuts" value={String(orderedShots.length)} />
         {sharedChoices.timePeriod?.trim() && <HeaderMeta label="Period" value={sharedChoices.timePeriod} />}
         {sharedChoices.genre?.trim() && <HeaderMeta label="Genre" value={sharedChoices.genre} />}
         <div className="min-w-[160px] flex-1">
-          <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">Environment</div>
-          <div className="line-clamp-1 text-[11px] text-zinc-200">{sharedChoices.environmentFingerprint || '—'}</div>
+          <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-stone-500">Environment</div>
+          <div className="line-clamp-1 text-[11px] text-stone-700">{sharedChoices.environmentFingerprint || '—'}</div>
         </div>
         <button
           type="button"
           onClick={() => onEditSection('shared')}
-          className="inline-flex items-center gap-1 rounded border border-zinc-600 px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-300 transition-colors hover:border-amber-400/60 hover:text-amber-400"
+          className="inline-flex items-center gap-1 rounded border border-stone-300 px-2 py-1 text-[10px] uppercase tracking-wider text-stone-600 transition-colors hover:border-amber-600/60 hover:text-amber-700"
           data-no-pan
         >
           <Pencil className="h-3 w-3" /> Edit
         </button>
       </div>
 
-      {/* Body — the AI's rows fill the canvas height by weight (no dead space). */}
-      <div className="flex flex-col">
-        {withFloorplanOwnRow(rows).map((row, ri) => (
-          <div
-            key={ri}
-            className="grid"
-            style={{ gridTemplateColumns: row.blocks.map((b) => `${b.widthWeight}fr`).join(' ') }}
-          >
-            {row.blocks.map((b, bi) => {
-              const section = sectionForBlock(b.type);
-              // The floor plan renders at its natural (big) size — it is never the
-              // scrollable one. Text-heavy blocks are capped and scroll, so they
-              // conserve space for the visual aids.
-              const isFloorplan = b.type === 'floorplan';
-              // Text-heavy blocks cap + scroll (space-savers); visual blocks fill their
-              // cell; the floor plan renders at natural size and is never the scrollbox.
-              const isText =
-                b.type === 'cinematography' || b.type === 'mood' || b.type === 'notes' || b.type === 'prompt' || b.type === 'palette';
-              return (
-                <div key={bi} className="flex min-h-0 min-w-0 flex-col border-b border-r border-zinc-600 px-5 py-3">
-                  <div className="mb-2 flex items-center gap-2">
-                    <h3 className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-200">{b.title ?? ''}</h3>
-                    {section && (
-                      <button
-                        type="button"
-                        onClick={() => onEditSection(section)}
-                        className="ml-auto inline-flex shrink-0 items-center gap-1 rounded border border-zinc-600 px-2 py-0.5 text-[9px] uppercase tracking-wider text-zinc-400 transition-colors hover:border-amber-400/60 hover:text-amber-400"
-                        data-no-pan
-                      >
-                        <Pencil className="h-2.5 w-2.5" /> Edit
-                      </button>
-                    )}
-                  </div>
-                  <div className={isFloorplan ? 'min-w-0' : isText ? 'min-h-0 max-h-[360px] flex-1 overflow-y-auto pr-1' : 'min-h-0 flex-1'}>
-                    {renderBlock(b.type)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── The document ────────────────────────────────────────────────────────────
-
-export function ShotPlanDocument(props: ShotPlanDocumentProps) {
-  const { plan, onEdit, onEditSection, onFloorPlanChange } = props;
-  // AI-composed page: the planner designed the layout → paint it. Fixed canvas,
-  // rows fill by weight, so there is never dead space.
-  if (plan.layout && plan.layout.rows.length > 0) {
-    return <ShotPlanLayoutCanvas {...props} />;
-  }
-  const { sharedChoices } = plan;
-  const look = sharedChoices.lookBible ?? {};
-  const orderedShots = [...plan.shots].sort((a, b) => a.index - b.index);
-  const objects = sharedChoices.objects ?? [];
-  const envImages = sharedChoices.environmentReferenceImageUrls ?? [];
-  const zones = sharedChoices.environmentZones ?? [];
-
-  // §1 — cast ordered: leads first, then supporting, then the rest (stable).
-  const billingRank = (m: ShotPlanCastMember): number =>
-    m.billing === 'lead' ? 0 : m.billing === 'supporting' ? 1 : 2;
-  const subjects = [...sharedChoices.cast]
-    .map((member, i) => ({ member, i }))
-    .sort((a, b) => billingRank(a.member) - billingRank(b.member) || a.i - b.i)
-    .map((entry) => entry.member);
-  const notesLabel = sharedChoices.adaptiveLabels?.characterNotes ?? 'Character notes';
-
-  // Dynamic column template for the multi-subject §1 grid (sanctioned inline style).
-  const subjectGridTemplate = subjects.map((s) => `${subjectWeight(s)}fr`).join(' ');
-
-  // The assembled "video prompt" — the composed prompt of the opening shot, the
-  // single best representation of how the doc reads to the engine.
-  const videoPrompt = orderedShots[0] ? composeShotGenerationPrompt(plan, orderedShots[0]) : '';
-
-  const lensValue = look.lensType ?? look.focalLength;
-  const dpStyle = look.videographerStyle ?? look.photographerStyle;
-  const tempValue = typeof look.temperature === 'number' ? `${look.temperature}K` : undefined;
-  const framingBits = [
-    look.shotType,
-    look.viewingDirection ? look.viewingDirection.replace(/-/g, ' ') : undefined,
-    look.subjectUnawareOfCamera ? 'candid (unaware of camera)' : undefined,
-  ]
-    .map((s) => s?.trim())
-    .filter((s): s is string => Boolean(s));
-
-  return (
-    <div className="w-[1920px] overflow-hidden rounded-2xl border border-zinc-600 bg-zinc-700 text-zinc-100 shadow-2xl">
-      {/* ══ SHARED CHOICES header bar ══ */}
-      <div className="border-b border-zinc-600 bg-gradient-to-b from-zinc-800 to-zinc-700 px-6 py-4">
-        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <span className="text-xs font-bold uppercase tracking-[0.25em] text-amber-400">Shot Doc</span>
-          <span className="text-[10px] uppercase tracking-wider text-zinc-400">{plan.title || 'Untitled production'}</span>
-          <button
-            type="button"
-            onClick={() => onEditSection('shared')}
-            className="ml-auto inline-flex items-center gap-1 rounded border border-zinc-600 px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-300 transition-colors hover:border-amber-400/60 hover:text-amber-400"
-            data-no-pan
-          >
-            <Pencil className="h-3 w-3" /> Edit
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-          <div>
-            <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">Cut count</div>
-            <div className="font-mono text-lg font-bold text-amber-400">{orderedShots.length}</div>
-          </div>
-          {sharedChoices.timePeriod?.trim() && (
-            <div>
-              <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">Time period</div>
-              <div className="text-xs text-zinc-100" title={sharedChoices.timePeriod}>{sharedChoices.timePeriod}</div>
-            </div>
-          )}
-          {sharedChoices.genre?.trim() && (
-            <div>
-              <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">Genre</div>
-              <div className="text-xs text-zinc-100" title={sharedChoices.genre}>{sharedChoices.genre}</div>
-            </div>
-          )}
-          <div>
-            <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">Color palette</div>
-            {sharedChoices.colorPalette.length > 0 ? (
-              <div className="flex items-end gap-1.5">
-                {sharedChoices.colorPalette.slice(0, 8).map((sw, i) => (
-                  <figure key={`${sw.hex}-${i}`} className="text-center">
-                    <span
-                      title={sw.name}
-                      className="block h-6 w-10 rounded-sm border border-zinc-600"
-                      style={{ backgroundColor: sw.hex }}
-                    />
-                    <figcaption className="mt-0.5 font-mono text-[7px] uppercase tracking-tight text-zinc-400">{sw.hex}</figcaption>
-                  </figure>
-                ))}
-              </div>
-            ) : (
-              <span className="text-xs text-zinc-500">—</span>
-            )}
-          </div>
-          <div className="min-w-[200px] flex-1">
-            <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-400">Environment fingerprint</div>
-            <div className="line-clamp-2 text-xs text-zinc-200">{sharedChoices.environmentFingerprint || '—'}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* ══ Top row: Section 1 (Character Reference) | Section 2 (Environment + Floor Plan) ══
-           Measured from OpenArt's sheet: Section 1 : Section 2 width = 766 : 916 ≈ 6 : 7. */}
-      <div className="grid grid-cols-[6fr_7fr]">
-        {/* SECTION 1 — CHARACTER REFERENCE (adaptive by subject count) */}
-        <section className="border-b border-r border-zinc-600 px-6 py-5">
-          <SectionLabel n={1} onEdit={() => onEditSection('characters')}>Character Reference</SectionLabel>
-          {subjects.length === 0 && objects.length === 0 ? (
-            <p className="text-xs text-zinc-500">No cast or objects yet.</p>
-          ) : (
-            <div className="flex flex-col gap-5">
-              {subjects.length <= 1 ? (
-                // ── SINGLE-SUBJECT: turnaround row across the top + Palette | notes below ──
-                <>
-                  <div className="space-y-5">
-                    {subjects.map((member) => {
-                      const views = subjectViews(member);
-                      return (
-                        <div key={member.characterId}>
-                          {views.length > 0 ? (
-                            <div className="flex flex-wrap items-start gap-2">
-                              {views.slice(0, 5).map((v, i) => {
-                                // Measured from OpenArt: full-body figures are tall (3:8);
-                                // the face / costume close-ups are wider featured frames (3:4).
-                                const featured = FEATURED_VIEW.test(v.label);
-                                return (
-                                  <figure key={`${v.imageUrl}-${i}`} className={featured ? 'w-40' : 'w-24'}>
-                                    <div className={`relative h-64 overflow-hidden rounded border border-zinc-600 bg-zinc-800 ${featured ? 'w-40' : 'w-24'}`}>
-                                      <Image src={v.imageUrl} alt={`${member.name} ${v.label}`} fill sizes={featured ? '160px' : '96px'} unoptimized className="object-cover" />
-                                    </div>
-                                    <figcaption className="mt-1 text-center text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-                                      {v.label}
-                                    </figcaption>
-                                  </figure>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <EmptyImage label="no refs" className="h-16 w-full" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Palette + descriptive character notes (bulleted, like a real call sheet) */}
-                  <div className="grid grid-cols-[auto_1fr] gap-6 border-t border-zinc-600 pt-4">
-                    <div>
-                      <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">Palette</div>
-                      <div className="w-28">
-                        <PaletteRow swatches={sharedChoices.colorPalette} />
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      {subjects.length === 1 && (
-                        <div className="mb-2">
-                          <IdentityStrip member={subjects[0]} />
-                        </div>
-                      )}
-                      <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">{notesLabel}</div>
-                      <ul className="list-disc space-y-1 pl-4 marker:text-amber-400/60">
-                        {subjects.flatMap((m) => {
-                          const sentences = (m.notes ?? '')
-                            .split(/(?<=[.!?])\s+/)
-                            .map((s) => s.trim())
-                            .filter(Boolean);
-                          if (sentences.length === 0) {
-                            return [
-                              <li key={m.characterId} className="text-[11px] leading-snug text-zinc-400">
-                                <span className="font-semibold text-zinc-50">{m.name}</span>
-                                {m.role ? ` — ${m.role}` : ''}
-                              </li>,
-                            ];
-                          }
-                          return sentences.map((s, i) => (
-                            <li key={`${m.characterId}-${i}`} className="text-[11px] leading-snug text-zinc-200">
-                              {s}
-                            </li>
-                          ));
-                        })}
-                      </ul>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                // ── MULTI-SUBJECT: N adaptive columns + full-width palette row ──
-                <>
-                  <div className="grid gap-5" style={{ gridTemplateColumns: subjectGridTemplate }}>
-                    {subjects.map((member) => (
-                      <SubjectColumn key={member.characterId} member={member} />
-                    ))}
-                  </div>
-                  <div className="border-t border-zinc-600 pt-4">
-                    <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">Palette</div>
-                    <PaletteRow swatches={sharedChoices.colorPalette} />
-                  </div>
-                </>
-              )}
-
-              {/* Objects / props — secondary, below the cast */}
-              {objects.length > 0 && (
-                <div className="space-y-3 border-t border-zinc-600 pt-4">
-                  <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">Key props</div>
-                  {objects.map((obj) => (
-                    <div key={obj.id}>
-                      <div className="mb-1.5 flex items-center gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-50">{obj.name}</span>
-                        <span className="text-[9px] uppercase tracking-wider text-zinc-400">
-                          {obj.subjectKind === 'creature' ? 'Creature' : 'Object'}
-                        </span>
-                      </div>
-                      {obj.referenceImageUrls.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {obj.referenceImageUrls.slice(0, 5).map((url, i) => (
-                            <RefImage key={`${url}-${i}`} src={url} alt={`${obj.name} reference ${i + 1}`} className="h-24 w-24" />
-                          ))}
-                        </div>
-                      ) : (
-                        <EmptyImage label="no refs" className="h-16 w-full" />
+      {/* ── LANDSCAPE LAYOUT BODY — a fixed 1920×1280 (3:2) sheet. The AI's rows
+           fill the height by `heightWeight`; each row's blocks fill the width by
+           `widthWeight`. The page is exactly the AI's composition, stretched. ── */}
+      {renderRows.length > 0 && (
+        <div
+          className="grid min-h-0"
+          style={{ height: '1280px', gridTemplateRows: renderRows.map((r) => `${r.heightWeight}fr`).join(' ') }}
+        >
+          {renderRows.map((row, ri) => (
+            <div
+              key={ri}
+              className="grid min-h-0 border-t border-stone-300 first:border-t-0"
+              style={{ gridTemplateColumns: row.blocks.map((b) => `${b.widthWeight}fr`).join(' ') }}
+            >
+              {row.blocks.map((block, bi) => {
+                const editSection = BLOCK_EDIT_SECTION[block.type];
+                const customTitle = block.title?.trim();
+                const heading = customTitle && customTitle.length > 0 ? customTitle : DEFAULT_BLOCK_TITLE[block.type];
+                return (
+                  <section
+                    key={`${block.type}-${bi}`}
+                    className="flex min-h-0 min-w-0 flex-col border-l border-stone-300 px-4 py-3 first:border-l-0"
+                  >
+                    <div className="mb-2 flex items-center gap-2">
+                      <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-700">{heading}</h3>
+                      {editSection && (
+                        <button
+                          type="button"
+                          onClick={() => onEditSection(editSection)}
+                          className="ml-auto inline-flex shrink-0 items-center gap-1 rounded border border-stone-300 px-2 py-0.5 text-[9px] uppercase tracking-wider text-stone-500 transition-colors hover:border-amber-600/60 hover:text-amber-700"
+                          data-no-pan
+                        >
+                          <Pencil className="h-2.5 w-2.5" /> Edit
+                        </button>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* SECTION 2 — ENVIRONMENT / SET DESIGN (adaptive by zone count) */}
-        <section className="border-b border-zinc-600 px-6 py-5">
-          <SectionLabel n={2} onEdit={() => onEditSection('environment')}>Environment / Set Design</SectionLabel>
-          {zones.length > 0 ? (
-            // ── MULTI-ZONE: a row of zone panels + the cross-zone route strip below ──
-            <div className="space-y-4">
-              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${zones.length}, minmax(0, 1fr))` }}>
-                {zones.map((zone) => (
-                  <div key={zone.id} className="space-y-2">
-                    {zone.heroImageUrl ? (
-                      <div className="relative aspect-video w-full overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-                        <Image src={zone.heroImageUrl} alt={`${zone.label} hero render`} fill sizes="600px" unoptimized className="object-cover" />
-                      </div>
-                    ) : (
-                      <EmptyImage label="zone hero" className="aspect-video w-full" />
-                    )}
-                    <div className="truncate text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400" title={zone.label}>
-                      {zone.label}
+                    <div
+                      className={`min-h-0 min-w-0 flex-1 overflow-hidden${
+                        isScrollableBlock(block.type) ? ' overflow-y-auto' : ''
+                      }`}
+                    >
+                      {renderBlock(block.type)}
                     </div>
-                    {zone.setDesign && zone.setDesign.length > 0 && (
-                      <ul className="list-disc space-y-0.5 pl-4 marker:text-amber-400/60">
-                        {zone.setDesign.map((item, i) => (
-                          <li key={i} className="text-[10px] leading-snug text-zinc-300">{item}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">Floor plan — top-down · cross-zone route · camera blocking</div>
-                <FloorPlanCanvas
-                  floorPlan={plan.floorPlan}
-                  shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
-                  cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
-                  objects={objects.map((o) => ({ id: o.id, name: o.name }))}
-                  onChange={onFloorPlanChange}
-                />
-              </div>
+                  </section>
+                );
+              })}
             </div>
-          ) : (
-            // ── SINGLE-ENVIRONMENT: hero + elevation strip on the left, floor plan on the right ──
-            // Measured from OpenArt: environment hero ≈ 469 of section-2's 916 width → ~50/50.
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-3">
-                {sharedChoices.environmentHeroImageUrl ? (
-                  <figure>
-                    <div className="relative aspect-video w-full overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-                      <Image src={sharedChoices.environmentHeroImageUrl} alt="Environment hero render" fill sizes="600px" unoptimized className="object-cover" />
-                    </div>
-                    <figcaption className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">
-                      EXT. — {(sharedChoices.environmentFingerprint || 'Environment').slice(0, 64)}
-                    </figcaption>
-                  </figure>
-                ) : (
-                  <EmptyImage label="environment hero" className="aspect-video w-full" />
-                )}
-                {envImages.length > 0 && (
-                  <figure>
-                    <div className="relative h-20 w-full overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-                      <Image src={envImages[0]} alt="Set elevation / reference" fill sizes="600px" unoptimized className="object-cover" />
-                    </div>
-                    <figcaption className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">Set elevation / reference</figcaption>
-                  </figure>
-                )}
-                {envImages.length > 1 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {envImages.slice(1, 4).map((url, i) => (
-                      <RefImage key={`${url}-${i}`} src={url} alt={`Environment ${i + 2}`} className="h-16 w-24" />
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-400">Floor plan — top-down · camera blocking</div>
-                <FloorPlanCanvas
-                  floorPlan={plan.floorPlan}
-                  shots={orderedShots.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
-                  cast={sharedChoices.cast.map((c) => ({ characterId: c.characterId, name: c.name }))}
-                  objects={objects.map((o) => ({ id: o.id, name: o.name }))}
-                  onChange={onFloorPlanChange}
-                />
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* ══ SECTION 3 — LIGHTING / MOOD / CINEMATOGRAPHY (richer than OpenArt — every captured field) ══ */}
-      <section className="border-b border-zinc-600 px-6 py-5">
-        <SectionLabel n={3} onEdit={() => onEditSection('lighting')}>Lighting · Mood · Cinematography</SectionLabel>
-        {sharedChoices.lightingSwatches && sharedChoices.lightingSwatches.length > 0 && (
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-            {sharedChoices.lightingSwatches.map((sw, i) => (
-              <figure key={`${sw.imageUrl}-${i}`}>
-                <div className="relative aspect-square w-full overflow-hidden rounded border border-zinc-600 bg-zinc-800">
-                  <Image src={sw.imageUrl} alt={sw.label} fill sizes="160px" unoptimized className="object-cover" />
-                </div>
-                <figcaption className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-zinc-400" title={sw.label}>
-                  {sw.label}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        )}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-          {/* Lighting & atmosphere */}
-          <div className="space-y-2">
-            <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Lighting &amp; atmosphere</div>
-            <Field label="Base lighting" value={look.lighting} />
-            <Field label="Atmosphere" value={look.atmosphere} />
-            <Field label="Color temperature" value={tempValue} />
-            <Field label="Filters / grade" value={look.filters && look.filters.length > 0 ? look.filters.join(', ') : undefined} />
-          </div>
-          {/* Camera & lens */}
-          <div className="space-y-2">
-            <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Camera &amp; lens</div>
-            <Field label="Camera body" value={look.camera} />
-            <Field label="Lens / focal" value={lensValue} />
-            <Field label="Framing" value={framingBits.length > 0 ? framingBits.join(' · ') : undefined} />
-            <Field label="Composition" value={look.composition} />
-            <Field label="Aspect ratio" value={look.aspectRatio} />
-          </div>
-          {/* Look & style */}
-          <div className="space-y-2">
-            <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Look &amp; style</div>
-            <Field label="Art style" value={look.artStyle ?? sharedChoices.artStyle} />
-            <Field label="Movie look" value={look.movieLook} />
-            <Field label="Film stock" value={look.filmStock} />
-            <Field label="DP style" value={dpStyle} />
-          </div>
-          {/* Mood + cinematography notes */}
-          <div className="space-y-3">
-            <div>
-              <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Mood</div>
-              <div className="flex flex-wrap gap-1.5">
-                {sharedChoices.moodKeywords.length > 0 ? (
-                  sharedChoices.moodKeywords.map((k) => (
-                    <span key={k} className="rounded-sm border border-zinc-600 bg-zinc-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-200">
-                      {k}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-zinc-500">—</span>
-                )}
-              </div>
-            </div>
-            {sharedChoices.cinematographyNotes.length > 0 && (
-              <div>
-                <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-amber-400">Cinematography notes</div>
-                <ul className="list-disc space-y-1 pl-4 marker:text-amber-400/60">
-                  {sharedChoices.cinematographyNotes.map((note, i) => (
-                    <li key={i} className="text-[11px] leading-snug text-zinc-200">{note}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+          ))}
         </div>
-      </section>
-
-      {/* ══ SECTION 4 — STORYBOARD (full-width strip, at the bottom) ══ */}
-      <section className="border-b border-zinc-600 px-6 py-5">
-        <SectionLabel n={4}>Storyboard</SectionLabel>
-        {orderedShots.length === 0 ? (
-          <p className="text-xs text-zinc-500">No shots yet.</p>
-        ) : (
-          <div className="grid grid-cols-5 gap-3">
-            {orderedShots.map((shot, i) => (
-              <DocStoryboardPanel key={shot.id} shot={shot} position={i} onEdit={() => onEdit(shot.id)} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ══ FOOTER — assembled video prompt ══ */}
-      <div className="bg-gradient-to-b from-zinc-700 to-zinc-800 px-6 py-4">
-        <div className="mb-1 flex items-center gap-2">
-          <Clapperboard className="h-3.5 w-3.5 text-amber-400" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-400">Video prompt — opening shot</span>
-        </div>
-        <p className="font-mono text-[11px] leading-relaxed text-zinc-300">{videoPrompt || '—'}</p>
-        <div className="mt-2 flex items-center gap-1 text-[10px] text-zinc-500">
-          <CameraIcon className="h-3 w-3" /> Click any shot, or “Edit”, to change the Shot Doc.
-        </div>
-      </div>
+      )}
     </div>
   );
 }
