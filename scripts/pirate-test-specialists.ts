@@ -1411,6 +1411,33 @@ const TESTS: TestCase[] = [
     },
   },
   {
+    // SCREENWRITER_DIRECTOR — specialist.ts exports a plain function (no execute()).
+    // generateScript loads its GM via getActiveSpecialistGMByIndustry, so the standard
+    // GM swap reaches it. userId 'pirate_test_user' yields empty cast/locations
+    // (read-only, no writes). Append-mode: the ScriptDocument schema has structural
+    // rules (per-shot-relative timing with endSec > startSec, scene.locationId must
+    // exist in locations[], speaking-shot framing) that live in the real GM — a full
+    // pirate replace strips them and the strict schema rejects the script, so keep the
+    // real GM and inject only the dialect.
+    specialistId: 'SCREENWRITER_DIRECTOR',
+    department: 'Content',
+    gmDocId: `sgm_screenwriter_director_${INDUSTRY_KEY}_v1`,
+    pirateMode: 'append',
+    llmOnlyRun: async (): Promise<string[]> => {
+      const { generateScript } = await import('../src/lib/agents/content/screenwriter/specialist');
+      const script = await generateScript({
+        brief:
+          'A 30-second product demo for SalesVelocity.ai: a narrator explains how AI agents qualify leads, run outreach, and draft proposals so reps only talk to hot prospects. Dark UI, blue accent, confident and modern.',
+        userId: 'pirate_test_user',
+        title: 'SalesVelocity Agent Swarm Demo',
+        platforms: ['youtube'],
+      });
+      const out: string[] = [];
+      collectStrings(script, out);
+      return out;
+    },
+  },
+  {
     // VIDEO_EDITOR_SPECIALIST — specialist.ts exports a plain function (no
     // execute() factory). findClippableMoments loads its GM via
     // getActiveSpecialistGMByIndustry, so the standard GM swap reaches it. We

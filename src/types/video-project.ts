@@ -23,6 +23,7 @@
 import { z } from 'zod';
 
 import { type ShotPlan, ShotPlanSchema } from '@/types/shot-plan';
+import { type ScriptDocument, ScriptDocumentSchema } from '@/types/video-script';
 
 /** Lifecycle of the whole project. */
 export type VideoProjectStatus =
@@ -51,6 +52,13 @@ export interface VideoProject {
   /** The original creative brief the project's docs were segmented from. */
   brief: string;
   /**
+   * The Stage-1 TIMED SCRIPT (Screenwriter/Director output) the project's Shot
+   * Docs are authored from. Optional + additive: legacy projects created before
+   * the front-door rewire have no script and are unaffected. When present it is
+   * the upstream source of truth — the Shot Doc agent consumes it to author `docs`.
+   */
+  script?: ScriptDocument;
+  /**
    * The ordered Shot Docs. Each is a full `ShotPlan`; each doc's own
    * `finalVideoUrl` (set by the P4 stitch) IS that doc's video. Order is the
    * play order in the final film.
@@ -78,6 +86,7 @@ export const VideoProjectSchema = z.object({
   id: z.string().trim().min(1).max(200),
   title: z.string().trim().max(300).default(''),
   brief: z.string().trim().max(20000).default(''),
+  script: ScriptDocumentSchema.optional(),
   docs: z.array(ShotPlanSchema).max(100).default([]),
   status: VideoProjectStatusSchema.default('planning'),
   finalVideoUrl: z.string().trim().url().optional(),
