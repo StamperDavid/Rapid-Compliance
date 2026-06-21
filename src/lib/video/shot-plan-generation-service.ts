@@ -54,6 +54,7 @@ import {
   type VideoGenerationStatus,
 } from '@/lib/video/providers';
 import { composeShotGenerationPrompt } from '@/lib/video/shot-plan-mapping';
+import { generateEnginePrompt } from '@/lib/agents/content/video-engine-prompt/specialist';
 import { applyShotPlanEdit, applyShotPlanEditDetailed } from '@/lib/video/shot-plan-edit';
 import type {
   ShotPlan,
@@ -173,16 +174,47 @@ function priorShot(plan: ShotPlan, shot: ShotPlanShot): ShotPlanShot | null {
 }
 
 /**
- * Build the prompt for a shot. Prefer the shot's explicit `assembledPrompt`
- * override; otherwise compose from the shot + the shared look-bible (reusing the
- * mapping module's composer so the prompt is consistent with the editor path).
+ * Build the engine prompt for a shot — the LAST MILE before the fal call.
+ *
+ * The full captured detail (the shot's `assembledPrompt` override, or the composed
+ * mapper output) is the INTENT. We hand that intent to the Video Engine Prompt
+ * Specialist (a real LLM agent, Brand DNA baked) which distills it into an
+ * engine-optimal, front-loaded prompt for the chosen engine. If the specialist
+ * fails for any reason, we fall back to the static composed prompt so generation
+ * never breaks.
  */
-function buildShotPrompt(plan: ShotPlan, shot: ShotPlanShot): string {
+async function buildShotPrompt(plan: ShotPlan, shot: ShotPlanShot): Promise<string> {
   const override = shot.assembledPrompt?.trim();
-  if (override) {
-    return override;
+  const baseIntent = override && override.length > 0 ? override : composeShotGenerationPrompt(plan, shot);
+
+  try {
+    const castRefs = resolveCastReferenceImageUrls(plan, shot);
+    const result = await generateEnginePrompt({
+      shotIntent: baseIntent,
+      hasCharacterReferences: castRefs.length > 0,
+      hasContinuationFrame: !isCutShot(plan, shot),
+      hasDialogue: Boolean(shot.dialogue?.trim()),
+      ...(plan.sharedChoices.lookBible?.aspectRatio
+        ? { aspectRatio: plan.sharedChoices.lookBible.aspectRatio }
+        : {}),
+      ...(typeof shot.durationSeconds === 'number' ? { durationSec: shot.durationSeconds } : {}),
+    });
+    logger.info('[shot-plan-gen] engine prompt specialist applied', {
+      file: FILE,
+      shotId: shot.id,
+      engine: result.engine,
+      generationType: result.generationType,
+      promptChars: result.prompt.length,
+    });
+    return result.prompt;
+  } catch (err) {
+    logger.warn('[shot-plan-gen] engine prompt specialist failed; using static composed prompt', {
+      file: FILE,
+      shotId: shot.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return baseIntent;
   }
-  return composeShotGenerationPrompt(plan, shot);
 }
 
 /**
@@ -361,7 +393,7 @@ export async function generateShot(
   const castRefs = resolveCastReferenceImageUrls(plan, shot);
   const objectRefs = resolveObjectReferenceImageUrls(plan, shot);
   const envRefs = environmentReferenceImageUrls(plan);
-  const basePrompt = buildShotPrompt(plan, shot);
+  const basePrompt = await buildShotPrompt(plan, shot);
 
   // Pre-flight: ffmpeg must be available before we spend money on a generation.
   await ensureFfmpeg();
@@ -710,7 +742,7 @@ export async function generateShotKeyframe(
 
   // ── Generate path: a fresh still from the prompt + cast identity refs ───────
   const castRefs = resolveCastReferenceImageUrls(plan, shot);
-  const basePrompt = buildShotPrompt(plan, shot);
+  const basePrompt = await buildShotPrompt(plan, shot);
   const workDir = await createWorkDir('shot-plan-keyframe');
 
   try {

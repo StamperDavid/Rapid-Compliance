@@ -87,13 +87,13 @@ import { AvatarPicker } from './AvatarPicker';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { ShotPlanDocument } from './ShotPlanDocument';
 import { ZoomPanViewport } from './ZoomPanViewport';
+import { RenderZeroDashboard } from './RenderZeroDashboard';
 import {
   applyShotPlanEdit,
   clearUpstreamChanged,
   type ShotPlanEdit,
 } from '@/lib/video/shot-plan-edit';
 import {
-  makeBlankShotPlan,
   makeBlankShot,
   castMemberFromProfile,
 } from '@/lib/video/shot-plan-blank';
@@ -2220,9 +2220,14 @@ export function ShotPlanSheet() {
     [authFetch, setShotPlan],
   );
 
+  // "Start blank / fill manually" opens the RenderZero dashboard (the deep
+  // cinematic form). Its "Create Shot Doc" then drafts the shot doc from the full
+  // filled-out detail. Manual mode persists until a shot plan exists.
+  const [manualMode, setManualMode] = useState(false);
+
   const handleStartBlank = useCallback(() => {
-    setShotPlan(makeBlankShotPlan());
-  }, [setShotPlan]);
+    setManualMode(true);
+  }, []);
 
   // ── Ask-AI submit ──
   const handleAskAiSubmit = useCallback(
@@ -2594,6 +2599,18 @@ export function ShotPlanSheet() {
 
   // ── Empty state ──
   if (!shotPlan) {
+    // Manual flow → the RenderZero dashboard. Its "Create Shot Doc" drafts the
+    // shot doc from the full filled-out cinematic detail (every field → the brief).
+    if (manualMode) {
+      return (
+        <RenderZeroDashboard
+          onCreateShotDoc={(brief) => { void handleGenerate(brief); }}
+          onBack={() => setManualMode(false)}
+          isCreating={isGenerating}
+          error={generateError}
+        />
+      );
+    }
     return (
       <EntryScreen
         onGenerate={(b) => { void handleGenerate(b); }}

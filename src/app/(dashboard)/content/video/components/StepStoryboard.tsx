@@ -29,6 +29,10 @@ export function StepStoryboard() {
   const authFetch = useAuthFetch();
   const projectId = useVideoPipelineStore((s) => s.projectId);
   const reset = useVideoPipelineStore((s) => s.reset);
+  // The "Shot Doc" header belongs ONLY to the actual shot doc. The entry screen
+  // and the RenderZero dashboard (scene-details) own their own headers, so this
+  // header is hidden until a shot plan exists.
+  const shotPlan = useVideoPipelineStore((s) => s.shotPlan);
 
   const [scrapArmed, setScrapArmed] = useState(false);
 
@@ -53,7 +57,8 @@ export function StepStoryboard() {
   // pb-28 keeps the footer clear of the floating Content Assistant launcher.
   return (
     <div className="space-y-6 pb-28">
-      {/* Header */}
+      {/* Header — only on the actual Shot Doc (not the entry / RenderZero pages). */}
+      {shotPlan && (
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
@@ -76,6 +81,7 @@ export function StepStoryboard() {
           {scrapArmed ? 'Click again to scrap' : 'Scrap video'}
         </Button>
       </div>
+      )}
 
       {/* The Shot Plan — the only creation surface. Owns generation + editor path. */}
       <ShotPlanSheet />
