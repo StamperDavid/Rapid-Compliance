@@ -22,13 +22,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   PageTitle,
   SectionTitle,
   SectionDescription,
   CardTitle,
-  Caption,
 } from '@/components/ui/typography';
 import {
   Film,
@@ -59,12 +57,6 @@ interface ProjectSummary {
 interface ListProjectsResponse {
   success: boolean;
   projects?: ProjectSummary[];
-  error?: string;
-}
-
-interface CreateProjectResponse {
-  success: boolean;
-  project?: { id: string; title: string };
   error?: string;
 }
 
@@ -219,12 +211,6 @@ export default function VideoProjectsPage(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // New-project form state.
-  const [brief, setBrief] = useState('');
-  const [title, setTitle] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-
   const loadProjects = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -250,40 +236,9 @@ export default function VideoProjectsPage(): React.JSX.Element {
     void loadProjects();
   }, [loadProjects]);
 
-  const handleCreate = useCallback(async () => {
-    const trimmedBrief = brief.trim();
-    if (!trimmedBrief) {
-      setCreateError('Please describe your video first so we know what to make.');
-      return;
-    }
-    setCreating(true);
-    setCreateError(null);
-    try {
-      const res = await authFetch('/api/video-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brief: trimmedBrief,
-          ...(title.trim() ? { title: title.trim() } : {}),
-        }),
-      });
-      const data = (await res.json()) as CreateProjectResponse;
-      if (!res.ok || !data.success || !data.project) {
-        throw new Error(
-          data.error ?? 'We could not start that project. Please try again.'
-        );
-      }
-      // Brief is now segmented into docs — go straight into the new project.
-      router.push(`/content/video/projects/${data.project.id}`);
-    } catch (err) {
-      setCreateError(
-        err instanceof Error
-          ? err.message
-          : 'We could not start that project. Please try again.'
-      );
-      setCreating(false);
-    }
-  }, [authFetch, brief, title, router]);
+  const handleStartNew = useCallback(() => {
+    router.push('/content/video/projects/new');
+  }, [router]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -315,75 +270,24 @@ export default function VideoProjectsPage(): React.JSX.Element {
       <div className="space-y-1">
         <PageTitle>Video projects</PageTitle>
         <SectionDescription>
-          A project turns one brief into several short docs, makes a video for each,
-          then stitches them into one finished film.
+          A project starts with a script. We write a full timed script from your brief,
+          you review and edit it, then we make a video for each scene.
         </SectionDescription>
       </div>
 
-      {/* New project */}
-      <section className="bg-card border border-border-strong rounded-2xl p-6 space-y-4">
+      {/* New project — routes to the script-first front door */}
+      <section className="bg-card border border-border-strong rounded-2xl p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <SectionTitle>Start a new project</SectionTitle>
           <SectionDescription>
-            Describe the video you want. We will break it into a few short docs you can
-            review and make one at a time.
+            Describe your video and we will write the full script — scenes, shots, and
+            dialogue — for you to review before anything is rendered.
           </SectionDescription>
         </div>
-
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Caption>Title (optional)</Caption>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Spring product launch"
-              disabled={creating}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Caption>What is this video about?</Caption>
-            <textarea
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-              placeholder="Tell us the story, the message, who it's for, and roughly how long it should be."
-              disabled={creating}
-              rows={5}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
-
-          {createError && (
-            <div className="flex items-start gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <span>{createError}</span>
-            </div>
-          )}
-
-          {creating && (
-            <div className="flex items-start gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm text-foreground">
-              <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden />
-              <span>
-                Breaking your brief into docs… this can take a minute. Please keep this
-                tab open.
-              </span>
-            </div>
-          )}
-
-          <Button onClick={() => void handleCreate()} disabled={creating || !brief.trim()}>
-            {creating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                Working…
-              </>
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" aria-hidden />
-                Create project
-              </>
-            )}
-          </Button>
-        </div>
+        <Button onClick={handleStartNew} size="lg" className="shrink-0">
+          <Plus className="mr-2 h-4 w-4" aria-hidden />
+          Write a script
+        </Button>
       </section>
 
       {/* Existing projects */}
