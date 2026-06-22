@@ -529,19 +529,6 @@ export function MediaFolderNav({ selection, onSelect, onFoldersChange }: MediaFo
         All media
       </button>
 
-      <button
-        type="button"
-        onClick={() => onSelect({ kind: 'unfiled' })}
-        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
-          selection.kind === 'unfiled'
-            ? 'bg-primary/10 text-primary'
-            : 'text-muted-foreground hover:bg-surface-elevated hover:text-foreground'
-        }`}
-      >
-        <Folder className="h-3.5 w-3.5 shrink-0" />
-        Unfiled
-      </button>
-
       {/* Divider */}
       {folders.length > 0 && (
         <div className="border-t border-border-light pt-1 mt-1" />

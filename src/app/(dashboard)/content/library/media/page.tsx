@@ -343,10 +343,12 @@ export default function MediaLibraryUnifiedPage() {
         const only = Array.from(categoryFilter)[0];
         params.set('category', only);
       }
-      // Folder scope: specific folder, unfiled only, or all (no param)
+      // Folder scope: a specific folder shows ITS assets; the top level shows only
+      // LOOSE (unfiled) media. Filed assets live exclusively in their folder — they
+      // never appear in the top-level view (owner's strict-containment model).
       if (folderSelection.kind === 'folder') {
         params.set('folderId', folderSelection.id);
-      } else if (folderSelection.kind === 'unfiled') {
+      } else {
         params.set('unfiledOnly', 'true');
       }
       params.set('limit', '500');
