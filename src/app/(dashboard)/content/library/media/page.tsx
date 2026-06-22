@@ -1337,13 +1337,29 @@ export default function MediaLibraryUnifiedPage() {
           </div>
 
           {/* Result summary */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <SectionTitle as="h2">
               {loading ? 'Loading...' : `${assets.length} asset${assets.length === 1 ? '' : 's'}`}
             </SectionTitle>
-            {errorMsg && (
-              <Caption className="text-destructive">{errorMsg}</Caption>
-            )}
+            <div className="flex items-center gap-3">
+              {errorMsg && <Caption className="text-destructive">{errorMsg}</Caption>}
+              {/* Select all in the CURRENT view → existing bulk bar handles delete etc. */}
+              {!loading && assets.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCheckedIds((prev) =>
+                      prev.size === assets.length
+                        ? new Set<string>()
+                        : new Set(assets.map((a) => a.id)),
+                    )
+                  }
+                >
+                  {checkedIds.size === assets.length ? 'Clear selection' : `Select all ${assets.length}`}
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Bulk action bar — the SAME full action set, applied to every
