@@ -2540,17 +2540,22 @@ function BulkMoveToFolderBar({
             className="flex-1 rounded-md border border-border-strong bg-card px-2 py-1.5 text-xs text-foreground"
             disabled={moving}
           >
-            <option value="">Unfiled (remove from folder)</option>
+            {/* Force an explicit choice — never default to "Unfiled" (that would
+                accidentally REMOVE images from their folder on a careless Move). */}
+            <option value="" disabled>
+              Choose a destination…
+            </option>
             {folders.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
               </option>
             ))}
+            <option value="__unfiled__">Unfiled (remove from folder)</option>
           </select>
           <Button
             size="sm"
-            disabled={moving}
-            onClick={() => onMove(selectedFolderId === '' ? null : selectedFolderId)}
+            disabled={moving || selectedFolderId === ''}
+            onClick={() => onMove(selectedFolderId === '__unfiled__' ? null : selectedFolderId)}
             className="h-8 px-3 text-xs"
           >
             {moving ? (
