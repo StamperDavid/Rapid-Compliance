@@ -158,6 +158,29 @@ duplicate-detection; `src/lib/crm/predictive-scoring.ts` (client-only consumer, 
   (multi-doc final stitch) are NOT done** despite being implied complete. generate-all is synchronous (no submit→poll).
 
 ## PROGRESS LOG — Vertical #1 (Video) cert in flight
+**Jun 21-22 2026 — NO-STITCH realignment + generation hardening + FIRST true E2E run (PROVEN).**
+- **Engine no longer stitches.** Owner-confirmed: each shot renders as its OWN clip and all clips
+  flow into the editor in play order; the operator stitches there (realigns with the original
+  "stitch in the editor" vision — the auto-stitch was the deviation). Per-doc generate route drops
+  `stitchShotPlan`; `docHasVideo` now = every shot has a clip (not a stitched `finalVideoUrl`);
+  `seedEditorFromProject` hands one clip per shot, in order; review page previews a scene's first
+  clip. `stitchShotPlan` itself kept (legacy path) but no longer called by the System B per-doc route.
+- **Generation hardened (surfaced by the live run).** `generateAllShots` retries a failed shot once,
+  then FLAGS it (`generated.status='failed'` + `error`) and CONTINUES — one bad shot no longer aborts
+  the whole video; continue shots chain from the most recent good frame (`priorChainFrame`), degrade
+  to a cut if none; persists after EVERY shot (partial progress survives). Fix: lighting-swatch label
+  exceeded the 200-char cap and crashed that still (clamped).
+- **Character library pollution FIXED.** Creating a character from library images now MOVES them
+  (`removeLibraryRecordsByUrls` in createAvatarProfile) — removes the regular-library records (scoped
+  to skip category 'character' so AI sheets are safe), mirroring the single-image move route. No more
+  manual cleanup.
+- **PROVEN:** `scripts/verify-video-e2e-no-stitch.ts` drove brief → System B project → 6 individual
+  clips → editor handoff on live fal, **fully green (6/6, no stitch, editor receives all clips in
+  order)**. Commits `ceb6bdf1` + `16dcc0a2` (dev), merged into rapid-dev, tsc/lint clean.
+- **STILL OPEN for the cert:** VP-C (script form — was falsely "done", never built) → VP-D (script→
+  Shot Doc handoff + entry fix + up-front saved-character picker) → VP-E (editor trim handles +
+  post-production) → VP-F (cleanup) → OpenArt/Arcads capability-map + gap-ledger + owner sign-off.
+
 **Jun 17 2026 — P4 (final multi-clip stitch) CLOSED + PROVEN.** The #1 gap vs every video
 competitor ("generate all" produced loose clips, never a deliverable video) is fixed:
 - `stitchShotPlan(plan, ctx)` in `shot-plan-generation-service.ts` — concatenates every generated
@@ -252,15 +275,17 @@ real-path verify script, no shortcuts named-or-hidden.**
   real Opus call → valid ScriptDocument (4 scenes/7 shots/30s, 1 location reused across beats,
   timed speaker lines + trim handles, on-brand). All prebuild guards green (tsc/lint/brand-dna/
   pirate-coverage/registry). Model: claude-opus-4.6 (top Opus the ModelName union exposes).
-- **VP-C — RenderZero form = editable face of the script: ✅ DONE + REVIEWED (Jun 20).** New
-  `src/app/(dashboard)/content/video/components/VideoScriptForm.tsx` (multi-scene editable face of
-  a ScriptDocument: video-level fields, reusable locations[], story-beat scenes w/ locationId
-  SELECT, shots reusing `CinematicControlsPanel`, timed lines w/ speaker SELECT, on-screen text,
-  SFX, trim handles; live derived runtime; AI-prefill via new `POST /api/content/video-script/
-  generate`; NO preview buttons; "Generate Shot Doc" stubbed for VP-D). `StepStoryboard` now opens
-  the form FIRST (entry bug fixed), Shot Doc reachable via stage toggle. StudioModePanel untouched.
-  tsc + lint green (re-run by Claude); design-system compliant. FOLLOW-UP: invented characters show
-  as raw ids (e.g. "new_1") in speaker dropdowns — carry invented-character display names later.
+- **VP-C — RenderZero form = editable face of the script: ❌ NOT DONE (was falsely marked done
+  Jun 20; corrected Jun 22).** `VideoScriptForm.tsx` was **never committed anywhere** (verified:
+  no commit on any branch, absent from dev + rapid-dev). The claimed entry-bug fix is also absent —
+  `StepStoryboard` still renders `<ShotPlanSheet/>` directly (jumps straight to the Shot Doc). STILL
+  TO BUILD: `src/app/(dashboard)/content/video/components/VideoScriptForm.tsx` (multi-scene editable
+  face of a ScriptDocument: video-level fields, reusable locations[], story-beat scenes w/ locationId
+  SELECT, shots reusing `CinematicControlsPanel`, timed lines w/ speaker SELECT, on-screen text, SFX,
+  trim handles; live derived runtime; AI-prefill via the existing `POST /api/content/video-script/
+  generate`). Fix `StepStoryboard` to OPEN THE FORM first. FOLD IN: the up-front "use a saved
+  character" picker (today's gap — the brief→build path can't bind a library character, so it always
+  invents; see Jun 21-22 log) + carry invented-character display names instead of raw ids ("new_1").
 - **VP-D — Handoff + entry fix:** "Generate Shot Doc" → Shot Doc agent (SHOT_PLAN_PLANNER) consumes
   the approved script → Shot Doc review. Re-wire the manual-creation entry to OPEN THE FORM (fix the
   bug where it jumps to the Shot Doc). AI-assisted path lands on the same prefilled form.
