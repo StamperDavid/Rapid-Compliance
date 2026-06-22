@@ -2806,9 +2806,11 @@ Full filter spec + supplementary monitor scripts in `memory/project_live_test_mo
 
 # 🟡 SPEC — SHOT-DOC LAYOUT VARIETY UPGRADE (Vertical #1 Video parity debt)
 
-**Status:** SPEC ONLY (not started). Owner is on the Jun 22 2026 STOPGAP ("Option A" — accept a
-consistent professional structure; content adaptation already works) and flagged the layout as
-NOT at OpenArt parity and needing this upgrade. See memory `project_shot_doc_layout_parity_debt`.
+**Status:** SPEC ONLY (not started). **Logged as GAP-TO-CLOSE on the Video cert ledger (owner
+decision Jun 22 2026)** — binding (Video cannot be certified until it's closed) but not the
+immediate next task. Owner is on the Jun 22 2026 STOPGAP ("Option A" — accept a consistent
+professional structure; content adaptation already works). See memory
+`project_shot_doc_layout_parity_debt`.
 
 ## Problem (proven, not assumed)
 The SHOT_PLAN_PLANNER GM authors a REAL `plan.layout` every time (it is a real LLM — an object-led
@@ -2877,3 +2879,67 @@ screen every shot doc looks like the same template. This does not meet the OpenA
   convergence failure mode (likely hybrid: retrieve layout-similar, then verbalized-sample N).
 - Real diversity gain of Verbalized Sampling on LAYOUT generation specifically.
 - Whether code/HTML framing increases DIVERSITY or only per-layout quality/alignment.
+
+---
+
+# 🟢 VIDEO PARITY CERTIFICATE — CAPABILITY MAP + GAP LEDGER (Jun 22 2026)
+
+Benchmark (owner-confirmed): **OpenArt Smart Shot** (the shot-doc / storyboard craft — our Shot Doc
+competes here directly) **+ Arcads** (delivered ad-style video — mostly orthogonal: a talking-head
+UGC-ad factory). Cert rubric points #2 (capability map) + #3 (functional parity ledger). Mapped by
+WHAT IT DOES FOR THE USER, not by label. Disposition: **Matched** (we have it, proven LIVE) ·
+**Matched-unproven** (real code, needs a real-path proof per cert point #5) · **Gap-to-close** ·
+**Declined** (their feature, deliberately not ours, with reason). Built from a code inventory + a
+benchmark research pass (both reviewed; editor status corrected from the VP-E audit — the live editor
+is `/content/video/editor` + `@/components/video-editor/*`, NOT the dead `EditorTimeline.tsx`).
+
+## A. vs OpenArt Smart Shot (Shot Doc is our competing surface)
+| OpenArt capability | Our equivalent | Disposition |
+|---|---|---|
+| One prompt → complete multi-cut video | brief → Screenwriter script → Shot Doc → per-shot clips → editor | **Matched** (LIVE end-to-end, proven `verify-video-e2e-no-stitch`) |
+| Editable Shot Plan production sheet shown before render | Shot Doc, fully editable, manual + **per-field "Ask AI"** | **Matched + BETTER** (per-field surgical AI edit) |
+| Per-shot breakdown: camera setup, shot type, mood/lighting | storyboard cards + look bible + lighting/mood blocks | **Matched + BETTER** (100+ cinematic presets) |
+| Per-shot regeneration without re-rolling the sequence | per-shot regenerate + keyframe preview + Ask-AI | **Matched** |
+| Character consistency across cuts | identity-locked reference images + last-frame chaining | **Matched-unproven** (re-anchoring needs a real cross-shot identity proof) |
+| Reusable saved characters | Character Library (own characters/clones) | **Matched** |
+| Reusable environments (Worlds) | Location Library + locked sets | **Matched** |
+| Reference-image conditioning (≤3 refs) | references on plan/shots (no hard 3 cap) | **Matched + BETTER** |
+| Auto camera moves (pan/push-in/orbit/dolly) | movement field + camera presets | **Matched** |
+| Mood & lighting direction per shot | mood keywords + lighting swatches + per-shot accents | **Matched** |
+| Export full video + export individual frames | editor export to library (LIVE) + per-shot keyframes/clips | **Matched** (full-frame still-download = minor Gap) |
+| 3–5 distinct cuts, 10–20s | N shots per doc (operator-controlled count) | **Matched** |
+| Models (GPT Image-2 + Seedance 2.0) | fal + Seedance (provider abstraction) | **Matched** (comparable stack) |
+| **Description-fitting VARIED storyboard layout** | AI authors `plan.layout` but converges to one structure | **Gap-to-close** (the layout spec above). NOTE: OpenArt makes NO public layout-variety claim — this is OUR self-imposed quality bar, not a strict OpenArt table-stake. |
+
+## B. vs Arcads (delivered UGC ad video — largely a DIFFERENT product)
+| Arcads capability | Our equivalent | Disposition |
+|---|---|---|
+| Script → realistic talking actor (tight lip-sync, gestures) | lip-sync pipeline (ElevenLabs voice + sync model) | **Gap-to-close** — this is our accepted WEAK LINK (lip-sync in wide framing unproven; owner reviewing model picks) |
+| Large stock AI-actor library (~300+, demographic filters) | Character Library = the user's OWN characters/clones, not a stock-actor catalog | **OWNER DECISION** (Declined-by-design vs Gap) — see below |
+| Batch / bulk variation engine (CSV: hooks×actors×CTAs, parallel) | none | **OWNER DECISION** (Gap vs Declined) |
+| 30+ language localization with re-synced lips | none | **Gap-to-close** (if pursuing UGC-ad parity) |
+| Speech-to-speech (clone your own delivery onto an actor) | none (we have TTS/cloned-voice, not S2S transfer) | **Gap** (lower priority) |
+| Vertical 9:16 + multi-platform aspect | aspect-ratio controls exist | **Matched-unproven** (per-shot aspect wiring incomplete) |
+| One-click captions / music / transitions / B-roll | editor: text overlays + transitions + effects (LIVE) | **Matched** |
+| Storyboard / multi-scene planning | full Shot Doc + multi-doc projects | **OUR EXTRA** (Arcads explicitly LACKS this) |
+
+## C. OUR PROTECTED EXTRAS ("and more" — never strip to match a competitor)
+Floor-plan **blocking diagram** (interactive, translates to camera-direction prompt language) ·
+**per-field Ask-AI** surgical revision · **deep cinematic controls** (100+ presets across shot/camera/
+lens/focal/lighting/look) · **timed script layer** (dialogue + SFX + on-screen text with per-line
+timing, before render) · **multi-doc projects** (brief → segmented shot docs → editor assembly) ·
+**continuity overlay** (per-shot character/costume/prop state) · **last-frame chaining** (continuity +
+identity re-anchor) · **save-for-later + scrap + visible autosave** · our own **in-app editor**.
+
+## D. OPEN GAPS SUMMARY (what blocks the Video cert)
+1. **Layout variety** — Gap-to-close (specced above).
+2. **Lip-sync quality** — accepted weak link; owner picking the Case-A model. Decide: close or formally decline-for-now.
+3. **Real-path PROOFS still owed** (cert point #5): cross-shot character-identity consistency; editor export end-to-end; per-shot aspect ratio; cost-estimate accuracy vs real fal pricing. (These are Matched-unproven → must convert to LIVE.)
+4. **Cert paperwork remaining:** the quality-vs-theirs grading per mapped capability (point #4), the named "one thing we beat them on" (point #7), and owner sign-off.
+
+## E. OWNER DECISIONS NEEDED (to finish the ledger)
+- **Arcads stock-actor library + batch-variation engine:** are these **Gaps-to-close** (we want to be a
+  UGC-ad factory too) or **Consciously-declined** (our model is the user's OWN characters/digital clones,
+  not a stock-actor catalog — a deliberate product difference)? This single call decides ~3 ledger rows.
+- **Lip-sync:** close now, or formally mark Consciously-declined-for-now (documented weak link) so Video
+  can certify without it?
