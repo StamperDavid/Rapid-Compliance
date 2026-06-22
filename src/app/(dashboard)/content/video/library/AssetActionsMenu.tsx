@@ -607,6 +607,8 @@ interface AssetActionsMenuProps {
   onLoadCharacters: () => void;
   projects: ProjectOption[];
   actions: AssetActions;
+  /** Hide the "Assign to project" action (e.g. the media library organizes by folders). */
+  hideProjectAction?: boolean;
   /** Arms the parent's two-step delete; the tile renders the confirm overlay. */
   onArmDelete: () => void;
 }
@@ -618,6 +620,7 @@ export function AssetActionsMenu({
   onLoadCharacters,
   projects,
   actions,
+  hideProjectAction = false,
   onArmDelete,
 }: AssetActionsMenuProps) {
   const [view, setView] = useState<SubView>('root');
@@ -733,15 +736,17 @@ export function AssetActionsMenu({
                   close();
                 }}
               />
-              <MenuItem
-                icon={FolderPlus}
-                label="Assign to project"
-                trailing={<ChevronRight className="h-3.5 w-3.5 opacity-50" />}
-                onClick={() => {
-                  setProjDialog(true);
-                  close();
-                }}
-              />
+              {!hideProjectAction && (
+                <MenuItem
+                  icon={FolderPlus}
+                  label="Assign to project"
+                  trailing={<ChevronRight className="h-3.5 w-3.5 opacity-50" />}
+                  onClick={() => {
+                    setProjDialog(true);
+                    close();
+                  }}
+                />
+              )}
               <MenuItem
                 icon={Layers}
                 label="Set category"
@@ -856,6 +861,8 @@ interface BulkActionsBarProps {
   /** Progress label, e.g. "Updating 3 of 8…". Null when idle. */
   progress: string | null;
   isArmedDelete: boolean;
+  /** Hide the "Project" bulk action (e.g. the media library organizes by folders). */
+  hideProjectAction?: boolean;
   onArmDelete: () => void;
   onCancelDelete: () => void;
   onClear: () => void;
@@ -871,6 +878,7 @@ export function BulkActionsBar({
   busy,
   progress,
   isArmedDelete,
+  hideProjectAction = false,
   onArmDelete,
   onCancelDelete,
   onClear,
@@ -951,16 +959,18 @@ export function BulkActionsBar({
           )}
         </MenuPopover>
 
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => setProjDialog(true)}
-          className="gap-1.5"
-        >
-          <FolderPlus className="h-4 w-4" />
-          Project
-        </Button>
+        {!hideProjectAction && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => setProjDialog(true)}
+            className="gap-1.5"
+          >
+            <FolderPlus className="h-4 w-4" />
+            Project
+          </Button>
+        )}
 
         <MenuPopover
           align="right"
