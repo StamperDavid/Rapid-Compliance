@@ -16,7 +16,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { getAsset, deleteAsset } from '@/lib/media/media-library-service';
+import { getAsset, deleteAsset, removeLibraryRecordsByUrls } from '@/lib/media/media-library-service';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -276,6 +276,26 @@ export async function createAvatarProfile(
     if (profileData.isDefault) {
       await unsetOtherDefaults(userId, profileId);
     }
+
+    // Move any regular-library images used for this character OUT of the general
+    // library — they now live with the character (prevents library pollution).
+    // Best-effort: a cleanup failure must not fail character creation.
+    await removeLibraryRecordsByUrls(
+      [
+        data.frontalImageUrl,
+        data.fullBodyImageUrl,
+        data.upperBodyImageUrl,
+        ...(data.additionalImageUrls ?? []),
+        ...(data.looks ?? []).flatMap((look) => look.imageUrls ?? []),
+      ].filter((u): u is string => typeof u === 'string' && u.length > 0),
+    ).catch((err: unknown) => {
+      logger.warn('Could not move some library images onto the character (continuing)', {
+        file: 'avatar-profile-service.ts',
+        profileId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return 0;
+    });
 
     logger.info('Avatar profile created', {
       profileId,
