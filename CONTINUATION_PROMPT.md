@@ -2801,3 +2801,79 @@ Full filter spec + supplementary monitor scripts in `memory/project_live_test_mo
 | Bug L | Content Manager registers BLOG_WRITER / PODCAST_SPECIALIST / MUSIC_PLANNER but never invokes them | Medium | Audit all managers for unreachable specialists |
 | `social_posts` composite indexes not deployed | `firestore.indexes.json` updated; needs `firebase deploy --only firestore:indexes` | Low | Code-level fix already shipped (queries no longer require composite); deploy is a perf optimization |
 | Apollo Technographic Scout | Tries to scrape topic strings as URLs | Low | Errors but doesn't halt |
+
+---
+
+# 🟡 SPEC — SHOT-DOC LAYOUT VARIETY UPGRADE (Vertical #1 Video parity debt)
+
+**Status:** SPEC ONLY (not started). Owner is on the Jun 22 2026 STOPGAP ("Option A" — accept a
+consistent professional structure; content adaptation already works) and flagged the layout as
+NOT at OpenArt parity and needing this upgrade. See memory `project_shot_doc_layout_parity_debt`.
+
+## Problem (proven, not assumed)
+The SHOT_PLAN_PLANNER GM authors a REAL `plan.layout` every time (it is a real LLM — an object-led
+brief correctly produced cast:0 + a watch-specific artStyle), but the layout STRUCTURE is essentially
+identical across briefs — same rows/blocks/order, only tiny widthWeight nudges (proven by
+`scripts/diag-shot-plan-layout.ts`: watch vs people docs differ only by characters w6 vs w7). On
+screen every shot doc looks like the same template. This does not meet the OpenArt Smart Shot bar.
+
+## Research conclusion (deep-research, 104 agents, ~22 sources, adversarially verified — Jun 22 2026)
+- **KEEP the structured planner + renderer. Do NOT switch to generating the sheet as an image.**
+  Every serious layout system in the literature (LayoutGPT [NeurIPS'23], LayoutNUWA [ICLR'24],
+  LayoutCoT [arXiv 2504.10829], MuLCO [CIKM'24], LaySPA [arXiv 2509.16891]) has an LLM author a
+  STRUCTURED/serialized layout that a renderer paints — none generate the sheet as an image. Our
+  architecture is the validated one.
+- **OpenArt's actual mechanism is UNDISCLOSED** — only its models are public (GPT Image-2 + Seedance
+  2.0). Do not assert they image-generate or structure the sheet; it is inference. Their Shot Plan is
+  an editable, component-itemized, preview-before-render production sheet (consistent with structured).
+- **The fixes for template-convergence are TRAINING-FREE and prompt/retrieval-level** (in priority):
+  1. **Layout-aware exemplar RETRIEVAL feeding DIVERSE in-context examples** (LayoutCoT). This is the
+     #1 move and is exactly the owner's instinct ("give it real examples, let it create its own").
+     Our planner ALREADY supports vision few-shot (`layoutExamples`) — it is DISABLED (`LAYOUT_EXAMPLES = []`
+     in `scripts/seed-shot-plan-planner-gm.js`). Re-enable it, driven by a curated diverse exemplar set,
+     ideally selected per-brief by subject-type / layout similarity.
+  2. **Verbalized Sampling** (arXiv 2510.01171, training-free): prompt the planner to emit a
+     DISTRIBUTION of N candidate layout structures in one call (not one), then pick/curate — breaks
+     single-mode convergence.
+  3. **Serialize layouts as code/HTML** (LayoutNUWA) instead of bare numeric weights — harnesses the
+     model's latent layout knowledge. Improves per-layout QUALITY; effect on diversity is unproven.
+- **REFUTED theories — do NOT build on these:** "structured/JSON output itself causes diversity
+  collapse" (refuted), "bare numeric weights / ignoring semantics is the CAUSE of our convergence"
+  (refuted), "temperature alone fixes it" (refuted). The Verbalized Sampling "1.6–2.1x diversity"
+  figure is from creative writing, NOT layouts — treat as unverified until we A/B it.
+
+## Implementation phases (our code)
+- **L0 — Loosen the renderer's homogenizing guardrails** (`ShotPlanDocument.tsx`): the renderer currently
+  forces the floorplan to its own tall row + 1.6× width, floors the prompt row, and drops standalone
+  notes/palette when a characters block exists. These FLATTEN whatever variety the AI authors. Reduce
+  them to true usability FLOORS so the AI's authored rows/weights actually render. (Without this, even a
+  varied `plan.layout` renders similar.)
+- **L1 — Build a curated DIVERSE exemplar library.** A set of real, structurally-different shot-doc
+  layouts (the 7 studied OpenArt sheets as TEXT/structure + our own best builds across subject types:
+  single-human, ensemble, object-led, world-led, hero+object). Each = {subjectType/tags, layout JSON,
+  optional rendered thumbnail}. Store under Storage/Firestore (the seed already references
+  `organizations/rapid-compliance-root/layout-examples/`). Licensing: use our own builds + studied
+  craft as text; do not bake copyrighted competitor images into the GM.
+- **L2 — Re-enable vision few-shot with per-brief retrieval.** Populate `layoutExamples` (planner already
+  consumes it). Start with subject-type-bucketed retrieval (classify the brief → human/object/world/
+  ensemble → feed 2–3 DIVERSE exemplars from that bucket); upgrade to layout-similarity retrieval later.
+- **L3 — Verbalized Sampling in the planner.** Have the planner emit N=3 candidate `plan.layout`
+  structures with a self-rated fit score; auto-pick the best, OR surface them for the operator to choose.
+- **L4 — (optional, quality) Code/HTML layout framing.** Evaluate emitting the layout as HTML in the
+  prompt exchange; gate on the A/B below — only keep if it measurably helps.
+- **Reseed** the SHOT_PLAN_PLANNER GM after any prompt change (Standing Rule #1 — Brand DNA via
+  `brand-dna-helper`; layout exemplars are CRAFT, not Brand DNA).
+
+## Verification (definition of done)
+- Extend `scripts/diag-shot-plan-layout.ts` into an A/B harness: build briefs across all subject types,
+  dump each `plan.layout`, compute a structural signature (row count + block-type sequence + weight
+  buckets), and assert (a) DISTINCT signatures across subject types and (b) within-type variation.
+- Visual review of the rendered sheets; owner sign-off that they look meaningfully different and good.
+- A/B each lever (retrieval on/off, VS on/off, code-framing on/off) — keep only what measurably moves
+  the structural-variety metric without hurting quality. Do not assume the research magnitudes.
+
+## Open questions to resolve via internal A/B (no source settled these)
+- Curated-diverse-static exemplars vs per-brief similarity-retrieved exemplars — which wins for OUR
+  convergence failure mode (likely hybrid: retrieve layout-similar, then verbalized-sample N).
+- Real diversity gain of Verbalized Sampling on LAYOUT generation specifically.
+- Whether code/HTML framing increases DIVERSITY or only per-layout quality/alignment.
