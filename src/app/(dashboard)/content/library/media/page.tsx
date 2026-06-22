@@ -301,8 +301,11 @@ export default function MediaLibraryUnifiedPage() {
   const disarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Folder navigation ───────────────────────────────────────────────────
+  // Default to UNFILED so the main view stays clean: an image that's been filed
+  // into a folder/project drops out of here and lives only in that folder. "All
+  // media" remains an explicit root for searching across everything at once.
   const [folderSelection, setFolderSelection] = useState<FolderSelection>({
-    kind: 'all',
+    kind: 'unfiled',
   });
   // Flat folder list — kept in page state so breadcrumb + move menus can use it
   const [allFolders, setAllFolders] = useState<MediaFolder[]>([]);
