@@ -137,6 +137,16 @@ function applyClientSideFilters(
   filters: MediaListFilters,
 ): UnifiedMediaAsset[] {
   let result = assets;
+  // Character images LIVE WITH their character in the Character Library — they must
+  // never appear in the general media library. Exclude category 'character' UNLESS
+  // the caller explicitly asked for character assets (by category or by characterId,
+  // e.g. the Character Library itself). This is the read-side of "characters own
+  // their images": every image generated for a character is tagged category
+  // 'character' + characterId, so it's tied to the character and kept out of here.
+  const wantsCharacters = filters.category === 'character' || Boolean(filters.characterId);
+  if (!wantsCharacters) {
+    result = result.filter((a) => a.category !== 'character');
+  }
   if (filters.tags && filters.tags.length > 0) {
     const wanted = new Set(filters.tags.map((t) => t.toLowerCase()));
     result = result.filter((a) =>
