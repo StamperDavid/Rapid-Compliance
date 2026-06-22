@@ -382,6 +382,10 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
           generatedScenes: project.generatedScenes,
           finalVideoUrl: project.finalVideoUrl,
           transitionType: project.transitionType,
+          // A loaded project is settled — never inherit a stale 'generating' state
+          // (which would leave the editor polling forever for a build that isn't running).
+          shotPlanBuildStatus: 'idle',
+          shotPlanBuildProgress: null,
         });
       },
 
