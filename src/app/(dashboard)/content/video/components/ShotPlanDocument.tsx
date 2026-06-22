@@ -26,7 +26,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Clapperboard, Link2, Scissors, Pencil, ImageOff, Maximize } from 'lucide-react';
+import { Clapperboard, Link2, Scissors, Pencil, ImageOff, Maximize, UserPlus, Check, Loader2 } from 'lucide-react';
 
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { composeShotGenerationPrompt } from '@/lib/video/shot-plan-mapping';
@@ -48,6 +48,14 @@ interface ShotPlanDocumentProps {
   onEdit: (shotId: string) => void;
   /** Open the editor for a whole section (section header / block click). */
   onEditSection: (section: ShotPlanSection) => void;
+  /**
+   * One-click "Add to Character Library" for a single cast member. Optional — when
+   * omitted (e.g. the read-only review render) no button is shown. Resolves with
+   * `{ ok }` (and `alreadySaved` when the character was already in the library).
+   */
+  onSaveCharacterToLibrary?: (
+    member: ShotPlanCastMember,
+  ) => Promise<{ ok: boolean; alreadySaved?: boolean; error?: string }>;
 }
 
 /** The labeled views to show for a subject (model sheet, or refs as a fallback). */
@@ -371,10 +379,25 @@ function BlockingZoom({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ShotPlanDocument({ plan, onEdit, onEditSection }: ShotPlanDocumentProps) {
+export function ShotPlanDocument({ plan, onEdit, onEditSection, onSaveCharacterToLibrary }: ShotPlanDocumentProps) {
   const { sharedChoices } = plan;
   const look = sharedChoices.lookBible ?? {};
   const orderedShots = [...plan.shots].sort((a, b) => a.index - b.index);
+
+  // Per-character "Add to Character Library" state, keyed by characterId.
+  const [libSave, setLibSave] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({});
+  const handleAddToCharacterLibrary = async (member: ShotPlanCastMember): Promise<void> => {
+    if (!onSaveCharacterToLibrary) {
+      return;
+    }
+    setLibSave((s) => ({ ...s, [member.characterId]: 'saving' }));
+    try {
+      const res = await onSaveCharacterToLibrary(member);
+      setLibSave((s) => ({ ...s, [member.characterId]: res.ok ? 'saved' : 'error' }));
+    } catch {
+      setLibSave((s) => ({ ...s, [member.characterId]: 'error' }));
+    }
+  };
   const objects = sharedChoices.objects ?? [];
   const envImages = sharedChoices.environmentReferenceImageUrls ?? [];
   const zones = sharedChoices.environmentZones ?? [];
@@ -495,6 +518,26 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection }: ShotPlanDocume
                 )}
                 <div className="mt-1 shrink-0"><IdentityStrip member={member} /></div>
                 {notes && <p className="mt-0.5 line-clamp-3 shrink-0 text-[10px] leading-snug text-stone-600">{notes}</p>}
+                {onSaveCharacterToLibrary && hero?.imageUrl && (
+                  <button
+                    type="button"
+                    data-no-pan
+                    onClick={() => void handleAddToCharacterLibrary(member)}
+                    disabled={libSave[member.characterId] === 'saving' || libSave[member.characterId] === 'saved'}
+                    title="Add this character to your Character Library — reuses the images already generated for this doc"
+                    className="mt-1 inline-flex shrink-0 items-center justify-center gap-1 rounded border border-stone-300 px-2 py-1 text-[9px] font-medium uppercase tracking-wider text-stone-600 transition-colors hover:border-amber-600/60 hover:text-amber-700 disabled:opacity-70"
+                  >
+                    {libSave[member.characterId] === 'saving' ? (
+                      <><Loader2 className="h-2.5 w-2.5 animate-spin" aria-hidden /> Saving…</>
+                    ) : libSave[member.characterId] === 'saved' ? (
+                      <><Check className="h-2.5 w-2.5 text-green-600" aria-hidden /> In your library</>
+                    ) : libSave[member.characterId] === 'error' ? (
+                      <><UserPlus className="h-2.5 w-2.5" aria-hidden /> Couldn&apos;t save — retry</>
+                    ) : (
+                      <><UserPlus className="h-2.5 w-2.5" aria-hidden /> Add to Character Library</>
+                    )}
+                  </button>
+                )}
               </div>
             );
           })}

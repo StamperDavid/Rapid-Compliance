@@ -3041,6 +3041,27 @@ export function ShotPlanSheet() {
           plan={shotPlan}
           onEdit={(id) => setDetailShotId((prev) => (prev === id ? null : id))}
           onEditSection={(section: ShotPlanSection) => setEditingSection(section)}
+          onSaveCharacterToLibrary={async (member) => {
+            try {
+              const res = await authFetch('/api/content/shot-plan/save-character', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ member }),
+              });
+              const data = (await res.json()) as {
+                success: boolean;
+                alreadySaved?: boolean;
+                error?: string;
+              };
+              return {
+                ok: res.ok && data.success,
+                alreadySaved: data.alreadySaved,
+                error: data.error,
+              };
+            } catch (e) {
+              return { ok: false, error: e instanceof Error ? e.message : 'Save failed' };
+            }
+          }}
         />
       </ZoomPanViewport>
 
