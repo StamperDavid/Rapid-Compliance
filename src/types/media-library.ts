@@ -107,6 +107,8 @@ export interface UnifiedMediaAsset {
   projectId?: string;
   /** Denormalized project title for display without a project lookup. */
   projectName?: string;
+  /** Library folder this asset is filed under (MediaFolder id). Absent = Unfiled. */
+  folderId?: string;
   /** ISO 8601. */
   createdAt: string;
   /** ISO 8601. */
@@ -147,6 +149,10 @@ export interface MediaListFilters {
   characterId?: string;
   /** Restrict to assets belonging to one video project. */
   projectId?: string;
+  /** Restrict to assets filed directly under this library folder. */
+  folderId?: string;
+  /** Restrict to assets NOT filed in any folder (the "Unfiled" root). */
+  unfiledOnly?: boolean;
   /** ISO 8601 inclusive lower bound on createdAt. */
   createdAfter?: string;
   /** ISO 8601 inclusive upper bound on createdAt. */
@@ -179,12 +185,49 @@ export interface MediaCreateInput {
   characterName?: string;
   projectId?: string;
   projectName?: string;
+  /** Library folder this asset is filed under (MediaFolder id). */
+  folderId?: string;
   brandDnaApplied?: boolean;
 }
 
 export type MediaUpdateInput = Partial<
   Omit<UnifiedMediaAsset, 'id' | 'createdAt' | 'createdBy'>
 >;
+
+// ============================================================================
+// Media folders — the library hierarchy (Brand ▸ Campaign ▸ Sub-campaign ▸ …).
+// Stored at organizations/{PLATFORM_ID}/mediaFolders/{id}. Nesting is via
+// `parentFolderId` (any depth); a null/absent parent is a top-level folder.
+// ============================================================================
+
+export interface MediaFolder {
+  id: string;
+  name: string;
+  /** Parent folder id; null/absent = a top-level (root) folder. */
+  parentFolderId?: string | null;
+  /** When this folder auto-represents a video project, the project id it mirrors. */
+  projectId?: string | null;
+  /** Firebase Auth uid of the creator. */
+  createdBy: string;
+  /** ISO 8601. */
+  createdAt: string;
+  /** ISO 8601. */
+  updatedAt: string;
+}
+
+export interface MediaFolderCreateInput {
+  name: string;
+  parentFolderId?: string | null;
+  /** Link this folder to a video project so generated assets auto-file into it. */
+  projectId?: string | null;
+  createdBy: string;
+}
+
+export interface MediaFolderUpdateInput {
+  name?: string;
+  /** Reparent the folder (move it under a different parent, or to root with null). */
+  parentFolderId?: string | null;
+}
 
 // ============================================================================
 // LEGACY shapes — kept for the existing /content/video/library page and the
