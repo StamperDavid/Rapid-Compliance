@@ -1828,12 +1828,17 @@ function inventedCharacterBasePrompt(plan: ShotPlan, member: ShotPlanCastMember)
     bits.push(`with ${member.accessories.join(', ')}`);
   }
   const notes = firstText(member.notes);
+  // The production's art style is the AUTHORITATIVE, FINAL instruction and is
+  // applied IDENTICALLY to every character — so the cast can't drift (one person
+  // photoreal, another Pixar/3D). Stated last so it dominates any stray style words
+  // that slipped into the casting notes.
   return (
     `Full-body character reference of ${subject}${bits.length > 0 ? `, ${bits.join(', ')}` : ''}.` +
     `${notes ? ` ${notes}` : ''} A single neutral standing full-body subject, head to toe, ` +
     `front-facing in a neutral A-pose, isolated on a seamless light-grey (#d9d9d9) photographic ` +
-    `studio background, even soft studio lighting, photorealistic, sharp focus, no props, no text. ` +
-    `${style}. Single character, full body visible.`
+    `studio background, even soft studio lighting, sharp focus, no props, no text. ` +
+    `Rendered in ${style} — use this EXACT same art style for EVERY character in this production; ` +
+    `do not render this one character in a different style. Single character, full body visible.`
   );
 }
 
@@ -1909,11 +1914,15 @@ async function renderCharacterView(
     // Kontext edit OFF THE SAME BASE: hard identity lock. The instruction names the
     // base subject as "the EXACT same person" so face/hair/wardrobe carry over while
     // only the camera angle changes — a real production turnaround, same backdrop.
+    // Render style is pinned to the PRODUCTION'S art style (same as the base + every
+    // other character) so a turnaround never drifts to a different look.
+    const sc = plan.sharedChoices;
+    const style = firstText(sc.lookBible?.artStyle, sc.artStyle) ?? 'photorealistic';
     const prompt =
       `Keep the EXACT same person from the reference image — identical face, hairstyle, and wardrobe — ` +
       `${viewDir}, ${framing}, full body, isolated on the same seamless light-grey (#d9d9d9) ` +
       `photographic studio background, even soft studio lighting, consistent identity, ` +
-      `photorealistic, sharp focus, no props, no text. Character turnaround model sheet.`;
+      `${style}, sharp focus, no props, no text. Character turnaround model sheet.`;
     logger.info('[shot-plan-gen] submitting character view (identity-locked off base)', { file: FILE, tenantId: ctx.tenantId, character: member.name, label });
     const result = await generateFromReferenceWithFal(prompt, ref, {});
     if (!result.url) {
