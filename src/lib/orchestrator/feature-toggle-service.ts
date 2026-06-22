@@ -120,7 +120,7 @@ export function buildNavigationStructure(): NavSection[] {
       id: 'content_factory',
       title: 'Content Factory',
       items: [
-        { id: 'video_studio', href: '/content/video', icon: '🎬', label: 'Video Studio', featureId: 'video_studio' },
+        { id: 'video_studio', href: '/content/video/projects', icon: '🎬', label: 'Video Studio', featureId: 'video_studio' },
         { id: 'social_media', href: '/social/campaigns', icon: '📱', label: 'Social Media', featureId: 'social_media' },
         { id: 'proposals', href: '/proposals/builder', icon: '📄', label: 'Proposals', featureId: 'proposals' },
         { id: 'battlecards', href: '/battlecards', icon: '🃏', label: 'Battlecards', featureId: 'battlecards' },
