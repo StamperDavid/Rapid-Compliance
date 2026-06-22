@@ -34,22 +34,57 @@ function gravityOffset(
 }
 
 /**
- * Load the logo bytes. Supports a remote URL (fetch) OR a local static asset path
- * like '/logo.png' (read from the app's public/ folder on disk) — the tenant's real
- * logo currently ships as a static asset rather than an uploaded URL.
+ * Make a logo's solid (near-black) BACKGROUND fully transparent. Many brand logos
+ * ship as a light/colored mark on a black rectangle; simply fading opacity then
+ * leaves a faded black box. This keys out near-black pixels (alpha→0) so the logo
+ * composites cleanly with NO background. Best-effort: returns the original buffer on
+ * any failure. NOTE: this also clears genuinely-black parts of the mark — acceptable
+ * because the brand logo is light-on-black; a logo with intentional black detail
+ * should be supplied as a real transparent PNG instead.
+ */
+async function makeBackgroundTransparent(buf: Buffer): Promise<Buffer> {
+  try {
+    const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width, height, channels } = info;
+    if (channels < 4) {
+      return buf;
+    }
+    const out = Buffer.from(data);
+    // Threshold catches the black field + most of its anti-aliased halo without
+    // eating typical colored/white logo pixels.
+    const THRESHOLD = 42;
+    for (let i = 0; i < out.length; i += channels) {
+      if (out[i] <= THRESHOLD && out[i + 1] <= THRESHOLD && out[i + 2] <= THRESHOLD) {
+        out[i + 3] = 0;
+      }
+    }
+    return await sharp(out, { raw: { width, height, channels } }).png().toBuffer();
+  } catch {
+    return buf;
+  }
+}
+
+/**
+ * Load the logo bytes and key out any near-black background so it composites with a
+ * fully transparent background. Supports a remote URL (fetch) OR a local static asset
+ * path like '/logo.png' (read from the app's public/ folder on disk) — the tenant's
+ * real logo currently ships as a static asset rather than an uploaded URL.
  */
 async function loadLogoBuffer(url: string): Promise<Buffer | null> {
   try {
+    let raw: Buffer;
     if (url.startsWith('/') && !url.startsWith('//')) {
       const fsMod = await import('node:fs/promises');
       const pathMod = await import('node:path');
-      return await fsMod.readFile(pathMod.join(process.cwd(), 'public', url));
+      raw = await fsMod.readFile(pathMod.join(process.cwd(), 'public', url));
+    } else {
+      const res = await fetch(url, { redirect: 'follow' });
+      if (!res.ok) {
+        return null;
+      }
+      raw = Buffer.from(await res.arrayBuffer());
     }
-    const res = await fetch(url, { redirect: 'follow' });
-    if (!res.ok) {
-      return null;
-    }
-    return Buffer.from(await res.arrayBuffer());
+    return await makeBackgroundTransparent(raw);
   } catch {
     return null;
   }

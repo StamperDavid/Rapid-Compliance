@@ -2101,12 +2101,15 @@ const OBJECT_VIEWS: { label: string; view: string }[] = [
 ];
 
 /**
- * A prop is a BRANDED SURFACE when its name or description names a surface that, in
- * the real world, carries the company's logo (a screen, packaging, merch, signage…).
- * For these props we (a) tell the generator to leave the surface clean/unbranded so it
- * does NOT invent a fake logo, then (b) composite the operator's REAL logo on top.
+ * A prop is a BRANDED SURFACE only when its name/description shows EXPLICIT brand
+ * intent — the company's OWN logo wall, packaging, merch, signage, or product. We do
+ * NOT slap the logo onto every generic screen / monitor / cup / laptop (that was
+ * over-eager and put the logo on random props); a plain monitor or coffee cup is left
+ * alone. Only an explicitly-branded surface gets (a) a clean/unbranded render then
+ * (b) the operator's REAL logo composited on top.
  */
-const BRANDED_SURFACE_REGEX = /dashboard|screen|display|monitor|branded|logo|app\b|tablet|laptop|mug|cup|bottle|merch|packaging|sign|banner/i;
+const BRANDED_SURFACE_REGEX =
+  /\b(branded|brand[- ]?logo|company[- ]?(logo|sign|signage|booth|banner|merch\w*|packaging|product)|our[- ]?(logo|brand|product|packaging|merch\w*|app|dashboard)|logo[- ]?wall|brand(ed)?[- ]?wall|step[- ]?and[- ]?repeat|packaging|merchandise|signage|storefront)\b/i;
 
 function isBrandedSurfaceProp(obj: { name: string; description?: string }): boolean {
   return BRANDED_SURFACE_REGEX.test(`${obj.name} ${obj.description ?? ''}`);
