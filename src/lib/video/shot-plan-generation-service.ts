@@ -1760,7 +1760,7 @@ const CHARACTER_VIEWS: { label: string; view: string; framing: string }[] = [
   {
     label: 'FRONT',
     view: 'front view, facing the camera directly',
-    framing: 'full body head-to-toe, neutral standing A-pose',
+    framing: 'full body head-to-toe, relaxed natural standing pose, arms at the sides',
   },
   {
     label: 'SIDE',
@@ -1784,6 +1784,33 @@ const CHARACTER_VIEWS: { label: string; view: string; framing: string }[] = [
   },
 ];
 
+/**
+ * The production's art style + how to FRAME it for an image model. Image models
+ * strongly associate "character model sheet / turnaround / A-pose / character
+ * reference" with 3D-animation production art, so a photoreal cast was rendering
+ * Pixar/CGI-looking even when the style word was "photorealistic". We counter that by
+ * (a) leading with the medium and (b) when the style is photographic, explicitly
+ * forbidding the 3D/illustrated look. Same style is applied to EVERY character so the
+ * cast never drifts (one photoreal, one Pixar).
+ */
+function characterStyleDirective(plan: ShotPlan): { lead: string; clause: string } {
+  const sc = plan.sharedChoices;
+  const style = firstText(sc.lookBible?.artStyle, sc.artStyle) ?? 'photorealistic';
+  const isPhoto = /photo|realis|live[\s-]?action|cinematic|documentary|\bfilm\b/i.test(style);
+  if (isPhoto) {
+    return {
+      lead: `A real photograph in ${style} style.`,
+      clause:
+        `This is a PHOTOGRAPH of a real human being — true-to-life skin texture, pores and fine detail. ` +
+        `It is NOT a 3D render, NOT CGI, NOT an illustration, NOT a cartoon, and NOT a Pixar/animated look.`,
+    };
+  }
+  return {
+    lead: `Rendered entirely in ${style}.`,
+    clause: `Use this EXACT same ${style} look for every character in this production — no other medium.`,
+  };
+}
+
 /** First non-empty (trimmed) value, or undefined. */
 function firstText(...values: Array<string | undefined>): string | undefined {
   for (const v of values) {
@@ -1801,8 +1828,7 @@ function firstText(...values: Array<string | undefined>): string | undefined {
  * notes — so the generated person matches the written profile.
  */
 function inventedCharacterBasePrompt(plan: ShotPlan, member: ShotPlanCastMember): string {
-  const sc = plan.sharedChoices;
-  const style = firstText(sc.lookBible?.artStyle, sc.artStyle) ?? 'photorealistic';
+  const { lead, clause } = characterStyleDirective(plan);
   const subject = firstText(member.name) ?? 'a character';
   const identity = [member.apparentAge, member.ethnicity, member.gender]
     .map((s) => s?.trim())
@@ -1833,12 +1859,11 @@ function inventedCharacterBasePrompt(plan: ShotPlan, member: ShotPlanCastMember)
   // photoreal, another Pixar/3D). Stated last so it dominates any stray style words
   // that slipped into the casting notes.
   return (
-    `Full-body character reference of ${subject}${bits.length > 0 ? `, ${bits.join(', ')}` : ''}.` +
-    `${notes ? ` ${notes}` : ''} A single neutral standing full-body subject, head to toe, ` +
-    `front-facing in a neutral A-pose, isolated on a seamless light-grey (#d9d9d9) photographic ` +
-    `studio background, even soft studio lighting, sharp focus, no props, no text. ` +
-    `Rendered in ${style} — use this EXACT same art style for EVERY character in this production; ` +
-    `do not render this one character in a different style. Single character, full body visible.`
+    `${lead} A full-length studio portrait of ${subject}${bits.length > 0 ? `, ${bits.join(', ')}` : ''}.` +
+    `${notes ? ` ${notes}` : ''} The subject stands naturally facing the camera, head to toe, ` +
+    `arms relaxed at the sides, on a seamless light-grey (#d9d9d9) studio backdrop, even soft ` +
+    `studio lighting, sharp focus, no props, no text. ${clause} Use this EXACT same art style for ` +
+    `EVERY character in this production. Single subject, full body visible.`
   );
 }
 
@@ -1916,13 +1941,12 @@ async function renderCharacterView(
     // only the camera angle changes — a real production turnaround, same backdrop.
     // Render style is pinned to the PRODUCTION'S art style (same as the base + every
     // other character) so a turnaround never drifts to a different look.
-    const sc = plan.sharedChoices;
-    const style = firstText(sc.lookBible?.artStyle, sc.artStyle) ?? 'photorealistic';
+    const { lead, clause } = characterStyleDirective(plan);
     const prompt =
       `Keep the EXACT same person from the reference image — identical face, hairstyle, and wardrobe — ` +
-      `${viewDir}, ${framing}, full body, isolated on the same seamless light-grey (#d9d9d9) ` +
-      `photographic studio background, even soft studio lighting, consistent identity, ` +
-      `${style}, sharp focus, no props, no text. Character turnaround model sheet.`;
+      `now shown ${viewDir}, ${framing}, full body, on the same seamless light-grey (#d9d9d9) ` +
+      `studio backdrop, even soft studio lighting, consistent identity. ${lead} ${clause} ` +
+      `Sharp focus, no props, no text.`;
     logger.info('[shot-plan-gen] submitting character view (identity-locked off base)', { file: FILE, tenantId: ctx.tenantId, character: member.name, label });
     const result = await generateFromReferenceWithFal(prompt, ref, {});
     if (!result.url) {
