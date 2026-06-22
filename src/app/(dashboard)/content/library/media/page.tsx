@@ -58,6 +58,7 @@ import {
   Wand2,
   ChevronRight,
   Folder,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   MEDIA_CATEGORIES,
@@ -262,13 +263,14 @@ export default function MediaLibraryUnifiedPage() {
   const [categoryFilter, setCategoryFilter] = useState<Set<MediaAssetCategory>>(
     new Set(),
   );
-  const [tagFilter, setTagFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState<MediaAssetSource | 'all'>(
     'all',
   );
-  const [createdAfter, setCreatedAfter] = useState('');
-  const [createdBefore, setCreatedBefore] = useState('');
   const [search, setSearch] = useState('');
+
+  // ── Filter popover ──────────────────────────────────────────────────────
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   // ── Selection / detail panel ────────────────────────────────────────────
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -332,25 +334,8 @@ export default function MediaLibraryUnifiedPage() {
       if (sourceFilter !== 'all') {
         params.set('source', sourceFilter);
       }
-      // Tag filter — comma-separated; ANY-match
-      const trimmedTags = tagFilter
-        .split(',')
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0);
-      if (trimmedTags.length > 0) {
-        params.set('tags', trimmedTags.join(','));
-      }
       if (search.trim()) {
         params.set('search', search.trim());
-      }
-      if (createdAfter) {
-        params.set('createdAfter', new Date(createdAfter).toISOString());
-      }
-      if (createdBefore) {
-        // Push to end-of-day so user-friendly "Apr 28" inclusive works.
-        const eod = new Date(createdBefore);
-        eod.setHours(23, 59, 59, 999);
-        params.set('createdBefore', eod.toISOString());
       }
       // Note: we send a single category at most (server takes one). For
       // multi-category we filter client-side after fetch.
@@ -400,10 +385,7 @@ export default function MediaLibraryUnifiedPage() {
     authFetch,
     typeFilter,
     sourceFilter,
-    tagFilter,
     search,
-    createdAfter,
-    createdBefore,
     categoryFilter,
     folderSelection,
   ]);
@@ -474,6 +456,20 @@ export default function MediaLibraryUnifiedPage() {
     };
   }, []);
 
+  // Close the filter popover when the user clicks outside of it.
+  useEffect(() => {
+    if (!filterOpen) {
+      return;
+    }
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [filterOpen]);
+
   // ========================================================================
   // Actions
   // ========================================================================
@@ -493,11 +489,7 @@ export default function MediaLibraryUnifiedPage() {
   const clearFilters = useCallback(() => {
     setTypeFilter('all');
     setCategoryFilter(new Set());
-    setTagFilter('');
     setSourceFilter('all');
-    setCreatedAfter('');
-    setCreatedBefore('');
-    setSearch('');
   }, []);
 
   const handleAddTag = useCallback(async () => {
@@ -1289,8 +1281,8 @@ export default function MediaLibraryUnifiedPage() {
         </div>
       </div>
 
-      {/* Layout: folder nav | filter sidebar | grid | detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-[180px_240px_1fr] gap-6">
+      {/* Layout: folder nav | grid | detail */}
+      <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-6">
         {/* ── Folder navigation ────────────────────────────────────────── */}
         <div className="space-y-3">
           <MediaFolderNav
@@ -1303,129 +1295,6 @@ export default function MediaLibraryUnifiedPage() {
           />
         </div>
 
-        {/* ── Filter sidebar ──────────────────────────────────────────── */}
-        <aside className="space-y-6">
-          {/* Type chips */}
-          <div className="bg-card border border-border-strong rounded-2xl p-4">
-            <CardTitle className="mb-3">Type</CardTitle>
-            <div className="flex flex-wrap gap-2">
-              {TYPE_FILTERS.map(({ value, label, icon: Icon }) => {
-                const active = typeFilter === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setTypeFilter(value)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      active
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border-strong bg-card hover:bg-surface-elevated text-muted-foreground'
-                    }`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Category multi-select */}
-          <div className="bg-card border border-border-strong rounded-2xl p-4">
-            <CardTitle className="mb-3">Category</CardTitle>
-            <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto">
-              {MEDIA_CATEGORIES.map((cat) => {
-                const active = categoryFilter.has(cat);
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => toggleCategory(cat)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                      active
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border-strong bg-card hover:bg-surface-elevated text-muted-foreground'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                );
-              })}
-            </div>
-            {categoryFilter.size > 0 && (
-              <Caption className="mt-2 block">
-                {categoryFilter.size} selected
-              </Caption>
-            )}
-          </div>
-
-          {/* Tag filter */}
-          <div className="bg-card border border-border-strong rounded-2xl p-4">
-            <CardTitle className="mb-3">Tags</CardTitle>
-            <Input
-              type="text"
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              placeholder="comma, separated"
-              className="text-xs"
-            />
-            <Caption className="mt-2 block">
-              Returns assets with ANY matching tag.
-            </Caption>
-          </div>
-
-          {/* Source filter */}
-          <div className="bg-card border border-border-strong rounded-2xl p-4">
-            <CardTitle className="mb-3">Source</CardTitle>
-            <div className="space-y-1.5">
-              {SOURCE_FILTERS.map(({ value, label }) => (
-                <label
-                  key={value}
-                  className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground"
-                >
-                  <input
-                    type="radio"
-                    name="source"
-                    checked={sourceFilter === value}
-                    onChange={() => setSourceFilter(value)}
-                    className="h-3 w-3"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Date range */}
-          <div className="bg-card border border-border-strong rounded-2xl p-4">
-            <CardTitle className="mb-3">Date range</CardTitle>
-            <div className="space-y-2">
-              <div>
-                <Caption className="block mb-1">From</Caption>
-                <Input
-                  type="date"
-                  value={createdAfter}
-                  onChange={(e) => setCreatedAfter(e.target.value)}
-                  className="text-xs"
-                />
-              </div>
-              <div>
-                <Caption className="block mb-1">To</Caption>
-                <Input
-                  type="date"
-                  value={createdBefore}
-                  onChange={(e) => setCreatedBefore(e.target.value)}
-                  className="text-xs"
-                />
-              </div>
-            </div>
-          </div>
-
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full">
-            Clear all filters
-          </Button>
-        </aside>
-
         {/* ── Main column (search + grid) ─────────────────────────────── */}
         <div className="space-y-4">
           {/* Breadcrumb */}
@@ -1435,16 +1304,133 @@ export default function MediaLibraryUnifiedPage() {
             onSelect={setFolderSelection}
           />
 
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, tag, or AI prompt..."
-              className="pl-9"
-            />
+          {/* Search bar + Filter button */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, tag, or AI prompt..."
+                className="pl-9"
+              />
+            </div>
+
+            {/* Filter popover trigger */}
+            <div ref={filterRef} className="relative">
+              {(() => {
+                const activeCount =
+                  (typeFilter !== 'all' ? 1 : 0) +
+                  categoryFilter.size +
+                  (sourceFilter !== 'all' ? 1 : 0);
+                return (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setFilterOpen((v) => !v)}
+                      className="gap-2 shrink-0"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      {activeCount > 0 ? `Filter · ${activeCount}` : 'Filter'}
+                    </Button>
+
+                    {filterOpen && (
+                      <div className="absolute right-0 z-20 mt-2 w-72 bg-card border border-border-strong rounded-xl shadow-lg p-4 space-y-5">
+                        {/* Type */}
+                        <div>
+                          <CardTitle className="mb-2">Type</CardTitle>
+                          <div className="flex flex-wrap gap-2">
+                            {TYPE_FILTERS.map(({ value, label, icon: Icon }) => {
+                              const active = typeFilter === value;
+                              return (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  onClick={() => setTypeFilter(value)}
+                                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                                    active
+                                      ? 'border-primary bg-primary text-primary-foreground'
+                                      : 'border-border-strong bg-card hover:bg-surface-elevated text-muted-foreground'
+                                  }`}
+                                >
+                                  <Icon className="h-3.5 w-3.5" />
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Category */}
+                        <div>
+                          <CardTitle className="mb-2">Category</CardTitle>
+                          <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+                            {MEDIA_CATEGORIES.map((cat) => {
+                              const active = categoryFilter.has(cat);
+                              return (
+                                <button
+                                  key={cat}
+                                  type="button"
+                                  onClick={() => toggleCategory(cat)}
+                                  className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                                    active
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-border-strong bg-card hover:bg-surface-elevated text-muted-foreground'
+                                  }`}
+                                >
+                                  {cat}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {categoryFilter.size > 0 && (
+                            <Caption className="mt-2 block">
+                              {categoryFilter.size} selected
+                            </Caption>
+                          )}
+                        </div>
+
+                        {/* Source */}
+                        <div>
+                          <CardTitle className="mb-2">Source</CardTitle>
+                          <div className="space-y-1.5">
+                            {SOURCE_FILTERS.map(({ value, label }) => (
+                              <label
+                                key={value}
+                                className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground"
+                              >
+                                <input
+                                  type="radio"
+                                  name="source"
+                                  checked={sourceFilter === value}
+                                  onChange={() => setSourceFilter(value)}
+                                  className="h-3 w-3"
+                                />
+                                {label}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Clear */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            clearFilters();
+                            setFilterOpen(false);
+                          }}
+                          className="w-full"
+                        >
+                          Clear all filters
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Result summary */}
