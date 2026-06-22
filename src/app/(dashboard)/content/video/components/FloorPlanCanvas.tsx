@@ -436,11 +436,13 @@ export function FloorPlanCanvas({
           ))}
         </g>
 
-        {/* Subject paths (dashed) */}
-        {plan.subjectPaths.map((sp) =>
+        {/* Subject paths (dashed). Keyed by array INDEX too — the same element can
+            have more than one path (a character moving across multiple scenes), so
+            elementId alone is not unique. */}
+        {plan.subjectPaths.map((sp, spi) =>
           sp.path.length >= 2 ? (
             <polyline
-              key={`sp-${sp.elementId}`}
+              key={`sp-${sp.elementId}-${spi}`}
               points={sp.path.map((p) => `${sx(p.x)},${sy(p.y)}`).join(' ')}
               fill="none"
               className="text-muted-foreground"
@@ -450,10 +452,10 @@ export function FloorPlanCanvas({
             />
           ) : null,
         )}
-        {plan.subjectPaths.map((sp) =>
+        {plan.subjectPaths.map((sp, spi) =>
           sp.path.map((p, i) => (
             <circle
-              key={`spdot-${sp.elementId}-${i}`}
+              key={`spdot-${sp.elementId}-${spi}-${i}`}
               cx={sx(p.x)}
               cy={sy(p.y)}
               r={3.5}

@@ -49,8 +49,15 @@ export default function VideoStudioPage() {
   // Auto-save: persists the project to Firestore (debounced) whenever it has
   // real content, so work is never lost and is always recallable.
   const { saveStatus } = useVideoProjectAutoSave();
+  // While a server-side shot-doc build runs the client autosave is paused (the
+  // server owns the doc), so saveStatus stays 'idle' — surface the build + the
+  // persisted state so the operator always sees where their work stands.
+  const shotPlan = useVideoPipelineStore((s) => s.shotPlan);
+  const shotPlanBuildStatus = useVideoPipelineStore((s) => s.shotPlanBuildStatus);
 
   const [showLoadModal, setShowLoadModal] = useState(false);
+  // Scrap-the-current-project (two-step) on the shot-doc screen itself.
+  const [confirmScrap, setConfirmScrap] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -176,6 +183,23 @@ export default function VideoStudioPage() {
   // fal / Seedance and hands off to the editor. There are no other wizard steps.
   const renderCurrentStep = () => <StepStoryboard />;
 
+  // What the save indicator shows. A server build pauses client autosave, so map
+  // through: building → saving → error → saved (explicit), and finally treat any
+  // persisted project (has an id + content) as "Saved" when otherwise idle.
+  const hasPersistableContent = Boolean(shotPlan) || Boolean(projectId);
+  const displayStatus: 'idle' | 'building' | 'saving' | 'saved' | 'error' =
+    shotPlanBuildStatus === 'generating'
+      ? 'building'
+      : saveStatus === 'saving'
+        ? 'saving'
+        : saveStatus === 'error'
+          ? 'error'
+          : saveStatus === 'saved'
+            ? 'saved'
+            : projectId && hasPersistableContent
+              ? 'saved'
+              : 'idle';
+
   return (
     <div className="bg-background">
       {/* ── Top Navigation ──────────────────────────────────────── */}
@@ -198,27 +222,36 @@ export default function VideoStudioPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Auto-save indicator — only shown once there's something to save */}
-            {saveStatus !== 'idle' && (
+            {/* Auto-save indicator — shows the build, the live save, and (when idle
+                with a persisted project) a steady "Saved" so the operator always
+                knows their shot doc is kept. */}
+            {displayStatus !== 'idle' && (
               <span
                 className={`flex items-center gap-1.5 text-xs mr-1 ${
-                  saveStatus === 'error' ? 'text-destructive' : 'text-muted-foreground'
+                  displayStatus === 'error' ? 'text-destructive' : 'text-muted-foreground'
                 }`}
                 aria-live="polite"
+                title="Your project auto-saves. Reopen it any time from Load Project."
               >
-                {saveStatus === 'saving' && (
+                {displayStatus === 'building' && (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Building &amp; saving…
+                  </>
+                )}
+                {displayStatus === 'saving' && (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     Saving…
                   </>
                 )}
-                {saveStatus === 'saved' && (
+                {displayStatus === 'saved' && (
                   <>
                     <Check className="w-3.5 h-3.5 text-green-400" />
                     Saved
                   </>
                 )}
-                {saveStatus === 'error' && (
+                {displayStatus === 'error' && (
                   <>
                     <CloudOff className="w-3.5 h-3.5" />
                     Save failed
@@ -263,6 +296,48 @@ export default function VideoStudioPage() {
               <FolderOpen className="w-4 h-4" />
               Load Project
             </Button>
+
+            {/* Scrap the CURRENT project (two-step). Deletes the saved doc, so it
+                also disappears from Load Project, and resets the editor. */}
+            {projectId && (
+              deletingProjectId === projectId ? (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Scrapping…
+                </span>
+              ) : confirmScrap ? (
+                <span className="flex items-center gap-1">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => { setConfirmScrap(false); void handleDeleteProject(projectId); }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Confirm scrap
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={() => setConfirmScrap(false)}
+                  >
+                    Cancel
+                  </Button>
+                </span>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 border-border-strong text-muted-foreground hover:text-destructive"
+                  onClick={() => setConfirmScrap(true)}
+                  title="Scrap this project — deletes it and removes it from Load Project"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Scrap
+                </Button>
+              )
+            )}
           </div>
         </div>
 
