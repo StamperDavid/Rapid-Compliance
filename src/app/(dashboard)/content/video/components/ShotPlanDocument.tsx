@@ -795,17 +795,22 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onSaveCharacterT
     .filter((row) => row.blocks.length > 0);
 
   // The blocking diagram is an interactive tool the operator edits — it must always
-  // render large enough to read and use. Floor its row height (~a third of the page)
-  // and make the diagram dominate its row's width.
+  // render large enough to read and use. These are READABILITY FLOORS, not a fixed
+  // shape: they guarantee the floorplan never becomes an unusable sliver, but they
+  // RESPECT the layout the AI authored. The old floors (1.6× width, 0.32 height) forced
+  // every floorplan to dominate the page, which made every shot doc look the same. The
+  // softer floors below (≥1/3 of its row's width, ≥18% of page height) keep it readable
+  // while letting an AI-authored small/shared floorplan stay small and a big one stay big
+  // — so layouts actually vary with the story.
   const totalHeightWeight = baseRows.reduce((s, r) => s + r.heightWeight, 0) || 1;
   const renderRows: ShotPlanLayoutRow[] = baseRows.map((row) => {
     const floorIdx = row.blocks.findIndex((b) => b.type === 'floorplan');
     if (floorIdx !== -1) {
       const others = row.blocks.reduce((s, b, i) => (i === floorIdx ? s : s + b.widthWeight), 0);
       const blocks = row.blocks.map((b, i) =>
-        i === floorIdx ? { ...b, widthWeight: Math.max(b.widthWeight, (others || 1) * 1.6) } : b,
+        i === floorIdx ? { ...b, widthWeight: Math.max(b.widthWeight, (others || 1) * 0.5) } : b,
       );
-      return { ...row, blocks, heightWeight: Math.max(row.heightWeight, totalHeightWeight * 0.32) };
+      return { ...row, blocks, heightWeight: Math.max(row.heightWeight, totalHeightWeight * 0.18) };
     }
     // The assembled prompt is a thin row, but it must still show ~2–3 lines (then
     // scroll) — floor its height so it can't be squeezed to nothing by taller rows.
