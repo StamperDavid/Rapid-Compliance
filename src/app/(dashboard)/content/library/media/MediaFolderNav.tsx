@@ -118,6 +118,7 @@ interface FolderRowProps {
   onSelect: (id: string) => void;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onNewSubfolder: (parentId: string) => void;
   renamingId: string | null;
   setRenamingId: (id: string | null) => void;
 }
@@ -129,6 +130,7 @@ function FolderRow({
   onSelect,
   onRename,
   onDelete,
+  onNewSubfolder,
   renamingId,
   setRenamingId,
 }: FolderRowProps) {
@@ -325,7 +327,19 @@ function FolderRow({
               <MoreHorizontal className="h-3.5 w-3.5" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-border-strong bg-card shadow-lg">
+              <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-border-strong bg-card shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setExpanded(true);
+                    onNewSubfolder(folder.id);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-surface-elevated"
+                >
+                  <FolderPlus className="h-3.5 w-3.5" />
+                  New subfolder
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -367,6 +381,7 @@ function FolderRow({
               onSelect={onSelect}
               onRename={onRename}
               onDelete={onDelete}
+              onNewSubfolder={onNewSubfolder}
               renamingId={renamingId}
               setRenamingId={setRenamingId}
             />
@@ -436,8 +451,9 @@ export function MediaFolderNav({ selection, onSelect, onFoldersChange }: MediaFo
     if (!name) {
       return;
     }
-    const parentFolderId =
-      selection.kind === 'folder' ? selection.id : null;
+    // The bottom button always makes a TOP-LEVEL folder. To nest, use a folder's
+    // "New subfolder" menu item.
+    const parentFolderId = null;
     setSaving(true);
     try {
       const res = await authFetch('/api/media-folders', {
@@ -457,7 +473,34 @@ export function MediaFolderNav({ selection, onSelect, onFoldersChange }: MediaFo
     } finally {
       setSaving(false);
     }
-  }, [authFetch, fetchFolders, newFolderName, onSelect, selection]);
+  }, [authFetch, fetchFolders, newFolderName, onSelect]);
+
+  // Create a subfolder INSIDE a given folder (from the folder's "New subfolder" menu),
+  // then jump straight into naming it. The parent row expands itself on click so the
+  // new subfolder is visible immediately.
+  const handleCreateSubfolder = useCallback(
+    async (parentId: string) => {
+      setSaving(true);
+      try {
+        const res = await authFetch('/api/media-folders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'New folder', parentFolderId: parentId }),
+        });
+        const data = (await res.json()) as FolderApiSingleResponse;
+        if (!res.ok || !data.success) {
+          setError(data.error ?? 'Could not create subfolder');
+          return;
+        }
+        await fetchFolders();
+        onSelect({ kind: 'folder', id: data.folder.id });
+        setRenamingId(data.folder.id);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [authFetch, fetchFolders, onSelect],
+  );
 
   // ── Rename folder ────────────────────────────────────────────────────────
 
@@ -554,6 +597,7 @@ export function MediaFolderNav({ selection, onSelect, onFoldersChange }: MediaFo
             onSelect={(id) => onSelect({ kind: 'folder', id })}
             onRename={handleRename}
             onDelete={handleDelete}
+            onNewSubfolder={(parentId) => { void handleCreateSubfolder(parentId); }}
             renamingId={renamingId}
             setRenamingId={setRenamingId}
           />
