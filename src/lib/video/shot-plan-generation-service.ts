@@ -41,7 +41,7 @@ import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
 import { generateWithFal, generateFromReferenceWithFal } from '@/lib/ai/providers/fal-provider';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { createAsset } from '@/lib/media/media-library-service';
-import { createAvatarProfile, getAvatarProfile } from '@/lib/video/avatar-profile-service';
+import { createAvatarProfile, getAvatarProfile, updateAvatarProfile } from '@/lib/video/avatar-profile-service';
 import { getBrandKit } from '@/lib/video/brand-kit-service';
 import { compositeBrandLogoCentered } from '@/lib/video/logo-compositor';
 import type { BrandLogo } from '@/types/brand-kit';
@@ -1937,6 +1937,49 @@ async function renderCharacterView(
  * via `Promise.allSettled` so one failed view never loses the others, and the views
  * are emitted in the canonical CHARACTER_VIEWS order. Best-effort per view.
  */
+/**
+ * "Characters own their images": when a SAVED character (its `characterId` is an
+ * existing Character-Library profile) gets NEW images generated for a video, attach
+ * them to that profile's gallery so the character accumulates its looks over time.
+ * Best-effort + idempotent: deduped, drops the frontal, capped at 12, and a no-op for
+ * invented characters (no profile) or when nothing new was produced.
+ */
+async function attachGeneratedViewsToSavedProfile(
+  member: ShotPlanCastMember,
+  newUrls: string[],
+): Promise<void> {
+  const urls = newUrls.filter((u) => typeof u === 'string' && u.length > 0);
+  if (urls.length === 0) {
+    return;
+  }
+  const existing = await getAvatarProfile(member.characterId).catch(() => null);
+  if (!existing) {
+    return; // invented character — not a saved profile, nothing to attach to
+  }
+  const current = existing.additionalImageUrls ?? [];
+  const merged = Array.from(new Set([...current, ...urls]))
+    .filter((u) => u !== existing.frontalImageUrl)
+    .slice(0, 12);
+  // Skip the write when nothing actually changed.
+  if (merged.length === current.length && merged.every((u, i) => u === current[i])) {
+    return;
+  }
+  try {
+    await updateAvatarProfile(member.characterId, { additionalImageUrls: merged });
+    logger.info('[shot-plan-gen] attached new images to saved character profile', {
+      file: FILE,
+      character: member.name,
+      added: urls.length,
+    });
+  } catch (err) {
+    logger.warn('[shot-plan-gen] could not attach images to saved profile (continuing)', {
+      file: FILE,
+      character: member.name,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
 async function renderCastMemberSheet(
   plan: ShotPlan,
   member: ShotPlanCastMember,
@@ -1974,6 +2017,12 @@ async function renderCastMemberSheet(
   // Persist a generated base into referenceImageUrls (lead position) so video
   // generation anchors identity on it — for both the sheet-succeeded and
   // sheet-failed-but-base-made cases.
+  // If this is a SAVED character, attach the freshly-rendered views to its profile
+  // so the character accumulates its images (best-effort; no-op for invented cast).
+  if (sheet.length > 0) {
+    await attachGeneratedViewsToSavedProfile(member, sheet.map((s) => s.imageUrl));
+  }
+
   const refs = generatedBase ? [generatedBase, ...member.referenceImageUrls] : member.referenceImageUrls;
   if (sheet.length > 0) {
     return { ...member, referenceImageUrls: refs, modelSheet: sheet };
