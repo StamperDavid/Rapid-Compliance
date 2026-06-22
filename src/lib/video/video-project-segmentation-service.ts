@@ -33,6 +33,12 @@ import { createVideoProject } from '@/lib/video/video-project-service';
 import type { VideoProject } from '@/types/video-project';
 import type { ShotPlan } from '@/types/shot-plan';
 import type { IntentSubject } from '@/lib/content/content-intent';
+import {
+  type ScriptDocument,
+  type ScriptScene,
+  type VideoLocation,
+  deriveScriptTotalSeconds,
+} from '@/types/video-script';
 
 const FILE = 'video/video-project-segmentation-service.ts';
 
@@ -373,6 +379,248 @@ export async function generateProjectDocs(input: GenerateProjectDocsInput): Prom
   });
 
   logger.info('[video-project-segmentation] project created', {
+    file: FILE,
+    projectId: project.id,
+    docs: project.docs.length,
+    status: project.status,
+  });
+
+  return project;
+}
+
+// ============================================================================
+// PUBLIC: generateProjectDocsFromScript (VP-D handoff)
+// ============================================================================
+
+/**
+ * Input for the script → project handoff. The operator has already written +
+ * edited a timed `ScriptDocument` on the front-door form (VP-C); approving it
+ * builds the multi-document `VideoProject` from it (VP-D).
+ */
+export interface GenerateProjectDocsFromScriptInput {
+  /** The operator-approved (possibly edited) timed script — the source of truth. */
+  script: ScriptDocument;
+  /** Owner of the Character Library each doc casts from (threaded to the planner). */
+  userId: string;
+  /**
+   * Of the script's cast, the ids that are REAL saved Character-Library characters
+   * the operator picked UP FRONT. Only these are locked into a doc's
+   * `sharedChoices.cast` (per scene, for the characters actually present). Invented
+   * story characters carry descriptive ids and are NOT in this set, so the planner
+   * is free to author them. Empty / omitted → the planner invents everyone.
+   */
+  savedCharacterIds?: string[];
+  /**
+   * Optional id → display-name map (the form knows the names of the saved
+   * characters it offered). Used ONLY to make the per-scene brief readable; the
+   * real casting binding rides on `savedCharacterIds`.
+   */
+  characterNames?: Record<string, string>;
+}
+
+/** Render one reusable location as a plain-language line for a scene brief. */
+function describeLocation(loc: VideoLocation | undefined): string {
+  if (!loc) {
+    return '';
+  }
+  const parts = [
+    `Location: ${loc.name} (${loc.locationType}${loc.locale ? `, ${loc.locale}` : ''}).`,
+    loc.description ? `The set: ${loc.description}.` : '',
+    loc.environmentLook ? `Established look: ${loc.environmentLook}.` : '',
+  ];
+  return parts.filter((p) => p.length > 0).join(' ');
+}
+
+/**
+ * Assemble a SELF-CONTAINED, plain-language brief for ONE scene out of the
+ * structured script. The Shot Doc planner sees ONLY this string for the doc, so it
+ * restates the world, who is present, and every shot (action, movement, timed
+ * dialogue, on-screen text, SFX) — mirroring the contract `segmentBrief` produces,
+ * but DETERMINISTICALLY from the script (no second LLM segmentation call).
+ */
+function buildSceneBriefFromScript(
+  script: ScriptDocument,
+  scene: ScriptScene,
+  characterNames: Record<string, string>,
+): string {
+  const nameFor = (id: string): string => characterNames[id]?.trim() || id;
+
+  const loc = script.locations.find((l) => l.id === scene.locationId);
+  const lines: string[] = [];
+
+  lines.push(`This is one scene of a video titled "${script.title || 'Untitled video'}".`);
+  if (script.coreMessage) {
+    lines.push(`Overall message of the whole video: ${script.coreMessage}.`);
+  }
+  if (script.tone) {
+    lines.push(`Tone: ${script.tone}.`);
+  }
+  if (script.lookBible?.filmLook) {
+    lines.push(`Film look: ${script.lookBible.filmLook}.`);
+  }
+  if (script.lookBible?.palette?.length) {
+    lines.push(`Color palette: ${script.lookBible.palette.join(', ')}.`);
+  }
+
+  lines.push('');
+  lines.push(`SCENE PURPOSE: ${scene.purpose || 'advance the story'}.`);
+
+  const locDesc = describeLocation(loc);
+  if (locDesc) {
+    lines.push(locDesc);
+  }
+  const timeOfDay = scene.timeOfDay ?? loc?.defaultTimeOfDay;
+  const weather = scene.weather ?? loc?.defaultWeather;
+  if (timeOfDay) {
+    lines.push(`Time of day: ${timeOfDay}.`);
+  }
+  if (weather) {
+    lines.push(`Weather / light: ${weather}.`);
+  }
+  if (scene.sceneMood) {
+    lines.push(`Mood: ${scene.sceneMood}.`);
+  }
+  if (scene.ambience) {
+    lines.push(`Ambient sound: ${scene.ambience}.`);
+  }
+
+  if (scene.charactersPresent.length > 0) {
+    lines.push('');
+    lines.push('CHARACTERS PRESENT (keep them consistent):');
+    for (const c of scene.charactersPresent) {
+      const detail = [c.wardrobe ? `wearing ${c.wardrobe}` : '', c.state ?? '']
+        .filter((d) => d.length > 0)
+        .join('; ');
+      lines.push(`- ${nameFor(c.characterId)}${detail ? ` — ${detail}` : ''}`);
+    }
+  }
+
+  lines.push('');
+  lines.push('SHOTS (in order):');
+  const ordered = [...scene.shots].sort((a, b) => a.index - b.index);
+  ordered.forEach((shot, i) => {
+    const head = [`${i + 1}. ${shot.action || 'action beat'} (~${Math.round(shot.durationSec)}s).`];
+    if (shot.movement) {
+      head.push(`Camera: ${shot.movement}.`);
+    }
+    lines.push(head.join(' '));
+    for (const line of shot.lines) {
+      const who = line.speaker.kind === 'narrator' ? 'Narrator' : nameFor(line.speaker.characterId);
+      lines.push(`   ${who}: "${line.text}"${line.deliveryNote ? ` (${line.deliveryNote})` : ''}`);
+    }
+    for (const t of shot.onScreenText) {
+      lines.push(`   On-screen text: "${t.text}"`);
+    }
+    for (const s of shot.sfxCues) {
+      lines.push(`   Sound effect: ${s.description}`);
+    }
+  });
+
+  const isLastScene = scene.index >= script.scenes.length - 1;
+  if (script.callToAction && isLastScene) {
+    lines.push('');
+    lines.push(`Close the scene on this call to action: ${script.callToAction}.`);
+  }
+
+  return lines.join('\n');
+}
+
+/** A short, human doc title for a scene. */
+function deriveSceneDocTitle(scene: ScriptScene): string {
+  const purpose = scene.purpose.trim();
+  const tail = purpose.length > 0 ? `: ${purpose.slice(0, 60)}` : '';
+  return `Scene ${scene.index + 1}${tail}`;
+}
+
+/**
+ * Build a persisted multi-document `VideoProject` directly from an operator-approved
+ * timed `ScriptDocument` (VP-D). This is the script-first counterpart to
+ * `generateProjectDocs` (brief-first):
+ *
+ *   script  →  for EACH scene IN ORDER: assemble a self-contained scene brief
+ *           →  author a full Shot Doc with `generateShotPlan`
+ *              (locking the scene's PRESENT saved characters into its cast)
+ *           →  render that doc's STILLS only (no video)
+ *           →  persist + return via `createVideoProject` (status → 'review')
+ *
+ * The expensive segmentation LLM call is NOT needed here — the script already IS the
+ * segmentation (one scene = one doc), so each scene brief is assembled
+ * deterministically from the structured script. Video is generated PER DOC later, on
+ * the operator's command. LONG-RUNNING for the same reason as `generateProjectDocs`
+ * (one authoring LLM call + several still renders per scene, sequentially).
+ */
+export async function generateProjectDocsFromScript(
+  input: GenerateProjectDocsFromScriptInput,
+): Promise<VideoProject> {
+  const { script, userId } = input;
+  if (!userId.trim()) {
+    throw new Error('A user id is required to build the project.');
+  }
+  if (script.scenes.length === 0) {
+    throw new Error('This script has no scenes yet — add at least one scene before building the videos.');
+  }
+
+  const savedSet = new Set((input.savedCharacterIds ?? []).filter((id) => id.trim().length > 0));
+  const characterNames = input.characterNames ?? {};
+
+  logger.info('[video-project-segmentation] generateProjectDocsFromScript started', {
+    file: FILE,
+    userId,
+    scenes: script.scenes.length,
+    savedCharacters: savedSet.size,
+    totalSeconds: deriveScriptTotalSeconds(script),
+  });
+
+  const orderedScenes = [...script.scenes].sort((a, b) => a.index - b.index);
+  const docs: ShotPlan[] = [];
+
+  for (let i = 0; i < orderedScenes.length; i += 1) {
+    const scene = orderedScenes[i];
+
+    // Lock ONLY the saved characters actually PRESENT in this scene into its cast —
+    // invented story characters (not in the saved set) are left to the planner.
+    const sceneSavedIds = Array.from(
+      new Set(
+        scene.charactersPresent
+          .map((c) => c.characterId)
+          .filter((id) => savedSet.has(id)),
+      ),
+    );
+
+    const sceneBrief = buildSceneBriefFromScript(script, scene, characterNames);
+
+    logger.info('[video-project-segmentation] authoring doc from script scene', {
+      file: FILE,
+      index: i,
+      total: orderedScenes.length,
+      lockedSavedCharacters: sceneSavedIds.length,
+    });
+
+    const authored = await generateShotPlan({
+      brief: sceneBrief,
+      userId,
+      shotCount: clampShotCount(scene.shots.length || MIN_SHOTS_PER_DOC),
+      title: deriveSceneDocTitle(scene),
+      ...(sceneSavedIds.length > 0 ? { selectedCharacterIds: sceneSavedIds } : {}),
+    });
+
+    const rendered = await renderShotPlanAssets(authored, { tenantId: PLATFORM_ID });
+    docs.push(rendered);
+  }
+
+  const projectTitle =
+    script.title.trim().length > 0 ? script.title.trim() : deriveTitleFromBrief(script.objective || script.coreMessage);
+  // Keep a readable brief on the project for context (the script is the real source).
+  const projectBrief =
+    [script.objective, script.coreMessage].find((t) => t.trim().length > 0)?.trim() ?? projectTitle;
+
+  const project = await createVideoProject({
+    title: projectTitle,
+    brief: projectBrief,
+    docs,
+  });
+
+  logger.info('[video-project-segmentation] project created from script', {
     file: FILE,
     projectId: project.id,
     docs: project.docs.length,
