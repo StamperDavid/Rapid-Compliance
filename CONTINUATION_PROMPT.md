@@ -2915,8 +2915,8 @@ is `/content/video/editor` + `@/components/video-editor/*`, NOT the dead `Editor
 | Arcads capability | Our equivalent | Disposition |
 |---|---|---|
 | Script → realistic talking actor (tight lip-sync, gestures) | lip-sync pipeline (ElevenLabs voice + sync model) | **Gap-to-close** — this is our accepted WEAK LINK (lip-sync in wide framing unproven; owner reviewing model picks) |
-| Large stock AI-actor library (~300+, demographic filters) | Character Library = the user's OWN characters/clones, not a stock-actor catalog | **OWNER DECISION** (Declined-by-design vs Gap) — see below |
-| Batch / bulk variation engine (CSV: hooks×actors×CTAs, parallel) | none | **OWNER DECISION** (Gap vs Declined) |
+| Large stock AI-actor library (~300+, demographic filters) | Character Library (user's OWN characters) — seeded with a few STARTER characters + a **one-click "Add to Library" on every shot-doc character** (autofills the card + reuses the already-generated images) | **DECLINED-by-design + OUR approach** (Jun 22 2026 owner call): we do NOT copy a stock-actor catalog; instead every video grows the user's reusable cast from characters the system already generated. |
+| Batch / bulk variation engine (CSV: hooks×actors×CTAs, parallel) | none | **DECLINED** (Jun 22 2026): different product — we're cinematic multi-scene, not a UGC-ad-variation factory. |
 | 30+ language localization with re-synced lips | none | **Gap-to-close** (if pursuing UGC-ad parity) |
 | Speech-to-speech (clone your own delivery onto an actor) | none (we have TTS/cloned-voice, not S2S transfer) | **Gap** (lower priority) |
 | Vertical 9:16 + multi-platform aspect | aspect-ratio controls exist | **Matched-unproven** (per-shot aspect wiring incomplete) |
@@ -2937,9 +2937,15 @@ identity re-anchor) · **save-for-later + scrap + visible autosave** · our own 
 3. **Real-path PROOFS still owed** (cert point #5): cross-shot character-identity consistency; editor export end-to-end; per-shot aspect ratio; cost-estimate accuracy vs real fal pricing. (These are Matched-unproven → must convert to LIVE.)
 4. **Cert paperwork remaining:** the quality-vs-theirs grading per mapped capability (point #4), the named "one thing we beat them on" (point #7), and owner sign-off.
 
-## E. OWNER DECISIONS NEEDED (to finish the ledger)
-- **Arcads stock-actor library + batch-variation engine:** are these **Gaps-to-close** (we want to be a
-  UGC-ad factory too) or **Consciously-declined** (our model is the user's OWN characters/digital clones,
-  not a stock-actor catalog — a deliberate product difference)? This single call decides ~3 ledger rows.
-- **Lip-sync:** close now, or formally mark Consciously-declined-for-now (documented weak link) so Video
-  can certify without it?
+## E. OWNER DECISIONS — RESOLVED (Jun 22 2026)
+- **Arcads stock-actor library + batch engine → DECLINED-by-design.** We operate differently and won't
+  copy them. INSTEAD, build OUR approach (a gap-to-close on our Character-Library strength):
+  1. **One-click "Add to my Library" on every character the system generates for a shot doc** (e.g. the
+     BrightPath cast). Clicking it creates a saved Character-Library profile, AUTO-FILLING the card
+     (name, role, age/gender/ethnicity/build/hair/wardrobe/etc. from the cast member) and REUSING the
+     images already generated for the doc (hero + turnaround/model-sheet views) — no regeneration. There
+     is already a `saveToLibrary` opt-in flag + `createAvatarProfile` plumbing to build on; this makes it
+     an explicit per-character button on the shot doc, post-generation.
+  2. **Seed the Character Library with a few STARTER characters** so it's never empty for a new user.
+- **Lip-sync → DECLINED-FOR-NOW (documented weak link).** Video can certify without proven lip-sync;
+  revisit after the Case-A model pick. (Consistent with the existing accepted-weak-link treatment.)
