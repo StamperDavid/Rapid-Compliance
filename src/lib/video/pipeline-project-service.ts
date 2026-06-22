@@ -22,6 +22,7 @@ import type {
   TransitionType,
   VideoType,
 } from '@/types/video-pipeline';
+import type { ShotPlan } from '@/types/shot-plan';
 
 // ============================================================================
 // Firestore Document Shape
@@ -42,6 +43,9 @@ interface FirestorePipelineDoc {
   finalVideoUrl: string | null;
   transitionType: TransitionType;
   status: ProjectStatus;
+  // The authored Shot Doc (production sheet). WRITTEN by the build + autosave; it
+  // MUST also be read back here or a reloaded project loses its shot doc entirely.
+  shotPlan?: ShotPlan | null;
   createdAt: FirebaseFirestore.Timestamp | null;
   updatedAt: FirebaseFirestore.Timestamp | null;
   createdBy: string;
@@ -99,6 +103,7 @@ function docToProject(id: string, raw: FirebaseFirestore.DocumentData): Pipeline
     finalVideoUrl: data.finalVideoUrl ?? null,
     transitionType: data.transitionType ?? 'cut',
     status: data.status ?? 'draft',
+    shotPlan: data.shotPlan ?? undefined,
     createdAt: timestampToISO(data.createdAt),
     updatedAt: timestampToISO(data.updatedAt),
     createdBy: data.createdBy ?? '',
