@@ -340,6 +340,40 @@ export async function deleteAsset(id: string): Promise<boolean> {
 }
 
 /**
+ * "Move" regular-library images onto a character: remove the general-library
+ * records for these image URLs so they no longer pollute the media browse. The
+ * underlying Storage files are NOT touched — the character now references the same
+ * URLs (this mirrors the single-image `moveImageToCharacter` move, applied at
+ * character-creation time so library images don't get left behind as duplicates).
+ *
+ * SCOPED FOR SAFETY: records already in the character section (category
+ * 'character') are skipped, so AI-generated character sheets are never deleted.
+ * URLs with no matching library record are ignored. Returns the count removed.
+ */
+export async function removeLibraryRecordsByUrls(urls: string[]): Promise<number> {
+  const db = ensureAdminDb();
+  const unique = Array.from(
+    new Set(urls.filter((u): u is string => typeof u === 'string' && u.length > 0)),
+  );
+  let removed = 0;
+  for (const url of unique) {
+    const snap = await db.collection(COLLECTION).where('url', '==', url).get();
+    for (const doc of snap.docs) {
+      if (doc.get('category') === 'character') {
+        continue; // never delete the character section's own sheets
+      }
+      await doc.ref.delete();
+      removed += 1;
+      logger.info('Library image moved onto character (record removed)', {
+        file: FILE,
+        id: doc.id,
+      });
+    }
+  }
+  return removed;
+}
+
+/**
  * Replace the asset's tag list. Use this instead of `updateAsset({ tags })`
  * when the call site only cares about tags — keeps the audit log readable
  * and gives us a single hook point if tag normalization (lowercase / dedup)
