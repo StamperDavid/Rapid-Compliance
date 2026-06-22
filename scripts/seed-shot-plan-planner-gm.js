@@ -38,13 +38,51 @@ const GM_ID = `sgm_shot_plan_planner_${INDUSTRY_KEY}_v1`;
  *   { url: '<public image url>', note: '<one line: what content this sheet was for>' }
  * Empty until the operator's examples are added + this is reseeded (--force).
  */
-// Runtime image few-shot is intentionally OFF. The 7 OpenArt example sheets were studied
-// and their craft baked directly into SYSTEM_PROMPT below ("HOW THE PAGE ADAPTS TO THE
-// STORY") so the agent is a true expert, not a model spoon-fed reference images every run.
-// Re-populate this (and the planner already supports it) only as a fallback if text proves
-// insufficient. The uploaded examples remain parked in storage under
-// organizations/rapid-compliance-root/layout-examples/ for that fallback.
-const LAYOUT_EXAMPLES = [];
+// Runtime image few-shot is ON. Text-only baking ("HOW THE PAGE ADAPTS TO THE STORY"
+// below) was not enough — the planner kept converging on ONE layout shape regardless of
+// the brief. We now ALSO show the model six genuinely different real example sheets so it
+// has concrete visual targets that differ by subject (single lead / ensemble / creature /
+// object / environment-led). The planner sends these as actual images to the vision model
+// (see callOpenRouter in planner.ts). Regenerate the URLs with
+// `node scripts/upload-layout-examples.js` (re-uploads from the desktop source folder).
+const LAYOUT_EXAMPLES = [
+  {
+    url: 'https://firebasestorage.googleapis.com/v0/b/rapid-compliance-65f87.firebasestorage.app/o/organizations%2Frapid-compliance-root%2Flayout-examples%2FScreenshot_2026-06-19_144219.png?alt=media&token=397cf0c0-0747-4153-915b-f3c0252b6037',
+    note:
+      'Single human lead (noir detective): the cast section is ONE wide turnaround + character notes; ' +
+      'one location; the overhead alley FLOOR-PLAN camera-blocking is large and prominent in the environment band.',
+  },
+  {
+    url: 'https://firebasestorage.googleapis.com/v0/b/rapid-compliance-65f87.firebasestorage.app/o/organizations%2Frapid-compliance-root%2Flayout-examples%2FScreenshot_2026-06-19_144125.png?alt=media&token=9defc1cf-32f0-4e6e-b38b-a9840c1206b0',
+    note:
+      'Human-led SaaS/founder story (one lead + supporting cast): a wide PRIMARY-FOUNDER turnaround + a ' +
+      'consolidated supporting-cast block + a LARGE top-down floor-plan / camera-blocking map. Cast compact, blocking large.',
+  },
+  {
+    url: 'https://firebasestorage.googleapis.com/v0/b/rapid-compliance-65f87.firebasestorage.app/o/organizations%2Frapid-compliance-root%2Flayout-examples%2FScreenshot_2026-06-19_144155.png?alt=media&token=a6bde019-3331-4f54-84ca-d923c5233067',
+    note:
+      'Ensemble of three human leads + a tribe group: the cast section is THREE character columns + ONE ' +
+      'consolidated group block + costume/prop tiles. A multi-location journey = several environment zones + a wide left-to-right route/blocking strip.',
+  },
+  {
+    url: 'https://firebasestorage.googleapis.com/v0/b/rapid-compliance-65f87.firebasestorage.app/o/organizations%2Frapid-compliance-root%2Flayout-examples%2FScreenshot_2026-06-19_144404.png?alt=media&token=ea33b6ff-98f9-40e1-90d7-502519d7d9fb',
+    note:
+      'Creature/object lead, NO human cast: the reference section is a genetically-modified battle-bear ' +
+      'turnaround + a weaponized-drone model sheet, with threat/material notes instead of wardrobe; a large top-down chase-lane floor plan.',
+  },
+  {
+    url: 'https://firebasestorage.googleapis.com/v0/b/rapid-compliance-65f87.firebasestorage.app/o/organizations%2Frapid-compliance-root%2Flayout-examples%2FScreenshot_2026-06-19_144430.png?alt=media&token=37a3ae36-0c19-4abb-bd7e-887076414bc2',
+    note:
+      'Creature + weaponized object focus: a creature + object reference section, and an environment band ' +
+      'DOMINATED by a big top-down FLOOR PLAN — the blocking diagram can be the single largest element on the page.',
+  },
+  {
+    url: 'https://firebasestorage.googleapis.com/v0/b/rapid-compliance-65f87.firebasestorage.app/o/organizations%2Frapid-compliance-root%2Flayout-examples%2FScreenshot_2026-06-19_144516.png?alt=media&token=b43436c9-7de0-44dc-a2f4-891630a257d4',
+    note:
+      'Environment/world-led journey (fantasy biomes, a unicorn), NO human cast: the FIRST section is the ' +
+      'WORLD reference — six biome tiles — not a cast. When the story is about PLACES, the page leads with environment, then a big top-down floor plan + side elevation.',
+  },
+];
 
 const SYSTEM_PROMPT = `You are the Shot Plan Planner for SalesVelocity.ai — a FULL PRODUCTION TEAM in one mind. You are simultaneously the DIRECTOR, the CINEMATOGRAPHER, the PRODUCTION DESIGNER, the COSTUME DESIGNER, the HAIR & MAKEUP department, the PROPS MASTER, and the SCRIPT SUPERVISOR (continuity). You think in all of those departments at once and fill every department's detail. You turn a plain-language creative brief into ONE complete, production-ready Shot Plan: an OpenArt "Smart Shot"-style production sheet with a project-level look bible plus an ordered set of individually-editable shots.
 
@@ -97,7 +135,7 @@ Rules for composing the page:
 - SIZE TO FILL — never leave a row that would render mostly empty. A content-heavy block (the cast turnaround, the storyboard) gets MORE weight; a thin block (palette) gets a small slice or SHARES a row with other thin blocks (e.g. cinematography + lighting + mood across one row). Combine thin blocks into a shared row rather than giving each its own near-empty row. Aim for ~3–5 rows total.
 - Heights work the same way: a row of big visual blocks (characters/environment, storyboard) gets a larger heightWeight; a row of thin field blocks gets a smaller one. The weights together must make the canvas look intentionally full and balanced.
 - MATCH WEIGHT TO CONTENT so EVERY block's cell is FULL. The #1 thing that makes a sheet look bad is giving a block MORE height or width than its content fills, which leaves dead white space. A SHORT block — a 4-swatch palette, the one-line assembled prompt, a lone establishing image, a few look-bible fields — gets a SMALL heightWeight; only a genuinely content-rich block earns a tall row. If a block would render with white space below it, give that row LESS height OR pair the block with another in the same row so the row is full.
-- THE BLOCKING DIAGRAM (floorplan) IS A PRIMARY, LARGE element — it is one of the MOST important parts of a shot sheet, not an afterthought. Give it a BIG block: substantial widthWeight AND its own tall row (large heightWeight). Never make it a thin slice or a short row. The overhead camera-blocking map plus its establishing render must be large enough to read clearly.
+- THE BLOCKING DIAGRAM (floorplan) is an important element, never an afterthought — but SIZE IT TO THE STAGING. Rich staging (multiple locations, several characters moving, a chase/journey) earns a BIG block with its own tall row; a simple single-setup scene gets a readable medium block that can share a row with the environment. Always large enough to read the overhead camera-blocking map clearly; never reflexively the biggest thing on every page.
 - THE ESTABLISHING / ENVIRONMENT HEROES must be large enough to actually SEE the location — give the environment block real width and a tall row; never shrink the world to a sliver.
 - OPTIMIZE FOR BOTH VISUAL APPEAL AND INFORMATION DENSITY: the page must look like an expert designer balanced it — BIG where it matters (cast, environment, the blocking diagram, storyboard) and TIGHT where it is reference (palette, look-bible fields, prompt) — with NO dead white space anywhere on the sheet.
 
@@ -138,7 +176,7 @@ A great shot sheet shows DIFFERENT information, sized DIFFERENTLY, depending on 
   - A CREATURE or OBJECT lead (an animal, vehicle, robot, weapon) → there is NO human cast: the block is the creature/object MODEL SHEET (turnaround + detail views) put in sharedChoices.objects, and the notes describe MATERIAL / threat language, not wardrobe — label the notes column "Material language".
   - A HERO PLUS A SIGNATURE OBJECT / VEHICLE (a pilot and their ship, a driver and their car, an invader and their vessel) → Section 1 holds BOTH side by side: the character turnaround AND the object's model sheet (hull / cockpit / detail views) sharing the reference band, so neither crowds the other out.
   - AN ENVIRONMENT / WORLD-LED journey (the story is about PLACES — e.g. a tour through biomes or locations) with no human/creature lead → LEAD THE PAGE WITH THE WORLD: the first block is a row of environment / biome / location reference tiles, not a cast.
-- THE BLOCKING DIAGRAM (floorplan) IS A HEADLINE ELEMENT — give it a LARGE block (big width AND a tall row). It is frequently the single biggest item on the sheet: a top-down map with numbered cameras and movement routes. For a multi-location journey it can be a wide left-to-right route strip across the page.
+- THE BLOCKING DIAGRAM (floorplan) becomes a HEADLINE element WHEN THE STAGING IS RICH — for a multi-location journey or a multi-character chase it can be the single biggest item on the sheet (a top-down map with numbered cameras and movement routes, even a wide left-to-right route strip). For a simple single-setup scene it is a readable medium block, not the page's centerpiece. Match its size to how much staging there actually is.
 - THE ENVIRONMENT must be sized large enough to actually READ the locations; consolidate the world into a few strong zones, not one per shot.
 - THE STORYBOARD is a full-width strip of the ordered cuts with tight technical captions (shot type · move · lens), placed low on the page.
 - The LIGHTING / MOOD / STYLE notes (swatches + mood keywords + cinematography notes) form a bottom band; the PALETTE is a thin swatch row.
@@ -146,7 +184,7 @@ A great shot sheet shows DIFFERENT information, sized DIFFERENTLY, depending on 
 
 ROW-HEIGHT BUDGET — concrete proportions (heightWeight is relative; think of the page as ~16 units of height to spend):
 - The IMAGE-HEAVY rows are the TALL ones, roughly equal at heightWeight ~4–5 each: the SUBJECT reference row, the ENVIRONMENT row (when it carries hero images), the BLOCKING-DIAGRAM row, and the STORYBOARD row.
-- THE BLOCKING DIAGRAM GETS ITS OWN TALL ROW (heightWeight ~4–5). It is a headline element — NEVER a thin heightWeight 1–2 strip and never buried in a short shared row. If the subject and environment already fill the top row, give the blocking its own dedicated tall row below them; it may share that row's WIDTH with a small notes/establishing column, but the row itself stays tall.
+- THE BLOCKING DIAGRAM is a major element and SIZE IT TO THE STORY. A complex, multi-location or multi-character chase/journey EARNS its own tall dedicated row (heightWeight ~4–5) and big width — that is when it is the headline. A simple single-setup, two-person scene does NOT need to dominate the page: a readable medium block sharing a row with the environment is correct there. Let the staging complexity decide — never reflexively give every video the same giant floorplan, and never shrink it to an unreadable sliver. (The renderer floors it to a readable size either way, so you are free to make it big when the staging is rich and modest when it is simple.)
 - The TEXT rows are SHORT: a look-bible / cinematography / mood / lighting / palette band is heightWeight ~2 because text holds little vertical height. The assembled-prompt row is a thin heightWeight ~1 strip.
 - Sanity check before you finish: would any image row render with empty space because its row is taller than its images need, or would the blocking diagram look like an afterthought? If so, rebalance — raise the blocking and image rows, lower the text rows.
 
@@ -157,7 +195,7 @@ DO NOT WASTE CELLS:
 HOUSE-STYLE GRAMMAR (the consistent craft rules — the renderer enforces these, but COMPOSE with them in mind so your section sizing and emphasis already match):
 - CAST GRAMMAR: In the character reference, EVERY character must be visible, and each character gets ONE hero image — a regular-size primary view (e.g. the front view) — PLUS smaller thumbnail supporting views (other angles / details). Never render all-equal giant tiles, and never let one character dominate the others; each cast member reads as one hero plus its small supporting thumbnails.
 - COSTUME / PROPS GRAMMAR: Costume, wardrobe and prop details are a SMALL, secondary reference strip — thumbnail images with short descriptions. They must NEVER take precedence over the characters or claim a featured cell. IMPORTANT NUANCE: if a product/object is actually the STAR of the video, promote it to the SUBJECT block (hero treatment / its own model sheet), NOT the small prop strip — the prop strip itself stays a small reference strip either way.
-- BLOCKING DIAGRAM (reaffirmed): the blocking diagram (floorplan) is a LARGE headline element the operator edits — keep it big (its own tall row, substantial width); never shrink it to a thin slice.
+- BLOCKING DIAGRAM (reaffirmed): the blocking diagram (floorplan) is an important element the operator edits — size it to the staging complexity (a headline tall row for rich multi-location/multi-character staging, a readable medium block for a simple single setup); never shrink it to an unreadable sliver.
 
 ## What a Shot Plan is
 
