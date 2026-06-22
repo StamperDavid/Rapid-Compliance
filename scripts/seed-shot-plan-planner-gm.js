@@ -101,12 +101,32 @@ Rules for composing the page:
 - THE ESTABLISHING / ENVIRONMENT HEROES must be large enough to actually SEE the location — give the environment block real width and a tall row; never shrink the world to a sliver.
 - OPTIMIZE FOR BOTH VISUAL APPEAL AND INFORMATION DENSITY: the page must look like an expert designer balanced it — BIG where it matters (cast, environment, the blocking diagram, storyboard) and TIGHT where it is reference (palette, look-bible fields, prompt) — with NO dead white space anywhere on the sheet.
 
-Example layout (ADAPT it to THIS video — do not copy literally):
-  Row 1 (heightWeight 5): [ characters widthWeight 6 ] [ environment widthWeight 7 ]
-  Row 2 (heightWeight 3): [ cinematography widthWeight 1 ] [ lighting widthWeight 1 ] [ mood widthWeight 1 ]
-  Row 3 (heightWeight 4): [ storyboard widthWeight 1 ]
-  Row 4 (heightWeight 1): [ prompt widthWeight 1 ]
-Vary the rows, blocks, and weights for the actual content you produced — a multi-zone story needs a bigger environment block; a large cast needs a wider characters block; add a palette/floorplan/notes block in its own slice where it fits.
+These are FOUR DIFFERENT layouts for FOUR DIFFERENT kinds of story. They are deliberately NOT alike — study how each one's shape follows its content, then design a FIFTH that fits YOUR story. NEVER copy any of them; if your layout matches one of these row-for-row you have failed the job.
+  A. ONE human lead, single location:
+     Row 1 (h 5): [ characters w 5 ] [ environment w 6 ]
+     Row 2 (h 5): [ floorplan w 7 ] [ mood w 3 ]
+     Row 3 (h 4): [ storyboard w 1 ]
+     Row 4 (h 2): [ cinematography w 1 ] [ lighting w 1 ] [ palette w 1 ]
+     Row 5 (h 1): [ prompt w 1 ]
+  B. Ensemble cast, multi-zone world:
+     Row 1 (h 5): [ characters w 1 ]
+     Row 2 (h 5): [ environment w 7 ] [ floorplan w 6 ]
+     Row 3 (h 4): [ storyboard w 1 ]
+     Row 4 (h 2): [ cinematography w 1 ] [ mood w 1 ] [ lighting w 1 ]
+     Row 5 (h 1): [ prompt w 1 ]
+  C. Object / creature lead (no human cast), one set:
+     Row 1 (h 5): [ characters w 6 ] [ environment w 5 ]   (characters block holds the object MODEL SHEET)
+     Row 2 (h 5): [ floorplan w 1 ]
+     Row 3 (h 4): [ storyboard w 1 ]
+     Row 4 (h 2): [ mood w 1 ] [ cinematography w 1 ]
+     Row 5 (h 1): [ prompt w 1 ]
+  D. Environment / world-led journey (lead with the world, small/no cast):
+     Row 1 (h 5): [ environment w 1 ]
+     Row 2 (h 5): [ floorplan w 8 ] [ characters w 4 ]
+     Row 3 (h 4): [ storyboard w 1 ]
+     Row 4 (h 2): [ palette w 1 ] [ mood w 1 ] [ cinematography w 1 ]
+     Row 5 (h 1): [ prompt w 1 ]
+DERIVE your layout from YOUR content, do not reach for a template: let the SUBJECT type decide which block leads and how wide it is, let the NUMBER of zones/cast decide the environment/characters width, let the floorplan claim its own tall row, and place thin text blocks together in a short band. Two videos with different subjects, cast sizes, or location counts MUST produce visibly different pages. Re-using the same arrangement twice is the single most common failure — actively avoid it.
 
 ## HOW THE PAGE ADAPTS TO THE STORY (expert shot-sheet craft)
 
@@ -149,7 +169,8 @@ A Shot Plan has two parts:
 
 - Read the brief and decide the story beats. Break them into the right number of shots (typically 2-6 for an ad unless the brief or a requested count says otherwise). cutCount MUST equal the number of shots.
 - Build the look bible FIRST, then write every shot to honor it. The colorPalette, environmentFingerprint, and lookBible are what keep the video feeling like one coherent piece instead of disconnected clips. Reuse the palette's named swatches and keep each shot's environment description consistent with the environment fingerprint.
-- Set mood keywords and cinematography notes that match the brand and the brief's emotional arc. Choose an artStyle that fits (e.g. "cinematic live-action", "Pixar-style 3D", "gritty documentary").
+- Set mood keywords and cinematography notes that match the brand and the brief's emotional arc. Choose ONE artStyle that fits the whole production (e.g. "cinematic live-action", "Pixar-style 3D", "gritty documentary").
+- ONE ART STYLE FOR THE ENTIRE CAST. The artStyle you choose applies to EVERY character, prop, and environment identically — the whole video is rendered in one consistent visual medium. NEVER make one character look different from the rest (e.g. one photoreal person beside one Pixar/3D person). A character's notes/description field is for IDENTITY ONLY — age, build, hair, wardrobe, personality, role. NEVER put a rendering-style or medium word (e.g. "Pixar", "3D animated", "cartoon", "anime", "claymation", "photorealistic") in an individual character's notes/description; the medium is decided once, in artStyle, for everyone.
 - For each shot, choose a deliberate camera package — shot type (e.g. wide establishing, medium, close-up), movement (e.g. static, slow push-in, tracking), lens feel, composition, and viewing angle — that serves the beat. Note up front: any shot that carries DIALOGUE must be framed medium-or-tighter (never a wide/establishing/full-body), because lip-sync on a small face is unreadable — see the HARD RULE under "Per-shot camera package". Wides establish; you cut tighter to deliver lines.
 
 ## The Look Bible is set ONCE and inherited by every shot
@@ -347,7 +368,7 @@ Return one JSON object with EXACTLY this shape:
   }
 }
 
-Example layout (ADAPT per video — never copy literally):
+Example of the layout JSON SHAPE only (this is ONE arrangement of MANY — do NOT copy it; design the rows/blocks/weights that fit YOUR story, per the four contrasting examples and the rules above):
 {
   "layout": {
     "rows": [

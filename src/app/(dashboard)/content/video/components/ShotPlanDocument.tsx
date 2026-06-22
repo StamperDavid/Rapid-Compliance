@@ -458,7 +458,10 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection }: ShotPlanDocume
    *  small thumbnail row of its remaining views beneath, so the cast reads like a
    *  call sheet — one prominent portrait per actor, not an equal-size view grid. */
   const renderCharacters = (): React.ReactNode => (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    // min-h-full (not h-full) lets the cast grow past the cell so the block's own
+    // overflow-y-auto scrolls it — instead of the grid compressing and its content
+    // spilling onto the costume/prop and palette rows below (the overlap bug).
+    <div className="flex min-h-full flex-col gap-3">
       {subjects.length > 0 && (
         <div className="grid min-h-0 flex-1 items-stretch gap-2" style={cols(Math.min(Math.max(subjects.length, 1), 5))}>
           {subjects.map((member) => {
@@ -716,9 +719,17 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection }: ShotPlanDocume
     }
   };
 
-  /** Text-heavy blocks scroll their content inside the cell rather than overflow it. */
+  /** Text-heavy blocks scroll their content inside the cell rather than overflow it.
+   *  'characters' is included because a full cast (grid + costume/prop study +
+   *  palette) can exceed its cell — without a scroll it would spill onto and overlap
+   *  the neighboring blocks instead of staying inside its own bounds. */
   const isScrollableBlock = (type: ShotPlanBlockType): boolean =>
-    type === 'cinematography' || type === 'mood' || type === 'notes' || type === 'prompt' || type === 'palette';
+    type === 'characters' ||
+    type === 'cinematography' ||
+    type === 'mood' ||
+    type === 'notes' ||
+    type === 'prompt' ||
+    type === 'palette';
 
   // ── Build the painted rows from the AI's layout (with empty-block/row drops). ─
   // The AI designs the composition (which blocks, their order and arrangement);
