@@ -56,6 +56,8 @@ import {
   Pencil,
   Eraser,
   Wand2,
+  ChevronRight,
+  Folder,
 } from 'lucide-react';
 import {
   MEDIA_CATEGORIES,
@@ -63,6 +65,7 @@ import {
   type MediaAssetSource,
   type MediaAssetType,
   type UnifiedMediaAsset,
+  type MediaFolder,
 } from '@/types/media-library';
 import {
   AssetActionsMenu,
@@ -72,6 +75,11 @@ import {
   type CharacterOption,
   type ProjectOption,
 } from '@/app/(dashboard)/content/video/library/AssetActionsMenu';
+import {
+  MediaFolderNav,
+  buildBreadcrumb,
+  type FolderSelection,
+} from './MediaFolderNav';
 
 // ============================================================================
 // Constants
@@ -292,6 +300,16 @@ export default function MediaLibraryUnifiedPage() {
   const [deleting, setDeleting] = useState(false);
   const disarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Folder navigation ───────────────────────────────────────────────────
+  const [folderSelection, setFolderSelection] = useState<FolderSelection>({
+    kind: 'all',
+  });
+  // Flat folder list — kept in page state so breadcrumb + move menus can use it
+  const [allFolders, setAllFolders] = useState<MediaFolder[]>([]);
+  // Bulk move-to-folder UI
+  const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
+  const [bulkMoving, setBulkMoving] = useState(false);
+
   // ── Upload ──────────────────────────────────────────────────────────────
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -337,6 +355,12 @@ export default function MediaLibraryUnifiedPage() {
         const only = Array.from(categoryFilter)[0];
         params.set('category', only);
       }
+      // Folder scope: specific folder, unfiled only, or all (no param)
+      if (folderSelection.kind === 'folder') {
+        params.set('folderId', folderSelection.id);
+      } else if (folderSelection.kind === 'unfiled') {
+        params.set('unfiledOnly', 'true');
+      }
       params.set('limit', '500');
 
       const url = `/api/media${params.toString() ? `?${params.toString()}` : ''}`;
@@ -378,11 +402,30 @@ export default function MediaLibraryUnifiedPage() {
     createdAfter,
     createdBefore,
     categoryFilter,
+    folderSelection,
   ]);
 
   useEffect(() => {
     void fetchAssets();
   }, [fetchAssets]);
+
+  // Fetch the folder list so breadcrumb + move menus have it.
+  const fetchFolders = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/media-folders');
+      if (!res.ok) {
+        return;
+      }
+      const data = (await res.json()) as { success: boolean; folders: MediaFolder[] };
+      setAllFolders(data.folders ?? []);
+    } catch {
+      /* non-fatal — folder list is optional for the grid */
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    void fetchFolders();
+  }, [fetchFolders]);
 
   // Clear a stale action error when a different asset is opened, so a past failure
   // doesn't linger on a freshly-selected image.
@@ -728,6 +771,52 @@ export default function MediaLibraryUnifiedPage() {
       setBulkArmed(false);
     }
   }, [checkedIds, deleteAssetsByIds]);
+
+  // Move every checked asset into a folder (or Unfiled when folderId is null).
+  const handleBulkMoveToFolder = useCallback(
+    async (folderId: string | null) => {
+      const ids = Array.from(checkedIds);
+      if (ids.length === 0) {
+        return;
+      }
+      setBulkMoving(true);
+      try {
+        await Promise.all(
+          ids.map((id) =>
+            authFetch(`/api/media/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ folderId }),
+            }).catch(() => null),
+          ),
+        );
+        await fetchAssets();
+        setCheckedIds(new Set());
+        setBulkMoveOpen(false);
+      } finally {
+        setBulkMoving(false);
+      }
+    },
+    [authFetch, checkedIds, fetchAssets],
+  );
+
+  // Move a single asset into a folder (or Unfiled when folderId is null).
+  const handleSingleMoveToFolder = useCallback(
+    async (assetId: string, folderId: string | null) => {
+      const res = await authFetch(`/api/media/${assetId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as MediaApiSingleResponse;
+        setAssets((prev) =>
+          prev.map((a) => (a.id === data.asset.id ? data.asset : a)),
+        );
+      }
+    },
+    [authFetch],
+  );
 
   // Download one asset through the same-origin proxy (/api/media/[id]/download).
   // Going through the proxy avoids the Storage bucket's missing CORS headers,
@@ -1197,8 +1286,20 @@ export default function MediaLibraryUnifiedPage() {
         </div>
       </div>
 
-      {/* Layout: filter sidebar | grid | detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+      {/* Layout: folder nav | filter sidebar | grid | detail */}
+      <div className="grid grid-cols-1 lg:grid-cols-[180px_240px_1fr] gap-6">
+        {/* ── Folder navigation ────────────────────────────────────────── */}
+        <div className="space-y-3">
+          <MediaFolderNav
+            selection={folderSelection}
+            onSelect={(sel) => {
+              setFolderSelection(sel);
+              setCheckedIds(new Set());
+            }}
+            onFoldersChange={setAllFolders}
+          />
+        </div>
+
         {/* ── Filter sidebar ──────────────────────────────────────────── */}
         <aside className="space-y-6">
           {/* Type chips */}
@@ -1324,6 +1425,13 @@ export default function MediaLibraryUnifiedPage() {
 
         {/* ── Main column (search + grid) ─────────────────────────────── */}
         <div className="space-y-4">
+          {/* Breadcrumb */}
+          <FolderBreadcrumb
+            selection={folderSelection}
+            folders={allFolders}
+            onSelect={setFolderSelection}
+          />
+
           {/* Search bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -1365,20 +1473,31 @@ export default function MediaLibraryUnifiedPage() {
           {/* Bulk action bar — the SAME full action set, applied to every
               checked asset. Appears when ≥1 tile is selected. */}
           {checkedIds.size > 0 && (
-            <BulkActionsBar
-              count={checkedIds.size}
-              characters={characters}
-              charactersLoading={charactersLoading}
-              onLoadCharacters={loadCharacters}
-              projects={projects}
-              actions={bulkActions}
-              busy={bulkBusy || bulkDeleting || downloading}
-              progress={bulkProgress}
-              isArmedDelete={bulkArmed}
-              onArmDelete={() => setBulkArmed(true)}
-              onCancelDelete={() => setBulkArmed(false)}
-              onClear={clearChecked}
-            />
+            <>
+              <BulkActionsBar
+                count={checkedIds.size}
+                characters={characters}
+                charactersLoading={charactersLoading}
+                onLoadCharacters={loadCharacters}
+                projects={projects}
+                actions={bulkActions}
+                busy={bulkBusy || bulkDeleting || downloading}
+                progress={bulkProgress}
+                isArmedDelete={bulkArmed}
+                onArmDelete={() => setBulkArmed(true)}
+                onCancelDelete={() => setBulkArmed(false)}
+                onClear={clearChecked}
+              />
+              {/* Move to folder — bulk */}
+              <BulkMoveToFolderBar
+                count={checkedIds.size}
+                folders={allFolders}
+                open={bulkMoveOpen}
+                moving={bulkMoving}
+                onToggle={() => setBulkMoveOpen((v) => !v)}
+                onMove={(folderId) => { void handleBulkMoveToFolder(folderId); }}
+              />
+            </>
           )}
 
           {/* Grid + detail panel */}
@@ -1444,6 +1563,10 @@ export default function MediaLibraryUnifiedPage() {
                 }}
                 editingImage={editingImgId === selectedAsset.id}
                 actionError={errorMsg}
+                folders={allFolders}
+                onMoveToFolder={(folderId) => {
+                  void handleSingleMoveToFolder(selectedAsset.id, folderId);
+                }}
               />
             </div>
           ) : (
@@ -1806,6 +1929,8 @@ interface AssetDetailPanelProps {
   onEditImage: (instruction: string) => void;
   editingImage: boolean;
   actionError: string | null;
+  folders: MediaFolder[];
+  onMoveToFolder: (folderId: string | null) => void;
 }
 
 function AssetDetailPanel({
@@ -1831,6 +1956,8 @@ function AssetDetailPanel({
   onEditImage,
   editingImage,
   actionError,
+  folders,
+  onMoveToFolder,
 }: AssetDetailPanelProps) {
   const Icon = typeIcon(asset.type);
   const showImage = asset.type === 'image' || Boolean(asset.thumbnailUrl);
@@ -2133,6 +2260,34 @@ function AssetDetailPanel({
           <Caption className="mt-1 block">Groups this item under a project (appears as a tag below).</Caption>
         </div>
 
+        {/* Move to folder */}
+        {folders.length > 0 && (
+          <div className="pt-3 border-t border-border-light">
+            <CardTitle className="mb-2 flex items-center gap-1.5">
+              <Folder className="h-3.5 w-3.5" />
+              Folder
+            </CardTitle>
+            <select
+              value={asset.folderId ?? ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                onMoveToFolder(v === '' ? null : v);
+              }}
+              className="w-full rounded-md border border-border-strong bg-card px-2 py-1.5 text-xs text-foreground"
+            >
+              <option value="">Unfiled</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+            <Caption className="mt-1 block">
+              Move this asset into a folder for easier organisation.
+            </Caption>
+          </div>
+        )}
+
         {/* Tag editor */}
         <div className="pt-3 border-t border-border-light">
           <div className="flex items-center justify-between mb-2">
@@ -2263,6 +2418,147 @@ function AssetDetailPanel({
         )}
       </div>
     </aside>
+  );
+}
+
+// ============================================================================
+// FolderBreadcrumb — shows current folder path above the grid
+// ============================================================================
+
+interface FolderBreadcrumbProps {
+  selection: FolderSelection;
+  folders: MediaFolder[];
+  onSelect: (sel: FolderSelection) => void;
+}
+
+function FolderBreadcrumb({ selection, folders, onSelect }: FolderBreadcrumbProps) {
+  if (selection.kind === 'all') {
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+        <span className="font-medium text-foreground">All media</span>
+      </div>
+    );
+  }
+  if (selection.kind === 'unfiled') {
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => onSelect({ kind: 'all' })}
+          className="hover:text-foreground transition-colors"
+        >
+          All media
+        </button>
+        <ChevronRight className="h-3 w-3" />
+        <span className="font-medium text-foreground">Unfiled</span>
+      </div>
+    );
+  }
+  const crumbs = buildBreadcrumb(folders, selection.id);
+  return (
+    <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+      <button
+        type="button"
+        onClick={() => onSelect({ kind: 'all' })}
+        className="hover:text-foreground transition-colors"
+      >
+        All media
+      </button>
+      {crumbs.map((folder, idx) => {
+        const isLast = idx === crumbs.length - 1;
+        return (
+          <span key={folder.id} className="flex items-center gap-1">
+            <ChevronRight className="h-3 w-3 shrink-0" />
+            {isLast ? (
+              <span className="font-medium text-foreground">{folder.name}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onSelect({ kind: 'folder', id: folder.id })}
+                className="hover:text-foreground transition-colors"
+              >
+                {folder.name}
+              </button>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================================
+// BulkMoveToFolderBar — inline folder picker beneath BulkActionsBar
+// ============================================================================
+
+interface BulkMoveToFolderBarProps {
+  count: number;
+  folders: MediaFolder[];
+  open: boolean;
+  moving: boolean;
+  onToggle: () => void;
+  onMove: (folderId: string | null) => void;
+}
+
+function BulkMoveToFolderBar({
+  count,
+  folders,
+  open,
+  moving,
+  onToggle,
+  onMove,
+}: BulkMoveToFolderBarProps) {
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
+
+  return (
+    <div className="rounded-xl border border-border-strong bg-card px-3 py-2 text-sm">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Folder className="h-3.5 w-3.5" />
+          Move {count} {count === 1 ? 'item' : 'items'} to folder…
+          <ChevronRight
+            className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {moving && (
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+        )}
+      </div>
+      {open && (
+        <div className="mt-2 flex items-center gap-2">
+          <select
+            value={selectedFolderId}
+            onChange={(e) => setSelectedFolderId(e.target.value)}
+            className="flex-1 rounded-md border border-border-strong bg-card px-2 py-1.5 text-xs text-foreground"
+            disabled={moving}
+          >
+            <option value="">Unfiled (remove from folder)</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            disabled={moving}
+            onClick={() => onMove(selectedFolderId === '' ? null : selectedFolderId)}
+            className="h-8 px-3 text-xs"
+          >
+            {moving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              'Move'
+            )}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 

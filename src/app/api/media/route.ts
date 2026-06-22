@@ -120,6 +120,7 @@ const PostJsonSchema = z.object({
   characterName: z.string().optional(),
   projectId: z.string().optional(),
   projectName: z.string().optional(),
+  folderId: z.string().optional(),
   brandDnaApplied: z.boolean().optional(),
 });
 
@@ -188,6 +189,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') ?? undefined;
     const characterId = searchParams.get('characterId') ?? undefined;
     const projectId = searchParams.get('projectId') ?? undefined;
+    const folderId = searchParams.get('folderId') ?? undefined;
+    const unfiledOnly = searchParams.get('unfiledOnly') === 'true';
     const createdAfter = searchParams.get('createdAfter') ?? undefined;
     const createdBefore = searchParams.get('createdBefore') ?? undefined;
 
@@ -204,6 +207,8 @@ export async function GET(request: NextRequest) {
       search,
       ...(characterId ? { characterId } : {}),
       ...(projectId ? { projectId } : {}),
+      ...(folderId ? { folderId } : {}),
+      ...(unfiledOnly ? { unfiledOnly } : {}),
       createdAfter,
       createdBefore,
       limit,
@@ -362,6 +367,7 @@ export async function POST(request: NextRequest) {
       ...(body.characterName ? { characterName: body.characterName } : {}),
       ...(body.projectId ? { projectId: body.projectId } : {}),
       ...(body.projectName ? { projectName: body.projectName } : {}),
+      ...(body.folderId ? { folderId: body.folderId } : {}),
       brandDnaApplied: body.brandDnaApplied === true,
     });
 

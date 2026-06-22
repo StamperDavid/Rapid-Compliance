@@ -11,6 +11,8 @@
  * Doc path: organizations/{PLATFORM_ID}/media/{id}
  */
 
+import { FieldValue } from 'firebase-admin/firestore';
+
 import { adminDb } from '@/lib/firebase/admin';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -81,6 +83,7 @@ interface MediaDocData {
   characterName?: string;
   projectId?: string;
   projectName?: string;
+  folderId?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
   createdBy?: string;
@@ -123,6 +126,7 @@ function rowToAsset(id: string, data: MediaDocData): UnifiedMediaAsset {
     ...(data.characterName ? { characterName: data.characterName } : {}),
     ...(data.projectId ? { projectId: data.projectId } : {}),
     ...(data.projectName ? { projectName: data.projectName } : {}),
+    ...(data.folderId ? { folderId: data.folderId } : {}),
     createdAt: toIsoString(data.createdAt),
     updatedAt: toIsoString(data.updatedAt),
     createdBy: data.createdBy ?? 'unknown',
@@ -146,6 +150,11 @@ function applyClientSideFilters(
   const wantsCharacters = filters.category === 'character' || Boolean(filters.characterId);
   if (!wantsCharacters) {
     result = result.filter((a) => a.category !== 'character');
+  }
+  // "Unfiled" root: assets not filed under any library folder. (Firestore can't
+  // query for an absent field cheaply, so it's an in-memory filter.)
+  if (filters.unfiledOnly) {
+    result = result.filter((a) => !a.folderId);
   }
   if (filters.tags && filters.tags.length > 0) {
     const wanted = new Set(filters.tags.map((t) => t.toLowerCase()));
@@ -209,6 +218,9 @@ export async function listAssets(
   if (filters.projectId) {
     query = query.where('projectId', '==', filters.projectId);
   }
+  if (filters.folderId) {
+    query = query.where('folderId', '==', filters.folderId);
+  }
 
   let snapshot: FirebaseFirestore.QuerySnapshot;
   try {
@@ -262,6 +274,24 @@ export async function createAsset(
   const docRef = db.collection(COLLECTION).doc();
   const now = new Date();
 
+  // Auto-file: an asset generated for a video project (has projectId, no explicit
+  // folder) lands in that project's folder, which is created on first use — so
+  // project folders fill themselves. Best-effort: a folder failure never blocks the
+  // asset write. Character assets (own their own library section) are left unfiled.
+  let folderId = input.folderId;
+  if (!folderId && input.projectId && input.category !== 'character') {
+    try {
+      const { getOrCreateProjectFolder } = await import('@/lib/media/media-folders-service');
+      folderId = await getOrCreateProjectFolder(input.projectId, input.projectName ?? 'Project');
+    } catch (err) {
+      logger.warn('Auto-file to project folder failed (asset will be unfiled)', {
+        file: FILE,
+        projectId: input.projectId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   const record: UnifiedMediaAsset = {
     id: docRef.id,
     type: input.type,
@@ -286,6 +316,7 @@ export async function createAsset(
     ...(input.characterName ? { characterName: input.characterName } : {}),
     ...(input.projectId ? { projectId: input.projectId } : {}),
     ...(input.projectName ? { projectName: input.projectName } : {}),
+    ...(folderId ? { folderId } : {}),
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     createdBy: input.createdBy,
@@ -347,6 +378,30 @@ export async function deleteAsset(id: string): Promise<boolean> {
   await AdminFirestoreService.delete(COLLECTION, id);
   logger.info('Media asset deleted', { file: FILE, id });
   return true;
+}
+
+/**
+ * File an asset into a library folder, or move it to Unfiled (pass null — which
+ * DELETES the field so the asset disappears from every folder). Uses a direct
+ * Admin update because clearing a field needs FieldValue.delete(), which the typed
+ * `updateAsset` path can't express. Returns the refreshed asset, or null if missing.
+ */
+export async function setAssetFolder(
+  id: string,
+  folderId: string | null,
+): Promise<UnifiedMediaAsset | null> {
+  const db = ensureAdminDb();
+  const existing = await getAsset(id);
+  if (!existing) {
+    return null;
+  }
+  await db.collection(COLLECTION).doc(id).update(
+    folderId
+      ? { folderId, updatedAt: new Date().toISOString() }
+      : { folderId: FieldValue.delete(), updatedAt: new Date().toISOString() },
+  );
+  logger.info('Media asset folder set', { file: FILE, id, folderId: folderId ?? 'unfiled' });
+  return getAsset(id);
 }
 
 /**

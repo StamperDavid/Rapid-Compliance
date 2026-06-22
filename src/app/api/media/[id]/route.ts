@@ -17,6 +17,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import {
   deleteAsset,
   getAsset,
+  setAssetFolder,
   updateAsset,
 } from '@/lib/media/media-library-service';
 import {
@@ -97,6 +98,9 @@ const PatchSchema = z
     characterName: z.string().optional(),
     projectId: z.string().optional(),
     projectName: z.string().optional(),
+    // Library folder. A string files the asset into that folder; null moves it to
+    // Unfiled (clears the field). Handled via setAssetFolder, not the typed patch.
+    folderId: z.string().min(1).nullable().optional(),
     brandDnaApplied: z.boolean().optional(),
   })
   .strict();
@@ -212,7 +216,18 @@ export async function PATCH(
         : {}),
     };
 
-    const updated = await updateAsset(id, patch);
+    // Library-folder move is handled separately (it can CLEAR the field for Unfiled,
+    // which the typed patch can't express). Run it first if requested.
+    if ('folderId' in body) {
+      const moved = await setAssetFolder(id, body.folderId ?? null);
+      if (!moved) {
+        return NextResponse.json({ success: false, error: 'Asset not found' }, { status: 404 });
+      }
+    }
+
+    // Apply any remaining field updates (skip when only a folder move was requested).
+    const updated =
+      Object.keys(patch).length > 0 ? await updateAsset(id, patch) : await getAsset(id);
     if (!updated) {
       return NextResponse.json(
         { success: false, error: 'Asset not found' },
