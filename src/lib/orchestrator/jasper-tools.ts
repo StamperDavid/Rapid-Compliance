@@ -623,8 +623,8 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   delegate_to_commerce: '/mission-control',
   delegate_to_operations: '/mission-control',
   // Single-artifact tools → their specific pages
-  create_video: '/content/video',
-  generate_video: '/content/video',
+  create_video: '/content/video/projects',
+  generate_video: '/content/video/projects',
   batch_produce_videos: '/social/calendar',
   save_blog_draft: '/website',
   research_trending_topics: '/seo',
