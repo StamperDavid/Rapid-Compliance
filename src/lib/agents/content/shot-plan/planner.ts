@@ -719,6 +719,37 @@ function buildSelectedLocationsBlock(locations: LocationProfile[]): string {
 }
 
 /**
+ * Names of the SEEDED STARTER characters that ship in every fresh Character Library
+ * (see `scripts/seed-starter-characters.ts` + `scripts/regen-starter-characters.ts`,
+ * which hold the canonical `STARTERS` list). These are excluded from the auto
+ * NAME-MATCH ONLY: a story character that happens to be called "Marcus" must NOT bind
+ * the generic starter "Marcus Reed". They are still fully usable via EXPLICIT id
+ * selection (see `resolveCast` below) — this set only gates the by-name coincidence.
+ *
+ * ROBUST-FIELD NOTE: an `AvatarProfile` carries NO field that distinguishes a starter
+ * from a user-created character — both are seeded with `source: 'custom'`,
+ * `role: 'presenter'`, `styleTag: 'real'`, so there is genuinely no clean flag to read.
+ * The only stable identifier the seed scripts give starters is their NAME, so we match
+ * on name here as a documented last resort. We match BOTH the full seeded name and the
+ * bare first name (the operator's collision example uses first names: Maya / Marcus /
+ * Sofia / James), case-insensitively. If a starter `source`/`isStarter`/`origin` field
+ * is ever added to the profile, replace this set with a field check.
+ */
+const STARTER_CHARACTER_NAMES: ReadonlySet<string> = new Set(
+  [
+    'Maya Chen', 'Maya',
+    'Marcus Reed', 'Marcus',
+    'Sofia Alvarez', 'Sofia',
+    'James O’Brien', 'James',
+    'Aisha Khan', 'Aisha',
+  ].map((n) => n.trim().toLowerCase()),
+);
+
+function isStarterCharacter(profile: AvatarProfile): boolean {
+  return STARTER_CHARACTER_NAMES.has(profile.name.trim().toLowerCase());
+}
+
+/**
  * Map the model's cast picks back onto the contract. A pick that matches a SELECTED
  * saved profile re-resolves its referenceImageUrls from that profile (the model never
  * supplies image URLs). A pick with NO matching profile is an INVENTED character —
@@ -737,8 +768,17 @@ function resolveCast(
   // we bind that saved character instead of letting the planner invent a look-alike.
   // (The operator turned the old "never name-match" rule off on purpose; we keep it safe
   // by matching ONLY their own library and ONLY on an exact name.)
+  //
+  // SEEDED STARTERS ARE EXCLUDED from this index: a coincidental story name (e.g. a
+  // character called "Marcus") must never auto-bind a generic starter ("Marcus Reed").
+  // Only the operator's intentionally-created characters (e.g. "Velocity") auto-match.
+  // Starters remain fully usable via EXPLICIT id selection (the `byId` path above),
+  // which is unaffected.
   const byName = new Map<string, AvatarProfile>();
   for (const p of nameLibrary) {
+    if (isStarterCharacter(p)) {
+      continue;
+    }
     const key = p.name.trim().toLowerCase();
     if (key) {
       byName.set(key, p);
