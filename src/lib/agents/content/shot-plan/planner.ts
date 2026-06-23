@@ -459,6 +459,92 @@ function stripJsonFences(raw: string): string {
     .trim();
 }
 
+/**
+ * Extract every balanced top-level JSON object substring from model output. A plain
+ * `JSON.parse` over the whole string throws ("non-whitespace after JSON") whenever the
+ * model emits ANYTHING after the first complete object — trailing prose, or a duplicate
+ * plan object (the planner has been observed double-emitting on dense ensemble briefs).
+ * Brace-walking respects string literals + escapes so braces inside strings don't count.
+ * Returns the candidates in document order; callers pick the one that validates.
+ */
+function extractJsonObjectCandidates(raw: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === '{') {
+      if (depth === 0) {
+        start = i;
+      }
+      depth++;
+    } else if (ch === '}') {
+      if (depth > 0) {
+        depth--;
+        if (depth === 0 && start >= 0) {
+          out.push(raw.slice(start, i + 1));
+          start = -1;
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Parse the model's raw output into a schema-valid LLM shot plan, tolerating trailing
+ * content / duplicate objects. Tries every balanced JSON object the output contains and
+ * returns the LARGEST one that satisfies `LlmShotPlanSchema` (the largest valid object is
+ * the most complete plan when the model double-emits a fuller second copy). Returns a
+ * human-readable error string instead when nothing parses + validates.
+ */
+function parseLlmShotPlan(
+  rawContent: string,
+): { ok: true; data: z.infer<typeof LlmShotPlanSchema> } | { ok: false; error: string } {
+  const stripped = stripJsonFences(rawContent);
+  const candidates = extractJsonObjectCandidates(stripped);
+  // Defensive fallback: if brace-walking found nothing, try the whole stripped string.
+  if (candidates.length === 0) {
+    candidates.push(stripped);
+  }
+
+  let best: { data: z.infer<typeof LlmShotPlanSchema>; size: number } | null = null;
+  let lastError = 'Output was not valid JSON';
+  for (const candidate of candidates) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(candidate);
+    } catch {
+      lastError = `Output was not valid JSON: ${candidate.slice(0, 200)}`;
+      continue;
+    }
+    const result = LlmShotPlanSchema.safeParse(parsed);
+    if (!result.success) {
+      lastError = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+      continue;
+    }
+    if (!best || candidate.length > best.size) {
+      best = { data: result.data, size: candidate.length };
+    }
+  }
+
+  return best ? { ok: true, data: best.data } : { ok: false, error: lastError };
+}
+
 async function callOpenRouter(
   gm: ShotPlanPlannerGMConfig,
   userPrompt: string,
@@ -995,21 +1081,21 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
       locations.length > 0,
       priorZodErrors,
     );
-    const rawContent = await callOpenRouter(gm, userPrompt, gm.maxTokens, gm.layoutExamples);
-
-    let parsedJson: unknown;
+    // A provider-level failure (truncated/aborted response, empty body, finish_reason
+    // 'length') THROWS — dense ensemble briefs trip this intermittently. Treat it like a
+    // parse miss: record it and retry, instead of letting it escape and hard-fail the
+    // whole generation on the first hiccup (the retry usually succeeds).
+    let rawContent: string;
     try {
-      parsedJson = JSON.parse(stripJsonFences(rawContent));
-    } catch {
-      priorZodErrors = `Output was not valid JSON: ${rawContent.slice(0, 200)}`;
+      rawContent = await callOpenRouter(gm, userPrompt, gm.maxTokens, gm.layoutExamples);
+    } catch (err) {
+      priorZodErrors = `LLM call failed: ${err instanceof Error ? err.message : String(err)}`;
       continue;
     }
 
-    const bodyResult = LlmShotPlanSchema.safeParse(parsedJson);
-    if (!bodyResult.success) {
-      priorZodErrors = bodyResult.error.issues
-        .map((i) => `${i.path.join('.')}: ${i.message}`)
-        .join('; ');
+    const bodyResult = parseLlmShotPlan(rawContent);
+    if (!bodyResult.ok) {
+      priorZodErrors = bodyResult.error;
       continue;
     }
 
@@ -1147,6 +1233,8 @@ export const __internal = {
   DEFAULT_INDUSTRY_KEY,
   loadGMConfig,
   stripJsonFences,
+  extractJsonObjectCandidates,
+  parseLlmShotPlan,
   buildAvailableCastBlock,
   buildSelectedLocationsBlock,
   collectEnvironmentReferenceImageUrls,

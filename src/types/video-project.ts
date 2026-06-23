@@ -46,11 +46,36 @@ export const VIDEO_PROJECT_STATUSES: readonly VideoProjectStatus[] = [
   'complete',
 ];
 
+/**
+ * Progress of the INITIAL background build (segment brief → author + render each doc).
+ * Optional + additive: present only while/after the Content Manager builds a project in
+ * the background so the review page can hand off INSTANTLY and show the docs filling in,
+ * instead of blocking the chat for the whole (multi-minute) render. Legacy projects and
+ * the synchronous Projects-page path never set it.
+ */
+export interface VideoProjectBuild {
+  /** 'running' while docs are still being authored/rendered; terminal otherwise. */
+  status: 'running' | 'complete' | 'error';
+  /** Plain-English current step, e.g. "Writing scene 2 of 4". */
+  phase: string;
+  /** Docs finished so far. */
+  done: number;
+  /** Total docs expected (0 until the brief is segmented). */
+  total: number;
+  /** Set only when status is 'error' — a plain-English reason. */
+  error?: string;
+}
+
 export interface VideoProject {
   id: string;
   title: string;
   /** The original creative brief the project's docs were segmented from. */
   brief: string;
+  /**
+   * Background-build progress for the initial doc authoring/rendering pass (Content
+   * Manager fast-handoff path). Absent once the build is irrelevant (legacy / sync path).
+   */
+  build?: VideoProjectBuild;
   /**
    * The Stage-1 TIMED SCRIPT (Screenwriter/Director output) the project's Shot
    * Docs are authored from. Optional + additive: legacy projects created before
@@ -82,10 +107,19 @@ export const VideoProjectStatusSchema = z.enum([
   'complete',
 ]);
 
+export const VideoProjectBuildSchema = z.object({
+  status: z.enum(['running', 'complete', 'error']),
+  phase: z.string().trim().max(300).default(''),
+  done: z.number().int().min(0).default(0),
+  total: z.number().int().min(0).default(0),
+  error: z.string().trim().max(2000).optional(),
+});
+
 export const VideoProjectSchema = z.object({
   id: z.string().trim().min(1).max(200),
   title: z.string().trim().max(300).default(''),
   brief: z.string().trim().max(20000).default(''),
+  build: VideoProjectBuildSchema.optional(),
   script: ScriptDocumentSchema.optional(),
   docs: z.array(ShotPlanSchema).max(100).default([]),
   status: VideoProjectStatusSchema.default('planning'),

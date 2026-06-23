@@ -29,7 +29,12 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { generateShotPlan, type ShotPlanReference } from '@/lib/agents/content/shot-plan/planner';
 import { renderShotPlanAssets } from '@/lib/video/shot-plan-generation-service';
-import { createVideoProject } from '@/lib/video/video-project-service';
+import {
+  createVideoProject,
+  appendProjectDoc,
+  setProjectBuild,
+  setProjectTitle,
+} from '@/lib/video/video-project-service';
 import type { VideoProject } from '@/types/video-project';
 import type { ShotPlan } from '@/types/shot-plan';
 import type { IntentSubject } from '@/lib/content/content-intent';
@@ -386,6 +391,157 @@ export async function generateProjectDocs(input: GenerateProjectDocsInput): Prom
   });
 
   return project;
+}
+
+// ============================================================================
+// PUBLIC: buildProjectDocsIntoProject (Content Manager FAST-HANDOFF background build)
+// ============================================================================
+
+export interface BuildProjectDocsIntoProjectInput {
+  /** The already-created project SHELL to fill (so the chat can hand off instantly). */
+  projectId: string;
+  /** The project brief — the whole film, not one scene. */
+  brief: string;
+  /** Owner of the Character Library each doc auto-casts from. */
+  userId: string;
+  /** Optional title hint (a better one may come from segmentation). */
+  title?: string;
+  /** Confirmed intent subjects (saved-character bindings thread into every doc). */
+  subjects?: IntentSubject[];
+  /** Operator's attached references (the planner's text-only reference inputs). */
+  attachments?: ShotPlanReference[];
+}
+
+/**
+ * Fill an EXISTING project shell with its Shot Docs IN THE BACKGROUND, persisting each doc
+ * the moment it is authored + rendered and writing plain-English `build` progress as it
+ * goes. This is the fast-handoff counterpart to `generateProjectDocs`: the Content Manager
+ * creates the shell, hands the operator off to the review page immediately, and calls this
+ * (fire-and-forget) so the docs stream in instead of blocking the chat for the whole render.
+ *
+ * Resilient by design: one doc failing to author/render is logged and SKIPPED (a partial
+ * project beats a total failure); only a fatal error (e.g. segmentation failed) marks the
+ * whole build 'error'. Never throws to its caller — it owns its own error reporting via the
+ * project's `build` field, which the review page polls.
+ */
+export async function buildProjectDocsIntoProject(
+  input: BuildProjectDocsIntoProjectInput,
+): Promise<void> {
+  const { projectId } = input;
+  const selectedCharacterIds = Array.from(
+    new Set((input.subjects ?? []).map((s) => s.characterId).filter((id): id is string => Boolean(id))),
+  );
+  const references = input.attachments ?? [];
+
+  try {
+    await setProjectBuild(projectId, {
+      status: 'running',
+      phase: 'Planning the scenes for your video…',
+      done: 0,
+      total: 0,
+    });
+
+    const segmentation = await segmentBrief(input.brief, input.title);
+    const segments: SceneSegment[] = segmentation.segments;
+    const total = segments.length;
+
+    // Adopt the model's project title when the caller didn't supply a strong one.
+    const betterTitle = [input.title?.trim(), segmentation.projectTitle.trim()].find(
+      (t): t is string => typeof t === 'string' && t.length > 0,
+    );
+    if (betterTitle) {
+      await setProjectTitle(projectId, betterTitle);
+    }
+
+    logger.info('[video-project-segmentation] background build started', {
+      file: FILE,
+      projectId,
+      total,
+      selectedCharacters: selectedCharacterIds.length,
+      references: references.length,
+    });
+
+    let done = 0;
+    for (let i = 0; i < segments.length; i += 1) {
+      const segment = segments[i];
+      await setProjectBuild(projectId, {
+        status: 'running',
+        phase: `Writing scene ${i + 1} of ${total}: ${segment.title}`,
+        done,
+        total,
+      });
+      try {
+        const authored = await generateShotPlan({
+          brief: segment.sceneBrief,
+          userId: input.userId,
+          shotCount: clampShotCount(segment.approxShots),
+          title: segment.title,
+          ...(selectedCharacterIds.length > 0 ? { selectedCharacterIds } : {}),
+          ...(references.length > 0 ? { references } : {}),
+        });
+        const rendered = await renderShotPlanAssets(authored, { tenantId: PLATFORM_ID });
+        await appendProjectDoc(projectId, rendered);
+        done += 1;
+        await setProjectBuild(projectId, {
+          status: 'running',
+          phase: `Finished scene ${i + 1} of ${total}`,
+          done,
+          total,
+        });
+      } catch (docErr) {
+        // One scene failing must NOT kill the whole project — skip it and keep going.
+        logger.warn('[video-project-segmentation] scene build failed — skipping', {
+          file: FILE,
+          projectId,
+          index: i,
+          error: docErr instanceof Error ? docErr.message : String(docErr),
+        });
+      }
+    }
+
+    if (done === 0) {
+      await setProjectBuild(projectId, {
+        status: 'error',
+        phase: 'We could not build any scenes for this video. Please try again.',
+        done: 0,
+        total,
+        error: 'Every scene failed to build.',
+      });
+      return;
+    }
+
+    await setProjectBuild(projectId, {
+      status: 'complete',
+      phase: `All ${done} ${done === 1 ? 'scene is' : 'scenes are'} ready to review.`,
+      done,
+      total,
+    });
+    logger.info('[video-project-segmentation] background build complete', {
+      file: FILE,
+      projectId,
+      built: done,
+      total,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error(
+      '[video-project-segmentation] background build failed',
+      err instanceof Error ? err : new Error(message),
+      { file: FILE, projectId },
+    );
+    // Best-effort: surface the failure on the project so the review page never lies.
+    try {
+      await setProjectBuild(projectId, {
+        status: 'error',
+        phase: 'Something went wrong while building your video.',
+        done: 0,
+        total: 0,
+        error: message,
+      });
+    } catch {
+      /* swallow — the original error is already logged */
+    }
+  }
 }
 
 // ============================================================================

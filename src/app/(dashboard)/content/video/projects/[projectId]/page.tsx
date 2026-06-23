@@ -98,6 +98,14 @@ interface MutateProjectResponse {
 // ---------------------------------------------------------------------------
 
 function plainProjectStatus(project: VideoProject): string {
+  // While the background build runs, the build phase IS the status (most current truth).
+  if (project.build?.status === 'running') {
+    const { phase, done, total } = project.build;
+    return total > 0 ? `${phase} — ${done} of ${total} ready to review so far.` : phase;
+  }
+  if (project.build?.status === 'error') {
+    return project.build.phase;
+  }
   if (project.status === 'complete') {
     return 'Final video is ready.';
   }
@@ -413,28 +421,55 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
   // The doc the cast picker is currently open for (null = closed).
   const [castDocId, setCastDocId] = useState<string | null>(null);
 
-  const loadProject = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const res = await authFetch(`/api/video-project/${projectId}`);
-      const data = (await res.json()) as GetProjectResponse;
-      if (!res.ok || !data.success || !data.project) {
-        throw new Error(data.error ?? 'We could not load this project. Please try again.');
+  const fetchProject = useCallback(
+    async (silent: boolean) => {
+      if (!silent) {
+        setLoading(true);
+        setLoadError(null);
       }
-      setProject(data.project);
-    } catch (err) {
-      setLoadError(
-        err instanceof Error ? err.message : 'We could not load this project. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [authFetch, projectId]);
+      try {
+        const res = await authFetch(`/api/video-project/${projectId}`);
+        const data = (await res.json()) as GetProjectResponse;
+        if (!res.ok || !data.success || !data.project) {
+          throw new Error(data.error ?? 'We could not load this project. Please try again.');
+        }
+        setProject(data.project);
+      } catch (err) {
+        // A transient POLL failure must not replace the page the operator is already
+        // reviewing — only surface errors on the initial full load.
+        if (!silent) {
+          setLoadError(
+            err instanceof Error ? err.message : 'We could not load this project. Please try again.'
+          );
+        }
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [authFetch, projectId]
+  );
+
+  const loadProject = useCallback(() => fetchProject(false), [fetchProject]);
 
   useEffect(() => {
     void loadProject();
   }, [loadProject]);
+
+  // While the Content Manager is still building this project's docs in the background,
+  // poll so each scene's doc streams onto the page the moment it finishes — no manual
+  // refresh. Stops as soon as the build is complete (or errored).
+  const isBuilding = project?.build?.status === 'running';
+  useEffect(() => {
+    if (!isBuilding) {
+      return;
+    }
+    const interval = setInterval(() => {
+      void fetchProject(true);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isBuilding, fetchProject]);
 
   const setDocError = useCallback((docId: string, message: string | null) => {
     setDocErrors((prev) => {
@@ -638,6 +673,27 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
           <SectionDescription>{plainProjectStatus(project)}</SectionDescription>
         </div>
       </div>
+
+      {/* Background-build banner — the docs stream in as each scene finishes. */}
+      {project.build?.status === 'running' && (
+        <div className="bg-primary/5 border border-primary/30 rounded-2xl p-5 flex items-start gap-3">
+          <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden />
+          <div className="space-y-0.5">
+            <CardTitle>Building your shot docs…</CardTitle>
+            <SectionDescription>
+              {project.build.total > 0
+                ? `${project.build.phase} — ${project.build.done} of ${project.build.total} ready so far. You can start reviewing each scene as it appears below; no need to wait for all of them.`
+                : `${project.build.phase} You can leave this page and come back — it keeps building.`}
+            </SectionDescription>
+          </div>
+        </div>
+      )}
+      {project.build?.status === 'error' && (
+        <div className="flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+          <span>{project.build.phase}</span>
+        </div>
+      )}
 
       {/* Ready-to-assemble banner + editor hand-off */}
       {readyToAssemble && (

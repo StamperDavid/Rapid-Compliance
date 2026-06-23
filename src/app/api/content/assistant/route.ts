@@ -22,7 +22,8 @@ import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { getActiveManagerGMByIndustry } from '@/lib/training/manager-golden-master-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
-import { generateProjectDocs } from '@/lib/video/video-project-segmentation-service';
+import { buildProjectDocsIntoProject } from '@/lib/video/video-project-segmentation-service';
+import { createVideoProject } from '@/lib/video/video-project-service';
 import type { ShotPlanReference } from '@/lib/agents/content/shot-plan/planner';
 import { listAvatarProfiles, type AvatarProfile } from '@/lib/video/avatar-profile-service';
 import { listAssets } from '@/lib/media/media-library-service';
@@ -601,24 +602,43 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ...(a.kind ? { kind: a.kind } : {}),
         }));
         try {
-          const project = await generateProjectDocs({
-            title: priorIntent.summary.slice(0, 120),
-            brief: mapIntentToBrief(priorIntent),
+          const projectBrief = mapIntentToBrief(priorIntent);
+          const projectTitle = priorIntent.summary.slice(0, 120) || 'Your video';
+          // FAST HANDOFF: create the project SHELL now and return immediately so the chat
+          // never blocks. The docs (segment → author → render stills) build in the
+          // BACKGROUND, streaming onto the review page as each scene finishes. (Previously
+          // this awaited the whole multi-minute render inline, freezing the chat on
+          // "thinking" for the entire build.)
+          const shell = await createVideoProject({
+            title: projectTitle,
+            brief: projectBrief,
+            build: { status: 'running', phase: 'Getting your project ready…', done: 0, total: 0 },
+          });
+          // Fire-and-forget — the function owns its own error reporting via the project's
+          // `build` field (the review page polls it); we just guard the promise.
+          void buildProjectDocsIntoProject({
+            projectId: shell.id,
+            brief: projectBrief,
             userId: authResult.user.uid,
+            title: projectTitle,
             ...(priorIntent.subjects.length > 0 ? { subjects: priorIntent.subjects } : {}),
             ...(projectReferences.length > 0 ? { attachments: projectReferences } : {}),
+          }).catch((e: unknown) => {
+            logger.error(
+              '[ContentManager] background video build threw',
+              e instanceof Error ? e : new Error(String(e)),
+              { file: FILE, projectId: shell.id },
+            );
           });
-          logger.info('[ContentManager] video project created', {
+          logger.info('[ContentManager] video project shell created — building in background', {
             file: FILE,
-            projectId: project.id,
-            docs: project.docs.length,
-            status: project.status,
+            projectId: shell.id,
           });
           return NextResponse.json({
             success: true,
             reply:
-              "Building your shot docs now — I'm opening the project so you can review each scene as it fills in.",
-            videoProjectId: project.id,
+              "Your project's ready — I'm opening it now. Your shot docs will fill in over the next few minutes as I build each scene; you can watch them appear and start reviewing as they land.",
+            videoProjectId: shell.id,
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : 'unknown error';
