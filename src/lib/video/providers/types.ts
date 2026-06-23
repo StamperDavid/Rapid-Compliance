@@ -59,9 +59,17 @@ export interface VideoGenerationStatus {
  * Tenant scope for credential resolution + usage metering. In single-tenant
  * (Penthouse) mode this is always { tenantId: PLATFORM_ID }. The field exists
  * now so the multi-tenant flip is additive, not a rewrite.
+ *
+ * When `projectId` is set, generated media assets are auto-filed into that
+ * project's folder in the media library (via `createAsset` → `getOrCreateProjectFolder`).
+ * `projectName` is the human-readable folder label (falls back to 'Project' if omitted).
  */
 export interface TenantContext {
   tenantId: string;
+  /** Optional: when present, generated (non-character) assets auto-file into this project's folder. */
+  projectId?: string;
+  /** Optional: human-readable project name for the auto-created folder label. */
+  projectName?: string;
 }
 
 /**
