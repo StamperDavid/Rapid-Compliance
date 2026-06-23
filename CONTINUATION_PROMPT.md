@@ -2,38 +2,6 @@
 
 ---
 
-# 🧹 VIDEO PATH CONSOLIDATION (Jun 22 2026) — one creation path, phased
-
-The operator was confused by TWO video-creation screens that behaved differently. There are
-parallel systems: **System A** = legacy `/content/video` storyboard screen (PipelineProject,
-`video_pipeline_projects`), and **System B** = canonical `/content/video/projects` + the
-"Write a script" front door (`VideoProject`, `videoProjects`) — the ONLY path with the saved-
-character picker, so only it carries a character's identity + auto-attaches new views back to
-the Character Library. The editor (`/content/video/editor`) is shared and data-agnostic; the
-capability panels (CinematicControls, ConstructedPromptDisplay, ShotPlanDocument, AvatarPicker,
-LocationPicker) are reusable and NOT trapped in System A.
-
-**Phase 1 — DONE (commit pending this session).** Make the prominent/default path singular
-without removing or breaking anything:
-- `subpage-nav.ts` "Video" tab → `/content/video/projects` (was `/content/video`).
-- AI/agent create-video deep links → `/content/video/projects` (`jasper-tools.ts`
-  create_video/generate_video, `mission-control/dashboard-links.ts` all Video Studio intents,
-  `feature-toggle-service.ts` video_studio). NOT changed: `ContentAssistant.tsx:912` (it applies
-  storyboards into the System A store first, so it must keep landing on `/content/video` — that
-  is a System-A-coupled flow to migrate in Phase 2).
-- Projects home got a labelled "Open the classic storyboard editor" link → `/content/video`, so
-  older / manually-built projects stay reachable (nothing lost).
-
-**Phase 2 — NOT done (when the operator wants it).** True single path:
-- Migrate existing `video_pipeline_projects` → `videoProjects` (schema adapter) OR dual-load both
-  into the projects list with a shared viewer.
-- Repoint/rebuild the System-A-coupled flows (ContentAssistant storyboard apply, content-calendar
-  `?brief=` prefill, templates) onto System B.
-- Then retire the legacy `/content/video` storyboard creation surface entirely (keep only as a
-  read-only viewer or delete after migration).
-
----
-
 # 🟢 GOVERNING PLAN (Jun 16 2026) — PARITY CERTIFICATION IS THE SPINE
 
 **This section governs everything below it.** The active plan is no longer "ship features" —
