@@ -14,8 +14,8 @@
  */
 
 import { useReducer, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, Plus, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, Plus, X, Trash2 } from 'lucide-react';
 
 import { PageTitle, Caption } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
@@ -86,12 +86,17 @@ function effectiveDuration(clip: EditorClip): number {
 
 export default function VideoEditorPage() {
   const authFetch = useAuthFetch();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('project');
 
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
   // The open tool on the right rail (the timeline is always visible).
   const [tool, setTool] = useState<EditorTool>('edit');
+  // Scrap-the-project (two-step): irreversibly deletes the project + its generated
+  // clips/stills (saved Characters are kept), then leaves the editor.
+  const [scrapArmed, setScrapArmed] = useState(false);
+  const [scrapping, setScrapping] = useState(false);
   // "Add media" popover — anchored below the toolbar button, not a blocking modal.
   const [mediaPopoverOpen, setMediaPopoverOpen] = useState(false);
   const addMediaBtnRef = useRef<HTMLButtonElement>(null);
@@ -451,6 +456,26 @@ export default function VideoEditorPage() {
 
   const ActivePanel = tool === 'edit' ? null : TOOL_PANELS[tool];
 
+  // Scrap the whole project (irreversible): deletes the project + its generated
+  // clips/stills server-side (saved Characters are kept), then leaves the editor.
+  const handleScrapProject = useCallback(async () => {
+    if (!projectIdParam || scrapping) {
+      return;
+    }
+    setScrapping(true);
+    try {
+      const res = await authFetch(`/api/video/project/${projectIdParam}`, { method: 'DELETE' });
+      if (res.ok) {
+        router.push('/content/video/projects');
+        return;
+      }
+    } catch {
+      /* fall through to reset the button */
+    }
+    setScrapping(false);
+    setScrapArmed(false);
+  }, [projectIdParam, scrapping, authFetch, router]);
+
   return (
     <div className="p-6 space-y-4">
       <SubpageNav items={CONTENT_GENERATOR_TABS} />
@@ -499,6 +524,39 @@ export default function VideoEditorPage() {
               </div>
             )}
           </div>
+
+          {/* Scrap project — two-step, irreversible. Only when editing a saved project. */}
+          {projectIdParam &&
+            (scrapArmed ? (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    void handleScrapProject();
+                  }}
+                  disabled={scrapping}
+                  className="gap-1.5"
+                >
+                  {scrapping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Confirm scrap
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setScrapArmed(false)} disabled={scrapping}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setScrapArmed(true)}
+                className="gap-1.5 text-destructive hover:text-destructive"
+                title="Scrap this project — permanently deletes it and its clips (your saved characters are kept)"
+              >
+                <Trash2 className="w-4 h-4" />
+                Scrap project
+              </Button>
+            ))}
 
           {projectLoad === 'loading' && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">
