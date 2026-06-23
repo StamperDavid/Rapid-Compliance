@@ -31,7 +31,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Button } from '@/components/ui/button';
@@ -60,8 +59,6 @@ import {
   CheckCircle2,
   Users,
   UserPlus,
-  ChevronDown,
-  ChevronUp,
   BadgeCheck,
 } from 'lucide-react';
 import type { ShotPlan, ShotPlanCastMember } from '@/types/shot-plan';
@@ -75,6 +72,8 @@ import { seedEditorFromProject } from '@/lib/video/editor-seed';
 import { castMemberFromProfile } from '@/lib/video/shot-plan-blank';
 import { AvatarPicker } from '../../components/AvatarPicker';
 import { ShotPlanDocument } from '../../components/ShotPlanDocument';
+import { ShotDocGradePanel } from '../../components/ShotDocGradePanel';
+import { ZoomPanViewport } from '../../components/ZoomPanViewport';
 
 // ---------------------------------------------------------------------------
 // API response contracts (typed — no `any`)
@@ -208,7 +207,6 @@ function DocCard({
   onRemoveCast,
   onToggleReady,
 }: DocCardProps): React.JSX.Element {
-  const [expanded, setExpanded] = useState(false);
   const hasVideo = docHasVideo(doc);
   const ready = docIsReady(doc);
   const still = firstKeyframe(doc);
@@ -218,21 +216,28 @@ function DocCard({
     [...doc.shots]
       .sort((a, b) => a.index - b.index)
       .find((shot) => shot.generated?.videoUrl)?.generated?.videoUrl ?? null;
-  const title = doc.title.trim() || `Doc ${index + 1}`;
+  const title = doc.title.trim() || `Scene ${index + 1}`;
   const cast = doc.sharedChoices.cast;
   const busy = generating || saving;
 
   return (
-    <div className="bg-card border border-border-strong rounded-2xl p-6 flex flex-col gap-4">
+    <div className="bg-card border border-border-strong rounded-2xl p-6 space-y-4">
+      {/* Header — which scene this is + review/made state. */}
       <div className="flex items-center gap-2">
         <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-elevated text-xs font-semibold text-foreground">
           {index + 1}
         </span>
-        <CardTitle className="line-clamp-1">{title}</CardTitle>
+        <div className="min-w-0">
+          <CardTitle className="line-clamp-1">{title}</CardTitle>
+          <Caption>
+            {doc.shots.length} {doc.shots.length === 1 ? 'shot' : 'shots'}
+            {hasVideo ? ' · clips made' : ''}
+          </Caption>
+        </div>
         <div className="ml-auto flex items-center gap-1.5">
           {ready && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> Ready
+              <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> Reviewed
             </span>
           )}
           {hasVideo && (
@@ -241,34 +246,18 @@ function DocCard({
         </div>
       </div>
 
-      {/* Preview: the scene's first generated clip if it has one, else its first still. */}
-      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-surface-elevated flex items-center justify-center">
-        {firstClip ? (
-          <video
-            src={firstClip}
-            poster={still ?? undefined}
-            controls
-            playsInline
-            preload="metadata"
-            className="w-full h-full object-cover"
-          />
-        ) : still ? (
-          // Keyframe/hero URLs are external, dynamic generation output → unoptimized.
-          <Image src={still} alt={`Still from ${title}`} fill unoptimized className="object-cover" />
-        ) : (
-          <div className="flex flex-col items-center gap-1 text-muted-foreground">
-            <Film className="h-10 w-10" aria-hidden />
-            <Caption>Still being prepared…</Caption>
-          </div>
-        )}
+      {/* THE SHOT DOC — reviewed here in full, with the grading column to the right so
+          the operator can train the layout agent (same surface as the editor). */}
+      <div className="flex flex-col items-start gap-4 xl:flex-row">
+        <div className="min-w-0 flex-1">
+          <ZoomPanViewport>
+            <ShotPlanDocument plan={doc} onEdit={() => undefined} onEditSection={() => undefined} />
+          </ZoomPanViewport>
+        </div>
+        <ShotDocGradePanel plan={doc} />
       </div>
 
-      <Caption>
-        {doc.shots.length} {doc.shots.length === 1 ? 'shot' : 'shots'}
-        {hasVideo ? ' · clips made' : ' · still preview'}
-      </Caption>
-
-      {/* Cast — assign a saved character onto this doc. */}
+      {/* Cast — assign a saved character onto this scene. */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
@@ -299,7 +288,7 @@ function DocCard({
                   onClick={() => onRemoveCast(doc.id, member.characterId)}
                   disabled={busy}
                   className="text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
-                  aria-label={`Remove ${member.name} from this doc`}
+                  aria-label={`Remove ${member.name} from this scene`}
                 >
                   ×
                 </button>
@@ -309,34 +298,16 @@ function DocCard({
         )}
       </div>
 
-      {/* Expand to review every field — the production-sheet render. */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-full justify-center gap-1.5"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-      >
-        {expanded ? (
-          <>
-            <ChevronUp className="h-4 w-4" aria-hidden /> Hide the fields
-          </>
-        ) : (
-          <>
-            <ChevronDown className="h-4 w-4" aria-hidden /> Review the fields
-          </>
-        )}
-      </Button>
-      {expanded && (
-        <div className="overflow-hidden rounded-xl border border-border-strong">
-          {/* Read-only review render (the System A production sheet). Section/shot
-              clicks are review-only here — deep field editing lives in the storyboard. */}
-          <ShotPlanDocument
-            plan={doc}
-            onEdit={() => undefined}
-            onEditSection={() => undefined}
-          />
-        </div>
+      {/* The generated clip, once this scene has been made. */}
+      {firstClip && (
+        <video
+          src={firstClip}
+          poster={still ?? undefined}
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full max-w-md rounded-xl border border-border-strong"
+        />
       )}
 
       {error && (
@@ -349,25 +320,26 @@ function DocCard({
       {generating && (
         <div className="flex items-start gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm text-foreground">
           <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden />
-          <span>Making this doc&apos;s video… this can take a few minutes.</span>
+          <span>Making this scene&apos;s video… this can take a few minutes.</span>
         </div>
       )}
 
-      <div className="mt-auto flex items-center gap-2">
+      {/* Review → (mark reviewed) → generate. Generating IS the approval to render. */}
+      <div className="flex items-center gap-2 border-t border-border-light pt-4">
         <Button
           variant={ready ? 'default' : 'outline'}
           size="sm"
           className="gap-1.5"
           onClick={() => onToggleReady(doc.id)}
           disabled={busy}
-          title={ready ? 'Mark this doc as still in review' : 'Mark this doc ready to make'}
+          title={ready ? 'Mark this scene as still in review' : 'Mark this scene reviewed'}
         >
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           ) : (
             <BadgeCheck className="h-4 w-4" aria-hidden />
           )}
-          {ready ? 'Marked ready' : 'Mark ready'}
+          {ready ? 'Reviewed' : 'Mark reviewed'}
         </Button>
         <Button
           variant={hasVideo ? 'outline' : 'default'}
@@ -384,7 +356,7 @@ function DocCard({
           ) : hasVideo ? (
             <>
               <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden />
-              Regenerate
+              Regenerate video
             </>
           ) : (
             <>
@@ -717,7 +689,7 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
 
       {/* Ordered doc list — review + cast + mark-ready + generate per doc */}
       <section className="space-y-4">
-        <SectionTitle>Docs in this project</SectionTitle>
+        <SectionTitle>Review your shot {project.docs.length === 1 ? 'doc' : 'docs'}</SectionTitle>
         {project.docs.length === 0 ? (
           <div className="bg-card border border-border-strong rounded-2xl p-10 flex flex-col items-center text-center gap-3">
             <Film className="h-10 w-10 text-muted-foreground" aria-hidden />
@@ -733,7 +705,7 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-6">
             {project.docs.map((doc, index) => (
               <DocCard
                 key={doc.id}
