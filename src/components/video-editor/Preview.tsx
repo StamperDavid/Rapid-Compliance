@@ -222,17 +222,23 @@ export default function Preview({
       return;
     }
 
+    // Seed a monotonic accumulator from the current playhead ONCE, then advance it
+    // by each frame's delta. The old code did `playheadTime + dt`, but playheadTime is
+    // the stale closure value (this effect intentionally doesn't depend on it), so the
+    // playhead never advanced past the first frame — playback appeared to stop after
+    // clip 1. The accumulator owns the clock and carries through every clip.
     let last = performance.now();
+    let elapsed = playheadTime;
     const step = (now: number) => {
       const dt = (now - last) / 1000;
       last = now;
-      const next = playheadTime + dt;
-      if (next >= totalDuration) {
+      elapsed += dt;
+      if (elapsed >= totalDuration) {
         dispatch({ type: 'SET_PLAYHEAD', time: totalDuration });
         dispatch({ type: 'SET_PLAYING', playing: false });
         return;
       }
-      dispatch({ type: 'SET_PLAYHEAD', time: next });
+      dispatch({ type: 'SET_PLAYHEAD', time: elapsed });
       rafRef.current = requestAnimationFrame(step);
     };
     rafRef.current = requestAnimationFrame(step);

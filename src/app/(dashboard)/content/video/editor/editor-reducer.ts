@@ -31,8 +31,12 @@ function snapshot(state: EditorState): EditorSnapshot {
 
 function computeTotalDuration(clips: EditorClip[]): number {
   return clips.reduce((sum, clip) => {
-    const effective = (clip.duration || DEFAULT_CLIP_DURATION) - clip.trimStart - clip.trimEnd;
-    return sum + Math.max(0, effective);
+    const trimmed = Math.max(0.1, (clip.duration || DEFAULT_CLIP_DURATION) - clip.trimStart - clip.trimEnd);
+    // Must match Preview's effectiveDuration: a clip at 2× occupies half the timeline,
+    // 0.5× occupies double. If this diverged, the playhead's end-of-timeline check would
+    // stop playback early (or run long) for any clip whose speed isn't 1×.
+    const speed = Math.min(2, Math.max(0.5, clip.effect?.speed ?? 1));
+    return sum + Math.max(0.1, trimmed / speed);
   }, 0);
 }
 
