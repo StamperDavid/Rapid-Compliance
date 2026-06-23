@@ -200,8 +200,10 @@ export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
 // /content/library layout). Each is its own route under /content/library/*.
 export const LIBRARY_SECTIONS: SubpageNavItem[] = [
   { label: 'Media', href: '/content/library/media' },
+  { label: 'Projects', href: '/content/library/projects' },
   { label: 'Characters', href: '/content/library/characters' },
   { label: 'Locations', href: '/content/library/locations' },
+  { label: 'Audio', href: '/content/library/audio' },
 ];
 
 // ── AI Workforce Hub (May 19 2026: added Workflows) ─────────────────────────
