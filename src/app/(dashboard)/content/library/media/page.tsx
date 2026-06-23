@@ -1475,7 +1475,6 @@ export default function MediaLibraryUnifiedPage() {
                 busy={bulkBusy || bulkDeleting || downloading}
                 progress={bulkProgress}
                 isArmedDelete={bulkArmed}
-                hideProjectAction
                 onArmDelete={() => setBulkArmed(true)}
                 onCancelDelete={() => setBulkArmed(false)}
                 onClear={clearChecked}
@@ -1859,7 +1858,6 @@ function AssetTile({
             onLoadCharacters={onLoadCharacters}
             projects={projects}
             actions={actions}
-            hideProjectAction
             onArmDelete={() => onArmDelete(asset.id)}
           />
         </div>
