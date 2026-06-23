@@ -235,7 +235,24 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json({ success: true, asset: updated, item: updated });
+    // "Assign to project" must actually FILE the asset into that project's folder —
+    // not just tag it (the old behaviour that did nothing visible). Mirrors createAsset's
+    // auto-file: when a projectId is assigned (and the caller didn't request an explicit
+    // folder move, and it isn't a Character-owned image), move it into the project folder.
+    let finalAsset = updated;
+    if (body.projectId && !('folderId' in body) && updated.category !== 'character') {
+      const { getOrCreateProjectFolder } = await import('@/lib/media/media-folders-service');
+      const folderId = await getOrCreateProjectFolder(
+        body.projectId,
+        body.projectName ?? updated.projectName ?? 'Project',
+      );
+      const moved = await setAssetFolder(id, folderId);
+      if (moved) {
+        finalAsset = moved;
+      }
+    }
+
+    return NextResponse.json({ success: true, asset: finalAsset, item: finalAsset });
   } catch (error) {
     logger.error(
       'Failed to update media asset',
