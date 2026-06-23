@@ -721,7 +721,6 @@ function CastCard({
   onRemove,
   onCastChange,
   onReplaceFromLibrary,
-  onReplaceImage,
 }: {
   member: ShotPlanCastMember;
   /** The full cast array — edits clone it and replace THIS member. */
@@ -733,8 +732,6 @@ function CastCard({
   onCastChange: (next: ShotPlanCastMember[]) => void;
   /** Swap THIS cast slot for a saved Character-Library character (keeps the slot). */
   onReplaceFromLibrary?: () => void;
-  /** Swap THIS cast slot's image for an uploaded / library image. */
-  onReplaceImage?: () => void;
 }) {
   const [imgBroken, setImgBroken] = useState(false);
   const [open, setOpen] = useState(false);
@@ -771,22 +768,11 @@ function CastCard({
           <button
             type="button"
             onClick={onReplaceFromLibrary}
-            title="Replace with a saved character from your library"
+            title="Replace with a character from your Character Library"
             aria-label={`Replace ${member.name} with a saved character`}
             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-primary"
           >
             <UserCog className="h-4 w-4" />
-          </button>
-        )}
-        {editing && onReplaceImage && (
-          <button
-            type="button"
-            onClick={onReplaceImage}
-            title="Replace the image (upload or pick from your media library)"
-            aria-label={`Replace ${member.name}'s image`}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-primary"
-          >
-            <ImageIcon className="h-4 w-4" />
           </button>
         )}
         {editing && (
@@ -2192,11 +2178,9 @@ export function ShotPlanSheet() {
   const [askAiSubmitting, setAskAiSubmitting] = useState(false);
   const [askAiError, setAskAiError] = useState<string | null>(null);
   const [castPickerOpen, setCastPickerOpen] = useState(false);
-  // When set, the cast/image picker REPLACES this cast slot in place (keeps the slot id so
+  // When set, the character picker REPLACES this cast slot in place (keeps the slot id so
   // every shot's castMemberIds stay valid) instead of adding a new member. null = add mode.
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
-  // Image-replace picker (upload or pick from the media library) for a single cast slot.
-  const [replaceImageOpen, setReplaceImageOpen] = useState(false);
   // "Create new" character — opens the full Character Studio creator; on save the
   // new (saved) character is added straight to this plan's cast.
   const [createCharacterOpen, setCreateCharacterOpen] = useState(false);
@@ -2828,26 +2812,6 @@ export function ShotPlanSheet() {
     [shotPlan, applyEdit],
   );
 
-  // Replace ONE cast slot's reference image with an uploaded / library image (keeps the
-  // slot's id, name and role — only the look changes). Clears any model sheet so the new
-  // image is the one that renders + conditions generation.
-  const replaceCastImage = useCallback(
-    (oldCharacterId: string, imageUrl: string) => {
-      if (!shotPlan) {
-        return;
-      }
-      applyEdit({
-        target: 'shared',
-        field: 'cast',
-        value: shotPlan.sharedChoices.cast.map((c) =>
-          c.characterId === oldCharacterId
-            ? { ...c, referenceImageUrls: [imageUrl], modelSheet: undefined }
-            : c,
-        ),
-      });
-    },
-    [shotPlan, applyEdit],
-  );
 
   // ── Objects & props helpers ──
   const addObject = useCallback(
@@ -3257,10 +3221,6 @@ export function ShotPlanSheet() {
                           setReplaceTargetId(member.characterId);
                           setCastPickerOpen(true);
                         }}
-                        onReplaceImage={() => {
-                          setReplaceTargetId(member.characterId);
-                          setReplaceImageOpen(true);
-                        }}
                       />
                     ))}
                   </div>
@@ -3522,25 +3482,6 @@ export function ShotPlanSheet() {
         </DialogContent>
       </Dialog>
 
-      {/* Replace a cast slot's IMAGE with an upload or a pick from the media library. */}
-      <MediaLibraryPicker
-        open={replaceImageOpen}
-        onOpenChange={(o) => {
-          setReplaceImageOpen(o);
-          if (!o) {
-            setReplaceTargetId(null);
-          }
-        }}
-        onSelect={(picked) => {
-          const img = picked.find((a) => a.type === 'image')?.url;
-          if (replaceTargetId && img) {
-            replaceCastImage(replaceTargetId, img);
-          }
-          setReplaceImageOpen(false);
-          setReplaceTargetId(null);
-        }}
-        authFetch={authFetch}
-      />
 
       {/* Create New character — the full Character Studio creator. On save the new
           (saved) character is added straight to the cast. */}

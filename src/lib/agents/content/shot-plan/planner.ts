@@ -729,11 +729,37 @@ function buildSelectedLocationsBlock(locations: LocationProfile[]): string {
 function resolveCast(
   llmCast: LlmShotPlan['sharedChoices']['cast'],
   profiles: AvatarProfile[],
+  nameLibrary: AvatarProfile[] = [],
 ): ShotPlanCastMember[] {
   const byId = new Map(profiles.map((p) => [p.id, p]));
+  // Exact-name index of the operator's OWN library (case-insensitive). This powers the
+  // auto name-match: when the brief NAMES a character that already exists in the library,
+  // we bind that saved character instead of letting the planner invent a look-alike.
+  // (The operator turned the old "never name-match" rule off on purpose; we keep it safe
+  // by matching ONLY their own library and ONLY on an exact name.)
+  const byName = new Map<string, AvatarProfile>();
+  for (const p of nameLibrary) {
+    const key = p.name.trim().toLowerCase();
+    if (key) {
+      byName.set(key, p);
+    }
+  }
   const resolved: ShotPlanCastMember[] = [];
   for (const member of llmCast) {
-    const profile = byId.get(member.characterId);
+    // First: an explicitly-selected (locked) saved character, matched by id.
+    let profile = byId.get(member.characterId);
+    // Otherwise: an INVENTED character whose name exactly matches a saved one → bind it.
+    if (!profile) {
+      const named = byName.get(member.name.trim().toLowerCase());
+      if (named) {
+        profile = named;
+        logger.info('[ShotPlanPlanner] auto name-match: bound saved character by name', {
+          file: FILE,
+          name: member.name,
+          characterId: named.id,
+        });
+      }
+    }
     resolved.push({
       characterId: member.characterId,
       lookId: member.lookId,
@@ -1047,15 +1073,14 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
   const validated = GenerateShotPlanInputSchema.parse(input);
   const gm = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
 
-  // ONLY the characters the operator EXPLICITLY selected are real saved cast.
-  // Everyone else the brief needs is invented fresh — the planner never auto-pulls
-  // the whole library (that forced the same character into every video and risked
-  // name collisions). No selection → no saved characters offered → invent all.
+  // EXPLICITLY-selected saved characters are LOCKED into the cast (offered to the model by
+  // id). On top of that, the operator's FULL own library is used for AUTO NAME-MATCH: if
+  // the brief NAMES a character that already exists in the library, resolveCast binds that
+  // saved character instead of inventing a look-alike. (Operator reversed the old
+  // never-name-match rule; we keep it safe — own library only, exact name only.)
   const selectedIds = new Set(validated.selectedCharacterIds ?? []);
-  const profiles =
-    selectedIds.size > 0
-      ? (await listAvatarProfiles(validated.userId, { ownOnly: true })).filter((p) => selectedIds.has(p.id))
-      : [];
+  const allOwnProfiles = await listAvatarProfiles(validated.userId, { ownOnly: true });
+  const profiles = selectedIds.size > 0 ? allOwnProfiles.filter((p) => selectedIds.has(p.id)) : [];
   const availableCastBlock = buildAvailableCastBlock(profiles);
 
   // SET-CONSISTENCY: ONLY the locations the operator EXPLICITLY selected LOCK the
@@ -1099,7 +1124,7 @@ export async function generateShotPlan(input: GenerateShotPlanInput): Promise<Sh
       continue;
     }
 
-    const cast = resolveCast(bodyResult.data.sharedChoices.cast, profiles);
+    const cast = resolveCast(bodyResult.data.sharedChoices.cast, profiles, allOwnProfiles);
     const candidate = assembleShotPlan(
       bodyResult.data,
       cast,
