@@ -8,6 +8,8 @@ import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { z } from 'zod';
 import { getProject, deleteProject, updateProject } from '@/lib/video/pipeline-project-service';
+import { listAssets, deleteAsset } from '@/lib/media/media-library-service';
+import { listFolders, deleteFolder } from '@/lib/media/media-folders-service';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 
@@ -250,6 +252,26 @@ export async function DELETE(
     logger.info('Deleting video pipeline project', {
       file: 'api/video/project/[projectId]/route.ts',
       projectId,
+    });
+
+    // Cascade ("Scrap project"): remove the project's generated media (clips + stills)
+    // and its library folder so scrapping clears it from the system. Saved Characters are
+    // owned separately and are NEVER deleted here (category 'character' is skipped).
+    // NOTE: this removes the Firestore asset records (they vanish from the app); the
+    // underlying Storage blobs are not purged here — a storage sweep can be added later.
+    const projectAssets = await listAssets({ projectId, limit: 500 });
+    const deletable = projectAssets.assets.filter((a) => a.category !== 'character');
+    const removed = (await Promise.all(deletable.map((a) => deleteAsset(a.id)))).filter(Boolean).length;
+    const folders = await listFolders();
+    const projectFolder = folders.find((f) => f.projectId === projectId);
+    if (projectFolder) {
+      await deleteFolder(projectFolder.id);
+    }
+    logger.info('Scrapped project media', {
+      file: 'api/video/project/[projectId]/route.ts',
+      projectId,
+      removedAssets: removed,
+      folderRemoved: Boolean(projectFolder),
     });
 
     const deleted = await deleteProject(projectId);
