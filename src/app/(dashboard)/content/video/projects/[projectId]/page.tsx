@@ -158,6 +158,7 @@ function DocCard({
   anyGenerating,
   onToggleReady,
 }: DocCardProps): React.JSX.Element {
+  const authFetch = useAuthFetch();
   const hasVideo = docHasVideo(doc);
   const ready = docIsReady(doc);
   const still = firstKeyframe(doc);
@@ -201,7 +202,28 @@ function DocCard({
       <div className="flex flex-col items-start gap-4 xl:flex-row">
         <div className="min-w-0 flex-1">
           <ZoomPanViewport>
-            <ShotPlanDocument plan={doc} onEdit={() => undefined} onEditSection={() => undefined} />
+            <ShotPlanDocument
+              plan={doc}
+              onEdit={() => undefined}
+              onEditSection={() => undefined}
+              onSaveCharacterToLibrary={async (member) => {
+                try {
+                  const res = await authFetch('/api/content/shot-plan/save-character', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ member }),
+                  });
+                  const data = (await res.json()) as {
+                    success: boolean;
+                    alreadySaved?: boolean;
+                    error?: string;
+                  };
+                  return { ok: res.ok && data.success, alreadySaved: data.alreadySaved, error: data.error };
+                } catch (e) {
+                  return { ok: false, error: e instanceof Error ? e.message : 'Save failed' };
+                }
+              }}
+            />
           </ZoomPanViewport>
         </div>
         <ShotDocGradePanel plan={doc} />
