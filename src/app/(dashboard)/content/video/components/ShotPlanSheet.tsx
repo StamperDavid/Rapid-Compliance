@@ -92,6 +92,7 @@ import type { LocationProfile } from './location-types';
 import CharacterForm from '../../characters/CharacterForm';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { ShotPlanDocument, type ShotPlanSection } from './ShotPlanDocument';
+import { ShotDocGradePanel } from './ShotDocGradePanel';
 import { ZoomPanViewport } from './ZoomPanViewport';
 import {
   applyShotPlanEdit,
@@ -2973,35 +2974,42 @@ export function ShotPlanSheet() {
         </div>
       )}
       {/* ══ The cinematic production-sheet document — always shown (read-only). Each
-           section's Edit button opens its own per-section popup below. ══ */}
-      <ZoomPanViewport>
-        <ShotPlanDocument
-          plan={shotPlan}
-          onEdit={(id) => setDetailShotId((prev) => (prev === id ? null : id))}
-          onEditSection={(section: ShotPlanSection) => setEditingSection(section)}
-          onSaveCharacterToLibrary={async (member) => {
-            try {
-              const res = await authFetch('/api/content/shot-plan/save-character', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ member }),
-              });
-              const data = (await res.json()) as {
-                success: boolean;
-                alreadySaved?: boolean;
-                error?: string;
-              };
-              return {
-                ok: res.ok && data.success,
-                alreadySaved: data.alreadySaved,
-                error: data.error,
-              };
-            } catch (e) {
-              return { ok: false, error: e instanceof Error ? e.message : 'Save failed' };
-            }
-          }}
-        />
-      </ZoomPanViewport>
+           section's Edit button opens its own per-section popup below. To its RIGHT,
+           the grading column lets the operator teach the layout agent (Shot Plan
+           Planner) their page-layout preferences; on narrow screens it stacks below. ══ */}
+      <div className="flex flex-col items-start gap-4 xl:flex-row">
+        <div className="min-w-0 flex-1">
+          <ZoomPanViewport>
+            <ShotPlanDocument
+              plan={shotPlan}
+              onEdit={(id) => setDetailShotId((prev) => (prev === id ? null : id))}
+              onEditSection={(section: ShotPlanSection) => setEditingSection(section)}
+              onSaveCharacterToLibrary={async (member) => {
+                try {
+                  const res = await authFetch('/api/content/shot-plan/save-character', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ member }),
+                  });
+                  const data = (await res.json()) as {
+                    success: boolean;
+                    alreadySaved?: boolean;
+                    error?: string;
+                  };
+                  return {
+                    ok: res.ok && data.success,
+                    alreadySaved: data.alreadySaved,
+                    error: data.error,
+                  };
+                } catch (e) {
+                  return { ok: false, error: e instanceof Error ? e.message : 'Save failed' };
+                }
+              }}
+            />
+          </ZoomPanViewport>
+        </div>
+        <ShotDocGradePanel plan={shotPlan} />
+      </div>
 
       {/* ══ Per-section editor popup — the shot doc is read-only; each section's Edit
            button opens just THAT section's editor here. One controlled Dialog whose
