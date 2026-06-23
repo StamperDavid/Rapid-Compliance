@@ -2,49 +2,6 @@
 
 ---
 
-# 🧹 VIDEO PATH CONSOLIDATION (Jun 22 2026) — one creation path, phased
-
-The operator was confused by TWO video-creation screens that behaved differently. There are
-parallel systems: **System A** = legacy `/content/video` storyboard screen (PipelineProject,
-`video_pipeline_projects`), and **System B** = canonical `/content/video/projects` + the
-"Write a script" front door (`VideoProject`, `videoProjects`) — the ONLY path with the saved-
-character picker, so only it carries a character's identity + auto-attaches new views back to
-the Character Library. The editor (`/content/video/editor`) is shared and data-agnostic; the
-capability panels (CinematicControls, ConstructedPromptDisplay, ShotPlanDocument, AvatarPicker,
-LocationPicker) are reusable and NOT trapped in System A.
-
-**Phase 1 — DONE (commit pending this session).** Make the prominent/default path singular
-without removing or breaking anything:
-- `subpage-nav.ts` "Video" tab → `/content/video/projects` (was `/content/video`).
-- AI/agent create-video deep links → `/content/video/projects` (`jasper-tools.ts`
-  create_video/generate_video, `mission-control/dashboard-links.ts` all Video Studio intents,
-  `feature-toggle-service.ts` video_studio). NOT changed: `ContentAssistant.tsx:912` (it applies
-  storyboards into the System A store first, so it must keep landing on `/content/video` — that
-  is a System-A-coupled flow to migrate in Phase 2).
-- Projects home got a labelled "Open the classic storyboard editor" link → `/content/video`, so
-  older / manually-built projects stay reachable (nothing lost).
-
-**Phase 2 — DONE (Jun 22 2026).** True single path, classic storyboard editor retired:
-- Migrated existing `video_pipeline_projects` → `videoProjects` via `scripts/migrate-pipeline-to-
-  videoproject.ts` (each legacy `shotPlan` becomes a one-doc VideoProject through the real
-  `createVideoProject`, Zod-validated; legacy doc tagged `migratedToVideoProjectId`, not deleted).
-  1 legacy draft migrated successfully.
-- `/content/video/page.tsx` is now a REDIRECT: `?brief=` (Content Calendar hand-off) →
-  `/content/video/projects/new?brief=…` (VideoScriptForm reads `?brief=`/`?title=`); everything
-  else → `/content/video/projects`. The classic StepStoryboard creation UI no longer renders.
-- ContentAssistant already prefers System B (opens `/content/video/projects/[id]` when the backend
-  returns a `videoProjectId`); its legacy System-A storyboard fallback now only ever lands on the
-  redirect → projects home, so it can't strand work. (The dead fallback block can be deleted in a
-  later cleanup — left for now to keep the change small.)
-- Removed the Phase 1 "Open the classic storyboard editor" link from the projects home.
-- The shared clip editor at `/content/video/editor` is unrelated and untouched.
-
-**Phase 2 follow-ups (low-pri cleanup, optional):** delete the now-unused System-A storyboard
-fallback in `ContentAssistant.tsx` + the orphaned `StepStoryboard`/`TemplatePickerModal` files +
-dormant `/api/content/shot-plan/*` build routes once confirmed nothing else uses them.
-
----
-
 # 🟢 GOVERNING PLAN (Jun 16 2026) — PARITY CERTIFICATION IS THE SPINE
 
 **This section governs everything below it.** The active plan is no longer "ship features" —

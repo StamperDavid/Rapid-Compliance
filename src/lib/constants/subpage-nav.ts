@@ -187,11 +187,7 @@ export const DEALS_TABS: SubpageNavItem[] = [
 // Studio tab REMOVED Jun 5 2026 — its job becomes the cross-tab Content Assistant (see
 // CONTENT GENERATOR REDESIGN spec in CONTINUATION_PROMPT.md). Characters tab added when built.
 export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
-  // Video tab lands on the single creation home (the script-first front door with the
-  // saved-character picker). The legacy /content/video storyboard screen still exists for
-  // opening older / manual projects, reached via a labelled link on the projects home —
-  // see the video-path consolidation note in CONTINUATION_PROMPT.md.
-  { label: 'Video', href: '/content/video/projects' },
+  { label: 'Video', href: '/content/video' },
   { label: 'Image', href: '/content/image-generator' },
   { label: 'Editor', href: '/content/video/editor' },
   // Media, Characters and Locations are all libraries → consolidated under one

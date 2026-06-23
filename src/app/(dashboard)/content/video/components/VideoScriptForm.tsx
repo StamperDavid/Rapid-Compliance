@@ -25,7 +25,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   AlertCircle,
@@ -258,27 +258,12 @@ interface BriefPhaseProps {
 
 function BriefPhase({ onScriptReady }: BriefPhaseProps): React.JSX.Element {
   const authFetch = useAuthFetch();
-  const searchParams = useSearchParams();
 
   // Brief form state
   const [brief, setBrief] = useState('');
   const [title, setTitle] = useState('');
   const [tone, setTone] = useState('');
   const [platformsRaw, setPlatformsRaw] = useState('');
-
-  // Prefill from a hand-off (e.g. the Content Calendar "make a video from this slot"
-  // links here with ?brief=…&title=…). Only seeds empty fields so it never clobbers
-  // what the operator has typed.
-  useEffect(() => {
-    const b = searchParams.get('brief');
-    const t = searchParams.get('title');
-    if (b) {
-      setBrief((cur) => (cur ? cur : b));
-    }
-    if (t) {
-      setTitle((cur) => (cur ? cur : t));
-    }
-  }, [searchParams]);
 
   // Character picker state
   const [profiles, setProfiles] = useState<AvatarProfileItem[]>([]);

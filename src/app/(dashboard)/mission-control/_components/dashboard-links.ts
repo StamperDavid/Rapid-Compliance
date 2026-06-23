@@ -42,14 +42,14 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   // was a dead-end. Revisit if a per-mission intelligence dashboard is built.
   delegate_to_commerce: { route: '/products', label: 'Products' },
   // Video tools
-  create_video: { route: '/content/video/projects', label: 'Video Studio' },
-  generate_video: { route: '/content/video/projects', label: 'Video Studio' },
-  produce_video: { route: '/content/video/projects', label: 'Video Studio' },
-  assemble_video: { route: '/content/video/projects', label: 'Video Studio' },
+  create_video: { route: '/content/video', label: 'Video Studio' },
+  generate_video: { route: '/content/video', label: 'Video Studio' },
+  produce_video: { route: '/content/video', label: 'Video Studio' },
+  assemble_video: { route: '/content/video', label: 'Video Studio' },
   // Video orchestration chain steps
-  video_script: { route: '/content/video/projects', label: 'Video Studio' },
-  video_cinematic: { route: '/content/video/projects', label: 'Video Studio' },
-  video_thumbnails: { route: '/content/video/projects', label: 'Video Studio' },
+  video_script: { route: '/content/video', label: 'Video Studio' },
+  video_cinematic: { route: '/content/video', label: 'Video Studio' },
+  video_thumbnails: { route: '/content/video', label: 'Video Studio' },
   // Image
   create_image: { route: '/content/image-generator', label: 'Image Generator' },
   // Other tools
@@ -63,7 +63,7 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   create_campaign: { route: '/mission-control', label: 'Mission Control' },
   batch_produce_videos: { route: '/social/calendar', label: 'Content Calendar' },
   // Campaign deliverable steps (fallbacks — toolResult.reviewLink takes priority)
-  campaign_video: { route: '/content/video/projects', label: 'Video Studio' },
+  campaign_video: { route: '/content/video', label: 'Video Studio' },
   campaign_social: { route: '/social', label: 'Social Hub' },
   campaign_email: { route: '/email/campaigns', label: 'Email Campaigns' },
   campaign_blog: { route: '/website/blog', label: 'Blog' },
