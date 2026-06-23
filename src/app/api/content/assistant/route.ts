@@ -621,6 +621,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             brief: projectBrief,
             userId: authResult.user.uid,
             title: projectTitle,
+            ...(priorIntent.format.durationSeconds
+              ? { durationSeconds: priorIntent.format.durationSeconds }
+              : {}),
             ...(priorIntent.subjects.length > 0 ? { subjects: priorIntent.subjects } : {}),
             ...(projectReferences.length > 0 ? { attachments: projectReferences } : {}),
           }).catch((e: unknown) => {

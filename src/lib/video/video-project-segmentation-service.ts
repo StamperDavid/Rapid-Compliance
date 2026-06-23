@@ -56,6 +56,17 @@ const MAX_SEGMENTS = 6;
 /** Per-doc shot-count guardrails (the planner clamps too, this keeps the ask sane). */
 const MIN_SHOTS_PER_DOC = 3;
 const MAX_SHOTS_PER_DOC = 8;
+/** A single shot doc covers up to ~this many seconds of story; longer videos need more docs. */
+const SECONDS_PER_DOC = 30;
+
+/**
+ * How many shot docs a video of the given length needs: one doc per ~30s of story.
+ * A 30-second video = 1 doc; 90s ≈ 3; capped at MAX_SEGMENTS. Unknown length → 1.
+ */
+function targetDocCount(durationSeconds: number | undefined): number {
+  const secs = durationSeconds && durationSeconds > 0 ? durationSeconds : SECONDS_PER_DOC;
+  return Math.max(1, Math.min(MAX_SEGMENTS, Math.ceil(secs / SECONDS_PER_DOC)));
+}
 
 // ============================================================================
 // INPUT CONTRACT
@@ -163,11 +174,22 @@ function buildSegmentationSystemPrompt(): string {
   ].join('\n');
 }
 
-function buildSegmentationUserPrompt(brief: string, titleHint: string | undefined, priorErrors?: string): string {
+function buildSegmentationUserPrompt(
+  brief: string,
+  titleHint: string | undefined,
+  targetDocs: number | undefined,
+  priorErrors?: string,
+): string {
   return [
     'PROJECT BRIEF (the whole film — segment it into ordered scenes):',
     brief,
     titleHint ? `\nTITLE HINT: ${titleHint}` : '',
+    // When the caller knows the video's LENGTH, the doc count is fixed (~30s of story per
+    // doc). Honor it — do NOT over-segment a short video into many tiny docs.
+    targetDocs
+      ? `\nThis video needs EXACTLY ${targetDocs} segment${targetDocs === 1 ? '' : 's'} ` +
+        `(one shot doc per ~30 seconds of story). Return exactly ${targetDocs}.`
+      : '',
     '\nReturn ONLY the JSON object described in your instructions.',
     priorErrors
       ? `\nYOUR PREVIOUS ATTEMPT FAILED VALIDATION. Fix exactly these problems and return corrected JSON only:\n${priorErrors}`
@@ -207,13 +229,17 @@ function extractJsonObject(raw: string): string {
  * Retries ONCE with the validation errors fed back; throws an honest error if the
  * model cannot produce a valid segmentation after two attempts.
  */
-async function segmentBrief(brief: string, titleHint: string | undefined): Promise<SegmentationResponse> {
+async function segmentBrief(
+  brief: string,
+  titleHint: string | undefined,
+  targetDocs?: number,
+): Promise<SegmentationResponse> {
   const provider = new OpenRouterProvider(PLATFORM_ID);
   const systemPrompt = buildSegmentationSystemPrompt();
 
   let priorErrors: string | undefined;
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const userPrompt = buildSegmentationUserPrompt(brief, titleHint, priorErrors);
+    const userPrompt = buildSegmentationUserPrompt(brief, titleHint, targetDocs, priorErrors);
 
     let response: { content: string; finishReason?: string };
     try {
@@ -262,12 +288,20 @@ async function segmentBrief(brief: string, titleHint: string | undefined): Promi
       continue;
     }
 
+    // Hard safety net against over-segmentation: when the length fixes the count, never
+    // return more docs than that, even if the model ignored the instruction.
+    const trimmed: SegmentationResponse =
+      targetDocs && result.data.segments.length > targetDocs
+        ? { ...result.data, segments: result.data.segments.slice(0, targetDocs) }
+        : result.data;
+
     logger.info('[video-project-segmentation] brief segmented', {
       file: FILE,
-      segments: result.data.segments.length,
+      segments: trimmed.segments.length,
+      targetDocs,
       attempt,
     });
-    return result.data;
+    return trimmed;
   }
 
   throw new Error(
@@ -406,6 +440,8 @@ export interface BuildProjectDocsIntoProjectInput {
   userId: string;
   /** Optional title hint (a better one may come from segmentation). */
   title?: string;
+  /** Target video length in seconds — decides the doc count (~30s per shot doc). */
+  durationSeconds?: number;
   /** Confirmed intent subjects (saved-character bindings thread into every doc). */
   subjects?: IntentSubject[];
   /** Operator's attached references (the planner's text-only reference inputs). */
@@ -441,7 +477,8 @@ export async function buildProjectDocsIntoProject(
       total: 0,
     });
 
-    const segmentation = await segmentBrief(input.brief, input.title);
+    const targetDocs = targetDocCount(input.durationSeconds);
+    const segmentation = await segmentBrief(input.brief, input.title, targetDocs);
     const segments: SceneSegment[] = segmentation.segments;
     const total = segments.length;
 
