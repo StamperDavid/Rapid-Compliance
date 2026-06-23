@@ -76,11 +76,6 @@ import {
   type CharacterOption,
   type ProjectOption,
 } from '@/app/(dashboard)/content/video/library/AssetActionsMenu';
-import {
-  MediaFolderNav,
-  buildBreadcrumb,
-  type FolderSelection,
-} from './MediaFolderNav';
 
 // ============================================================================
 // Constants
@@ -302,14 +297,7 @@ export default function MediaLibraryUnifiedPage() {
   const [deleting, setDeleting] = useState(false);
   const disarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Folder navigation ───────────────────────────────────────────────────
-  // Default to UNFILED so the main view stays clean: an image that's been filed
-  // into a folder/project drops out of here and lives only in that folder. "All
-  // media" remains an explicit root for searching across everything at once.
-  const [folderSelection, setFolderSelection] = useState<FolderSelection>({
-    kind: 'unfiled',
-  });
-  // Flat folder list — kept in page state so breadcrumb + move menus can use it
+  // Flat folder list — kept in page state so move menus can use it
   const [allFolders, setAllFolders] = useState<MediaFolder[]>([]);
   // Bulk move-to-folder UI
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
@@ -343,14 +331,9 @@ export default function MediaLibraryUnifiedPage() {
         const only = Array.from(categoryFilter)[0];
         params.set('category', only);
       }
-      // Folder scope: a specific folder shows ITS assets; the top level shows only
-      // LOOSE (unfiled) media. Filed assets live exclusively in their folder — they
-      // never appear in the top-level view (owner's strict-containment model).
-      if (folderSelection.kind === 'folder') {
-        params.set('folderId', folderSelection.id);
-      } else {
-        params.set('unfiledOnly', 'true');
-      }
+      // Media always shows only loose (unfiled) assets — filed assets live in
+      // the Projects library tab and never appear here.
+      params.set('unfiledOnly', 'true');
       params.set('limit', '500');
 
       const url = `/api/media${params.toString() ? `?${params.toString()}` : ''}`;
@@ -389,7 +372,6 @@ export default function MediaLibraryUnifiedPage() {
     sourceFilter,
     search,
     categoryFilter,
-    folderSelection,
   ]);
 
   useEffect(() => {
@@ -1283,29 +1265,8 @@ export default function MediaLibraryUnifiedPage() {
         </div>
       </div>
 
-      {/* Layout: folder nav | grid | detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-6">
-        {/* ── Folder navigation ────────────────────────────────────────── */}
-        <div className="space-y-3">
-          <MediaFolderNav
-            selection={folderSelection}
-            onSelect={(sel) => {
-              setFolderSelection(sel);
-              setCheckedIds(new Set());
-            }}
-            onFoldersChange={setAllFolders}
-          />
-        </div>
-
-        {/* ── Main column (search + grid) ─────────────────────────────── */}
-        <div className="space-y-4">
-          {/* Breadcrumb */}
-          <FolderBreadcrumb
-            selection={folderSelection}
-            folders={allFolders}
-            onSelect={setFolderSelection}
-          />
-
+      {/* Media grid + detail */}
+      <div className="space-y-4">
           {/* Search bar + Filter button */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -1585,7 +1546,6 @@ export default function MediaLibraryUnifiedPage() {
               buildAssetActions={buildAssetActions}
             />
           )}
-        </div>
       </div>
     </>
   );
@@ -2409,73 +2369,6 @@ function AssetDetailPanel({
         )}
       </div>
     </aside>
-  );
-}
-
-// ============================================================================
-// FolderBreadcrumb — shows current folder path above the grid
-// ============================================================================
-
-interface FolderBreadcrumbProps {
-  selection: FolderSelection;
-  folders: MediaFolder[];
-  onSelect: (sel: FolderSelection) => void;
-}
-
-function FolderBreadcrumb({ selection, folders, onSelect }: FolderBreadcrumbProps) {
-  if (selection.kind === 'all') {
-    return (
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <FolderOpen className="h-3.5 w-3.5 shrink-0" />
-        <span className="font-medium text-foreground">All media</span>
-      </div>
-    );
-  }
-  if (selection.kind === 'unfiled') {
-    return (
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <button
-          type="button"
-          onClick={() => onSelect({ kind: 'all' })}
-          className="hover:text-foreground transition-colors"
-        >
-          All media
-        </button>
-        <ChevronRight className="h-3 w-3" />
-        <span className="font-medium text-foreground">Unfiled</span>
-      </div>
-    );
-  }
-  const crumbs = buildBreadcrumb(folders, selection.id);
-  return (
-    <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
-      <button
-        type="button"
-        onClick={() => onSelect({ kind: 'all' })}
-        className="hover:text-foreground transition-colors"
-      >
-        All media
-      </button>
-      {crumbs.map((folder, idx) => {
-        const isLast = idx === crumbs.length - 1;
-        return (
-          <span key={folder.id} className="flex items-center gap-1">
-            <ChevronRight className="h-3 w-3 shrink-0" />
-            {isLast ? (
-              <span className="font-medium text-foreground">{folder.name}</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onSelect({ kind: 'folder', id: folder.id })}
-                className="hover:text-foreground transition-colors"
-              >
-                {folder.name}
-              </button>
-            )}
-          </span>
-        );
-      })}
-    </div>
   );
 }
 
