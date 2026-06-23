@@ -731,13 +731,15 @@ export default function CharacterForm({
             />
             {frontalImageUrl ? (
               <div className="relative inline-block">
-                <div className="relative h-32 w-32 overflow-hidden rounded-xl border border-border-strong bg-surface-elevated">
+                {/* Big PORTRAIT box, object-contain — show the WHOLE character (face to
+                    feet), never a cropped torso/knees. */}
+                <div className="relative h-80 w-60 overflow-hidden rounded-xl border border-border-strong bg-surface-elevated">
                   <Image
                     src={frontalImageUrl}
-                    alt="Face anchor"
+                    alt="Character reference"
                     fill
                     unoptimized
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </div>
                 <Button
