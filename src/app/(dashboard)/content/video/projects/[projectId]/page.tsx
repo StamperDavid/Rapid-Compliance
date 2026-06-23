@@ -190,7 +190,8 @@ interface DocCardProps {
   /** A non-generation save (cast / mark-ready) is in flight for this doc. */
   saving: boolean;
   error: string | null;
-  onGenerate: (docId: string) => void;
+  /** Any project-wide generation run is in flight — locks per-scene edits. */
+  anyGenerating: boolean;
   onOpenCast: (docId: string) => void;
   onRemoveCast: (docId: string, characterId: string) => void;
   onToggleReady: (docId: string) => void;
@@ -202,7 +203,7 @@ function DocCard({
   generating,
   saving,
   error,
-  onGenerate,
+  anyGenerating,
   onOpenCast,
   onRemoveCast,
   onToggleReady,
@@ -218,7 +219,7 @@ function DocCard({
       .find((shot) => shot.generated?.videoUrl)?.generated?.videoUrl ?? null;
   const title = doc.title.trim() || `Scene ${index + 1}`;
   const cast = doc.sharedChoices.cast;
-  const busy = generating || saving;
+  const busy = generating || saving || anyGenerating;
 
   return (
     <div className="bg-card border border-border-strong rounded-2xl p-6 space-y-4">
@@ -324,7 +325,9 @@ function DocCard({
         </div>
       )}
 
-      {/* Review → (mark reviewed) → generate. Generating IS the approval to render. */}
+      {/* Per-scene review action only. Generation is ONE project-level commit (below the
+          list) — there is no per-scene Generate button; you fix every scene first, then
+          render them all at once so you never pay for a render you haven't reviewed. */}
       <div className="flex items-center gap-2 border-t border-border-light pt-4">
         <Button
           variant={ready ? 'default' : 'outline'}
@@ -340,30 +343,6 @@ function DocCard({
             <BadgeCheck className="h-4 w-4" aria-hidden />
           )}
           {ready ? 'Reviewed' : 'Mark reviewed'}
-        </Button>
-        <Button
-          variant={hasVideo ? 'outline' : 'default'}
-          size="sm"
-          className="flex-1"
-          onClick={() => onGenerate(doc.id)}
-          disabled={busy}
-        >
-          {generating ? (
-            <>
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />
-              Working…
-            </>
-          ) : hasVideo ? (
-            <>
-              <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden />
-              Regenerate video
-            </>
-          ) : (
-            <>
-              <Wand2 className="mr-1.5 h-4 w-4" aria-hidden />
-              Generate video
-            </>
-          )}
         </Button>
       </div>
     </div>
@@ -384,8 +363,10 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Per-doc generation state, keyed by doc id.
+  // Per-doc generation state, keyed by doc id (which scene is rendering right now).
   const [generatingDocId, setGeneratingDocId] = useState<string | null>(null);
+  // True while the project-level "Generate all" run is walking every scene.
+  const [generatingAll, setGeneratingAll] = useState(false);
   // Per-doc non-generation save (cast / mark-ready) state, keyed by doc id.
   const [savingDocId, setSavingDocId] = useState<string | null>(null);
   const [docErrors, setDocErrors] = useState<Record<string, string>>({});
@@ -456,7 +437,7 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
   }, []);
 
   const handleGenerate = useCallback(
-    async (docId: string) => {
+    async (docId: string): Promise<boolean> => {
       setGeneratingDocId(docId);
       setDocError(docId, null);
       try {
@@ -467,23 +448,46 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
         const data = (await res.json()) as MutateProjectResponse;
         if (!res.ok || !data.success || !data.project) {
           throw new Error(
-            data.error ?? "We could not make this doc's video. Please try again."
+            data.error ?? "We could not make this scene's video. Please try again."
           );
         }
         setProject(data.project);
+        return true;
       } catch (err) {
         setDocError(
           docId,
           err instanceof Error
             ? err.message
-            : "We could not make this doc's video. Please try again."
+            : "We could not make this scene's video. Please try again."
         );
+        return false;
       } finally {
         setGeneratingDocId(null);
       }
     },
     [authFetch, projectId, setDocError]
   );
+
+  // Generate EVERY scene's video in one commit — the costly step happens once, after the
+  // operator has reviewed/graded/fixed all the shot docs (which is free). Renders each
+  // scene that doesn't already have a clip, in order, stopping if one fails.
+  const handleGenerateAll = useCallback(async () => {
+    if (!project) {
+      return;
+    }
+    setGeneratingAll(true);
+    try {
+      const pending = project.docs.filter((d) => !docHasVideo(d));
+      for (const doc of pending) {
+        const ok = await handleGenerate(doc.id);
+        if (!ok) {
+          break; // surface the per-scene error; don't keep spending on a broken run
+        }
+      }
+    } finally {
+      setGeneratingAll(false);
+    }
+  }, [project, handleGenerate]);
 
   /**
    * Persist a whole edited doc (cast change or mark-ready) via the doc PUT route.
@@ -631,6 +635,12 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
   }
 
   const projectTitle = project.title.trim() || 'Untitled project';
+  // Scenes that still need a clip (the "Generate all" run targets exactly these).
+  const pendingCount = project.docs.filter((d) => !docHasVideo(d)).length;
+  // Which scene is rendering right now (1-based) during a Generate-all run, for progress.
+  const currentSceneNumber = generatingDocId
+    ? project.docs.findIndex((d) => d.id === generatingDocId) + 1
+    : 0;
 
   return (
     <div className="p-8 space-y-6">
@@ -687,9 +697,35 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
         </div>
       )}
 
-      {/* Ordered doc list — review + cast + mark-ready + generate per doc */}
+      {/* Ordered doc list — review/grade each scene, then ONE generate-all commit. */}
       <section className="space-y-4">
-        <SectionTitle>Review your shot {project.docs.length === 1 ? 'doc' : 'docs'}</SectionTitle>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionTitle>Review your shot {project.docs.length === 1 ? 'doc' : 'docs'}</SectionTitle>
+          {project.docs.length > 0 && !isBuilding && !readyToAssemble && (
+            <Button onClick={() => void handleGenerateAll()} disabled={generatingAll}>
+              {generatingAll ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                  {currentSceneNumber > 0
+                    ? `Generating scene ${currentSceneNumber} of ${project.docs.length}…`
+                    : 'Generating…'}
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" aria-hidden />
+                  {project.docs.length === 1
+                    ? 'Generate the video'
+                    : `Generate all ${pendingCount} ${pendingCount === 1 ? 'video' : 'videos'}`}
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+        <SectionDescription>
+          Review and grade each scene below. When everything looks right, generate all the
+          videos in one go — that&apos;s the step that costs credits, so nothing renders until
+          you say so.
+        </SectionDescription>
         {project.docs.length === 0 ? (
           <div className="bg-card border border-border-strong rounded-2xl p-10 flex flex-col items-center text-center gap-3">
             <Film className="h-10 w-10 text-muted-foreground" aria-hidden />
@@ -714,7 +750,7 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
                 generating={generatingDocId === doc.id}
                 saving={savingDocId === doc.id}
                 error={docErrors[doc.id] ?? null}
-                onGenerate={(docId) => void handleGenerate(docId)}
+                anyGenerating={generatingAll}
                 onOpenCast={(docId) => setCastDocId(docId)}
                 onRemoveCast={(docId, characterId) => void handleRemoveCast(docId, characterId)}
                 onToggleReady={(docId) => void handleToggleReady(docId)}
