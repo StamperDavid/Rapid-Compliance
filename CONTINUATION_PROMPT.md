@@ -24,13 +24,24 @@ without removing or breaking anything:
 - Projects home got a labelled "Open the classic storyboard editor" link → `/content/video`, so
   older / manually-built projects stay reachable (nothing lost).
 
-**Phase 2 — NOT done (when the operator wants it).** True single path:
-- Migrate existing `video_pipeline_projects` → `videoProjects` (schema adapter) OR dual-load both
-  into the projects list with a shared viewer.
-- Repoint/rebuild the System-A-coupled flows (ContentAssistant storyboard apply, content-calendar
-  `?brief=` prefill, templates) onto System B.
-- Then retire the legacy `/content/video` storyboard creation surface entirely (keep only as a
-  read-only viewer or delete after migration).
+**Phase 2 — DONE (Jun 22 2026).** True single path, classic storyboard editor retired:
+- Migrated existing `video_pipeline_projects` → `videoProjects` via `scripts/migrate-pipeline-to-
+  videoproject.ts` (each legacy `shotPlan` becomes a one-doc VideoProject through the real
+  `createVideoProject`, Zod-validated; legacy doc tagged `migratedToVideoProjectId`, not deleted).
+  1 legacy draft migrated successfully.
+- `/content/video/page.tsx` is now a REDIRECT: `?brief=` (Content Calendar hand-off) →
+  `/content/video/projects/new?brief=…` (VideoScriptForm reads `?brief=`/`?title=`); everything
+  else → `/content/video/projects`. The classic StepStoryboard creation UI no longer renders.
+- ContentAssistant already prefers System B (opens `/content/video/projects/[id]` when the backend
+  returns a `videoProjectId`); its legacy System-A storyboard fallback now only ever lands on the
+  redirect → projects home, so it can't strand work. (The dead fallback block can be deleted in a
+  later cleanup — left for now to keep the change small.)
+- Removed the Phase 1 "Open the classic storyboard editor" link from the projects home.
+- The shared clip editor at `/content/video/editor` is unrelated and untouched.
+
+**Phase 2 follow-ups (low-pri cleanup, optional):** delete the now-unused System-A storyboard
+fallback in `ContentAssistant.tsx` + the orphaned `StepStoryboard`/`TemplatePickerModal` files +
+dormant `/api/content/shot-plan/*` build routes once confirmed nothing else uses them.
 
 ---
 
