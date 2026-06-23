@@ -290,20 +290,6 @@ export default function VideoProjectsPage(): React.JSX.Element {
         </Button>
       </section>
 
-      {/* Older / manually-built videos live on the classic storyboard screen. Kept
-          reachable so nothing is lost while the two video paths are consolidated. */}
-      <div className="text-sm text-muted-foreground">
-        Have an older or manually-built video?{' '}
-        <button
-          type="button"
-          onClick={() => router.push('/content/video')}
-          className="font-medium text-primary underline-offset-2 hover:underline"
-        >
-          Open the classic storyboard editor
-        </button>
-        .
-      </div>
-
       {/* Existing projects */}
       <section className="space-y-4">
         <SectionTitle>Your projects</SectionTitle>
