@@ -40,7 +40,7 @@ import { adminStorage } from '@/lib/firebase/admin';
 import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
 import { generateWithFal, generateFromReferenceWithFal } from '@/lib/ai/providers/fal-provider';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { createAsset } from '@/lib/media/media-library-service';
+import { createAsset, updateAsset } from '@/lib/media/media-library-service';
 import { createAvatarProfile, getAvatarProfile, updateAvatarProfile } from '@/lib/video/avatar-profile-service';
 import { getBrandKit } from '@/lib/video/brand-kit-service';
 import { compositeBrandLogoCentered } from '@/lib/video/logo-compositor';
@@ -570,9 +570,12 @@ async function lipSyncShotClip(
     voice: string;
     falKey: string;
     workDir: string;
+    /** When given, UPDATE this existing clip asset in place instead of creating a
+     *  second (duplicate) library card for the lip-synced version. */
+    mediaAssetId?: string;
   },
 ): Promise<LipSyncResult> {
-  const { shotId, clipUrl, dialogue, voice, falKey, workDir } = args;
+  const { shotId, clipUrl, dialogue, voice, falKey, workDir, mediaAssetId } = args;
 
   // 1. TTS the line in the character's voice.
   logger.info('[shot-plan-gen] lip-sync: synthesizing line', { file: FILE, shotId, voice });
@@ -608,19 +611,33 @@ async function lipSyncShotClip(
     `shot ${shotId} talking last frame`,
   );
 
-  await createAsset({
-    type: 'video',
-    category: 'video-clip',
-    name: `Shot ${shotId} — lip-synced`,
-    description: 'Lip-synced (speaking) clip — the silent shot re-synced to the character voice.',
-    url: syncedVideoUrl,
-    mimeType: 'video/mp4',
-    fileSize: syncedBuf.length,
-    source: 'ai-generated',
-    aiProvider: FAL_LIPSYNC_MODEL,
-    createdBy: 'system',
-    tags: ['shot-plan', 'lip-sync'],
-  });
+  if (mediaAssetId) {
+    // Update the existing shot clip in place: ONE library card per shot, keeping its
+    // human-readable name, now pointing at the speaking clip + its talking-frame
+    // thumbnail. No second, raw-id-named duplicate.
+    await updateAsset(mediaAssetId, {
+      url: syncedVideoUrl,
+      thumbnailUrl: talkingFrameUrl,
+      fileSize: syncedBuf.length,
+      aiProvider: FAL_LIPSYNC_MODEL,
+      description: 'Lip-synced (speaking) clip — re-synced to the character voice.',
+    });
+  } else {
+    await createAsset({
+      type: 'video',
+      category: 'video-clip',
+      name: `Shot ${shotId} — lip-synced`,
+      description: 'Lip-synced (speaking) clip — the silent shot re-synced to the character voice.',
+      url: syncedVideoUrl,
+      thumbnailUrl: talkingFrameUrl,
+      mimeType: 'video/mp4',
+      fileSize: syncedBuf.length,
+      source: 'ai-generated',
+      aiProvider: FAL_LIPSYNC_MODEL,
+      createdBy: 'system',
+      tags: ['shot-plan', 'lip-sync'],
+    });
+  }
 
   return { videoUrl: syncedVideoUrl, lastFrameUrl: talkingFrameUrl };
 }
@@ -766,14 +783,17 @@ export async function generateShot(
       `shot ${shotId} last frame`,
     );
 
-    // ── Register the clip in the media library ────────────────────────────────
-    await createAsset({
+    // ── Register the clip in the media library (with its last frame as the
+    //    thumbnail). Capture the asset so a later lip-sync can UPDATE this one card
+    //    in place instead of creating a second, raw-id-named duplicate. ───────────
+    const clipAsset = await createAsset({
       type: 'video',
       category: 'video-clip',
       name: `Shot ${shot.index + 1}${shot.title ? ` — ${shot.title}` : ''}`,
       description:
         `Generated shot (${cut ? 'cut' : 'continue'}) from Shot Plan "${plan.title || plan.id}".`,
       url: permanentVideoUrl,
+      thumbnailUrl: permanentLastFrameUrl,
       mimeType: 'video/mp4',
       fileSize: clipBuf.length,
       source: 'ai-generated',
@@ -819,6 +839,7 @@ export async function generateShot(
             voice,
             falKey,
             workDir,
+            mediaAssetId: clipAsset.id,
           });
           finalVideoUrl = synced.videoUrl;
           finalLastFrameUrl = synced.lastFrameUrl;
