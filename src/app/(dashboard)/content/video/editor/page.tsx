@@ -15,7 +15,7 @@
 
 import { useReducer, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, Upload } from 'lucide-react';
+import { Scissors, Sparkles, CheckCircle, AlertCircle, Loader2, Plus, X } from 'lucide-react';
 
 import { PageTitle, Caption } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
@@ -92,11 +92,39 @@ export default function VideoEditorPage() {
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
   // The open tool on the right rail (the timeline is always visible).
   const [tool, setTool] = useState<EditorTool>('edit');
-  // The Add-media rail (upload / library / projects / characters / URL import) is a
-  // SHARED on-ramp: bring in your own footage, an earlier video, or a project's scenes.
-  // Open by DEFAULT — a video editor needs its media bin visible, like CapCut. The
-  // operator can collapse it with the header toggle.
-  const [mediaOpen, setMediaOpen] = useState(true);
+  // "Add media" popover — anchored below the toolbar button, not a blocking modal.
+  const [mediaPopoverOpen, setMediaPopoverOpen] = useState(false);
+  const addMediaBtnRef = useRef<HTMLButtonElement>(null);
+  const mediaPopoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover on click-outside or Escape.
+  useEffect(() => {
+    if (!mediaPopoverOpen) {
+      return;
+    }
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        mediaPopoverRef.current &&
+        !mediaPopoverRef.current.contains(target) &&
+        addMediaBtnRef.current &&
+        !addMediaBtnRef.current.contains(target)
+      ) {
+        setMediaPopoverOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMediaPopoverOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mediaPopoverOpen]);
 
   const { clips, textOverlays, isPlaying, selectedClipId, playheadTime } = state;
 
@@ -423,10 +451,6 @@ export default function VideoEditorPage() {
 
   const ActivePanel = tool === 'edit' ? null : TOOL_PANELS[tool];
 
-  const mainGridClass = mediaOpen
-    ? 'grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)_380px] gap-4'
-    : 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-4';
-
   return (
     <div className="p-6 space-y-4">
       <SubpageNav items={CONTENT_GENERATOR_TABS} />
@@ -438,15 +462,44 @@ export default function VideoEditorPage() {
         </PageTitle>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant={mediaOpen ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setMediaOpen((open) => !open)}
-            className="gap-1.5"
-          >
-            <Upload className="w-4 h-4" />
-            Add media
-          </Button>
+          {/* Add media — anchored popover, not a blocking sidebar */}
+          <div className="relative">
+            <Button
+              ref={addMediaBtnRef}
+              variant={mediaPopoverOpen ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMediaPopoverOpen((open) => !open)}
+              className="gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              Add media
+            </Button>
+
+            {mediaPopoverOpen && (
+              <div
+                ref={mediaPopoverRef}
+                className="absolute left-0 top-full z-50 mt-2 w-[380px] overflow-hidden rounded-2xl border border-border-strong bg-card shadow-2xl"
+              >
+                {/* Popover header with close affordance */}
+                <div className="flex items-center justify-between border-b border-border-strong px-4 py-2.5">
+                  <span className="text-xs font-semibold text-foreground">Add media</span>
+                  <button
+                    type="button"
+                    onClick={() => setMediaPopoverOpen(false)}
+                    className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-surface-elevated hover:text-foreground"
+                    aria-label="Close media panel"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {/* Scrollable body — the panel has its own internal scroll per tab */}
+                <div className="max-h-[520px] overflow-y-auto p-2">
+                  <EditorMediaPanel dispatch={dispatch} defaultTransition={state.defaultTransition} />
+                </div>
+              </div>
+            )}
+          </div>
+
           {projectLoad === 'loading' && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-md text-xs text-primary-light">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -494,21 +547,14 @@ export default function VideoEditorPage() {
         dispatch={dispatch}
       />
 
-      <div className={mainGridClass}>
-        {mediaOpen && (
-          <aside className="h-fit lg:sticky lg:top-4">
-            <EditorMediaPanel dispatch={dispatch} defaultTransition={state.defaultTransition} />
-          </aside>
-        )}
-
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-4">
         {/* Always-on core: Preview + Timeline */}
         <div className="min-w-0 space-y-4">
           {state.clips.length === 0 && (
             <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-center">
               <Caption className="block">
-                Your timeline is empty. Bring in footage from the{' '}
-                <span className="font-medium text-foreground">Media</span> panel
-                {mediaOpen ? ' on the left' : ' (the “Add media” button)'} — your{' '}
+                Your timeline is empty. Use the{' '}
+                <span className="font-medium text-foreground">Add media</span> button above to bring in footage — your{' '}
                 <span className="font-medium text-foreground">Library</span>, your{' '}
                 <span className="font-medium text-foreground">Projects</span> (generated scenes), or{' '}
                 <span className="font-medium text-foreground">Upload</span> your own.
