@@ -8,16 +8,18 @@
  * creates a project and sends the operator here to do exactly what it told them:
  * "review the fields, cast your character, and mark each ready", then generate.
  *
+ * Each shot doc is REVIEWED here in full (the image-forward production-sheet render,
+ * reused `ShotPlanDocument`) with its grading column beside it. Characters are written
+ * into the scene by the planner — there is no manual cast control on the doc.
+ *
  * Per doc the operator can:
- *   - SEE every field — the same image-forward production-sheet render used in the
- *     System A storyboard (reused `ShotPlanDocument`), expandable per card.
- *   - CAST a saved character onto the doc — the same `AvatarPicker` +
- *     `castMemberFromProfile` flow System A uses, persisted via the doc PUT route.
- *   - MARK the doc ready — flips the doc's `status` to `ready`, persisted the same
- *     way; a plain badge shows which docs are reviewed.
- *   - GENERATE the doc's video — wired to the existing per-doc generate route. The
- *     act of generating IS final approval; this is LONG-RUNNING so we show a clear,
- *     plain-English working state and never fail silently.
+ *   - REVIEW every field — the full production-sheet render.
+ *   - GRADE the layout — the `ShotDocGradePanel` trains the Shot Plan Planner.
+ *   - MARK the scene reviewed — flips the doc's `status` to `ready`, persisted via the
+ *     doc PUT route; a plain badge shows which scenes are reviewed.
+ *
+ * Generation is ONE project-level commit ("Generate all videos") — never per-scene — so
+ * nothing renders (and nothing is charged) until every scene has been reviewed.
  *
  * When every doc has a video, a prominent "Open project in editor" button appears
  * so the doc-videos can be stitched into the final film.
@@ -35,13 +37,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
   PageTitle,
   SectionTitle,
   SectionDescription,
@@ -57,11 +52,9 @@ import {
   RefreshCw,
   Wand2,
   CheckCircle2,
-  Users,
-  UserPlus,
   BadgeCheck,
 } from 'lucide-react';
-import type { ShotPlan, ShotPlanCastMember } from '@/types/shot-plan';
+import type { ShotPlan } from '@/types/shot-plan';
 import {
   type VideoProject,
   docHasVideo,
@@ -69,8 +62,6 @@ import {
   allDocsHaveVideo,
 } from '@/types/video-project';
 import { seedEditorFromProject } from '@/lib/video/editor-seed';
-import { castMemberFromProfile } from '@/lib/video/shot-plan-blank';
-import { AvatarPicker } from '../../components/AvatarPicker';
 import { ShotPlanDocument } from '../../components/ShotPlanDocument';
 import { ShotDocGradePanel } from '../../components/ShotDocGradePanel';
 import { ZoomPanViewport } from '../../components/ZoomPanViewport';
@@ -143,43 +134,6 @@ function docIsReady(doc: ShotPlan): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Cast picker dialog — the EXACT System A flow (AvatarPicker + castMemberFromProfile)
-// ---------------------------------------------------------------------------
-
-function CastDialog({
-  open,
-  onOpenChange,
-  onCast,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCast: (member: ShotPlanCastMember) => void;
-}): React.JSX.Element {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border border-border-strong max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <Users className="w-4 h-4 text-primary" /> Cast a character
-          </DialogTitle>
-          <DialogDescription>
-            Pick one of your saved characters. They become available to every shot in
-            this doc.
-          </DialogDescription>
-        </DialogHeader>
-        <AvatarPicker
-          selectedAvatarId={null}
-          onSelect={() => {
-            /* Full reference data comes through onProfileLoaded below. */
-          }}
-          onProfileLoaded={(profile) => onCast(castMemberFromProfile(profile))}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Doc card
 // ---------------------------------------------------------------------------
 
@@ -192,8 +146,6 @@ interface DocCardProps {
   error: string | null;
   /** Any project-wide generation run is in flight — locks per-scene edits. */
   anyGenerating: boolean;
-  onOpenCast: (docId: string) => void;
-  onRemoveCast: (docId: string, characterId: string) => void;
   onToggleReady: (docId: string) => void;
 }
 
@@ -204,8 +156,6 @@ function DocCard({
   saving,
   error,
   anyGenerating,
-  onOpenCast,
-  onRemoveCast,
   onToggleReady,
 }: DocCardProps): React.JSX.Element {
   const hasVideo = docHasVideo(doc);
@@ -218,7 +168,6 @@ function DocCard({
       .sort((a, b) => a.index - b.index)
       .find((shot) => shot.generated?.videoUrl)?.generated?.videoUrl ?? null;
   const title = doc.title.trim() || `Scene ${index + 1}`;
-  const cast = doc.sharedChoices.cast;
   const busy = generating || saving || anyGenerating;
 
   return (
@@ -256,47 +205,6 @@ function DocCard({
           </ZoomPanViewport>
         </div>
         <ShotDocGradePanel plan={doc} />
-      </div>
-
-      {/* Cast — assign a saved character onto this scene. */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
-            <Users className="h-3.5 w-3.5" aria-hidden /> Cast
-          </Caption>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => onOpenCast(doc.id)}
-            disabled={busy}
-          >
-            <UserPlus className="h-3.5 w-3.5" aria-hidden /> Cast character
-          </Button>
-        </div>
-        {cast.length === 0 ? (
-          <Caption>No characters cast yet.</Caption>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {cast.map((member) => (
-              <span
-                key={member.characterId}
-                className="inline-flex items-center gap-1 rounded-full border border-border-light bg-surface-elevated px-2.5 py-0.5 text-xs text-foreground"
-              >
-                {member.name}
-                <button
-                  type="button"
-                  onClick={() => onRemoveCast(doc.id, member.characterId)}
-                  disabled={busy}
-                  className="text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
-                  aria-label={`Remove ${member.name} from this scene`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* The generated clip, once this scene has been made. */}
@@ -370,9 +278,6 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
   // Per-doc non-generation save (cast / mark-ready) state, keyed by doc id.
   const [savingDocId, setSavingDocId] = useState<string | null>(null);
   const [docErrors, setDocErrors] = useState<Record<string, string>>({});
-
-  // The doc the cast picker is currently open for (null = closed).
-  const [castDocId, setCastDocId] = useState<string | null>(null);
 
   const fetchProject = useCallback(
     async (silent: boolean) => {
@@ -520,54 +425,6 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
       }
     },
     [authFetch, projectId, setDocError]
-  );
-
-  const handleCast = useCallback(
-    async (docId: string, member: ShotPlanCastMember) => {
-      if (!project) {
-        return;
-      }
-      const doc = project.docs.find((d) => d.id === docId);
-      if (!doc) {
-        return;
-      }
-      // Skip if already cast (same identity) — close the picker, no write.
-      if (doc.sharedChoices.cast.some((c) => c.characterId === member.characterId)) {
-        setCastDocId(null);
-        return;
-      }
-      const nextDoc: ShotPlan = {
-        ...doc,
-        sharedChoices: {
-          ...doc.sharedChoices,
-          cast: [...doc.sharedChoices.cast, member],
-        },
-      };
-      setCastDocId(null);
-      await saveDoc(nextDoc, 'We could not add that character. Please try again.');
-    },
-    [project, saveDoc]
-  );
-
-  const handleRemoveCast = useCallback(
-    async (docId: string, characterId: string) => {
-      if (!project) {
-        return;
-      }
-      const doc = project.docs.find((d) => d.id === docId);
-      if (!doc) {
-        return;
-      }
-      const nextDoc: ShotPlan = {
-        ...doc,
-        sharedChoices: {
-          ...doc.sharedChoices,
-          cast: doc.sharedChoices.cast.filter((c) => c.characterId !== characterId),
-        },
-      };
-      await saveDoc(nextDoc, 'We could not remove that character. Please try again.');
-    },
-    [project, saveDoc]
   );
 
   const handleToggleReady = useCallback(
@@ -751,29 +608,12 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
                 saving={savingDocId === doc.id}
                 error={docErrors[doc.id] ?? null}
                 anyGenerating={generatingAll}
-                onOpenCast={(docId) => setCastDocId(docId)}
-                onRemoveCast={(docId, characterId) => void handleRemoveCast(docId, characterId)}
                 onToggleReady={(docId) => void handleToggleReady(docId)}
               />
             ))}
           </div>
         )}
       </section>
-
-      {/* Cast picker — opens for whichever doc the operator chose. */}
-      <CastDialog
-        open={castDocId !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setCastDocId(null);
-          }
-        }}
-        onCast={(member) => {
-          if (castDocId) {
-            void handleCast(castDocId, member);
-          }
-        }}
-      />
     </div>
   );
 }
