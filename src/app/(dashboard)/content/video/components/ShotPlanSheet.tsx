@@ -1958,17 +1958,11 @@ function EntryScreen({
   onStartBlank,
   isGenerating,
   error,
-  selectedLocations,
-  onOpenLocationPicker,
-  onRemoveLocation,
 }: {
   onGenerate: (brief: string, references: ShotPlanReferencePayload[]) => void;
   onStartBlank: () => void;
   isGenerating: boolean;
   error: string | null;
-  selectedLocations: LocationProfile[];
-  onOpenLocationPicker: () => void;
-  onRemoveLocation: (locationId: string) => void;
 }) {
   const [brief, setBrief] = useState('');
   const [references, setReferences] = useState<ShotPlanReferenceAttachment[]>([]);
@@ -2004,42 +1998,6 @@ function EntryScreen({
           className="w-full rounded-md border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y"
         />
         <ReferenceMaterials references={references} onChange={setReferences} />
-
-        {/* Locations — pick saved sets to build the plan around (rides along as
-            selectedLocationIds in the generate request). */}
-        <div className="space-y-2 rounded-2xl border border-border-strong bg-card p-4">
-          <div className="flex items-center justify-between gap-2">
-            <Caption className="flex items-center gap-1.5 font-medium text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 text-primary" /> Locations
-            </Caption>
-            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={onOpenLocationPicker}>
-              <Plus className="h-3.5 w-3.5" /> Add location
-            </Button>
-          </div>
-          {selectedLocations.length === 0 ? (
-            <Caption>Optional. Pick a saved set so the room stays consistent across every shot.</Caption>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {selectedLocations.map((location) => (
-                <span
-                  key={location.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border-light bg-surface-elevated px-2.5 py-1 text-xs text-foreground"
-                >
-                  <MapPin className="h-3 w-3 text-primary" />
-                  {location.name}
-                  <button
-                    type="button"
-                    onClick={() => onRemoveLocation(location.id)}
-                    aria-label={`Remove ${location.name}`}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
 
         {stillReading && (
           <Caption className="flex items-center gap-1.5">
@@ -2900,9 +2858,6 @@ export function ShotPlanSheet() {
           // build is running but hasn't yet polled back a plan to render.
           isGenerating={isGenerating || isRenderingSheet}
           error={generateError ?? shotGenError}
-          selectedLocations={selectedLocations}
-          onOpenLocationPicker={() => setLocationPickerOpen(true)}
-          onRemoveLocation={removeLocation}
         />
         {locationPickerDialog}
       </>
