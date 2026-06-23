@@ -90,8 +90,20 @@ function isShotRendered(plan: ShotPlan, shotId: string): boolean {
  */
 export async function runShotPlanVideoBuild(args: RunShotPlanVideoBuildArgs): Promise<void> {
   const { projectId } = args;
-  const ctx: TenantContext = { tenantId: PLATFORM_ID };
   const ref = projectDocRef(projectId);
+
+  // Read the project doc ONCE up front to get its display name so generated assets
+  // auto-file into the correct project folder in the media library.
+  const projectSnap = await ref.get();
+  const projectData = projectSnap.data();
+  const projectName =
+    (typeof projectData?.name === 'string' && projectData.name.trim()
+      ? projectData.name.trim()
+      : typeof projectData?.title === 'string' && projectData.title.trim()
+        ? projectData.title.trim()
+        : 'Project');
+
+  const ctx: TenantContext = { tenantId: PLATFORM_ID, projectId, projectName };
 
   /** Write the live plan + status/progress onto the project doc (merge). */
   const persist = async (

@@ -602,12 +602,13 @@ async function lipSyncShotClip(
     voice: string;
     falKey: string;
     workDir: string;
+    ctx: TenantContext;
     /** When given, UPDATE this existing clip asset in place instead of creating a
      *  second (duplicate) library card for the lip-synced version. */
     mediaAssetId?: string;
   },
 ): Promise<LipSyncResult> {
-  const { shotId, clipUrl, dialogue, voice, falKey, workDir, mediaAssetId } = args;
+  const { shotId, clipUrl, dialogue, voice, falKey, workDir, ctx, mediaAssetId } = args;
 
   // 1. TTS the line in the character's voice.
   logger.info('[shot-plan-gen] lip-sync: synthesizing line', { file: FILE, shotId, voice });
@@ -668,6 +669,7 @@ async function lipSyncShotClip(
       aiProvider: FAL_LIPSYNC_MODEL,
       createdBy: 'system',
       tags: ['shot-plan', 'lip-sync'],
+      ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
     });
   }
 
@@ -833,6 +835,7 @@ export async function generateShot(
       aiPrompt: cut ? basePrompt : buildContinuePrompt(basePrompt),
       createdBy: 'system',
       tags: ['shot-plan'],
+      ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
     });
 
     // ── Speaking lip-sync (best-effort) ───────────────────────────────────────
@@ -871,6 +874,7 @@ export async function generateShot(
             voice,
             falKey,
             workDir,
+            ctx,
             mediaAssetId: clipAsset.id,
           });
           finalVideoUrl = synced.videoUrl;
@@ -1240,6 +1244,7 @@ export async function stitchShotPlan(plan: ShotPlan, ctx: TenantContext): Promis
       aiProvider: upscaledTo4K ? `fal-seedance + ${FAL_UPSCALE_MODEL}` : 'fal-seedance',
       createdBy: 'system',
       tags: upscaledTo4K ? ['shot-plan', 'final-video', '4k'] : ['shot-plan', 'final-video'],
+      ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
     });
 
     logger.info('[shot-plan-gen] final video persisted', {
@@ -1468,6 +1473,7 @@ export async function generateShotKeyframe(
       aiPrompt: keyframePrompt,
       createdBy: 'system',
       tags: ['shot-plan', 'keyframe'],
+      ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
     });
 
     // ── Write the keyframe url onto the shot (preserving prior generated) ──────
@@ -1549,6 +1555,7 @@ export async function generateFloorPlanImage(plan: ShotPlan, ctx: TenantContext)
       aiPrompt: prompt,
       createdBy: 'system',
       tags: ['shot-plan', 'floor-plan'],
+      ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
     });
 
     const nextFloorPlan: ShotPlanFloorPlan = {
@@ -1617,6 +1624,7 @@ async function renderEnvironmentHeroImage(
       aiPrompt: prompt,
       createdBy: 'system',
       tags: ['shot-plan', 'environment'],
+      ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
     });
     return url;
   } finally {
@@ -1756,6 +1764,7 @@ export async function generateLightingSwatches(plan: ShotPlan, ctx: TenantContex
         aiPrompt: prompt,
         createdBy: 'system',
         tags: ['shot-plan', 'lighting'],
+        ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
       });
       // The schema caps a swatch label at 200 chars; the model's lighting `setup`
       // can run longer, so clamp it (the full setup still drives the image prompt).
@@ -2243,6 +2252,7 @@ async function compositeLogoOntoPropImage(
   obj: { name: string; subjectKind?: 'object' | 'creature' },
   plan: ShotPlan,
   label: string,
+  ctx: TenantContext,
 ): Promise<string> {
   const workDir = await createWorkDir('shot-plan-objlogo');
   try {
@@ -2268,6 +2278,7 @@ async function compositeLogoOntoPropImage(
       aiProvider: 'fal',
       createdBy: 'system',
       tags: ['shot-plan', 'object', 'brand-logo'],
+      ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
     });
     return url;
   } catch (err) {
@@ -2341,13 +2352,14 @@ export async function generateObjectSheets(plan: ShotPlan, ctx: TenantContext): 
           aiPrompt: basePrompt,
           createdBy: 'system',
           tags: ['shot-plan', 'object', obj.subjectKind ?? 'object'],
+          ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
         });
         // Keep the CLEAN base for view generation; composite our logo only onto the
         // displayed reference.
         cleanBaseUrl = url;
         let refUrl = url;
         if (branded && brandLogo) {
-          refUrl = await compositeLogoOntoPropImage(url, brandLogo, obj, plan, 'reference');
+          refUrl = await compositeLogoOntoPropImage(url, brandLogo, obj, plan, 'reference', ctx);
         }
         refs.push(refUrl);
       }
@@ -2381,11 +2393,12 @@ export async function generateObjectSheets(plan: ShotPlan, ctx: TenantContext): 
               aiPrompt: prompt,
               createdBy: 'system',
               tags: ['shot-plan', 'object', label.toLowerCase()],
+              ...(ctx.projectId ? { projectId: ctx.projectId, projectName: ctx.projectName } : {}),
             });
             // Branded surface → composite the operator's REAL logo onto this view too.
             let refUrl = url;
             if (branded && brandLogo) {
-              refUrl = await compositeLogoOntoPropImage(url, brandLogo, obj, plan, label);
+              refUrl = await compositeLogoOntoPropImage(url, brandLogo, obj, plan, label, ctx);
             }
             refs.push(refUrl);
           }
