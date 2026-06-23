@@ -111,6 +111,15 @@ export default function VideoEditorPage() {
   const projectLoadedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const addedClipUrlsRef = useRef<Set<string>>(new Set());
+  // Reach authFetch inside the poll WITHOUT making it an effect dependency — its
+  // identity changes when the auth token refreshes, and if that (or `clips.length`)
+  // were a dep, every re-render would tear the interval down and the projectLoadedRef
+  // guard would never recreate it (the auto-open "clips never drop until refresh" bug).
+  const authFetchRef = useRef(authFetch);
+  authFetchRef.current = authFetch;
+  // True once a one-shot sessionStorage seed has filled the timeline, so the poll can
+  // stand down without depending on `clips.length`.
+  const manualSeedRef = useRef(false);
   const [projectLoad, setProjectLoad] = useState<'idle' | 'loading' | 'error'>('idle');
   const [buildStatus, setBuildStatus] = useState<'generating' | 'complete' | 'error' | null>(null);
   const [buildProgress, setBuildProgress] = useState<{ done: number; total: number } | null>(null);
@@ -130,6 +139,7 @@ export default function VideoEditorPage() {
     if (!seed || seed.clips.length === 0) {
       return;
     }
+    manualSeedRef.current = true;
     for (const clip of seed.clips) {
       dispatch({
         type: 'ADD_CLIP',
@@ -196,8 +206,10 @@ export default function VideoEditorPage() {
       return;
     }
     // A sessionStorage seed (manual "Open in editor") already populated the timeline —
-    // don't also poll. The seed effect runs first and the url dedup set guards overlap.
-    if (clips.length > 0) {
+    // don't also poll. Checked via a ref (not `clips.length`) so this effect does NOT
+    // depend on clip count — otherwise adding a clip re-runs the effect, the cleanup
+    // tears the interval down, and the projectLoadedRef guard never recreates it.
+    if (manualSeedRef.current) {
       return;
     }
 
@@ -215,7 +227,7 @@ export default function VideoEditorPage() {
     // in plan order, surface build status, and stop once the build is done or errored.
     const poll = async () => {
       try {
-        const res = await authFetch(`/api/video/project/${projectIdParam}`);
+        const res = await authFetchRef.current(`/api/video/project/${projectIdParam}`);
         if (!res.ok) {
           throw new Error('Project load failed');
         }
@@ -282,7 +294,10 @@ export default function VideoEditorPage() {
     }, 4000);
 
     return stopPolling;
-  }, [projectIdParam, clips.length, authFetch, loadFromGeneratedScenes]);
+    // Depends ONLY on the project id (+ the stable loader). authFetch is read via a ref
+    // and the seed guard via manualSeedRef, so the interval is created once and survives
+    // re-renders until the build finishes or the editor unmounts.
+  }, [projectIdParam, loadFromGeneratedScenes]);
 
   // ── Split at playhead — reused by toolbar + keyboard ────────────────────
   const splitAtPlayhead = useCallback(() => {
