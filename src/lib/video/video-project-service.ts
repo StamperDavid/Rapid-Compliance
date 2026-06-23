@@ -17,6 +17,7 @@ import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import {
   type VideoProject,
+  type VideoProjectBuild,
   VideoProjectSchema,
   deriveProjectStatus,
 } from '@/types/video-project';
@@ -74,6 +75,8 @@ export interface CreateVideoProjectInput {
   title: string;
   brief: string;
   docs?: ShotPlan[];
+  /** Seed background-build progress (Content Manager fast-handoff path). */
+  build?: VideoProjectBuild;
 }
 
 /** Create a new project (starts in 'planning'; status re-derives once docs land). */
@@ -84,6 +87,7 @@ export async function createVideoProject(input: CreateVideoProjectInput): Promis
     title: input.title.trim() || 'Untitled Project',
     brief: input.brief,
     docs: input.docs ?? [],
+    ...(input.build ? { build: input.build } : {}),
     status: 'planning',
     createdAt: now,
     updatedAt: now,
@@ -91,6 +95,40 @@ export async function createVideoProject(input: CreateVideoProjectInput): Promis
   const saved = await persist(project);
   logger.info('[video-project] created', { file: FILE, projectId: saved.id, docs: saved.docs.length });
   return saved;
+}
+
+/**
+ * Append ONE freshly-authored doc to a project, returning the persisted project. Used by
+ * the background build so each doc appears on the review page the moment it is rendered,
+ * instead of all-or-nothing at the end. Status re-derives (first doc flips 'planning'→'review').
+ */
+export async function appendProjectDoc(projectId: string, doc: ShotPlan): Promise<VideoProject> {
+  const project = await getVideoProject(projectId);
+  if (!project) {
+    throw new Error(`appendProjectDoc: project not found: ${projectId}`);
+  }
+  return persist({ ...project, docs: [...project.docs, doc] });
+}
+
+/** Update ONLY the background-build progress field, returning the persisted project. */
+export async function setProjectBuild(
+  projectId: string,
+  build: VideoProjectBuild,
+): Promise<VideoProject> {
+  const project = await getVideoProject(projectId);
+  if (!project) {
+    throw new Error(`setProjectBuild: project not found: ${projectId}`);
+  }
+  return persist({ ...project, build });
+}
+
+/** Update only the project title (used once segmentation produces a better one). */
+export async function setProjectTitle(projectId: string, title: string): Promise<VideoProject> {
+  const project = await getVideoProject(projectId);
+  if (!project) {
+    throw new Error(`setProjectTitle: project not found: ${projectId}`);
+  }
+  return persist({ ...project, title: title.trim() || project.title });
 }
 
 /** Fetch one project, validated. Returns null when missing. */
