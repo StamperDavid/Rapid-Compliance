@@ -3,9 +3,17 @@
 /**
  * ShotDocGradePanel — the grading COLUMN that sits to the right of the Shot Doc.
  *
- * Lets the operator grade how the AI laid out THIS production sheet and explain the
- * grade in plain language, so the Shot Plan Planner (SHOT_PLAN_PLANNER) learns their
- * layout preferences. It reuses the exact, proven Mission Control training pipeline:
+ * Lets the operator grade the AI's production sheet in TWO independent ways and explain
+ * each grade in plain language, so the Shot Plan Planner (SHOT_PLAN_PLANNER) learns their
+ * preferences. Two stacked boxes, each fully self-contained (its own stars, explanation,
+ * submit, proposal and review popup):
+ *
+ *   1. "Grade the layout"               — how THIS page is arranged.
+ *   2. "Grade the content & consistency" — the scenes, characters, environment, and
+ *                                          whether the images stay consistent.
+ *
+ * Both boxes target the SAME specialist and reuse the exact, proven Mission Control
+ * training pipeline:
  *
  *   grade + explanation
  *     → POST /api/training/grade-specialist (targets SHOT_PLAN_PLANNER)
@@ -34,6 +42,9 @@ import type { ShotPlan } from '@/types/shot-plan';
 
 const SPECIALIST_ID = 'SHOT_PLAN_PLANNER';
 const SPECIALIST_NAME = 'Shot Plan Planner';
+
+/** Which aspect of the shot doc a grading box covers. */
+type GradeDimension = 'layout' | 'content';
 
 /** The Prompt Engineer's proposed surgical edit (matches the Phase 3 backend). */
 interface ProposedEdit {
@@ -70,12 +81,54 @@ interface GradeResponse {
 
 type Message = { kind: 'info' | 'success' | 'warn' | 'error'; text: string } | null;
 
-/** Plain-English label under the stars for the current rating. */
-function ratingHint(score: number): string {
-  if (score <= 2) { return 'This layout is wrong'; }
-  if (score <= 4) { return 'Good, but needs changes'; }
-  return 'Love this layout';
+/** Static, per-dimension copy so one component renders both boxes. */
+interface DimensionCopy {
+  heading: string;
+  subtitle: string;
+  /** Label above the star row. */
+  ratingLabel: string;
+  /** Label above the explanation textarea. */
+  explanationLabel: string;
+  placeholder: string;
+  /** Plain-English label under the stars for a given 1–5 score. */
+  ratingHint: (score: number) => string;
 }
+
+const COPY: Record<GradeDimension, DimensionCopy> = {
+  layout: {
+    heading: 'Grade this layout',
+    subtitle:
+      'Tell the agent how it laid out this page. It learns from every grade, so the next ' +
+      'shot doc is closer to how you like it.',
+    ratingLabel: 'Your rating',
+    explanationLabel: 'What should it do differently — or keep doing?',
+    placeholder:
+      'e.g. This is a product video with no people, but the page still leads with a character block. ' +
+      'Lead with the product instead and make it big.',
+    ratingHint: (score) => {
+      if (score <= 2) { return 'This layout is wrong'; }
+      if (score <= 4) { return 'Good, but needs changes'; }
+      return 'Love this layout';
+    },
+  },
+  content: {
+    heading: 'Grade the content & consistency',
+    subtitle:
+      'Tell the agent about the scenes, characters, environment, and whether the images stay ' +
+      'consistent — like keeping the same room and blocking from shot to shot.',
+    ratingLabel: 'Your rating',
+    explanationLabel: "What's off about the scenes — or what's working?",
+    placeholder:
+      'e.g. The room changes between shots — the blocking shows 4 tables and one window, but some ' +
+      'images show a long conference table with many windows. Keep the whole video in the same location ' +
+      'as the blocking map, and shoot each scene from its camera angle on that map.',
+    ratingHint: (score) => {
+      if (score <= 2) { return 'This is wrong'; }
+      if (score <= 4) { return 'Good, but needs changes'; }
+      return 'Love this';
+    },
+  },
+};
 
 /** Map a 1–5 rating to the backend grade enum (semantically faithful). */
 function gradeFor(score: number): 'reject' | 'request_revision' | 'approve_with_notes' {
@@ -96,11 +149,10 @@ function describeLayout(plan: ShotPlan): string {
 }
 
 /**
- * The excerpt the Prompt Engineer reads. Unlike the Mission Control widget (which lacks
- * the raw output), we hand it the ACTUAL layout being graded so the proposed edit is
- * grounded in this specific page, not just the operator's words.
+ * The LAYOUT excerpt the Prompt Engineer reads. We hand it the ACTUAL page structure being
+ * graded so the proposed edit is grounded in this specific page, not just the operator's words.
  */
-function buildExcerpt(plan: ShotPlan, score: number, explanation: string): string {
+function buildLayoutExcerpt(plan: ShotPlan, score: number, explanation: string): string {
   const cast = plan.sharedChoices?.cast?.length ?? 0;
   const objects = plan.sharedChoices?.objects?.length ?? 0;
   const style = plan.sharedChoices?.artStyle ?? plan.sharedChoices?.lookBible?.artStyle ?? '(unspecified)';
@@ -116,9 +168,109 @@ function buildExcerpt(plan: ShotPlan, score: number, explanation: string): strin
   ].join('\n');
 }
 
-export function ShotDocGradePanel({ plan }: { plan: ShotPlan }): React.JSX.Element {
+/** A concise field summary of the project-level "look bible" used for consistency. */
+function describeLookBible(plan: ShotPlan): string {
+  const sc = plan.sharedChoices;
+  const lb = sc?.lookBible;
+  const parts: string[] = [];
+  const artStyle = sc?.artStyle ?? lb?.artStyle;
+  if (artStyle) { parts.push(`art style: ${artStyle}`); }
+  if (lb?.movieLook) { parts.push(`movie look: ${lb.movieLook}`); }
+  if (lb?.filmStock) { parts.push(`film stock: ${lb.filmStock}`); }
+  if (lb?.lighting) { parts.push(`lighting: ${lb.lighting}`); }
+  if (lb?.atmosphere) { parts.push(`atmosphere: ${lb.atmosphere}`); }
+  if (lb?.filters?.length) { parts.push(`filters: ${lb.filters.join(', ')}`); }
+  if (typeof lb?.temperature === 'number') { parts.push(`color temperature: ${lb.temperature}`); }
+  if (sc?.moodKeywords?.length) { parts.push(`mood: ${sc.moodKeywords.join(', ')}`); }
+  return parts.length > 0 ? parts.join('; ') : '(not specified)';
+}
+
+/** One readable line per shot: its environment, camera, and action. */
+function describeShots(plan: ShotPlan): string {
+  const shots = plan.shots ?? [];
+  if (shots.length === 0) { return '  (no shots in this plan)'; }
+  return shots
+    .map((s, i) => {
+      const env = s.environment?.trim() || '(no environment given)';
+      const cam = [s.camera?.shotType, s.camera?.movement, s.camera?.composition, s.camera?.viewingDirection]
+        .filter((v): v is string => Boolean(v?.trim()))
+        .join(', ') || '(no camera given)';
+      const action = s.action?.trim() || '(no action given)';
+      return `  Shot ${i + 1} "${s.title || 'Untitled'}": env = ${env}; camera = ${cam}; action = ${action}`;
+    })
+    .join('\n');
+}
+
+/** A one-line summary of whether top-down blocking exists and how rich it is. */
+function describeBlocking(plan: ShotPlan): string {
+  const fp = plan.floorPlan;
+  if (!fp) { return '  (no blocking / floor-plan map was authored for this plan)'; }
+  const elements = fp.elements?.length ?? 0;
+  const cameras = fp.cameras?.length ?? 0;
+  const zones = fp.zones?.length ?? 0;
+  return `  Blocking map present — ${elements} placed element(s) (actors/props/set pieces), ` +
+    `${cameras} camera position(s), ${zones} location zone(s).`;
+}
+
+/** The cast, one line each, so the agent can reason about character consistency. */
+function describeCast(plan: ShotPlan): string {
+  const cast = plan.sharedChoices?.cast ?? [];
+  if (cast.length === 0) { return '  (no cast — this is a no-people video)'; }
+  return cast
+    .map((c) => {
+      const role = c.role ? ` (${c.role})` : '';
+      const wardrobe = c.wardrobe ? `; wardrobe: ${c.wardrobe}` : '';
+      return `  - ${c.name}${role}${wardrobe}`;
+    })
+    .join('\n');
+}
+
+/**
+ * The CONTENT & CONSISTENCY excerpt the Prompt Engineer reads. It summarizes WHAT is being
+ * graded — the world signature, the look bible, every shot's environment/camera/action, the
+ * blocking map and the cast — so a proposed edit can act on the real scenes, not just words.
+ */
+function buildContentExcerpt(plan: ShotPlan, score: number, explanation: string): string {
+  const fingerprint = plan.sharedChoices?.environmentFingerprint?.trim() || '(no environment fingerprint set)';
+  return [
+    `[Shot Doc content & consistency graded ${score}/5]`,
+    `Video: "${plan.title || 'Untitled'}" — ${plan.shots?.length ?? 0} shot(s).`,
+    '',
+    'World signature (the cross-shot consistency anchor — every shot should match this):',
+    `  ${fingerprint}`,
+    '',
+    'Look bible (the shared style every shot inherits):',
+    `  ${describeLookBible(plan)}`,
+    '',
+    'Per-shot breakdown (environment, camera, and action for each cut):',
+    describeShots(plan),
+    '',
+    'Blocking / floor-plan map (the spatial layout the scenes should obey):',
+    describeBlocking(plan),
+    '',
+    'Cast (the characters that must stay visually consistent across shots):',
+    describeCast(plan),
+    '',
+    `What the operator wants changed about THE CONTENT & CONSISTENCY OF THE SCENES: ${explanation}`,
+  ].join('\n');
+}
+
+/** Build the right excerpt for the dimension being graded. */
+function buildExcerpt(dimension: GradeDimension, plan: ShotPlan, score: number, explanation: string): string {
+  return dimension === 'layout'
+    ? buildLayoutExcerpt(plan, score, explanation)
+    : buildContentExcerpt(plan, score, explanation);
+}
+
+/**
+ * GradeBox — ONE fully self-contained grading box. Driven by `dimension`, it owns its own
+ * star/explanation state, submit + proposal handling, and its own PromptRevisionPopup. Two of
+ * these stack in the panel with NO shared state, so grading one never disturbs the other.
+ */
+function GradeBox({ plan, dimension }: { plan: ShotPlan; dimension: GradeDimension }): React.JSX.Element {
   const authFetch = useAuthFetch();
   const projectId = useVideoPipelineStore((s) => s.projectId);
+  const copy = COPY[dimension];
 
   const [score, setScore] = useState(0);
   const [hover, setHover] = useState(0);
@@ -142,7 +294,7 @@ export function ShotDocGradePanel({ plan }: { plan: ShotPlan }): React.JSX.Eleme
             targetSpecialistId: SPECIALIST_ID,
             targetSpecialistName: SPECIALIST_NAME,
             sourceReportTaskId: projectId ?? plan.id ?? 'shot-doc',
-            sourceReportExcerpt: buildExcerpt(plan, score, explanation.trim()),
+            sourceReportExcerpt: buildExcerpt(dimension, plan, score, explanation.trim()),
             grade: gradeFor(score),
             explanation: explanation.trim(),
           }),
@@ -256,88 +408,81 @@ export function ShotDocGradePanel({ plan }: { plan: ShotPlan }): React.JSX.Eleme
 
   return (
     <>
-      <aside className="w-full xl:w-[340px] xl:shrink-0 xl:sticky xl:top-6">
-        <div className="bg-card border border-border-strong rounded-2xl p-5 space-y-4">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-primary" aria-hidden /> Grade this layout
-            </CardTitle>
-            <SectionDescription>
-              Tell the agent how it laid out this page. It learns from every grade, so the next
-              shot doc is closer to how you like it.
-            </SectionDescription>
-          </div>
-
-          {/* Star rating */}
-          <div className="space-y-1.5">
-            <Caption className="font-medium text-muted-foreground">Your rating</Caption>
-            <div className="flex items-center gap-1" onMouseLeave={() => setHover(0)}>
-              {[1, 2, 3, 4, 5].map((n) => {
-                const lit = (hover || score) >= n;
-                return (
-                  <button
-                    key={n}
-                    type="button"
-                    onMouseEnter={() => setHover(n)}
-                    onClick={() => setScore(n)}
-                    aria-label={`${n} star${n > 1 ? 's' : ''}`}
-                    className="rounded-md p-0.5 text-muted-foreground transition-colors hover:text-primary"
-                  >
-                    <Star className={`h-7 w-7 ${lit ? 'fill-primary text-primary' : ''}`} aria-hidden />
-                  </button>
-                );
-              })}
-            </div>
-            <Caption>{score > 0 ? ratingHint(score) : 'Pick 1–5 stars.'}</Caption>
-          </div>
-
-          {/* Explanation */}
-          <div className="space-y-1.5">
-            <Caption className="font-medium text-muted-foreground">
-              What should it do differently — or keep doing?
-            </Caption>
-            <textarea
-              value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
-              rows={5}
-              placeholder="e.g. This is a product video with no people, but the page still leads with a character block. Lead with the product instead and make it big."
-              className="w-full rounded-md border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y"
-            />
-            <Caption>Be specific — the more concrete you are, the better it learns.</Caption>
-          </div>
-
-          <Button className="w-full gap-1.5" disabled={!canSubmit} onClick={handleSubmit}>
-            {submitting ? (
-              <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Teaching the agent…</>
-            ) : (
-              <><Sparkles className="h-4 w-4" aria-hidden /> Submit grade</>
-            )}
-          </Button>
-
-          {message && (
-            <div
-              className={`flex items-start gap-2 rounded-md px-3 py-2 text-sm ${
-                message.kind === 'error'
-                  ? 'bg-destructive/10 text-destructive'
-                  : message.kind === 'success'
-                    ? 'bg-primary/10 text-primary'
-                    : message.kind === 'warn'
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                      : 'bg-surface-elevated text-foreground'
-              }`}
-            >
-              {message.kind === 'error' ? (
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              ) : message.kind === 'success' ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              ) : (
-                <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              )}
-              <span>{message.text}</span>
-            </div>
-          )}
+      <div className="bg-card border border-border-strong rounded-2xl p-5 space-y-4">
+        <div className="space-y-1">
+          <CardTitle className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4 text-primary" aria-hidden /> {copy.heading}
+          </CardTitle>
+          <SectionDescription>{copy.subtitle}</SectionDescription>
         </div>
-      </aside>
+
+        {/* Star rating */}
+        <div className="space-y-1.5">
+          <Caption className="font-medium text-muted-foreground">{copy.ratingLabel}</Caption>
+          <div className="flex items-center gap-1" onMouseLeave={() => setHover(0)}>
+            {[1, 2, 3, 4, 5].map((n) => {
+              const lit = (hover || score) >= n;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onMouseEnter={() => setHover(n)}
+                  onClick={() => setScore(n)}
+                  aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                  className="rounded-md p-0.5 text-muted-foreground transition-colors hover:text-primary"
+                >
+                  <Star className={`h-7 w-7 ${lit ? 'fill-primary text-primary' : ''}`} aria-hidden />
+                </button>
+              );
+            })}
+          </div>
+          <Caption>{score > 0 ? copy.ratingHint(score) : 'Pick 1–5 stars.'}</Caption>
+        </div>
+
+        {/* Explanation */}
+        <div className="space-y-1.5">
+          <Caption className="font-medium text-muted-foreground">{copy.explanationLabel}</Caption>
+          <textarea
+            value={explanation}
+            onChange={(e) => setExplanation(e.target.value)}
+            rows={5}
+            placeholder={copy.placeholder}
+            className="w-full rounded-md border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y"
+          />
+          <Caption>Be specific — the more concrete you are, the better it learns.</Caption>
+        </div>
+
+        <Button className="w-full gap-1.5" disabled={!canSubmit} onClick={handleSubmit}>
+          {submitting ? (
+            <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Teaching the agent…</>
+          ) : (
+            <><Sparkles className="h-4 w-4" aria-hidden /> Submit grade</>
+          )}
+        </Button>
+
+        {message && (
+          <div
+            className={`flex items-start gap-2 rounded-md px-3 py-2 text-sm ${
+              message.kind === 'error'
+                ? 'bg-destructive/10 text-destructive'
+                : message.kind === 'success'
+                  ? 'bg-primary/10 text-primary'
+                  : message.kind === 'warn'
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                    : 'bg-surface-elevated text-foreground'
+            }`}
+          >
+            {message.kind === 'error' ? (
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            ) : message.kind === 'success' ? (
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            ) : (
+              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            )}
+            <span>{message.text}</span>
+          </div>
+        )}
+      </div>
 
       {proposal !== null && (
         <PromptRevisionPopup
@@ -354,5 +499,14 @@ export function ShotDocGradePanel({ plan }: { plan: ShotPlan }): React.JSX.Eleme
         />
       )}
     </>
+  );
+}
+
+export function ShotDocGradePanel({ plan }: { plan: ShotPlan }): React.JSX.Element {
+  return (
+    <aside className="w-full xl:w-[340px] xl:shrink-0 xl:sticky xl:top-6 space-y-5">
+      <GradeBox plan={plan} dimension="layout" />
+      <GradeBox plan={plan} dimension="content" />
+    </aside>
   );
 }
