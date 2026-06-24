@@ -17,6 +17,10 @@
 import type { PipelineScene, SceneStatus } from '@/types/video-pipeline';
 import type { CinematicConfig } from '@/types/creative-studio';
 import { buildPromptFromPresets } from '@/lib/ai/cinematic-presets';
+import {
+  describeShotCameraGeometry,
+  SET_CONSISTENCY_CLAUSE,
+} from '@/lib/video/floor-plan-camera';
 import type {
   ShotPlan,
   ShotPlanShot,
@@ -476,10 +480,21 @@ export function composeShotGenerationPrompt(plan: ShotPlan, shot: ShotPlanShot):
     fragments.push(`${shot.camera.lens.trim()} lens`);
   }
 
-  // Floor-plan blocking → camera position/route + subject motion (drives camera).
-  const blocking = describeBlockingForShot(plan, shot);
-  if (blocking) {
-    fragments.push(blocking);
+  // Floor-plan blocking → PERSPECTIVE camera geometry from THIS shot's camera node
+  // (where it sits, which way it looks, what's in frame, eye-level NOT top-down) so
+  // the shot is rendered FROM the angle marked on the blocking, plus a set-consistency
+  // clause that pins the SAME location across shots. Falls back to the coarser
+  // `describeBlockingForShot` (position bands + subject motion) when there is no
+  // camera node for this shot.
+  const cameraGeometry = describeShotCameraGeometry(plan, shot);
+  if (cameraGeometry) {
+    fragments.push(cameraGeometry);
+    fragments.push(SET_CONSISTENCY_CLAUSE);
+  } else {
+    const blocking = describeBlockingForShot(plan, shot);
+    if (blocking) {
+      fragments.push(blocking);
+    }
   }
 
   return joinPromptFragments(fragments);
