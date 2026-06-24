@@ -1243,6 +1243,34 @@ const TESTS: TestCase[] = [
     },
   },
   {
+    // VIDEO_ENGINE_PROMPT_SPECIALIST — specialist.ts exports a plain function
+    // (no execute()). generateEnginePrompt loads its GM via
+    // getActiveSpecialistGMByIndustry, so the standard GM swap reaches it.
+    // Read-only (no Firestore writes).
+    specialistId: 'VIDEO_ENGINE_PROMPT_SPECIALIST',
+    department: 'Content',
+    gmDocId: `sgm_video_engine_prompt_specialist_${INDUSTRY_KEY}_v1`,
+    // Append-mode: the output has a structured rule (generationType enum) that
+    // lives in the real GM; a full-replace pirate prompt would break the schema.
+    pirateMode: 'append',
+    llmOnlyRun: async (): Promise<string[]> => {
+      const { generateEnginePrompt } = await import('../src/lib/agents/content/video-engine-prompt/specialist');
+      const result = await generateEnginePrompt({
+        shotIntent:
+          'Medium close-up of a confident founder at a standing desk in a dark modern office with blue accent lighting; she turns to camera and gestures at a glowing dashboard as AI agents light up across the screen. Cinematic, shot on ARRI, shallow depth of field, teal-and-amber grade.',
+        hasCharacterReferences: true,
+        hasContinuationFrame: false,
+        hasDialogue: true,
+        aspectRatio: '16:9',
+        durationSec: 5,
+        candidateEngines: ['seedance', 'kling'],
+      });
+      const out: string[] = [];
+      collectStrings(result, out);
+      return out;
+    },
+  },
+  {
     // SCHEDULING_SPECIALIST — execute()-based, but its single LLM call (brand-
     // voiced meeting title + description) only fires after real CRM + meeting
     // I/O. This run seeds disposable docs, suppresses Zoom (autoCreateZoom:false),

@@ -95,13 +95,13 @@ import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { ShotPlanDocument, type ShotPlanSection } from './ShotPlanDocument';
 import { ShotDocGradePanel } from './ShotDocGradePanel';
 import { ZoomPanViewport } from './ZoomPanViewport';
+import { RenderZeroDashboard } from './RenderZeroDashboard';
 import {
   applyShotPlanEdit,
   clearUpstreamChanged,
   type ShotPlanEdit,
 } from '@/lib/video/shot-plan-edit';
 import {
-  makeBlankShotPlan,
   makeBlankShot,
   castMemberFromProfile,
 } from '@/lib/video/shot-plan-blank';
@@ -2387,6 +2387,11 @@ export function ShotPlanSheet() {
     ],
   );
 
+  // "Start blank / fill manually" opens the RenderZero dashboard (the deep
+  // cinematic form). Its "Create Shot Doc" then drafts the shot doc from the full
+  // filled-out detail. Manual mode persists until a shot plan exists.
+  const [manualMode, setManualMode] = useState(false);
+
   // ── Resume on mount — what makes the build survive navigation/refresh ──
   // On mount, if we have a project id, do ONE read. If the SERVER build is still
   // 'generating', hydrate the plan/progress and re-attach the poll loop so the
@@ -2426,8 +2431,8 @@ export function ShotPlanSheet() {
   }, [authFetch, setShotPlan, setShotPlanBuildProgress, setShotPlanBuildStatus, pollBuild]);
 
   const handleStartBlank = useCallback(() => {
-    setShotPlan(makeBlankShotPlan());
-  }, [setShotPlan]);
+    setManualMode(true);
+  }, []);
 
   // ── Ask-AI submit ──
   const handleAskAiSubmit = useCallback(
@@ -2889,6 +2894,18 @@ export function ShotPlanSheet() {
 
   // ── Empty state ──
   if (!shotPlan) {
+    // Manual flow → the RenderZero dashboard. Its "Create Shot Doc" drafts the
+    // shot doc from the full filled-out cinematic detail (every field → the brief).
+    if (manualMode) {
+      return (
+        <RenderZeroDashboard
+          onCreateShotDoc={(brief) => { void handleGenerate(brief); }}
+          onBack={() => setManualMode(false)}
+          isCreating={isGenerating}
+          error={generateError}
+        />
+      );
+    }
     return (
       <>
         <EntryScreen
