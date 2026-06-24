@@ -415,6 +415,7 @@ export async function generateProjectDocs(input: GenerateProjectDocsInput): Prom
     title: projectTitle,
     brief: validated.brief,
     docs,
+    createdByUid: validated.userId,
   });
 
   logger.info('[video-project-segmentation] project created', {
@@ -811,6 +812,7 @@ export async function generateProjectDocsFromScript(
     title: projectTitle,
     brief: projectBrief,
     docs,
+    createdByUid: userId,
   });
 
   logger.info('[video-project-segmentation] project created from script', {

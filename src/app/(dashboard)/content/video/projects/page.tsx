@@ -36,6 +36,7 @@ import {
   AlertCircle,
   FolderPlus,
   ArrowRight,
+  User,
 } from 'lucide-react';
 import type { VideoProjectStatus } from '@/types/video-project';
 
@@ -51,6 +52,8 @@ interface ProjectSummary {
   docCount: number;
   docsWithVideo: number;
   finalVideoUrl?: string;
+  /** Who created the project (null on legacy projects made before creator tracking). */
+  createdBy?: { uid: string; name: string; email: string | null } | null;
   updatedAt: string;
 }
 
@@ -160,13 +163,19 @@ function ProjectCard({ project, onOpen, onDelete }: ProjectCardProps): React.JSX
         )}
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <CardTitle className="line-clamp-1">{title}</CardTitle>
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusPillClasses(project)}`}
         >
           {plainStatus(project)}
         </span>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <User className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="line-clamp-1">
+            Created by {project.createdBy?.name ?? 'Unknown'}
+          </span>
+        </div>
       </div>
 
       <div className="mt-auto flex items-center gap-2">
