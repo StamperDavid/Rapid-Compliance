@@ -18,6 +18,7 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import {
   type VideoProject,
   type VideoProjectBuild,
+  type VideoProjectCreator,
   VideoProjectSchema,
   deriveProjectStatus,
 } from '@/types/video-project';
@@ -38,6 +39,32 @@ function ensureDb() {
 
 function isoNow(): string {
   return new Date().toISOString();
+}
+
+/**
+ * Resolve a uid into a displayable creator record. Reads the top-level `users`
+ * doc (same collection api-auth reads) for a display name + email; on any miss
+ * it degrades to the uid so a project is always attributable, never blank.
+ */
+async function resolveCreator(uid: string): Promise<VideoProjectCreator> {
+  const fallback: VideoProjectCreator = { uid, name: uid, email: null };
+  try {
+    const snap = await ensureDb().collection('users').doc(uid).get();
+    if (!snap.exists) {
+      return fallback;
+    }
+    const data = snap.data() ?? {};
+    const email = typeof data.email === 'string' && data.email.trim().length > 0 ? data.email.trim() : null;
+    const displayName =
+      typeof data.displayName === 'string' && data.displayName.trim().length > 0
+        ? data.displayName.trim()
+        : typeof data.name === 'string' && data.name.trim().length > 0
+          ? data.name.trim()
+          : null;
+    return { uid, name: displayName ?? email ?? uid, email };
+  } catch {
+    return fallback;
+  }
 }
 
 /** Re-derive `status` + bump `updatedAt`, then validate the whole project. */
@@ -77,15 +104,19 @@ export interface CreateVideoProjectInput {
   docs?: ShotPlan[];
   /** Seed background-build progress (Content Manager fast-handoff path). */
   build?: VideoProjectBuild;
+  /** uid of the creator — resolved to a display name + email and stamped on the project. */
+  createdByUid?: string;
 }
 
 /** Create a new project (starts in 'planning'; status re-derives once docs land). */
 export async function createVideoProject(input: CreateVideoProjectInput): Promise<VideoProject> {
   const now = isoNow();
+  const creator = input.createdByUid?.trim() ? await resolveCreator(input.createdByUid.trim()) : null;
   const project: VideoProject = {
     id: `vproj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     title: input.title.trim() || 'Untitled Project',
     brief: input.brief,
+    ...(creator ? { createdBy: creator } : {}),
     docs: input.docs ?? [],
     ...(input.build ? { build: input.build } : {}),
     status: 'planning',
@@ -157,6 +188,8 @@ export interface VideoProjectSummary {
   docCount: number;
   docsWithVideo: number;
   finalVideoUrl: string | null;
+  /** Who created the project (absent on legacy projects). */
+  createdBy: VideoProjectCreator | null;
   updatedAt: string;
 }
 
@@ -177,6 +210,7 @@ export async function listVideoProjects(): Promise<VideoProjectSummary[]> {
       docCount: p.docs.length,
       docsWithVideo: p.docs.filter((d) => Boolean(d.finalVideoUrl)).length,
       finalVideoUrl: p.finalVideoUrl ?? null,
+      createdBy: p.createdBy ?? null,
       updatedAt: p.updatedAt,
     });
   }

@@ -66,11 +66,27 @@ export interface VideoProjectBuild {
   error?: string;
 }
 
+/**
+ * Who created the project — captured at creation so the list can show authorship
+ * ("Created by …"). Optional + additive: legacy projects created before this field
+ * existed simply have no creator and render as "Unknown".
+ */
+export interface VideoProjectCreator {
+  /** Firebase Auth uid of the creator. */
+  uid: string;
+  /** Human-readable name (display name, falling back to email, then uid). */
+  name: string;
+  /** Creator email when known (null for synthetic/background creators). */
+  email: string | null;
+}
+
 export interface VideoProject {
   id: string;
   title: string;
   /** The original creative brief the project's docs were segmented from. */
   brief: string;
+  /** Who created the project (stamped at creation). Absent on legacy projects. */
+  createdBy?: VideoProjectCreator;
   /**
    * Background-build progress for the initial doc authoring/rendering pass (Content
    * Manager fast-handoff path). Absent once the build is irrelevant (legacy / sync path).
@@ -115,10 +131,17 @@ export const VideoProjectBuildSchema = z.object({
   error: z.string().trim().max(2000).optional(),
 });
 
+export const VideoProjectCreatorSchema = z.object({
+  uid: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(300),
+  email: z.string().trim().email().nullable().default(null),
+});
+
 export const VideoProjectSchema = z.object({
   id: z.string().trim().min(1).max(200),
   title: z.string().trim().max(300).default(''),
   brief: z.string().trim().max(20000).default(''),
+  createdBy: VideoProjectCreatorSchema.optional(),
   build: VideoProjectBuildSchema.optional(),
   script: ScriptDocumentSchema.optional(),
   docs: z.array(ShotPlanSchema).max(100).default([]),

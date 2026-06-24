@@ -612,6 +612,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           const shell = await createVideoProject({
             title: projectTitle,
             brief: projectBrief,
+            createdByUid: authResult.user.uid,
             build: { status: 'running', phase: 'Getting your project ready…', done: 0, total: 0 },
           });
           // Fire-and-forget — the function owns its own error reporting via the project's
