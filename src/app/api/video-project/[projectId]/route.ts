@@ -13,6 +13,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { deleteVideoProject, getVideoProject } from '@/lib/video/video-project-service';
+import { deleteProjectMedia } from '@/lib/video/project-media-cleanup';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,9 +68,18 @@ export async function DELETE(
     }
 
     const { projectId } = await params;
+
+    // Cascade: remove the project's generated media + library folder, protecting any image
+    // owned by a saved Character-Library character (shared with the System A scrap path).
+    const media = await deleteProjectMedia(projectId, authResult.user.uid);
     await deleteVideoProject(projectId);
 
-    logger.info('[video-project] deleted via API', { file: FILE, projectId });
+    logger.info('[video-project] deleted via API', {
+      file: FILE,
+      projectId,
+      removedAssets: media.removed,
+      skippedProtected: media.skippedProtected,
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error(
