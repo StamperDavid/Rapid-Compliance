@@ -491,10 +491,12 @@ export function FloorPlanCanvas({
           )),
         )}
 
-        {/* Elements — no selection chrome / drag wiring in read-only mode */}
-        {plan.elements.map((el) => (
+        {/* Elements — no selection chrome / drag wiring in read-only mode.
+            Key includes the index: the AI sometimes emits duplicate element ids (e.g.
+            several "object" elements), and a bare id key collides ("same key, object"). */}
+        {plan.elements.map((el, i) => (
           <ElementMarker
-            key={el.id}
+            key={`el-${el.id}-${i}`}
             element={el}
             selected={!readOnly && selection?.kind === 'element' && selection.id === el.id}
             onPointerDown={
@@ -506,9 +508,9 @@ export function FloorPlanCanvas({
         ))}
 
         {/* Camera nodes — no selection chrome / drag wiring in read-only mode */}
-        {plan.cameras.map((cam) => (
+        {plan.cameras.map((cam, i) => (
           <CameraMarker
-            key={`cam-${cam.shotId}`}
+            key={`cam-${cam.shotId}-${i}`}
             camera={cam}
             number={shotNumberFor(cam.shotId)}
             selected={!readOnly && selection?.kind === 'camera' && selection.shotId === cam.shotId}

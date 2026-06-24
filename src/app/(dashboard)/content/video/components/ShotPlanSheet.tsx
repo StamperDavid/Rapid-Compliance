@@ -1141,11 +1141,11 @@ function ContinuityBlock({
   return (
     <div className="space-y-3 rounded-lg border border-border-light bg-surface-elevated/40 p-3">
       <Caption className="font-medium uppercase tracking-wider text-muted-foreground">Continuity</Caption>
-      {castInShot.map((member) => {
+      {castInShot.map((member, mi) => {
         const charState = (shot.characterStates ?? []).find((r) => r.characterId === member.characterId)?.state ?? '';
         const costumeState = (shot.costumeStates ?? []).find((r) => r.characterId === member.characterId)?.state ?? '';
         return (
-          <div key={member.characterId} className="space-y-2">
+          <div key={`${member.characterId}-${mi}`} className="space-y-2">
             <Caption className="font-medium text-foreground">{member.name}</Caption>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <EditableTextSimple
@@ -1164,11 +1164,11 @@ function ContinuityBlock({
           </div>
         );
       })}
-      {objectsInShot.map((object) => {
+      {objectsInShot.map((object, oi) => {
         const propState = (shot.propStates ?? []).find((r) => r.objectId === object.id)?.state ?? '';
         return (
           <EditableTextSimple
-            key={object.id}
+            key={`${object.id}-${oi}`}
             label={`${object.name} — condition`}
             value={propState}
             placeholder="e.g. lantern lit, lantern spent"
@@ -1421,11 +1421,11 @@ function ShotCard({
                 <Package className="h-3 w-3" /> Objects in this shot
               </Caption>
               <div className="flex flex-wrap gap-1.5">
-                {planObjects.map((obj) => {
+                {planObjects.map((obj, oi) => {
                   const active = selectedObjectIds.includes(obj.id);
                   return (
                     <button
-                      key={obj.id}
+                      key={`${obj.id}-${oi}`}
                       type="button"
                       onClick={() => toggleObject(obj.id)}
                       aria-pressed={active}
@@ -3192,9 +3192,9 @@ export function ShotPlanSheet() {
                   <SectionDescription>No cast yet. Pick a saved character from your library, or create a new one — new characters can be saved back to your library.</SectionDescription>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {sharedChoices.cast.map((member) => (
+                    {sharedChoices.cast.map((member, mi) => (
                       <CastCard
-                        key={member.characterId}
+                        key={`${member.characterId}-${mi}`}
                         member={member}
                         cast={sharedChoices.cast}
                         editing
@@ -3227,8 +3227,8 @@ export function ShotPlanSheet() {
                   </SectionDescription>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {(sharedChoices.objects ?? []).map((object) => (
-                      <ObjectCard key={object.id} object={object} onRemove={() => removeObject(object.id)} />
+                    {(sharedChoices.objects ?? []).map((object, oi) => (
+                      <ObjectCard key={`${object.id}-${oi}`} object={object} onRemove={() => removeObject(object.id)} />
                     ))}
                   </div>
                 )}
