@@ -375,6 +375,140 @@ export async function generateFromReferenceWithFal(
   };
 }
 
+// ─── Flux Kontext Max (multi-image) — compose an edit from SEVERAL references ──
+
+/**
+ * fal model that edits an image conditioned on MULTIPLE reference images at once
+ * (image + several refs → image). Used to anchor a scene still on BOTH a locked
+ * perspective room image (environment consistency) AND the cast identity image(s)
+ * at the same time — the single-image Kontext model cannot see both.
+ */
+const FLUX_KONTEXT_MAX_MULTI_MODEL = 'fal-ai/flux-pro/kontext/max/multi';
+
+/**
+ * Edit/compose an image from a natural-language instruction conditioned on MULTIPLE
+ * reference images (Flux Pro Kontext Max — multi). The first reference is the
+ * primary anchor (e.g. the locked perspective room) and the rest are additional
+ * conditioning (e.g. cast identity). Mirrors `generateFromReferenceWithFal`'s key
+ * resolution, retry-on-"valid dictionary", and `GenerationResult` return shape.
+ *
+ * @param prompt     - The compose/edit instruction.
+ * @param imageUrls  - Ordered reference image URLs (>=1). The first leads.
+ * @param options    - Optional seed / aspect ratio.
+ */
+export async function generateFromReferencesWithFal(
+  prompt: string,
+  imageUrls: string[],
+  options: FalKontextOptions = {}
+): Promise<GenerationResult> {
+  const refs = imageUrls.filter((u) => typeof u === 'string' && u.length > 0);
+  if (refs.length === 0) {
+    throw new Error('generateFromReferencesWithFal requires at least one source imageUrl');
+  }
+  // A single reference does not need the multi model — defer to the cheaper path.
+  if (refs.length === 1) {
+    return generateFromReferenceWithFal(prompt, refs[0], options);
+  }
+
+  const apiKey = await getFalApiKey();
+  const model = FLUX_KONTEXT_MAX_MULTI_MODEL;
+
+  const requestBody: Record<string, unknown> = {
+    prompt,
+    image_urls: refs,
+    num_images: 1,
+  };
+  if (options.seed !== undefined) {
+    requestBody.seed = options.seed;
+  }
+  if (options.aspectRatio !== undefined) {
+    requestBody.aspect_ratio = options.aspectRatio;
+  }
+
+  const url = `${FAL_BASE_URL}/${model}`;
+
+  logger.info('[Fal] Starting Kontext Max multi-image edit', {
+    model,
+    refCount: refs.length,
+    promptLength: prompt.length,
+    file: 'fal-provider.ts',
+  });
+
+  /** One request attempt. Returns the parsed response or throws. */
+  const attempt = async (): Promise<FalApiResponse> => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      const err = new Error(`Fal.ai Kontext Max error (${response.status}): ${errorText}`);
+      if (/valid dictionary/i.test(errorText)) {
+        (err as Error & { isFalDictRetryable?: boolean }).isFalDictRetryable = true;
+      }
+      throw err;
+    }
+    return (await response.json()) as FalApiResponse;
+  };
+
+  let data: FalApiResponse;
+  try {
+    data = await attempt();
+  } catch (firstError) {
+    const retryable =
+      firstError instanceof Error &&
+      (firstError as Error & { isFalDictRetryable?: boolean }).isFalDictRetryable === true;
+    if (!retryable) {
+      if (firstError instanceof Error) {
+        logger.error('[Fal] Kontext Max edit failed', firstError, { model, file: 'fal-provider.ts' });
+      }
+      throw firstError;
+    }
+    logger.warn('[Fal] Kontext Max "valid dictionary" error — retrying once', {
+      model,
+      file: 'fal-provider.ts',
+    });
+    data = await attempt();
+  }
+
+  if (!data.images || data.images.length === 0) {
+    throw new Error('Fal.ai Kontext Max returned empty image response');
+  }
+
+  const image = data.images[0];
+  const cost = MODEL_COSTS[model] ?? 0.1;
+
+  const metadata: GenerationMetadata = {
+    width: image.width,
+    height: image.height,
+    format: image.content_type || 'image/png',
+    seed: data.seed,
+  };
+
+  const generationId = `fal-kontext-max-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  logger.info('[Fal] Kontext Max multi-image edit completed', {
+    generationId,
+    model,
+    refCount: refs.length,
+    file: 'fal-provider.ts',
+  });
+
+  return {
+    id: generationId,
+    url: image.url,
+    provider: 'fal',
+    model,
+    cost,
+    metadata,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 // ─── Model Info ──────────────────────────────────────────────────────
 
 /**

@@ -38,7 +38,11 @@ import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { adminStorage } from '@/lib/firebase/admin';
 import { firebaseDownloadUrl } from '@/lib/firebase/storage-utils';
-import { generateWithFal, generateFromReferenceWithFal } from '@/lib/ai/providers/fal-provider';
+import {
+  generateWithFal,
+  generateFromReferenceWithFal,
+  generateFromReferencesWithFal,
+} from '@/lib/ai/providers/fal-provider';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { createAsset, updateAsset } from '@/lib/media/media-library-service';
 import { createAvatarProfile, getAvatarProfile, updateAvatarProfile } from '@/lib/video/avatar-profile-service';
@@ -60,6 +64,10 @@ import {
 } from '@/lib/video/providers';
 import { composeShotGenerationPrompt } from '@/lib/video/shot-plan-mapping';
 import { generateEnginePrompt } from '@/lib/agents/content/video-engine-prompt/specialist';
+import {
+  describeShotCameraGeometry,
+  SET_CONSISTENCY_CLAUSE,
+} from '@/lib/video/floor-plan-camera';
 import { applyShotPlanEdit, applyShotPlanEditDetailed } from '@/lib/video/shot-plan-edit';
 import type {
   ShotPlan,
@@ -713,7 +721,18 @@ export async function generateShot(
   const chainFrame = cut ? null : priorChainFrame(plan, shot);
   const castRefs = resolveCastReferenceImageUrls(plan, shot);
   const objectRefs = resolveObjectReferenceImageUrls(plan, shot);
-  const envRefs = environmentReferenceImageUrls(plan);
+  // Environment anchors for the room: the operator's uploaded world refs PLUS the
+  // generated, LOCKED perspective room hero (this shot's zone hero, else the world
+  // hero) — the same image the keyframe still anchors on — so the video keeps the
+  // SAME location (walls/windows/furniture) as every other shot. Hero leads so it is
+  // never dropped by the reference cap. The top-down blocking image is NEVER added
+  // here (it would push the video toward an overhead look); the blocking reaches the
+  // video as TEXT only, via the composed prompt's camera geometry.
+  const roomHeroUrl = resolveShotEnvironmentHeroUrl(plan, shot);
+  const envRefs = [
+    ...(roomHeroUrl ? [roomHeroUrl] : []),
+    ...environmentReferenceImageUrls(plan),
+  ];
   const basePrompt = await buildShotPrompt(plan, shot);
 
   // Pre-flight: ffmpeg must be available before we spend money on a generation.
@@ -1384,13 +1403,21 @@ export async function generateShotKeyframe(
     }
   }
 
-  // ── Generate path: a fresh still from the prompt + cast identity refs ───────
+  // ── Generate path: a fresh still from the prompt + room anchor + cast refs ──
   const castRefs = resolveCastReferenceImageUrls(plan, shot);
   const basePrompt = await buildShotPrompt(plan, shot);
-  // The shot's environment-zone hero (or the world hero) — the SET the on-model
-  // cast must appear inside, so the frame is the real cast in the real environment.
+  // The ROOM ANCHOR: the shot's environment-zone hero (or the world hero) — a wide,
+  // peopleless PERSPECTIVE render of the location. This is the single locked image
+  // that pins furniture/walls/windows so the room does NOT reinvent itself between
+  // shots. It is the FIRST visual reference; the cast identity follows it. (The
+  // top-down blocking image is NEVER used as a visual reference — that would make
+  // the still render top-down; the blocking drives composition through TEXT only.)
   const envHeroUrl = resolveShotEnvironmentHeroUrl(plan, shot);
   const envProse = shotEnvironmentProse(plan, shot);
+  // The per-shot camera geometry from the blocking diagram → perspective direction
+  // (where the camera sits, which way it looks, what's in frame, eye-level NOT
+  // top-down). '' when this shot has no floor-plan camera node.
+  const cameraGeometry = describeShotCameraGeometry(plan, shot);
   const workDir = await createWorkDir('shot-plan-keyframe');
 
   try {
@@ -1399,23 +1426,51 @@ export async function generateShotKeyframe(
     // arg, but we log it so the multi-tenant metering seam is visible here too.
     const seed = typeof shot.generated?.seed === 'number' ? shot.generated.seed : undefined;
 
-    // STORYBOARD KEYFRAME = a cinematic photographic still of the ACTUAL on-model
-    // cast INSIDE the ACTUAL set for this shot. Two reference signals matter: the
-    // cast identity (kept exact) AND the environment hero (the set look). Flux Pro
-    // Kontext (`generateFromReferenceWithFal`) accepts a SINGLE source image only —
-    // there is no multi-image / additionalImageUrls path on the fal provider — so we
-    // anchor on the cast ref for identity (the single biggest quality differentiator)
-    // and fold the environment hero in through strong prose, naming the set
-    // explicitly. Without cast refs we fall back to a pure text-to-image still.
-    const mode = castRefs.length > 0 ? 'kontext' : 'text-to-image';
-    const keyframePrompt =
-      castRefs.length > 0
-        ? `Cinematic film still: keep the EXACT same person/people from the reference image — ` +
-          `identical face(s), hair, and wardrobe — placed inside ${envProse || 'the scene environment'}. ` +
-          `${basePrompt} Photographic, film-grade, sharp focus, on-model recognizable cast in the ` +
-          `actual set, no text. No invented brand logos, brand names, or fake signage text in frame.`
-        : `Cinematic film still in ${envProse || 'the scene environment'}. ${basePrompt} ` +
-          `Photographic, film-grade, sharp focus, no text. No invented brand logos, brand names, or fake signage text in frame.`;
+    // Ordered visual references: ROOM ANCHOR first (environment consistency), then
+    // cast identity. Flux Kontext Max (multi) conditions on both at once when both
+    // exist; with only one it degrades to single-image Kontext; with none, text-to-
+    // image. The room anchor leading is what holds the LOCATION constant across shots.
+    const visualRefs = capReferenceImages([...(envHeroUrl ? [envHeroUrl] : []), ...castRefs]);
+
+    // Build the keyframe prompt. The leading instruction names WHICH reference is the
+    // room and which is the cast, so the model keeps the set from @Image1 and the
+    // people from the later refs. The camera geometry + set-consistency clause make
+    // the still read FROM the marked angle, inside the SAME location.
+    const cameraDirection = cameraGeometry ? ` ${cameraGeometry}.` : '';
+    const setConsistency = ` ${SET_CONSISTENCY_CLAUSE}`;
+    let keyframePrompt: string;
+    let mode: 'kontext-room+cast' | 'kontext-room' | 'kontext-cast' | 'text-to-image';
+    if (envHeroUrl && castRefs.length > 0) {
+      mode = 'kontext-room+cast';
+      keyframePrompt =
+        `Cinematic film still set INSIDE the room shown in the first reference image — keep ` +
+        `that exact location (same walls, windows, doors, and furniture in the same places). ` +
+        `Place the EXACT same person/people from the other reference image(s) — identical ` +
+        `face(s), hair, and wardrobe — into that room. ${basePrompt}${cameraDirection}${setConsistency} ` +
+        `Photographic, film-grade, sharp focus, on-model recognizable cast in the actual set, ` +
+        `no text. No invented brand logos, brand names, or fake signage text in frame.`;
+    } else if (envHeroUrl) {
+      mode = 'kontext-room';
+      keyframePrompt =
+        `Cinematic film still set INSIDE the room shown in the reference image — keep that exact ` +
+        `location (same walls, windows, doors, and furniture in the same places). ` +
+        `${basePrompt}${cameraDirection}${setConsistency} Photographic, film-grade, sharp focus, ` +
+        `no text. No invented brand logos, brand names, or fake signage text in frame.`;
+    } else if (castRefs.length > 0) {
+      mode = 'kontext-cast';
+      keyframePrompt =
+        `Cinematic film still: keep the EXACT same person/people from the reference image — ` +
+        `identical face(s), hair, and wardrobe — placed inside ${envProse || 'the scene environment'}. ` +
+        `${basePrompt}${cameraDirection}${setConsistency} Photographic, film-grade, sharp focus, ` +
+        `on-model recognizable cast in the actual set, no text. No invented brand logos, brand ` +
+        `names, or fake signage text in frame.`;
+    } else {
+      mode = 'text-to-image';
+      keyframePrompt =
+        `Cinematic film still in ${envProse || 'the scene environment'}. ${basePrompt}${cameraDirection} ` +
+        `Photographic, film-grade, sharp focus, no text. No invented brand logos, brand names, or ` +
+        `fake signage text in frame.`;
+    }
 
     logger.info('[shot-plan-gen] submitting keyframe still', {
       file: FILE,
@@ -1423,23 +1478,28 @@ export async function generateShotKeyframe(
       tenantId: ctx.tenantId,
       mode,
       castRefCount: castRefs.length,
-      // Multi-ref readout: cast identity ref + environment hero. The provider is
-      // single-reference, so envHero rides in prose (envHeroResolved) — both counts
-      // are logged so the owner can confirm the keyframe saw the right set.
-      envHeroResolved: envHeroUrl ? 1 : 0,
+      // The room anchor is now a real VISUAL reference (lead), not prose-only.
+      roomAnchorResolved: envHeroUrl ? 1 : 0,
+      visualRefCount: visualRefs.length,
+      hasCameraGeometry: cameraGeometry.length > 0,
       envZone: resolveShotEnvironmentZone(plan, shot)?.label ?? null,
     });
 
     const result =
-      castRefs.length > 0
-        ? await generateFromReferenceWithFal(keyframePrompt, castRefs[0], {
+      visualRefs.length > 1
+        ? await generateFromReferencesWithFal(keyframePrompt, visualRefs, {
             aspectRatio: '16:9',
             ...(seed !== undefined ? { seed } : {}),
           })
-        : await generateWithFal(keyframePrompt, {
-            aspectRatio: '16:9',
-            ...(seed !== undefined ? { seed } : {}),
-          });
+        : visualRefs.length === 1
+          ? await generateFromReferenceWithFal(keyframePrompt, visualRefs[0], {
+              aspectRatio: '16:9',
+              ...(seed !== undefined ? { seed } : {}),
+            })
+          : await generateWithFal(keyframePrompt, {
+              aspectRatio: '16:9',
+              ...(seed !== undefined ? { seed } : {}),
+            });
 
     const falImageUrl = result.url;
     if (!falImageUrl) {
