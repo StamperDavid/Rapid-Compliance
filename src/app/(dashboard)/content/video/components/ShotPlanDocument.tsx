@@ -487,7 +487,7 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onSaveCharacterT
     <div className="flex min-h-full flex-col gap-3">
       {subjects.length > 0 && (
         <div className="grid min-h-0 flex-1 items-stretch gap-2" style={cols(Math.min(Math.max(subjects.length, 1), 5))}>
-          {subjects.map((member) => {
+          {subjects.map((member, mi) => {
             const views = subjectViews(member);
             const notes = (member.notes ?? '').trim();
             const tier = member.billing === 'lead' ? 'Lead' : member.billing === 'supporting' ? 'Support' : null;
@@ -496,8 +496,9 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onSaveCharacterT
             const hero = views[0];
             const thumbs = views.slice(1, 5);
             const tn = Math.min(Math.max(thumbs.length, 1), 4);
+            // Key includes the index — the AI can emit duplicate cast characterIds.
             return (
-              <div key={member.characterId} className="flex h-full min-h-0 min-w-0 flex-col">
+              <div key={`${member.characterId}-${mi}`} className="flex h-full min-h-0 min-w-0 flex-col">
                 <div className="mb-1 flex shrink-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                   <span className="text-[12px] font-bold uppercase tracking-wider text-stone-900">{member.name}</span>
                   {member.role && <span className="truncate text-[9px] uppercase tracking-wider text-amber-700">{member.role}</span>}
@@ -551,8 +552,8 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onSaveCharacterT
               row is left-aligned and the thumbs are width-capped so they stay small
               regardless of count, so the props never compete with the cast above. */}
           <div className="flex flex-wrap gap-1.5">
-            {objects.slice(0, 12).map((obj) => (
-              <div key={obj.id} className="w-16 shrink-0">
+            {objects.slice(0, 12).map((obj, oi) => (
+              <div key={`${obj.id}-${oi}`} className="w-16 shrink-0">
                 <Cell src={obj.referenceImageUrls[0]} alt={obj.name} caption={obj.name} aspect="aspect-square" />
               </div>
             ))}
@@ -578,8 +579,8 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onSaveCharacterT
           {(zones.length > 0
             ? zones.map((zone, zi) => ({ id: zone.id, label: zone.label, hero: zone.heroImageUrl ?? (zi === 0 ? heroFallback : undefined), setDesign: zone.setDesign }))
             : [{ id: 'env', label: `EXT. — ${(sharedChoices.environmentFingerprint || 'Environment').slice(0, 60)}`, hero: heroFallback, setDesign: undefined as string[] | undefined }]
-          ).map((z) => (
-            <div key={z.id} className="flex h-full min-h-0 min-w-0 flex-col">
+          ).map((z, zix) => (
+            <div key={`${z.id}-${zix}`} className="flex h-full min-h-0 min-w-0 flex-col">
               <Cell src={z.hero} alt={z.label} caption={z.label} fill />
               {z.setDesign && z.setDesign.length > 0 && (
                 <ul className="mt-1 list-disc space-y-0.5 pl-4 marker:text-amber-600/60">
@@ -702,10 +703,10 @@ export function ShotPlanDocument({ plan, onEdit, onEditSection, onSaveCharacterT
   /** Character / continuity notes — the per-character identity + notes column. */
   const renderNotes = (): React.ReactNode => (
     <div className="space-y-2">
-      {subjects.map((member) => {
+      {subjects.map((member, mi) => {
         const notes = (member.notes ?? '').trim();
         return (
-          <div key={member.characterId} className="min-w-0 border-b border-stone-200 pb-1.5 last:border-b-0">
+          <div key={`${member.characterId}-${mi}`} className="min-w-0 border-b border-stone-200 pb-1.5 last:border-b-0">
             <div className="text-[11px] font-bold uppercase tracking-wider text-stone-900">{member.name}</div>
             <IdentityStrip member={member} />
             {notes && <p className="mt-0.5 text-[10px] leading-snug text-stone-600">{notes}</p>}
