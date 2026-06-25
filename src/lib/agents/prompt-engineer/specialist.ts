@@ -127,7 +127,10 @@ const ProposePromptEditPayloadSchema = z.object({
   action: z.literal('propose_prompt_edit'),
   targetSpecialistId: z.string().min(1).max(100),
   targetSpecialistName: z.string().min(1).max(200),
-  currentSystemPrompt: z.string().min(100).max(60000),
+  // Agent system prompts can be large (craft + baked Brand DNA); 60k chars was too
+  // tight and rejected real prompts before the rewriter could even start. 200k chars
+  // (~50k tokens) is safely within the model context and well under Firestore limits.
+  currentSystemPrompt: z.string().min(100).max(200000),
   correctedReportExcerpt: z.string().min(1).max(20000),
   humanCorrection: z.object({
     grade: GradeEnum,
