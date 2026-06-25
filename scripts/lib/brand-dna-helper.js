@@ -174,6 +174,7 @@ function buildBrandDNABlock(brandDNA) {
       `Caption/UI text color: ${v.captionColor ?? '(not set)'}`,
       `Logo: ${v.logoUrl ?? '(not set)'}`,
       `Brand font: ${v.fontFamily ?? '(not set)'}`,
+      "LOGO RULE: never describe or invent the brand logo's appearance (no colors, glow, gradient, shape, lettering, or styling FOR THE LOGO ITSELF). The pipeline composites the operator's REAL logo file onto the frame. When the logo should appear, simply state that the brand logo appears — nothing about how it looks.",
     );
   }
 

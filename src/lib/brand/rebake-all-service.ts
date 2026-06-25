@@ -81,6 +81,12 @@ export interface RebakeAllResult {
 
 export interface RebakeAllOptions {
   createdBy: string;
+  /**
+   * Bypass the idempotent-skip. Needed when the BLOCK TEMPLATE changes (e.g. a new
+   * rule added to buildBrandDNABlock) but the Brand DNA DATA is unchanged — without
+   * this, every GM would skip and the new block would never land.
+   */
+  force?: boolean;
   onProgress?: (progress: {
     done: number;
     total: number;
@@ -272,6 +278,7 @@ async function processGMTarget(
   target: GMTarget,
   brandDNA: BrandDNA,
   createdBy: string,
+  force: boolean,
 ): Promise<RebakeTargetResult> {
   const label = gmTargetId(target);
   const base: RebakeTargetResult = {
@@ -281,8 +288,9 @@ async function processGMTarget(
     fromVersion: target.currentVersion,
   };
 
-  // Idempotent skip — already baked with the current Brand DNA.
-  if (brandDNAEquals(target.currentSnapshot, brandDNA)) {
+  // Idempotent skip — already baked with the current Brand DNA. Bypassed when `force`
+  // is set (a block-template change with unchanged data still needs to land).
+  if (!force && brandDNAEquals(target.currentSnapshot, brandDNA)) {
     return base;
   }
 
@@ -449,7 +457,7 @@ export async function rebakeAllGoldenMasters(opts: RebakeAllOptions): Promise<Re
 
   // Process specialist/manager targets, bounded to MAX_CONCURRENCY at a time.
   await inChunks(gmTargets, MAX_CONCURRENCY, async (t) => {
-    const result = await processGMTarget(t, brandDNA, opts.createdBy);
+    const result = await processGMTarget(t, brandDNA, opts.createdBy, opts.force ?? false);
     await reportProgress(result);
     return result;
   });
