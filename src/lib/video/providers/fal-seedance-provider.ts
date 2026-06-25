@@ -169,6 +169,19 @@ function normalizeStatus(raw: string | undefined): VideoGenerationStatus['status
   return 'processing';
 }
 
+/**
+ * Snap a requested clip length onto what Seedance actually accepts: the string
+ * 'auto', or an INTEGER from 4 to 15. A non-number → 'auto'; anything else is
+ * rounded and clamped into [4, 15]. Without this, a short shot (e.g. 3s) is
+ * rejected by fal with a 422 and never renders.
+ */
+function toSeedanceDuration(durationSeconds: number | undefined): number | 'auto' {
+  if (typeof durationSeconds !== 'number' || !Number.isFinite(durationSeconds)) {
+    return 'auto';
+  }
+  return Math.min(15, Math.max(4, Math.round(durationSeconds)));
+}
+
 /** Build the shared Seedance request body fields from a normalized request. */
 function buildCommonBody(req: VideoGenerateRequest): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -176,7 +189,7 @@ function buildCommonBody(req: VideoGenerateRequest): Record<string, unknown> {
     resolution: req.resolution ?? '720p',
     aspect_ratio: req.aspectRatio ?? '16:9',
     // Seedance accepts a number (4–15) or the string 'auto' to let it decide.
-    duration: typeof req.durationSeconds === 'number' ? req.durationSeconds : 'auto',
+    duration: toSeedanceDuration(req.durationSeconds),
     generate_audio: req.generateAudio ?? false,
   };
   if (typeof req.seed === 'number') {
@@ -241,7 +254,7 @@ export class FalSeedanceProvider implements VideoEngineProvider {
       resolution: req.resolution ?? '720p',
       aspect_ratio: req.aspectRatio ?? '16:9',
       // Seedance accepts a number (4–15) or the string 'auto'.
-      duration: typeof req.durationSeconds === 'number' ? req.durationSeconds : 'auto',
+      duration: toSeedanceDuration(req.durationSeconds),
       // Text-to-video is the spoken/dialogue path → audio ON unless disabled.
       generate_audio: req.generateAudio ?? true,
     };

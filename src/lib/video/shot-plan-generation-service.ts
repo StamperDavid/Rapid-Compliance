@@ -53,6 +53,7 @@ import {
   ensureFfmpeg,
   runFfmpeg,
   probeVideo,
+  appendFrozenTail,
   createWorkDir,
   cleanupWorkDir,
 } from '@/lib/video/ffmpeg-utils';
@@ -91,6 +92,25 @@ const BUCKET = 'rapid-compliance-65f87.firebasestorage.app';
  */
 const DEFAULT_RESOLUTION: NonNullable<VideoGenerateRequest['resolution']> = '1080p';
 const DEFAULT_ASPECT_RATIO = '16:9';
+
+/**
+ * Clip timing. Each rendered shot is ACTION + a short FROZEN tail:
+ *   • ACTION  = the engine-rendered motion. We floor it at 5s (the engine also
+ *     only accepts 4–15s, so a too-short planner value can't break the render),
+ *     and cap at 15s. Longer authored shots are preserved within the cap.
+ *   • FREEZE  = the final frame held for a beat AFTER the action. The next clip
+ *     is chained to START on this exact frame, so the freeze is an invisible
+ *     overlap the editor trims within → seamless stitching. (≈5s + 2s = ~7s clip.)
+ */
+const ACTION_FLOOR_SECONDS = 5;
+const ACTION_CEIL_SECONDS = 15;
+const FREEZE_TAIL_SECONDS = 2;
+
+/** The action length sent to the engine: authored value floored to 5s, capped at 15s. */
+function actionDurationSeconds(durationSeconds: number | undefined): number {
+  const raw = typeof durationSeconds === 'number' && durationSeconds > 0 ? durationSeconds : ACTION_FLOOR_SECONDS;
+  return Math.min(ACTION_CEIL_SECONDS, Math.max(ACTION_FLOOR_SECONDS, Math.round(raw)));
+}
 
 /** Poll cadence + ceiling: 5s interval, ~15 min ceiling (generous for a clip). */
 const POLL_INTERVAL_MS = 5_000;
@@ -754,7 +774,7 @@ export async function generateShot(
         imageUrls: cutRefs,
         resolution: DEFAULT_RESOLUTION,
         aspectRatio: DEFAULT_ASPECT_RATIO,
-        durationSeconds: shot.durationSeconds,
+        durationSeconds: actionDurationSeconds(shot.durationSeconds),
         // No Seedance-generated audio: dialogue comes ONLY from the cloned-voice
         // lip-sync (a coherent single voice), never a competing voice the engine
         // invents. Non-speaking shots are silent here (music/ambient added in the
@@ -790,7 +810,7 @@ export async function generateShot(
         imageUrls: continueRefs,
         resolution: DEFAULT_RESOLUTION,
         aspectRatio: DEFAULT_ASPECT_RATIO,
-        durationSeconds: shot.durationSeconds,
+        durationSeconds: actionDurationSeconds(shot.durationSeconds),
         // No Seedance-generated audio: dialogue comes ONLY from the cloned-voice
         // lip-sync (a coherent single voice), never a competing voice the engine
         // invents. Non-speaking shots are silent here (music/ambient added in the
@@ -920,6 +940,43 @@ export async function generateShot(
           shotId,
         });
       }
+    }
+
+    // ── Freeze-frame stitch tail ──────────────────────────────────────────────
+    // Hold the FINAL frame for a short beat on the end of the clip. The next clip
+    // is chained to START on this exact frame (priorChainFrame → finalLastFrameUrl),
+    // so the freeze is an invisible overlap the editor trims within → seamless
+    // stitching. Best-effort: a failure keeps the un-tailed clip, never fails the shot.
+    // `finalLastFrameUrl` is unchanged — the frozen frame IS that frame.
+    try {
+      const finalDlPath = join(workDir, 'final-for-freeze.mp4');
+      await downloadToFile(finalVideoUrl, finalDlPath, `shot ${shotId} final clip`);
+      const probe = await probeVideo(finalDlPath);
+      const frozenPath = join(workDir, 'with-freeze.mp4');
+      await appendFrozenTail(finalDlPath, frozenPath, FREEZE_TAIL_SECONDS, probe.hasAudio);
+      const frozenBuf = await readFile(frozenPath);
+      const frozenStoragePath = `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`;
+      finalVideoUrl = await uploadPermanent(
+        frozenBuf,
+        frozenStoragePath,
+        'video/mp4',
+        `shot ${shotId} clip + freeze tail`,
+      );
+      // Point the library card at the final (frozen-tail) clip.
+      await updateAsset(clipAsset.id, { url: finalVideoUrl, fileSize: frozenBuf.length }).catch(() => {
+        /* best-effort — the shot still carries the right URL */
+      });
+      logger.info('[shot-plan-gen] freeze tail appended', {
+        file: FILE,
+        shotId,
+        freezeSeconds: FREEZE_TAIL_SECONDS,
+      });
+    } catch (err) {
+      logger.error(
+        '[shot-plan-gen] freeze-tail failed (keeping clip without tail)',
+        err instanceof Error ? err : new Error(String(err)),
+        { file: FILE, shotId },
+      );
     }
 
     // ── Write the successful result back onto the shot ────────────────────────

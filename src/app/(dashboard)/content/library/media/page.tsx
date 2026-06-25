@@ -1679,7 +1679,10 @@ function AssetTile({
   const Icon = typeIcon(asset.type);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isVideo = asset.type === 'video';
-  const showImage = asset.type === 'image' || Boolean(asset.thumbnailUrl);
+  // Only TRUE images render as a still. Videos have a thumbnail (their last frame)
+  // but must render as a playable <video> — keying off thumbnailUrl here is what made
+  // every video clip show up as a frozen still in the library instead of a video.
+  const showImage = asset.type === 'image';
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   const handleEnter = () => {
     if (isVideo && videoRef.current) {
@@ -1911,7 +1914,10 @@ function AssetDetailPanel({
   onMoveToFolder,
 }: AssetDetailPanelProps) {
   const Icon = typeIcon(asset.type);
-  const showImage = asset.type === 'image' || Boolean(asset.thumbnailUrl);
+  // Only TRUE images render as a still. Videos have a thumbnail (their last frame)
+  // but must render as a playable <video> — keying off thumbnailUrl here is what made
+  // every video clip show up as a frozen still in the library instead of a video.
+  const showImage = asset.type === 'image';
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(asset.name);
   const [projectDraft, setProjectDraft] = useState('');
