@@ -24,7 +24,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
-import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
+import { getBrandDNA, type BrandDNA, type BrandVisualIdentity } from '@/lib/brand/brand-dna-service';
 import { buildBrandDNABlock, swapBrandDNABlock } from '@/lib/brand/rebake-brand-dna';
 import {
   createIndustryGMVersionFromBrandRebake,
@@ -103,6 +103,41 @@ interface GMTarget {
   currentSnapshot: BrandDNA | null;
 }
 
+/**
+ * Read the tenant's VISUAL brand identity (colors, logo, font) from the brand kit
+ * doc — the SAME raw read as the JS seed helper `fetchBrandVisualIdentity`, so the
+ * baked block is byte-identical across the seed + re-bake paths. Best-effort;
+ * undefined when no colors are set (→ no visual subsection baked).
+ */
+async function fetchBrandVisualIdentity(): Promise<BrandVisualIdentity | undefined> {
+  if (!adminDb) { return undefined; }
+  try {
+    const doc = await adminDb
+      .collection('organizations').doc(PLATFORM_ID)
+      .collection('settings').doc('brand-kit')
+      .get();
+    if (!doc.exists) { return undefined; }
+    const kit = (doc.data() ?? {}) as {
+      colors?: { primary?: string; secondary?: string; accent?: string };
+      typography?: { captionColor?: string; fontFamily?: string };
+      logo?: { url?: string };
+    };
+    const colors = kit.colors ?? {};
+    if (!colors.primary) { return undefined; }
+    const v: BrandVisualIdentity = { primaryColor: colors.primary };
+    if (colors.secondary) { v.secondaryColor = colors.secondary; }
+    if (colors.accent) { v.accentColor = colors.accent; }
+    if (kit.typography?.captionColor) { v.captionColor = kit.typography.captionColor; }
+    if (kit.typography?.fontFamily) { v.fontFamily = kit.typography.fontFamily; }
+    if (typeof kit.logo?.url === 'string' && /^https?:\/\//i.test(kit.logo.url)) {
+      v.logoUrl = kit.logo.url;
+    }
+    return v;
+  } catch {
+    return undefined;
+  }
+}
+
 // ============================================================================
 // IDEMPOTENT-SKIP HELPERS (ported verbatim from the CLI script)
 // ============================================================================
@@ -126,6 +161,8 @@ function normalizeBrandDNA(dna: BrandDNA | null): string {
     industry: dna.industry ?? '',
     competitors: Array.isArray(dna.competitors) ? dna.competitors : [],
     referenceExamples: dna.referenceExamples ?? '',
+    // Visual identity included so a color/logo change triggers a re-bake (not skipped).
+    visualIdentity: dna.visualIdentity ?? null,
   };
   const sortedKeys = Object.keys(semantic).sort();
   const ordered: Record<string, unknown> = {};
@@ -382,10 +419,13 @@ async function processJasperTarget(
  * is captured in the result instead of aborting the run.
  */
 export async function rebakeAllGoldenMasters(opts: RebakeAllOptions): Promise<RebakeAllResult> {
-  const brandDNA = await getBrandDNA();
-  if (!brandDNA) {
+  const baseDNA = await getBrandDNA();
+  if (!baseDNA) {
     throw new Error('No Brand DNA configured on the org — cannot re-bake.');
   }
+  // Attach the visual identity (colors/logo/font) so it bakes alongside the voice.
+  const visualIdentity = await fetchBrandVisualIdentity();
+  const brandDNA: BrandDNA = visualIdentity ? { ...baseDNA, visualIdentity } : baseDNA;
 
   const [specialists, managers] = await Promise.all([
     enumerateSpecialists(),

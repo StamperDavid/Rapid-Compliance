@@ -81,7 +81,45 @@ async function fetchBrandDNA(db, platformId) {
     );
   }
 
+  brandDNA.visualIdentity = await fetchBrandVisualIdentity(db, platformId);
   return brandDNA;
+}
+
+/**
+ * Fetch the tenant's VISUAL brand identity (colors, logo, font) from the brand kit
+ * doc so it can be baked alongside the voice. Best-effort: never throws — visuals are
+ * additive, and a seed must not fail over them. Returns undefined when no colors are
+ * set (→ no visual subsection baked). Reads the SAME raw doc the TS re-bake reads, so
+ * the baked block is byte-identical across the seed + re-bake paths.
+ *
+ * @param {import('firebase-admin').firestore.Firestore} db
+ * @param {string} platformId
+ * @returns {Promise<object|undefined>}
+ */
+async function fetchBrandVisualIdentity(db, platformId) {
+  try {
+    const doc = await db
+      .collection('organizations').doc(platformId)
+      .collection('settings').doc('brand-kit')
+      .get();
+    if (!doc.exists) { return undefined; }
+    const kit = doc.data() || {};
+    const colors = kit.colors || {};
+    if (!colors.primary) { return undefined; }
+    const v = { primaryColor: colors.primary };
+    if (colors.secondary) { v.secondaryColor = colors.secondary; }
+    if (colors.accent) { v.accentColor = colors.accent; }
+    if (kit.typography) {
+      if (kit.typography.captionColor) { v.captionColor = kit.typography.captionColor; }
+      if (kit.typography.fontFamily) { v.fontFamily = kit.typography.fontFamily; }
+    }
+    if (kit.logo && typeof kit.logo.url === 'string' && /^https?:\/\//i.test(kit.logo.url)) {
+      v.logoUrl = kit.logo.url;
+    }
+    return v;
+  } catch (_e) {
+    return undefined;
+  }
 }
 
 /**
@@ -120,6 +158,25 @@ function buildBrandDNABlock(brandDNA) {
     `Competitors (never name them unless specifically asked): ${competitors}`,
   ];
 
+  // Brand Visual Identity subsection — only when colors are configured. Baked so any
+  // agent depicting the brand on screen (video / images / UI) uses the EXACT palette +
+  // logo instead of inventing them. INSIDE the block so the surgical swap refreshes it
+  // as one unit. MUST match buildBrandDNABlock in src/lib/brand/rebake-brand-dna.ts byte-for-byte.
+  const v = brandDNA.visualIdentity;
+  if (v && typeof v.primaryColor === 'string' && v.primaryColor.trim().length > 0) {
+    lines.push(
+      '',
+      "## Brand Visual Identity (baked — when THIS brand's OWN product, dashboard, UI, or logo appears on screen, render these EXACT assets; never invent a different palette or logo)",
+      '',
+      `Primary brand color: ${v.primaryColor}`,
+      `Secondary brand color: ${v.secondaryColor ?? '(not set)'}`,
+      `Accent brand color: ${v.accentColor ?? '(not set)'}`,
+      `Caption/UI text color: ${v.captionColor ?? '(not set)'}`,
+      `Logo: ${v.logoUrl ?? '(not set)'}`,
+      `Brand font: ${v.fontFamily ?? '(not set)'}`,
+    );
+  }
+
   // Reference examples subsection — only when the operator has provided reference
   // materials (assembled into a text block on the org brandDNA at save time). Kept
   // INSIDE the Brand DNA block so the surgical swap refreshes it as one unit. MUST
@@ -154,6 +211,7 @@ function mergeBrandDNAIntoSystemPrompt(baseSystemPrompt, brandDNA) {
 
 module.exports = {
   fetchBrandDNA,
+  fetchBrandVisualIdentity,
   buildBrandDNABlock,
   mergeBrandDNAIntoSystemPrompt,
 };
