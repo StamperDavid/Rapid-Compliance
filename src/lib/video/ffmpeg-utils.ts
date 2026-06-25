@@ -747,7 +747,7 @@ export async function addWatermark(
   inputPath: string,
   watermarkPath: string,
   outputPath: string,
-  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'bottom-right',
+  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center' = 'bottom-right',
   opacity = 0.7,
   scale = 0.1, // 10% of video width
 ): Promise<string> {
@@ -756,6 +756,8 @@ export async function addWatermark(
     'top-right': 'x=W-w-20:y=20',
     'bottom-left': 'x=20:y=H-h-20',
     'bottom-right': 'x=W-w-20:y=H-h-20',
+    // Centered — used for a logo-resolve shot (the real logo is the focus, not a watermark).
+    'center': 'x=(W-w)/2:y=(H-h)/2',
   };
 
   const filterComplex = [

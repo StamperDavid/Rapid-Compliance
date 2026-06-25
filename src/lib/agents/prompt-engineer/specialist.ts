@@ -234,6 +234,26 @@ function stripJsonFences(raw: string): string {
     .trim();
 }
 
+/**
+ * Extract the JSON object from an LLM response, tolerant of the model "thinking out
+ * loud" before/after the JSON. Tries markdown-fence stripping first; if the result
+ * isn't a bare object, slices from the first `{` to the last `}` (the outermost
+ * object), discarding any surrounding reasoning prose. This is what stops a valid
+ * edit from failing with "output was not valid JSON" when the model adds a preamble.
+ */
+function extractJsonObject(raw: string): string {
+  const fenced = stripJsonFences(raw).trim();
+  if (fenced.startsWith('{') && fenced.endsWith('}')) {
+    return fenced;
+  }
+  const first = raw.indexOf('{');
+  const last = raw.lastIndexOf('}');
+  if (first !== -1 && last > first) {
+    return raw.slice(first, last + 1);
+  }
+  return fenced;
+}
+
 async function callOpenRouter(
   ctx: LlmCallContext,
   userPrompt: string,
@@ -355,7 +375,7 @@ async function executeProposePromptEdit(
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(stripJsonFences(rawContent));
+    parsed = JSON.parse(extractJsonObject(rawContent));
   } catch {
     throw new Error(
       `Prompt Engineer output was not valid JSON: ${rawContent.slice(0, 300)}`,

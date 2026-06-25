@@ -54,6 +54,7 @@ import {
   runFfmpeg,
   probeVideo,
   appendFrozenTail,
+  addWatermark,
   createWorkDir,
   cleanupWorkDir,
 } from '@/lib/video/ffmpeg-utils';
@@ -753,7 +754,11 @@ export async function generateShot(
     ...(roomHeroUrl ? [roomHeroUrl] : []),
     ...environmentReferenceImageUrls(plan),
   ];
-  const basePrompt = await buildShotPrompt(plan, shot);
+  // A brand-logo moment (logo resolve / end card): render a CLEAN backdrop now (no
+  // invented logo), then composite the operator's REAL logo onto the final clip below.
+  const isLogoMoment = shotIsBrandLogoMoment(shot);
+  const rawPrompt = await buildShotPrompt(plan, shot);
+  const basePrompt = isLogoMoment ? rawPrompt + LOGO_MOMENT_CLEAN_INSTRUCTION : rawPrompt;
 
   // Pre-flight: ffmpeg must be available before we spend money on a generation.
   await ensureFfmpeg();
@@ -977,6 +982,27 @@ export async function generateShot(
         err instanceof Error ? err : new Error(String(err)),
         { file: FILE, shotId },
       );
+    }
+
+    // ── Brand-logo moment: stamp the operator's REAL logo onto the final clip ──
+    // The engine rendered a clean backdrop (LOGO_MOMENT_CLEAN_INSTRUCTION), so this
+    // composites the ACTUAL brand asset onto the center — pixel-exact, never an AI
+    // interpretation. Best-effort: a failure keeps the un-stamped clip.
+    if (isLogoMoment) {
+      const logo = await loadCompositableLogo();
+      if (logo) {
+        const stamped = await overlayRealLogoOntoClip(finalVideoUrl, logo, shotId, workDir);
+        if (stamped) {
+          finalVideoUrl = stamped;
+          await updateAsset(clipAsset.id, { url: finalVideoUrl }).catch(() => {
+            /* best-effort — the shot still carries the right URL */
+          });
+          logger.info('[shot-plan-gen] real brand logo composited onto logo-moment shot', {
+            file: FILE,
+            shotId,
+          });
+        }
+      }
     }
 
     // ── Write the successful result back onto the shot ────────────────────────
@@ -2321,6 +2347,66 @@ function isBrandedSurfaceProp(obj: { name: string; description?: string }): bool
 /** Appended to branded-surface prop prompts so the AI leaves the surface logo-free. */
 const CLEAN_SURFACE_INSTRUCTION =
   ', clean unbranded surface, no text, no logos, no brand marks, blank screen';
+
+/**
+ * A SHOT whose PURPOSE is the brand's own logo on screen (logo resolve / end card /
+ * reveal). Distinct from a branded prop: here the logo IS the shot, so we render a
+ * clean backdrop (no invented logo) and composite the operator's REAL logo onto the
+ * CENTER of the final clip — pixel-exact, never an AI interpretation.
+ */
+const BRAND_LOGO_MOMENT_REGEX =
+  /\b(logo[- ]?(resolve|reveal|lock[- ]?up|lockup|sting|animation|end[- ]?card|card)|(brand|company|our)[- ]?logo|logo[- ]?(fades?|appears?|animates?|reveals?|locks?|rises?|forms?)|closing[- ]?logo|final[- ]?logo)\b/i;
+
+function shotIsBrandLogoMoment(shot: { title?: string; action?: string }): boolean {
+  return BRAND_LOGO_MOMENT_REGEX.test(`${shot.title ?? ''} ${shot.action ?? ''}`);
+}
+
+/** Appended to a brand-logo shot's prompt so the engine renders a CLEAN backdrop only —
+ *  the real logo is composited in post, never invented by the model. */
+const LOGO_MOMENT_CLEAN_INSTRUCTION =
+  ' — render ONLY a clean, simple background (a tasteful gradient or minimal scene); NO ' +
+  'text, NO logos, NO brand marks, NO invented logo of any kind. The real brand logo is ' +
+  'composited onto the center in post-production.';
+
+/**
+ * Stamp the operator's REAL logo (pixel-exact) onto the CENTER of a finished clip, for a
+ * brand-logo moment. Downloads the clip + the real logo asset, overlays via ffmpeg,
+ * persists the result. Best-effort: returns null on any failure so the clip is kept. A
+ * non-https logo (e.g. a static '/logo.png') cannot be downloaded → null.
+ */
+async function overlayRealLogoOntoClip(
+  clipUrl: string,
+  logo: BrandLogo,
+  shotId: string,
+  workDir: string,
+): Promise<string | null> {
+  if (!/^https?:\/\//i.test(logo.url)) {
+    return null;
+  }
+  try {
+    const clipPath = join(workDir, 'logo-base.mp4');
+    await downloadToFile(clipUrl, clipPath, `shot ${shotId} clip for logo overlay`);
+    const logoPath = join(workDir, 'brand-logo.png');
+    await downloadToFile(logo.url, logoPath, 'brand logo');
+    const outPath = join(workDir, 'logo-resolved.mp4');
+    // Centered, prominent (35% of width), near-full opacity — the focal logo, not a watermark.
+    await addWatermark(clipPath, logoPath, outPath, 'center', 0.96, 0.35);
+    const buf = await readFile(outPath);
+    return await uploadPermanent(
+      buf,
+      `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`,
+      'video/mp4',
+      `shot ${shotId} clip + real brand logo`,
+    );
+  } catch (err) {
+    logger.warn('[shot-plan-gen] real-logo overlay failed (keeping clip)', {
+      file: FILE,
+      shotId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
 
 /** Text-to-image prompt for an invented object's BASE reference from its description. */
 function inventedObjectBasePrompt(plan: ShotPlan, obj: { name: string; subjectKind?: 'object' | 'creature'; description?: string }): string {
