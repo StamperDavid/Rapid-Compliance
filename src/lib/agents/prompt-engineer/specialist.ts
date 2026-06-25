@@ -78,11 +78,13 @@ const SUPPORTED_ACTIONS = ['propose_prompt_edit'] as const;
  * overran the cap and truncated (finish_reason='length'), failing the grade's
  * training step.
  *
- * Raised to 16,000 to cover a worst-case rewrite of a large section with margin.
- * NOTE: maxTokens is only a CEILING — you pay for tokens actually generated, so a
- * normal short edit costs the same; this only stops long ones from being cut off.
+ * Sized to the section caps: currentText (≤40k chars) + proposedText (≤40k) +
+ * rationale ≈ 83k chars ≈ 28k tokens, so 32,000 covers a worst-case full rewrite
+ * of a large section with margin. NOTE: maxTokens is only a CEILING — you pay for
+ * tokens actually generated, so a normal short edit costs the same; this only stops
+ * long ones from being cut off.
  */
-const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 16000;
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 32000;
 
 interface PromptEngineerGMConfig {
   systemPrompt: string;
@@ -131,7 +133,7 @@ const ProposePromptEditPayloadSchema = z.object({
   // tight and rejected real prompts before the rewriter could even start. 200k chars
   // (~50k tokens) is safely within the model context and well under Firestore limits.
   currentSystemPrompt: z.string().min(100).max(200000),
-  correctedReportExcerpt: z.string().min(1).max(20000),
+  correctedReportExcerpt: z.string().min(1).max(60000),
   humanCorrection: z.object({
     grade: GradeEnum,
     explanation: z.string().min(5).max(5000),
@@ -159,8 +161,8 @@ const EditProposedSchema = z.object({
   // Jasper's full GM (~42K chars) — the realistic upper bound for a single
   // section. Same-shape bug as the changeDescription cap on
   // /api/training/apply-prompt-revision (also raised today).
-  currentText: z.string().min(1).max(20000),
-  proposedText: z.string().min(1).max(20000),
+  currentText: z.string().min(1).max(40000),
+  proposedText: z.string().min(1).max(40000),
   rationale: z.string().min(30).max(3000),
   confidence: z.number().int().min(0).max(100),
   conflictsWithOtherSections: z.array(z.string().min(1).max(600)).max(10),

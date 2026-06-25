@@ -43,7 +43,7 @@ const SubmitGradeSchema = z.object({
   targetSpecialistId: z.string().min(1).max(100),
   targetSpecialistName: z.string().min(1).max(200),
   sourceReportTaskId: z.string().min(1).max(300),
-  sourceReportExcerpt: z.string().min(1).max(20000),
+  sourceReportExcerpt: z.string().min(1).max(60000),
   grade: z.enum(['reject', 'request_revision', 'approve_with_notes']),
   explanation: z.string().min(5).max(5000),
   industryKey: z.string().min(1).max(100).optional(),
