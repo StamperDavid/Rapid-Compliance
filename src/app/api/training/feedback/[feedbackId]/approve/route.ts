@@ -29,8 +29,11 @@ const ApproveEditSchema = z.object({
       headingOrLocation: z.string().min(1).max(500),
       reasoning: z.string().min(20).max(1500),
     }),
-    currentText: z.string().min(1).max(8000),
-    proposedText: z.string().min(1).max(8000),
+    // Must match the Prompt Engineer's OUTPUT caps (specialist.ts: max 20000). The
+    // old 8000 cap was TIGHTER than what the rewriter can legitimately produce, so a
+    // large-section edit failed approval with a confusing "invalid payload" 422.
+    currentText: z.string().min(1).max(20000),
+    proposedText: z.string().min(1).max(20000),
     rationale: z.string().min(30).max(3000),
     confidence: z.number().int().min(0).max(100),
     conflictsWithOtherSections: z.array(z.string().min(1).max(600)).max(10),
