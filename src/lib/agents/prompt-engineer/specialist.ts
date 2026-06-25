@@ -68,25 +68,20 @@ const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 const SUPPORTED_ACTIONS = ['propose_prompt_edit'] as const;
 
 /**
- * max_tokens floor for the Prompt Engineer's worst-case response.
+ * max_tokens FLOOR for the Prompt Engineer's worst-case response.
  *
- * Derivation:
- *   EditProposedSchema worst case:
- *     currentText 4000 (up to 4000 chars of the target section)
- *     proposedText 4000
- *     rationale 2000
- *     conflictsWithOtherSections: 5 × 500 = 2500
- *     targetSection.reasoning 500
- *     targetSection.headingOrLocation 200
- *     ≈ 13,200 chars prose
- *     /3.0 chars/token = 4,400 tokens
- *     + JSON overhead ~150 tokens
- *     + 25% safety margin
- *     ≈ 5,688 tokens minimum
+ * The response carries the FULL target section TWICE — `currentText` (the section
+ * as-is) plus `proposedText` (the rewrite) — plus `rationale` and any
+ * cross-section conflicts. The old 6,500 floor assumed a target section ≤ ~4,000
+ * chars; real agent prompts have grown well past that, so a full-section rewrite
+ * overran the cap and truncated (finish_reason='length'), failing the grade's
+ * training step.
  *
- *   Setting floor at 6,500 tokens.
+ * Raised to 16,000 to cover a worst-case rewrite of a large section with margin.
+ * NOTE: maxTokens is only a CEILING — you pay for tokens actually generated, so a
+ * normal short edit costs the same; this only stops long ones from being cut off.
  */
-const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 6500;
+const MIN_OUTPUT_TOKENS_FOR_SCHEMA = 16000;
 
 interface PromptEngineerGMConfig {
   systemPrompt: string;
