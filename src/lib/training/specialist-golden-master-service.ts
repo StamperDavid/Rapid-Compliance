@@ -18,6 +18,7 @@ import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { buildBrandDNABlock, swapBrandDNABlock } from '@/lib/brand/rebake-brand-dna';
+import { applySectionEdit } from '@/lib/training/section-edit-match';
 import type { BrandDNA } from '@/lib/brand/brand-dna-service';
 import type { SpecialistGoldenMaster, SpecialistImprovementRequest } from '@/types/training';
 
@@ -528,17 +529,17 @@ export async function createIndustryGMVersionFromEdit(
     return null;
   }
 
-  // Hard invariant: currentText must appear verbatim in the current prompt.
-  // The Prompt Engineer is supposed to guarantee this, but we double-check
-  // before writing to Firestore.
-  if (!currentPrompt.includes(edit.currentText)) {
+  // Locate the edited section (exact, then whitespace-tolerant) and apply it. We
+  // still REFUSE to write if the section can't be found uniquely — we never guess —
+  // but trivial whitespace drift in the Prompt Engineer's quote no longer fails the
+  // whole approval (the previous strict includes() check was the 422 the operator hit).
+  const newPrompt = applySectionEdit(currentPrompt, edit.currentText, edit.proposedText);
+  if (newPrompt === null) {
     throw new Error(
-      `createIndustryGMVersionFromEdit: currentText does not appear verbatim in active GM ${activeGM.id}. ` +
-      `The Prompt Engineer must have hallucinated the section. Refusing to write.`,
+      `createIndustryGMVersionFromEdit: could not uniquely locate the edited section in active GM ${activeGM.id} ` +
+      `(the Prompt Engineer's quoted text did not match, even allowing for whitespace). Refusing to write.`,
     );
   }
-
-  const newPrompt = currentPrompt.replace(edit.currentText, edit.proposedText);
   const newVersion = activeGM.version + 1;
   const newDocId = buildIndustryGMDocId(specialistId, industryKey, newVersion);
 

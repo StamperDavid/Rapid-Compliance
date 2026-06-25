@@ -27,6 +27,7 @@ import type { AgentDomain } from '@/types/training';
 import type { AgentMessage } from '@/lib/agents/types';
 import { logger } from '@/lib/logger/logger';
 import { getPromptEngineer, type ProposePromptEditResult } from '@/lib/agents/prompt-engineer/specialist';
+import { applySectionEdit } from '@/lib/training/section-edit-match';
 
 const FILE = 'prompt-engineer-agent.ts';
 
@@ -135,14 +136,13 @@ export async function proposePromptRevision(
       };
     }
 
-    // EDIT_PROPOSED — build the full revised prompt by replacing the target
-    // section verbatim. The specialist enforces (via post-parse invariant)
-    // that currentText appears verbatim in the input prompt, so this replace
-    // is guaranteed to hit exactly once.
-    const fullRevisedPrompt = request.currentSystemPrompt.replace(
-      result.currentText,
-      result.proposedText,
-    );
+    // EDIT_PROPOSED — build the full revised prompt via the shared tolerant matcher
+    // (the specialist's canLocateSection gate already confirmed the section is
+    // locatable). Fall back to the original if somehow not found — never silently
+    // mangle the prompt; the GM apply path refuses a non-unique match anyway.
+    const fullRevisedPrompt =
+      applySectionEdit(request.currentSystemPrompt, result.currentText, result.proposedText) ??
+      request.currentSystemPrompt;
 
     return {
       beforeSection: result.currentText,
