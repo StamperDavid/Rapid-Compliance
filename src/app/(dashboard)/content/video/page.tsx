@@ -17,16 +17,26 @@ import type { VideoTemplate } from '@/lib/video/templates';
 
 // ─── Types ────────────────────────────────────────────────────────────
 
+/**
+ * One row in the UNIFIED project list. `system` records which store the project
+ * lives in so a click opens the correct surface:
+ *   • 'studio'  → classic pipeline project → loads into THIS Studio editor
+ *   • 'project' → shot-doc VideoProject    → opens the project review page
+ * Both stores are merged into ONE list so the operator never has to know which is
+ * which, or hunt for their work in a second place.
+ */
 interface ProjectSummary {
   id: string;
   name: string;
-  type: string;
-  currentStep: string;
+  system: 'studio' | 'project';
+  type?: string;
+  currentStep?: string;
   status: string;
   sceneCount: number;
   hasVideo: boolean;
-  createdAt: string;
+  createdAt?: string;
   updatedAt: string;
+  createdByName?: string | null;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────
@@ -82,14 +92,59 @@ export default function VideoStudioPage() {
     setShowLoadModal(true);
     setLoadingProjects(true);
     try {
-      const response = await authFetch('/api/video/project/list');
-      if (!response.ok) {
-        throw new Error('Failed to fetch projects');
+      // ONE list of ALL the operator's projects, pulled from BOTH stores: the classic
+      // Studio pipeline AND the shot-doc VideoProjects. These used to be two separate
+      // lists, which is exactly why rendered projects seemed to vanish — the operator
+      // looked here and their work was in the other one.
+      const [studioRes, docRes] = await Promise.all([
+        authFetch('/api/video/project/list').catch(() => null),
+        authFetch('/api/video-project').catch(() => null),
+      ]);
+
+      const merged: ProjectSummary[] = [];
+
+      if (studioRes?.ok) {
+        const data = (await studioRes.json()) as {
+          success: boolean;
+          projects?: Array<{
+            id: string; name: string; status: string; sceneCount: number;
+            hasVideo: boolean; type?: string; currentStep?: string; updatedAt: string;
+          }>;
+        };
+        if (data.success && data.projects) {
+          for (const p of data.projects) {
+            merged.push({ ...p, system: 'studio' });
+          }
+        }
       }
-      const data = await response.json() as { success: boolean; projects: ProjectSummary[] };
-      if (data.success) {
-        setProjects(data.projects);
+
+      if (docRes?.ok) {
+        const data = (await docRes.json()) as {
+          success: boolean;
+          projects?: Array<{
+            id: string; title: string; status: string; docCount: number;
+            docsWithVideo: number; createdBy?: { name: string } | null; updatedAt: string;
+          }>;
+        };
+        if (data.success && data.projects) {
+          for (const p of data.projects) {
+            merged.push({
+              id: p.id,
+              name: p.title,
+              system: 'project',
+              status: p.status,
+              sceneCount: p.docCount,
+              hasVideo: p.docsWithVideo > 0,
+              updatedAt: p.updatedAt,
+              createdByName: p.createdBy?.name ?? null,
+            });
+          }
+        }
       }
+
+      // Newest first across both stores.
+      merged.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+      setProjects(merged);
     } catch {
       setProjects([]);
     } finally {
@@ -116,12 +171,30 @@ export default function VideoStudioPage() {
     }
   }, [loadProject, authFetch]);
 
-  // Delete a saved project (two-step confirm via confirmDeleteId).
-  const handleDeleteProject = useCallback(async (id: string) => {
+  // Open whichever project the operator clicked, sending it to the RIGHT surface:
+  // a shot-doc VideoProject opens its review page; a classic studio project loads
+  // into this editor. One list, two correct destinations — no wrong-place dead ends.
+  const handleOpenProject = useCallback(
+    (proj: ProjectSummary) => {
+      if (proj.system === 'project') {
+        setShowLoadModal(false);
+        router.push(`/content/video/projects/${proj.id}`);
+        return;
+      }
+      void handleLoadProject(proj.id);
+    },
+    [router, handleLoadProject],
+  );
+
+  // Delete a saved project (two-step confirm via confirmDeleteId). Routes to the
+  // correct store's delete endpoint based on which system the project lives in.
+  const handleDeleteProject = useCallback(async (id: string, system: 'studio' | 'project') => {
     setConfirmDeleteId(null);
     setDeletingProjectId(id);
     try {
-      const response = await authFetch(`/api/video/project/${id}`, { method: 'DELETE' });
+      const endpoint =
+        system === 'project' ? `/api/video-project/${id}` : `/api/video/project/${id}`;
+      const response = await authFetch(endpoint, { method: 'DELETE' });
       if (response.ok) {
         setProjects((prev) => prev.filter((p) => p.id !== id));
         // If the project being deleted is the one currently loaded in the store,
@@ -311,7 +384,7 @@ export default function VideoStudioPage() {
                     variant="destructive"
                     size="sm"
                     className="gap-1.5"
-                    onClick={() => { setConfirmScrap(false); void handleDeleteProject(projectId); }}
+                    onClick={() => { setConfirmScrap(false); void handleDeleteProject(projectId, 'studio'); }}
                   >
                     <Trash2 className="w-4 h-4" />
                     Confirm scrap
@@ -409,22 +482,32 @@ export default function VideoStudioPage() {
                 <div className="space-y-2">
                   {projects.map((project) => (
                     <div
-                      key={project.id}
+                      key={`${project.system}-${project.id}`}
                       className="w-full p-3 rounded-lg border border-border-strong hover:border-primary/50 hover:bg-surface-elevated/50 transition-colors group flex items-start justify-between gap-2"
                     >
                       <button
-                        onClick={() => { void handleLoadProject(project.id); }}
+                        onClick={() => handleOpenProject(project)}
                         disabled={loadingProjectId === project.id}
                         className="flex-1 text-left min-w-0 disabled:opacity-50"
                       >
-                        <h3 className="text-sm font-medium text-white truncate group-hover:text-primary-light transition-colors">
-                          {project.name}
-                        </h3>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h3 className="text-sm font-medium text-white truncate group-hover:text-primary-light transition-colors">
+                            {project.name}
+                          </h3>
+                          {project.system === 'project' && (
+                            <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary-light">
+                              Shot doc
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Film className="w-3 h-3" />
                             {project.sceneCount} scene{project.sceneCount !== 1 ? 's' : ''}
                           </span>
+                          {project.createdByName && (
+                            <span className="truncate">by {project.createdByName}</span>
+                          )}
                           <span className={
                             project.status === 'completed' ? 'text-green-400' :
                             project.status === 'generating' ? 'text-primary-light' :
@@ -444,7 +527,7 @@ export default function VideoStudioPage() {
                         ) : confirmDeleteId === project.id ? (
                           <>
                             <button
-                              onClick={() => { void handleDeleteProject(project.id); }}
+                              onClick={() => { void handleDeleteProject(project.id, project.system); }}
                               className="px-2 py-1 rounded text-xs bg-destructive text-white"
                             >
                               Delete
