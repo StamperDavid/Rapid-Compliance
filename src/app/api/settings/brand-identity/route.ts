@@ -11,6 +11,8 @@ import { z } from 'zod';
 import { requireAuth, requirePermission } from '@/lib/auth/api-auth';
 import { getBrandIdentity, saveBrandIdentity } from '@/lib/brand/brand-identity-service';
 import { syncBrandIdentityToLegacyStores } from '@/lib/brand/brand-identity-bridges';
+import { createRebakeJob } from '@/lib/brand/rebake-job-service';
+import { runRebakeJob } from '@/lib/brand/rebake-all-service';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -207,10 +209,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     //   2. brandKit → `settings/brand-kit` (read by the video pipeline)
     //   3. theme    → `platform_settings/theme` (read by `useOrgTheme` → CSS vars)
     // We pass the SAVED `brandIdentity` so every field (incl. the logo bridge
-    // fallback) is present. We do NOT trigger the agent re-bake here — publishing
-    // to agents stays a deliberate, operator-pressed button. The sync never throws
-    // and a partial failure must not fail the save (the identity doc is already
-    // persisted), so we log the per-store result and continue.
+    // fallback) is present. The sync never throws and a partial failure must not fail
+    // the save (the identity doc is already persisted), so we log the per-store result
+    // and continue.
     try {
       const syncResult = await syncBrandIdentityToLegacyStores(
         brandIdentity,
@@ -224,6 +225,34 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       logger.error(
         'Saved brand identity but failed to sync to legacy stores',
         syncError instanceof Error ? syncError : new Error(String(syncError)),
+        { file: FILE },
+      );
+    }
+
+    // Auto-publish to the agents: saving the brand IS publishing it. Fires the same
+    // SURGICAL re-bake the "Publish to Agents" button uses — a block-swap that refreshes
+    // ONLY each agent's Brand DNA block (now incl. the visual identity) and preserves the
+    // industry body + human training edits (Standing Rule #2). Detached so Save returns
+    // immediately; idempotent-skip means an unchanged brand is a no-op. A failure here
+    // NEVER fails the save — the identity is already persisted; the operator can still
+    // re-publish manually.
+    try {
+      const job = await createRebakeJob({
+        triggeredBy: permResult.user.uid,
+        trigger: 'voice-save',
+      });
+      void runRebakeJob(job.id, permResult.user.uid).catch((rebakeError: unknown) => {
+        logger.error(
+          'Detached auto re-bake (brand save) failed',
+          rebakeError instanceof Error ? rebakeError : new Error(String(rebakeError)),
+          { file: FILE, jobId: job.id },
+        );
+      });
+      logger.info('Brand save auto-triggered agent re-bake', { file: FILE, jobId: job.id });
+    } catch (rebakeStartError) {
+      logger.error(
+        'Saved brand identity but failed to start auto re-bake',
+        rebakeStartError instanceof Error ? rebakeStartError : new Error(String(rebakeStartError)),
         { file: FILE },
       );
     }
