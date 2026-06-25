@@ -65,6 +65,25 @@ export function buildBrandDNABlock(brandDNA: BrandDNA): string {
     `Competitors (never name them unless specifically asked): ${competitors}`,
   ];
 
+  // Brand Visual Identity subsection — only when colors are configured. Baked so any
+  // agent depicting the brand on screen (video / images / UI) uses the EXACT palette +
+  // logo instead of inventing them. INSIDE the block so the surgical swap refreshes it
+  // as one unit. MUST match buildBrandDNABlock in scripts/lib/brand-dna-helper.js byte-for-byte.
+  const v = brandDNA.visualIdentity;
+  if (v && typeof v.primaryColor === 'string' && v.primaryColor.trim().length > 0) {
+    lines.push(
+      '',
+      "## Brand Visual Identity (baked — when THIS brand's OWN product, dashboard, UI, or logo appears on screen, render these EXACT assets; never invent a different palette or logo)",
+      '',
+      `Primary brand color: ${v.primaryColor}`,
+      `Secondary brand color: ${v.secondaryColor ?? '(not set)'}`,
+      `Accent brand color: ${v.accentColor ?? '(not set)'}`,
+      `Caption/UI text color: ${v.captionColor ?? '(not set)'}`,
+      `Logo: ${v.logoUrl ?? '(not set)'}`,
+      `Brand font: ${v.fontFamily ?? '(not set)'}`,
+    );
+  }
+
   // Reference examples subsection — only when the operator has provided reference
   // materials (assembled into a text block on the org brandDNA at save time). Kept
   // INSIDE the Brand DNA block so the surgical swap refreshes it as one unit. MUST

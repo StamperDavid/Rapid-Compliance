@@ -15,6 +15,22 @@ function getDb() {
   return adminDb;
 }
 
+/**
+ * The tenant's VISUAL brand identity, baked alongside the voice so every agent
+ * that depicts the brand on screen (video, images, UI) uses the EXACT colors and
+ * logo instead of inventing them. Sourced from the brand kit at bake time (seed +
+ * re-bake) and attached onto the BrandDNA object that flows into buildBrandDNABlock.
+ * All fields optional — when colors are unset, no visual subsection is baked.
+ */
+export interface BrandVisualIdentity {
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  captionColor?: string;
+  logoUrl?: string;
+  fontFamily?: string;
+}
+
 // Type definitions for Brand DNA and tool training
 export interface BrandDNA {
   companyDescription: string;
@@ -26,6 +42,11 @@ export interface BrandDNA {
   avoidPhrases: string[];
   industry: string;
   competitors: string[];
+  /**
+   * Visual brand identity (colors, logo, font) — attached at bake time from the
+   * brand kit so the baked block can carry it. Optional + additive.
+   */
+  visualIdentity?: BrandVisualIdentity;
   /**
    * Pre-assembled "Brand Reference Examples" text block (built from the brand
    * identity's uploaded reference materials — each asset's description + purpose).
