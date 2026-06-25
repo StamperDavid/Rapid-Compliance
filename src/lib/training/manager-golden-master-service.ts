@@ -23,6 +23,7 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { buildBrandDNABlock, swapBrandDNABlock } from '@/lib/brand/rebake-brand-dna';
 import type { BrandDNA } from '@/lib/brand/brand-dna-service';
 import type { ManagerGoldenMaster } from '@/types/training';
+import { applySectionEdit } from '@/lib/training/section-edit-match';
 
 // ============================================================================
 // CONSTANTS
@@ -245,14 +246,16 @@ export async function createManagerGMVersionFromEdit(
     return null;
   }
 
-  if (!currentPrompt.includes(edit.currentText)) {
+  // Locate the edited section (exact, then whitespace-tolerant) and apply it — refuse
+  // to write if it can't be found uniquely, but don't fail the approval on trivial
+  // whitespace drift in the Prompt Engineer's quote.
+  const newPrompt = applySectionEdit(currentPrompt, edit.currentText, edit.proposedText);
+  if (newPrompt === null) {
     throw new Error(
-      `createManagerGMVersionFromEdit: currentText does not appear verbatim in active GM ${activeGM.id}. ` +
-      `The Prompt Engineer must have hallucinated the section. Refusing to write.`,
+      `createManagerGMVersionFromEdit: could not uniquely locate the edited section in active GM ${activeGM.id} ` +
+      `(the Prompt Engineer's quoted text did not match, even allowing for whitespace). Refusing to write.`,
     );
   }
-
-  const newPrompt = currentPrompt.replace(edit.currentText, edit.proposedText);
   const newVersion = activeGM.version + 1;
   const newDocId = buildManagerGMDocId(managerId, industryKey, newVersion);
 

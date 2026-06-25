@@ -53,6 +53,7 @@ import { z } from 'zod';
 import { BaseSpecialist } from '../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../types';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { canLocateSection } from '@/lib/training/section-edit-match';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
 import type { ModelName } from '@/types/ai-models';
@@ -369,10 +370,10 @@ async function executeProposePromptEdit(
   // loudly — the diff UI would silently reject a mismatched currentText anyway.
   const data = result.data;
   if (data.status === 'EDIT_PROPOSED') {
-    if (!req.currentSystemPrompt.includes(data.currentText)) {
+    if (!canLocateSection(req.currentSystemPrompt, data.currentText)) {
       throw new Error(
-        `Prompt Engineer produced an EDIT_PROPOSED whose currentText does not appear verbatim in the target specialist's current system prompt. ` +
-        `This means the LLM hallucinated or paraphrased the section — retry or escalate.`,
+        `Prompt Engineer produced an EDIT_PROPOSED whose currentText cannot be located in the target's current system prompt ` +
+        `(even allowing for whitespace / quote / dash drift). The LLM hallucinated or genuinely paraphrased the section — retry or escalate.`,
       );
     }
     if (!data.preservesBrandDna) {

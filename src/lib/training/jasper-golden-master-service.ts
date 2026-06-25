@@ -30,6 +30,7 @@
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { applySectionEdit } from '@/lib/training/section-edit-match';
 import {
   getActiveJasperGoldenMaster,
   invalidateJasperGMCache as invalidateJasperGMCacheFromLoader,
@@ -269,15 +270,16 @@ export async function createJasperGMVersionFromEdit(
     return null;
   }
 
-  // Hard invariant — refuse to write if the target section doesn't exist.
-  if (!currentPrompt.includes(edit.currentText)) {
+  // Locate the edited section (exact, then drift-tolerant) and apply it — refuse to
+  // write if it can't be found uniquely, but don't fail on trivial whitespace/quote/
+  // dash drift in the Prompt Engineer's quote.
+  const newSystemPrompt = applySectionEdit(currentPrompt, edit.currentText, edit.proposedText);
+  if (newSystemPrompt === null) {
     throw new Error(
-      `createJasperGMVersionFromEdit: currentText does not appear verbatim in active Jasper GM ${activeGM.id}. ` +
-      `The Prompt Engineer must have hallucinated the section. Refusing to write.`,
+      `createJasperGMVersionFromEdit: could not uniquely locate the edited section in active Jasper GM ${activeGM.id} ` +
+      `(the Prompt Engineer's quoted text did not match, even allowing for whitespace). Refusing to write.`,
     );
   }
-
-  const newSystemPrompt = currentPrompt.replace(edit.currentText, edit.proposedText);
 
   // Scan all existing versions and pick max + 1. Resilient to someone having
   // written an out-of-band v2 by hand.
