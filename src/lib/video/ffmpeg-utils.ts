@@ -342,6 +342,35 @@ async function probeWithFfmpeg(filePath: string): Promise<VideoProbeResult> {
   }
 }
 
+/**
+ * Append a FROZEN tail of the final frame to a clip: holds the last video frame
+ * for `freezeSeconds` and pads the audio with matching silence. This gives the
+ * editor an invisible overlap zone for seamless stitching — the next clip is
+ * generated to START on this exact frame, so trimming within the freeze hides
+ * the cut entirely.
+ */
+export async function appendFrozenTail(
+  inputPath: string,
+  outputPath: string,
+  freezeSeconds: number,
+  hasAudio: boolean,
+): Promise<void> {
+  const dur = Math.max(0.1, freezeSeconds);
+  const args = ['-i', inputPath, '-vf', `tpad=stop_mode=clone:stop_duration=${dur}`];
+  if (hasAudio) {
+    args.push('-af', `apad=pad_dur=${dur}`);
+  }
+  args.push(
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-preset', 'veryfast',
+    ...(hasAudio ? ['-c:a', 'aac'] : ['-an']),
+    '-movflags', '+faststart',
+    '-y', outputPath,
+  );
+  await runFfmpeg(args);
+}
+
 // ============================================================================
 // File I/O
 // ============================================================================
