@@ -203,6 +203,113 @@ competitor ("generate all" produced loose clips, never a deliverable video) is f
 
 ---
 
+# 🟢 RESUME HERE — Jun 26 2026 — VIDEO: character/style fixes DONE; LOCATION-CONSISTENCY is next
+
+## Proven + committed today (commit `05b3a16a`, synced rapid-dev↔dev)
+All verified on real generation runs during the manual walkthrough:
+- **Gender lock** — saved characters now carry a `gender` field (schema + service + 2 API
+  routes + Character Studio dropdown); the planner INHERITS it instead of guessing (a
+  genderless Velocity is why it once rendered a woman). Velocity set to `male` in Firestore.
+- **Whole-scene art-style consistency** — a stylized/anime saved character drives the WHOLE
+  production's art style (`deriveProductionArtStyle`); the storyboard still + the environment
+  hero both honor it (dropped the hardcoded "Photographic, film-grade" and the movieLook/
+  filmStock terms for stylized). Fixes the Pixar-character-in-a-photoreal-room clash —
+  proven: Velocity + the second character + the ROOM all render consistent Pixar.
+- **Logo end-card** — a brand-logo-moment renders a clean solid backdrop (no room/cast) and
+  composites the operator's REAL logo. Velocity's reference set to the clean grey-bg FRONT.
+
+## 🎯 VIDEO VERTICAL — GAP LEDGER (the finite list to certify; benchmark PER PIECE)
+Keys: ✅ matched · ⚠️ GAP (open) · ❓ needs-verify · 🛡️ our-extra (protect) · ⏸️ deferred
+
+**Piece 1 — Shot Doc** (bar: RenderZero detail + OpenArt Smart Shot visual + per-section editing)
+- ✅ AI authors the full shot doc (cast, environment, objects, blocking, prompts, page layout), brand DNA baked
+- ✅ Visual shot-doc representation (OpenArt-style) + cinematic controls + ~400 presets
+- ✅ (today) gender locked from character · whole-scene art-style consistency · logo end-card on solid bg
+- ⚠️ **Blocking map NOT visually obeyed** — stills don't follow the floor-plan layout (windows/props/door). THE big one.
+- ❓ Per-section EDITING of the shot doc (owner wants to edit each section) — verify what's editable today
+- ⚠️ Character reference-image pollution (scene-stills mixed into the refs) — clean up
+- 🛡️ interview-first Content Manager + brand-baked agents
+
+**Piece 2 — Render / engine** (bar: consistent, usable clips)
+- ✅ per-shot render (no forced stitch) · 5s action + 2s freeze tail · character + logo compositing — proven E2E today
+- ⚠️ location/room consistency shot-to-shot (drifts — ties to the blocking build)
+- ⏸️ lip-sync (accepted weak link, deferred)
+
+**Piece 3 — Character / cast** (bar: persistent reusable cast)
+- ✅ saved characters · gender · art style · reuse + identity anchors
+- ⚠️ reference-set hygiene (scene-stills appended) · auto-append new looks to a profile
+- 🛡️ persistent digital cast (Arcads stock-actor model consciously DECLINED)
+
+**Piece 4 — Location / set** (bar: reusable locked sets)
+- ✅ saved locations (name, description, reference images), reusable across videos
+- ⚠️ top-down-map ingestion + the generator OBEYING it (**Option 1 — the next build below**)
+- ⏸️ upload video → auto-build map (deferred)
+
+**Piece 5 — Editor** (bar: AI-powered **CapCut MOBILE** + Premiere Pro)
+- ✅ timeline · trim · split-at-playhead · transitions · per-clip effects · text overlays · server-side stitch/export
+- ⚠️ CapCut-mobile gaps: music/audio track + volume/fade · speed control · filters · auto-captions · stickers · aspect-ratio/canvas · AI auto-cut
+- ⚠️ Premiere gaps: multi-track timeline · audio mixing · color grading · keyframe animation
+- ⚠️ (today's bugs) clips don't drop LIVE (refresh needed) · export has no progress/preview · slow project load (~11s)
+
+**Piece 6 — Finish → Post-Production → Publish** (bar: stitch → choose platforms → publish/schedule)
+- ✅ stitch + save final to Library works (proven) · social/publishing layer already EXISTS (`src/app/api/social`)
+- ⚠️ NO clear "Stitch & Finish" button / progress / final preview
+- ⚠️ NO post-production → publish handoff (connect the editor's final video into the social flow: platforms, caption, schedule)
+
+**Other verticals' benchmarks (owner-stated Jun 26 — logged for when Video is certified):** CRM = Reevo /
+Pipedrive · Social = Sora + SocialBee / Postrillo / Buffer / ContentStudio / Hootsuite(OwlyWriter) ·
+Website builder = AI-powered Elementor Pro.
+
+## 🔵 NEXT FOCUSED BUILD (owner chose "Option 1") — TOP-DOWN-MAP-DRIVEN LOCATION CONSISTENCY
+**Goal:** operator uploads/attaches a TOP-DOWN MAP to a saved location; the system *reads/
+understands* that map, builds the reusable location from it, and renders every shot consistent
+with the map's windows, props, assets, and lighting. (The user PROVIDES the map — no auto-
+reconstruction.) This is the real version of the blocking-as-visual-bible fix.
+
+Pieces (honest difficulty):
+1. Attach a top-down map image (+ optional photos/video) to a `LocationProfile` — small.
+2. **Vision model READS the map → structured `floorPlan`** (walls, windows, named assets +
+   positions/zones) + a locked set description — moderate; this is the "understanding" step
+   that replaces the planner GUESSING the floorPlan.
+3. Named map assets (desk, corkboard, copy machine…) → locked OBJECT reference anchors so each
+   prop renders identically every shot — moderate (object-anchor system already exists).
+4. Generate eye-level "set renders" of the room FROM the map / each camera position, used as
+   the per-shot room anchor that locks walls/windows/lighting — moderate-hard (the payoff).
+5. Camera placement on the map already exists (`FloorPlanCanvas`) — repoint it at the saved
+   location's map.
+**Realistic effort:** a focused multi-week build. **Quality ceiling to set expectations:** image
+models approximate spatial layout — set-render anchors get MUCH closer to "matches the map," but
+pixel-perfect exact-layout-every-time is at the edge of current models. Start map-provided
+(Option 1); the consistency payoff comes first.
+
+## 🔵 ALSO NEXT — EDITOR FINISH FLOW + POST-PRODUCTION PUBLISHING (owner-flagged Jun 26)
+Current editor export is opaque: clicking Export silently stitches + saves to Library with a
+tiny, missable "Saved to Library — open" pill — **no progress, no in-editor preview of the
+final video, and NO next step.** (Underneath it DOES work: the stitch+save runs server-side
+~30-40s and the final "Edited Video" lands in the Library as category `final` — proven this
+session, mediaId `os5N3UbtvwYqkh3phm3y`.) Owner's intended flow:
+**[Finish/Stitch button] → one combined video → POST-PRODUCTION screen → pick platforms →
+caption/schedule → publish.**
+Pieces (honest):
+1. **Editor finish UX** — a clear "Stitch & Finish" button + real progress (the render takes
+   ~30-40s) + an in-editor PREVIEW of the final video (not just a pill). Moderate.
+2. **Post-production → publish handoff** — the social/publishing layer ALREADY EXISTS
+   (`src/app/api/social`: accounts, calendar, connect, approvals, posting). So this is
+   CONNECTING the editor's final video into that flow + a post-production UI (platforms,
+   caption, schedule), NOT building publishing from scratch. Moderate.
+3. **Bugs found this session:** clips don't drop into the editor LIVE as they render (operator
+   had to refresh — "clips never drop until refresh"); and `GET /api/video/project/[id]` is
+   slow (~11s — it returns the whole heavy project). Small-moderate.
+
+## ⏸️ DEFERRED / LATER (owner: address later)
+- **Auto video → top-down map** (photogrammetry / SLAM 3D reconstruction so the operator
+  uploads a walkthrough video and the system BUILDS the map). Genuinely hard / likely external
+  tooling — its own project. Do AFTER Option 1; it becomes an enhancement (AI-estimate the map),
+  not a prerequisite.
+- Cleaning leftover scene-still junk out of saved characters' reference sets.
+
+---
+
 # 🟢 RESUME HERE — Jun 20 2026 — VIDEO FRONT-DOOR REWIRE (owner-confirmed decisions)
 
 **Why:** Manual video creation currently DROPS THE USER STRAIGHT ONTO THE SHOT DOC
