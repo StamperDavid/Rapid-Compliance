@@ -525,10 +525,6 @@ export default function VideoProjectDetailPage(): React.JSX.Element {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push('/content/video/projects')}>
-          <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden />
-          Back to projects
-        </Button>
         <div className="space-y-1">
           <PageTitle>{projectTitle}</PageTitle>
           <SectionDescription>{plainProjectStatus(project)}</SectionDescription>
