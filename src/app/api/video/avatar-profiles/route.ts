@@ -45,6 +45,7 @@ const CreateProfileSchema = z.object({
     .enum(['hero', 'villain', 'extra', 'narrator', 'presenter', 'custom'])
     .optional(),
   styleTag: z.enum(['real', 'anime', 'stylized']).optional(),
+  gender: z.string().trim().max(40).nullable().optional(),
   tier: z.enum(['premium', 'standard']).default('standard'),
   additionalImageUrls: z.array(z.string().url()).default([]),
   fullBodyImageUrl: z.string().url().nullable().default(null),
@@ -153,6 +154,7 @@ export async function POST(request: NextRequest) {
       source: data.source,
       role: data.role,
       styleTag: data.styleTag,
+      gender: data.gender ?? null,
       tier: data.tier,
       additionalImageUrls: data.additionalImageUrls,
       fullBodyImageUrl: data.fullBodyImageUrl,

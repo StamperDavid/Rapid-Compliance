@@ -82,6 +82,10 @@ export interface ShotPlanCastMember {
   apparentAge?: string;
   /** Gender presentation, e.g. "male", "female", "androgynous". */
   gender?: string;
+  /** Art style of a bound saved character ('real' | 'anime' | 'stylized'), carried from
+   *  its profile. A stylized/anime character drives the WHOLE production's art style so
+   *  the character and the world render in one consistent look (no Pixar-in-a-photo clash). */
+  styleTag?: 'real' | 'anime' | 'stylized';
   /** Ethnicity / heritage cue for casting consistency. */
   ethnicity?: string;
   /** Body type / height, e.g. "tall, lean", "stocky, 5'6\"". */
@@ -576,6 +580,7 @@ export const ShotPlanCastMemberSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
   apparentAge: z.string().trim().max(300).optional(),
   gender: z.string().trim().max(300).optional(),
+  styleTag: z.enum(['real', 'anime', 'stylized']).optional(),
   ethnicity: z.string().trim().max(300).optional(),
   build: z.string().trim().max(300).optional(),
   hairColor: z.string().trim().max(300).optional(),

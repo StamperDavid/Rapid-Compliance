@@ -73,6 +73,7 @@ export interface AvatarProfile {
   source: CharacterSource; // 'custom' = user-created
   role: CharacterRole; // Character's role in productions
   styleTag: CharacterStyleTag; // Visual style for prompt optimization
+  gender: string | null; // LOCKED identity gender ("male" / "female" / "non-binary"). The planner INHERITS this and never re-guesses it, so a saved character keeps its gender in every video.
 
   // Avatar tier
   tier: AvatarTier; // 'premium' = green screen video clips, 'standard' = photo-based
@@ -111,6 +112,7 @@ export interface CreateAvatarProfileData {
   source?: CharacterSource;
   role?: CharacterRole;
   styleTag?: CharacterStyleTag;
+  gender?: string | null;
   tier?: AvatarTier;
   additionalImageUrls?: string[];
   fullBodyImageUrl?: string | null;
@@ -130,6 +132,7 @@ export interface UpdateAvatarProfileData {
   source?: CharacterSource;
   role?: CharacterRole;
   styleTag?: CharacterStyleTag;
+  gender?: string | null;
   tier?: AvatarTier;
   additionalImageUrls?: string[];
   fullBodyImageUrl?: string | null;
@@ -154,6 +157,7 @@ interface FirestoreAvatarProfileDoc {
   source: CharacterSource;
   role: CharacterRole;
   styleTag: CharacterStyleTag;
+  gender: string | null;
   tier: AvatarTier;
   frontalImageUrl: string;
   additionalImageUrls: string[];
@@ -207,6 +211,7 @@ function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarPr
     source: 'custom',
     role: data.role ?? 'presenter',
     styleTag: data.styleTag ?? 'real',
+    gender: data.gender ?? null,
     tier: data.tier ?? (clips.length > 0 ? 'premium' : 'standard'),
     frontalImageUrl: data.frontalImageUrl ?? '',
     additionalImageUrls: data.additionalImageUrls ?? [],
@@ -253,6 +258,7 @@ export async function createAvatarProfile(
       source: data.source ?? 'custom',
       role: data.role ?? 'presenter',
       styleTag: data.styleTag ?? 'real',
+      gender: data.gender ?? null,
       tier,
       frontalImageUrl: data.frontalImageUrl,
       additionalImageUrls: data.additionalImageUrls ?? [],
@@ -311,6 +317,7 @@ export async function createAvatarProfile(
       source: profileData.source,
       role: profileData.role,
       styleTag: profileData.styleTag,
+      gender: profileData.gender,
       tier,
       frontalImageUrl: data.frontalImageUrl,
       additionalImageUrls: profileData.additionalImageUrls,
@@ -479,6 +486,9 @@ export async function updateAvatarProfile(
     }
     if (updates.styleTag !== undefined) {
       updateData.styleTag = updates.styleTag;
+    }
+    if (updates.gender !== undefined) {
+      updateData.gender = updates.gender;
     }
     if (updates.tier !== undefined) {
       updateData.tier = updates.tier;

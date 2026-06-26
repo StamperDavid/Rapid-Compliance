@@ -1532,7 +1532,7 @@ export async function generateShotKeyframe(
     // cast identity. Flux Kontext Max (multi) conditions on both at once when both
     // exist; with only one it degrades to single-image Kontext; with none, text-to-
     // image. The room anchor leading is what holds the LOCATION constant across shots.
-    const visualRefs = capReferenceImages([...(envHeroUrl ? [envHeroUrl] : []), ...castRefs], KONTEXT_MAX_MULTI_REFS);
+    let visualRefs = capReferenceImages([...(envHeroUrl ? [envHeroUrl] : []), ...castRefs], KONTEXT_MAX_MULTI_REFS);
 
     // Build the keyframe prompt. The leading instruction names WHICH reference is the
     // room and which is the cast, so the model keeps the set from @Image1 and the
@@ -1540,37 +1540,53 @@ export async function generateShotKeyframe(
     // the still read FROM the marked angle, inside the SAME location.
     const cameraDirection = cameraGeometry ? ` ${cameraGeometry}.` : '';
     const setConsistency = ` ${SET_CONSISTENCY_CLAUSE}`;
+    // The production art style (Pixar/anime/photoreal) leads + closes the prompt, so the
+    // WHOLE still — character AND room — renders in ONE consistent look. Replaces the old
+    // hardcoded "Cinematic film still / Photographic, film-grade" that forced realism onto
+    // a stylized character (the Pixar-in-a-photo clash).
+    const { lead: styleLead, clause: styleClause } = characterStyleDirective(plan);
     let keyframePrompt: string;
     let mode: 'kontext-room+cast' | 'kontext-room' | 'kontext-cast' | 'text-to-image';
-    if (envHeroUrl && castRefs.length > 0) {
+    if (shotIsBrandLogoMoment(shot)) {
+      // Brand-logo END-CARD: just the logo on a clean solid backdrop — NO room, NO
+      // character, NO scene. We render a plain solid background, then composite the
+      // operator's REAL logo centered (the compositing step below). Drop all scene refs
+      // so the model can't pull the room/character back in.
+      mode = 'text-to-image';
+      visualRefs = [];
+      keyframePrompt =
+        `A clean, smooth solid dark charcoal studio background — completely empty: ` +
+        `no people, no characters, no objects, no room, no furniture, no text, and no logo. ` +
+        `Even, soft, neutral studio lighting with a subtle vignette. A plain end-card backdrop.`;
+    } else if (envHeroUrl && castRefs.length > 0) {
       mode = 'kontext-room+cast';
       keyframePrompt =
-        `Cinematic film still set INSIDE the room shown in the first reference image — keep ` +
+        `${styleLead} A still frame set INSIDE the room shown in the first reference image — keep ` +
         `that exact location (same walls, windows, doors, and furniture in the same places). ` +
-        `Place the EXACT same person/people from the other reference image(s) — identical ` +
+        `Place the EXACT same character(s) from the other reference image(s) — identical ` +
         `face(s), hair, and wardrobe — into that room. ${basePrompt}${cameraDirection}${setConsistency} ` +
-        `Photographic, film-grade, sharp focus, on-model recognizable cast in the actual set, ` +
+        `${styleClause} Sharp focus, on-model recognizable cast in the actual set, ` +
         `no text. No invented brand logos, brand names, or fake signage text in frame.`;
     } else if (envHeroUrl) {
       mode = 'kontext-room';
       keyframePrompt =
-        `Cinematic film still set INSIDE the room shown in the reference image — keep that exact ` +
+        `${styleLead} A still frame set INSIDE the room shown in the reference image — keep that exact ` +
         `location (same walls, windows, doors, and furniture in the same places). ` +
-        `${basePrompt}${cameraDirection}${setConsistency} Photographic, film-grade, sharp focus, ` +
+        `${basePrompt}${cameraDirection}${setConsistency} ${styleClause} Sharp focus, ` +
         `no text. No invented brand logos, brand names, or fake signage text in frame.`;
     } else if (castRefs.length > 0) {
       mode = 'kontext-cast';
       keyframePrompt =
-        `Cinematic film still: keep the EXACT same person/people from the reference image — ` +
+        `${styleLead} A still frame: keep the EXACT same character(s) from the reference image — ` +
         `identical face(s), hair, and wardrobe — placed inside ${envProse || 'the scene environment'}. ` +
-        `${basePrompt}${cameraDirection}${setConsistency} Photographic, film-grade, sharp focus, ` +
+        `${basePrompt}${cameraDirection}${setConsistency} ${styleClause} Sharp focus, ` +
         `on-model recognizable cast in the actual set, no text. No invented brand logos, brand ` +
         `names, or fake signage text in frame.`;
     } else {
       mode = 'text-to-image';
       keyframePrompt =
-        `Cinematic film still in ${envProse || 'the scene environment'}. ${basePrompt}${cameraDirection} ` +
-        `Photographic, film-grade, sharp focus, no text. No invented brand logos, brand names, or ` +
+        `${styleLead} A still frame in ${envProse || 'the scene environment'}. ${basePrompt}${cameraDirection} ` +
+        `${styleClause} Sharp focus, no text. No invented brand logos, brand names, or ` +
         `fake signage text in frame.`;
     }
 
@@ -1754,7 +1770,14 @@ export async function generateFloorPlanImage(plan: ShotPlan, ctx: TenantContext)
 /** The shared look-bible descriptor bits, woven into every environment-hero prompt. */
 function environmentLookBits(plan: ShotPlan): string {
   const look = plan.sharedChoices.lookBible ?? {};
-  return [look.movieLook, look.filmStock, look.lighting, look.atmosphere, look.artStyle]
+  const style = firstText(look.artStyle, plan.sharedChoices.artStyle) ?? '';
+  const isPhoto = /photo|realis|live[\s-]?action|cinematic|documentary|\bfilm\b/i.test(style);
+  // movieLook + filmStock are live-action photography concepts — they drag a stylized
+  // (Pixar/anime) room back toward realism, so include them ONLY for photographic styles.
+  const bits = isPhoto
+    ? [look.movieLook, look.filmStock, look.lighting, look.atmosphere, look.artStyle]
+    : [look.lighting, look.atmosphere, look.artStyle];
+  return bits
     .map((s) => s?.trim())
     .filter((s): s is string => Boolean(s))
     .join(', ');
@@ -1772,9 +1795,15 @@ async function renderEnvironmentHeroImage(
   label: string,
   ctx: TenantContext,
 ): Promise<string> {
+  // Lead + close with the production art style so the ROOM renders in the SAME look as the
+  // cast (a Pixar room for a Pixar cast). Without this the env hero rendered photoreal and
+  // the keyframe — conditioned on that realistic room image — produced a Pixar-character-in-
+  // a-real-room clash. The old "cinematic / film-still quality" wording is dropped here
+  // because it forced photography regardless of the art style.
+  const { lead, clause } = characterStyleDirective(plan);
   const prompt =
-    `Wide cinematic establishing shot of ${description}. ${lookBits}. ` +
-    'Atmospheric, film-still quality, no people, no text. No invented brand logos, brand names, or fake signage text on any sign, screen, or surface.';
+    `${lead} A wide establishing shot of ${description}. ${lookBits}. ` +
+    `${clause} Atmospheric, no people, no text. No invented brand logos, brand names, or fake signage text on any sign, screen, or surface.`;
   const workDir = await createWorkDir('shot-plan-envhero');
   try {
     logger.info('[shot-plan-gen] submitting environment hero', { file: FILE, tenantId: ctx.tenantId, label });

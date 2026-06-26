@@ -113,6 +113,7 @@ interface CharacterFormPayload {
   description: string | null;
   role: CharacterRole;
   styleTag: CharacterStyleTag;
+  gender: string | null;
   frontalImageUrl: string;
   additionalImageUrls: string[];
   fullBodyImageUrl: string | null;
@@ -161,6 +162,7 @@ export default function CharacterForm({
   const [description, setDescription] = useState('');
   const [role, setRole] = useState<CharacterRole>('presenter');
   const [styleTag, setStyleTag] = useState<CharacterStyleTag>('real');
+  const [gender, setGender] = useState<string | null>(null);
   const [frontalImageUrl, setFrontalImageUrl] = useState('');
   const [additionalImageUrls, setAdditionalImageUrls] = useState<string[]>([]);
   const [fullBodyImageUrl, setFullBodyImageUrl] = useState<string | null>(null);
@@ -203,6 +205,7 @@ export default function CharacterForm({
     setDescription(profile?.description ?? '');
     setRole(profile?.role ?? 'presenter');
     setStyleTag(profile?.styleTag ?? 'real');
+    setGender(profile?.gender ?? null);
     setFrontalImageUrl(profile?.frontalImageUrl ?? '');
     setAdditionalImageUrls(profile?.additionalImageUrls ?? []);
     setFullBodyImageUrl(profile?.fullBodyImageUrl ?? null);
@@ -586,6 +589,7 @@ export default function CharacterForm({
       description: description.trim() ? description.trim() : null,
       role,
       styleTag,
+      gender,
       frontalImageUrl,
       additionalImageUrls,
       fullBodyImageUrl,
@@ -629,6 +633,7 @@ export default function CharacterForm({
     description,
     role,
     styleTag,
+    gender,
     additionalImageUrls,
     fullBodyImageUrl,
     upperBodyImageUrl,
@@ -712,6 +717,25 @@ export default function CharacterForm({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Gender — LOCKED identity. The video planner inherits this and never guesses,
+              so the character keeps the right gender + pronouns in every video. */}
+          <div>
+            <Caption className="mb-1 block">Gender</Caption>
+            <select
+              value={gender ?? ''}
+              onChange={(e) => setGender(e.target.value ? e.target.value : null)}
+              className="w-full rounded-md border border-border-strong bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Not set</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="non-binary">Non-binary</option>
+            </select>
+            <Caption className="mt-1 block text-muted-foreground">
+              Locks this character&apos;s gender so videos never render the wrong person.
+            </Caption>
           </div>
 
           {/* Face anchor (required) */}

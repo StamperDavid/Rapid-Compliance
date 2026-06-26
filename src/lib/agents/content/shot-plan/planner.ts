@@ -652,6 +652,7 @@ function buildAvailableCastBlock(profiles: AvatarProfile[]): string {
         : '        (no alternate looks)';
       return [
         `  - characterId "${p.id}" = "${p.name}" [role: ${p.role}, style: ${p.styleTag}]`,
+        p.gender ? `      gender: ${p.gender} — LOCKED. Use this gender and matching pronouns for this character throughout; never change it.` : '',
         p.description ? `      description: ${p.description}` : '',
         '      looks:',
         looks,
@@ -810,7 +811,13 @@ function resolveCast(
       subjectKind: member.subjectKind,
       notes: member.notes,
       apparentAge: member.apparentAge,
-      gender: member.gender,
+      // A bound saved character's gender is LOCKED from its profile — never the model's
+      // guess. (Velocity has no gender stored → the planner once guessed "female" and
+      // rendered a woman; the profile gender now wins.) Invented characters keep the model's.
+      gender: profile?.gender?.trim() ? profile.gender : member.gender,
+      // Carry the bound character's art style into the plan so a stylized/anime
+      // character can drive the whole production's look (see deriveProductionArtStyle).
+      ...(profile?.styleTag ? { styleTag: profile.styleTag } : {}),
       ethnicity: member.ethnicity,
       build: member.build,
       hairColor: member.hairColor,
@@ -960,6 +967,26 @@ function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
 }
 
+/**
+ * DEFAULT-STYLE RULE: a stylized/anime SAVED character drives the WHOLE production's art
+ * style, so the character and the world render in ONE consistent look (no "Pixar character
+ * dropped into a photoreal room" clash). Maps the lead bound character's styleTag to an
+ * art-style phrase; a 'real' or absent styleTag keeps the planner's authored style. This is
+ * the DEFAULT — an explicit mixed-style brief (e.g. Roger Rabbit) would override per-shot.
+ */
+function deriveProductionArtStyle(authoredArtStyle: string, cast: ShotPlanCastMember[]): string {
+  const styled =
+    cast.find((c) => c.billing === 'lead' && c.styleTag && c.styleTag !== 'real') ??
+    cast.find((c) => c.styleTag && c.styleTag !== 'real');
+  if (styled?.styleTag === 'stylized') {
+    return '3D animated, Pixar-style cinematic render';
+  }
+  if (styled?.styleTag === 'anime') {
+    return 'anime illustration, cel-shaded';
+  }
+  return authoredArtStyle;
+}
+
 /** Assemble the contract-valid ShotPlan from the model body + resolved cast. */
 function assembleShotPlan(
   body: LlmShotPlan,
@@ -1067,6 +1094,9 @@ function assembleShotPlan(
         }))
       : undefined;
 
+  // A stylized/anime cast character makes the WHOLE production its style (default rule).
+  const productionArtStyle = deriveProductionArtStyle(body.sharedChoices.lookBible.artStyle, cast);
+
   const candidate: ShotPlan = {
     id: `splan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     title: titleHint ?? body.title,
@@ -1083,8 +1113,8 @@ function assembleShotPlan(
       ...(environmentReferenceImageUrls.length > 0 ? { environmentReferenceImageUrls } : {}),
       moodKeywords: body.sharedChoices.moodKeywords,
       cinematographyNotes: body.sharedChoices.cinematographyNotes,
-      artStyle: body.sharedChoices.artStyle,
-      lookBible: body.sharedChoices.lookBible,
+      artStyle: productionArtStyle,
+      lookBible: { ...body.sharedChoices.lookBible, artStyle: productionArtStyle },
       ...(objects.length > 0 ? { objects } : {}),
       ...(environmentZones ? { environmentZones } : {}),
       ...(body.sharedChoices.adaptiveLabels

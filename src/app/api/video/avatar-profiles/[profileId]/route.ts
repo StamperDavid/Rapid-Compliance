@@ -47,6 +47,7 @@ const UpdateProfileSchema = z.object({
     .enum(['hero', 'villain', 'extra', 'narrator', 'presenter', 'custom'])
     .optional(),
   styleTag: z.enum(['real', 'anime', 'stylized']).optional(),
+  gender: z.string().trim().max(40).nullable().optional(),
   tier: z.enum(['premium', 'standard']).optional(),
   additionalImageUrls: z.array(z.string().url()).optional(),
   fullBodyImageUrl: z.string().url().nullable().optional(),
