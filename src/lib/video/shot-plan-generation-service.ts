@@ -153,10 +153,14 @@ function resolveCastReferenceImageUrls(plan: ShotPlan, shot: ShotPlanShot): stri
     if (!member) {
       continue;
     }
-    for (const url of member.referenceImageUrls) {
-      if (url && !urls.includes(url)) {
-        urls.push(url);
-      }
+    // ONE identity anchor per character — the primary reference photo. A saved
+    // character accumulates many photos over time (Velocity had 13); sending them ALL
+    // blows past the engine's image-input limit (fal Kontext caps at 4) AND dilutes the
+    // likeness rather than strengthening it. One clean photo per person is what the
+    // engine needs to lock the face. Multi-character shots then stay within the limit.
+    const primary = member.referenceImageUrls.find((url) => Boolean(url));
+    if (primary && !urls.includes(primary)) {
+      urls.push(primary);
     }
   }
   return urls;
@@ -301,9 +305,17 @@ function shotEnvironmentProse(plan: ShotPlan, shot: ShotPlanShot): string {
  */
 const MAX_REFERENCE_IMAGES = 7;
 
+/**
+ * fal's Flux Kontext Max (multi) — the keyframe-still model — HARD-REJECTS more than
+ * 4 image_urls with a 422 ("image_urls must be between 1 and 4"). The reference-to-video
+ * path tolerates the wider ceiling, so this tighter limit applies ONLY to the keyframe
+ * still. Exceeding it fails every shot's still and breaks the whole shot doc.
+ */
+const KONTEXT_MAX_MULTI_REFS = 4;
+
 /** De-duplicate + cap a reference-image list, preserving order (lead frame kept). */
-function capReferenceImages(urls: string[]): string[] {
-  return [...new Set(urls.filter(Boolean))].slice(0, MAX_REFERENCE_IMAGES);
+function capReferenceImages(urls: string[], limit: number = MAX_REFERENCE_IMAGES): string[] {
+  return [...new Set(urls.filter(Boolean))].slice(0, limit);
 }
 
 /**
@@ -1488,7 +1500,14 @@ export async function generateShotKeyframe(
 
   // ── Generate path: a fresh still from the prompt + room anchor + cast refs ──
   const castRefs = resolveCastReferenceImageUrls(plan, shot);
-  const basePrompt = await buildShotPrompt(plan, shot);
+  // On a brand-logo moment the still must be a CLEAN plate — empty brand-colored space
+  // where the operator's REAL logo gets composited onto the rendered clip later. Without
+  // this guard (same one the video path uses) the image model invents a fake logo (e.g.
+  // an Apple logo) to fill the endcard.
+  const rawKeyframePrompt = await buildShotPrompt(plan, shot);
+  const basePrompt = shotIsBrandLogoMoment(shot)
+    ? rawKeyframePrompt + LOGO_MOMENT_CLEAN_INSTRUCTION
+    : rawKeyframePrompt;
   // The ROOM ANCHOR: the shot's environment-zone hero (or the world hero) — a wide,
   // peopleless PERSPECTIVE render of the location. This is the single locked image
   // that pins furniture/walls/windows so the room does NOT reinvent itself between
@@ -1513,7 +1532,7 @@ export async function generateShotKeyframe(
     // cast identity. Flux Kontext Max (multi) conditions on both at once when both
     // exist; with only one it degrades to single-image Kontext; with none, text-to-
     // image. The room anchor leading is what holds the LOCATION constant across shots.
-    const visualRefs = capReferenceImages([...(envHeroUrl ? [envHeroUrl] : []), ...castRefs]);
+    const visualRefs = capReferenceImages([...(envHeroUrl ? [envHeroUrl] : []), ...castRefs], KONTEXT_MAX_MULTI_REFS);
 
     // Build the keyframe prompt. The leading instruction names WHICH reference is the
     // room and which is the cast, so the model keeps the set from @Image1 and the
@@ -1591,7 +1610,23 @@ export async function generateShotKeyframe(
 
     // ── Persist to OUR storage (ownership rule) ───────────────────────────────
     const framePath = join(workDir, 'keyframe.png');
-    const frameBuf = await downloadToFile(falImageUrl, framePath, `shot ${shotId} keyframe`);
+    let frameBuf = await downloadToFile(falImageUrl, framePath, `shot ${shotId} keyframe`);
+
+    // Brand-logo moment: the model rendered a CLEAN plate (no painted logo, per the
+    // clean-plate guard above); stamp the operator's REAL logo onto it, pixel-exact —
+    // never an AI-painted guess. Same real asset the final video composites. Best-effort:
+    // keep the clean plate if compositing fails.
+    if (shotIsBrandLogoMoment(shot)) {
+      const logo = await loadCompositableLogo();
+      const stamped = logo ? await compositeBrandLogoCentered(falImageUrl, logo) : null;
+      if (stamped) {
+        frameBuf = stamped;
+        logger.info('[shot-plan-gen] stamped REAL brand logo onto keyframe still', {
+          file: FILE,
+          shotId,
+        });
+      }
+    }
 
     const frameStoragePath = `organizations/${PLATFORM_ID}/media/images/${randomUUID()}.png`;
     const permanentKeyframeUrl = await uploadPermanent(
