@@ -38,30 +38,12 @@ import {
   ArrowRight,
   User,
 } from 'lucide-react';
-import type { VideoProjectStatus } from '@/types/video-project';
-
-// ---------------------------------------------------------------------------
-// API response contracts (typed — no `any`)
-// ---------------------------------------------------------------------------
-
-/** One row in the projects list (the summary shape the list endpoint returns). */
-interface ProjectSummary {
-  id: string;
-  title: string;
-  status: VideoProjectStatus;
-  docCount: number;
-  docsWithVideo: number;
-  finalVideoUrl?: string;
-  /** Who created the project (null on legacy projects made before creator tracking). */
-  createdBy?: { uid: string; name: string; email: string | null } | null;
-  updatedAt: string;
-}
-
-interface ListProjectsResponse {
-  success: boolean;
-  projects?: ProjectSummary[];
-  error?: string;
-}
+import {
+  fetchUnifiedVideoProjects,
+  videoProjectOpenPath,
+  videoProjectDeleteEndpoint,
+  type UnifiedProjectRow,
+} from '../components/unified-projects';
 
 // ---------------------------------------------------------------------------
 // Plain-English status helpers
@@ -71,31 +53,25 @@ interface ListProjectsResponse {
  * Turns the project state into a short sentence a non-technical owner reads at a
  * glance — never raw status enums.
  */
-function plainStatus(project: ProjectSummary): string {
+function plainStatus(project: UnifiedProjectRow): string {
   if (project.status === 'complete') {
     return 'Final video ready';
   }
-  if (project.status === 'planning' || project.docCount === 0) {
+  if (project.sceneCount === 0) {
     return 'Writing the docs…';
   }
-  if (project.docsWithVideo === 0) {
-    return `Ready to make videos · ${project.docCount} ${project.docCount === 1 ? 'doc' : 'docs'}`;
+  if (!project.hasVideo) {
+    return `Ready to make videos · ${project.sceneCount} ${project.sceneCount === 1 ? 'doc' : 'docs'}`;
   }
-  if (project.docsWithVideo >= project.docCount) {
-    return 'Ready to assemble';
-  }
-  return `${project.docsWithVideo} of ${project.docCount} videos made`;
+  return 'Videos made';
 }
 
 /** A soft status pill color, expressed only as Tailwind token classes. */
-function statusPillClasses(project: ProjectSummary): string {
-  if (project.status === 'complete') {
+function statusPillClasses(project: UnifiedProjectRow): string {
+  if (project.status === 'complete' || project.hasVideo) {
     return 'bg-primary/10 text-primary';
   }
-  if (project.status === 'assembled' || project.docsWithVideo >= project.docCount) {
-    return 'bg-primary/10 text-primary';
-  }
-  if (project.status === 'planning' || project.docCount === 0) {
+  if (project.sceneCount === 0) {
     return 'bg-surface-elevated text-muted-foreground';
   }
   return 'bg-surface-elevated text-foreground';
@@ -106,9 +82,9 @@ function statusPillClasses(project: ProjectSummary): string {
 // ---------------------------------------------------------------------------
 
 interface ProjectCardProps {
-  project: ProjectSummary;
-  onOpen: (id: string) => void;
-  onDelete: (id: string) => Promise<void>;
+  project: UnifiedProjectRow;
+  onOpen: (project: UnifiedProjectRow) => void;
+  onDelete: (project: UnifiedProjectRow) => Promise<void>;
 }
 
 function ProjectCard({ project, onOpen, onDelete }: ProjectCardProps): React.JSX.Element {
@@ -137,14 +113,14 @@ function ProjectCard({ project, onOpen, onDelete }: ProjectCardProps): React.JSX
     }
     setDeleting(true);
     try {
-      await onDelete(project.id);
+      await onDelete(project);
     } finally {
       setDeleting(false);
       setArmed(false);
     }
-  }, [armed, onDelete, project.id]);
+  }, [armed, onDelete, project]);
 
-  const title = project.title.trim() || 'Untitled project';
+  const title = project.name.trim() || 'Untitled project';
 
   return (
     <div className="bg-card border border-border-strong rounded-2xl p-6 flex flex-col gap-4">
@@ -173,7 +149,7 @@ function ProjectCard({ project, onOpen, onDelete }: ProjectCardProps): React.JSX
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <User className="h-3.5 w-3.5 shrink-0" aria-hidden />
           <span className="line-clamp-1">
-            Created by {project.createdBy?.name ?? 'Unknown'}
+            Created by {project.createdByName ?? 'Unknown'}
           </span>
         </div>
       </div>
@@ -183,7 +159,7 @@ function ProjectCard({ project, onOpen, onDelete }: ProjectCardProps): React.JSX
           variant="default"
           size="sm"
           className="flex-1"
-          onClick={() => onOpen(project.id)}
+          onClick={() => onOpen(project)}
         >
           Open
           <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
@@ -216,7 +192,7 @@ export default function VideoProjectsPage(): React.JSX.Element {
   const router = useRouter();
   const authFetch = useAuthFetch();
 
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [projects, setProjects] = useState<UnifiedProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -224,12 +200,10 @@ export default function VideoProjectsPage(): React.JSX.Element {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await authFetch('/api/video-project');
-      const data = (await res.json()) as ListProjectsResponse;
-      if (!res.ok || !data.success || !data.projects) {
-        throw new Error(data.error ?? 'We could not load your projects. Please try again.');
-      }
-      setProjects(data.projects);
+      // ONE merged source — both project stores, newest first. Every list surface
+      // reads this same helper, so they can never show different projects again.
+      const rows = await fetchUnifiedVideoProjects(authFetch);
+      setProjects(rows);
     } catch (err) {
       setLoadError(
         err instanceof Error
@@ -250,14 +224,18 @@ export default function VideoProjectsPage(): React.JSX.Element {
   }, [router]);
 
   const handleDelete = useCallback(
-    async (id: string) => {
+    async (project: UnifiedProjectRow) => {
       try {
-        const res = await authFetch(`/api/video-project/${id}`, { method: 'DELETE' });
+        // Delete hits the endpoint for THIS project's store — so removing it here
+        // removes it from the one source every surface reads. Gone everywhere.
+        const res = await authFetch(videoProjectDeleteEndpoint(project), { method: 'DELETE' });
         const data = (await res.json()) as { success: boolean; error?: string };
         if (!res.ok || !data.success) {
           throw new Error(data.error ?? 'We could not delete that project.');
         }
-        setProjects((prev) => prev.filter((p) => p.id !== id));
+        setProjects((prev) =>
+          prev.filter((p) => !(p.id === project.id && p.system === project.system))
+        );
       } catch (err) {
         setLoadError(
           err instanceof Error ? err.message : 'We could not delete that project.'
@@ -268,8 +246,8 @@ export default function VideoProjectsPage(): React.JSX.Element {
   );
 
   const handleOpen = useCallback(
-    (id: string) => {
-      router.push(`/content/video/projects/${id}`);
+    (project: UnifiedProjectRow) => {
+      router.push(videoProjectOpenPath(project));
     },
     [router]
   );
@@ -333,7 +311,7 @@ export default function VideoProjectsPage(): React.JSX.Element {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((project) => (
               <ProjectCard
-                key={project.id}
+                key={`${project.system}:${project.id}`}
                 project={project}
                 onOpen={handleOpen}
                 onDelete={handleDelete}

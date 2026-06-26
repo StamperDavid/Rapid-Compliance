@@ -14,30 +14,11 @@ import { TemplatePickerModal } from './components/TemplatePickerModal';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import type { PipelineProject } from '@/types/video-pipeline';
 import type { VideoTemplate } from '@/lib/video/templates';
-
-// ─── Types ────────────────────────────────────────────────────────────
-
-/**
- * One row in the UNIFIED project list. `system` records which store the project
- * lives in so a click opens the correct surface:
- *   • 'studio'  → classic pipeline project → loads into THIS Studio editor
- *   • 'project' → shot-doc VideoProject    → opens the project review page
- * Both stores are merged into ONE list so the operator never has to know which is
- * which, or hunt for their work in a second place.
- */
-interface ProjectSummary {
-  id: string;
-  name: string;
-  system: 'studio' | 'project';
-  type?: string;
-  currentStep?: string;
-  status: string;
-  sceneCount: number;
-  hasVideo: boolean;
-  createdAt?: string;
-  updatedAt: string;
-  createdByName?: string | null;
-}
+import {
+  fetchUnifiedVideoProjects,
+  videoProjectDeleteEndpoint,
+  type UnifiedProjectRow,
+} from './components/unified-projects';
 
 // ─── Page ─────────────────────────────────────────────────────────────
 
@@ -70,7 +51,7 @@ export default function VideoStudioPage() {
   const [confirmScrap, setConfirmScrap] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [projects, setProjects] = useState<UnifiedProjectRow[]>([]);
   const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
@@ -92,59 +73,11 @@ export default function VideoStudioPage() {
     setShowLoadModal(true);
     setLoadingProjects(true);
     try {
-      // ONE list of ALL the operator's projects, pulled from BOTH stores: the classic
-      // Studio pipeline AND the shot-doc VideoProjects. These used to be two separate
-      // lists, which is exactly why rendered projects seemed to vanish — the operator
-      // looked here and their work was in the other one.
-      const [studioRes, docRes] = await Promise.all([
-        authFetch('/api/video/project/list').catch(() => null),
-        authFetch('/api/video-project').catch(() => null),
-      ]);
-
-      const merged: ProjectSummary[] = [];
-
-      if (studioRes?.ok) {
-        const data = (await studioRes.json()) as {
-          success: boolean;
-          projects?: Array<{
-            id: string; name: string; status: string; sceneCount: number;
-            hasVideo: boolean; type?: string; currentStep?: string; updatedAt: string;
-          }>;
-        };
-        if (data.success && data.projects) {
-          for (const p of data.projects) {
-            merged.push({ ...p, system: 'studio' });
-          }
-        }
-      }
-
-      if (docRes?.ok) {
-        const data = (await docRes.json()) as {
-          success: boolean;
-          projects?: Array<{
-            id: string; title: string; status: string; docCount: number;
-            docsWithVideo: number; createdBy?: { name: string } | null; updatedAt: string;
-          }>;
-        };
-        if (data.success && data.projects) {
-          for (const p of data.projects) {
-            merged.push({
-              id: p.id,
-              name: p.title,
-              system: 'project',
-              status: p.status,
-              sceneCount: p.docCount,
-              hasVideo: p.docsWithVideo > 0,
-              updatedAt: p.updatedAt,
-              createdByName: p.createdBy?.name ?? null,
-            });
-          }
-        }
-      }
-
-      // Newest first across both stores.
-      merged.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
-      setProjects(merged);
+      // ONE list of ALL the operator's projects from BOTH stores — the SAME helper the
+      // Video Projects cards page reads, so the two lists can never disagree. These used
+      // to be two separate inline merges, which is exactly why projects seemed to vanish.
+      const rows = await fetchUnifiedVideoProjects(authFetch);
+      setProjects(rows);
     } catch {
       setProjects([]);
     } finally {
@@ -175,7 +108,7 @@ export default function VideoStudioPage() {
   // a shot-doc VideoProject opens its review page; a classic studio project loads
   // into this editor. One list, two correct destinations — no wrong-place dead ends.
   const handleOpenProject = useCallback(
-    (proj: ProjectSummary) => {
+    (proj: UnifiedProjectRow) => {
       if (proj.system === 'project') {
         setShowLoadModal(false);
         router.push(`/content/video/projects/${proj.id}`);
@@ -192,11 +125,9 @@ export default function VideoStudioPage() {
     setConfirmDeleteId(null);
     setDeletingProjectId(id);
     try {
-      const endpoint =
-        system === 'project' ? `/api/video-project/${id}` : `/api/video/project/${id}`;
-      const response = await authFetch(endpoint, { method: 'DELETE' });
+      const response = await authFetch(videoProjectDeleteEndpoint({ id, system }), { method: 'DELETE' });
       if (response.ok) {
-        setProjects((prev) => prev.filter((p) => p.id !== id));
+        setProjects((prev) => prev.filter((p) => !(p.id === id && p.system === system)));
         // If the project being deleted is the one currently loaded in the store,
         // clear it — otherwise auto-save keeps POSTing to the now-deleted doc (500s)
         // and the editor keeps GETting it (404s) forever.
