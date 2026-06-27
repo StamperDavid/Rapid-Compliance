@@ -203,6 +203,51 @@ competitor ("generate all" produced loose clips, never a deliverable video) is f
 
 ---
 
+# 🟢 RESUME HERE — Jun 27 2026 — VERTICAL #2 (CRM) audit + MONETIZATION model
+
+## CRM GAP LEDGER (benchmark: Pipedrive + HubSpot + Reevo) — from read-only audit Jun 27
+**Headline: the CRM is genuinely DEEP + real** (Admin SDK data layer, no fakery) — much closer to
+parity than video was. Contacts/Companies/Deals/Leads all LIVE + real lead-scoring (1549 LOC),
+forecasting, automation, atomic dup-merge, and in-CRM quotes/invoices/payments.
+Keys: ✅ matched · ⚠️ GAP (work) · 🛡️ our-extra (protect)
+
+**LIVE (✅):** Contacts/People · Companies · Deals (CRUD/value/probability/stages) · Leads + scoring/
+routing · Reporting/forecasting · Automation/workflows · Email send+tracking+templates+sequences ·
+CSV import + duplicate-detect/merge · AI lead-scoring/next-best-action/enrichment (rule-based).
+
+**GAPS — the finite work list to certify CRM:**
+1. ⚠️ **Drag-drop pipeline kanban** (board is static columns; `@dnd-kit` installed but unused) — Pipedrive's signature interaction
+2. ⚠️ **"Log a call/meeting/note" UI button** (backend POST + 25 activity types exist; no button) — table-stakes
+3. ⚠️ **Custom-field management UI** (model has `customFields` everywhere; no admin screen to define them)
+4. ⚠️ **CSV export** (import is LIVE; export route MISSING)
+5. ⚠️ **CRM-native telephony** (click-to-call / call logging bound to contacts; only agent-swarm Twilio today)
+6. ⚠️ **Inbound email depth** (send+tracking strong; two-way receive/thread-on-record only partial)
+7. ⚠️ **AI bound to records** ("draft this email" / "summarize this call" on a contact — lives in the swarm, not surfaced on records — where HubSpot/Reevo shine)
+- ⚠️ **DATA-PATH RISK:** forms→CRM lead-capture (`src/lib/forms/crm-mapping.ts`) uses the CLIENT Firebase SDK with NO `/api` server route — verify leads aren't silently dropped before trusting it.
+- 🛡️ **OUR EXTRAS (protect):** in-CRM quotes/invoices/payments (CPQ-adjacent) · next-best-action engine (796 LOC) · trainable multi-factor lead scoring · atomic dup-merge w/ FK re-parenting · skill/territory/load-balance routing.
+
+## MONETIZATION MODEL (owner counts this as part of the CRM build; for the multi-tenant flip)
+**Two tiers offered to clients:**
+1. **BYOK — $297/mo flat:** client brings own keys (~12 providers), pays providers directly; we charge the platform fee.
+2. **Usage-based (managed):** WE hold master accounts, meter per-tenant usage, sell credits WITH MARGIN (no keys for them).
+
+**State of build:** the metering SEAM exists (`recordUsage` hooks in `src/lib/ai/providers/*` +
+`src/lib/video/providers/credentials.ts`; per-tenant keys already read from Firestore via
+`apiKeyService`). **NOT built:** usage LEDGER (call→cost), PRICE BOOK (provider cost + our margin),
+CREDITS WALLET (Stripe reload/balance/deduct per usage), the $297 subscription gating, and BYOK
+onboarding for ~12 providers.
+**Cross-cutting:** this touches EVERY AI feature across ALL verticals — it's a platform/billing layer,
+not CRM-specific. Foundational for the multi-tenant launch.
+**RISK to verify FIRST:** some providers' ToS may forbid reselling their API under a master account
+(the usage tier) — per-provider check before committing to it.
+**OPEN DECISIONS (owner):** (a) does $297 BYOK include a usage allowance, or pure flat-fee? (b) usage
+tier = prepaid credits wallet (with margin) or metered post-pay?
+**Noted Jun 27:** `APIKeyService` Firestore-listener flooding ("max retries exceeded" → TTL-cache
+fallback; non-fatal). Likely server-up-too-long OR a listener-teardown leak in `api-key-service.ts` —
+harden as part of the BYOK key work.
+
+---
+
 # 🟢 RESUME HERE — Jun 26 2026 — VIDEO: character/style fixes DONE; LOCATION-CONSISTENCY is next
 
 ## Proven + committed today (commit `05b3a16a`, synced rapid-dev↔dev)
