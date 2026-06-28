@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { useRecords } from '@/hooks/useRecords';
 import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas'
@@ -64,8 +64,18 @@ export default function EntityTablePage() {
   const params = useParams();
   const entityName = params.entityName as string;
   const authFetch = useAuthFetch();
+  const router = useRouter();
   const { isEntityEnabled, initialized: entityConfigInitialized } = useEntityConfig();
   const { user } = useAuth();
+
+  // Contacts moved to the bespoke /contacts pages (Vertical #2, Option 1) — the generic
+  // entities engine no longer serves them. Redirect any direct /entities/contacts hit so
+  // there is ONE contacts experience, not two parallel ones.
+  useEffect(() => {
+    if (entityName === 'contacts') {
+      router.replace('/contacts');
+    }
+  }, [entityName, router]);
 
   const {
     records,

@@ -226,6 +226,24 @@ CSV import + duplicate-detect/merge · AI lead-scoring/next-best-action/enrichme
 - ⚠️ **DATA-PATH RISK:** forms→CRM lead-capture (`src/lib/forms/crm-mapping.ts`) uses the CLIENT Firebase SDK with NO `/api` server route — verify leads aren't silently dropped before trusting it.
 - 🛡️ **OUR EXTRAS (protect):** in-CRM quotes/invoices/payments (CPQ-adjacent) · next-best-action engine (796 LOC) · trainable multi-factor lead scoring · atomic dup-merge w/ FK re-parenting · skill/territory/load-balance routing.
 
+**ARCHITECTURE DECISION (owner Jun 28): Option 1 — bespoke CRM pages, retire the generic
+`/entities` redirect; build AI-forward (Reevo bar).** The `/entities/[entityName]` engine and the
+bespoke pages were two parallel ways to show CRM records (contacts went through the generic engine
+via a `/contacts → /entities/contacts` redirect; companies/deals were already bespoke). Consolidating
+on bespoke pages.
+
+**CRM LEDGER PROGRESS (Jun 28):**
+- ✅ **#2 manual activity logging** — `LogActivityModal` (reusable: contact today, deal next) +
+  contact detail timeline now shows REAL activities + live refresh. Real-path proven
+  (`scripts/verify-activity-logging.ts`: log → persist w/ correct backdate → read back → cleanup).
+- ✅ **Bespoke contacts list** (`/contacts/page.tsx` — was a redirect) mirroring companies (DataTable:
+  search + bulk-delete + CSV export); rows → `/contacts/[id]`. `/entities/contacts` now redirects to
+  `/contacts`. Nav already pointed to `/contacts`.
+- ✅ **#4 CSV export (contacts)** — free via the shared DataTable on the new list.
+- ▶ **NEXT: Step 2 — AI-forward contact detail** (= gap #7): surface next-best-action + "Draft email"
+  + "Summarize activity" on the record (we own the engines; just not surfaced). Then #1 drag-drop
+  pipeline, #3 custom-field UI, #5 telephony, #6 inbound email.
+
 ## MONETIZATION MODEL — FINALIZED (owner-confirmed Jun 27–28; for the multi-tenant flip)
 **TWO subscription types (mutually exclusive):**
 1. **BYOK ("advanced") — flat $297/mo.** Client gets + fills their OWN API keys (~12 providers) and
