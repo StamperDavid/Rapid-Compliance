@@ -17,6 +17,30 @@ interface CompanyWithRollup extends Company {
   wonDealValue?: number;
 }
 
+interface LinkedContact {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  title?: string;
+}
+
+interface LinkedDeal {
+  id: string;
+  name?: string;
+  value?: number;
+  stage?: string;
+}
+
+/** Best available display name for a linked contact, without chaining `||`. */
+function contactDisplayName(c: LinkedContact): string {
+  const composed = (c.name ?? `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim());
+  if (composed) { return composed; }
+  if (c.email) { return c.email; }
+  return 'Unnamed contact';
+}
+
 export default function CompanyDetailPage(): React.JSX.Element {
   const params = useParams();
   const router = useRouter();
@@ -25,6 +49,26 @@ export default function CompanyDetailPage(): React.JSX.Element {
   const [company, setCompany] = useState<CompanyWithRollup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<LinkedContact[] | null>(null);
+  const [deals, setDeals] = useState<LinkedDeal[] | null>(null);
+  const [relError, setRelError] = useState<string | null>(null);
+
+  const loadRelationships = useCallback(async () => {
+    setRelError(null);
+    try {
+      const [contactsRes, dealsRes] = await Promise.all([
+        authFetch(`/api/crm/companies/${companyId}/contacts`),
+        authFetch(`/api/crm/companies/${companyId}/deals`),
+      ]);
+      const contactsJson = (await contactsRes.json()) as { success?: boolean; data?: LinkedContact[] };
+      const dealsJson = (await dealsRes.json()) as { success?: boolean; data?: LinkedDeal[] };
+      setContacts(contactsJson.data ?? []);
+      setDeals(dealsJson.data ?? []);
+    } catch (e) {
+      logger.error('Error loading company relationships:', e instanceof Error ? e : new Error(String(e)), { file: 'page.tsx' });
+      setRelError("We couldn't load this company's contacts and deals.");
+    }
+  }, [authFetch, companyId]);
 
   const loadCompany = useCallback(async () => {
     setError(null);
@@ -46,7 +90,8 @@ export default function CompanyDetailPage(): React.JSX.Element {
 
   useEffect(() => {
     void loadCompany();
-  }, [loadCompany]);
+    void loadRelationships();
+  }, [loadCompany, loadRelationships]);
 
   if (loading) {
     return <div className="p-8">Loading...</div>;
@@ -95,6 +140,57 @@ export default function CompanyDetailPage(): React.JSX.Element {
               <div className="mt-4">
                 <div className="text-sm text-muted-foreground mb-1">Description</div>
                 <div className="text-sm whitespace-pre-wrap">{company.description}</div>
+              </div>
+            )}
+          </div>
+
+          {relError && <div className="text-destructive text-sm">{relError}</div>}
+
+          <div className="bg-card rounded-lg p-6">
+            <SectionTitle className="mb-4">Contacts ({contacts?.length ?? company.contactCount ?? 0})</SectionTitle>
+            {contacts === null ? (
+              <div className="text-sm text-muted-foreground">Loading…</div>
+            ) : contacts.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No contacts linked to this company yet.</div>
+            ) : (
+              <div className="divide-y divide-border-light">
+                {contacts.map((c) => {
+                  const name = contactDisplayName(c);
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => router.push(`/contacts/${c.id}`)}
+                      className="flex w-full items-center justify-between py-2 text-left hover:opacity-80"
+                    >
+                      <span className="text-sm font-medium text-foreground">{name}</span>
+                      <span className="text-xs text-muted-foreground">{c.title ?? c.email ?? ''}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-card rounded-lg p-6">
+            <SectionTitle className="mb-4">Deals ({deals?.length ?? company.dealCount ?? 0})</SectionTitle>
+            {deals === null ? (
+              <div className="text-sm text-muted-foreground">Loading…</div>
+            ) : deals.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No deals linked to this company yet.</div>
+            ) : (
+              <div className="divide-y divide-border-light">
+                {deals.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => router.push(`/deals/${d.id}`)}
+                    className="flex w-full items-center justify-between py-2 text-left hover:opacity-80"
+                  >
+                    <span className="text-sm font-medium text-foreground">{d.name ?? 'Untitled deal'}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {d.stage ? `${d.stage.replace('_', ' ')} · ` : ''}${(d.value ?? 0).toLocaleString()}
+                    </span>
+                  </button>
+                ))}
               </div>
             )}
           </div>

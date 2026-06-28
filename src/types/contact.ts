@@ -17,6 +17,8 @@ export interface Contact {
   phoneNumber?: string;
   mobile?: string;
   company?: string;
+  /** FK to the linked Company record. The `company` string above is kept for display/legacy fallback. */
+  companyId?: string;
   title?: string;
   linkedIn?: string;
   lastActivity?: Timestamp | { toDate: () => Date };

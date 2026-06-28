@@ -282,8 +282,9 @@ export interface Deal {
 
   // Deal details
   name: string;
-  company?: string;
+  company?: string; // Display name (legacy / fallback)
   companyName?: string; // Legacy field - use `company` instead
+  companyId?: string; // FK to the linked Company record
   contactId?: string;
 
   // Financial
@@ -496,7 +497,8 @@ export interface Contact {
   phone?: string;
 
   // Company info
-  company?: string;
+  company?: string; // Display name (legacy / fallback)
+  companyId?: string; // FK to the linked Company record
   title?: string;
   department?: string;
 

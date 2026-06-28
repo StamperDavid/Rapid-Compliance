@@ -13,6 +13,7 @@ const updateContactSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),
   company: z.string().optional(),
+  companyId: z.string().optional(),
   title: z.string().optional(),
   department: z.string().optional(),
   linkedInUrl: z.string().url().optional(),

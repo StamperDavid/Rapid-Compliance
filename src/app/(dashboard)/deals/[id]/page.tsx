@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger/logger';
 import { RecordActivityTimeline } from '@/components/crm/RecordActivityTimeline';
+import { EntitySearchSelect } from '@/components/crm/EntitySearchSelect';
 import type { DealHealthScore } from '@/lib/crm/deal-health-types';
 import type { Deal, FirestoreDate } from '@/types/crm-entities';
 import { useToast } from '@/hooks/useToast';
@@ -46,6 +47,7 @@ export default function DealDetailPage() {
   const [loading, setLoading] = useState(true);
   const [healthScore, setHealthScore] = useState<DealHealthScore | null>(null);
   const [_loadingHealth, setLoadingHealth] = useState(false);
+  const [contactLabel, setContactLabel] = useState<string | null>(null);
 
   // State for inline modals
   const [showLostModal, setShowLostModal] = useState(false);
@@ -90,6 +92,59 @@ export default function DealDetailPage() {
   useEffect(() => {
     void loadDeal();
   }, [loadDeal]);
+
+  // Resolve the linked contact's display name for the Relationships card.
+  useEffect(() => {
+    const contactId = deal?.contactId;
+    if (!contactId) {
+      setContactLabel(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/contacts/${contactId}`);
+        const json = (await res.json()) as {
+          success?: boolean;
+          contact?: { name?: string; firstName?: string; lastName?: string; email?: string };
+        };
+        if (!cancelled && json.success && json.contact) {
+          const c = json.contact;
+          const composed = (c.name ?? `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim());
+          const label = composed ? composed : (c.email ?? 'Linked contact');
+          setContactLabel(label);
+        }
+      } catch (error: unknown) {
+        logger.error('Error loading deal contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, deal?.contactId]);
+
+  const patchDeal = useCallback(
+    async (updates: Record<string, string>) => {
+      try {
+        const res = await authFetch(`/api/deals/${dealId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        });
+        const json = (await res.json()) as { success?: boolean; deal?: Deal; error?: string };
+        if (!res.ok || !json.success) {
+          throw new Error(json.error ?? 'Failed to update deal');
+        }
+        if (json.deal) {
+          setDeal(json.deal);
+        }
+      } catch (error: unknown) {
+        logger.error('Error updating deal relationship:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+        toast.error('Failed to update deal');
+      }
+    },
+    [authFetch, dealId, toast]
+  );
 
   const handleMarkWon = useCallback(async () => {
     try {
@@ -308,6 +363,67 @@ export default function DealDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Relationships */}
+          <div className="bg-card rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Relationships</h2>
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Company</div>
+                {deal.companyId && displayCompany ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => router.push(`/companies/${deal.companyId ?? ''}`)}
+                      className="text-primary hover:opacity-80 text-left"
+                    >
+                      {displayCompany}
+                    </button>
+                    <button
+                      onClick={() => setDeal((prev) => (prev ? { ...prev, companyId: undefined } : prev))}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <EntitySearchSelect
+                    entityType="company"
+                    placeholder="Link a company…"
+                    onSelect={(id, label) => void patchDeal({ companyId: id, company: label })}
+                  />
+                )}
+                {!deal.companyId && displayCompany && (
+                  <div className="text-xs text-muted-foreground mt-1">Currently shown as “{displayCompany}” (not yet linked).</div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Contact</div>
+                {deal.contactId ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => router.push(`/contacts/${deal.contactId ?? ''}`)}
+                      className="text-primary hover:opacity-80 text-left"
+                    >
+                      {contactLabel ?? 'Linked contact'}
+                    </button>
+                    <button
+                      onClick={() => setDeal((prev) => (prev ? { ...prev, contactId: undefined } : prev))}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <EntitySearchSelect
+                    entityType="contact"
+                    placeholder="Link a contact…"
+                    onSelect={(id) => void patchDeal({ contactId: id })}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Quick Actions */}
           <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">

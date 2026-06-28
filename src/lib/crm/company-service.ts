@@ -259,16 +259,50 @@ export async function getCompanyRollup(companyId: string): Promise<{
   wonDealValue: number;
 }> {
   try {
-    const [contacts, deals] = await Promise.all([
-      AdminFirestoreService.getAll(
+    // Prefer the association FK (companyId). Fall back to the legacy `company`
+    // string match (by both the company's id and its display name) so records
+    // that predate the FK still roll up.
+    const company = await getCompany(companyId);
+    const companyName = company?.name;
+
+    const [contactsById, dealsById] = await Promise.all([
+      AdminFirestoreService.getAll<{ id: string }>(
         getSubCollection('contacts'),
-        [where('company', '==', companyId)]
+        [where('companyId', '==', companyId)]
       ),
-      AdminFirestoreService.getAll<{ value?: number; stage?: string }>(
+      AdminFirestoreService.getAll<{ id: string; value?: number; stage?: string }>(
         getSubCollection('deals'),
-        [where('company', '==', companyId)]
+        [where('companyId', '==', companyId)]
       ),
     ]);
+
+    // Legacy fallback queries (match the `company` string against the id and the name).
+    const legacyStrings = Array.from(new Set([companyId, companyName].filter((s): s is string => Boolean(s))));
+    const legacyContactArrays: { id: string }[][] = [];
+    const legacyDealArrays: { id: string; value?: number; stage?: string }[][] = [];
+    for (const legacyValue of legacyStrings) {
+      const [legacyContacts, legacyDeals] = await Promise.all([
+        AdminFirestoreService.getAll<{ id: string }>(
+          getSubCollection('contacts'),
+          [where('company', '==', legacyValue)]
+        ),
+        AdminFirestoreService.getAll<{ id: string; value?: number; stage?: string }>(
+          getSubCollection('deals'),
+          [where('company', '==', legacyValue)]
+        ),
+      ]);
+      legacyContactArrays.push(legacyContacts);
+      legacyDealArrays.push(legacyDeals);
+    }
+
+    // De-dupe by id so a record matched by both FK and legacy string counts once.
+    const contactMap = new Map<string, { id: string }>();
+    for (const c of [contactsById, ...legacyContactArrays].flat()) { contactMap.set(c.id, c); }
+    const dealMap = new Map<string, { id: string; value?: number; stage?: string }>();
+    for (const d of [dealsById, ...legacyDealArrays].flat()) { dealMap.set(d.id, d); }
+
+    const contacts = Array.from(contactMap.values());
+    const deals = Array.from(dealMap.values());
 
     const totalDealValue = deals.reduce((sum, d) => sum + (d.value ?? 0), 0);
     const wonDealValue = deals

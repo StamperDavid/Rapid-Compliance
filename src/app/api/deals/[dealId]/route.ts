@@ -13,6 +13,7 @@ const updateDealSchema = z.object({
   value: z.number().min(0).optional(),
   company: z.string().optional(),
   companyName: z.string().optional(),
+  companyId: z.string().optional(),
   contactId: z.string().optional(),
   currency: z.string().optional(),
   stage: z.enum(DEAL_STAGES).optional(),

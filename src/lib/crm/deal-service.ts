@@ -363,6 +363,25 @@ export async function getPipelineSummary(): Promise<Record<string, { count: numb
   }
 }
 
+/**
+ * Get all deals linked to a company by its id (association FK).
+ */
+export async function getDealsByCompanyId(companyId: string): Promise<Deal[]> {
+  try {
+    const deals = await AdminFirestoreService.getAll<Deal>(
+      getSubCollection('deals'),
+      [where('companyId', '==', companyId)]
+    );
+
+    logger.info('Deals retrieved by companyId', { companyId, count: deals.length });
+    return deals;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get deals by companyId', error instanceof Error ? error : new Error(String(error)), { companyId });
+    throw new Error(`Failed to retrieve deals by company: ${errorMessage}`);
+  }
+}
+
 // ============================================================================
 // SERVER-SIDE HELPERS — Admin SDK required (used by merge route)
 // ============================================================================

@@ -17,6 +17,8 @@ export interface Contact {
   email?: string;
   phone?: string;
   company?: string;
+  /** FK to the linked Company record. The `company` string is kept for display/legacy fallback. */
+  companyId?: string;
   title?: string;
   department?: string;
   linkedInUrl?: string;
@@ -370,6 +372,26 @@ export async function recordInteraction(
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     logger.error('Failed to record interaction', error instanceof Error ? error : undefined, { contactId, type });
     throw new Error(`Failed to record interaction: ${errorMessage}`);
+  }
+}
+
+/**
+ * Get all contacts linked to a company by its id (association FK).
+ * Uses the Admin SDK so this can be called from server-side API routes.
+ */
+export async function getContactsByCompanyId(companyId: string): Promise<Contact[]> {
+  try {
+    const contacts = await AdminFirestoreService.getAll<Contact>(
+      getSubCollection('contacts'),
+      [where('companyId', '==', companyId)]
+    );
+
+    logger.info('Contacts retrieved by companyId', { companyId, count: contacts.length });
+    return contacts;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to get contacts by companyId', error instanceof Error ? error : undefined, { companyId });
+    throw new Error(`Failed to retrieve contacts by company: ${errorMessage}`);
   }
 }
 

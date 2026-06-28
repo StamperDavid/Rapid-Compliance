@@ -12,6 +12,8 @@ export interface Deal {
   name: string;
   company?: string;
   companyName?: string;
+  /** FK to the linked Company record. The `company` string is kept for display/legacy fallback. */
+  companyId?: string;
   contactId?: string;
   leadId?: string;
   value: number;
