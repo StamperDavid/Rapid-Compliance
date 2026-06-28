@@ -7,9 +7,8 @@
 import type { Lead } from './lead-service';
 import { getActivityStats } from './activity-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface PredictiveScore {
   score: number; // 0-100
@@ -57,32 +56,32 @@ const DEFAULT_WEIGHTS: ScoringWeights = {
  */
 async function loadScoringWeights(): Promise<ScoringWeights> {
   try {
-    if (!db) {
-      return DEFAULT_WEIGHTS;
-    }
-    const docRef = doc(db, 'organizations', PLATFORM_ID, 'config', 'scoringWeights');
-    const modelDoc = await getDoc(docRef);
+    // Predictive scoring is a server-only path, so read via the Admin SDK. The
+    // client SDK hits Firestore security rules with no auth context here, returns
+    // PERMISSION_DENIED, and the catch below silently falls back to defaults —
+    // which is why custom/trained weights never loaded.
+    const data = await AdminFirestoreService.get<{ weights?: Record<string, unknown>; modelVersion?: string }>(
+      getSubCollection('config'),
+      'scoringWeights'
+    );
 
-    if (modelDoc.exists()) {
-      const data = modelDoc.data();
-      if (data?.weights && typeof data.weights === 'object') {
-        const weights = data.weights as Record<string, unknown>;
-        if (
-          typeof weights.demographics === 'number' &&
-          typeof weights.firmographics === 'number' &&
-          typeof weights.engagement === 'number' &&
-          typeof weights.behavioral === 'number'
-        ) {
-          logger.info('Loaded trained scoring weights from Firestore', {
-            modelVersion: typeof data.modelVersion === 'string' ? data.modelVersion : 'unknown',
-          });
-          return {
-            demographics: weights.demographics,
-            firmographics: weights.firmographics,
-            engagement: weights.engagement,
-            behavioral: weights.behavioral,
-          };
-        }
+    if (data?.weights && typeof data.weights === 'object') {
+      const weights = data.weights;
+      if (
+        typeof weights.demographics === 'number' &&
+        typeof weights.firmographics === 'number' &&
+        typeof weights.engagement === 'number' &&
+        typeof weights.behavioral === 'number'
+      ) {
+        logger.info('Loaded trained scoring weights from Firestore', {
+          modelVersion: typeof data.modelVersion === 'string' ? data.modelVersion : 'unknown',
+        });
+        return {
+          demographics: weights.demographics,
+          firmographics: weights.firmographics,
+          engagement: weights.engagement,
+          behavioral: weights.behavioral,
+        };
       }
     }
 
