@@ -205,10 +205,73 @@ competitor ("generate all" produced loose clips, never a deliverable video) is f
 
 # 🟢 RESUME HERE — Jun 27 2026 — VERTICAL #2 (CRM) audit + MONETIZATION model
 
+## 🔴 CRM PARITY — HONEST RESET (Jun 28) — read this before trusting any "✅" below
+**We are NOT at parity-is-floor with HubSpot, Pipedrive, or Reevo. Prior "DEEP + real / much closer
+to parity" framing was over-claiming.** Two structural reasons the work felt like an endless drip of
+increments instead of reaching the floor:
+1. **No Definition of Done.** "Exists in code" was treated as "at parity." A full code scan (Jun 28)
+   marked dozens of capabilities EXISTS-REAL — but a capability that compiles ≠ one PROVEN to work on
+   the bespoke page the operator uses. **Every "✅"/EXISTS-REAL below is UNVERIFIED until certified.**
+2. **Two parallel CRMs (the real root cause).** A rich GENERIC engine under `/entities` (kanban,
+   calendar/gallery/map views, custom-field SCHEMA BUILDER, workflow builder) AND the thin BESPOKE
+   object pages (contacts/companies/deals/leads) the operator actually navigates. The capability is
+   stranded in the generic engine; the bespoke pages don't expose it. Retiring `/entities` for bespoke
+   pages RISKS DELETING capability unless it's deliberately ported — the parallel-versions trap.
+
+**DEFINITION OF DONE for every CRM capability (the bar that stops "good enough?" drift):** a 7-point
+Parity Certificate — (1) the named competitor's behavior documented, (2) our behavior matches OR beats
+it, (3) on the BESPOKE object page (not the generic engine), (4) across EVERY object it applies to,
+(5) proven by a real test or an operator walkthrough, (6) our-extras protected, (7) operator signs off.
+No row counts as done on my say-so or a code scan.
+
+**PARITY MATRIX — VERIFIED by code trace on the bespoke pages (Jun 28 verification sweep)**
+Status keys: 🟢 PROVEN on bespoke page · 🔵 GENERIC-ONLY (in `/entities`, not bespoke) · 🟠 PARTIAL ·
+🔴 MISSING for the user · 👁️ NEEDS-LIVE-CLICK (operator walkthrough)
+
+GENUINELY PROVEN (the real foundation — do NOT rebuild):
+- ✅ CRUD on contacts/companies/deals/leads from bespoke pages (👁️ company EDIT modal needs a live click)
+- ✅ Deal pipeline kanban drag-drop → persists stage
+- ✅ Activity timeline + "Log activity" (note/call/meeting/email/task + due date) on ALL FOUR objects
+- ✅ Email send-from-record (mailto + AI draft on contacts) · lead "Add to Sequence" · click-to-call (contacts/leads)
+- ✅ Deal health score (factors shown) · predictive lead scoring (tier + breakdown) · CSV EXPORT (contacts/companies/deals)
+- ✅ Lead duplicate detection on create
+
+MISSING FOR THE USER (the real, finite parity gap list — every competitor has these):
+1. 🔴 **Custom fields** — NO admin UI to define them, and they don't render on detail pages (model supports it)
+2. 🔴 **Saved/filtered views + segmentation** — only a search box; no named views/segments on any list
+3. 🔴 **Multiple pipelines** — one hardcoded 6-stage pipeline; no pipeline selector
+4. 🔴 **Associations UI** — can't link/navigate contact↔company↔deal; only rollup COUNTS shown, read-only
+5. 🔴 **Reporting/dashboards/forecasting SURFACED in CRM** — engines exist, not mounted on CRM pages
+6. 🔴 **Workflow automation from CRM** — builder exists but no trigger wired to record/stage events
+7. 🔴 **Inbound email capture/threading** + open/click tracking surfaced on records
+8. 🔴 **Email templates reachable from a record** (👁️ verify the draft modal) · 🔴 reminders · 🔴 task queues/assignment
+9. 🔴 **CSV IMPORT UI** (export works; import route exists for leads only, no UI) · 🔴 **duplicate MERGE UI** (API exists, 🔵 generic-only)
+10. 🔴 **Per-record call recording/transcription** (calling is a standalone `/calls/make` page, 🔵 not record-bound)
+11. 🟠 **Ownership editable + roles/permissions/visibility** on records (owner shown read-only)
+12. 🔴 **Objects competitors have that we lack:** products/quotes/tickets as CRM objects
+
+CONSISTENCY BUG (quick fix): 🔵 **Leads LIST still redirects to `/entities/leads`** — the bespoke leads
+list doesn't exist (detail page IS bespoke). Leads is half-migrated; finish it like contacts.
+
+**"AND MORE" — the Reevo AI-native frontier (the bar ABOVE the floor; build AFTER table-stakes certified):**
+self-updating CRM (auto-capture → auto-log → CRM Hygiene agent) · roster of autonomous agents with
+CITED evidence (Meeting Prep, Deal Progression, Disqualification, Coaching) · Ask-Reevo NL builds
+pipelines/views/workflows · evidence-cited predictive deal scoring · in-CRM asset generation. This is
+where JASPER gets surfaced in the CRM (NOT a new copilot). Reevo's OWN gaps (do NOT copy): no mobile
+app, thin integrations, no products/quotes/tickets, lead-scoring still "Soon."
+
+**IMMEDIATE NEXT (before any more feature-building): VERIFY, don't trust.** Take the 🟡 CLAIMED rows and
+prove or demote each on the bespoke pages; decide per capability whether to PORT it from the generic
+`/entities` engine onto bespoke pages (so retiring `/entities` doesn't lose features). Only then is the
+matrix real enough to burn down with confidence.
+
+--- below: the older Jun 27 ledger (keep for the gap list; treat its "LIVE ✅" as 🟡 UNVERIFIED per above) ---
+
 ## CRM GAP LEDGER (benchmark: Pipedrive + HubSpot + Reevo) — from read-only audit Jun 27
-**Headline: the CRM is genuinely DEEP + real** (Admin SDK data layer, no fakery) — much closer to
-parity than video was. Contacts/Companies/Deals/Leads all LIVE + real lead-scoring (1549 LOC),
-forecasting, automation, atomic dup-merge, and in-CRM quotes/invoices/payments.
+**Headline (SUPERSEDED — see HONEST RESET above; this over-claimed):** the CRM has a real Admin-SDK data
+layer (no fakery) and is further along than video was — but "DEEP / much closer to parity" was wrong.
+Contacts/Companies/Deals/Leads exist + lead-scoring/forecasting/automation/dup-merge CODE exists; none
+of it is CERTIFIED against the competitors on the bespoke pages yet.
 Keys: ✅ matched · ⚠️ GAP (work) · 🛡️ our-extra (protect)
 
 **LIVE (✅):** Contacts/People · Companies · Deals (CRUD/value/probability/stages) · Leads + scoring/
