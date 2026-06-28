@@ -25,6 +25,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import PipelineBoard, { type Deal } from './PipelineBoard';
 
 const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
 
@@ -66,18 +67,6 @@ const STAGE_COLORS: Record<string, { bgStyle: React.CSSProperties; borderStyle: 
     icon: '❌'
   },
 };
-
-interface Deal {
-  id: string;
-  name: string;
-  company?: string;
-  companyName?: string;
-  value?: number;
-  stage?: string;
-  probability?: number;
-  source?: string;
-  leadId?: string;
-}
 
 const getCompanyName = (deal: Deal) => {
   return deal.company ?? deal.companyName ?? '-';
@@ -146,8 +135,20 @@ export default function DealsPage() {
     void refresh();
   }, [refresh, authLoading]);
 
-  const getDealsByStage = (stage: string) => deals.filter(d => d.stage === stage);
   const totalPipelineValue = deals.reduce((sum, d) => sum + (d.value ?? 0), 0);
+
+  const moveDealToStage = useCallback(async (dealId: string, stage: string): Promise<boolean> => {
+    try {
+      const response = await authFetch(`/api/deals/${dealId}/stage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage }),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }, [authFetch]);
 
   const columns: ColumnDef<Deal>[] = useMemo(() => [
     {
@@ -317,71 +318,16 @@ export default function DealsPage() {
 
       {view === 'pipeline' ? (
         <>
-          {/* Pipeline View — unchanged from original */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4"
-          >
-            {DEAL_STAGES.map((stage, stageIdx) => {
-              const stageDeals = getDealsByStage(stage);
-              const stageValue = stageDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
-              const colors = STAGE_COLORS[stage];
-
-              return (
-                <motion.div
-                  key={stage}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: stageIdx * 0.05 }}
-                  className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light overflow-hidden"
-                >
-                  {/* Stage Header */}
-                  <div className="p-4 border-b border-border-light" style={colors.bgStyle}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">{colors.icon}</span>
-                      <h3 className="font-semibold text-foreground text-sm capitalize">{stage.replace('_', ' ')}</h3>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{stageDeals.length} deals</span>
-                      <span>&bull;</span>
-                      <span className="text-primary font-medium">${stageValue.toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  {/* Deal Cards */}
-                  <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
-                    {stageDeals.length === 0 ? (
-                      <div className="text-center py-6 text-muted-foreground text-sm">
-                        No deals
-                      </div>
-                    ) : (
-                      stageDeals.map((deal, idx) => (
-                        <motion.div
-                          key={deal.id}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: idx * 0.02 }}
-                          onClick={() => router.push(`/deals/${deal.id}`)}
-                          className="bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary rounded-xl p-3 cursor-pointer transition-all group"
-                        >
-                          <div className="font-medium text-foreground text-sm mb-1 group-hover:text-primary-light transition-colors">
-                            {deal.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground mb-2">{getCompanyName(deal)}</div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-primary">${(deal.value ?? 0).toLocaleString()}</span>
-                            <span className="text-xs text-muted-foreground">{deal.probability ?? 0}%</span>
-                          </div>
-                        </motion.div>
-                      ))
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+          {/* Pipeline View — drag a deal card between stage columns to change its stage */}
+          <PipelineBoard
+            stages={DEAL_STAGES}
+            stageColors={STAGE_COLORS}
+            deals={deals}
+            getCompanyName={getCompanyName}
+            setDeals={setDeals}
+            onMoveDeal={moveDealToStage}
+            onOpenDeal={(dealId) => router.push(`/deals/${dealId}`)}
+          />
 
           {/* Load More */}
           {(hasMore || loading) && (

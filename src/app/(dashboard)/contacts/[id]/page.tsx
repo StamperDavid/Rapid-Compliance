@@ -6,67 +6,10 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { type Contact } from '@/types/contact';
 import { PageTitle, SectionTitle } from '@/components/ui/typography';
-import { Button } from '@/components/ui/button';
-import { LogActivityModal } from '@/components/crm/LogActivityModal';
+import { RecordActivityTimeline } from '@/components/crm/RecordActivityTimeline';
 import ContactNextBestAction from '@/components/crm/ContactNextBestAction';
 import { ContactActivitySummary } from '@/components/crm/ContactActivitySummary';
 import { ContactDraftEmail } from '@/components/crm/ContactDraftEmail';
-
-/** Minimal shape of an activity row as the GET /api/crm/activities endpoint returns it. */
-interface TimelineActivity {
-  id: string;
-  type: string;
-  subject?: string;
-  body?: string;
-  summary?: string;
-  occurredAt?: unknown;
-  createdByName?: string;
-}
-
-/** Friendly label for an activity type (falls back to the prettified raw type). */
-const TYPE_LABELS: Record<string, string> = {
-  note_added: 'Note',
-  call_made: 'Call',
-  call_received: 'Call',
-  meeting_completed: 'Meeting',
-  meeting_scheduled: 'Meeting',
-  meeting_no_show: 'Meeting',
-  email_sent: 'Email',
-  email_received: 'Email',
-  task_created: 'Task',
-  task_completed: 'Task',
-  sms_sent: 'SMS',
-  sms_received: 'SMS',
-  ai_chat: 'AI Chat',
-  form_submitted: 'Form',
-};
-function typeLabel(t: string): string {
-  return TYPE_LABELS[t] ?? t.replace(/_/g, ' ');
-}
-
-/** Defensively coerce the serialized occurredAt (ISO string / number / Firestore Timestamp) to a Date. */
-function toActivityDate(value: unknown): Date | null {
-  if (!value) {
-    return null;
-  }
-  if (typeof value === 'string' || typeof value === 'number') {
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-  if (typeof value === 'object') {
-    const obj = value as Record<string, unknown>;
-    const secs =
-      typeof obj._seconds === 'number'
-        ? obj._seconds
-        : typeof obj.seconds === 'number'
-          ? obj.seconds
-          : null;
-    if (secs !== null) {
-      return new Date(secs * 1000);
-    }
-  }
-  return null;
-}
 
 export default function ContactDetailPage() {
   const params = useParams();
@@ -75,8 +18,6 @@ export default function ContactDetailPage() {
   const contactId = params.id as string;
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState<TimelineActivity[]>([]);
-  const [logOpen, setLogOpen] = useState(false);
 
   const loadContact = useCallback(async () => {
     try {
@@ -92,22 +33,9 @@ export default function ContactDetailPage() {
     }
   }, [authFetch, contactId]);
 
-  const loadActivities = useCallback(async () => {
-    try {
-      const res = await authFetch(`/api/crm/activities?entityType=contact&entityId=${contactId}&pageSize=25`);
-      const json = (await res.json()) as { success?: boolean; data?: TimelineActivity[] };
-      if (json.success && Array.isArray(json.data)) {
-        setActivities(json.data);
-      }
-    } catch (error: unknown) {
-      logger.error('Error loading activities:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-    }
-  }, [authFetch, contactId]);
-
   useEffect(() => {
     void loadContact();
-    void loadActivities();
-  }, [loadContact, loadActivities]);
+  }, [loadContact]);
 
   if (loading || !contact) {return <div className="p-8">Loading...</div>;}
 
@@ -139,42 +67,18 @@ export default function ContactDetailPage() {
               <div><div className="text-sm text-muted-foreground mb-1">LinkedIn</div><div>{contact.linkedIn ? <a href={contact.linkedIn} className="text-primary hover:opacity-80">View Profile</a> : '-'}</div></div>
             </div>
           </div>
-          <div className="bg-card rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <SectionTitle>Activity Timeline</SectionTitle>
-              <Button size="sm" onClick={() => setLogOpen(true)}>Log activity</Button>
-            </div>
-            <div className="mb-4">
-              <ContactActivitySummary contactId={contactId} />
-            </div>
-            <div className="space-y-3">
-              {activities.length === 0 ? (
-                <div className="text-muted-foreground text-sm">No activity yet — log a call, meeting, or note to start the history.</div>
-              ) : (
-                activities.map((a) => {
-                  const when = toActivityDate(a.occurredAt);
-                  return (
-                    <div key={a.id} className="bg-surface-elevated rounded p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{typeLabel(a.type)}</span>
-                        {when && <span className="text-xs text-muted-foreground">{when.toLocaleString()}</span>}
-                      </div>
-                      {a.subject && <div className="mt-1.5 text-sm font-medium text-foreground">{a.subject}</div>}
-                      {(a.body ?? a.summary) && <div className="mt-0.5 text-sm text-muted-foreground whitespace-pre-wrap">{a.body ?? a.summary}</div>}
-                      {a.createdByName && <div className="mt-1 text-xs text-muted-foreground">by {a.createdByName}</div>}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <RecordActivityTimeline
+            entityType="contact"
+            entityId={contactId}
+            entityName={displayName}
+            topSlot={<ContactActivitySummary contactId={contactId} />}
+          />
         </div>
         <div className="space-y-6">
           <ContactNextBestAction contactId={contactId} />
           <div className="bg-card rounded-lg p-6">
             <SectionTitle className="mb-4">Actions</SectionTitle>
             <div className="space-y-2">
-              <Button className="w-full justify-start" onClick={() => setLogOpen(true)}>📝 Log activity</Button>
               <ContactDraftEmail contactId={contactId} contactEmail={contact.email} contactName={displayName} />
               <button
                 onClick={() => {
@@ -201,13 +105,6 @@ export default function ContactDetailPage() {
           </div>
         </div>
       </div>
-
-      <LogActivityModal
-        open={logOpen}
-        onOpenChange={setLogOpen}
-        relatedTo={{ entityType: 'contact', entityId: contactId, entityName: displayName }}
-        onLogged={() => { void loadActivities(); }}
-      />
     </div>
   );
 }

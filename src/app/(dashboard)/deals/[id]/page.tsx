@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger/logger';
-import ActivityTimeline from '@/components/ActivityTimeline';
+import { RecordActivityTimeline } from '@/components/crm/RecordActivityTimeline';
 import type { DealHealthScore } from '@/lib/crm/deal-health-types';
 import type { Deal, FirestoreDate } from '@/types/crm-entities';
 import { useToast } from '@/hooks/useToast';
@@ -265,16 +265,7 @@ export default function DealDetailPage() {
           </div>
 
           {/* Activity Timeline */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Activity Timeline</h2>
-            <ActivityTimeline
-              entityType="deal"
-              entityId={dealId}
-              showInsights={true}
-              showNextAction={true}
-              maxHeight="500px"
-            />
-          </div>
+          <RecordActivityTimeline entityType="deal" entityId={dealId} entityName={displayName} />
 
           {/* Notes */}
           <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
