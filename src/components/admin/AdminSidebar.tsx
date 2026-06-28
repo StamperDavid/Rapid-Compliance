@@ -85,8 +85,11 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Users, iconColor: 'var(--color-info)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'companies', label: 'Companies', href: '/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
+      { id: 'tasks', label: 'Tasks', href: '/tasks', icon: ClipboardList, iconColor: 'var(--color-info)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
+      { id: 'crm-dashboard', label: 'CRM Dashboard', href: '/analytics/crm', icon: PieChart, iconColor: 'var(--color-success)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
       { id: 'products-pricing-payments', label: 'Products, Pricing & Payments', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
+      { id: 'custom-fields', label: 'Custom Fields & Objects', href: '/schemas', icon: LayoutTemplate, iconColor: 'var(--color-secondary)' },
     ],
   },
   // ── Marketing — channel tools + strategic Campaigns (May 19 2026) ────
@@ -219,7 +222,7 @@ export default function AdminSidebar() {
         pathname.startsWith('/coaching') ||
         pathname === '/playbook' ||
         pathname === '/analytics' ||
-        pathname.startsWith('/analytics/') ||
+        (pathname.startsWith('/analytics/') && !pathname.startsWith('/analytics/crm')) ||
         pathname.startsWith('/growth/') ||
         pathname.startsWith('/sequences/analytics') ||
         pathname.startsWith('/compliance-reports') ||
@@ -332,9 +335,13 @@ export default function AdminSidebar() {
     // System hub — system health, impersonate, schemas
     if (href === '/system') {
       return pathname === '/system' ||
-        pathname.startsWith('/system/') ||
-        pathname === '/schemas';
+        pathname.startsWith('/system/');
     }
+
+    // CRM additions (Jun 28): Tasks, CRM Dashboard, and the schema/custom-fields editor.
+    if (href === '/tasks') { return pathname.startsWith('/tasks'); }
+    if (href === '/analytics/crm') { return pathname.startsWith('/analytics/crm'); }
+    if (href === '/schemas') { return pathname === '/schemas'; }
 
     return pathname.startsWith(href);
   };

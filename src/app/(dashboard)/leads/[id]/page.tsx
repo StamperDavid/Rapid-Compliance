@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
-import ActivityTimeline from '@/components/ActivityTimeline';
+import { RecordActivityTimeline } from '@/components/crm/RecordActivityTimeline';
 import type { PredictiveScore } from '@/lib/crm/predictive-scoring';
 import type { DataQualityScore } from '@/lib/crm/data-quality';
 import type { Lead } from '@/lib/crm/lead-service';
@@ -51,9 +51,6 @@ export default function LeadDetailPage() {
 
       const leadData = json.lead;
       setLead(leadData);
-
-      // Load intelligence features
-      void loadIntelligence(leadData);
     } catch (error: unknown) {
       logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
@@ -61,46 +58,31 @@ export default function LeadDetailPage() {
     }
   }, [authFetch, leadId]);
 
-  useEffect(() => {
-    void loadLead();
-    void loadCustomFields('leads', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
-  }, [loadLead, authFetch]);
-
-  const loadIntelligence = async (leadData: ExtendedLead): Promise<void> => {
+  const loadIntelligence = useCallback(async (): Promise<void> => {
     try {
-      // Calculate predictive score - use only Lead fields
-      const { calculatePredictiveLeadScore } = await import('@/lib/crm/predictive-scoring');
-      const leadForScoring: Lead = {
-        id: leadData.id,
-        firstName: leadData.firstName,
-        lastName: leadData.lastName,
-        email: leadData.email,
-        phone: leadData.phone,
-        company: leadData.company,
-        companyName: leadData.companyName,
-        title: leadData.title,
-        source: leadData.source,
-        status: leadData.status,
-        score: leadData.score,
-        ownerId: leadData.ownerId,
-        tags: leadData.tags,
-        customFields: leadData.customFields,
-        enrichmentData: leadData.enrichmentData,
-        createdAt: leadData.createdAt,
-        updatedAt: leadData.updatedAt,
-        name: leadData.name
+      // Predictive score + data quality are computed SERVER-SIDE. They read the
+      // activity history via the Admin SDK, which can't run in the browser
+      // (it was throwing "Admin Firestore DB not initialized" client-side).
+      const res = await authFetch(`/api/leads/${leadId}/intelligence`);
+      const json = (await res.json()) as {
+        success?: boolean;
+        predictiveScore?: PredictiveScore;
+        dataQuality?: DataQualityScore;
       };
-      const score = await calculatePredictiveLeadScore(leadForScoring);
-      setPredictiveScore(score);
-
-      // Calculate data quality
-      const { calculateLeadDataQuality } = await import('@/lib/crm/data-quality');
-      const quality = calculateLeadDataQuality(leadForScoring);
-      setDataQuality(quality);
+      if (json.success) {
+        setPredictiveScore(json.predictiveScore ?? null);
+        setDataQuality(json.dataQuality ?? null);
+      }
     } catch (error: unknown) {
       logger.error('Error loading intelligence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     }
-  };
+  }, [authFetch, leadId]);
+
+  useEffect(() => {
+    void loadLead();
+    void loadIntelligence();
+    void loadCustomFields('leads', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
+  }, [loadLead, loadIntelligence, authFetch]);
 
   if (loading || !lead) {return <div className="p-8">Loading...</div>;}
 
@@ -275,12 +257,10 @@ export default function LeadDetailPage() {
           {/* Activity Timeline */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Activity Timeline</h2>
-            <ActivityTimeline
+            <RecordActivityTimeline
               entityType="lead"
               entityId={leadId}
-              showInsights={true}
-              showNextAction={true}
-              maxHeight="500px"
+              entityName={getDisplayName()}
             />
           </div>
 
