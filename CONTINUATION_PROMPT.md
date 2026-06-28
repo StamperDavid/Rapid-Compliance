@@ -240,9 +240,24 @@ on bespoke pages.
   search + bulk-delete + CSV export); rows → `/contacts/[id]`. `/entities/contacts` now redirects to
   `/contacts`. Nav already pointed to `/contacts`.
 - ✅ **#4 CSV export (contacts)** — free via the shared DataTable on the new list.
-- ▶ **NEXT: Step 2 — AI-forward contact detail** (= gap #7): surface next-best-action + "Draft email"
-  + "Summarize activity" on the record (we own the engines; just not surfaced). Then #1 drag-drop
-  pipeline, #3 custom-field UI, #5 telephony, #6 inbound email.
+- ✅ **#7 record-bound AI on contacts (the PATTERN)** — built by 3 parallel agents + reviewed:
+  `ContactNextBestAction` (real next-best-action engine), `ContactActivitySummary` (real
+  `sendUnifiedChatMessage`/claude-sonnet-4.6), `ContactDraftEmail` (real email-writer + live send),
+  integrated into the contact detail. Real calls verified; tsc/lint clean. **Contacts only — the pattern.**
+
+**SEQUENCING DECISION (owner Jun 28): FULL CRM functional parity FIRST (whole CRM, every object — the
+floor), THEN the AI-forward layer.** And critically — **"AI-forward CRM" = surface JASPER (the existing
+orchestrator) IN the CRM, NOT a new copilot** (no fork). The swarm already has it: `orchestrator` (Jasper,
+`/api/orchestrator/chat`) + `sales/revenue` manager + specialists (qualifier · deal-closer ·
+objection-handler · outreach · merchandiser) + outreach (email/sms/voice) + intelligence/insights-analyst
++ operations/scheduling + content/copywriter (60 specialists total). **Determine the exact specialist/Jasper
+gaps AFTER functional parity** (don't guess now). Do NOT expand the contact AI pattern to other objects
+until the functional floor is met.
+
+▶ **NEXT — FUNCTIONAL parity across ALL objects (no AI expansion):** #1 drag-drop pipeline (deals) ·
+extend activity timeline + Log Activity to deals & companies (reusable modal, pure functionality) ·
+#3 custom-field UI · #6 inbound email depth · #5 telephony · consistent bespoke detail pages for every
+object (contacts done; deals/companies/leads to match).
 
 ## MONETIZATION MODEL — FINALIZED (owner-confirmed Jun 27–28; for the multi-tenant flip)
 **TWO subscription types (mutually exclusive):**

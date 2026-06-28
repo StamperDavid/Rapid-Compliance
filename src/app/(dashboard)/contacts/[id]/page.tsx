@@ -8,6 +8,9 @@ import { type Contact } from '@/types/contact';
 import { PageTitle, SectionTitle } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
 import { LogActivityModal } from '@/components/crm/LogActivityModal';
+import ContactNextBestAction from '@/components/crm/ContactNextBestAction';
+import { ContactActivitySummary } from '@/components/crm/ContactActivitySummary';
+import { ContactDraftEmail } from '@/components/crm/ContactDraftEmail';
 
 /** Minimal shape of an activity row as the GET /api/crm/activities endpoint returns it. */
 interface TimelineActivity {
@@ -141,6 +144,9 @@ export default function ContactDetailPage() {
               <SectionTitle>Activity Timeline</SectionTitle>
               <Button size="sm" onClick={() => setLogOpen(true)}>Log activity</Button>
             </div>
+            <div className="mb-4">
+              <ContactActivitySummary contactId={contactId} />
+            </div>
             <div className="space-y-3">
               {activities.length === 0 ? (
                 <div className="text-muted-foreground text-sm">No activity yet — log a call, meeting, or note to start the history.</div>
@@ -164,10 +170,12 @@ export default function ContactDetailPage() {
           </div>
         </div>
         <div className="space-y-6">
+          <ContactNextBestAction contactId={contactId} />
           <div className="bg-card rounded-lg p-6">
             <SectionTitle className="mb-4">Actions</SectionTitle>
             <div className="space-y-2">
               <Button className="w-full justify-start" onClick={() => setLogOpen(true)}>📝 Log activity</Button>
+              <ContactDraftEmail contactId={contactId} contactEmail={contact.email} contactName={displayName} />
               <button
                 onClick={() => {
                   const subject = `Getting in touch`;
