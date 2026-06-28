@@ -42,8 +42,10 @@ export default function LookupFieldPicker({
 
   const loadSelectedRecord = useCallback(async (recordId: string) => {
     try {
+      // Records live at organizations/{platformId}/{targetEntity} (the canonical store
+      // used by /api/entities/[entityName]/records), NOT under an `entities/.../records` path.
       const { getSubCollection } = await import('@/lib/firebase/collections');
-      const path = `${getSubCollection('entities')}/${targetEntity}/records`;
+      const path = getSubCollection(targetEntity);
       const record = await FirestoreService.get<LookupRecord>(path, recordId);
       if (record) {
         setSelectedRecord(record);
@@ -57,7 +59,7 @@ export default function LookupFieldPicker({
     try {
       setLoading(true);
       const { getSubCollection } = await import('@/lib/firebase/collections');
-      const path = `${getSubCollection('entities')}/${targetEntity}/records`;
+      const path = getSubCollection(targetEntity);
 
       // Get all records (in production, this should use pagination with a reasonable limit)
       const allRecords = await FirestoreService.getAll<LookupRecord>(path, []);

@@ -34,7 +34,11 @@ export type ActivityType =
 
 export type ActivityDirection = 'inbound' | 'outbound' | 'internal';
 
-export type RelatedEntityType = 'lead' | 'contact' | 'company' | 'deal' | 'opportunity';
+// Core CRM objects have first-class literals (for autocomplete + exhaustive handling);
+// custom objects from the generic entities engine pass their entityName through as a plain
+// string. The `(string & {})` member preserves the known literals while accepting any
+// custom-object type so custom records get activity history like core objects.
+export type RelatedEntityType = 'lead' | 'contact' | 'company' | 'deal' | 'opportunity' | (string & {});
 
 export interface Activity {
   id: string;

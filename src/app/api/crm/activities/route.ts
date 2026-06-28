@@ -25,7 +25,8 @@ const activityTypeEnum = z.enum([
 ]);
 
 const relatedEntitySchema = z.object({
-  entityType: z.enum(['lead', 'contact', 'company', 'deal', 'opportunity']),
+  // Core CRM literals plus any custom-object entity name (generic entities engine).
+  entityType: z.string().min(1),
   entityId: z.string().min(1),
   entityName: z.string().optional(),
 });
@@ -62,12 +63,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
 
-    // Parse filters with proper type guards
+    // Parse filters. entityType is a free string so custom-object records (the generic
+    // entities engine) are filtered to their own activity, not shown unfiltered.
     const entityTypeParam = searchParams.get('entityType');
     const entityType: RelatedEntityType | undefined =
-      entityTypeParam && ['lead', 'contact', 'company', 'deal', 'opportunity'].includes(entityTypeParam)
-        ? entityTypeParam as RelatedEntityType
-        : undefined;
+      (entityTypeParam !== null && entityTypeParam !== '') ? entityTypeParam : undefined;
 
     const entityId = searchParams.get('entityId');
 

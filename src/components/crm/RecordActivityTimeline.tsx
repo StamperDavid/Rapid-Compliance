@@ -74,8 +74,8 @@ function toActivityDate(value: unknown): Date | null {
 }
 
 interface RecordActivityTimelineProps {
-  /** The kind of record this timeline belongs to. */
-  entityType: 'deal' | 'company' | 'contact' | 'lead';
+  /** The kind of record this timeline belongs to (core CRM literal or any custom-object entity name). */
+  entityType: 'deal' | 'company' | 'contact' | 'lead' | (string & {});
   /** The record's id. */
   entityId: string;
   /** Optional display name, shown in the Log activity modal header. */
@@ -100,7 +100,7 @@ export function RecordActivityTimeline({
     setError(null);
     try {
       const res = await authFetch(
-        `/api/crm/activities?entityType=${entityType}&entityId=${entityId}&pageSize=25`,
+        `/api/crm/activities?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}&pageSize=25`,
       );
       const json = (await res.json()) as { success?: boolean; data?: TimelineActivity[]; error?: string };
       if (json.success && Array.isArray(json.data)) {

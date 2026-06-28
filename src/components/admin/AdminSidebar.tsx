@@ -9,13 +9,15 @@
  * the sidebar footer. Role-based filtering via unified-rbac types.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useFeatureModules } from '@/hooks/useFeatureModules';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useEntityConfig } from '@/hooks/useEntityConfig';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import {
   type NavigationSection,
   type NavigationItem,
@@ -147,6 +149,28 @@ const NAV_SECTIONS: NavigationSection[] = [
 ];
 
 // ============================================================================
+// CUSTOM OBJECTS — user-created schemas surfaced under their own section
+// ============================================================================
+
+// A user-created object type. Standard CRM schemas are excluded by id.
+interface CustomSchema {
+  id: string;
+  pluralName: string;
+  icon?: string;
+}
+
+interface SchemaListResponse {
+  schemas?: Array<{ id?: unknown; pluralName?: unknown; name?: unknown; icon?: unknown }>;
+}
+
+// Ids of the built-in CRM schemas (contacts, companies, deals, leads, …).
+// Anything NOT in this set is a custom object the user created.
+const STANDARD_SCHEMA_IDS = new Set<string>(Object.keys(STANDARD_SCHEMAS));
+
+// Roles allowed to see the Custom Objects section — mirrors the CRM section.
+const CUSTOM_OBJECTS_ALLOWED_ROLES: ReadonlyArray<string> = ['owner', 'admin', 'manager', 'member'];
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -159,9 +183,51 @@ export default function AdminSidebar() {
   const { user } = useUnifiedAuth();
   const { isModuleEnabled } = useFeatureModules();
   const { isEntityEnabled } = useEntityConfig();
+  const authFetch = useAuthFetch();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [customSchemas, setCustomSchemas] = useState<CustomSchema[]>([]);
+
+  // Whether the current role may see CRM-grade data (custom objects are CRM data).
+  const canSeeCustomObjects = !!user?.role && CUSTOM_OBJECTS_ALLOWED_ROLES.includes(user.role);
+
+  // Load user-created object types from /api/schemas, keeping only the custom
+  // ones (those not in STANDARD_SCHEMA_IDS) that have a usable id + label.
+  useEffect(() => {
+    if (!canSeeCustomObjects) {
+      setCustomSchemas([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch('/api/schemas');
+        if (!res.ok) { return; }
+        const data = (await res.json()) as SchemaListResponse;
+        const next: CustomSchema[] = (data.schemas ?? [])
+          .map((s) => {
+            const id = typeof s.id === 'string' ? s.id : '';
+            const pluralName = typeof s.pluralName === 'string' && s.pluralName
+              ? s.pluralName
+              : (typeof s.name === 'string' ? s.name : '');
+            const icon = typeof s.icon === 'string' ? s.icon : undefined;
+            return { id, pluralName, icon };
+          })
+          .filter((s) => s.id !== '' && s.pluralName !== '' && !STANDARD_SCHEMA_IDS.has(s.id));
+        if (!cancelled) { setCustomSchemas(next); }
+      } catch {
+        if (!cancelled) { setCustomSchemas([]); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [authFetch, canSeeCustomObjects]);
+
+  // Respect the per-entity enable flag (skip disabled objects).
+  const visibleCustomSchemas = useMemo(
+    () => customSchemas.filter((s) => isEntityEnabled(s.id)),
+    [customSchemas, isEntityEnabled]
+  );
 
   // Filter navigation: role-based → feature-based → remove empty sections
   const filteredSections = useMemo(() => {
@@ -342,6 +408,13 @@ export default function AdminSidebar() {
     if (href === '/tasks') { return pathname.startsWith('/tasks'); }
     if (href === '/analytics/crm') { return pathname.startsWith('/analytics/crm'); }
     if (href === '/schemas') { return pathname === '/schemas'; }
+
+    // Custom Objects — a link to /entities/{id} highlights on that record list
+    // and any of its sub-paths (e.g. /entities/{id}/123), but not a sibling
+    // object (/entities/{otherId}).
+    if (href.startsWith('/entities/')) {
+      return pathname === href || pathname.startsWith(`${href}/`);
+    }
 
     return pathname.startsWith(href);
   };
@@ -728,6 +801,140 @@ export default function AdminSidebar() {
               </div>
             );
           })}
+
+          {/* Custom Objects — user-created schemas. Renders NOTHING when empty. */}
+          {canSeeCustomObjects && visibleCustomSchemas.length > 0 && (() => {
+            const hasActiveItem = visibleCustomSchemas.some((s) => isActive(`/entities/${s.id}`));
+            const isSectionCollapsed = collapsedSections['custom-objects'] ?? !hasActiveItem;
+            return (
+              <div key="custom-objects" style={{ marginBottom: '0.25rem' }}>
+                {/* Section Header */}
+                {!isCollapsed ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('custom-objects')}
+                    aria-expanded={!isSectionCollapsed}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      padding: '0.5rem 1.25rem',
+                      marginTop: '0.5rem',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: hasActiveItem ? 'var(--color-primary)' : 'var(--color-text-disabled)',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                      }}
+                    >
+                      <Package className="w-3.5 h-3.5" />
+                      Custom Objects
+                    </span>
+                    {isSectionCollapsed ? (
+                      <ChevronDown className="w-3 h-3" />
+                    ) : (
+                      <ChevronUp className="w-3 h-3" />
+                    )}
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      height: 1,
+                      backgroundColor: 'var(--color-border-light)',
+                      margin: '0.5rem 0.75rem',
+                    }}
+                  />
+                )}
+
+                {/* Section Items */}
+                {!isSectionCollapsed &&
+                  visibleCustomSchemas.map((schema) => {
+                    const href = `/entities/${schema.id}`;
+                    const active = isActive(href);
+                    return (
+                      <Link
+                        key={schema.id}
+                        href={href}
+                        aria-current={active ? 'page' : undefined}
+                        title={isCollapsed ? schema.pluralName : undefined}
+                        onClick={handleMobileClose}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: isCollapsed ? '0.625rem 0' : '0.625rem 1.25rem',
+                          justifyContent: isCollapsed ? 'center' : 'flex-start',
+                          textDecoration: 'none',
+                          backgroundColor: active ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
+                          borderLeft: active ? '3px solid var(--color-primary)' : '3px solid transparent',
+                          color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!active) {
+                            e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
+                            e.currentTarget.style.color = 'var(--color-text-primary)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!active) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = 'var(--color-text-secondary)';
+                          }
+                        }}
+                      >
+                        {schema.icon ? (
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              width: '1rem',
+                              height: '1rem',
+                              flexShrink: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.875rem',
+                              lineHeight: 1,
+                            }}
+                          >
+                            {schema.icon}
+                          </span>
+                        ) : (
+                          <Package
+                            className="w-4 h-4 flex-shrink-0"
+                            style={{ color: active ? 'var(--color-secondary)' : 'var(--color-text-disabled)' }}
+                          />
+                        )}
+                        {!isCollapsed && (
+                          <span
+                            style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: active ? 600 : 400,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {schema.pluralName}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+              </div>
+            );
+          })()}
         </nav>
 
         {/* Footer — Settings & Academy quick access */}

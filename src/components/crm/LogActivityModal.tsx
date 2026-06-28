@@ -25,7 +25,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
 export type LogActivityRelatedTo = {
-  entityType: 'lead' | 'contact' | 'company' | 'deal' | 'opportunity';
+  // Core CRM literals plus any custom-object entity name (generic entities engine).
+  entityType: 'lead' | 'contact' | 'company' | 'deal' | 'opportunity' | (string & {});
   entityId: string;
   entityName?: string;
 };

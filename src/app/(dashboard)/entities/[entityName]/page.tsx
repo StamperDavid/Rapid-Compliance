@@ -60,6 +60,31 @@ interface TeamMembersResponse {
   members?: TeamMember[];
 }
 
+/** Core objects with bespoke detail pages — lookups to these route to those pages. */
+const CORE_OBJECT_ROUTES: Record<string, string> = {
+  contacts: '/contacts',
+  companies: '/companies',
+  deals: '/deals',
+  leads: '/leads',
+};
+
+/** Best-effort display name for any record shape (used to label resolved lookup values). */
+function resolveDisplayName(record: Record<string, unknown>): string {
+  const name = record.name;
+  if (typeof name === 'string' && name.trim() !== '') { return name; }
+  const first = record.firstName ?? record.first_name;
+  const last = record.lastName ?? record.last_name;
+  if (typeof first === 'string' && typeof last === 'string' && (first + last).trim() !== '') {
+    return `${first} ${last}`.trim();
+  }
+  for (const key of ['title', 'companyName', 'company', 'subject', 'email']) {
+    const v = record[key];
+    if (typeof v === 'string' && v.trim() !== '') { return v; }
+  }
+  const id = record.id;
+  return typeof id === 'string' ? id : '';
+}
+
 export default function EntityTablePage() {
   const params = useParams();
   const entityName = params.entityName as string;
@@ -68,12 +93,13 @@ export default function EntityTablePage() {
   const { isEntityEnabled, initialized: entityConfigInitialized } = useEntityConfig();
   const { user } = useAuth();
 
-  // Contacts moved to the bespoke /contacts pages (Vertical #2, Option 1) — the generic
-  // entities engine no longer serves them. Redirect any direct /entities/contacts hit so
-  // there is ONE contacts experience, not two parallel ones.
+  // The CORE CRM objects moved to bespoke pages (Vertical #2, Option 1) — the generic
+  // entities engine no longer serves them. Redirect any direct /entities/{contacts,companies,
+  // deals,leads} hit so there is ONE experience per object, not two parallel ones. Custom
+  // objects (any other entityName) stay on this generic engine.
   useEffect(() => {
-    if (entityName === 'contacts') {
-      router.replace('/contacts');
+    if (CORE_OBJECT_ROUTES[entityName]) {
+      router.replace(CORE_OBJECT_ROUTES[entityName]);
     }
   }, [entityName, router]);
 
@@ -277,12 +303,64 @@ export default function EntityTablePage() {
     return result;
   }, [records, searchTerm, activeFilters, fields]);
 
-  // Key fields to show in table (first 5 non-lookup fields)
+  // Key fields to show in table (first 5 short fields, lookups INCLUDED so relationships are visible)
   const tableFields = useMemo(() => {
     return fields
-      .filter(f => f.type !== 'lookup' && f.type !== 'longText')
+      .filter(f => f.type !== 'longText')
       .slice(0, 5);
   }, [fields]);
+
+  // Resolve the target entity (sub-collection name) for a lookup field.
+  const lookupTarget = useCallback((field: SchemaField): string => {
+    if (field.lookupEntity != null && field.lookupEntity !== '') { return field.lookupEntity; }
+    return field.config?.linkedSchema ?? 'contacts';
+  }, []);
+
+  // Resolved display names for lookup values, keyed by `${targetEntity}:${recordId}`.
+  const [lookupNames, setLookupNames] = useState<Record<string, string>>({});
+
+  // Resolve display names for the lookup values currently shown in the table.
+  useEffect(() => {
+    const lookupFields = tableFields.filter(f => f.type === 'lookup');
+    if (lookupFields.length === 0 || records.length === 0) { return; }
+
+    let isMounted = true;
+    void (async () => {
+      const toResolve = new Map<string, { target: string; value: string }>();
+      for (const record of records) {
+        for (const field of lookupFields) {
+          const value = record[field.key];
+          if (typeof value !== 'string' || value === '') { continue; }
+          const target = lookupTarget(field);
+          const cacheKey = `${target}:${value}`;
+          if (!lookupNames[cacheKey] && !toResolve.has(cacheKey)) {
+            toResolve.set(cacheKey, { target, value });
+          }
+        }
+      }
+      if (toResolve.size === 0) { return; }
+
+      const resolved: Record<string, string> = {};
+      await Promise.all(
+        Array.from(toResolve.entries()).map(async ([cacheKey, { target, value }]) => {
+          try {
+            const res = await authFetch(`/api/entities/${target}/records/${value}`);
+            if (!res.ok) { return; }
+            const json = (await res.json()) as { success?: boolean; record?: Record<string, unknown> };
+            if (json.success && json.record) {
+              resolved[cacheKey] = resolveDisplayName(json.record) || value;
+            }
+          } catch (err: unknown) {
+            logger.error('Error resolving lookup value', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+          }
+        })
+      );
+      if (isMounted && Object.keys(resolved).length > 0) {
+        setLookupNames(prev => ({ ...prev, ...resolved }));
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [tableFields, records, lookupTarget, authFetch, lookupNames]);
 
   const handleAdd = async () => {
     try {
@@ -850,10 +928,33 @@ export default function EntityTablePage() {
               </thead>
               <tbody>
                 {filteredRecords.map((record) => (
-                  <tr key={String(record.id)} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                  <tr
+                    key={String(record.id)}
+                    onClick={() => router.push(`/entities/${entityName}/${String(record.id)}`)}
+                    style={{ borderBottom: '1px solid var(--color-border-light)', cursor: 'pointer' }}
+                  >
                     {tableFields.map(field => (
                       <td key={field.key} style={{ padding: '1rem 1.5rem', color: 'var(--color-text-primary)' }}>
-                        {field.type === 'checkbox' ? (
+                        {field.type === 'lookup' ? (
+                          (() => {
+                            const lookupValue = record[field.key];
+                            if (typeof lookupValue !== 'string' || lookupValue === '') {
+                              return <span style={{ color: 'var(--color-text-disabled)' }}>—</span>;
+                            }
+                            const target = lookupTarget(field);
+                            const resolvedLabel = lookupNames[`${target}:${lookupValue}`] ?? lookupValue;
+                            const corePath = CORE_OBJECT_ROUTES[target];
+                            const href = corePath ? `${corePath}/${lookupValue}` : `/entities/${target}/${lookupValue}`;
+                            return (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); router.push(href); }}
+                                style={{ color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left' }}
+                              >
+                                {resolvedLabel}
+                              </button>
+                            );
+                          })()
+                        ) : field.type === 'checkbox' ? (
                           <span style={{
                             padding: '0.25rem 0.5rem',
                             backgroundColor: record[field.key] ? 'var(--color-success-dark)' : 'var(--color-border-strong)',
@@ -882,13 +983,13 @@ export default function EntityTablePage() {
                     ))}
                     <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                       <button
-                        onClick={() => handleEdit(record as EntityRecord)}
+                        onClick={(e) => { e.stopPropagation(); handleEdit(record as EntityRecord); }}
                         style={{ color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem', fontWeight: '500' }}
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(String(record.id))}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(String(record.id)); }}
                         style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
                       >
                         Delete

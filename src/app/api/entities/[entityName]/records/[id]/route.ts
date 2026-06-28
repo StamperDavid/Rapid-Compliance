@@ -14,6 +14,38 @@ const updateSchema = z.object({
 });
 
 /**
+ * GET /api/entities/[entityName]/records/[id] — fetch a single record (Admin SDK).
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ entityName: string; id: string }> }
+) {
+  try {
+    const { entityName, id } = await params;
+
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    if (!ENTITY_NAME_RE.test(entityName)) {
+      return NextResponse.json({ error: 'Invalid entity name' }, { status: 400 });
+    }
+
+    const record = await AdminFirestoreService.get(getSubCollection(entityName), id);
+    if (!record) {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, record });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch record';
+    logger.error('Failed to fetch entity record', error instanceof Error ? error : new Error(String(error)));
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
  * PATCH /api/entities/[entityName]/records/[id] — update a record.
  */
 export async function PATCH(
