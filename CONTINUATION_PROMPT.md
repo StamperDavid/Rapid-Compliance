@@ -226,25 +226,44 @@ CSV import + duplicate-detect/merge · AI lead-scoring/next-best-action/enrichme
 - ⚠️ **DATA-PATH RISK:** forms→CRM lead-capture (`src/lib/forms/crm-mapping.ts`) uses the CLIENT Firebase SDK with NO `/api` server route — verify leads aren't silently dropped before trusting it.
 - 🛡️ **OUR EXTRAS (protect):** in-CRM quotes/invoices/payments (CPQ-adjacent) · next-best-action engine (796 LOC) · trainable multi-factor lead scoring · atomic dup-merge w/ FK re-parenting · skill/territory/load-balance routing.
 
-## MONETIZATION MODEL (owner counts this as part of the CRM build; for the multi-tenant flip)
-**Two tiers offered to clients:**
-1. **BYOK — $297/mo flat:** client brings own keys (~12 providers), pays providers directly; we charge the platform fee.
-2. **Usage-based (managed):** WE hold master accounts, meter per-tenant usage, sell credits WITH MARGIN (no keys for them).
+## MONETIZATION MODEL — FINALIZED (owner-confirmed Jun 27–28; for the multi-tenant flip)
+**TWO subscription types (mutually exclusive):**
+1. **BYOK ("advanced") — flat $297/mo.** Client gets + fills their OWN API keys (~12 providers) and
+   pays the providers directly. One flat software fee; no credits from us.
+2. **Done-For-You (managed) — lower tiered monthly + included credits.** Client uses OUR keys. Each
+   tier = a lower base price + a set credit allowance (credits scale up by tier). Burn through it →
+   buy OVERAGE credits at a HIGHER rate. The credit markup is our margin. Heavy users naturally
+   graduate to BYOK (we stop floating their provider cost).
 
-**State of build:** the metering SEAM exists (`recordUsage` hooks in `src/lib/ai/providers/*` +
-`src/lib/video/providers/credentials.ts`; per-tenant keys already read from Firestore via
-`apiKeyService`). **NOT built:** usage LEDGER (call→cost), PRICE BOOK (provider cost + our margin),
-CREDITS WALLET (Stripe reload/balance/deduct per usage), the $297 subscription gating, and BYOK
-onboarding for ~12 providers.
-**Cross-cutting:** this touches EVERY AI feature across ALL verticals — it's a platform/billing layer,
-not CRM-specific. Foundational for the multi-tenant launch.
+**PRICING SOURCE — reuse the EXISTING Products & Services catalog** (`products/page.tsx` +
+`products/services`), NOT a new price-book. BUT as a **PLATFORM-LEVEL service catalog WE control**:
+each AI capability (video, image, voiceover, agent task, …) is a product/service with a credit
+price. Clients set THEIR OWN product pricing; they can **NEVER** edit the AI/platform pricing.
+
+**COST TRANSPARENCY — SYSTEM-WIDE (hard requirement, not just the video generator):**
+- Client ALWAYS sees their token/credit **balance**.
+- BEFORE EVERY generation on EVERY AI across the system (video, image, voice, text, agents — all of
+  it) → show the **projected credit/token cost** so they decide informed. No bill shock.
+- AFTER → meter actual → deduct from wallet → log to ledger → **spend dashboard** (track expenses).
+- **ARCHITECTURE:** every AI call site routes through ONE **cost gateway** (estimate → balance check
+  → confirm → meter), so "show projected cost + balance" is consistent everywhere instead of
+  bolted onto each feature one at a time.
+
+**PRICING LEVERS (owner-tunable; SET FROM REAL LEDGER DATA, not guesses):** $/credit value · margin
+multiplier on the catalog (fat on video/voice, thin/near-free on text) · included credits per DFY
+tier (size to typical usage) · overage rate (always > the included effective rate → the upgrade lever).
+
+**BUILD ORDER:** usage ledger (capture real cost per action across ALL AI) → wire the platform
+service catalog as the price source → pre-commit estimate + balance UI at EVERY AI call site (the
+cost gateway) → credits wallet (prepay / reload / overage deduct) → tiered billing + Stripe + BYOK $297.
+
 **RISK to verify FIRST:** some providers' ToS may forbid reselling their API under a master account
-(the usage tier) — per-provider check before committing to it.
-**OPEN DECISIONS (owner):** (a) does $297 BYOK include a usage allowance, or pure flat-fee? (b) usage
-tier = prepaid credits wallet (with margin) or metered post-pay?
-**Noted Jun 27:** `APIKeyService` Firestore-listener flooding ("max retries exceeded" → TTL-cache
-fallback; non-fatal). Likely server-up-too-long OR a listener-teardown leak in `api-key-service.ts` —
-harden as part of the BYOK key work.
+(the DFY tier) — per-provider check before committing.
+**STATE:** metering SEAM exists (`recordUsage` in `src/lib/ai/providers/*` + `video/providers/
+credentials.ts`; per-tenant keys via `apiKeyService`). Ledger / catalog-wiring / estimate-gateway /
+wallet / billing are NOT built.
+**NOTED:** `APIKeyService` Firestore-listener flooding ("max retries" → TTL fallback; non-fatal) —
+likely a listener-teardown leak in `api-key-service.ts`; harden as part of the BYOK key work.
 
 ---
 
