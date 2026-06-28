@@ -3,6 +3,7 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
+import type { CustomFields } from './crm-entities';
 
 /**
  * Contact entity from Firestore
@@ -24,6 +25,7 @@ export interface Contact {
   lastActivity?: Timestamp | { toDate: () => Date };
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  customFields?: CustomFields;
 }
 
 /**

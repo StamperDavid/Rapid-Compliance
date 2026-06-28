@@ -8,6 +8,8 @@ import type { Company } from '@/types/company';
 import { PageTitle, SectionTitle } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
 import { RecordActivityTimeline } from '@/components/crm/RecordActivityTimeline';
+import { CustomFieldsCard, type CustomFieldDef } from '@/lib/forms/custom-field-renderer';
+import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
 
 /** Company GET returns the company merged with rollup counts; we read both defensively. */
 interface CompanyWithRollup extends Company {
@@ -52,6 +54,7 @@ export default function CompanyDetailPage(): React.JSX.Element {
   const [contacts, setContacts] = useState<LinkedContact[] | null>(null);
   const [deals, setDeals] = useState<LinkedDeal[] | null>(null);
   const [relError, setRelError] = useState<string | null>(null);
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([]);
 
   const loadRelationships = useCallback(async () => {
     setRelError(null);
@@ -91,7 +94,8 @@ export default function CompanyDetailPage(): React.JSX.Element {
   useEffect(() => {
     void loadCompany();
     void loadRelationships();
-  }, [loadCompany, loadRelationships]);
+    void loadCustomFields('companies', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
+  }, [loadCompany, loadRelationships, authFetch]);
 
   if (loading) {
     return <div className="p-8">Loading...</div>;
@@ -143,6 +147,8 @@ export default function CompanyDetailPage(): React.JSX.Element {
               </div>
             )}
           </div>
+
+          <CustomFieldsCard fields={customFieldDefs} values={company.customFields} />
 
           {relError && <div className="text-destructive text-sm">{relError}</div>}
 
@@ -205,7 +211,7 @@ export default function CompanyDetailPage(): React.JSX.Element {
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => router.push(`/companies?edit=${companyId}`)}
+                onClick={() => router.push(`/companies/${companyId}/edit`)}
               >
                 Edit Company
               </Button>

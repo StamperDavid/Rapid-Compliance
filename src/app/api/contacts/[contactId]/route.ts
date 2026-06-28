@@ -30,6 +30,7 @@ const updateContactSchema = z.object({
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   ownerId: z.string().optional(),
+  customFields: z.record(z.unknown()).optional(),
 });
 
 /**

@@ -5,6 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+import { CustomFieldInputs, type CustomFieldDef, type CustomFieldRecord } from '@/lib/forms/custom-field-renderer';
+import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
+import type { CustomFieldValue } from '@/types/crm-entities';
 
 interface Lead {
   firstName?: string;
@@ -16,6 +19,7 @@ interface Lead {
   companyName?: string;
   title?: string;
   status?: string;
+  customFields?: CustomFieldRecord;
 }
 
 export default function EditLeadPage() {
@@ -27,6 +31,8 @@ export default function EditLeadPage() {
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([]);
+  const [customValues, setCustomValues] = useState<CustomFieldRecord>({});
 
   const loadLead = useCallback(async () => {
     try {
@@ -34,6 +40,7 @@ export default function EditLeadPage() {
       const json = (await res.json()) as { success?: boolean; lead?: Lead };
       if (json.success && json.lead) {
         setLead(json.lead);
+        setCustomValues({ ...(json.lead.customFields ?? {}) });
       }
     } catch (error: unknown) {
       logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -44,7 +51,12 @@ export default function EditLeadPage() {
 
   useEffect(() => {
     void loadLead();
-  }, [loadLead]);
+    void loadCustomFields('leads', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
+  }, [loadLead, authFetch]);
+
+  const handleCustomFieldChange = (key: string, value: CustomFieldValue): void => {
+    setCustomValues((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +74,7 @@ export default function EditLeadPage() {
           company: lead.company,
           title: lead.title,
           status: lead.status,
+          customFields: customValues,
         }),
       });
       const json = (await res.json()) as { success?: boolean; error?: string };
@@ -99,6 +112,16 @@ export default function EditLeadPage() {
               <div><label className="block text-sm font-medium mb-2">Status</label><select value={(lead.status !== '' && lead.status != null) ? lead.status : 'new'} onChange={(e) => setLead({...lead, status: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg"><option value="new">New</option><option value="contacted">Contacted</option><option value="qualified">Qualified</option><option value="converted">Converted</option></select></div>
             </div>
           </div>
+          {customFieldDefs.length > 0 && (
+            <div className="bg-card rounded-lg p-6 mb-4">
+              <h2 className="text-lg font-semibold mb-4">Custom Fields</h2>
+              <CustomFieldInputs
+                fields={customFieldDefs}
+                values={customValues}
+                onChange={handleCustomFieldChange}
+              />
+            </div>
+          )}
           <div className="flex gap-3">
             <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 px-6 py-3 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)]">{saving ? 'Saving...' : 'Save Changes'}</button>

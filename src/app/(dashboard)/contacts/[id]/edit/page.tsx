@@ -6,6 +6,9 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { showErrorToast } from '@/components/ErrorToast';
 import type { Contact } from '@/types/contact';
+import { CustomFieldInputs, type CustomFieldDef, type CustomFieldRecord } from '@/lib/forms/custom-field-renderer';
+import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
+import type { CustomFieldValue } from '@/types/crm-entities';
 
 export default function EditContactPage() {
   const params = useParams();
@@ -15,6 +18,8 @@ export default function EditContactPage() {
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([]);
+  const [customValues, setCustomValues] = useState<CustomFieldRecord>({});
 
   const loadContact = useCallback(async () => {
     try {
@@ -22,6 +27,7 @@ export default function EditContactPage() {
       const json = (await res.json()) as { success?: boolean; contact?: Contact };
       if (json.success && json.contact) {
         setContact(json.contact);
+        setCustomValues({ ...(json.contact.customFields ?? {}) });
       }
     } catch (error: unknown) {
       logger.error('Error loading contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -32,7 +38,12 @@ export default function EditContactPage() {
 
   useEffect(() => {
     void loadContact();
-  }, [loadContact]);
+    void loadCustomFields('contacts', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
+  }, [loadContact, authFetch]);
+
+  const handleCustomFieldChange = (key: string, value: CustomFieldValue): void => {
+    setCustomValues((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +56,7 @@ export default function EditContactPage() {
       const res = await authFetch(`/api/contacts/${contactId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(contact),
+        body: JSON.stringify({ ...contact, customFields: customValues }),
       });
       const json = (await res.json()) as { success?: boolean; error?: string };
       if (!res.ok || !json.success) {
@@ -81,6 +92,16 @@ export default function EditContactPage() {
               </div>
             </div>
           </div>
+          {customFieldDefs.length > 0 && (
+            <div className="bg-card rounded-lg p-6 mb-4">
+              <h2 className="text-lg font-semibold mb-4">Custom Fields</h2>
+              <CustomFieldInputs
+                fields={customFieldDefs}
+                values={customValues}
+                onChange={handleCustomFieldChange}
+              />
+            </div>
+          )}
           <div className="flex gap-3">
             <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 px-6 py-3 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)]">{saving ? 'Saving...' : 'Save Changes'}</button>

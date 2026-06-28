@@ -6,7 +6,8 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Lead, LeadFilters, EnrichmentData } from '@/types/crm-entities';
@@ -53,23 +54,33 @@ export async function getLeads(
       constraints.push(where('acquisitionMethod', '==', filters.acquisitionMethod));
     }
 
+    // where-only constraints for the accurate total (orderBy is irrelevant to a count).
+    const countConstraints = [...constraints];
+
     // Default ordering
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await FirestoreService.getAllPaginated<Lead>(
-      getSubCollection('leads'),
-      constraints,
-      options?.pageSize ?? 50,
-      options?.lastDoc
-    );
+    // Server-side list: must use the Admin SDK (the client FirestoreService hits
+    // Firestore security rules with no auth context → "Missing or insufficient
+    // permissions" → silently returns [] → empty leads list). Mirrors getContacts.
+    const [result, total] = await Promise.all([
+      AdminFirestoreService.getAllPaginated<Lead>(
+        getSubCollection('leads'),
+        constraints,
+        options?.pageSize ?? 50,
+        options?.lastDoc
+      ),
+      AdminFirestoreService.count(getSubCollection('leads'), countConstraints),
+    ]);
 
     logger.info('Leads retrieved', {
       count: result.data.length,
+      total,
       hasMore: result.hasMore,
       filters: filters ? JSON.stringify(filters) : undefined,
     });
 
-    return result;
+    return { ...result, total };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to get leads', error instanceof Error ? error : undefined, { filters: filters ? JSON.stringify(filters) : undefined });

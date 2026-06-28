@@ -20,6 +20,7 @@ import {
   DollarSign,
   Trash2,
   X,
+  ChevronDown,
 } from 'lucide-react';
 import type { Company, CompanyStatus } from '@/types/company';
 
@@ -42,6 +43,8 @@ export default function CompaniesPage() {
   const { loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
   const [companies, setCompanies] = useState<CompanyWithRollup[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [limit, setLimit] = useState(100);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -61,16 +64,17 @@ export default function CompaniesPage() {
   const fetchCompanies = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await authFetch('/api/crm/companies?pageSize=100');
+      const response = await authFetch(`/api/crm/companies?pageSize=${limit}`);
       if (!response.ok) { throw new Error('Failed to fetch companies'); }
-      const result = await response.json() as { data: CompanyWithRollup[] };
-      setCompanies(result.data);
+      const result = await response.json() as { data: CompanyWithRollup[]; total?: number };
+      setCompanies(Array.isArray(result.data) ? result.data : []);
+      setTotal(typeof result.total === 'number' ? result.total : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load companies');
     } finally {
       setLoading(false);
     }
-  }, [authFetch]);
+  }, [authFetch, limit]);
 
   useEffect(() => {
     if (authLoading) { return; }
@@ -123,6 +127,7 @@ export default function CompaniesPage() {
       setCompanies(prev => prev.filter(c => !deleteIds.includes(c.id)));
       setDeleteDialogOpen(false);
       setDeleteIds([]);
+      void fetchCompanies();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
@@ -245,7 +250,9 @@ export default function CompaniesPage() {
           </div>
           <div>
             <PageTitle>Companies</PageTitle>
-            <SectionDescription>{companies.length} companies in your CRM</SectionDescription>
+            <SectionDescription>
+              {total !== null ? `${companies.length} of ${total} companies in your CRM` : `${companies.length} companies in your CRM`}
+            </SectionDescription>
           </div>
         </div>
 
@@ -293,6 +300,29 @@ export default function CompaniesPage() {
           accentColor="blue"
         />
       </motion.div>
+
+      {/* Load More */}
+      {total !== null && companies.length < total && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setLimit((l) => l + 100)}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-muted-foreground hover:text-foreground rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Load More ({companies.length} of {total})
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Create Modal */}
       {showCreateModal && (

@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
+import { CustomFieldInputs, type CustomFieldDef, type CustomFieldRecord } from '@/lib/forms/custom-field-renderer';
+import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
+import type { CustomFieldValue } from '@/types/crm-entities';
 
 interface Deal {
   id: string;
@@ -15,6 +18,7 @@ interface Deal {
   stage?: string;
   expectedCloseDate?: string;
   notes?: string;
+  customFields?: CustomFieldRecord;
 }
 
 export default function EditDealPage() {
@@ -26,6 +30,8 @@ export default function EditDealPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([]);
+  const [customValues, setCustomValues] = useState<CustomFieldRecord>({});
 
   const loadDeal = useCallback(async () => {
     try {
@@ -33,6 +39,7 @@ export default function EditDealPage() {
       const json = (await res.json()) as { success?: boolean; deal?: Deal };
       if (json.success && json.deal) {
         setDeal(json.deal);
+        setCustomValues({ ...(json.deal.customFields ?? {}) });
       }
     } catch (error: unknown) {
       logger.error('Error loading deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -43,7 +50,12 @@ export default function EditDealPage() {
 
   useEffect(() => {
     void loadDeal();
-  }, [loadDeal]);
+    void loadCustomFields('deals', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
+  }, [loadDeal, authFetch]);
+
+  const handleCustomFieldChange = (key: string, value: CustomFieldValue): void => {
+    setCustomValues((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +72,7 @@ export default function EditDealPage() {
         probability: deal.probability,
         stage: deal.stage,
         notes: deal.notes,
+        customFields: customValues,
       };
       if (deal.expectedCloseDate) { payload.expectedCloseDate = deal.expectedCloseDate; }
       const res = await authFetch(`/api/deals/${dealId}`, {
@@ -107,6 +120,16 @@ export default function EditDealPage() {
               <div><label className="block text-sm font-medium mb-2">Notes</label><textarea value={deal.notes ?? ''} onChange={(e) => setDeal({...deal, notes: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" rows={4} /></div>
             </div>
           </div>
+          {customFieldDefs.length > 0 && (
+            <div className="bg-card rounded-lg p-6 mb-4">
+              <h2 className="text-lg font-semibold mb-4">Custom Fields</h2>
+              <CustomFieldInputs
+                fields={customFieldDefs}
+                values={customValues}
+                onChange={handleCustomFieldChange}
+              />
+            </div>
+          )}
           <div className="flex gap-3">
             <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]">Cancel</button>
             <button type="submit" disabled={saving} className="flex-1 px-6 py-3 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)]">{saving ? 'Saving...' : 'Save Changes'}</button>

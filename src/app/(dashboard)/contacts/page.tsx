@@ -17,7 +17,7 @@ import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
-import { Users, Plus, Eye, Loader2, AlertCircle, Trash2, Mail, Phone } from 'lucide-react';
+import { Users, Plus, Eye, Loader2, AlertCircle, Trash2, Mail, Phone, ChevronDown } from 'lucide-react';
 import { type Contact } from '@/types/contact';
 
 function contactName(c: Contact): string {
@@ -29,6 +29,8 @@ export default function ContactsPage() {
   const { loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [limit, setLimit] = useState(100);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
@@ -38,16 +40,17 @@ export default function ContactsPage() {
   const fetchContacts = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await authFetch('/api/contacts?pageSize=100');
+      const response = await authFetch(`/api/contacts?pageSize=${limit}`);
       if (!response.ok) { throw new Error('Failed to fetch contacts'); }
-      const result = await response.json() as { data: Contact[] };
+      const result = await response.json() as { data: Contact[]; total?: number };
       setContacts(Array.isArray(result.data) ? result.data : []);
+      setTotal(typeof result.total === 'number' ? result.total : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load contacts');
     } finally {
       setLoading(false);
     }
-  }, [authFetch]);
+  }, [authFetch, limit]);
 
   useEffect(() => {
     if (authLoading) { return; }
@@ -68,6 +71,7 @@ export default function ContactsPage() {
       setContacts((prev) => prev.filter((c) => !deleteIds.includes(c.id)));
       setDeleteDialogOpen(false);
       setDeleteIds([]);
+      void fetchContacts();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
@@ -165,7 +169,9 @@ export default function ContactsPage() {
           </div>
           <div>
             <PageTitle>Contacts</PageTitle>
-            <SectionDescription>{contacts.length} contacts in your CRM</SectionDescription>
+            <SectionDescription>
+              {total !== null ? `${contacts.length} of ${total} contacts in your CRM` : `${contacts.length} contacts in your CRM`}
+            </SectionDescription>
           </div>
         </div>
 
@@ -200,6 +206,28 @@ export default function ContactsPage() {
         emptyIcon={<Users className="w-8 h-8 text-muted-foreground" />}
         accentColor="blue"
       />
+
+      {total !== null && contacts.length < total && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setLimit((l) => l + 100)}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-muted-foreground hover:text-foreground rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Load More ({contacts.length} of {total})
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={deleteDialogOpen}

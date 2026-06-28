@@ -8,6 +8,8 @@ import ActivityTimeline from '@/components/ActivityTimeline';
 import type { PredictiveScore } from '@/lib/crm/predictive-scoring';
 import type { DataQualityScore } from '@/lib/crm/data-quality';
 import type { Lead } from '@/lib/crm/lead-service';
+import { CustomFieldsCard, type CustomFieldDef } from '@/lib/forms/custom-field-renderer';
+import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
 
 /**
  * Extended Lead interface with legacy fields for backward compatibility
@@ -36,6 +38,7 @@ export default function LeadDetailPage() {
   const [dataQuality, setDataQuality] = useState<DataQualityScore | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([]);
 
   const loadLead = useCallback(async (): Promise<void> => {
     try {
@@ -60,7 +63,8 @@ export default function LeadDetailPage() {
 
   useEffect(() => {
     void loadLead();
-  }, [loadLead]);
+    void loadCustomFields('leads', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
+  }, [loadLead, authFetch]);
 
   const loadIntelligence = async (leadData: ExtendedLead): Promise<void> => {
     try {
@@ -264,6 +268,9 @@ export default function LeadDetailPage() {
               <div><div className="text-sm text-[var(--color-text-secondary)] mb-1">Title</div><div>{getTitle() || '-'}</div></div>
             </div>
           </div>
+
+          {/* Custom Fields */}
+          <CustomFieldsCard fields={customFieldDefs} values={lead.customFields} />
 
           {/* Activity Timeline */}
           <div>

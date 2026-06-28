@@ -20,6 +20,7 @@ interface PaginatedResult<T> {
   data: T[];
   lastDoc: QueryDocumentSnapshot | null;
   hasMore: boolean;
+  total?: number;
 }
 
 /**
@@ -48,21 +49,28 @@ export async function getCompanies(
       constraints.push(where('ownerId', '==', filters.ownerId));
     }
 
+    // where-only constraints for the accurate total (orderBy is irrelevant to a count).
+    const countConstraints = [...constraints];
+
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await AdminFirestoreService.getAllPaginated<Company>(
-      getSubCollection('companies'),
-      constraints,
-      options?.pageSize ?? 50,
-      options?.lastDoc
-    );
+    const [result, total] = await Promise.all([
+      AdminFirestoreService.getAllPaginated<Company>(
+        getSubCollection('companies'),
+        constraints,
+        options?.pageSize ?? 50,
+        options?.lastDoc
+      ),
+      AdminFirestoreService.count(getSubCollection('companies'), countConstraints),
+    ]);
 
     logger.info('Companies retrieved', {
       count: result.data.length,
+      total,
       filters: filters ? JSON.stringify(filters) : undefined,
     });
 
-    return result;
+    return { ...result, total };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     logger.error('Failed to get companies', error instanceof Error ? error : undefined, {

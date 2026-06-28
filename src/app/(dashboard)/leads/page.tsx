@@ -17,7 +17,7 @@ import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
-import { Target, Plus, Eye, Loader2, AlertCircle, Trash2, Mail, Building2, Gauge } from 'lucide-react';
+import { Target, Plus, Eye, Loader2, AlertCircle, Trash2, Mail, Building2, Gauge, ChevronDown } from 'lucide-react';
 import { type Lead, type LeadStatus } from '@/types/crm-entities';
 
 function leadName(l: Lead): string {
@@ -37,6 +37,8 @@ export default function LeadsPage() {
   const { loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [limit, setLimit] = useState(100);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
@@ -46,16 +48,17 @@ export default function LeadsPage() {
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await authFetch('/api/leads?pageSize=100');
+      const response = await authFetch(`/api/leads?pageSize=${limit}`);
       if (!response.ok) { throw new Error('Failed to fetch leads'); }
-      const result = await response.json() as { data: Lead[] };
+      const result = await response.json() as { data: Lead[]; total?: number };
       setLeads(Array.isArray(result.data) ? result.data : []);
+      setTotal(typeof result.total === 'number' ? result.total : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load leads');
     } finally {
       setLoading(false);
     }
-  }, [authFetch]);
+  }, [authFetch, limit]);
 
   useEffect(() => {
     if (authLoading) { return; }
@@ -79,6 +82,7 @@ export default function LeadsPage() {
       setLeads((prev) => prev.filter((l) => !deleteIds.includes(l.id)));
       setDeleteDialogOpen(false);
       setDeleteIds([]);
+      void fetchLeads();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
@@ -197,7 +201,9 @@ export default function LeadsPage() {
           </div>
           <div>
             <PageTitle>Leads</PageTitle>
-            <SectionDescription>{leads.length} leads in your CRM</SectionDescription>
+            <SectionDescription>
+              {total !== null ? `${leads.length} of ${total} leads in your CRM` : `${leads.length} leads in your CRM`}
+            </SectionDescription>
           </div>
         </div>
 
@@ -233,6 +239,28 @@ export default function LeadsPage() {
         emptyIcon={<Target className="w-8 h-8 text-muted-foreground" />}
         accentColor="blue"
       />
+
+      {total !== null && leads.length < total && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setLimit((l) => l + 100)}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-muted-foreground hover:text-foreground rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Load More ({leads.length} of {total})
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={deleteDialogOpen}

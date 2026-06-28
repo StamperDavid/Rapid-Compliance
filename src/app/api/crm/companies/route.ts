@@ -10,6 +10,7 @@ import { getCompanies, createCompany } from '@/lib/crm/company-service';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import type { CompanyFilters, CompanySize, CompanyStatus } from '@/types/company';
+import type { CustomFields } from '@/types/crm-entities';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,7 @@ const createCompanySchema = z.object({
   facebookUrl: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  customFields: z.record(z.unknown()).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -76,6 +78,7 @@ export async function GET(request: NextRequest) {
       data: result.data,
       hasMore: result.hasMore,
       count: result.data.length,
+      total: result.total,
     });
   } catch (error) {
     logger.error('Companies GET failed', error instanceof Error ? error : new Error(String(error)));
@@ -103,8 +106,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { customFields, ...companyData } = parsed.data;
     const company = await createCompany({
-      ...parsed.data,
+      ...companyData,
+      ...(customFields ? { customFields: customFields as CustomFields } : {}),
       status: parsed.data.status ?? 'prospect',
     });
 

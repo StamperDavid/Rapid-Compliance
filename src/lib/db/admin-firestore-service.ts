@@ -255,6 +255,54 @@ export class AdminFirestoreService {
   }
 
   /**
+   * Count documents in a collection that match the given constraints, using
+   * the Firestore aggregation API (no document reads). Only `where`
+   * constraints are applied — `orderBy` and `limit` are intentionally ignored
+   * so the count reflects the full filtered set, not a single page. Mirrors
+   * the `where` translation used by getAllPaginated so a filtered count
+   * matches a filtered list.
+   */
+  static async count(
+    collectionPath: string,
+    constraints: QueryConstraint[] = []
+  ): Promise<number> {
+    try {
+      let query: FirebaseFirestore.Query = ensureAdminDb().collection(collectionPath);
+
+      for (const constraint of constraints) {
+        const constraintData = constraint as unknown as ConstraintData;
+
+        if (constraintData?.type !== 'where') {
+          // Ignore orderBy / limit for counting.
+          continue;
+        }
+
+        const whereData = constraintData as WhereConstraintData;
+        const fieldPath = whereData._field?.segments?.join('.') ?? whereData.fieldPath;
+        const op = whereData._op ?? whereData.opStr;
+        const value = whereData._value !== undefined ? whereData._value : whereData.value;
+
+        if (!fieldPath || !op) {
+          continue;
+        }
+
+        query = query.where(
+          fieldPath,
+          op as FirebaseFirestore.WhereFilterOp,
+          value
+        );
+      }
+
+      const snapshot = await query.count().get();
+      return snapshot.data().count;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error counting documents in ${collectionPath}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
+    }
+  }
+
+  /**
    * Set/create a document (creates if doesn't exist). Generic over the
    * document shape so callers can write a typed interface without an
    * explicit `Record<string, unknown>` cast — mirrors the client-SDK

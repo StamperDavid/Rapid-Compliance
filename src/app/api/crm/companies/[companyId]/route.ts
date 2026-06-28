@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { getCompany, updateCompany, deleteCompany, getCompanyRollup } from '@/lib/crm/company-service';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
+import type { CustomFields } from '@/types/crm-entities';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,7 @@ const updateCompanySchema = z.object({
   facebookUrl: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  customFields: z.record(z.unknown()).optional(),
 }).strict();
 
 export async function GET(
@@ -95,7 +97,11 @@ export async function PUT(
       );
     }
 
-    const company = await updateCompany(companyId, parsed.data);
+    const { customFields, ...companyUpdates } = parsed.data;
+    const company = await updateCompany(companyId, {
+      ...companyUpdates,
+      ...(customFields ? { customFields: customFields as CustomFields } : {}),
+    });
 
     return NextResponse.json({
       success: true,

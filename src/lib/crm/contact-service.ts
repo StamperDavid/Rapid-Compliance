@@ -57,6 +57,7 @@ export interface PaginatedResult<T> {
   data: T[];
   lastDoc: QueryDocumentSnapshot | null;
   hasMore: boolean;
+  total?: number;
 }
 
 /**
@@ -82,22 +83,29 @@ export async function getContacts(
       constraints.push(where('ownerId', '==', filters.ownerId));
     }
 
+    // where-only constraints for the accurate total (orderBy is irrelevant to a count).
+    const countConstraints = [...constraints];
+
     // Default ordering
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const result = await AdminFirestoreService.getAllPaginated<Contact>(
-      getSubCollection('contacts'),
-      constraints,
-      options?.pageSize ?? 50,
-      options?.lastDoc
-    );
+    const [result, total] = await Promise.all([
+      AdminFirestoreService.getAllPaginated<Contact>(
+        getSubCollection('contacts'),
+        constraints,
+        options?.pageSize ?? 50,
+        options?.lastDoc
+      ),
+      AdminFirestoreService.count(getSubCollection('contacts'), countConstraints),
+    ]);
 
     logger.info('Contacts retrieved', {
       count: result.data.length,
+      total,
       filters: filters ? JSON.stringify(filters) : undefined,
     });
 
-    return result;
+    return { ...result, total };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     logger.error('Failed to get contacts', error instanceof Error ? error : undefined, { filters: filters ? JSON.stringify(filters) : undefined });

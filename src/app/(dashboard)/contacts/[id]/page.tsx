@@ -11,6 +11,8 @@ import ContactNextBestAction from '@/components/crm/ContactNextBestAction';
 import { ContactActivitySummary } from '@/components/crm/ContactActivitySummary';
 import { ContactDraftEmail } from '@/components/crm/ContactDraftEmail';
 import { EntitySearchSelect } from '@/components/crm/EntitySearchSelect';
+import { CustomFieldsCard, type CustomFieldDef } from '@/lib/forms/custom-field-renderer';
+import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
 
 interface LinkedDeal {
   id: string;
@@ -27,6 +29,7 @@ export default function ContactDetailPage() {
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
   const [deals, setDeals] = useState<LinkedDeal[] | null>(null);
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([]);
 
   const loadContact = useCallback(async () => {
     try {
@@ -75,7 +78,8 @@ export default function ContactDetailPage() {
   useEffect(() => {
     void loadContact();
     void loadDeals();
-  }, [loadContact, loadDeals]);
+    void loadCustomFields('contacts', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
+  }, [loadContact, loadDeals, authFetch]);
 
   if (loading || !contact) {return <div className="p-8">Loading...</div>;}
 
@@ -107,6 +111,7 @@ export default function ContactDetailPage() {
               <div><div className="text-sm text-muted-foreground mb-1">LinkedIn</div><div>{contact.linkedIn ? <a href={contact.linkedIn} className="text-primary hover:opacity-80">View Profile</a> : '-'}</div></div>
             </div>
           </div>
+          <CustomFieldsCard fields={customFieldDefs} values={contact.customFields} />
           <RecordActivityTimeline
             entityType="contact"
             entityId={contactId}

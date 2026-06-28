@@ -23,6 +23,7 @@ const updateDealSchema = z.object({
   source: z.string().optional(),
   lostReason: z.string().optional(),
   notes: z.string().optional(),
+  customFields: z.record(z.unknown()).optional(),
 });
 
 /**

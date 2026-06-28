@@ -28,6 +28,7 @@ const createDealSchema = z.object({
   ownerId: z.string().optional(),
   source: z.string().optional(),
   notes: z.string().optional(),
+  customFields: z.record(z.unknown()).optional(),
 });
 
 const deleteBodySchema = z.object({

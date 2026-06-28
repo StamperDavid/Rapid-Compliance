@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getLead, updateLead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
+import type { CustomFields } from '@/types/crm-entities';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ const updateLeadSchema = z.object({
   ownerId: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  customFields: z.record(z.unknown()).optional(),
 });
 
 /**
@@ -75,7 +77,15 @@ export async function PATCH(
       );
     }
 
-    const lead = await updateLead(leadId, bodyResult.data, { useAdminSdk: true });
+    const { customFields, ...leadUpdates } = bodyResult.data;
+    const lead = await updateLead(
+      leadId,
+      {
+        ...leadUpdates,
+        ...(customFields ? { customFields: customFields as CustomFields } : {}),
+      },
+      { useAdminSdk: true }
+    );
 
     return NextResponse.json({ success: true, lead });
   } catch (error: unknown) {

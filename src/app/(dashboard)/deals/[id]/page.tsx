@@ -9,6 +9,8 @@ import type { DealHealthScore } from '@/lib/crm/deal-health-types';
 import type { Deal, FirestoreDate } from '@/types/crm-entities';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { CustomFieldsCard, type CustomFieldDef } from '@/lib/forms/custom-field-renderer';
+import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -48,6 +50,7 @@ export default function DealDetailPage() {
   const [healthScore, setHealthScore] = useState<DealHealthScore | null>(null);
   const [_loadingHealth, setLoadingHealth] = useState(false);
   const [contactLabel, setContactLabel] = useState<string | null>(null);
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([]);
 
   // State for inline modals
   const [showLostModal, setShowLostModal] = useState(false);
@@ -91,7 +94,8 @@ export default function DealDetailPage() {
 
   useEffect(() => {
     void loadDeal();
-  }, [loadDeal]);
+    void loadCustomFields('deals', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
+  }, [loadDeal, authFetch]);
 
   // Resolve the linked contact's display name for the Relationships card.
   useEffect(() => {
@@ -327,6 +331,9 @@ export default function DealDetailPage() {
             <h2 className="text-xl font-semibold mb-4">Notes</h2>
             <div className="bg-[var(--color-bg-elevated)] rounded p-4 text-[var(--color-text-secondary)]">{displayNotes}</div>
           </div>
+
+          {/* Custom Fields */}
+          <CustomFieldsCard fields={customFieldDefs} values={deal.customFields} />
         </div>
 
         {/* Right Sidebar */}
