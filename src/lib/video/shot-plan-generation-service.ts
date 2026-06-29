@@ -53,7 +53,6 @@ import {
   ensureFfmpeg,
   runFfmpeg,
   probeVideo,
-  appendFrozenTail,
   addWatermark,
   createWorkDir,
   cleanupWorkDir,
@@ -95,17 +94,21 @@ const DEFAULT_RESOLUTION: NonNullable<VideoGenerateRequest['resolution']> = '108
 const DEFAULT_ASPECT_RATIO = '16:9';
 
 /**
- * Clip timing. Each rendered shot is ACTION + a short FROZEN tail:
- *   • ACTION  = the engine-rendered motion. We floor it at 5s (the engine also
- *     only accepts 4–15s, so a too-short planner value can't break the render),
- *     and cap at 15s. Longer authored shots are preserved within the cap.
- *   • FREEZE  = the final frame held for a beat AFTER the action. The next clip
- *     is chained to START on this exact frame, so the freeze is an invisible
- *     overlap the editor trims within → seamless stitching. (≈5s + 2s = ~7s clip.)
+ * Clip timing. Each rendered shot is pure ACTION — the engine-rendered motion.
+ * We floor it at 5s (the engine also only accepts 4–15s, so a too-short planner
+ * value can't break the render) and cap at 15s. Longer authored shots are
+ * preserved within the cap.
+ *
+ * NOTE (Jun 29 2026): we no longer append a frozen tail. The freeze was meant to
+ * be an "invisible overlap the editor trims within," but nothing ever trimmed it —
+ * the stitch hard-concatenates and the editor plays it — so every clip carried a
+ * 2s held-frame + 2s silence that read as a stutter at every join. Continuity
+ * across clips does NOT need it: the next clip is chained to start on the prior
+ * clip's extracted last FRAME (`generated.lastFrameUrl`), so motion now flows
+ * straight from one clip into the next instead of pausing on a freeze.
  */
 const ACTION_FLOOR_SECONDS = 5;
 const ACTION_CEIL_SECONDS = 15;
-const FREEZE_TAIL_SECONDS = 2;
 
 /** The action length sent to the engine: authored value floored to 5s, capped at 15s. */
 function actionDurationSeconds(durationSeconds: number | undefined): number {
@@ -959,42 +962,12 @@ export async function generateShot(
       }
     }
 
-    // ── Freeze-frame stitch tail ──────────────────────────────────────────────
-    // Hold the FINAL frame for a short beat on the end of the clip. The next clip
-    // is chained to START on this exact frame (priorChainFrame → finalLastFrameUrl),
-    // so the freeze is an invisible overlap the editor trims within → seamless
-    // stitching. Best-effort: a failure keeps the un-tailed clip, never fails the shot.
-    // `finalLastFrameUrl` is unchanged — the frozen frame IS that frame.
-    try {
-      const finalDlPath = join(workDir, 'final-for-freeze.mp4');
-      await downloadToFile(finalVideoUrl, finalDlPath, `shot ${shotId} final clip`);
-      const probe = await probeVideo(finalDlPath);
-      const frozenPath = join(workDir, 'with-freeze.mp4');
-      await appendFrozenTail(finalDlPath, frozenPath, FREEZE_TAIL_SECONDS, probe.hasAudio);
-      const frozenBuf = await readFile(frozenPath);
-      const frozenStoragePath = `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`;
-      finalVideoUrl = await uploadPermanent(
-        frozenBuf,
-        frozenStoragePath,
-        'video/mp4',
-        `shot ${shotId} clip + freeze tail`,
-      );
-      // Point the library card at the final (frozen-tail) clip.
-      await updateAsset(clipAsset.id, { url: finalVideoUrl, fileSize: frozenBuf.length }).catch(() => {
-        /* best-effort — the shot still carries the right URL */
-      });
-      logger.info('[shot-plan-gen] freeze tail appended', {
-        file: FILE,
-        shotId,
-        freezeSeconds: FREEZE_TAIL_SECONDS,
-      });
-    } catch (err) {
-      logger.error(
-        '[shot-plan-gen] freeze-tail failed (keeping clip without tail)',
-        err instanceof Error ? err : new Error(String(err)),
-        { file: FILE, shotId },
-      );
-    }
+    // ── (Removed Jun 29 2026: frozen-tail stitch beat) ────────────────────────
+    // We used to hold the final frame for 2s on the end of every clip as an
+    // "overlap the editor trims within." Nothing trimmed it, so it played as a
+    // stutter at every join. Continuity is preserved by chaining the next clip to
+    // this clip's extracted last frame (`finalLastFrameUrl`, already set above) —
+    // not by padding the video — so the clip now ends on real motion.
 
     // ── Brand-logo moment: stamp the operator's REAL logo onto the final clip ──
     // The engine rendered a clean backdrop (LOGO_MOMENT_CLEAN_INSTRUCTION), so this
