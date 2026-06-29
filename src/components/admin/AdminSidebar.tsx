@@ -34,7 +34,6 @@ import {
   PhoneCall,
   Activity,
   Globe,
-  Settings,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -53,6 +52,28 @@ import {
   BookOpen,
   Link2,
   Zap,
+  ShoppingBag,
+  Store,
+  Ticket,
+  FlaskConical,
+  Sparkles,
+  Palette,
+  Music,
+  Mail,
+  Clock,
+  Workflow,
+  Route,
+  Inbox,
+  Plug,
+  Calculator,
+  Key,
+  Webhook,
+  Wrench,
+  CreditCard,
+  SlidersHorizontal,
+  FileCheck,
+  ScrollText,
+  UserCircle,
 } from 'lucide-react';
 
 // ============================================================================
@@ -133,6 +154,73 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'ai-workforce', label: 'Workforce', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Zap, iconColor: 'var(--color-warning)', requiredPermission: 'canDeployAIAgents' },
+    ],
+  },
+  // ── Commerce (Jun 29 2026: absorbed from the retired Settings page) ──
+  {
+    id: 'commerce',
+    label: 'Commerce',
+    icon: ShoppingBag,
+    allowedRoles: ['owner', 'admin', 'manager'],
+    items: [
+      { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-primary)', requiredPermission: 'canManageOrganization' },
+      { id: 'coupons', label: 'Promotions & Coupons', href: '/coupons', icon: Ticket, iconColor: 'var(--color-warning)', requiredPermission: 'canManageOrganization' },
+      { id: 'ab-tests', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)', requiredPermission: 'canManageOrganization' },
+    ],
+  },
+  // ── Brand & Templates (Jun 29 2026: absorbed from the retired Settings page) ──
+  {
+    id: 'brand_templates',
+    label: 'Brand & Templates',
+    icon: Sparkles,
+    allowedRoles: ['owner', 'admin', 'manager'],
+    items: [
+      { id: 'brand-identity', label: 'Brand Identity', href: '/settings/brand', icon: Palette, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageTheme' },
+      { id: 'music-library', label: 'Music Library', href: '/settings/music-library', icon: Music, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageOrganization' },
+      { id: 'email-templates', label: 'Email Templates', href: '/settings/email-templates', icon: Mail, iconColor: 'var(--color-primary)', requiredPermission: 'canManageTheme' },
+      { id: 'sms-messages', label: 'SMS Messages', href: '/settings/sms-messages', icon: MessageSquare, iconColor: 'var(--color-info)', requiredPermission: 'canManageTheme' },
+      { id: 'scheduling-messages', label: 'Scheduling Messages', href: '/settings/scheduling-messages', icon: Clock, iconColor: 'var(--color-warning)', requiredPermission: 'canManageOrganization' },
+    ],
+  },
+  // ── Automation (Jun 29 2026: absorbed from the retired Settings page) ──
+  {
+    id: 'automation',
+    label: 'Automation',
+    icon: Workflow,
+    allowedRoles: ['owner', 'admin', 'manager'],
+    items: [
+      { id: 'lead-routing', label: 'Lead Routing', href: '/settings/lead-routing', icon: Route, iconColor: 'var(--color-primary)', requiredPermission: 'canAssignRecords' },
+      { id: 'inbound-automation', label: 'Inbound Automation', href: '/settings/automation', icon: Inbox, iconColor: 'var(--color-success)', requiredPermission: 'canManageOrganization' },
+    ],
+  },
+  // ── Integrations & Developer (Jun 29 2026: absorbed from the retired Settings page) ──
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    icon: Plug,
+    allowedRoles: ['owner', 'admin'],
+    items: [
+      { id: 'connected-apps', label: 'Connected Apps', href: '/settings/integrations', icon: Link2, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageIntegrations' },
+      { id: 'accounting', label: 'Accounting Software', href: '/settings/accounting', icon: Calculator, iconColor: 'var(--color-success)', requiredPermission: 'canManageIntegrations' },
+      { id: 'api-keys', label: 'API Keys', href: '/settings/api-keys', icon: Key, iconColor: 'var(--color-warning)', requiredPermission: 'canManageAPIKeys' },
+      { id: 'webhooks', label: 'Webhooks', href: '/settings/webhooks', icon: Webhook, iconColor: 'var(--color-info)', requiredPermission: 'canManageIntegrations' },
+      { id: 'custom-tools', label: 'Custom Tools', href: '/settings/custom-tools', icon: Wrench, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageOrganization' },
+    ],
+  },
+  // ── Organization (Jun 29 2026: absorbed from the retired Settings page) ──
+  {
+    id: 'organization',
+    label: 'Organization',
+    icon: Building2,
+    allowedRoles: ['owner', 'admin', 'manager'],
+    items: [
+      { id: 'organization-profile', label: 'Organization Profile', href: '/settings/organization', icon: Building2, iconColor: 'var(--color-primary)', requiredPermission: 'canManageOrganization' },
+      { id: 'team-members', label: 'Team Members', href: '/settings/users', icon: Users, iconColor: 'var(--color-info)', requiredPermission: 'canViewAllUsers' },
+      { id: 'security', label: 'Security', href: '/settings/security', icon: Shield, iconColor: 'var(--color-error)', requiredPermission: 'canManageOrganization' },
+      { id: 'subscription', label: 'Subscription & Billing', href: '/settings/subscription', icon: CreditCard, iconColor: 'var(--color-success)', requiredPermission: 'canManageBilling' },
+      { id: 'features-modules', label: 'Features & Modules', href: '/settings/features', icon: SlidersHorizontal, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageOrganization' },
+      { id: 'compliance-reports', label: 'Compliance Reports', href: '/compliance-reports', icon: FileCheck, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageOrganization' },
+      { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: 'var(--color-warning)', requiredPermission: 'canManageOrganization' },
     ],
   },
   // ── System (standalone — owner only) ───────────────────────────────
@@ -291,7 +379,6 @@ export default function AdminSidebar() {
         (pathname.startsWith('/analytics/') && !pathname.startsWith('/analytics/crm')) ||
         pathname.startsWith('/growth/') ||
         pathname.startsWith('/sequences/analytics') ||
-        pathname.startsWith('/compliance-reports') ||
         pathname.startsWith('/battlecards');
     }
 
@@ -301,7 +388,6 @@ export default function AdminSidebar() {
         pathname.startsWith('/products/') ||
         pathname === '/orders' ||
         pathname.startsWith('/orders/') ||
-        pathname === '/coupons' ||
         pathname === '/subscriptions' ||
         pathname === '/deals/payments';
     }
@@ -368,9 +454,10 @@ export default function AdminSidebar() {
     // Proposals hub — list + builder
     if (href === '/proposals') { return pathname.startsWith('/proposals'); }
 
-    // Website hub — all /website/* (SEO absorbed as tab)
+    // Website hub — all /website/* (SEO absorbed as tab), EXCEPT the Audit Log
+    // which is now its own Organization nav item.
     if (href === '/website/editor') {
-      return pathname.startsWith('/website/');
+      return pathname.startsWith('/website/') && !pathname.startsWith('/website/audit-log');
     }
 
     // AI Workforce hub — workforce, mission control, training, models
@@ -389,7 +476,6 @@ export default function AdminSidebar() {
       return pathname === '/analytics' ||
         pathname.startsWith('/analytics/') ||
         pathname.startsWith('/sequences/analytics') ||
-        pathname.startsWith('/compliance-reports') ||
         pathname.startsWith('/battlecards');
     }
 
@@ -947,8 +1033,8 @@ export default function AdminSidebar() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsed ? '0' : '0.25rem', justifyContent: isCollapsed ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
             <Link
-              href="/settings"
-              title="Settings"
+              href="/settings/account"
+              title="My Account"
               onClick={handleMobileClose}
               style={{
                 display: 'flex',
@@ -957,26 +1043,26 @@ export default function AdminSidebar() {
                 padding: '0.5rem 0.5rem',
                 borderRadius: '0.375rem',
                 textDecoration: 'none',
-                color: pathname?.startsWith('/settings') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                backgroundColor: pathname?.startsWith('/settings') ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
+                color: pathname?.startsWith('/settings/account') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                backgroundColor: pathname?.startsWith('/settings/account') ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
                 transition: 'all 0.15s ease',
                 flex: isCollapsed ? 'none' : 1,
               }}
               onMouseEnter={(e) => {
-                if (!pathname?.startsWith('/settings')) {
+                if (!pathname?.startsWith('/settings/account')) {
                   e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
                   e.currentTarget.style.color = 'var(--color-text-primary)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (!pathname?.startsWith('/settings')) {
+                if (!pathname?.startsWith('/settings/account')) {
                   e.currentTarget.style.backgroundColor = 'transparent';
                   e.currentTarget.style.color = 'var(--color-text-secondary)';
                 }
               }}
             >
-              <Settings className="w-4 h-4 flex-shrink-0" />
-              {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Settings</span>}
+              <UserCircle className="w-4 h-4 flex-shrink-0" />
+              {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>My Account</span>}
             </Link>
             <Link
               href="/academy"

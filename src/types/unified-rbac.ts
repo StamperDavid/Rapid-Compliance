@@ -485,6 +485,12 @@ export type NavigationCategory =
   | 'website'
   | 'analytics'
   | 'records'
+  // Config groups absorbed from the retired Settings page (Jun 29 2026)
+  | 'commerce'
+  | 'brand_templates'
+  | 'automation'
+  | 'integrations'
+  | 'organization'
   | 'system';
 
 /**
