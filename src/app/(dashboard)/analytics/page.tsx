@@ -179,7 +179,7 @@ export default function AnalyticsDashboard() {
     {
       title: 'Pipeline Analytics',
       description: 'Analyze pipeline stages, velocity, conversion rates, and forecasts.',
-      href: `/analytics/pipeline`,
+      href: `/analytics/sales`,
       icon: BarChart3,
       gradient: 'from-blue-500 to-cyan-500',
     },

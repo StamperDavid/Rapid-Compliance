@@ -217,21 +217,21 @@ export default function WebsiteAnalyticsPage() {
             title="Traffic over time"
             description="Sessions, unique visitors, and bounce rate. Connect Google Analytics 4, Plausible, or Vercel Analytics."
             ctaLabel="Set up integration"
-            ctaHref="/integrations"
+            ctaHref="/settings/integrations"
           />
           <EmptyStateCard
             icon={TrendingUp}
             title="Top pages by views"
             description="Page-level traffic ranking, time-on-page, and exit rates — populated from your analytics provider."
             ctaLabel="Set up integration"
-            ctaHref="/integrations"
+            ctaHref="/settings/integrations"
           />
           <EmptyStateCard
             icon={MapPin}
             title="Traffic sources"
             description="Referrers, organic search keywords, and campaign attribution."
             ctaLabel="Set up integration"
-            ctaHref="/integrations"
+            ctaHref="/settings/integrations"
           />
           <EmptyStateCard
             icon={ClipboardList}

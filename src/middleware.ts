@@ -50,7 +50,7 @@ export function middleware(request: NextRequest) {
 
   const adminRouteMap: Record<string, string> = {
     '/admin/workforce': '/workforce',
-    '/admin/ai-agents': '/ai-agents',
+    '/admin/ai-agents': '/workforce',
     '/admin/compliance-reports': '/compliance-reports',
     '/admin/living-ledger': '/living-ledger',
   };

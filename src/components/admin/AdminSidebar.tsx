@@ -397,7 +397,6 @@ export default function AdminSidebar() {
       return pathname === '/leads' ||
         pathname.startsWith('/leads/') ||
         pathname.startsWith('/lead-scoring') ||
-        pathname.startsWith('/scraper') ||
         pathname.startsWith('/entities/leads');
     }
 
@@ -467,8 +466,7 @@ export default function AdminSidebar() {
         pathname.startsWith('/settings/ai-agents/') ||
         pathname.startsWith('/voice/training') ||
         pathname.startsWith('/seo/training') ||
-        pathname.startsWith('/ai/') ||
-        pathname === '/ai-agents';
+        pathname.startsWith('/ai/');
     }
 
     // Analytics overview — all analytics sub-pages

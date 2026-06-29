@@ -4655,14 +4655,14 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
               action,
               itemCount: filtered.length,
               items: filtered,
-              libraryUrl: '/content/video/library',
+              libraryUrl: '/content/library/media',
               message: `Found ${filtered.length} media item(s)${mediaType ? ` of type "${mediaType}"` : ''}${category ? ` in category "${category}"` : ''}.`,
             });
           } else {
             content = JSON.stringify({
               status: 'success',
               message: 'To add media, direct users to the Media Library upload page or the Video Editor upload panel.',
-              libraryUrl: '/content/video/library',
+              libraryUrl: '/content/library/media',
               editorUrl: '/content/video/editor',
             });
           }

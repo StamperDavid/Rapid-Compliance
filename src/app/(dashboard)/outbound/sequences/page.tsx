@@ -135,7 +135,7 @@ export default function EmailSequencesPage() {
       <div>
         {/* Header */}
         <div className="mb-8">
-          <Link href="/outbound" className="text-primary text-sm font-medium no-underline hover:underline">
+          <Link href="/email-writer" className="text-primary text-sm font-medium no-underline hover:underline">
             ← Back to Outbound
           </Link>
           <div className="flex items-center justify-between mt-4">

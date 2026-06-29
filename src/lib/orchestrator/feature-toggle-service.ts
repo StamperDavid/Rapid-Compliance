@@ -154,7 +154,7 @@ export function buildNavigationStructure(): NavSection[] {
       items: [
         { id: 'analytics_overview', href: '/analytics', icon: '📈', label: 'Overview', featureId: 'analytics_overview' },
         { id: 'revenue', href: '/analytics/revenue', icon: '💵', label: 'Revenue', featureId: 'revenue_analytics' },
-        { id: 'pipeline', href: '/analytics/pipeline', icon: '🔄', label: 'Pipeline', featureId: 'pipeline_analytics' },
+        { id: 'pipeline', href: '/analytics/sales', icon: '🔄', label: 'Pipeline', featureId: 'pipeline_analytics' },
         { id: 'sequence_analytics', href: '/sequences/analytics', icon: '📊', label: 'Sequences', featureId: 'sequence_analytics' },
       ],
     },
@@ -174,7 +174,7 @@ export function buildNavigationStructure(): NavSection[] {
       title: 'Settings',
       items: [
         { id: 'settings', href: '/settings', icon: '⚙️', label: 'Settings', featureId: 'settings' },
-        { id: 'integrations', href: '/integrations', icon: '🔌', label: 'Integrations', featureId: 'integrations' },
+        { id: 'integrations', href: '/settings/integrations', icon: '🔌', label: 'Integrations', featureId: 'integrations' },
         { id: 'api_keys', href: '/settings/api-keys', icon: '🔑', label: 'API Keys', featureId: 'api_keys' },
       ],
     },

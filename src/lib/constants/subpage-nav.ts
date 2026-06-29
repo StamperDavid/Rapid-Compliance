@@ -93,7 +93,7 @@ export const AI_DATA_TABS: SubpageNavItem[] = [
 export const LEAD_INTEL_TABS: SubpageNavItem[] = [
   { label: 'Lead Research', href: '/leads/research' },
   { label: 'Lead Scoring', href: '/lead-scoring' },
-  { label: 'Marketing Scraper', href: '/scraper' },
+  { label: 'Marketing Scraper', href: '/leads/research' },
 ];
 
 // ── Email Studio (May 19 2026: dropped 4 tabs that did not belong) ───────────
@@ -192,7 +192,7 @@ export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
   { label: 'Editor', href: '/content/video/editor' },
   // Media, Characters and Locations are all libraries → consolidated under one
   // "Library" tab with internal sections (see LIBRARY_SECTIONS + /content/library).
-  { label: 'Library', href: '/content/library' },
+  { label: 'Library', href: '/content/library/media' },
   { label: 'Audio Lab', href: '/content/voice-lab' },
 ];
 
