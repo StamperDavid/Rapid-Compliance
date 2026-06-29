@@ -2,6 +2,40 @@
 
 ---
 
+# 🔴 TOMORROW — Jun 30 2026 — START HERE (two open items)
+
+### 1. Diagnose the live SMS send failure (outreach "hands" program)
+The "give every specialist real hands" program advanced hard this session. **DONE + committed:**
+the whole **sales team** (5 executors) and the whole **outreach department** — email / SMS / voice
+specialists are now operator-gated **senders** (not advisors). Same proven template: LLM (GM verbatim)
+writes only the note, deterministic code does the action, fail-closed `viaApprovedMissionStep` gate
+(literal `true` only in the mission step-runner). Chain: Jasper `delegate_to_outreach` → Outreach
+manager → specialist.
+
+**Live tests fired to +12088718552 / jamesstamper72@gmail.com:**
+- ✅ **Email — DELIVERED** end-to-end to jamesstamper72@gmail.com.
+- ❌ **SMS — FAILED to send (UNDIAGNOSED).** The gate passed, TCPA consent recorded, the LLM wrote the
+  note — but `sendSMS()` returned `success:false` with **no** messageId. Root cause not yet captured.
+  **Most likely** the Twilio **trial account can only text VERIFIED numbers** (error 21608), or a
+  from-number / messaging-service config issue. **First thing tomorrow:** re-run with FULL unfiltered
+  output to read the real `result.error`, then tell the operator the reason in plain English.
+  `cd D:\rapid-dev; $env:NODE_OPTIONS='--conditions=react-server'; $env:OUTREACH_LIVE_SEND='1'; $env:OUTREACH_TEST_PHONE='+12088718552'; npx tsx scripts/verify-outreach-sms-send.ts`
+  🚫 **Do NOT change any Twilio A2P / consent / opt-out wording or config** — approval status is at risk.
+  Only diagnose + surface what's needed (e.g. verify the number in Twilio, or confirm from-number).
+- ⏸️ **Voice — correctly BLOCKED** by the TCPA call-time window (was ~3am recipient; calls allowed
+  8am–9pm). NOT a bug. **Retest the live call during daytime** (8am–9pm Mountain).
+
+After SMS is sorted: continue the program to the remaining departments (marketing/social posting,
+content, commerce, intelligence), then flip Jasper to delegate-only.
+
+### 2. Video cinematic-quality fixes — see the diagnosis added to the VIDEO VERTICAL gap ledger below
+A full pipeline review found the planning is strong but **assembly + sound are broken** (frozen-tail
+stutter, no music, no cross-clip grading). Tier-1 fixes are days of work, mostly reconnecting code that
+already exists. Full ranked diagnosis + recommendations are in the **🔴 CINEMATIC-QUALITY DIAGNOSIS
+(Jun 29)** block under the Video Vertical gap ledger.
+
+---
+
 # 🟢 GOVERNING PLAN (Jun 16 2026) — PARITY CERTIFICATION IS THE SPINE
 
 **This section governs everything below it.** The active plan is no longer "ship features" —
@@ -419,6 +453,58 @@ Keys: ✅ matched · ⚠️ GAP (open) · ❓ needs-verify · 🛡️ our-extra 
 **Other verticals' benchmarks (owner-stated Jun 26 — logged for when Video is certified):** CRM = Reevo /
 Pipedrive · Social = Sora + SocialBee / Postrillo / Buffer / ContentStudio / Hootsuite(OwlyWriter) ·
 Website builder = AI-powered Elementor Pro.
+
+## 🔴 CINEMATIC-QUALITY DIAGNOSIS (Jun 29) — why our 30s–3min videos aren't cinematic
+Full pipeline review (planning → prompting → generation → chaining → assembly → sound). **Verdict:
+the "brain" is good, the "plumbing" is broken.** The expensive parts (shot planner, cinematic controls)
+are genuinely strong — DO NOT touch them. The damage happens AFTER the plan, during assembly. Good news:
+plumbing is far cheaper to fix than intelligence, and the 3 worst fixes are mostly **reconnecting code
+we already wrote.**
+
+**Working — leave alone:** the shot planner is cinematographer-grade (acts as director/DP/production
+designer, enforces real film rules, names real DPs). The cinematic controls + ~400 presets are REALLY
+wired into the prompt (project-wide + per-shot) — verified, not decorative.
+
+**Why output is sub-par (ranked by damage):**
+1. 🔴 **Frozen-tail stutter — wrecks every video.** Every clip gets a 2s frozen frame + 2s silence
+   appended (`appendFrozenTail` in `ffmpeg-utils.ts`); the editor was supposed to trim it but never does
+   (`stitchShotPlan` never trims). A 30-clip / 3-min video → ~1 full minute of picture-freeze + dead
+   audio at every join. Single biggest offender. Near one-fix, huge payoff.
+2. 🔴 **No music / sound design at all.** Videos ship as dialogue over silence; Seedance audio is
+   hard-coded off per shot. The cruel part: a full cinematic music system (`StitcherService` — bg music,
+   beat-aware ducking, color grading) is BUILT but disconnected and never runs; the music-gen service +
+   library are also unwired. The "make it sound like a film" code exists, unplugged.
+3. 🔴 **Every clip a different look.** Clips are generated independently → each its own brightness/color/
+   exposure; the stitch only resizes + sets fps (no grading/normalization). Shot 1 warm, shot 2 cool,
+   shot 3 dark; dialogue volume jumps too. Never reads as one continuous piece.
+4. 🟠 **Quality drift over long videos.** Each clip is generated from the last frame of the previous →
+   characters/wardrobe/lighting slowly wander over 12–30 clips; a failed clip jumps back several shots
+   for a good frame → visible jump-cut.
+5. 🟠 **No pacing/rhythm.** The planner is never told the target length, and its shot durations are
+   force-clamped to 4–15s → everything ~same length; no montage-quick vs held-emotional rhythm.
+6. 🟠 **Fake 4K.** A talking clip is re-encoded 5–6× (generate → lip-sync → frozen tail → stitch →
+   upscale) THEN upscaled to "4K" — enlarging already-degraded footage. Labeled 4K, actually upscaled mush.
+7. 🟡 **Camera never moves on command.** Seedance accepts camera-motion controls, but we only describe
+   movement in prose — never send the actual motion control. "Slow push-in" is a hope, not a command.
+8. 🟡 **Smaller wiring bugs:** the prompt-rewrite step can silently drop film-stock/lens nuance (no check
+   it kept them); computed negative-prompt + motion settings are thrown away; two final-assembly systems
+   exist and disagree; operator-added editor music is silently dropped on export; the fallback first-frame
+   uses Flux dev instead of the pro model.
+
+**Recommended order (start Tier 1 — biggest visible wins for least work, on rapid-dev, one change at a time):**
+- **Tier 1 (days):** ① trim/stop the frozen tail · ② turn sound on (reconnect the existing music stitcher
+  + ducking + a music bed in the final render) · ③ cross-clip color + volume normalization pass · ④ stop
+  the fake-4K upscale on degraded footage (only upscale a clean master).
+- **Tier 2 (1–3 wks):** ⑤ fewer/higher-quality re-encode passes · ⑥ send real camera-motion controls to
+  Seedance · ⑦ give the planner a target duration + let pacing vary · ⑧ verify the prompt-rewrite keeps
+  the cinematic terms (or skip it).
+- **Tier 3 (ongoing):** ⑨ stronger first-frame image model · ⑩ add a 2nd video engine (Kling/Veo/Runway)
+  via the existing provider layer (only Seedance is implemented today).
+
+**One-sentence answer:** good footage + a good plan, then assembled with the picture freezing every few
+seconds, every clip a different color, and no music — and the fixes for the three worst offenders are
+mostly reconnecting code that already exists. (Note: this overlaps Pieces 2/5/6 above — frozen-tail +
+grading + sound are the real content behind those ⚠️ entries.)
 
 ## 🔵 NEXT FOCUSED BUILD (owner chose "Option 1") — TOP-DOWN-MAP-DRIVEN LOCATION CONSISTENCY
 **Goal:** operator uploads/attaches a TOP-DOWN MAP to a saved location; the system *reads/
