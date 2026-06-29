@@ -28,11 +28,13 @@ manager → specialist.
 After SMS is sorted: continue the program to the remaining departments (marketing/social posting,
 content, commerce, intelligence), then flip Jasper to delegate-only.
 
-### 2. Video cinematic-quality fixes — see the diagnosis added to the VIDEO VERTICAL gap ledger below
-A full pipeline review found the planning is strong but **assembly + sound are broken** (frozen-tail
-stutter, no music, no cross-clip grading). Tier-1 fixes are days of work, mostly reconnecting code that
-already exists. Full ranked diagnosis + recommendations are in the **🔴 CINEMATIC-QUALITY DIAGNOSIS
-(Jun 29)** block under the Video Vertical gap ledger.
+### 2. Video cinematic-quality fixes — Tier-1 ①+② DONE (Jun 29); ③+④ remain
+A full pipeline review found the planning is strong but **assembly + sound were broken** (frozen-tail
+stutter, no music, no cross-clip grading). **DONE Jun 29:** ① frozen-tail stutter removed; ② sound turned
+on (mood-matched MusicGen bed ducked under dialogue, looped to length) — commits `fcefa504` + `0e66cebb`.
+**Still open Tier-1:** ③ cross-clip color/volume normalization · ④ stop the fake-4K upscale on degraded
+footage. Full ranked diagnosis is in the **🔴 CINEMATIC-QUALITY DIAGNOSIS (Jun 29)** block under the
+Video Vertical gap ledger.
 
 ---
 
@@ -495,9 +497,10 @@ wired into the prompt (project-wide + per-shot) — verified, not decorative.
    uses Flux dev instead of the pro model.
 
 **Recommended order (start Tier 1 — biggest visible wins for least work, on rapid-dev, one change at a time):**
-- **Tier 1 (days):** ① trim/stop the frozen tail · ② turn sound on (reconnect the existing music stitcher
-  + ducking + a music bed in the final render) · ③ cross-clip color + volume normalization pass · ④ stop
-  the fake-4K upscale on degraded footage (only upscale a clean master).
+- **Tier 1 (days):** ✅ ① trim/stop the frozen tail (DONE Jun 29, `fcefa504`) · ✅ ② turn sound on —
+  mood-matched MusicGen bed ducked under dialogue via `mixAudioWithDucking`, looped with `-stream_loop -1`
+  (DONE Jun 29, `0e66cebb`) · ⬜ ③ cross-clip color + volume normalization pass · ⬜ ④ stop the fake-4K
+  upscale on degraded footage (only upscale a clean master).
 - **Tier 2 (1–3 wks):** ⑤ fewer/higher-quality re-encode passes · ⑥ send real camera-motion controls to
   Seedance · ⑦ give the planner a target duration + let pacing vary · ⑧ verify the prompt-rewrite keeps
   the cinematic terms (or skip it).
