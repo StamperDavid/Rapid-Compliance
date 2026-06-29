@@ -74,6 +74,10 @@ import {
   FileCheck,
   ScrollText,
   UserCircle,
+  CalendarDays,
+  Telescope,
+  Wallet,
+  BrainCircuit,
 } from 'lucide-react';
 
 // ============================================================================
@@ -105,10 +109,12 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
       { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
+      { id: 'discovery', label: 'Discovery', href: '/intelligence/discovery', icon: Telescope, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewLeads' },
       { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Users, iconColor: 'var(--color-info)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'companies', label: 'Companies', href: '/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'tasks', label: 'Tasks', href: '/tasks', icon: ClipboardList, iconColor: 'var(--color-info)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
+      { id: 'meetings', label: 'Meetings', href: '/meetings', icon: CalendarDays, iconColor: 'var(--color-success)', requiredPermission: 'canViewLeads' },
       { id: 'crm-dashboard', label: 'CRM Dashboard', href: '/analytics/crm', icon: PieChart, iconColor: 'var(--color-success)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
       { id: 'products-pricing-payments', label: 'Products, Pricing & Payments', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
@@ -124,6 +130,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'campaigns', label: 'Campaigns', href: '/campaigns', icon: Megaphone, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEmailCampaigns' },
+      { id: 'marketing-budget', label: 'Marketing Budget', href: '/marketing/budget', icon: Wallet, iconColor: 'var(--color-success)' },
       { id: 'social-hub', label: 'Social Hub', href: '/social', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
       { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
@@ -153,6 +160,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'ai-workforce', label: 'Workforce', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
+      { id: 'agent-setup', label: 'Agent Setup', href: '/settings/ai-agents', icon: BrainCircuit, iconColor: 'var(--color-secondary)', requiredPermission: 'canDeployAIAgents' },
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Zap, iconColor: 'var(--color-warning)', requiredPermission: 'canDeployAIAgents' },
     ],
   },
@@ -463,7 +471,6 @@ export default function AdminSidebar() {
     if (href === '/workforce') {
       return pathname.startsWith('/workforce') ||
         pathname.startsWith('/mission-control') ||
-        pathname.startsWith('/settings/ai-agents/') ||
         pathname.startsWith('/voice/training') ||
         pathname.startsWith('/seo/training') ||
         pathname.startsWith('/ai/');
