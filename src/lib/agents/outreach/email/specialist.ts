@@ -47,6 +47,7 @@
  */
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
@@ -55,6 +56,7 @@ import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golde
 import { getActiveEmailPurposeTypes } from '@/lib/services/email-purpose-types-service';
 import type { EmailPurposeType } from '@/types/email-purpose-types';
 import type { ModelName } from '@/types/ai-models';
+import { createActivity } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -64,7 +66,7 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'outreach/email/specialist.ts';
 const SPECIALIST_ID = 'EMAIL_SPECIALIST';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['compose_email', 'compose_outreach_sequence'] as const;
+const SUPPORTED_ACTIONS = ['compose_email', 'compose_outreach_sequence', 'send_email'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
 /**
@@ -304,6 +306,82 @@ const ComposeOutreachSequenceResultSchema = z.object({
 });
 
 export type ComposeOutreachSequenceResult = z.infer<typeof ComposeOutreachSequenceResultSchema>;
+
+// ============================================================================
+// INPUT CONTRACT — send_email (EXECUTOR action)
+// ============================================================================
+//
+// send_email is the ONLY action on this specialist that produces a real-world
+// side effect: it actually delivers an email through email-service and logs an
+// 'email_sent' activity on the lead's CRM timeline. It is fail-closed behind an
+// operator-approval gate (viaApprovedMissionStep), exactly like the Deal
+// Closer's execute_close.
+//
+// The recipient address, subject, and body are DETERMINISTIC passthroughs —
+// they were composed and operator-reviewed upstream (e.g. via compose_email +
+// Mission Control approval). The LLM does NOT author or alter the email itself
+// here. The only LLM work in this action is authoring the human-readable
+// timeline note that records the send.
+// ============================================================================
+
+const SendEmailPayloadSchema = z.object({
+  action: z.literal('send_email'),
+  leadId: z.string().min(1).max(300),
+  toEmail: z.string().email(),
+  leadName: z.string().min(1).max(300).optional(),
+  subject: z.string().min(1).max(998),
+  bodyPlainText: z.string().min(1).max(100000),
+  bodyHtml: z.string().min(1).max(500000).optional(),
+  campaignName: z.string().min(1).max(200).optional(),
+  /**
+   * APPROVAL GATE. send_email performs an irreversible external side effect
+   * (it sends a real email to a real recipient + logs an activity). It must
+   * NEVER fire autonomously from a direct Jasper chat call. This flag is set
+   * true ONLY when the mission StepRunner dispatched this as an
+   * operator-approved mission step (context.viaApprovedMissionStep, threaded
+   * down through Jasper's tool layer → Outreach Manager). Absent/false → the
+   * specialist FAILS CLOSED, does not send, and returns guidance routing
+   * Jasper through Mission Control approval. Defaults to false so any caller
+   * that omits it gets the safe (no-send) behavior.
+   */
+  viaApprovedMissionStep: z.boolean().optional().default(false),
+});
+
+export type SendEmailRequest = z.infer<typeof SendEmailPayloadSchema>;
+
+/**
+ * LLM JSON contract for send_email. The model AUTHORS only the timeline note —
+ * it does NOT emit, rewrite, or even echo the recipient address, subject, or
+ * body (the code owns delivery). Output tokens for this action are small.
+ */
+const SendEmailActivityNoteSchema = z.object({
+  rationale: z.string().min(10).max(2000),
+  activity: z.object({
+    subject: z.string().min(3).max(200),
+    body: z.string().min(10).max(3000),
+    outcome: z.enum(['positive', 'neutral', 'negative']),
+  }),
+});
+
+export type SendEmailActivityNote = z.infer<typeof SendEmailActivityNoteSchema>;
+
+/**
+ * Result of a send_email run. `emailSent` is true once email-service reported a
+ * successful delivery. `activityId` is null when the email sent but the
+ * activity write failed afterward (partial success — we NEVER discard a
+ * completed send).
+ */
+export interface SendEmailResult {
+  rationale: string;
+  executed: {
+    leadId: string;
+    toEmail: string;
+    emailId: string | undefined;
+    activityId: string | null;
+    provider: string | undefined;
+    emailSent: true;
+  };
+}
 
 // ============================================================================
 // LLM INVOCATION CORE
@@ -675,6 +753,67 @@ async function executeComposeEmail(
 }
 
 // ============================================================================
+// ACTION: send_email — EXECUTOR (real delivery + LLM-authored timeline note)
+// ============================================================================
+
+function buildSendEmailNotePrompt(req: SendEmailRequest): string {
+  return [
+    'ACTION: send_email',
+    '',
+    'An operator-approved outbound email has just been (or is about to be) sent to a lead.',
+    'Your ONLY job is to author the timeline note + a one-line rationale that records this send',
+    'on the lead\'s CRM activity timeline. You do NOT write, rewrite, or echo the email itself —',
+    'the recipient address, subject, and body are already composed, operator-reviewed, and owned',
+    'by the delivery code. Do NOT reproduce the recipient email address anywhere in your output.',
+    '',
+    `Campaign: ${req.campaignName ?? '(none specified)'}`,
+    req.leadName ? `Lead: ${req.leadName}` : '',
+    `Email subject line that was sent: ${req.subject}`,
+    '',
+    'A short excerpt of the email body (context only — do NOT copy it verbatim into your note):',
+    req.bodyPlainText.slice(0, 600),
+    '',
+    '---',
+    '',
+    'Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "rationale": "<1-3 sentences, plain English, why logging this send matters / what this outreach is doing for the lead>",',
+    '  "activity": {',
+    '    "subject": "<short timeline title for this send, e.g. \\"Outreach email sent — intro\\">",',
+    '    "body": "<2-4 sentence note for the lead timeline summarizing that this email went out and what it asked for, plain text>",',
+    '    "outcome": "<positive | neutral | negative — outbound sends are normally neutral>"',
+    '  }',
+    '}',
+    '',
+    'Hard rules:',
+    '- NEVER emit the recipient email address. NEVER rewrite or restate the subject or body verbatim — the code owns the email.',
+    '- Output ONLY the JSON note. Plain text in the note. No markdown, no placeholders, no prose outside the JSON.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+async function authorSendEmailNote(req: SendEmailRequest, ctx: LlmCallContext): Promise<SendEmailActivityNote> {
+  const userPrompt = buildSendEmailNotePrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Email Specialist send_email note was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = SendEmailActivityNoteSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Email Specialist send_email note did not match expected schema: ${issueSummary}`);
+  }
+  return result.data;
+}
+
+// ============================================================================
 // EMAIL SPECIALIST CLASS
 // ============================================================================
 
@@ -711,6 +850,13 @@ export class EmailSpecialist extends BaseSpecialist {
       const action = rawAction as SupportedAction;
 
       logger.info(`[EmailSpecialist] Executing action=${action} taskId=${taskId}`, { file: FILE });
+
+      // EXECUTOR path: actually send a (composed, operator-approved) email and
+      // log it. The approval gate is checked INSIDE executeSendEmail BEFORE any
+      // GM load or LLM call so an unapproved request never touches OpenRouter.
+      if (action === 'send_email') {
+        return await this.executeSendEmail(taskId, payload);
+      }
 
       const ctx = await loadGMBrandDNAAndPurposeTypes(DEFAULT_INDUSTRY_KEY);
 
@@ -752,6 +898,117 @@ export class EmailSpecialist extends BaseSpecialist {
       logger.error('[EmailSpecialist] Execution failed', error instanceof Error ? error : new Error(errorMessage), { file: FILE });
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
+  }
+
+  /**
+   * EXECUTOR: actually send a (composed, operator-approved) email + log it.
+   * Fail-closed behind viaApprovedMissionStep. Delivery routes through
+   * email-delivery-service (which records the delivery + emits the email.sent
+   * signal), and reuses the SAME CAN-SPAM compliance path the
+   * /api/email-writer/send route uses (wrapEmailBody + injectUnsubscribe +
+   * buildListUnsubscribeHeaders). No compliance wording/behavior is changed here.
+   */
+  private async executeSendEmail(taskId: string, rawPayload: Record<string, unknown>): Promise<AgentReport> {
+    const validation = SendEmailPayloadSchema.safeParse(rawPayload);
+    if (!validation.success) {
+      const issues = validation.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+      return this.createReport(taskId, 'FAILED', null, [`Email Specialist: invalid send_email payload: ${issues}`]);
+    }
+    const req = validation.data;
+
+    // APPROVAL GATE — FAIL CLOSED. send_email delivers a real email and must never
+    // fire from a direct Jasper chat call. viaApprovedMissionStep is set true ONLY
+    // by the mission StepRunner for an operator-approved step. Checked BEFORE any
+    // GM load / LLM call / send, so an unapproved request never touches OpenRouter
+    // or the carrier.
+    if (req.viaApprovedMissionStep !== true) {
+      logger.warn(
+        `[EmailSpecialist] send_email BLOCKED (no operator approval) taskId=${taskId} leadId=${req.leadId}`,
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'COMPLETED', {
+        approvalRequired: true,
+        mutated: false,
+        leadId: req.leadId,
+        toEmail: req.toEmail,
+        message:
+          'send_email delivers a real email and cannot run directly from chat. It requires explicit ' +
+          'operator approval. Propose it as a mission step via propose_mission_plan (toolName ' +
+          '"delegate_to_outreach", action "send_email") — the operator approves the step in Mission ' +
+          'Control, then the email is sent.',
+      });
+    }
+
+    // The LLM authors ONLY the timeline note (GM verbatim); recipient/subject/body
+    // are deterministic passthroughs already composed + operator-reviewed upstream.
+    const ctx = await loadGMBrandDNAAndPurposeTypes(DEFAULT_INDUSTRY_KEY);
+    const note = await authorSendEmailNote(req, ctx);
+
+    // COMPLIANCE: reuse the EXACT CAN-SPAM path the /api/email-writer/send route
+    // uses — wrap the HTML, inject the unsubscribe footer, build the
+    // List-Unsubscribe headers. We call the same functions the proven route calls;
+    // nothing about the compliance wording/headers is changed here.
+    const { wrapEmailBody, stripHTML } = await import('@/lib/email-writer/email-html-templates');
+    const { injectUnsubscribe, buildListUnsubscribeHeaders } = await import('@/lib/compliance/can-spam-service');
+    const { sendEmail: sendViaDelivery } = await import('@/lib/email-writer/email-delivery-service');
+
+    let htmlBody = wrapEmailBody(req.bodyHtml ?? req.bodyPlainText, { subject: req.subject });
+    const injected = injectUnsubscribe(htmlBody, undefined, req.toEmail, undefined);
+    htmlBody = injected.html;
+    const listUnsubHeaders = buildListUnsubscribeHeaders(injected.unsubscribeUrl);
+    const plainTextBody = req.bodyPlainText.trim().length > 0 ? req.bodyPlainText : stripHTML(htmlBody);
+
+    const result = await sendViaDelivery({
+      userId: `agent:${SPECIALIST_ID}`,
+      to: req.toEmail,
+      toName: req.leadName,
+      subject: req.subject,
+      html: htmlBody,
+      text: plainTextBody,
+      headers: listUnsubHeaders,
+      ...(req.campaignName ? { campaignId: req.campaignName } : {}),
+    });
+
+    if (!result.success) {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Email Specialist: delivery failed: ${result.error ?? 'unknown error'}`,
+      ]);
+    }
+
+    // Log the email_sent activity. Partial-success: NEVER discard a completed send —
+    // if the activity write fails, keep the send and return activityId:null.
+    let activityId: string | null = null;
+    try {
+      const activity = await createActivity({
+        type: 'email_sent',
+        subject: req.subject,
+        body: note.activity.body,
+        relatedTo: [{ entityType: 'lead', entityId: req.leadId, entityName: req.leadName }],
+        createdBy: SPECIALIST_ID,
+        occurredAt: Timestamp.fromDate(new Date()),
+        metadata: { emailId: result.messageId, toEmail: req.toEmail },
+      });
+      activityId = activity.id;
+    } catch (activityError) {
+      logger.error(
+        `[EmailSpecialist] Email sent but activity log failed for lead ${req.leadId}`,
+        activityError instanceof Error ? activityError : new Error(String(activityError)),
+        { file: FILE },
+      );
+    }
+
+    const out: SendEmailResult = {
+      rationale: note.rationale,
+      executed: {
+        leadId: req.leadId,
+        toEmail: req.toEmail,
+        emailId: result.messageId,
+        activityId,
+        provider: 'sendgrid',
+        emailSent: true,
+      },
+    };
+    return this.createReport(taskId, 'COMPLETED', out);
   }
 
   async handleSignal(signal: Signal): Promise<AgentReport> {

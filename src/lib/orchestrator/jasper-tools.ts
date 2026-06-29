@@ -2133,10 +2133,44 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'delegate_to_outreach',
       description:
-        'Delegate a multi-channel outreach campaign to the Outreach Department. The Outreach Manager will coordinate Email Specialist and SMS Specialist with DNC compliance, frequency throttling, and sentiment-aware routing. For COLD-OUTREACH EMAIL DRIPS (e.g. "3-email outreach drip", "5-touch cold sequence"): set channel="email" and steps to the email count (>=2) — the Email Specialist will produce a coherent N-email arc personalized to the prospect in one call. For SINGLE outreach emails: leave steps at 1 (or omit). ENABLED: TRUE.',
+        'Delegate a multi-channel outreach campaign to the Outreach Department. The Outreach Manager will coordinate Email Specialist and SMS Specialist with DNC compliance, frequency throttling, and sentiment-aware routing. For COLD-OUTREACH EMAIL DRIPS (e.g. "3-email outreach drip", "5-touch cold sequence"): set channel="email" and steps to the email count (>=2) — the Email Specialist will produce a coherent N-email arc personalized to the prospect in one call. For SINGLE outreach emails: leave steps at 1 (or omit). ' +
+        'Action "send_email" ACTUALLY SENDS a real, composed email to a real recipient and logs it on the CRM timeline — this is an IRREVERSIBLE side effect that REQUIRES OPERATOR APPROVAL. Do NOT call "send_email" directly from chat: it will refuse to send and just tell you to seek approval. ALWAYS route it through propose_mission_plan as a single step (toolName "delegate_to_outreach", action "send_email", with leadId, toEmail, subject and bodyPlainText). The operator approves the step in Mission Control and only then is the email delivered. The default compose flow (no "send_email" action) only DRAFTS content and is safe to call directly. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
+          action: {
+            type: 'string',
+            description: 'The outreach action to perform. Omit (or use the default compose flow) to DRAFT email/SMS content safely. "send_email" ACTUALLY SENDS a real, already-composed email to the recipient and logs it — an irreversible CRM side effect that REQUIRES OPERATOR APPROVAL, so it must be proposed via propose_mission_plan and never called directly from chat.',
+            enum: ['send_email'],
+          },
+          leadId: {
+            type: 'string',
+            description: 'For action "send_email": the CRM lead ID the email is being sent to (used to log the email_sent activity on the timeline). REQUIRED for "send_email".',
+          },
+          toEmail: {
+            type: 'string',
+            description: 'For action "send_email": the recipient email address. REQUIRED for "send_email".',
+          },
+          subject: {
+            type: 'string',
+            description: 'For action "send_email": the already-composed, operator-reviewed subject line of the email. REQUIRED for "send_email".',
+          },
+          bodyPlainText: {
+            type: 'string',
+            description: 'For action "send_email": the already-composed, operator-reviewed plain-text body of the email. REQUIRED for "send_email".',
+          },
+          bodyHtml: {
+            type: 'string',
+            description: 'Optional HTML body for action "send_email". If omitted, the plain-text body is wrapped into a compliant HTML email.',
+          },
+          leadName: {
+            type: 'string',
+            description: 'Optional recipient display name for action "send_email".',
+          },
+          campaignName: {
+            type: 'string',
+            description: 'Optional campaign label for action "send_email" (groups the send in analytics).',
+          },
           sequenceType: {
             type: 'string',
             description: 'Type of outreach sequence to run',
@@ -5525,6 +5559,60 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const { OutreachManager } = await import('@/lib/agents/outreach/manager');
           const outreachMgr = new OutreachManager();
           await outreachMgr.initialize();
+
+          // EXECUTOR action: actually SEND a (composed, operator-approved) email.
+          // Mirrors the delegate_to_sales execute_close branch — maps the
+          // lowercase tool action to the manager's SEND_EMAIL_EXECUTE intent,
+          // builds the executor payload, and threads the approval gate.
+          const outreachAction = args.action as string | undefined;
+          if (outreachAction === 'send_email') {
+            const sendPayload: Record<string, unknown> = {
+              intent: 'SEND_EMAIL_EXECUTE',
+              action: 'send_email_execute',
+              leadId: args.leadId as string | undefined,
+              toEmail: args.toEmail as string | undefined,
+              subject: args.subject as string | undefined,
+              bodyPlainText: args.bodyPlainText as string | undefined,
+              bodyHtml: args.bodyHtml as string | undefined,
+              leadName: args.leadName as string | undefined,
+              campaignName: args.campaignName as string | undefined,
+              // APPROVAL GATE: send_email delivers a real, irreversible email.
+              // It only sends when this is true, which happens ONLY when the
+              // mission StepRunner dispatches an operator-approved step (it sets
+              // context.viaApprovedMissionStep). A direct Jasper chat call
+              // arrives without the flag → the Email Specialist fails closed,
+              // does not send, and asks Jasper to propose it as a mission step
+              // for operator approval.
+              viaApprovedMissionStep: context?.viaApprovedMissionStep === true,
+            };
+
+            const sendResult = await withTimeout(outreachMgr.execute({
+              id: `outreach_send_${Date.now()}`,
+              timestamp: new Date(),
+              from: 'JASPER',
+              to: 'OUTREACH_MANAGER',
+              type: 'COMMAND',
+              priority: 'NORMAL',
+              payload: sendPayload,
+              requiresResponse: true,
+              traceId: `trace_${Date.now()}`,
+            }), MANAGER_TIMEOUT_MS, 'Outreach Manager');
+
+            const sendDuration = Date.now() - outreachStart;
+            trackMissionStep(context, 'delegate_to_outreach',
+              sendResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+              { summary: `Outreach send_email: ${sendResult.status}`, durationMs: sendDuration, toolResult: JSON.stringify(sendResult.data), specialistsUsed: sendResult.specialistsUsed }
+            );
+
+            content = JSON.stringify({
+              status: sendResult.status,
+              data: sendResult.data,
+              errors: sendResult.errors,
+              manager: 'OUTREACH_MANAGER',
+              reviewLink: getReviewLink('delegate_to_outreach', context?.missionId),
+            });
+            break;
+          }
 
           // Parse leadList into an array. Accept JSON array, JSON single
           // object, or empty/invalid (fall back to a placeholder lead).

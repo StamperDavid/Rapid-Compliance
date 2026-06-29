@@ -313,7 +313,8 @@ export interface OutreachBrief {
  */
 export type OutreachIntent =
   | 'EXECUTE_SEQUENCE'      // Run a multi-step sequence
-  | 'SEND_EMAIL'            // Single email
+  | 'SEND_EMAIL'            // Single email (COMPOSE-only — content generation, nothing sent)
+  | 'SEND_EMAIL_EXECUTE'    // EXECUTOR — actually delivers a real email (irreversible, approval-gated)
   | 'SEND_SMS'              // Single SMS
   | 'SEND_VOICE'            // Voice call (future)
   | 'CHECK_COMPLIANCE'      // Compliance verification
@@ -343,6 +344,11 @@ const INTENT_KEYWORDS: Record<OutreachIntent, string[]> = {
   SEND_EMAIL: [
     'email', 'send email', 'email campaign', 'newsletter', 'inbox',
   ],
+  // EXECUTOR intent — never keyword-detected. Routed ONLY when the Jasper tool
+  // layer sets payload.intent='SEND_EMAIL_EXECUTE' for an operator-approved
+  // mission step. Empty keywords keep it out of the heuristic intent matcher
+  // so a stray "email" in a brief can never trigger a real send.
+  SEND_EMAIL_EXECUTE: [],
   SEND_SMS: [
     'sms', 'text', 'text message', 'mobile', 'short code',
   ],
@@ -378,6 +384,7 @@ const INTENT_KEYWORDS: Record<OutreachIntent, string[]> = {
 const _INTENT_SPECIALISTS: Record<OutreachIntent, string[]> = {
   EXECUTE_SEQUENCE: ['EMAIL_SPECIALIST', 'SMS_SPECIALIST', 'VOICE_AI_SPECIALIST'],
   SEND_EMAIL: ['EMAIL_SPECIALIST'],
+  SEND_EMAIL_EXECUTE: ['EMAIL_SPECIALIST'],
   SEND_SMS: ['SMS_SPECIALIST'],
   SEND_VOICE: ['VOICE_AI_SPECIALIST'],
   CHECK_COMPLIANCE: [],
@@ -551,6 +558,21 @@ export class OutreachManager extends BaseManager {
         case 'SEND_EMAIL':
           return await this.executeSingleChannel(taskId, 'EMAIL', payload, startTime);
 
+        case 'SEND_EMAIL_EXECUTE':
+          return await this.orchestrateSendEmailExecute(
+            {
+              leadId: payload?.leadId as string | undefined,
+              toEmail: payload?.toEmail as string | undefined,
+              leadName: payload?.leadName as string | undefined,
+              subject: payload?.subject as string | undefined,
+              bodyPlainText: payload?.bodyPlainText as string | undefined,
+              bodyHtml: payload?.bodyHtml as string | undefined,
+              campaignName: payload?.campaignName as string | undefined,
+              viaApprovedMissionStep: payload?.viaApprovedMissionStep === true,
+            },
+            taskId,
+          );
+
         case 'SEND_SMS':
           return await this.executeSingleChannel(taskId, 'SMS', payload, startTime);
 
@@ -611,6 +633,13 @@ export class OutreachManager extends BaseManager {
     // Check for explicit action
     if (payload?.action === 'execute_sequence') {
       return 'EXECUTE_SEQUENCE';
+    }
+
+    // EXECUTOR action — actually delivers a real email. Recognized here so the
+    // Jasper tool layer can route to the executor by manager action name as
+    // well as by explicit intent. The approval gate lives in the specialist.
+    if (payload?.action === 'send_email_execute') {
+      return 'SEND_EMAIL_EXECUTE';
     }
 
     // Phase 4: Check for Event Router command-style actions
@@ -1027,6 +1056,69 @@ export class OutreachManager extends BaseManager {
         sentiment: content.sentiment,
       },
     };
+  }
+
+  /**
+   * EXECUTOR — actually DELIVER a (composed, operator-approved) email via the
+   * Email Specialist's send_email action and log the email_sent activity.
+   *
+   * This is the executor sibling of composeEmailViaSpecialist: compose generates
+   * content (nothing ships), send_email delivers a real email (irreversible).
+   * It mirrors the sales Revenue Director's orchestrateExecuteClose EXACTLY —
+   * it builds the AgentMessage with the specialist's lowercase action
+   * (`send_email`), threads `viaApprovedMissionStep: params.viaApprovedMissionStep === true`,
+   * and routes via the SAME delegation mechanic (delegateWithReview to
+   * EMAIL_SPECIALIST) so the M2a accumulator records the specialist and a
+   * perf-tracker entry is written.
+   *
+   * The approval gate is enforced INSIDE the specialist's executeSendEmail:
+   * unless viaApprovedMissionStep === true it fails closed (no send). This
+   * manager NEVER sets the flag true on its own — it only forwards what the
+   * Jasper tool layer passed (which is true ONLY for an operator-approved
+   * mission step).
+   */
+  async orchestrateSendEmailExecute(
+    params: {
+      leadId?: string;
+      toEmail?: string;
+      leadName?: string;
+      subject?: string;
+      bodyPlainText?: string;
+      bodyHtml?: string;
+      campaignName?: string;
+      viaApprovedMissionStep?: boolean;
+    },
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log('INFO', `Orchestrating send_email (EXECUTOR) for lead: ${params.leadId ?? '(none)'} → ${params.toEmail ?? '(none)'}`);
+
+    if (!this.specialistsRegistered) {
+      await this.registerAllSpecialists();
+    }
+
+    const message: AgentMessage = {
+      id: taskId,
+      timestamp: new Date(),
+      from: this.identity.id,
+      to: 'EMAIL_SPECIALIST',
+      type: 'COMMAND',
+      priority: 'HIGH',
+      payload: {
+        action: 'send_email',
+        leadId: params.leadId,
+        toEmail: params.toEmail,
+        leadName: params.leadName,
+        subject: params.subject,
+        bodyPlainText: params.bodyPlainText,
+        bodyHtml: params.bodyHtml,
+        campaignName: params.campaignName,
+        viaApprovedMissionStep: params.viaApprovedMissionStep === true,
+      },
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    return this.delegateWithReview('EMAIL_SPECIALIST', message);
   }
 
   /**
