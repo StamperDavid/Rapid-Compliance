@@ -206,7 +206,7 @@ export default function ProposalsQuotesPage() {
             <FileText className="w-6 h-6 text-white" />
           </div>
           <div>
-            <PageTitle>Proposals & Quotes</PageTitle>
+            <PageTitle>Quotes</PageTitle>
             <SectionDescription>
               {quotes.length} quotes &bull; ${quotes.reduce((s, q) => s + q.total, 0).toLocaleString()} total value
             </SectionDescription>

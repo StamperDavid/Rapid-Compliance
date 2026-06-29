@@ -126,7 +126,7 @@ export const TEAM_TABS: SubpageNavItem[] = [
 
 // ── Proposals ───────────────────────────────────────────────────────────────
 export const PROPOSALS_TABS: SubpageNavItem[] = [
-  { label: 'Proposals', href: '/proposals' },
+  { label: 'Templates', href: '/proposals' },
   { label: 'Builder', href: '/proposals/builder' },
 ];
 
@@ -167,7 +167,7 @@ export const SYSTEM_TABS: SubpageNavItem[] = [
 // ── Leads Hub (All Leads + Proposals/Quotes + Lead Research + Scoring) ──────
 export const LEADS_TABS: SubpageNavItem[] = [
   { label: 'All Leads', href: '/entities/leads' },
-  { label: 'Proposals / Quotes', href: '/leads/proposals' },
+  { label: 'Quotes', href: '/leads/proposals' },
   { label: 'Intelligence Hub', href: '/leads/research' },
   { label: 'Scoring', href: '/lead-scoring' },
 ];

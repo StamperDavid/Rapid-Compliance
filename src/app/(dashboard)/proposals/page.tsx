@@ -97,7 +97,7 @@ export default function ProposalsPage() {
       {/* Header */}
       <div className="flex items-center justify-between pb-6 border-b border-border">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Proposals &amp; Documents</h1>
+          <h1 className="text-3xl font-bold text-foreground">Document Templates</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Create and manage proposal templates, quotes, contracts, and invoices
           </p>

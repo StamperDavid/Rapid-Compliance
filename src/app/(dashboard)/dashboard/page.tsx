@@ -456,7 +456,7 @@ export default function WorkspaceDashboardPage() {
           <div className="flex flex-col gap-3 mt-3">
             <NavRow icon={<Globe size={14} />} label="Website Editor" href="/website/editor" />
             <NavRow icon={<BarChart3 size={14} />} label="SEO" href="/website/seo" />
-            <NavRow icon={<FileText size={14} />} label="Proposals" href="/proposals" />
+            <NavRow icon={<FileText size={14} />} label="Document Templates" href="/proposals" />
             <NavRow icon={<Share2 size={14} />} label="Social Analytics" href="/social/analytics" />
           </div>
           <SectionFooter text="View content" />

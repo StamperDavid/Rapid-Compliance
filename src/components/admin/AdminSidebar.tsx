@@ -78,6 +78,7 @@ import {
   Telescope,
   Wallet,
   BrainCircuit,
+  FileText,
 } from 'lucide-react';
 
 // ============================================================================
@@ -118,6 +119,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'crm-dashboard', label: 'CRM Dashboard', href: '/analytics/crm', icon: PieChart, iconColor: 'var(--color-success)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
       { id: 'products-pricing-payments', label: 'Products, Pricing & Payments', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
+      { id: 'document-templates', label: 'Document Templates', href: '/proposals', icon: FileText, iconColor: 'var(--color-info)', requiredPermission: 'canManageProducts' },
       { id: 'custom-fields', label: 'Custom Fields & Objects', href: '/schemas', icon: LayoutTemplate, iconColor: 'var(--color-secondary)' },
     ],
   },
