@@ -54,9 +54,11 @@ import {
   runFfmpeg,
   probeVideo,
   addWatermark,
+  mixAudioWithDucking,
   createWorkDir,
   cleanupWorkDir,
 } from '@/lib/video/ffmpeg-utils';
+import { generateMusic } from '@/lib/music/music-generation-service';
 import {
   getVideoEngineProvider,
   type TenantContext,
@@ -1159,6 +1161,36 @@ function collectStitchableClips(plan: ShotPlan): StitchableClip[] {
 const STITCH_FALLBACK_WIDTH = 1280;
 const STITCH_FALLBACK_HEIGHT = 720;
 
+/** Music-bed level under dialogue (sidechaincompress ducks it further when voice plays). */
+const MUSIC_BED_VOLUME = 0.18;
+/** Bed length we request from MusicGen (its quality ceiling); looped to cover the film. */
+const MUSIC_BED_SECONDS = 30;
+
+/**
+ * Compose the MusicGen brief for a film's background score from the plan's own
+ * look bible (genre, mood keywords, art style, title). Instrumental + loopable,
+ * so it can sit under dialogue and repeat to any length.
+ */
+function buildMusicBedPrompt(plan: ShotPlan): { prompt: string; genre?: string; mood?: string } {
+  const sc = plan.sharedChoices;
+  const moods = (sc.moodKeywords ?? []).map((m) => m.trim()).filter((m) => m.length > 0);
+  const mood = moods.length > 0 ? moods.join(', ') : undefined;
+  const genre = firstText(sc.genre);
+  const artStyle = firstText(sc.artStyle, sc.lookBible?.artStyle);
+  const title = plan.title?.trim();
+
+  const bits = [
+    'Instrumental background score for a short film',
+    title ? `titled "${title}"` : '',
+    genre ? `in a ${genre} style` : '',
+    artStyle ? `with a ${artStyle} visual aesthetic` : '',
+    mood ? `evoking a ${mood} mood` : '',
+    'no vocals, seamless and loopable, sits gently under spoken dialogue',
+  ].filter((s) => s.length > 0);
+
+  return { prompt: `${bits.join(', ')}.`, genre, mood };
+}
+
 /**
  * Concatenate EVERY generated shot of a plan, IN ORDER, into ONE deliverable
  * video on OUR storage — the missing "final stitch" that turns a pile of clips
@@ -1270,7 +1302,47 @@ export async function stitchShotPlan(plan: ShotPlan, ctx: TenantContext): Promis
     });
     await runFfmpeg(args, 600_000);
 
-    const finalBuf = await readFile(outputPath);
+    // 2b. Cinematic music bed (best-effort). The stitched video already carries the
+    //     dialogue/lip-sync audio (and synthesized silence on wordless shots). Lay a
+    //     mood-matched INSTRUMENTAL bed under it: ducked beneath any dialogue via
+    //     sidechaincompress and loudness-normalized to -14 LUFS. One bed is generated
+    //     for the whole film and LOOPED to cover its full length. A failure here keeps
+    //     the un-scored stitch — music is an enhancement, never a blocker on delivery.
+    //     Flows into BOTH the 1080p deliverable and the 4K upscale (mixed before upload).
+    let deliverablePath = outputPath;
+    try {
+      const totalDuration = probes.reduce((sum, p) => sum + (p.duration > 0 ? p.duration : 0), 0);
+      const bed = buildMusicBedPrompt(plan);
+      const music = await generateMusic({
+        prompt: bed.prompt,
+        ...(bed.genre ? { genre: bed.genre } : {}),
+        ...(bed.mood ? { mood: bed.mood } : {}),
+        durationSeconds: MUSIC_BED_SECONDS,
+      });
+      const musicPath = join(workDir, 'music-bed.mp3');
+      await downloadToFile(music.url, musicPath, 'shot-plan music bed');
+      const scoredPath = join(workDir, 'final-scored.mp4');
+      await mixAudioWithDucking(outputPath, musicPath, scoredPath, {
+        musicVolume: MUSIC_BED_VOLUME,
+        targetLUFS: -14,
+        loopMusic: true,
+      });
+      deliverablePath = scoredPath;
+      logger.info('[shot-plan-gen] music bed mixed under dialogue', {
+        file: FILE,
+        clips: clips.length,
+        videoSeconds: Number(totalDuration.toFixed(1)),
+        bedSeconds: music.duration,
+      });
+    } catch (err) {
+      logger.error(
+        '[shot-plan-gen] music bed failed (delivering un-scored stitch)',
+        err instanceof Error ? err : new Error(String(err)),
+        { file: FILE },
+      );
+    }
+
+    const finalBuf = await readFile(deliverablePath);
     if (finalBuf.length === 0) {
       throw new Error('stitchShotPlan: ffmpeg produced an empty final video');
     }

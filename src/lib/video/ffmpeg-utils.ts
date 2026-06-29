@@ -602,12 +602,14 @@ export async function mixAudioWithDucking(
     duckingThreshold?: number; // dB threshold for ducking (default -20)
     duckingRatio?: number; // compression ratio (default 8)
     targetLUFS?: number; // target loudness (default -14)
+    loopMusic?: boolean; // loop the music to cover the full video (default false)
   },
 ): Promise<string> {
   const musicVol = options?.musicVolume ?? 0.15;
   const threshold = options?.duckingThreshold ?? -20;
   const ratio = options?.duckingRatio ?? 8;
   const targetLUFS = options?.targetLUFS ?? -14;
+  const loopMusic = options?.loopMusic ?? false;
 
   // Filter chain:
   // 1. Extract video audio as voice track
@@ -623,8 +625,12 @@ export async function mixAudioWithDucking(
     `[mixed]loudnorm=I=${targetLUFS}:TP=-1.5:LRA=11[outa]`,
   ].join(';');
 
+  // `-stream_loop -1` (when looping) must precede the music input so a short bed
+  // repeats to cover a longer video; `amix=duration=first` + `-shortest` then trim
+  // the looped music to the video's length.
   const args = [
     '-i', videoPath,
+    ...(loopMusic ? ['-stream_loop', '-1'] : []),
     '-i', musicPath,
     '-filter_complex', filterComplex,
     '-map', '0:v',
