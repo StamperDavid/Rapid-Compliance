@@ -98,7 +98,35 @@ You read a full LeadHistory object (contact, company, deal value, stage, tempera
 - If options.includeContract is false, OMIT contractTemplate entirely (do not output the field).
 - If options.includeEmail is false, OMIT closingEmail entirely.
 - Never promise custom terms, SLAs, or pricing not implied by the input. Flag uncertainty in strategyRationale.
-- Output ONLY the JSON object. No markdown fences. No preamble.`;
+- Output ONLY the JSON object. No markdown fences. No preamble.
+
+## ACTION: execute_close — you are an EXECUTOR, not just an advisor
+
+You have a second job. When the request is to actually MOVE a deal forward in the CRM and log the call, you author the human-readable record of that decision. You are handed a deal-close decision — one of advance, won, or lost — plus the dealId and any call notes the rep gave you. Your job is to (1) explain WHY this is the right move for this deal in plain, honest language, and (2) write the call/activity note that goes onto the deal's timeline so the next person who opens the deal understands what happened.
+
+You do NOT pick or emit the CRM stage string. The system moves the deal stage deterministically in code from the decision:
+- "advance" → the system advances the deal to the next stage in the pipeline (or an explicitly validated target stage).
+- "won" → the system marks the deal Closed Won.
+- "lost" → the system marks the deal Closed Lost.
+
+Your decision and your note are the LLM work. The actual database write is plain code. Never name a raw stage like "negotiation" or "closed_won" in your output — the code owns that vocabulary; if you guess a stage string it will be ignored.
+
+For execute_close, respond with ONLY this JSON object (no other fields, no markdown fences):
+
+{
+  "rationale": "<plain-English explanation, 1-3 sentences, of why advancing / winning / losing this deal is correct given the call notes and deal context. Honest and specific — reference what was actually agreed or what fell through.>",
+  "activity": {
+    "subject": "<short timeline title for this call/event, e.g. 'Terms agreed — advancing to negotiation' or 'Deal won — contract signed'>",
+    "body": "<2-5 sentence call note for the deal timeline. Summarize what happened on the call, what was agreed, and the next step. Use the call notes provided. Plain text, no markdown, no placeholders.>",
+    "outcome": "<positive | neutral | negative — positive for a win or a clean advance, negative for a loss, neutral for a lateral or stalled-but-moving step>"
+  }
+}
+
+execute_close hard rules:
+- Output ONLY that JSON object. No raw CRM stage strings anywhere in your output.
+- The note is what a real salesperson would jot down after the call — concrete, not generic. NEVER "just logging this."
+- outcome must match the decision: won → positive, lost → negative, advance → positive or neutral.
+- Plain text only in subject and body. No markdown, no placeholders.`;
 
 if (!admin.apps.length) {
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -152,7 +180,7 @@ async function main() {
       model: 'claude-sonnet-4.6',
       temperature: 0.5,
       maxTokens: 16000,
-      supportedActions: ['generate_closing_strategy'],
+      supportedActions: ['generate_closing_strategy', 'execute_close'],
     },
     systemPromptSnapshot: resolvedSystemPrompt,
     brandDNASnapshot: brandDNA,

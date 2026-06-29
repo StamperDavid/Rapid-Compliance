@@ -34,11 +34,15 @@
  */
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getDeal, moveDealToStage } from '@/lib/crm/deal-service';
+import type { Deal } from '@/lib/crm/deal-service-types';
+import { createActivity } from '@/lib/crm/activity-service';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -49,7 +53,35 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'sales/deal-closer/specialist.ts';
 const SPECIALIST_ID = 'DEAL_CLOSER';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['generate_closing_strategy'] as const;
+const SUPPORTED_ACTIONS = ['generate_closing_strategy', 'execute_close'] as const;
+
+/**
+ * The CRM pipeline order, lowest → highest. Used to compute the "next
+ * stage after current" for an `advance` decision. The two terminal stages
+ * (closed_won / closed_lost) are deliberately NOT in this progression — they
+ * are reached only via an explicit `won` / `lost` decision, never by walking
+ * forward from `negotiation`.
+ */
+const CRM_STAGE_ORDER: ReadonlyArray<Deal['stage']> = [
+  'prospecting',
+  'qualification',
+  'proposal',
+  'negotiation',
+] as const;
+
+/** Every valid CRM stage string — used to validate an operator-supplied targetStage. */
+const ALL_CRM_STAGES: ReadonlySet<Deal['stage']> = new Set<Deal['stage']>([
+  'prospecting',
+  'qualification',
+  'proposal',
+  'negotiation',
+  'closed_won',
+  'closed_lost',
+]);
+
+function isCrmStage(value: string): value is Deal['stage'] {
+  return ALL_CRM_STAGES.has(value as Deal['stage']);
+}
 
 /**
  * Realistic max_tokens floor for the worst-case Deal Closer response.
@@ -206,6 +238,59 @@ export type DealStage = z.infer<typeof DealStageEnum>;
 export type BuyerPersona = z.infer<typeof BuyerPersonaEnum>;
 export type LeadHistory = z.infer<typeof LeadHistorySchema>;
 export type ClosingRequest = z.infer<typeof GenerateClosingStrategyPayloadSchema>;
+
+// ============================================================================
+// INPUT CONTRACT — execute_close (EXECUTOR action)
+// ============================================================================
+
+/**
+ * Operator/Jasper → Revenue Director → Deal Closer execute_close payload.
+ *
+ * `decision` is the SEMANTIC intent (advance / won / lost). The specialist
+ * maps it to a concrete CRM stage DETERMINISTICALLY IN CODE — the LLM never
+ * picks the raw stage string. `targetStage` is an optional override for the
+ * `advance` case (e.g. skip straight to negotiation); it is validated against
+ * the real CRM stage union before use and ignored if unrecognized.
+ */
+const ExecuteClosePayloadSchema = z.object({
+  action: z.literal('execute_close'),
+  dealId: z.string().min(1).max(300),
+  decision: z.enum(['advance', 'won', 'lost']),
+  targetStage: z.string().min(1).max(60).optional(),
+  callNotes: z.string().max(4000).optional(),
+  /**
+   * APPROVAL GATE. execute_close performs an irreversible CRM write (it moves a
+   * real deal stage + logs an activity). It must NEVER fire autonomously from a
+   * direct Jasper chat call. This flag is set true ONLY when the mission
+   * StepRunner dispatched this as an operator-approved mission step
+   * (context.viaApprovedMissionStep, threaded down through Jasper's tool layer
+   * → Revenue Director). Absent/false → the specialist FAILS CLOSED and does
+   * not mutate; it returns guidance telling Jasper to propose the action as a
+   * mission step for operator approval.
+   *
+   * Defaults to `false` so any caller that omits it gets the safe (no-mutation)
+   * behavior.
+   */
+  viaApprovedMissionStep: z.boolean().optional().default(false),
+});
+
+export type ExecuteCloseRequest = z.infer<typeof ExecuteClosePayloadSchema>;
+
+/**
+ * LLM JSON contract for execute_close. The model AUTHORS the activity note
+ * and explains its reasoning — it does NOT emit a CRM stage. Output tokens
+ * for this action are small; the schema floor still applies via the GM.
+ */
+const ActivityNoteSchema = z.object({
+  rationale: z.string().min(10).max(2000),
+  activity: z.object({
+    subject: z.string().min(3).max(200),
+    body: z.string().min(10).max(3000),
+    outcome: z.enum(['positive', 'neutral', 'negative']),
+  }),
+});
+
+export type ActivityNote = z.infer<typeof ActivityNoteSchema>;
 
 // ============================================================================
 // OUTPUT CONTRACT — ClosingStrategyResult (preserved from pre-rebuild)
@@ -498,6 +583,136 @@ async function executeGenerateClosingStrategy(
 }
 
 // ============================================================================
+// ACTION: execute_close — EXECUTOR (deterministic CRM write + LLM-authored note)
+// ============================================================================
+
+/**
+ * Result of an execute_close run. `dealMoved` is true once the CRM stage
+ * write succeeded. `activityId` is null when the stage moved but the activity
+ * write failed (partial success — we never discard a completed move).
+ */
+export interface ExecuteCloseResult {
+  rationale: string;
+  executed: {
+    dealId: string;
+    previousStage: Deal['stage'];
+    newStage: Deal['stage'];
+    activityId: string | null;
+    dealMoved: boolean;
+  };
+}
+
+/**
+ * DETERMINISTIC decision → CRM stage mapping. The LLM never reaches this code
+ * path; the stage is chosen purely from the decision + the deal's current
+ * stage (+ an optional, validated operator override for `advance`).
+ *
+ * Throws when an `advance` cannot produce a forward move (already at the end
+ * of the pipeline, or the resolved target equals the current stage).
+ */
+function resolveTargetStage(
+  decision: ExecuteCloseRequest['decision'],
+  currentStage: Deal['stage'],
+  targetStageRaw: string | undefined,
+): Deal['stage'] {
+  if (decision === 'won') { return 'closed_won'; }
+  if (decision === 'lost') { return 'closed_lost'; }
+
+  // decision === 'advance'
+  // 1) Honor an explicit, valid target stage if one was supplied.
+  if (targetStageRaw !== undefined) {
+    const candidate = targetStageRaw.toLowerCase();
+    if (isCrmStage(candidate)) {
+      if (candidate === currentStage) {
+        throw new Error(`Cannot advance: target stage '${candidate}' equals the current stage`);
+      }
+      return candidate;
+    }
+    // Unrecognized override → fall through to next-in-order.
+  }
+
+  // 2) Otherwise advance to the next stage in the pipeline order.
+  const idx = CRM_STAGE_ORDER.indexOf(currentStage);
+  if (idx === -1) {
+    throw new Error(
+      `Cannot advance from stage '${currentStage}' — it is not an open pipeline stage. ` +
+      `Use decision 'won' or 'lost' for a closed deal.`,
+    );
+  }
+  const next = CRM_STAGE_ORDER[idx + 1];
+  if (next === undefined) {
+    throw new Error(
+      `Cannot advance: deal is already at the last open stage '${currentStage}'. ` +
+      `Use decision 'won' or 'lost' to close it.`,
+    );
+  }
+  return next;
+}
+
+function buildExecuteClosePrompt(req: ExecuteCloseRequest, deal: Deal): string {
+  const decisionLabel =
+    req.decision === 'won' ? 'WIN the deal (mark Closed Won)' :
+    req.decision === 'lost' ? 'LOSE the deal (mark Closed Lost)' :
+    'ADVANCE the deal to the next pipeline stage';
+
+  return [
+    'ACTION: execute_close',
+    '',
+    `Decision to record: ${decisionLabel}`,
+    '',
+    '## Deal',
+    `Deal ID: ${deal.id}`,
+    `Name: ${deal.name}`,
+    (deal.companyName ?? deal.company) ? `Company: ${deal.companyName ?? deal.company}` : '',
+    `Current pipeline stage: ${deal.stage}`,
+    `Value: ${deal.currency ?? 'USD'} ${deal.value.toLocaleString()}`,
+    '',
+    '## Call notes from the rep',
+    req.callNotes && req.callNotes.trim().length > 0 ? req.callNotes.trim() : '(no call notes provided)',
+    '',
+    '---',
+    '',
+    'Author the timeline note + rationale for this decision. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "rationale": "<1-3 sentences, plain English, why this decision is correct given the call notes and deal context>",',
+    '  "activity": {',
+    '    "subject": "<short timeline title for this call/event>",',
+    '    "body": "<2-5 sentence call note for the deal timeline, plain text>",',
+    '    "outcome": "<positive | neutral | negative>"',
+    '  }',
+    '}',
+    '',
+    'Hard rules:',
+    '- Do NOT name any raw CRM stage string (the system moves the stage in code).',
+    '- Plain text only. No markdown, no placeholders.',
+    `- outcome must match the decision: ${req.decision === 'won' ? 'positive' : req.decision === 'lost' ? 'negative' : 'positive or neutral'}.`,
+    '- Output ONLY the JSON object. No markdown fences. No prose outside it.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+async function authorActivityNote(req: ExecuteCloseRequest, deal: Deal, ctx: LlmCallContext): Promise<ActivityNote> {
+  const userPrompt = buildExecuteClosePrompt(req, deal);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Deal Closer execute_close output was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = ActivityNoteSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Deal Closer execute_close output did not match expected schema: ${issueSummary}`);
+  }
+  return result.data;
+}
+
+// ============================================================================
 // DEAL CLOSER CLASS
 // ============================================================================
 
@@ -519,6 +734,11 @@ export class DealCloserSpecialist extends BaseSpecialist {
       const rawPayload = message.payload as Record<string, unknown> | null;
       if (rawPayload === null || typeof rawPayload !== 'object') {
         return this.createReport(taskId, 'FAILED', null, ['Deal Closer: payload must be an object']);
+      }
+
+      // EXECUTOR path: move a deal stage / mark won-lost and log the call.
+      if (rawPayload.action === 'execute_close') {
+        return await this.executeClose(taskId, rawPayload);
       }
 
       const normalized = { ...rawPayload, action: rawPayload.action ?? 'generate_closing_strategy' };
@@ -552,6 +772,128 @@ export class DealCloserSpecialist extends BaseSpecialist {
       );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
+  }
+
+  /**
+   * EXECUTOR: move a deal forward (advance / won / lost) and log the call.
+   *
+   * The DECISION + the call note are LLM work (governed by the Golden Master).
+   * The CRM stage chosen and the database writes are plain deterministic
+   * TypeScript — the LLM never picks the raw stage string.
+   */
+  private async executeClose(taskId: string, rawPayload: Record<string, unknown>): Promise<AgentReport> {
+    const inputValidation = ExecuteClosePayloadSchema.safeParse(rawPayload);
+    if (!inputValidation.success) {
+      const issueSummary = inputValidation.error.issues
+        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+        .join('; ');
+      return this.createReport(taskId, 'FAILED', null, [
+        `Deal Closer: invalid execute_close payload: ${issueSummary}`,
+      ]);
+    }
+    const req = inputValidation.data;
+
+    // (0) APPROVAL GATE — FAIL CLOSED. execute_close is an irreversible CRM
+    //     mutation and must never run autonomously from a direct Jasper chat
+    //     call. It mutates ONLY when this run is an operator-approved mission
+    //     step (the StepRunner sets viaApprovedMissionStep; a direct chat call
+    //     does not). Without the approval signal we DO NOT touch the CRM —
+    //     instead we return COMPLETED guidance that routes Jasper through the
+    //     Mission Control approval flow (propose_mission_plan → operator
+    //     approves the step → runner re-invokes this with the flag set).
+    if (req.viaApprovedMissionStep !== true) {
+      logger.warn(
+        `[DealCloser] execute_close BLOCKED (no operator approval) taskId=${taskId} dealId=${req.dealId} decision=${req.decision}`,
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'COMPLETED', {
+        approvalRequired: true,
+        mutated: false,
+        dealId: req.dealId,
+        decision: req.decision,
+        message:
+          'execute_close moves a real CRM deal and cannot run directly from chat. ' +
+          'It requires explicit operator approval. Propose it as a mission step via ' +
+          'propose_mission_plan (toolName "delegate_to_sales", action "execute_close", ' +
+          `with dealId "${req.dealId}" and decision "${req.decision}"). The operator ` +
+          'approves the step in Mission Control, then the deal is moved.',
+      });
+    }
+
+    logger.info(
+      `[DealCloser] Executing execute_close taskId=${taskId} dealId=${req.dealId} decision=${req.decision}`,
+      { file: FILE },
+    );
+
+    // (a) Idempotency / existence guard.
+    const deal = await getDeal(req.dealId);
+    if (!deal) {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Deal Closer: deal '${req.dealId}' not found — cannot execute close.`,
+      ]);
+    }
+    if (deal.stage === 'closed_won' || deal.stage === 'closed_lost') {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Deal Closer: deal '${req.dealId}' is already ${deal.stage} — nothing to execute.`,
+      ]);
+    }
+
+    // (c) DETERMINISTIC decision → CRM stage mapping (in code, not the LLM).
+    let newStage: Deal['stage'];
+    try {
+      newStage = resolveTargetStage(req.decision, deal.stage, req.targetStage);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return this.createReport(taskId, 'FAILED', null, [`Deal Closer: ${errorMessage}`]);
+    }
+
+    // (b) LLM authors the activity note + rationale (GM prompt, verbatim).
+    const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+    const note = await authorActivityNote(req, deal, ctx);
+
+    // (d) Move the deal stage (deterministic CRM write).
+    await moveDealToStage(req.dealId, newStage);
+
+    // (e) Log the call/activity. If THIS fails, report partial success — the
+    //     stage move already landed and must not be thrown away.
+    let activityId: string | null = null;
+    try {
+      const activity = await createActivity({
+        type: req.decision === 'advance' ? 'deal_stage_changed' : 'call_made',
+        subject: note.activity.subject,
+        body: note.activity.body,
+        relatedTo: [{ entityType: 'deal', entityId: req.dealId, entityName: deal.name }],
+        createdBy: SPECIALIST_ID,
+        occurredAt: Timestamp.fromDate(new Date()),
+        metadata: {
+          sentiment: note.activity.outcome,
+          previousValue: deal.stage,
+          newValue: newStage,
+          fieldChanged: 'stage',
+          callNotes: req.callNotes,
+        },
+      });
+      activityId = activity.id;
+    } catch (activityError) {
+      logger.error(
+        `[DealCloser] Stage move succeeded but activity log failed for deal ${req.dealId}`,
+        activityError instanceof Error ? activityError : new Error(String(activityError)),
+        { file: FILE },
+      );
+    }
+
+    const result: ExecuteCloseResult = {
+      rationale: note.rationale,
+      executed: {
+        dealId: req.dealId,
+        previousStage: deal.stage,
+        newStage,
+        activityId,
+        dealMoved: true,
+      },
+    };
+
+    return this.createReport(taskId, 'COMPLETED', result);
   }
 
   async handleSignal(signal: Signal): Promise<AgentReport> {
@@ -612,4 +954,8 @@ export const __internal = {
   executeGenerateClosingStrategy,
   GenerateClosingStrategyPayloadSchema,
   GenerateClosingStrategyResultSchema,
+  ExecuteClosePayloadSchema,
+  ActivityNoteSchema,
+  resolveTargetStage,
+  buildExecuteClosePrompt,
 };

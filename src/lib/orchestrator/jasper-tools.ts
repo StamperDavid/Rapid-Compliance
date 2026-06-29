@@ -80,6 +80,21 @@ export interface ToolCallContext {
    * separately appends step_delegate_*.
    */
   suppressStepTracking?: boolean;
+  /**
+   * APPROVAL GATE for irreversible CRM mutations (e.g. execute_close).
+   *
+   * Set to `true` ONLY by the mission StepRunner (`runMissionToCompletion`),
+   * which runs a step exclusively after the operator approved it in Mission
+   * Control (status==='PROPOSED' && operatorApproved===true — the M3.7 gate).
+   *
+   * The Jasper chat route NEVER sets this, so a direct chat tool call arrives
+   * with it `undefined`/`false`. Tools that perform an irreversible mutation
+   * (deal-closer's execute_close) MUST FAIL CLOSED on the absence of this flag:
+   * without it they refuse to mutate and instead tell Jasper to propose the
+   * action as a mission step for operator approval. This makes "operator
+   * approved this exact step" the only path to the mutation.
+   */
+  viaApprovedMissionStep?: boolean;
 }
 
 /**
@@ -1687,18 +1702,39 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'delegate_to_sales',
       description:
-        'Delegate a sales/commerce request to the Sales Department. The Revenue Director will analyze the lead and coordinate Lead Qualifier (BANT scoring), Outreach Specialist (personalized messages), and Merchandiser (coupon/nudge decisions). ENABLED: TRUE.',
+        'Delegate a sales/commerce request to the Sales Department. The Revenue Director will analyze the lead and coordinate Lead Qualifier (BANT scoring), Outreach Specialist (personalized messages), and Merchandiser (coupon/nudge decisions). ' +
+        'Action "execute_close" actually MOVES a real CRM deal forward / marks it won/lost and logs the call — this is an IRREVERSIBLE mutation that REQUIRES OPERATOR APPROVAL. ' +
+        'Do NOT call execute_close directly from chat: it will refuse to mutate and just tell you to seek approval. ' +
+        'Instead, ALWAYS route execute_close through propose_mission_plan as a single step (toolName "delegate_to_sales", action "execute_close", with dealId and decision). ' +
+        'The operator approves the step in Mission Control and only then does the deal move. The other actions (qualify_lead, generate_outreach, evaluate_nudge, analyze_pipeline, check_transition) are safe to call directly. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           action: {
             type: 'string',
-            description: 'The sales action to perform',
-            enum: ['qualify_lead', 'generate_outreach', 'evaluate_nudge', 'analyze_pipeline', 'check_transition'],
+            description: 'The sales action to perform. "execute_close" moves a real CRM deal stage / marks won-lost and logs the call — it is irreversible and REQUIRES OPERATOR APPROVAL, so it must be proposed via propose_mission_plan, never called directly from chat.',
+            enum: ['qualify_lead', 'generate_outreach', 'evaluate_nudge', 'analyze_pipeline', 'check_transition', 'execute_close'],
           },
           leadId: {
             type: 'string',
             description: 'The lead ID to process (required for lead-specific actions)',
+          },
+          dealId: {
+            type: 'string',
+            description: 'The CRM deal ID to act on. REQUIRED for action "execute_close".',
+          },
+          decision: {
+            type: 'string',
+            description: 'For action "execute_close": how to move the deal. "advance" = move to the next pipeline stage, "won" = mark Closed Won, "lost" = mark Closed Lost. REQUIRED for "execute_close".',
+            enum: ['advance', 'won', 'lost'],
+          },
+          targetStage: {
+            type: 'string',
+            description: 'Optional CRM stage override for an "advance" decision (e.g. "negotiation"). If omitted, the deal advances to the next stage in order.',
+          },
+          callNotes: {
+            type: 'string',
+            description: 'Optional plain-text notes from the call/decision for action "execute_close". The Deal Closer uses these to author the activity note logged on the deal timeline.',
           },
           leadData: {
             type: 'string',
@@ -4864,12 +4900,30 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const salesMgr = new RevenueDirector();
           await salesMgr.initialize();
 
+          // Map the lowercase tool action to the manager's action union.
+          // execute_close is the executor path → uppercase EXECUTE_CLOSE with
+          // the deal-close params threaded through.
+          const rawAction = (args.action as string | undefined) ?? 'EVALUATE_TRANSITION';
           const salesPayload: Record<string, unknown> = {
-            action: (args.action as string | undefined) ?? 'EVALUATE_TRANSITION',
+            action: rawAction === 'execute_close' ? 'EXECUTE_CLOSE' : rawAction,
             leadData: args.leadData,
             objection: args.objection,
             options: args.options,
           };
+
+          if (rawAction === 'execute_close') {
+            salesPayload.dealId = args.dealId as string | undefined;
+            salesPayload.decision = args.decision as string | undefined;
+            salesPayload.crmTargetStage = args.targetStage as string | undefined;
+            salesPayload.callNotes = args.callNotes as string | undefined;
+            // APPROVAL GATE: execute_close performs an irreversible CRM write.
+            // It only mutates when this is true, which happens ONLY when the
+            // mission StepRunner dispatches an operator-approved step (it sets
+            // context.viaApprovedMissionStep). A direct Jasper chat call arrives
+            // without the flag → the deal-closer refuses to mutate and asks
+            // Jasper to propose it as a mission step for operator approval.
+            salesPayload.viaApprovedMissionStep = context?.viaApprovedMissionStep === true;
+          }
 
           const salesResult = await withTimeout(salesMgr.execute({
             id: `sales_${Date.now()}`,

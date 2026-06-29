@@ -493,6 +493,7 @@ export interface PipelineQueryRequest {
     | 'BATCH_EVALUATE'
     | 'SYNTHESIZE_REVENUE_BRIEF'
     | 'CLOSE_DEAL'
+    | 'EXECUTE_CLOSE'
     | 'HANDLE_OBJECTION'
     | 'TUNE_GOLDEN_MASTER'
     | 'GENERATE_BATTLECARD'
@@ -514,6 +515,19 @@ export interface PipelineQueryRequest {
     includeEmail?: boolean;
     urgencyLevel?: 'NORMAL' | 'HIGH' | 'CRITICAL';
   };
+  // EXECUTE_CLOSE — executor path: move a real CRM deal and log the call.
+  dealId?: string;
+  decision?: 'advance' | 'won' | 'lost';
+  // Optional explicit CRM stage override for an `advance` decision (lowercase
+  // CRM stage string). The Deal Closer validates it against the CRM stage
+  // union and falls back to next-in-order if unrecognized.
+  crmTargetStage?: string;
+  callNotes?: string;
+  // APPROVAL GATE for execute_close. True ONLY when Jasper's tool layer ran this
+  // as an operator-approved mission step (StepRunner sets it). The Deal Closer
+  // refuses to mutate the CRM unless this is true (fail closed) — a direct chat
+  // call leaves it undefined/false.
+  viaApprovedMissionStep?: boolean;
 }
 
 // ============================================================================
@@ -882,6 +896,25 @@ export class RevenueDirector extends BaseManager {
           }
           result = await this.orchestrateDealClosing(payload.leadData, payload.closingOptions, taskId);
           break;
+
+        case 'EXECUTE_CLOSE': {
+          if (!payload.dealId || !payload.decision) {
+            return this.createReport(taskId, 'FAILED', null, ['dealId and decision are required for EXECUTE_CLOSE']);
+          }
+          // The specialist's report is returned directly so its `data.executed`
+          // shape and (via the BaseManager createReport override) the
+          // `specialistsUsed` accumulator both reach the caller intact.
+          return await this.orchestrateExecuteClose(
+            {
+              dealId: payload.dealId,
+              decision: payload.decision,
+              targetStage: payload.crmTargetStage,
+              callNotes: payload.callNotes,
+              viaApprovedMissionStep: payload.viaApprovedMissionStep === true,
+            },
+            taskId,
+          );
+        }
 
         case 'HANDLE_OBJECTION':
           if (!payload.objection) {
@@ -2160,6 +2193,49 @@ export class RevenueDirector extends BaseManager {
     }
 
     throw new Error(`Deal closing failed: ${report.errors?.join(', ') ?? 'Unknown error'}`);
+  }
+
+  /**
+   * Orchestrate EXECUTE_CLOSE — the executor path. Routes through
+   * `delegateWithReview` (NOT a direct specialist call) so the M2a
+   * specialist-tracking accumulator records DEAL_CLOSER and a perf entry is
+   * written. The Deal Closer performs the deterministic CRM write + logs the
+   * call; this manager only builds the message and returns the report.
+   *
+   * The AgentMessage id is the manager's root taskId so the
+   * `specialistsUsed` accumulator (keyed by message.id) lines up with the
+   * report produced by `createReport(taskId, ...)` in the specialist.
+   */
+  async orchestrateExecuteClose(
+    params: { dealId: string; decision: 'advance' | 'won' | 'lost'; targetStage?: string; callNotes?: string; viaApprovedMissionStep?: boolean },
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log('INFO', `Orchestrating execute_close for deal: ${params.dealId} (decision=${params.decision})`);
+
+    if (!this.dealCloserInstance) {
+      await this.registerAllSpecialists();
+    }
+
+    const message: AgentMessage = {
+      id: taskId,
+      type: 'COMMAND',
+      from: this.identity.id,
+      to: 'DEAL_CLOSER',
+      payload: {
+        action: 'execute_close',
+        dealId: params.dealId,
+        decision: params.decision,
+        targetStage: params.targetStage,
+        callNotes: params.callNotes,
+        viaApprovedMissionStep: params.viaApprovedMissionStep === true,
+      },
+      timestamp: new Date(),
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    return this.delegateWithReview('DEAL_CLOSER', message);
   }
 
   /**

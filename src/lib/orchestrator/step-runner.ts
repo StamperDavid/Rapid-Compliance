@@ -193,7 +193,13 @@ export async function runMissionToCompletion(input: RunMissionInput): Promise<Ru
   // directly via markStepRunning/markStepDone. Without it, the tool wrapper's
   // trackMissionStep would ALSO append separate step_delegate_* rows, which
   // is Bug D — the UI then shows 2×N rows for an N-step plan.
-  const toolContext: ToolCallContext = { conversationId, missionId, userPrompt, userId, suppressStepTracking: true };
+  // viaApprovedMissionStep=true is the APPROVAL signal for irreversible CRM
+  // mutations (execute_close). This runner only ever runs a step the operator
+  // approved in Mission Control (findRunnableProposedStep requires
+  // operatorApproved===true), so every tool dispatched from here is, by
+  // definition, an operator-approved step. The chat route never sets this flag,
+  // which is what makes execute_close fail closed on a direct chat call.
+  const toolContext: ToolCallContext = { conversationId, missionId, userPrompt, userId, suppressStepTracking: true, viaApprovedMissionStep: true };
 
   let stepsRun = 0;
   let stepsFailed = 0;
