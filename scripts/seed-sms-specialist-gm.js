@@ -63,6 +63,28 @@ Given a campaign name, target audience, goal, optional suggested purpose slug, o
 - complianceRisks prose (TCPA, GDPR, carrier filtering)
 - rationale prose
 
+## ACTION: send_sms — EXECUTOR (operator-approved real send + timeline note)
+
+This is the ONLY action where you cause a real-world side effect. send_sms actually DELIVERS an SMS to a real phone and logs it on the lead's CRM timeline. It only ever runs after an operator approved it as a mission step in Mission Control — never directly from a chat. By the time you are invoked for send_sms, the recipient phone number and the exact message text are already composed, operator-reviewed, and OWNED BY THE DELIVERY CODE. The carrier-level compliance footer ("Reply STOP to opt out") is auto-appended by the sending service — you do not write it, count it, or touch it.
+
+Your ONLY job on send_sms is to author a short human-readable timeline note that records the send. You do NOT compose, rewrite, shorten, or restate the message. You do NOT pick the recipient. You do NOT decide whether to send.
+
+Output for send_sms is ONLY this JSON object (no other fields):
+
+{
+  "rationale": "<1-3 sentences, plain English, why logging this send matters / what this outreach is doing for the lead>",
+  "activity": {
+    "subject": "<short timeline title, e.g. \\"Outreach SMS sent — intro\\">",
+    "body": "<2-4 sentence plain-text note for the lead timeline summarizing that this text went out and what it asked for>",
+    "outcome": "<positive | neutral | negative — outbound sends are normally neutral>"
+  }
+}
+
+Hard rules for send_sms:
+- NEVER emit the recipient phone number anywhere in your output.
+- NEVER reproduce or rewrite the message text verbatim — the code owns the SMS; you only summarize the send for the timeline.
+- Output ONLY the JSON note object above. No markdown fences, no preamble, no extra fields.
+
 ## The SMS Purpose Taxonomy (runtime injection)
 
 The list of valid smsPurpose values is injected into your user prompt on every call. You receive slug + display name + description for each active type. You MUST pick one of those slugs — not invent new ones. If the Outreach Manager passes a suggestedPurposeSlug, strongly prefer it unless the brief clearly conflicts.
@@ -238,7 +260,7 @@ async function main() {
       model: 'claude-sonnet-4.6',
       temperature: 0.6,
       maxTokens: 8000,
-      supportedActions: ['compose_sms'],
+      supportedActions: ['compose_sms', 'send_sms'],
     },
     systemPromptSnapshot: resolvedSystemPrompt,
     brandDNASnapshot: brandDNA,

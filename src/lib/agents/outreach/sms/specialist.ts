@@ -42,6 +42,7 @@
  */
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
@@ -49,6 +50,9 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
 import { getActiveSmsPurposeTypes } from '@/lib/services/sms-purpose-types-service';
 import { getSmsSettings } from '@/lib/services/sms-settings-service';
+import { sendSMS } from '@/lib/sms/sms-service';
+import { checkTCPAConsent } from '@/lib/compliance/tcpa-service';
+import { createActivity } from '@/lib/crm/activity-service';
 import type { SmsPurposeType } from '@/types/sms-purpose-types';
 import type { SmsSettings } from '@/types/sms-settings';
 import type { ModelName } from '@/types/ai-models';
@@ -61,7 +65,7 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'outreach/sms/specialist.ts';
 const SPECIALIST_ID = 'SMS_SPECIALIST';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['compose_sms'] as const;
+const SUPPORTED_ACTIONS = ['compose_sms', 'send_sms'] as const;
 type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
 
 /**
@@ -205,6 +209,83 @@ const ComposeSmsResultSchema = z.object({
 });
 
 export type ComposeSmsResult = z.infer<typeof ComposeSmsResultSchema>;
+
+// ============================================================================
+// INPUT CONTRACT — send_sms (EXECUTOR action)
+// ============================================================================
+//
+// send_sms is the ONLY action on this specialist that produces a real-world
+// side effect: it actually delivers an SMS through sms-service AND logs an
+// 'sms_sent' activity on the lead's CRM timeline. It is fail-closed behind an
+// operator-approval gate (viaApprovedMissionStep), exactly like the Email
+// Specialist's send_email and the Deal Closer's execute_close.
+//
+// The recipient phone and message body are DETERMINISTIC passthroughs — they
+// were composed and operator-reviewed upstream (e.g. via compose_sms + Mission
+// Control approval). The LLM does NOT author, rewrite, or echo the message
+// text or the phone number here. The only LLM work in this action is authoring
+// the human-readable timeline note that records the send.
+//
+// COMPLIANCE: the canonical sendSMS() AUTO-APPENDS "Reply STOP to opt out" —
+// this specialist never alters that behavior. TCPA consent is verified via
+// checkTCPAConsent(to,'sms') BEFORE any send, fail-closed.
+// ============================================================================
+
+const SendSmsPayloadSchema = z.object({
+  action: z.literal('send_sms'),
+  leadId: z.string().min(1).max(300),
+  toPhone: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'toPhone must be E.164 (e.g. +12085551234)'),
+  leadName: z.string().min(1).max(300).optional(),
+  message: z.string().min(1).max(1600),
+  campaignName: z.string().min(1).max(200).optional(),
+  /**
+   * APPROVAL GATE. send_sms performs an irreversible external side effect
+   * (it sends a real SMS to a real recipient + logs an activity). It must
+   * NEVER fire autonomously from a direct Jasper chat call. This flag is set
+   * true ONLY when the mission StepRunner dispatched this as an
+   * operator-approved mission step (context.viaApprovedMissionStep, threaded
+   * down through Jasper's tool layer → Outreach Manager). Absent/false → the
+   * specialist FAILS CLOSED, does not send, and returns guidance routing
+   * Jasper through Mission Control approval. Defaults to false so any caller
+   * that omits it gets the safe (no-send) behavior.
+   */
+  viaApprovedMissionStep: z.boolean().optional().default(false),
+});
+
+export type SendSmsRequest = z.infer<typeof SendSmsPayloadSchema>;
+
+/**
+ * LLM JSON contract for send_sms. The model AUTHORS only the timeline note —
+ * it does NOT emit, rewrite, or even echo the recipient phone number or the
+ * message text (the code owns delivery). Output tokens for this action are
+ * small.
+ */
+const SendSmsActivityNoteSchema = z.object({
+  rationale: z.string().min(10).max(2000),
+  activity: z.object({
+    subject: z.string().min(3).max(200),
+    body: z.string().min(10).max(3000),
+    outcome: z.enum(['positive', 'neutral', 'negative']),
+  }),
+});
+
+export type SendSmsActivityNote = z.infer<typeof SendSmsActivityNoteSchema>;
+
+/**
+ * Result of a send_sms run. `smsSent` is true once sms-service reported a
+ * successful delivery. `activityId` is null when the SMS sent but the activity
+ * write failed afterward (partial success — we NEVER discard a completed send).
+ */
+export interface SendSmsResult {
+  rationale: string;
+  executed: {
+    leadId: string;
+    toPhone: string;
+    smsId: string | undefined;
+    activityId: string | null;
+    smsSent: true;
+  };
+}
 
 // ============================================================================
 // LLM INVOCATION CORE
@@ -473,6 +554,67 @@ async function executeComposeSms(
 }
 
 // ============================================================================
+// ACTION: send_sms — EXECUTOR (real delivery + LLM-authored timeline note)
+// ============================================================================
+
+function buildSendSmsNotePrompt(req: SendSmsRequest): string {
+  return [
+    'ACTION: send_sms',
+    '',
+    'An operator-approved outbound SMS has just been (or is about to be) sent to a lead.',
+    'Your ONLY job is to author the timeline note + a one-line rationale that records this send',
+    'on the lead\'s CRM activity timeline. You do NOT write, rewrite, or echo the SMS itself —',
+    'the recipient phone number and message text are already composed, operator-reviewed, and',
+    'owned by the delivery code. Do NOT reproduce the recipient phone number anywhere in your',
+    'output. Do NOT reproduce or rewrite the message text verbatim.',
+    '',
+    `Campaign: ${req.campaignName ?? '(none specified)'}`,
+    req.leadName ? `Lead: ${req.leadName}` : '',
+    '',
+    'A short excerpt of the SMS body (context only — do NOT copy it verbatim into your note):',
+    req.message.slice(0, 200),
+    '',
+    '---',
+    '',
+    'Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "rationale": "<1-3 sentences, plain English, why logging this send matters / what this outreach is doing for the lead>",',
+    '  "activity": {',
+    '    "subject": "<short timeline title for this send, e.g. \\"Outreach SMS sent — intro\\">",',
+    '    "body": "<2-4 sentence note for the lead timeline summarizing that this text went out and what it asked for, plain text>",',
+    '    "outcome": "<positive | neutral | negative — outbound sends are normally neutral>"',
+    '  }',
+    '}',
+    '',
+    'Hard rules:',
+    '- NEVER emit the recipient phone number. NEVER rewrite or restate the message text verbatim — the code owns the SMS.',
+    '- Output ONLY the JSON note. Plain text in the note. No markdown, no placeholders, no prose outside the JSON.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+async function authorSendSmsNote(req: SendSmsRequest, ctx: LlmCallContext): Promise<SendSmsActivityNote> {
+  const userPrompt = buildSendSmsNotePrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`SMS Specialist send_sms note was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = SendSmsActivityNoteSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`SMS Specialist send_sms note did not match expected schema: ${issueSummary}`);
+  }
+  return result.data;
+}
+
+// ============================================================================
 // SMS SPECIALIST CLASS
 // ============================================================================
 
@@ -510,6 +652,15 @@ export class SmsSpecialist extends BaseSpecialist {
 
       logger.info(`[SmsSpecialist] Executing action=${action} taskId=${taskId}`, { file: FILE });
 
+      // EXECUTOR path: actually send a (composed, operator-approved) SMS and
+      // log it. The approval gate is checked INSIDE executeSendSms BEFORE any
+      // GM load, TCPA check, or LLM call so an unapproved request never touches
+      // the carrier or OpenRouter.
+      if (action === 'send_sms') {
+        return await this.executeSendSms(taskId, payload);
+      }
+
+      // action === 'compose_sms'
       const inputValidation = ComposeSmsRequestSchema.safeParse({
         ...payload,
         action,
@@ -531,6 +682,113 @@ export class SmsSpecialist extends BaseSpecialist {
       logger.error('[SmsSpecialist] Execution failed', error instanceof Error ? error : new Error(errorMessage), { file: FILE });
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
+  }
+
+  /**
+   * EXECUTOR: actually send a (composed, operator-approved) SMS + log it.
+   * Fail-closed behind viaApprovedMissionStep. Delivery routes through the
+   * canonical sms-service.sendSMS() (which auto-appends "Reply STOP to opt out"
+   * — UNTOUCHED here, it protects the operator's Twilio A2P approval). TCPA
+   * consent is verified via checkTCPAConsent BEFORE any send. The LLM authors
+   * ONLY the timeline note; the recipient phone and message text are
+   * deterministic passthroughs.
+   */
+  private async executeSendSms(taskId: string, rawPayload: Record<string, unknown>): Promise<AgentReport> {
+    const validation = SendSmsPayloadSchema.safeParse(rawPayload);
+    if (!validation.success) {
+      const issues = validation.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+      return this.createReport(taskId, 'FAILED', null, [`SMS Specialist: invalid send_sms payload: ${issues}`]);
+    }
+    const req = validation.data;
+
+    // APPROVAL GATE — FAIL CLOSED. send_sms delivers a real SMS and must never
+    // fire from a direct Jasper chat call. viaApprovedMissionStep is set true
+    // ONLY by the mission StepRunner for an operator-approved step. Checked
+    // BEFORE any GM load / TCPA check / LLM call / send, so an unapproved
+    // request never touches the carrier or OpenRouter.
+    if (req.viaApprovedMissionStep !== true) {
+      logger.warn(
+        `[SmsSpecialist] send_sms BLOCKED (no operator approval) taskId=${taskId} leadId=${req.leadId}`,
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'COMPLETED', {
+        approvalRequired: true,
+        mutated: false,
+        leadId: req.leadId,
+        toPhone: req.toPhone,
+        message:
+          'send_sms delivers a real SMS and cannot run directly from chat. It requires explicit ' +
+          'operator approval. Propose it as a mission step via propose_mission_plan (toolName ' +
+          '"delegate_to_outreach", action "send_sms") — the operator approves the step in Mission ' +
+          'Control, then the SMS is sent.',
+      });
+    }
+
+    // TCPA GATE — FAIL CLOSED. Reuse checkTCPAConsent EXACTLY as-is. No send if
+    // consent is not on file / is revoked / number is suppressed.
+    const consent = await checkTCPAConsent(req.toPhone, 'sms');
+    if (!consent.allowed) {
+      logger.warn(
+        `[SmsSpecialist] send_sms BLOCKED by TCPA (no consent) taskId=${taskId} leadId=${req.leadId}`,
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'FAILED', null, [
+        `SMS Specialist: TCPA consent check failed — not sending. ${consent.reason ?? 'No consent on file.'}`,
+      ]);
+    }
+
+    // The LLM authors ONLY the timeline note (GM verbatim); recipient/message
+    // are deterministic passthroughs already composed + operator-reviewed.
+    const ctx = await loadRuntimeContext(DEFAULT_INDUSTRY_KEY);
+    const note = await authorSendSmsNote(req, ctx);
+
+    // COMPLIANCE: sendSMS() auto-appends "Reply STOP to opt out" itself — we
+    // pass the message verbatim and DO NOT alter that footer behavior.
+    const result = await sendSMS({
+      to: req.toPhone,
+      message: req.message,
+      ...(req.campaignName ? { metadata: { campaignName: req.campaignName } } : {}),
+    });
+
+    if (!result.success) {
+      return this.createReport(taskId, 'FAILED', null, [
+        `SMS Specialist: delivery failed: ${result.error ?? 'unknown error'}`,
+      ]);
+    }
+
+    // Log the sms_sent activity. Partial-success: NEVER discard a completed
+    // send — if the activity write fails, keep the send and return activityId:null.
+    let activityId: string | null = null;
+    try {
+      const activity = await createActivity({
+        type: 'sms_sent',
+        subject: note.activity.subject,
+        body: req.message,
+        relatedTo: [{ entityType: 'lead', entityId: req.leadId, entityName: req.leadName }],
+        createdBy: SPECIALIST_ID,
+        occurredAt: Timestamp.fromDate(new Date()),
+        metadata: { sentiment: note.activity.outcome },
+      });
+      activityId = activity.id;
+    } catch (activityError) {
+      logger.error(
+        `[SmsSpecialist] SMS sent but activity log failed for lead ${req.leadId}`,
+        activityError instanceof Error ? activityError : new Error(String(activityError)),
+        { file: FILE },
+      );
+    }
+
+    const out: SendSmsResult = {
+      rationale: note.rationale,
+      executed: {
+        leadId: req.leadId,
+        toPhone: req.toPhone,
+        smsId: result.messageId,
+        activityId,
+        smsSent: true,
+      },
+    };
+    return this.createReport(taskId, 'COMPLETED', out);
   }
 
   async handleSignal(signal: Signal): Promise<AgentReport> {
@@ -581,7 +839,10 @@ export const __internal = {
   loadRuntimeContext,
   appendPurposeAndSettings,
   buildComposeSmsUserPrompt,
+  buildSendSmsNotePrompt,
   stripJsonFences,
   ComposeSmsRequestSchema,
   ComposeSmsResultSchema,
+  SendSmsPayloadSchema,
+  SendSmsActivityNoteSchema,
 };

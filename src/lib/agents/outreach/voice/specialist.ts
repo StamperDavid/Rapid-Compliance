@@ -34,7 +34,9 @@ import type { VoiceCall, VoiceProvider, InitiateCallOptions } from '@/lib/voice/
 import { logger } from '@/lib/logger/logger';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { checkTCPAConsent } from '@/lib/compliance/tcpa-service';
+import { checkTCPAConsent, checkCallTimeRestrictions } from '@/lib/compliance/tcpa-service';
+import { createActivity } from '@/lib/crm/activity-service';
+import { Timestamp } from 'firebase/firestore';
 
 // ============== Configuration ==============
 
@@ -86,6 +88,28 @@ interface MakeCallPayload {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * place_call_execute — operator-gated EXECUTOR action.
+ *
+ * Unlike make_call (a raw dispatcher action the manager/Jasper can call
+ * directly), place_call_execute is an irreversible side effect: it RINGS a
+ * real phone AND writes a `call_made` CRM activity to the lead's timeline.
+ * It therefore fails closed behind the same operator-approval gate the other
+ * executor specialists use (deal-closer / email): it only proceeds when the
+ * mission step-runner sets `viaApprovedMissionStep === true` for an
+ * operator-approved step. A direct chat call (flag absent/false) returns
+ * COMPLETED guidance and performs NO TCPA check, NO dial, NO activity write.
+ */
+interface PlaceCallExecutePayload {
+  action: 'place_call_execute';
+  leadId: string;
+  toPhone: string;
+  contactId?: string;
+  leadName?: string;
+  goal?: string;
+  viaApprovedMissionStep?: boolean;
+}
+
 interface GetCallStatusPayload {
   action: 'get_call_status';
   callId: string;
@@ -126,6 +150,7 @@ interface LogOutcomePayload {
 
 type VoicePayload =
   | MakeCallPayload
+  | PlaceCallExecutePayload
   | GetCallStatusPayload
   | EndCallPayload
   | SendDTMFPayload
@@ -141,6 +166,20 @@ interface VoiceExecutionResult {
   recording?: string | null;
   outcome?: string;
   error?: string;
+  // place_call_execute — operator-gate guidance (returned WITHOUT a side effect)
+  approvalRequired?: boolean;
+  mutated?: boolean;
+  leadId?: string;
+  toPhone?: string;
+  message?: string;
+  // place_call_execute — executor result (call placed + CRM activity logged)
+  executed?: {
+    leadId: string;
+    toPhone: string;
+    callId: string;
+    activityId: string | null;
+    callPlaced: boolean;
+  };
 }
 
 // ============== Voice AI Specialist Implementation ==============
@@ -214,6 +253,10 @@ export class VoiceAiSpecialist extends BaseSpecialist {
       switch (payload.action) {
         case 'make_call':
           result = await this.handleMakeCall(payload);
+          break;
+
+        case 'place_call_execute':
+          result = await this.handlePlaceCallExecute(payload);
           break;
 
         case 'get_call_status':
@@ -314,6 +357,152 @@ export class VoiceAiSpecialist extends BaseSpecialist {
       action: 'make_call',
       callId: call.callId,
       call,
+    };
+  }
+
+  /**
+   * Handle place_call_execute action — operator-gated EXECUTOR.
+   *
+   * This is the only voice action that BOTH rings a real phone AND writes a
+   * `call_made` CRM activity to the lead's timeline. Because that pair of side
+   * effects is irreversible, it fails closed behind an operator-approval gate
+   * (mirrors deal-closer `executeClose` / email `send_email`).
+   *
+   * Order is safety-first:
+   *   (1) approval gate (no flag → refuse with guidance, NO side effect)
+   *   (2) E.164 validation (same regex make_call uses)
+   *   (3) TCPA consent (checkTCPAConsent) THEN call-time window
+   *       (checkCallTimeRestrictions) — both reused verbatim from
+   *       compliance/tcpa-service.ts, no wording change
+   *   (4) place the real call by REUSING the exact provider path make_call
+   *       uses (provider factory → provider.initiateCall) + the same
+   *       callLogs write
+   *   (5) log a deterministic `call_made` CRM activity (NO LLM — fixed
+   *       template text). Partial success: if the activity write fails after
+   *       the call is placed, keep the call (activityId:null).
+   */
+  private async handlePlaceCallExecute(payload: PlaceCallExecutePayload): Promise<VoiceExecutionResult> {
+    // (1) APPROVAL GATE — FAIL CLOSED. A direct chat call (flag absent/false)
+    //     must NOT ring a phone or touch the CRM. Return COMPLETED guidance
+    //     that routes through Mission Control. No TCPA / no dial before this.
+    if (payload.viaApprovedMissionStep !== true) {
+      logger.warn('[Voice Specialist] place_call_execute BLOCKED (no operator approval)', {
+        leadId: payload.leadId,
+        toPhone: payload.toPhone,
+        file: 'voice/specialist.ts',
+      });
+      return {
+        success: true,
+        action: 'place_call_execute',
+        approvalRequired: true,
+        mutated: false,
+        leadId: payload.leadId,
+        toPhone: payload.toPhone,
+        message:
+          'place_call_execute rings a real phone and logs a CRM activity, so it cannot run ' +
+          'directly from chat. It requires explicit operator approval. Propose it as a mission ' +
+          'step via propose_mission_plan (delegate_to_outreach, action "place_call"). The ' +
+          'operator approves the step in Mission Control, then the call is placed.',
+      };
+    }
+
+    if (!payload.leadId) {
+      return { success: false, action: 'place_call_execute', error: 'Missing required field: leadId' };
+    }
+    if (!payload.toPhone) {
+      return { success: false, action: 'place_call_execute', error: 'Missing required field: toPhone (phone number)' };
+    }
+
+    // (2) E.164 validation — same regex make_call uses.
+    if (!payload.toPhone.match(/^\+[1-9]\d{6,14}$/)) {
+      return {
+        success: false,
+        action: 'place_call_execute',
+        error: `Invalid phone number format (E.164 required): ${payload.toPhone}`,
+      };
+    }
+
+    // (3a) TCPA consent gate — fail closed (reused verbatim).
+    const consent = await checkTCPAConsent(payload.toPhone, 'call');
+    if (!consent.allowed) {
+      logger.warn('[Voice Specialist] place_call_execute blocked by TCPA consent check', {
+        toPhone: payload.toPhone,
+        reason: consent.reason,
+        file: 'voice/specialist.ts',
+      });
+      return {
+        success: false,
+        action: 'place_call_execute',
+        error: `Call blocked: TCPA consent not on file for this number. ${consent.reason ?? 'No consent record found.'}`,
+      };
+    }
+
+    // (3b) TCPA call-time window — the check make_call was missing (reused verbatim).
+    const timeOk = checkCallTimeRestrictions(payload.toPhone);
+    if (!timeOk.allowed) {
+      logger.warn('[Voice Specialist] place_call_execute blocked by TCPA call-time restriction', {
+        toPhone: payload.toPhone,
+        reason: timeOk.reason,
+        file: 'voice/specialist.ts',
+      });
+      return {
+        success: false,
+        action: 'place_call_execute',
+        error: `Call blocked: ${timeOk.reason ?? 'Outside permitted calling hours.'}`,
+      };
+    }
+
+    // (4) Place the real call by reusing the SAME provider path make_call uses
+    //     (provider factory → provider.initiateCall) + the same callLogs write.
+    const provider = await this.getProvider();
+    const call = await provider.initiateCall(payload.toPhone, 'default', {});
+    this.log('INFO', `place_call_execute: call initiated ${call.callId} to ${payload.toPhone} via ${provider.providerType}`);
+    await this.logCallToFirestore(call, {
+      leadId: payload.leadId,
+      contactId: payload.contactId,
+      goal: payload.goal,
+      via: 'place_call_execute',
+    });
+
+    // (5) Log the `call_made` CRM activity (deterministic template — NO LLM).
+    //     Partial success: keep the placed call even if the activity write fails.
+    const displayName = payload.leadName ?? 'lead';
+    const goalSuffix = payload.goal ? ` Goal: ${payload.goal}.` : '';
+    let activityId: string | null = null;
+    try {
+      const activity = await createActivity({
+        type: 'call_made',
+        direction: 'outbound',
+        subject: payload.goal ?? 'Outbound call',
+        body: `Outbound call placed to ${displayName} (${payload.toPhone}).${goalSuffix}`,
+        relatedTo: [{ entityType: 'lead', entityId: payload.leadId, entityName: payload.leadName }],
+        createdBy: CONFIG.identity.id,
+        occurredAt: Timestamp.fromDate(new Date()),
+        // Minimal metadata only — we know the call was PLACED, not whether it
+        // connected, so we do not assert a callOutcome. The provider call id is
+        // recorded on the callLogs doc (and in executed.callId), not duplicated here.
+        metadata: {},
+      });
+      activityId = activity.id;
+    } catch (activityError) {
+      logger.error(
+        `[Voice Specialist] place_call_execute: call placed (${call.callId}) but call_made activity log failed for lead ${payload.leadId}`,
+        activityError instanceof Error ? activityError : new Error(String(activityError)),
+        { file: 'voice/specialist.ts' },
+      );
+    }
+
+    return {
+      success: true,
+      action: 'place_call_execute',
+      callId: call.callId,
+      executed: {
+        leadId: payload.leadId,
+        toPhone: payload.toPhone,
+        callId: call.callId,
+        activityId,
+        callPlaced: true,
+      },
     };
   }
 

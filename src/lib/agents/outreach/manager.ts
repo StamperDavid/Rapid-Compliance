@@ -316,6 +316,8 @@ export type OutreachIntent =
   | 'SEND_EMAIL'            // Single email (COMPOSE-only — content generation, nothing sent)
   | 'SEND_EMAIL_EXECUTE'    // EXECUTOR — actually delivers a real email (irreversible, approval-gated)
   | 'SEND_SMS'              // Single SMS
+  | 'SEND_SMS_EXECUTE'      // EXECUTOR — actually delivers a real SMS (irreversible, approval-gated)
+  | 'PLACE_CALL_EXECUTE'    // EXECUTOR — actually places a real voice call (irreversible, approval-gated)
   | 'SEND_VOICE'            // Voice call (future)
   | 'CHECK_COMPLIANCE'      // Compliance verification
   | 'CHECK_SENTIMENT'       // Sentiment query
@@ -352,6 +354,12 @@ const INTENT_KEYWORDS: Record<OutreachIntent, string[]> = {
   SEND_SMS: [
     'sms', 'text', 'text message', 'mobile', 'short code',
   ],
+  // EXECUTOR intents — never keyword-detected. Routed ONLY when the Jasper tool
+  // layer sets payload.intent for an operator-approved mission step. Empty
+  // keywords keep them out of the heuristic intent matcher so a stray "text" or
+  // "call" in a brief can never trigger a real SMS / voice call.
+  SEND_SMS_EXECUTE: [],
+  PLACE_CALL_EXECUTE: [],
   SEND_VOICE: [
     'call', 'voice', 'phone', 'ring', 'dial',
   ],
@@ -386,6 +394,8 @@ const _INTENT_SPECIALISTS: Record<OutreachIntent, string[]> = {
   SEND_EMAIL: ['EMAIL_SPECIALIST'],
   SEND_EMAIL_EXECUTE: ['EMAIL_SPECIALIST'],
   SEND_SMS: ['SMS_SPECIALIST'],
+  SEND_SMS_EXECUTE: ['SMS_SPECIALIST'],
+  PLACE_CALL_EXECUTE: ['VOICE_AI_SPECIALIST'],
   SEND_VOICE: ['VOICE_AI_SPECIALIST'],
   CHECK_COMPLIANCE: [],
   CHECK_SENTIMENT: [],
@@ -573,6 +583,32 @@ export class OutreachManager extends BaseManager {
             taskId,
           );
 
+        case 'SEND_SMS_EXECUTE':
+          return await this.orchestrateSendSmsExecute(
+            {
+              leadId: payload?.leadId as string | undefined,
+              toPhone: payload?.toPhone as string | undefined,
+              leadName: payload?.leadName as string | undefined,
+              message: payload?.message as string | undefined,
+              campaignName: payload?.campaignName as string | undefined,
+              viaApprovedMissionStep: payload?.viaApprovedMissionStep === true,
+            },
+            taskId,
+          );
+
+        case 'PLACE_CALL_EXECUTE':
+          return await this.orchestratePlaceCallExecute(
+            {
+              leadId: payload?.leadId as string | undefined,
+              toPhone: payload?.toPhone as string | undefined,
+              contactId: payload?.contactId as string | undefined,
+              leadName: payload?.leadName as string | undefined,
+              goal: payload?.goal as string | undefined,
+              viaApprovedMissionStep: payload?.viaApprovedMissionStep === true,
+            },
+            taskId,
+          );
+
         case 'SEND_SMS':
           return await this.executeSingleChannel(taskId, 'SMS', payload, startTime);
 
@@ -640,6 +676,20 @@ export class OutreachManager extends BaseManager {
     // well as by explicit intent. The approval gate lives in the specialist.
     if (payload?.action === 'send_email_execute') {
       return 'SEND_EMAIL_EXECUTE';
+    }
+
+    // EXECUTOR action — actually delivers a real SMS. Recognized here so the
+    // Jasper tool layer can route to the executor by manager action name as
+    // well as by explicit intent. The approval gate lives in the specialist.
+    if (payload?.action === 'send_sms_execute') {
+      return 'SEND_SMS_EXECUTE';
+    }
+
+    // EXECUTOR action — actually places a real voice call. Recognized here so
+    // the Jasper tool layer can route to the executor by manager action name as
+    // well as by explicit intent. The approval gate lives in the specialist.
+    if (payload?.action === 'place_call_execute') {
+      return 'PLACE_CALL_EXECUTE';
     }
 
     // Phase 4: Check for Event Router command-style actions
@@ -1119,6 +1169,121 @@ export class OutreachManager extends BaseManager {
     };
 
     return this.delegateWithReview('EMAIL_SPECIALIST', message);
+  }
+
+  /**
+   * EXECUTOR — actually DELIVER a (composed, operator-approved) SMS via the
+   * SMS Specialist's send_sms action.
+   *
+   * Executor sibling of composeSmsViaSpecialist: compose generates content
+   * (nothing ships), send_sms delivers a real SMS (irreversible). Mirrors
+   * orchestrateSendEmailExecute EXACTLY — builds the AgentMessage with the
+   * specialist's lowercase action (`send_sms`), threads
+   * `viaApprovedMissionStep: params.viaApprovedMissionStep === true`, and routes
+   * via delegateWithReview to SMS_SPECIALIST so the M2a accumulator records the
+   * specialist and a perf-tracker entry is written.
+   *
+   * The approval gate is enforced INSIDE the specialist's executeSendSms:
+   * unless viaApprovedMissionStep === true it fails closed (no send). This
+   * manager NEVER sets the flag true on its own — it only forwards what the
+   * Jasper tool layer passed (which is true ONLY for an operator-approved
+   * mission step).
+   */
+  async orchestrateSendSmsExecute(
+    params: {
+      leadId?: string;
+      toPhone?: string;
+      leadName?: string;
+      message?: string;
+      campaignName?: string;
+      viaApprovedMissionStep?: boolean;
+    },
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log('INFO', `Orchestrating send_sms (EXECUTOR) for lead: ${params.leadId ?? '(none)'} → ${params.toPhone ?? '(none)'}`);
+
+    if (!this.specialistsRegistered) {
+      await this.registerAllSpecialists();
+    }
+
+    const message: AgentMessage = {
+      id: taskId,
+      timestamp: new Date(),
+      from: this.identity.id,
+      to: 'SMS_SPECIALIST',
+      type: 'COMMAND',
+      priority: 'HIGH',
+      payload: {
+        action: 'send_sms',
+        leadId: params.leadId,
+        toPhone: params.toPhone,
+        leadName: params.leadName,
+        message: params.message,
+        campaignName: params.campaignName,
+        viaApprovedMissionStep: params.viaApprovedMissionStep === true,
+      },
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    return this.delegateWithReview('SMS_SPECIALIST', message);
+  }
+
+  /**
+   * EXECUTOR — actually PLACE a (operator-approved) outbound voice call via the
+   * Voice AI Specialist's place_call_execute action.
+   *
+   * Executor sibling of the compose-only voice path: place_call_execute rings a
+   * real phone (irreversible) and logs a CRM activity. Mirrors
+   * orchestrateSendEmailExecute EXACTLY — builds the AgentMessage with the
+   * specialist's lowercase action (`place_call_execute`), threads
+   * `viaApprovedMissionStep: params.viaApprovedMissionStep === true`, and routes
+   * via delegateWithReview to VOICE_AI_SPECIALIST so the M2a accumulator records
+   * the specialist and a perf-tracker entry is written.
+   *
+   * The approval gate is enforced INSIDE the specialist's handler: unless
+   * viaApprovedMissionStep === true it fails closed (no call). This manager
+   * NEVER sets the flag true on its own — it only forwards what the Jasper tool
+   * layer passed (which is true ONLY for an operator-approved mission step).
+   */
+  async orchestratePlaceCallExecute(
+    params: {
+      leadId?: string;
+      toPhone?: string;
+      contactId?: string;
+      leadName?: string;
+      goal?: string;
+      viaApprovedMissionStep?: boolean;
+    },
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log('INFO', `Orchestrating place_call (EXECUTOR) for lead: ${params.leadId ?? '(none)'} → ${params.toPhone ?? '(none)'}`);
+
+    if (!this.specialistsRegistered) {
+      await this.registerAllSpecialists();
+    }
+
+    const message: AgentMessage = {
+      id: taskId,
+      timestamp: new Date(),
+      from: this.identity.id,
+      to: 'VOICE_AI_SPECIALIST',
+      type: 'COMMAND',
+      priority: 'HIGH',
+      payload: {
+        action: 'place_call_execute',
+        leadId: params.leadId,
+        toPhone: params.toPhone,
+        contactId: params.contactId,
+        leadName: params.leadName,
+        goal: params.goal,
+        viaApprovedMissionStep: params.viaApprovedMissionStep === true,
+      },
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    return this.delegateWithReview('VOICE_AI_SPECIALIST', message);
   }
 
   /**

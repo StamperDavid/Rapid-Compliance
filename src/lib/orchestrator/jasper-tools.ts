@@ -649,7 +649,6 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   voice_agent: '/voice',
   place_call: '/voice',
   schedule_call: '/calls',
-  send_sms: '/sms-messages',
   send_social_reply: '/mission-control',
   create_campaign: '/mission-control',
   create_workflow: '/mission-control',
@@ -2134,22 +2133,28 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       name: 'delegate_to_outreach',
       description:
         'Delegate a multi-channel outreach campaign to the Outreach Department. The Outreach Manager will coordinate Email Specialist and SMS Specialist with DNC compliance, frequency throttling, and sentiment-aware routing. For COLD-OUTREACH EMAIL DRIPS (e.g. "3-email outreach drip", "5-touch cold sequence"): set channel="email" and steps to the email count (>=2) — the Email Specialist will produce a coherent N-email arc personalized to the prospect in one call. For SINGLE outreach emails: leave steps at 1 (or omit). ' +
-        'Action "send_email" ACTUALLY SENDS a real, composed email to a real recipient and logs it on the CRM timeline — this is an IRREVERSIBLE side effect that REQUIRES OPERATOR APPROVAL. Do NOT call "send_email" directly from chat: it will refuse to send and just tell you to seek approval. ALWAYS route it through propose_mission_plan as a single step (toolName "delegate_to_outreach", action "send_email", with leadId, toEmail, subject and bodyPlainText). The operator approves the step in Mission Control and only then is the email delivered. The default compose flow (no "send_email" action) only DRAFTS content and is safe to call directly. ENABLED: TRUE.',
+        'Action "send_email" ACTUALLY SENDS a real, composed email to a real recipient and logs it on the CRM timeline — this is an IRREVERSIBLE side effect that REQUIRES OPERATOR APPROVAL. Do NOT call "send_email" directly from chat: it will refuse to send and just tell you to seek approval. ALWAYS route it through propose_mission_plan as a single step (toolName "delegate_to_outreach", action "send_email", with leadId, toEmail, subject and bodyPlainText). The operator approves the step in Mission Control and only then is the email delivered. ' +
+        'Action "send_sms" ACTUALLY SENDS a real SMS to a real phone number (it costs money and is IRREVERSIBLE) and action "place_call" ACTUALLY PLACES a real outbound voice call right now (it rings a real phone and is IRREVERSIBLE). BOTH require OPERATOR APPROVAL and BOTH refuse to fire if called directly from chat — you MUST route them through propose_mission_plan as a single step (toolName "delegate_to_outreach", action "send_sms" with leadId/toPhone/message, or action "place_call" with leadId/toPhone). The operator approves the step in Mission Control and only then is the SMS sent / call placed. ' +
+        'The default compose flow (no "send_email"/"send_sms"/"place_call" action) only DRAFTS content and is safe to call directly. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           action: {
             type: 'string',
-            description: 'The outreach action to perform. Omit (or use the default compose flow) to DRAFT email/SMS content safely. "send_email" ACTUALLY SENDS a real, already-composed email to the recipient and logs it — an irreversible CRM side effect that REQUIRES OPERATOR APPROVAL, so it must be proposed via propose_mission_plan and never called directly from chat.',
-            enum: ['send_email'],
+            description: 'The outreach action to perform. Omit (or use the default compose flow) to DRAFT email/SMS content safely. "send_email" ACTUALLY SENDS a real, already-composed email to the recipient and logs it. "send_sms" ACTUALLY SENDS a real SMS to a phone number. "place_call" ACTUALLY PLACES a real outbound voice call right now. ALL THREE are irreversible side effects that cost money and REQUIRE OPERATOR APPROVAL, so they must be proposed via propose_mission_plan and never called directly from chat.',
+            enum: ['send_email', 'send_sms', 'place_call'],
           },
           leadId: {
             type: 'string',
-            description: 'For action "send_email": the CRM lead ID the email is being sent to (used to log the email_sent activity on the timeline). REQUIRED for "send_email".',
+            description: 'For action "send_email"/"send_sms"/"place_call": the CRM lead ID the outreach is being sent to (used to log the activity on the timeline). REQUIRED for these actions.',
           },
           toEmail: {
             type: 'string',
             description: 'For action "send_email": the recipient email address. REQUIRED for "send_email".',
+          },
+          toPhone: {
+            type: 'string',
+            description: 'For action "send_sms"/"place_call": the recipient phone number in E.164 format (e.g. +15551234567). REQUIRED for "send_sms" and "place_call".',
           },
           subject: {
             type: 'string',
@@ -2165,11 +2170,19 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           leadName: {
             type: 'string',
-            description: 'Optional recipient display name for action "send_email".',
+            description: 'Optional recipient display name for action "send_email"/"send_sms"/"place_call".',
           },
           campaignName: {
             type: 'string',
-            description: 'Optional campaign label for action "send_email" (groups the send in analytics).',
+            description: 'Optional campaign label for action "send_email"/"send_sms" (groups the send in analytics).',
+          },
+          contactId: {
+            type: 'string',
+            description: 'For action "place_call": optional CRM contact id to link the call record to.',
+          },
+          goal: {
+            type: 'string',
+            description: 'For action "place_call": optional free-text description of WHY we are calling (e.g. "follow up on the demo from last week"). Surfaces to the AI voice agent.',
           },
           sequenceType: {
             type: 'string',
@@ -2187,7 +2200,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           message: {
             type: 'string',
-            description: 'The core message or value proposition to communicate',
+            description: 'The core message or value proposition to communicate. For action "send_sms": this is the already-composed, operator-reviewed SMS body that is actually sent. REQUIRED for "send_sms".',
           },
           steps: {
             type: 'number',
@@ -2518,34 +2531,12 @@ export const JASPER_TOOLS: ToolDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // DIRECT SMS SEND (Twilio/Vonage — compliance-gated)
+  // DIRECT SMS SEND — RETIRED (April 2026): the ungated inline send_sms tool was
+  // consolidated into the operator-gated delegate_to_outreach / action "send_sms"
+  // path, which routes through the SMS Specialist (TCPA + approval gate +
+  // sms_sent CRM activity logging the inline tool never did). No ungated SMS
+  // send path may remain — see delegate_to_outreach.
   // ═══════════════════════════════════════════════════════════════════════════
-  {
-    type: 'function',
-    function: {
-      name: 'send_sms',
-      description:
-        'Send a direct SMS to a phone number via the configured provider (Twilio primary, Vonage fallback). Use this when the user asks to text someone, send an SMS, or message a lead via phone. TCPA compliance is enforced: the recipient must have opted in or the send will be rejected. Always confirm the user intends an outbound text before calling this — it costs money per send. Returns the provider message id on success. ENABLED: TRUE.',
-      parameters: {
-        type: 'object',
-        properties: {
-          to: {
-            type: 'string',
-            description: 'Recipient phone number in E.164 format (e.g. +15551234567)',
-          },
-          message: {
-            type: 'string',
-            description: 'Message body (plain text, 160 chars per segment on GSM; longer messages are auto-segmented)',
-          },
-          from: {
-            type: 'string',
-            description: 'Optional sender phone number or alpha sender id — defaults to the configured Twilio number',
-          },
-        },
-        required: ['to', 'message'],
-      },
-    },
-  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // INBOUND SOCIAL DM REPLY (X / Twitter — operator-approved)
@@ -5614,6 +5605,102 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             break;
           }
 
+          // EXECUTOR action: actually SEND a (composed, operator-approved) SMS.
+          // Mirrors the send_email branch — maps the lowercase tool action to
+          // the manager's SEND_SMS_EXECUTE intent, builds the executor payload,
+          // and threads the approval gate (=== true, never literal true). The
+          // SMS Specialist fails closed unless viaApprovedMissionStep === true,
+          // which happens ONLY when the mission StepRunner dispatches an
+          // operator-approved step (it sets context.viaApprovedMissionStep). A
+          // direct Jasper chat call arrives without the flag → no send.
+          if (outreachAction === 'send_sms') {
+            const smsPayload: Record<string, unknown> = {
+              intent: 'SEND_SMS_EXECUTE',
+              action: 'send_sms_execute',
+              leadId: args.leadId as string | undefined,
+              toPhone: args.toPhone as string | undefined,
+              leadName: args.leadName as string | undefined,
+              message: args.message as string | undefined,
+              campaignName: args.campaignName as string | undefined,
+              viaApprovedMissionStep: context?.viaApprovedMissionStep === true,
+            };
+
+            const smsResult = await withTimeout(outreachMgr.execute({
+              id: `outreach_sms_${Date.now()}`,
+              timestamp: new Date(),
+              from: 'JASPER',
+              to: 'OUTREACH_MANAGER',
+              type: 'COMMAND',
+              priority: 'NORMAL',
+              payload: smsPayload,
+              requiresResponse: true,
+              traceId: `trace_${Date.now()}`,
+            }), MANAGER_TIMEOUT_MS, 'Outreach Manager');
+
+            const smsDuration = Date.now() - outreachStart;
+            trackMissionStep(context, 'delegate_to_outreach',
+              smsResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+              { summary: `Outreach send_sms: ${smsResult.status}`, durationMs: smsDuration, toolResult: JSON.stringify(smsResult.data), specialistsUsed: smsResult.specialistsUsed }
+            );
+
+            content = JSON.stringify({
+              status: smsResult.status,
+              data: smsResult.data,
+              errors: smsResult.errors,
+              manager: 'OUTREACH_MANAGER',
+              reviewLink: getReviewLink('delegate_to_outreach', context?.missionId),
+            });
+            break;
+          }
+
+          // EXECUTOR action: actually PLACE a (operator-approved) voice call.
+          // Mirrors the send_email branch — maps the lowercase tool action to
+          // the manager's PLACE_CALL_EXECUTE intent, builds the executor
+          // payload, and threads the approval gate (=== true, never literal
+          // true). The Voice Specialist fails closed unless
+          // viaApprovedMissionStep === true, which happens ONLY when the mission
+          // StepRunner dispatches an operator-approved step. A direct Jasper
+          // chat call arrives without the flag → no call.
+          if (outreachAction === 'place_call') {
+            const callPayload: Record<string, unknown> = {
+              intent: 'PLACE_CALL_EXECUTE',
+              action: 'place_call_execute',
+              leadId: args.leadId as string | undefined,
+              toPhone: args.toPhone as string | undefined,
+              contactId: args.contactId as string | undefined,
+              leadName: args.leadName as string | undefined,
+              goal: args.goal as string | undefined,
+              viaApprovedMissionStep: context?.viaApprovedMissionStep === true,
+            };
+
+            const callResult = await withTimeout(outreachMgr.execute({
+              id: `outreach_call_${Date.now()}`,
+              timestamp: new Date(),
+              from: 'JASPER',
+              to: 'OUTREACH_MANAGER',
+              type: 'COMMAND',
+              priority: 'NORMAL',
+              payload: callPayload,
+              requiresResponse: true,
+              traceId: `trace_${Date.now()}`,
+            }), MANAGER_TIMEOUT_MS, 'Outreach Manager');
+
+            const callDuration = Date.now() - outreachStart;
+            trackMissionStep(context, 'delegate_to_outreach',
+              callResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+              { summary: `Outreach place_call: ${callResult.status}`, durationMs: callDuration, toolResult: JSON.stringify(callResult.data), specialistsUsed: callResult.specialistsUsed }
+            );
+
+            content = JSON.stringify({
+              status: callResult.status,
+              data: callResult.data,
+              errors: callResult.errors,
+              manager: 'OUTREACH_MANAGER',
+              reviewLink: getReviewLink('delegate_to_outreach', context?.missionId),
+            });
+            break;
+          }
+
           // Parse leadList into an array. Accept JSON array, JSON single
           // object, or empty/invalid (fall back to a placeholder lead).
           let parsedLeads: Array<Record<string, unknown>> = [];
@@ -6505,70 +6592,10 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         break;
       }
 
-      case 'send_sms': {
-        const smsStart = Date.now();
-        trackMissionStep(context, 'send_sms', 'RUNNING', { toolArgs: args });
-
-        const to = typeof args.to === 'string' ? args.to : '';
-        const message = typeof args.message === 'string' ? args.message : '';
-        const from = typeof args.from === 'string' ? args.from : undefined;
-
-        if (!to || !message) {
-          trackMissionStep(context, 'send_sms', 'FAILED', { error: 'Missing to or message' });
-          content = JSON.stringify({ success: false, error: 'to and message are required' });
-          break;
-        }
-
-        try {
-          const { checkTCPAConsent } = await import('@/lib/compliance/tcpa-service');
-          const tcpa = await checkTCPAConsent(to, 'sms');
-          if (!tcpa.allowed) {
-            trackMissionStep(context, 'send_sms', 'FAILED', {
-              error: `TCPA: ${tcpa.reason}`,
-              durationMs: Date.now() - smsStart,
-            });
-            content = JSON.stringify({ success: false, error: `Blocked by TCPA compliance: ${tcpa.reason}` });
-            break;
-          }
-
-          const { sendSMS } = await import('@/lib/sms/sms-service');
-          const userId = context?.userId;
-          const result = await sendSMS({
-            to,
-            message,
-            from,
-            metadata: userId ? { userId } : undefined,
-          });
-
-          if (result.success) {
-            trackMissionStep(context, 'send_sms', 'COMPLETED', {
-              summary: `SMS sent to ${to}`,
-              durationMs: Date.now() - smsStart,
-              toolResult: JSON.stringify(result),
-            });
-            content = JSON.stringify({
-              success: true,
-              messageId: result.messageId,
-              provider: result.provider,
-              to,
-            });
-          } else {
-            trackMissionStep(context, 'send_sms', 'FAILED', {
-              error: result.error ?? 'SMS send failed',
-              durationMs: Date.now() - smsStart,
-            });
-            content = JSON.stringify({ success: false, error: result.error ?? 'SMS send failed' });
-          }
-        } catch (smsError) {
-          const smsErrorMsg = smsError instanceof Error ? smsError.message : String(smsError);
-          trackMissionStep(context, 'send_sms', 'FAILED', {
-            error: smsErrorMsg,
-            durationMs: Date.now() - smsStart,
-          });
-          content = JSON.stringify({ success: false, error: smsErrorMsg });
-        }
-        break;
-      }
+      // case 'send_sms' RETIRED (April 2026): the ungated inline SMS-send path
+      // was consolidated into delegate_to_outreach / action "send_sms", which
+      // routes through the operator-gated SMS Specialist (TCPA + approval gate +
+      // sms_sent CRM activity). No ungated SMS send path remains.
 
       case 'send_social_reply': {
         const sendReplyStart = Date.now();
@@ -6674,6 +6701,29 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       }
 
       case 'place_call': {
+        // APPROVAL GATE — FAIL CLOSED. place_call rings a real phone (irreversible,
+        // costs money) and must NEVER fire from a direct Jasper chat call. The flag
+        // is set true ONLY when the mission StepRunner dispatches an operator-approved
+        // step. The preferred, fully-consolidated path is delegate_to_outreach /
+        // action "place_call" (routes through the Voice Specialist). This inline tool
+        // is retained ONLY because it writes the `calls` collection doc keyed by
+        // twilioCallSid that the Twilio status webhook (/api/webhooks/voice) and
+        // /api/calls read to update call status/duration/recording — the Voice
+        // Specialist writes `callLogs`, a DIFFERENT collection, so retiring this
+        // outright would break that status-callback update. Full retirement is a
+        // follow-up: migrate the status webhook + /api/calls reader from `calls` to
+        // the specialist's `callLogs` write, then delete this tool. Until then it is
+        // gated so it can never fire ungated.
+        if (context?.viaApprovedMissionStep !== true) {
+          content = JSON.stringify({
+            approvalRequired: true,
+            mutated: false,
+            message:
+              'place_call requires operator approval — route via propose_mission_plan delegate_to_outreach place_call',
+          });
+          break;
+        }
+
         const callStart = Date.now();
         trackMissionStep(context, 'place_call', 'RUNNING', { toolArgs: args });
 
