@@ -28,7 +28,7 @@ export const CATALOG_TABS: SubpageNavItem[] = [
 // ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
 export const SOCIAL_TABS: SubpageNavItem[] = [
   { label: 'Platforms', href: '/social' },
-  { label: 'Campaigns', href: '/social/campaigns' },
+  { label: 'Social Media Campaigns', href: '/social/campaigns' },
   { label: 'Calendar', href: '/social/calendar' },
   { label: 'Analytics', href: '/social/analytics' },
   { label: 'Listening', href: '/social/listening' },
@@ -103,7 +103,7 @@ export const LEAD_INTEL_TABS: SubpageNavItem[] = [
 // /templates absorbed into Builder as a template picker (separate page deprecated).
 export const EMAIL_STUDIO_TABS: SubpageNavItem[] = [
   { label: 'Compose', href: '/email-writer' },
-  { label: 'Campaigns', href: '/email/campaigns' },
+  { label: 'Email Campaigns', href: '/email/campaigns' },
   { label: 'Builder', href: '/marketing/email-builder' },
 ];
 

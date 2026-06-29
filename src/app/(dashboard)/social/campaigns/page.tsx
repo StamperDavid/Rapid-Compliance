@@ -328,7 +328,7 @@ export default function SocialMediaCampaignsPage() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <PageTitle>Content Studio</PageTitle>
+            <PageTitle>Social Media Campaigns</PageTitle>
             <SectionDescription className="mt-1">AI-powered content creation with manual override</SectionDescription>
           </div>
           <div className="flex items-center gap-3">
