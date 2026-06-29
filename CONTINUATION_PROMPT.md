@@ -452,7 +452,10 @@ Keys: ✅ matched · ⚠️ GAP (open) · ❓ needs-verify · 🛡️ our-extra 
 
 **Other verticals' benchmarks (owner-stated Jun 26 — logged for when Video is certified):** CRM = Reevo /
 Pipedrive · Social = Sora + SocialBee / Postrillo / Buffer / ContentStudio / Hootsuite(OwlyWriter) ·
-Website builder = AI-powered Elementor Pro.
+Website builder = AI-powered Elementor Pro · **Lead sourcing + enrichment (Jun 29) = per-piece: Clay
+(enrichment/waterfall) · Firecrawl / Crawl4AI (LLM-clean crawl) · Apify (unified suite) · PhantomBuster
+(social) · Browse AI / Octoparse (no-code directory) · Bright Data / ScrapingBee (anti-bot) · Apollo
+(database pull) · Gumloop / Make (orchestration — OUR built-in edge).** See B.4a for the full mapping.
 
 ## 🔴 CINEMATIC-QUALITY DIAGNOSIS (Jun 29) — why our 30s–3min videos aren't cinematic
 Full pipeline review (planning → prompting → generation → chaining → assembly → sound). **Verdict:
@@ -1731,7 +1734,21 @@ Every item below is currently below the competitive bar. Target = the named incu
 - **B.1 Email Builder upgrade.** Phase 1 shipped (8 templates, basic block editor). Build Phases 2-5: per-block color/font/padding/alignment controls, drag-and-drop block reordering with handles, mobile preview toggle, image upload to Firebase Storage, HTML export, reusable block library, merge-tag picker UI. Target: Klaviyo / Mailchimp.
 - **B.2 Email Template Library to 50+.** Build out welcome (5), abandoned-cart (5), win-back (5), newsletter (5), promotional (8), transactional (5), re-engagement (5), event (3), sales (5), nurture sequences (4 multi-step). Every template hand-tuned with proven copy patterns. Target: Klaviyo's library.
 - **B.3 Social Composer upgrade.** Currently text + one image. Build: carousels (Instagram, LinkedIn), short-form video composer with auto-captions, AI thumbnail generation, threaded posts (X, Threads, Bluesky), Stories format (IG/FB), Reels format. Per-platform scheduling intelligence based on real audience engagement. Target: Buffer + Later.
-- **B.4 CRM AI layer.** AI lead enrichment from public data (wire the existing Scraper Specialist), deal scoring with plain-English reasoning, predictive churn modeling, multi-touch attribution beyond Budget Strategist's first-touch. Target: HubSpot Sales Hub.
+- **B.4 CRM AI layer.** Deal scoring with plain-English reasoning, predictive churn modeling, multi-touch attribution beyond Budget Strategist's first-touch. Target: HubSpot Sales Hub. (Lead sourcing + enrichment broken out into B.4a below — it's a vertical of its own, not a CRM sub-bullet.)
+
+- **B.4a Lead sourcing + enrichment (the "scraper" vertical).** Today's Scraper Specialist + Apollo pull is weak and doesn't cover the jobs the operator actually needs. This is the one place where a marketed "do-everything" approach is tempting — and it's exactly where we must NOT fork. **Architecture decision (Jun 29):** we do NOT add Apify/Clay/PhantomBuster as a fourth parallel scraping system bolted onto Jasper. We STRENGTHEN the single existing **Scraper Specialist** and give it these vendors as *tools it wields*, reached only by Jasper delegation. Jasper never scrapes; the specialist reasons about *which* source/tool fits the task and calls it. (This is the Apify/Gumloop "router" pattern — but it's already what our orchestrator→specialist model is, so we build it INTO the specialist, not as a competing canvas.)
+  - **Per-PIECE parity benchmarks (parity is the FLOOR, not the ceiling — match OR beat, then add):**
+    - **B2B enrichment / waterfall** (one input → verified decision-maker + email + phone, cross-referenced across many data sources): bar = **Clay** (Claygent + 150-source waterfall). This is the heaviest lift and the real answer to "Apollo is weak."
+    - **LLM-clean crawl** (URL → clean Markdown, token-cheap, no raw-HTML choke): bar = **Firecrawl / Crawl4AI**. *Do this FIRST* — cheapest, highest leverage, immediately cuts token cost on every research/enrichment call. Feeds [[project_ai_cost_estimation_and_metering]].
+    - **Unified scraper suite** (LinkedIn / Google Maps / arbitrary site under one API + proxy/anti-bot handled): bar = **Apify** (Actors via API/SDK, not its dashboard).
+    - **Social / profile scraping**: bar = **PhantomBuster**.
+    - **No-code / directory + niche-portal scraping**: bar = **Browse AI / Octoparse**.
+    - **Anti-bot raw power** (CAPTCHA/proxy rotation/fingerprinting at scale): bar = **Bright Data / ScrapingBee**.
+    - **Database pull** (broad target lists — what we already have): bar = **Apollo**. Keep it as the broad-match core; the others fill the gaps it leaves.
+    - **Orchestration / "AI picks the tool"**: bar = **Gumloop / Make**. This is OUR built-in edge — Jasper→Scraper Specialist already IS this routing layer. PROTECTED extra; surface it, don't rebuild a node canvas.
+  - **OUR protected extra (and a real differentiator for a compliance-branded product):** a **compliance gate** baked into the lead-gen flow — source-legality check (public/business-directory = clean; LinkedIn/social scraping = ToS + GDPR/CCPA spicy, flag it), plus consent/suppression-list handling before anything enters outreach. No incumbent scraper ships this; for Rapid Compliance it's a feature, not a tax.
+  - **Before spending:** pin down the *specific* Apollo gap (deliverability? shallow titles? no local-business coverage? stale data?) — each points at a different tool above. One sentence of ground truth changes the buy.
+  - **Definition of done:** the Scraper Specialist (real LLM, pirate-test proven) can be handed a task by Jasper, choose the right tool, return clean enriched JSON into the CRM lead record, with the compliance gate enforced — each piece certified against its named bar above. Wires into B.4's enrichment and C.6's competitor feed.
 - **B.5 Forms upgrade.** Conditional logic ("if Enterprise, show extra fields"), multi-step flows with progress bars, embeddable widget script. Target: Typeform / Tally.
 - **B.6 Voice AI end-to-end walkthrough.** Built but never tested. Outbound TCPA-gated dial → real conversation → transcript → CRM logging → follow-up trigger. Gated on Twilio toll-free approval. Target: Air AI / Synthflow.
 - **B.7 Workflows polish.** Engine exists. Template gallery + visual editor are basic. Real if-this-then-that builder for non-technical users. Target: Zapier visual builder.
