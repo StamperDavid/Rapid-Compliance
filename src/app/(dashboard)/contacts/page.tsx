@@ -17,8 +17,9 @@ import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
-import { Users, Plus, Eye, Loader2, AlertCircle, Trash2, Mail, Phone, ChevronDown } from 'lucide-react';
+import { Users, Plus, Eye, Loader2, AlertCircle, Trash2, Mail, Phone, ChevronDown, GitMerge, CheckCircle } from 'lucide-react';
 import { type Contact } from '@/types/contact';
+import { MergeRecordsDialog } from '@/components/crm/MergeRecordsDialog';
 
 function contactName(c: Contact): string {
   return (c.name ?? `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()) || 'Unknown';
@@ -36,6 +37,8 @@ export default function ContactsPage() {
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [mergePair, setMergePair] = useState<[Contact, Contact] | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -60,6 +63,16 @@ export default function ContactsPage() {
   const handleBulkDelete = (_ids: string[], rows: Contact[]) => {
     setDeleteIds(rows.map((r) => r.id));
     setDeleteDialogOpen(true);
+  };
+
+  const handleBulkMerge = (_ids: string[], rows: Contact[]) => {
+    if (rows.length !== 2) {
+      setNotice(null);
+      setError('Select exactly two contacts to merge.');
+      return;
+    }
+    setError(null);
+    setMergePair([rows[0], rows[1]]);
   };
 
   const confirmDelete = async () => {
@@ -137,6 +150,13 @@ export default function ContactsPage() {
 
   const bulkActions: BulkAction<Contact>[] = useMemo(() => [
     {
+      key: 'merge',
+      label: 'Merge',
+      icon: <GitMerge className="w-4 h-4" />,
+      variant: 'default',
+      onAction: handleBulkMerge,
+    },
+    {
       key: 'delete',
       label: 'Delete',
       icon: <Trash2 className="w-4 h-4" />,
@@ -185,6 +205,13 @@ export default function ContactsPage() {
         <div className="p-4 rounded-xl border border-error/20 flex items-center gap-3" style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}>
           <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
           <span className="text-error-light">{error}</span>
+        </div>
+      )}
+
+      {notice && (
+        <div className="p-4 rounded-xl border border-success/20 flex items-center gap-3" style={{ backgroundColor: 'rgba(var(--color-success-rgb), 0.1)' }}>
+          <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
+          <span className="text-success">{notice}</span>
         </div>
       )}
 
@@ -239,6 +266,17 @@ export default function ContactsPage() {
         variant="destructive"
         loading={deleting}
       />
+
+      {mergePair && (
+        <MergeRecordsDialog
+          open
+          onClose={() => setMergePair(null)}
+          entityType="contact"
+          recordA={{ id: mergePair[0].id, label: contactName(mergePair[0]), sublabel: mergePair[0].email ?? mergePair[0].company ?? undefined }}
+          recordB={{ id: mergePair[1].id, label: contactName(mergePair[1]), sublabel: mergePair[1].email ?? mergePair[1].company ?? undefined }}
+          onMerged={(msg) => { setMergePair(null); setNotice(msg); void fetchContacts(); }}
+        />
+      )}
     </div>
   );
 }
