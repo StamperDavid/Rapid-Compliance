@@ -176,7 +176,7 @@ export const LEADS_TABS: SubpageNavItem[] = [
 //    Payments moved to Products, Pricing & Payments hub (CATALOG_TABS) Apr 29 2026.
 export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'All Deals', href: '/deals' },
-  { label: 'Orders', href: '/deals/orders' },
+  { label: 'Orders', href: '/orders' },
   { label: 'Invoices', href: '/deals/invoices' },
   { label: 'Tasks', href: '/deals/tasks' },
   { label: 'Risk', href: '/risk' },
