@@ -11,7 +11,7 @@ import type { SubpageNavItem } from '@/components/ui/SubpageNav';
 export const DASHBOARD_TABS: SubpageNavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Analytics & Growth', href: '/analytics' },
-  { label: 'Activities', href: '/dashboard/activities' },
+  { label: 'Activities', href: '/activities' },
   { label: 'Executive Briefing', href: '/executive-briefing' },
   { label: 'Team', href: '/team/leaderboard' },
 ];

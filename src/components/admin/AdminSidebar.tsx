@@ -380,6 +380,7 @@ export default function AdminSidebar() {
     // Dashboard hub — dashboard + all tab destinations (executive briefing, team, analytics & growth)
     if (href === '/dashboard') {
       return pathname === '/dashboard' ||
+        pathname.startsWith('/activities') ||
         pathname.startsWith('/executive-briefing') ||
         pathname.startsWith('/team/') ||
         pathname.startsWith('/performance') ||
