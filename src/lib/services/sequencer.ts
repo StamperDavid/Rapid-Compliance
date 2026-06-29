@@ -27,6 +27,8 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email/email-service';
+import { wrapEmailBody } from '@/lib/email-writer/email-html-templates';
+import { injectUnsubscribe, buildListUnsubscribeHeaders } from '@/lib/compliance/can-spam-service';
 import { sendSMS } from '@/lib/sms/sms-service';
 import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
 import { initiateCall } from '@/lib/voice/twilio-service';
@@ -814,11 +816,27 @@ async function executeEmailAction(
     ? subjectVal
     : 'Following up';
   
+  // CAN-SPAM: this is a commercial sequence email, so it MUST carry an
+  // unsubscribe footer + RFC 8058 List-Unsubscribe headers. Wrap the body in
+  // the standard HTML template (if not already), inject the footer, and pass the
+  // headers into the send call so List-Unsubscribe reaches SendGrid. The lead id
+  // is used as the unsubscribe contactId (matching how the route derives it),
+  // with the step id as the audit-scoped emailId.
+  const wrappedHtml = wrapEmailBody(messageContent, { subject });
+  const { html: compliantHtml, unsubscribeUrl } = injectUnsubscribe(
+    wrappedHtml,
+    undefined,
+    enrollment.leadId,
+    step.id,
+  );
+  const listUnsubHeaders = buildListUnsubscribeHeaders(unsubscribeUrl);
+
   const result = await sendEmail({
     to: leadData.email,
     subject: subject,
-    html: messageContent,
-    text: messageContent.replace(/<[^>]*>/g, ''), // Strip HTML tags for text version
+    html: compliantHtml,
+    text: compliantHtml.replace(/<[^>]*>/g, ''), // Strip HTML tags for text version
+    headers: listUnsubHeaders,
     metadata: {
       sequenceId: enrollment.sequenceId,
       enrollmentId: enrollment.id,

@@ -361,7 +361,7 @@ export class SequenceEngine {
           throw new Error('Gmail failed and SendGrid not configured. Cannot send email.');
         }
 
-        const { sendEmail } = await import('@/lib/email/sendgrid-service');
+        const { sendEmail } = await import('@/lib/email/email-service');
         const result = await sendEmail({
           to: prospect.email,
           subject: (step.subject !== '' && step.subject != null)
@@ -378,7 +378,7 @@ export class SequenceEngine {
             stepId: step.id,
             prospectId: enrollment.prospectId,
           },
-        }, sendgridKey);
+        });
 
         if (!result.success) {
           throw new Error((result.error !== '' && result.error != null)

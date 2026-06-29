@@ -20,6 +20,8 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { sendEmail } from '@/lib/email/email-service';
+import { wrapEmailBody } from '@/lib/email-writer/email-html-templates';
+import { injectUnsubscribe, buildListUnsubscribeHeaders } from '@/lib/compliance/can-spam-service';
 import { logger } from '@/lib/logger/logger';
 import {
   upsertSalesVelocityCalendarEvent,
@@ -399,10 +401,25 @@ export async function fireReadySequenceJobs(maxBatch: number = 50): Promise<Fire
     }
 
     try {
+      // CAN-SPAM: this is a commercial drip-sequence email, so it MUST carry an
+      // unsubscribe footer + RFC 8058 List-Unsubscribe headers. Wrap the body in
+      // the standard HTML template (if it is not already), inject the footer, and
+      // hand the headers to the send call so List-Unsubscribe reaches SendGrid.
+      // The recipient email is used as the unsubscribe contactId (the job has no
+      // separate contact/lead id), mirroring the /api/email-writer/send fallback.
+      const wrappedHtml = wrapEmailBody(job.emailBody, { subject: job.emailSubject });
+      const { html: compliantHtml, unsubscribeUrl } = injectUnsubscribe(
+        wrappedHtml,
+        undefined,
+        job.recipient,
+      );
+      const listUnsubHeaders = buildListUnsubscribeHeaders(unsubscribeUrl);
+
       const result = await sendEmail({
         to: [job.recipient],
         subject: job.emailSubject,
-        html: job.emailBody,
+        html: compliantHtml,
+        headers: listUnsubHeaders,
         tracking: { trackOpens: true, trackClicks: true },
         metadata: {
           workflowId: job.workflowId,

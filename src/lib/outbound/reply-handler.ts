@@ -407,9 +407,14 @@ export async function sendReplyEmail(
   _inReplyTo?: string,
   _threadId?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { sendEmail } = await import('@/lib/email/sendgrid-service');
-  
-  return sendEmail({
+  // This is a CONVERSATIONAL reply — an AI-generated answer auto-sent in
+  // response to a prospect's own inbound email (see the gmail + email-inbound
+  // webhooks). It is a one-to-one human-like response, NOT a commercial/bulk
+  // marketing message, so no CAN-SPAM unsubscribe footer is injected (mirrors
+  // the prior behavior — this path never had one).
+  const { sendEmail } = await import('@/lib/email/email-service');
+
+  const result = await sendEmail({
     to,
     subject,
     html: body,
@@ -418,6 +423,8 @@ export async function sendReplyEmail(
       trackClicks: true,
     },
   });
+
+  return { success: result.success, error: result.error };
 }
 
 /**

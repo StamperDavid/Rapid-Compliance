@@ -9,167 +9,15 @@ import { logger } from '@/lib/logger/logger';
 const FROM_EMAIL =(process.env.FROM_EMAIL !== '' && process.env.FROM_EMAIL != null) ? process.env.FROM_EMAIL : 'noreply@yourdomain.com';
 const FROM_NAME =(process.env.FROM_NAME !== '' && process.env.FROM_NAME != null) ? process.env.FROM_NAME : 'SalesVelocity';
 
-export interface SendEmailOptions {
-  to: string;
-  subject: string;
-  html: string;
-  text?: string;
-  from?: {
-    email: string;
-    name: string;
-  };
-  replyTo?: string;
-  tracking?: {
-    trackOpens: boolean;
-    trackClicks: boolean;
-    /**
-     * Whether to ALSO rewrite URLs found in the plain-text part for click
-     * tracking. Defaults to false so plain-text unsubscribe links never get
-     * routed through SendGrid's click-tracking subdomain (url8565.<domain>),
-     * which has bitten us with NET::ERR_CERT_COMMON_NAME_INVALID warnings.
-     * HTML click tracking remains on by default; individual <a> tags can
-     * opt out per-link with the `clicktracking="off"` attribute.
-     */
-    trackClicksText?: boolean;
-  };
-  metadata?: Record<string, string>;
-  /** Additional SMTP headers, e.g. List-Unsubscribe for CAN-SPAM compliance */
-  headers?: Record<string, string>;
-}
-
-export interface EmailTrackingData {
-  enrollmentId?: string;
-  stepId?: string;
-  prospectId?: string;
-  campaignId?: string;
-}
-
 /**
- * Send email via SendGrid with tracking
+ * NOTE: The transactional/marketing `sendEmail` and `sendBulkEmails` senders
+ * that previously lived here were retired during the email-send consolidation.
+ * Use `sendEmail`/`sendBulkEmails` from '@/lib/email/email-service' (multi-provider
+ * transport + transactional/bulk, forwards `options.headers` for List-Unsubscribe)
+ * or `sendEmail` from '@/lib/email-writer/email-delivery-service' (marketing/lead
+ * canonical, delivery record + retry). This file is kept ONLY for its webhook
+ * parser and the HTML tracking/template/validation helpers below.
  */
-export async function sendEmail(options: SendEmailOptions, apiKey?: string): Promise<{
-  success: boolean;
-  messageId?: string;
-  error?: string;
-}> {
-  const SENDGRID_API_KEY =apiKey ?? process.env.SENDGRID_API_KEY;
-  
-  if (!SENDGRID_API_KEY) {
-    logger.error('[SendGrid] API key not configured', new Error('[SendGrid] API key not configured'), { file: 'sendgrid-service.ts' });
-    return {
-      success: false,
-      error: 'Email service not configured.',
-    };
-  }
-  
-  sgMail.setApiKey(SENDGRID_API_KEY);
-
-  try {
-    const msg: MailDataRequired = {
-      to: options.to,
-      from:options.from ?? {
-        email: FROM_EMAIL,
-        name: FROM_NAME,
-      },
-      subject: options.subject,
-      html: options.html,
-      text:options.text ?? stripHtml(options.html),
-      trackingSettings: {
-        clickTracking: {
-          enable: options.tracking?.trackClicks ?? true,
-          enableText: options.tracking?.trackClicksText ?? false,
-        },
-        openTracking: {
-          enable: options.tracking?.trackOpens ?? true,
-        },
-      },
-    };
-
-    // Add reply-to if specified
-    if (options.replyTo) {
-      msg.replyTo = options.replyTo;
-    }
-
-    // Add custom SMTP headers (e.g. List-Unsubscribe for CAN-SPAM compliance)
-    if (options.headers) {
-      msg.headers = options.headers;
-    }
-
-    // Add custom headers for tracking
-    if (options.metadata) {
-      msg.customArgs = options.metadata;
-    }
-
-    const [response] = await sgMail.send(msg);
-
-    logger.info('SendGrid Email sent successfully to options.to}', { file: 'sendgrid-service.ts' });
-
-    const headers = response.headers as Record<string, unknown> | undefined;
-    const messageId = headers?.['x-message-id'];
-
-    return {
-      success: true,
-      messageId: typeof messageId === 'string' ? messageId : undefined,
-    };
-  } catch (error) {
-    const err = error as ResponseError | Error;
-    logger.error('[SendGrid] Error sending email:', err instanceof Error ? err : new Error(String(error)), { file: 'sendgrid-service.ts' });
-
-    if ('response' in err && err.response) {
-      logger.error('[SendGrid] Response error', new Error('SendGrid error'), {
-        responseBody: err.response.body,
-        file: 'sendgrid-service.ts'
-      });
-    }
-
-    return {
-      success: false,
-      error: err instanceof Error && err.message ? err.message : 'Failed to send email',
-    };
-  }
-}
-
-/**
- * Send bulk emails (batch send)
- */
-export async function sendBulkEmails(
-  emails: SendEmailOptions[]
-): Promise<{
-  success: boolean;
-  sent: number;
-  failed: number;
-  errors: string[];
-}> {
-  const results = await Promise.allSettled(
-    emails.map(email => sendEmail(email))
-  );
-
-  let sent = 0;
-  let failed = 0;
-  const errors: string[] = [];
-
-  results.forEach((result, index) => {
-    if (result.status === 'fulfilled' && result.value.success) {
-      sent++;
-    } else {
-      failed++;
-      let errorMessage: string;
-      if (result.status === 'rejected') {
-        errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
-      } else {
-        errorMessage = result.value.error ?? 'Unknown error';
-      }
-      errors.push(`Email ${index + 1}: ${errorMessage}`);
-    }
-  });
-
-  return {
-    success: failed === 0,
-    sent,
-    failed,
-    errors,
-  };
-}
 
 /**
  * Add tracking pixel to HTML email
@@ -206,20 +54,6 @@ export function addClickTracking(html: string, trackingId: string): string {
       return `href="${trackingUrl}"`;
     }
   );
-}
-
-/**
- * Strip HTML tags from text
- */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .trim();
 }
 
 /**

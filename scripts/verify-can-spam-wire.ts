@@ -126,12 +126,15 @@ results.push({
   detail: deliveryAcceptsHeaders ? 'present' : 'missing — email-writer sendEmail will not pass headers through',
 });
 
-// Verify SendGrid + Gmail send layers actually emit headers
-const sgPath = path.resolve(process.cwd(), 'src/lib/email/sendgrid-service.ts');
+// Verify the canonical multi-provider transport actually emits headers on its
+// SendGrid branch. (The legacy email/sendgrid-service.ts sender was retired in
+// the email-send consolidation; its SendGrid transport now lives in
+// email-service.ts, which sets payload.headers = options.headers.)
+const sgPath = path.resolve(process.cwd(), 'src/lib/email/email-service.ts');
 const sgSrc = fs.readFileSync(sgPath, 'utf-8');
-const sgEmitsHeaders = /msg\.headers\s*=\s*options\.headers/.test(sgSrc);
+const sgEmitsHeaders = /payload\.headers\s*=\s*options\.headers/.test(sgSrc);
 results.push({
-  name: 'sendgrid-service emits options.headers',
+  name: 'email-service SendGrid branch emits options.headers',
   pass: sgEmitsHeaders,
   detail: sgEmitsHeaders ? 'present' : 'missing — headers field on EmailOptions is dead-end',
 });

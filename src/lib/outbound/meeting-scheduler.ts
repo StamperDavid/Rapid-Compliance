@@ -639,7 +639,7 @@ async function sendMeetingUpdate(
   reason?: string
 ): Promise<void> {
   try {
-    const { sendEmail } = await import('@/lib/integrations/sendgrid-service');
+    const { sendEmail } = await import('@/lib/email/email-service');
     
     // Get organization settings for email templates
     const { db } = await import('@/lib/firebase/config');
