@@ -46,12 +46,17 @@
  */
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
 import type { ScrapeResult } from '../../intelligence/scraper/specialist';
+import { getLead, updateLead } from '@/lib/crm/lead-service';
+import type { Lead } from '@/types/crm-entities';
+import { createActivity } from '@/lib/crm/activity-service';
+import type { ActivityType } from '@/types/activity';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -62,7 +67,7 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'sales/outreach/specialist.ts';
 const SPECIALIST_ID = 'OUTREACH_SPECIALIST';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['generate_outreach'] as const;
+const SUPPORTED_ACTIONS = ['generate_outreach', 'log_outreach_touch'] as const;
 
 /**
  * Realistic max_tokens floor for the worst-case Sales Outreach response.
@@ -240,6 +245,92 @@ export type OutreachObjection = z.infer<typeof ObjectionAnticipationSchema>;
 export type MessageRequest = GenerateOutreachPayload;
 export type OutreachResult = GenerateOutreachResult;
 export type GeneratedMessage = OutreachMessage;
+
+// ============================================================================
+// INPUT CONTRACT — log_outreach_touch (EXECUTOR action)
+// ============================================================================
+
+/**
+ * The four lead statuses that are TERMINAL — a touch on a lead in one of these
+ * states is rejected (the lead is closed, there is nothing left to nurture).
+ */
+const TERMINAL_LEAD_STATUSES: ReadonlySet<Lead['status']> = new Set<Lead['status']>([
+  'converted',
+  'lost',
+]);
+
+const OutreachTouchChannelEnum = z.enum(['email', 'linkedin_dm', 'call', 'other']);
+export type OutreachTouchChannel = z.infer<typeof OutreachTouchChannelEnum>;
+
+/**
+ * Operator/Jasper → Revenue Director → Sales Outreach Specialist
+ * log_outreach_touch payload.
+ *
+ * This action LOGS that an outreach touch happened (it records an activity on
+ * the lead timeline and bumps `new → contacted`). It does NOT send anything —
+ * delivery belongs to the Outreach department's Email / SMS specialists. The
+ * `channel` is mapped to an `ActivityType` DETERMINISTICALLY IN CODE; the LLM
+ * never picks the type. `viaApprovedMissionStep` is the approval gate (see
+ * below) and defaults to `false` so any caller that omits it gets the safe
+ * (no-mutation) behavior.
+ */
+const LogOutreachTouchPayloadSchema = z.object({
+  action: z.literal('log_outreach_touch'),
+  leadId: z.string().min(1).max(300),
+  channel: OutreachTouchChannelEnum,
+  touchSummary: z.string().max(2000).optional(),
+  callNotes: z.string().max(4000).optional(),
+  /**
+   * APPROVAL GATE. log_outreach_touch performs a CRM write (it logs an activity
+   * and may bump the lead status). It must NEVER fire autonomously from a direct
+   * Jasper chat call. This flag is set true ONLY when the mission StepRunner
+   * dispatched this as an operator-approved mission step
+   * (context.viaApprovedMissionStep, threaded down through Jasper's tool layer →
+   * Revenue Director). Absent/false → the specialist FAILS CLOSED and does not
+   * mutate; it returns guidance telling Jasper to propose the action as a
+   * mission step for operator approval.
+   *
+   * Defaults to `false` so any caller that omits it gets the safe (no-mutation)
+   * behavior.
+   */
+  viaApprovedMissionStep: z.boolean().optional().default(false),
+});
+
+export type LogOutreachTouchRequest = z.infer<typeof LogOutreachTouchPayloadSchema>;
+
+/**
+ * LLM JSON contract for log_outreach_touch. The model AUTHORS the activity note
+ * and explains its reasoning — it does NOT pick the activity type, the lead
+ * status, or claim the message was delivered. Output tokens for this action are
+ * small.
+ */
+const OutreachTouchNoteSchema = z.object({
+  rationale: z.string().min(10).max(2000),
+  activity: z.object({
+    subject: z.string().min(3).max(200),
+    body: z.string().min(10).max(3000),
+    outcome: z.enum(['positive', 'neutral']),
+  }),
+});
+
+export type OutreachTouchNote = z.infer<typeof OutreachTouchNoteSchema>;
+
+/**
+ * Result of a log_outreach_touch run. `leadUpdated` is true once the lead status
+ * write (`new → contacted`) landed. `activityId` is null when the status change
+ * was kept but the activity write threw (partial success — we never discard a
+ * status change that already landed).
+ */
+export interface LogOutreachTouchResult {
+  rationale: string;
+  executed: {
+    leadId: string;
+    previousStatus: Lead['status'];
+    newStatus: Lead['status'];
+    activityId: string | null;
+    leadUpdated: boolean;
+  };
+}
 
 // ============================================================================
 // LLM INVOCATION CORE
@@ -511,6 +602,113 @@ async function executeGenerateOutreach(
 }
 
 // ============================================================================
+// ACTION: log_outreach_touch — EXECUTOR (deterministic CRM write + LLM note)
+// ============================================================================
+
+/**
+ * DETERMINISTIC channel → ActivityType mapping. The LLM never reaches this code
+ * path; the activity type is chosen purely from the channel the rep used.
+ *   email → 'email_sent'
+ *   call  → 'call_made'
+ *   linkedin_dm / other → 'note_added'
+ */
+function mapChannelToActivityType(channel: OutreachTouchChannel): ActivityType {
+  if (channel === 'email') { return 'email_sent'; }
+  if (channel === 'call') { return 'call_made'; }
+  return 'note_added';
+}
+
+/**
+ * DETERMINISTIC status transition. ONLY a lead at `'new'` advances to
+ * `'contacted'`. Every other status is left UNCHANGED — we never downgrade a
+ * `'qualified'` lead by logging a touch. The LLM never reaches this code path.
+ */
+function resolveNextLeadStatus(currentStatus: Lead['status']): Lead['status'] {
+  return currentStatus === 'new' ? 'contacted' : currentStatus;
+}
+
+function buildLogOutreachTouchPrompt(req: LogOutreachTouchRequest, lead: Lead): string {
+  const channelLabel =
+    req.channel === 'email' ? 'an email' :
+    req.channel === 'linkedin_dm' ? 'a LinkedIn DM' :
+    req.channel === 'call' ? 'a phone call' :
+    'an outreach touch';
+
+  const leadName = lead.name ?? `${lead.firstName}${lead.lastName ? ` ${lead.lastName}` : ''}`.trim();
+
+  return [
+    'ACTION: log_outreach_touch',
+    '',
+    `You are recording that an outbound outreach touch (${channelLabel}) was made to this lead.`,
+    'You are NOT sending the message — sending belongs to a separate specialist. You only',
+    'author the timeline note + rationale for the touch that already happened.',
+    '',
+    '## Lead',
+    `Lead ID: ${lead.id}`,
+    leadName ? `Name: ${leadName}` : '',
+    (lead.company ?? lead.companyName) ? `Company: ${lead.company ?? lead.companyName}` : '',
+    `Current status: ${lead.status}`,
+    `Channel: ${req.channel}`,
+    '',
+    '## Touch summary from the rep',
+    req.touchSummary && req.touchSummary.trim().length > 0 ? req.touchSummary.trim() : '(no touch summary provided)',
+    '',
+    '## Call notes from the rep',
+    req.callNotes && req.callNotes.trim().length > 0 ? req.callNotes.trim() : '(no call notes provided)',
+    '',
+    '---',
+    '',
+    'Author the timeline note + rationale for this touch. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "rationale": "<1-3 sentences, plain English, why this touch was the right move given the context>",',
+    '  "activity": {',
+    '    "subject": "<short timeline title for this touch>",',
+    '    "body": "<2-5 sentence timeline note describing the touch, plain text>",',
+    '    "outcome": "<positive | neutral>"',
+    '  }',
+    '}',
+    '',
+    'Hard rules:',
+    '- NEVER claim the message was delivered, opened, replied to, or received. You are RECORDING a',
+    '  touch the rep made; the actual send is handled by a different specialist. Write the note as',
+    '  "Reached out via ..." / "Logged outreach touch ...", not "Sent and they opened ...".',
+    '- Do NOT name or guess any CRM status string (the system updates the status in code).',
+    '- Plain text only. No markdown, no placeholders.',
+    '- Output ONLY the JSON object. No markdown fences. No prose outside it.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+async function authorOutreachTouchNote(
+  req: LogOutreachTouchRequest,
+  lead: Lead,
+  ctx: LlmCallContext,
+): Promise<OutreachTouchNote> {
+  const userPrompt = buildLogOutreachTouchPrompt(req, lead);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Sales Outreach Specialist log_outreach_touch output was not valid JSON: ${rawContent.slice(0, 300)}`,
+    );
+  }
+
+  const result = OutreachTouchNoteSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(
+      `Sales Outreach Specialist log_outreach_touch output did not match expected schema: ${issueSummary}`,
+    );
+  }
+  return result.data;
+}
+
+// ============================================================================
 // SALES OUTREACH SPECIALIST CLASS
 // ============================================================================
 
@@ -534,6 +732,11 @@ export class OutreachSpecialist extends BaseSpecialist {
         return this.createReport(taskId, 'FAILED', null, [
           'Sales Outreach Specialist: payload must be an object',
         ]);
+      }
+
+      // EXECUTOR path: log an outreach touch + bump the lead status (no send).
+      if (rawPayload.action === 'log_outreach_touch') {
+        return await this.executeLogOutreachTouch(taskId, rawPayload);
       }
 
       const normalized = this.normalizePayload(rawPayload);
@@ -567,6 +770,133 @@ export class OutreachSpecialist extends BaseSpecialist {
       );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
+  }
+
+  /**
+   * EXECUTOR: record an outbound outreach touch on a lead and bump its status.
+   *
+   * SCOPE: this LOGS the touch + advances `new → contacted`. It does NOT send
+   * email/SMS/DMs — delivery belongs to the Outreach department's Email / SMS
+   * specialists. The activity NOTE + rationale are LLM work (governed by the
+   * Golden Master). The activity TYPE, the status transition, and the database
+   * writes are plain deterministic TypeScript — the LLM never picks them.
+   */
+  private async executeLogOutreachTouch(taskId: string, rawPayload: Record<string, unknown>): Promise<AgentReport> {
+    const inputValidation = LogOutreachTouchPayloadSchema.safeParse(rawPayload);
+    if (!inputValidation.success) {
+      const issueSummary = inputValidation.error.issues
+        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+        .join('; ');
+      return this.createReport(taskId, 'FAILED', null, [
+        `Sales Outreach Specialist: invalid log_outreach_touch payload: ${issueSummary}`,
+      ]);
+    }
+    const req = inputValidation.data;
+
+    // (0) APPROVAL GATE — FAIL CLOSED. log_outreach_touch is a CRM mutation
+    //     (activity write + status bump) and must never run autonomously from a
+    //     direct Jasper chat call. It mutates ONLY when this run is an
+    //     operator-approved mission step (the StepRunner sets
+    //     viaApprovedMissionStep; a direct chat call does not). Without the
+    //     approval signal we DO NOT touch the CRM — instead we return COMPLETED
+    //     guidance that routes Jasper through the Mission Control approval flow
+    //     (propose_mission_plan → operator approves the step → runner re-invokes
+    //     this with the flag set).
+    if (req.viaApprovedMissionStep !== true) {
+      logger.warn(
+        `[OutreachSpecialist] log_outreach_touch BLOCKED (no operator approval) taskId=${taskId} leadId=${req.leadId} channel=${req.channel}`,
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'COMPLETED', {
+        approvalRequired: true,
+        mutated: false,
+        leadId: req.leadId,
+        channel: req.channel,
+        message:
+          'log_outreach_touch logs a real CRM activity and may bump the lead status, so it ' +
+          'cannot run directly from chat. It requires explicit operator approval. Propose it as ' +
+          'a mission step via propose_mission_plan (toolName "delegate_to_sales", action ' +
+          `"log_outreach_touch", with leadId "${req.leadId}" and channel "${req.channel}"). The ` +
+          'operator approves the step in Mission Control, then the touch is logged.',
+      });
+    }
+
+    logger.info(
+      `[OutreachSpecialist] Executing log_outreach_touch taskId=${taskId} leadId=${req.leadId} channel=${req.channel}`,
+      { file: FILE },
+    );
+
+    // (a) Existence + terminal-state guard.
+    const lead = await getLead(req.leadId, { useAdminSdk: true });
+    if (!lead) {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Sales Outreach Specialist: lead '${req.leadId}' not found — cannot log outreach touch.`,
+      ]);
+    }
+    if (TERMINAL_LEAD_STATUSES.has(lead.status)) {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Sales Outreach Specialist: lead '${req.leadId}' is already ${lead.status} (terminal) — nothing to log.`,
+      ]);
+    }
+
+    // (b) DETERMINISTIC channel → ActivityType + status transition (in code).
+    const activityType = mapChannelToActivityType(req.channel);
+    const previousStatus = lead.status;
+    const newStatus = resolveNextLeadStatus(previousStatus);
+    const leadName = lead.name ?? `${lead.firstName}${lead.lastName ? ` ${lead.lastName}` : ''}`.trim();
+
+    // (c) LLM authors the activity note + rationale (GM prompt, verbatim).
+    const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+    const note = await authorOutreachTouchNote(req, lead, ctx);
+
+    // (d) Bump the lead status ONLY when it actually changes (new → contacted).
+    let leadUpdated = false;
+    if (newStatus !== previousStatus) {
+      await updateLead(req.leadId, { status: newStatus }, { useAdminSdk: true });
+      leadUpdated = true;
+    }
+
+    // (e) Log the touch as an activity. If THIS fails, report partial success —
+    //     a status bump that already landed must not be thrown away.
+    let activityId: string | null = null;
+    try {
+      const activity = await createActivity({
+        type: activityType,
+        direction: 'outbound',
+        subject: note.activity.subject,
+        body: note.activity.body,
+        relatedTo: [{ entityType: 'lead', entityId: req.leadId, entityName: leadName }],
+        createdBy: SPECIALIST_ID,
+        occurredAt: Timestamp.fromDate(new Date()),
+        metadata: {
+          previousValue: previousStatus,
+          newValue: newStatus,
+          fieldChanged: 'status',
+          sentiment: note.activity.outcome,
+          callNotes: req.callNotes,
+        },
+      });
+      activityId = activity.id;
+    } catch (activityError) {
+      logger.error(
+        `[OutreachSpecialist] Lead status bump succeeded but activity log failed for lead ${req.leadId}`,
+        activityError instanceof Error ? activityError : new Error(String(activityError)),
+        { file: FILE },
+      );
+    }
+
+    const result: LogOutreachTouchResult = {
+      rationale: note.rationale,
+      executed: {
+        leadId: req.leadId,
+        previousStatus,
+        newStatus,
+        activityId,
+        leadUpdated,
+      },
+    };
+
+    return this.createReport(taskId, 'COMPLETED', result);
   }
 
   /**
@@ -676,4 +1006,9 @@ export const __internal = {
   executeGenerateOutreach,
   GenerateOutreachPayloadSchema,
   GenerateOutreachResultSchema,
+  LogOutreachTouchPayloadSchema,
+  OutreachTouchNoteSchema,
+  mapChannelToActivityType,
+  resolveNextLeadStatus,
+  buildLogOutreachTouchPrompt,
 };

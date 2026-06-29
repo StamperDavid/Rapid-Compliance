@@ -76,7 +76,34 @@ You do NOT apply the coupon (that is infrastructure). You decide, justify, and h
 - NEVER stack nudges. One active nudge per lead max.
 - ALWAYS include constraints.violations if any rule is broken.
 - ALWAYS explain WHY shouldNudge=false is the right call when applicable.
-- Output ONLY the JSON object matching the schema in the user prompt. No markdown fences. No preamble.`;
+- Output ONLY the JSON object matching the schema in the user prompt. No markdown fences. No preamble.
+
+## ACTION: create_discount_quote — you are an EXECUTOR, not just an advisor
+
+You have a second job. When the request is to actually CREATE a discounted draft quote on a deal, you author the human-readable COPY for that quote and the timeline note that records it. You are handed a dealId and an operator-approved discountPercent. Your job is to (1) explain WHY a discounted quote is a sound move for this deal in plain, honest language, (2) write the quote title and the line-item product name + description, and (3) write the activity note that goes onto the deal's timeline.
+
+You author COPY ONLY. You NEVER compute, restate, or even mention a price, unit price, subtotal, total, currency amount, or discount percentage. The system computes EVERY figure deterministically in code: the quote-service takes the deal value as the unit price and the operator-supplied discount percent and calculates the line-item subtotal and the quote totals itself. The money is owned by code, never by you. Do not put a single number into any field of your output.
+
+For create_discount_quote, respond with ONLY this JSON object (no other fields, no markdown fences):
+
+{
+  "rationale": "<plain-English explanation, 1-3 sentences, of why offering this discounted quote is a sound move for this deal. Honest and specific. Contains NO numbers.>",
+  "quoteTitle": "<short proposal title for this quote, e.g. 'Q3 Platform Proposal — Acme Co'>",
+  "lineItem": {
+    "productName": "<the product or package name being quoted>",
+    "description": "<1-2 sentence plain-text description of what is included. NO prices.>"
+  },
+  "activity": {
+    "subject": "<short timeline title for this event, e.g. 'Discounted quote prepared'>",
+    "body": "<2-5 sentence note for the deal timeline describing that a discounted draft quote was prepared and the next step. Plain text. NO numbers.>",
+    "outcome": "<positive | neutral>"
+  }
+}
+
+create_discount_quote hard rules:
+- NEVER include a price, total, unit price, currency amount, or discount percent in ANY field. The code owns all money; any number you write is wrong and will be ignored or rejected.
+- Output ONLY that JSON object. Plain text only in every field. No markdown, no placeholders.
+- The note is what a real salesperson would jot down — concrete, not generic.`;
 
 if (!admin.apps.length) {
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -130,7 +157,7 @@ async function main() {
       model: 'claude-sonnet-4.6',
       temperature: 0.3,
       maxTokens: 6000,
-      supportedActions: ['evaluate_nudge'],
+      supportedActions: ['evaluate_nudge', 'create_discount_quote'],
     },
     systemPromptSnapshot: resolvedSystemPrompt,
     brandDNASnapshot: brandDNA,

@@ -35,11 +35,15 @@
  */
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getDeal } from '@/lib/crm/deal-service';
+import { getLead } from '@/lib/crm/lead-service';
+import { createActivity } from '@/lib/crm/activity-service';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -50,7 +54,7 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'sales/objection-handler/specialist.ts';
 const SPECIALIST_ID = 'OBJ_HANDLER';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['handle_objection'] as const;
+const SUPPORTED_ACTIONS = ['handle_objection', 'log_objection'] as const;
 
 /**
  * Realistic max_tokens floor for the worst-case Objection Handler response.
@@ -179,6 +183,63 @@ export type ReframingStrategy = z.infer<typeof ReframingStrategyEnum>;
 export type VerificationLevel = z.infer<typeof VerificationLevelEnum>;
 export type ObjectionInput = z.infer<typeof ObjectionInputSchema>;
 export type ObjectionRequest = z.infer<typeof HandleObjectionPayloadSchema>;
+
+// ============================================================================
+// INPUT CONTRACT — log_objection (EXECUTOR action)
+// ============================================================================
+
+/**
+ * Operator/Jasper → Revenue Director → Objection Handler log_objection payload.
+ *
+ * Unlike Deal Closer's execute_close, this EXECUTOR does NOT mutate any status
+ * — an objection has no first-class CRM field, so the timeline note IS the
+ * artifact. It performs a SINGLE write: a `note_added` activity onto the deal
+ * or lead recording the objection in the prospect's own words plus the rebuttal
+ * angle the rep should use next.
+ *
+ * `entityType` is validated against the two literals IN CODE (the LLM never
+ * picks which record to write to). The activity write is plain deterministic
+ * TypeScript; only the note text is LLM work.
+ */
+const LogObjectionPayloadSchema = z.object({
+  action: z.literal('log_objection'),
+  entityType: z.enum(['deal', 'lead']),
+  entityId: z.string().min(1).max(300),
+  rawObjection: z.string().min(3).max(3000),
+  recommendedRebuttal: z.string().max(3000).optional(),
+  callNotes: z.string().max(4000).optional(),
+  /**
+   * APPROVAL GATE. log_objection writes a real CRM activity. It must NEVER fire
+   * autonomously from a direct Jasper chat call. This flag is set true ONLY when
+   * the mission StepRunner dispatched this as an operator-approved mission step
+   * (context.viaApprovedMissionStep, threaded down through Jasper's tool layer →
+   * Revenue Director). Absent/false → the specialist FAILS CLOSED and does not
+   * write; it returns guidance telling Jasper to propose the action as a mission
+   * step for operator approval.
+   *
+   * Defaults to `false` so any caller that omits it gets the safe (no-write)
+   * behavior.
+   */
+  viaApprovedMissionStep: z.boolean().optional().default(false),
+});
+
+export type LogObjectionRequest = z.infer<typeof LogObjectionPayloadSchema>;
+
+/**
+ * LLM JSON contract for log_objection. The model AUTHORS the timeline note and
+ * explains its reasoning — it does NOT choose the entity, write to the CRM, or
+ * emit any status. Output tokens for this action are small.
+ */
+const ObjectionNoteSchema = z.object({
+  rationale: z.string().min(10).max(2000),
+  activity: z.object({
+    subject: z.string().min(3).max(200),
+    body: z.string().min(10).max(3000),
+    outcome: z.enum(['neutral', 'negative']),
+  }),
+});
+
+export type ObjectionNote = z.infer<typeof ObjectionNoteSchema>;
 
 // ============================================================================
 // OUTPUT CONTRACT
@@ -424,6 +485,112 @@ async function executeHandleObjection(
 }
 
 // ============================================================================
+// ACTION: log_objection — EXECUTOR (single CRM write + LLM-authored note)
+// ============================================================================
+
+/**
+ * Result of a log_objection run. `logged` is true once the activity write
+ * succeeded.
+ */
+export interface LogObjectionResult {
+  rationale: string;
+  executed: {
+    entityType: 'deal' | 'lead';
+    entityId: string;
+    activityId: string;
+    logged: true;
+  };
+}
+
+/**
+ * Resolve the human-readable display name for the entity the objection is
+ * being logged against. Used to denormalize `relatedTo[].entityName` on the
+ * activity so the timeline reads cleanly.
+ */
+async function resolveEntityName(
+  entityType: 'deal' | 'lead',
+  entityId: string,
+): Promise<string | null> {
+  if (entityType === 'deal') {
+    const deal = await getDeal(entityId);
+    return deal ? deal.name : null;
+  }
+  const lead = await getLead(entityId, { useAdminSdk: true });
+  if (!lead) { return null; }
+  const composed = `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim();
+  return lead.name ?? (composed.length > 0 ? composed : lead.email ?? entityId);
+}
+
+function buildLogObjectionPrompt(req: LogObjectionRequest, entityName: string): string {
+  const entityLabel = req.entityType === 'deal' ? 'deal' : 'lead';
+
+  return [
+    'ACTION: log_objection',
+    '',
+    `You are recording an objection raised by the prospect on this ${entityLabel}, so the`,
+    'next person who opens the record understands what was said and how to answer it next time.',
+    '',
+    `## ${entityLabel === 'deal' ? 'Deal' : 'Lead'}`,
+    `${entityLabel === 'deal' ? 'Deal' : 'Lead'} ID: ${req.entityId}`,
+    `Name: ${entityName}`,
+    '',
+    '## Objection raised by the prospect (verbatim)',
+    `"${req.rawObjection}"`,
+    '',
+    req.recommendedRebuttal && req.recommendedRebuttal.trim().length > 0
+      ? `## Recommended rebuttal angle for the rep\n${req.recommendedRebuttal.trim()}`
+      : '## Recommended rebuttal angle for the rep\n(none provided — infer the best angle from the objection)',
+    '',
+    '## Call notes from the rep',
+    req.callNotes && req.callNotes.trim().length > 0 ? req.callNotes.trim() : '(no call notes provided)',
+    '',
+    '---',
+    '',
+    'Author the timeline note + rationale for this objection. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "rationale": "<1-3 sentences, plain English, why this objection matters and what it signals about the deal>",',
+    '  "activity": {',
+    '    "subject": "<short timeline title for this objection, e.g. \'Pricing objection raised on renewal call\'>",',
+    '    "body": "<2-5 sentences, plain text: the objection in the prospect\'s own words, then the rebuttal angle the rep should use next time>",',
+    '    "outcome": "<neutral | negative — negative if the objection is a serious blocker, neutral if it is a routine concern>"',
+    '  }',
+    '}',
+    '',
+    'Hard rules:',
+    '- The body MUST capture the objection in the prospect\'s words AND the rebuttal angle to use next.',
+    '- Plain text only. No markdown, no placeholders.',
+    '- outcome is neutral or negative ONLY (an objection is never a positive event).',
+    '- Output ONLY the JSON object. No markdown fences. No prose outside it.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+async function authorObjectionNote(
+  req: LogObjectionRequest,
+  entityName: string,
+  ctx: LlmCallContext,
+): Promise<ObjectionNote> {
+  const userPrompt = buildLogObjectionPrompt(req, entityName);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Objection Handler log_objection output was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = ObjectionNoteSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Objection Handler log_objection output did not match expected schema: ${issueSummary}`);
+  }
+  return result.data;
+}
+
+// ============================================================================
 // OBJECTION HANDLER CLASS
 // ============================================================================
 
@@ -447,6 +614,11 @@ export class ObjectionHandlerSpecialist extends BaseSpecialist {
         return this.createReport(taskId, 'FAILED', null, [
           'Objection Handler: payload must be an object',
         ]);
+      }
+
+      // EXECUTOR path: log an objection onto a deal/lead timeline.
+      if (rawPayload.action === 'log_objection') {
+        return await this.logObjection(taskId, rawPayload);
       }
 
       const normalized = { ...rawPayload, action: rawPayload.action ?? 'handle_objection' };
@@ -480,6 +652,98 @@ export class ObjectionHandlerSpecialist extends BaseSpecialist {
       );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
+  }
+
+  /**
+   * EXECUTOR: log an objection onto a deal/lead timeline.
+   *
+   * The note text + rationale are LLM work (governed by the Golden Master).
+   * Choosing the entity (validated against the two literals), the existence
+   * guard, and the single CRM write are plain deterministic TypeScript — the
+   * LLM never picks the record and never mutates any status (an objection has
+   * no first-class CRM field, so the timeline note IS the artifact).
+   */
+  private async logObjection(taskId: string, rawPayload: Record<string, unknown>): Promise<AgentReport> {
+    const inputValidation = LogObjectionPayloadSchema.safeParse(rawPayload);
+    if (!inputValidation.success) {
+      const issueSummary = inputValidation.error.issues
+        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+        .join('; ');
+      return this.createReport(taskId, 'FAILED', null, [
+        `Objection Handler: invalid log_objection payload: ${issueSummary}`,
+      ]);
+    }
+    const req = inputValidation.data;
+
+    // (0) APPROVAL GATE — FAIL CLOSED. log_objection writes a real CRM activity
+    //     and must never run autonomously from a direct Jasper chat call. It
+    //     writes ONLY when this run is an operator-approved mission step (the
+    //     StepRunner sets viaApprovedMissionStep; a direct chat call does not).
+    //     Without the approval signal we DO NOT touch the CRM (no reads, no
+    //     writes) — instead we return COMPLETED guidance that routes Jasper
+    //     through the Mission Control approval flow.
+    if (req.viaApprovedMissionStep !== true) {
+      logger.warn(
+        `[ObjectionHandler] log_objection BLOCKED (no operator approval) taskId=${taskId} entityType=${req.entityType} entityId=${req.entityId}`,
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'COMPLETED', {
+        approvalRequired: true,
+        mutated: false,
+        entityType: req.entityType,
+        entityId: req.entityId,
+        message:
+          'log_objection writes a real CRM timeline note and cannot run directly from chat. ' +
+          'It requires explicit operator approval. Propose it as a mission step via ' +
+          'propose_mission_plan (toolName "delegate_to_sales", action "log_objection", ' +
+          `with entityType "${req.entityType}" and entityId "${req.entityId}"). The operator ` +
+          'approves the step in Mission Control, then the objection is logged.',
+      });
+    }
+
+    logger.info(
+      `[ObjectionHandler] Executing log_objection taskId=${taskId} entityType=${req.entityType} entityId=${req.entityId}`,
+      { file: FILE },
+    );
+
+    // (a) Existence guard (in code — entityType validated against the two
+    //     literals by the schema, never LLM-chosen).
+    const entityName = await resolveEntityName(req.entityType, req.entityId);
+    if (entityName === null) {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Objection Handler: ${req.entityType} '${req.entityId}' not found — cannot log objection.`,
+      ]);
+    }
+
+    // (b) LLM authors the timeline note + rationale (GM prompt, verbatim).
+    const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+    const note = await authorObjectionNote(req, entityName, ctx);
+
+    // (c) Single CRM write — a note_added activity onto the entity timeline.
+    const activity = await createActivity({
+      type: 'note_added',
+      subject: note.activity.subject,
+      body: note.activity.body,
+      relatedTo: [{ entityType: req.entityType, entityId: req.entityId, entityName }],
+      createdBy: SPECIALIST_ID,
+      occurredAt: Timestamp.fromDate(new Date()),
+      metadata: {
+        sentiment: note.activity.outcome,
+        callNotes: req.callNotes,
+      },
+    });
+
+    const result: LogObjectionResult = {
+      rationale: note.rationale,
+      executed: {
+        entityType: req.entityType,
+        entityId: req.entityId,
+        activityId: activity.id,
+        logged: true,
+      },
+    };
+
+    return this.createReport(taskId, 'COMPLETED', result);
   }
 
   async handleSignal(signal: Signal): Promise<AgentReport> {
@@ -540,4 +804,8 @@ export const __internal = {
   executeHandleObjection,
   HandleObjectionPayloadSchema,
   HandleObjectionResultSchema,
+  LogObjectionPayloadSchema,
+  ObjectionNoteSchema,
+  buildLogObjectionPrompt,
+  resolveEntityName,
 };

@@ -91,7 +91,30 @@ You read ONE raw objection (a quote from the prospect) plus optional context (de
 - alternativeRebuttals MUST use DIFFERENT strategies from primary.
 - Alternatives count MUST equal maxRebuttals - 1 (downstream validation enforces this).
 - Never fabricate evidence, stats, or customer stories.
-- Output ONLY the JSON object. No markdown fences. No preamble.`;
+- Output ONLY the JSON object. No markdown fences. No preamble.
+
+## ACTION: log_objection — you are an EXECUTOR, not just an advisor
+
+You have a second job. When the request is to actually RECORD an objection onto a deal or lead in the CRM, you author the human-readable timeline note for that objection. You are handed which record it belongs to (a deal or a lead) plus its id, the raw objection in the prospect's words, an optional recommended rebuttal angle, and any call notes the rep gave you. Your job is to (1) explain in plain, honest language WHY this objection matters and what it signals about the deal, and (2) write the timeline note that goes onto the record so the next person who opens it understands exactly what the prospect said and how to answer it next time.
+
+Unlike a deal-stage change, an objection has no first-class CRM field — the timeline note IS the artifact. The system performs a SINGLE write of your note onto the record's timeline. It does NOT change any status. You do NOT pick which record to write to (the system validated that in code) and you do NOT mutate any field — your note and rationale are the only LLM work; the write is plain code.
+
+For log_objection, respond with ONLY this JSON object (no other fields, no markdown fences):
+
+{
+  "rationale": "<plain-English explanation, 1-3 sentences, of why this objection matters and what it signals about the deal's health and the path forward. Honest and specific — reference what the prospect actually said.>",
+  "activity": {
+    "subject": "<short timeline title for this objection, e.g. 'Pricing objection raised on renewal call' or 'Authority objection — needs VP sign-off'>",
+    "body": "<2-5 sentence timeline note. State the objection in the PROSPECT'S OWN WORDS, then state the rebuttal angle the rep should use the next time it comes up. Use the call notes provided. Plain text, no markdown, no placeholders.>",
+    "outcome": "<neutral | negative — negative if the objection is a serious blocker that threatens the deal, neutral if it is a routine concern the rep can work through>"
+  }
+}
+
+log_objection hard rules:
+- Output ONLY that JSON object. Do NOT change or name any CRM status — there is none for an objection.
+- The body MUST capture the objection in the prospect's words AND the rebuttal angle to use next. NEVER "just logging this."
+- outcome is neutral or negative ONLY. An objection is never a positive event.
+- Plain text only in subject and body. No markdown, no placeholders.`;
 
 if (!admin.apps.length) {
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -145,7 +168,7 @@ async function main() {
       model: 'claude-sonnet-4.6',
       temperature: 0.4,
       maxTokens: 10000,
-      supportedActions: ['handle_objection'],
+      supportedActions: ['handle_objection', 'log_objection'],
     },
     systemPromptSnapshot: resolvedSystemPrompt,
     brandDNASnapshot: brandDNA,

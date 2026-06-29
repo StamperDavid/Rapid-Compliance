@@ -1704,16 +1704,17 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       description:
         'Delegate a sales/commerce request to the Sales Department. The Revenue Director will analyze the lead and coordinate Lead Qualifier (BANT scoring), Outreach Specialist (personalized messages), and Merchandiser (coupon/nudge decisions). ' +
         'Action "execute_close" actually MOVES a real CRM deal forward / marks it won/lost and logs the call — this is an IRREVERSIBLE mutation that REQUIRES OPERATOR APPROVAL. ' +
-        'Do NOT call execute_close directly from chat: it will refuse to mutate and just tell you to seek approval. ' +
-        'Instead, ALWAYS route execute_close through propose_mission_plan as a single step (toolName "delegate_to_sales", action "execute_close", with dealId and decision). ' +
-        'The operator approves the step in Mission Control and only then does the deal move. The other actions (qualify_lead, generate_outreach, evaluate_nudge, analyze_pipeline, check_transition) are safe to call directly. ENABLED: TRUE.',
+        'The actions "record_qualification", "log_objection", "log_outreach_touch" and "create_discount_quote" are ALSO irreversible CRM mutations that REQUIRE OPERATOR APPROVAL. ' +
+        'Do NOT call any of these mutating actions directly from chat: they will refuse to mutate and just tell you to seek approval. ' +
+        'Instead, ALWAYS route them through propose_mission_plan as a single step (toolName "delegate_to_sales", the chosen action, with its required args). ' +
+        'The operator approves the step in Mission Control and only then does the CRM change. The other actions (qualify_lead, generate_outreach, evaluate_nudge, analyze_pipeline, check_transition) are safe to call directly. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           action: {
             type: 'string',
-            description: 'The sales action to perform. "execute_close" moves a real CRM deal stage / marks won-lost and logs the call — it is irreversible and REQUIRES OPERATOR APPROVAL, so it must be proposed via propose_mission_plan, never called directly from chat.',
-            enum: ['qualify_lead', 'generate_outreach', 'evaluate_nudge', 'analyze_pipeline', 'check_transition', 'execute_close'],
+            description: 'The sales action to perform. "execute_close" moves a real CRM deal stage / marks won-lost and logs the call; "record_qualification" persists a qualification decision on a lead; "log_objection" records an objection on a deal/lead; "log_outreach_touch" logs an outreach touch on a lead; "create_discount_quote" creates a discount quote on a deal. These five are irreversible CRM mutations and REQUIRE OPERATOR APPROVAL, so each must be proposed via propose_mission_plan, never called directly from chat.',
+            enum: ['qualify_lead', 'generate_outreach', 'evaluate_nudge', 'analyze_pipeline', 'check_transition', 'execute_close', 'record_qualification', 'log_objection', 'log_outreach_touch', 'create_discount_quote'],
           },
           leadId: {
             type: 'string',
@@ -1721,7 +1722,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           dealId: {
             type: 'string',
-            description: 'The CRM deal ID to act on. REQUIRED for action "execute_close".',
+            description: 'The CRM deal ID to act on. REQUIRED for actions "execute_close" and "create_discount_quote".',
           },
           decision: {
             type: 'string',
@@ -1734,7 +1735,50 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           callNotes: {
             type: 'string',
-            description: 'Optional plain-text notes from the call/decision for action "execute_close". The Deal Closer uses these to author the activity note logged on the deal timeline.',
+            description: 'Optional plain-text notes from the call/decision for actions "execute_close", "record_qualification", "log_objection" and "log_outreach_touch". The specialist uses these to author the activity note logged on the timeline.',
+          },
+          decisionOutcome: {
+            type: 'string',
+            description: 'For action "record_qualification": the qualification decision. "qualified" = ready to advance, "nurture" = keep warming, "disqualified" = drop. REQUIRED for "record_qualification".',
+            enum: ['qualified', 'nurture', 'disqualified'],
+          },
+          score: {
+            type: 'string',
+            description: 'Optional qualification score for action "record_qualification" (e.g. a 0-100 BANT total).',
+          },
+          entityType: {
+            type: 'string',
+            description: 'For action "log_objection": whether the objection is logged against a "deal" or a "lead". REQUIRED for "log_objection".',
+            enum: ['deal', 'lead'],
+          },
+          entityId: {
+            type: 'string',
+            description: 'For action "log_objection": the CRM deal or lead ID the objection applies to. REQUIRED for "log_objection".',
+          },
+          rawObjection: {
+            type: 'string',
+            description: 'For action "log_objection": the verbatim objection the prospect raised. REQUIRED for "log_objection".',
+          },
+          recommendedRebuttal: {
+            type: 'string',
+            description: 'Optional recommended rebuttal text for action "log_objection".',
+          },
+          channel: {
+            type: 'string',
+            description: 'For action "log_outreach_touch": the channel of the touch. REQUIRED for "log_outreach_touch".',
+            enum: ['email', 'linkedin_dm', 'call', 'other'],
+          },
+          touchSummary: {
+            type: 'string',
+            description: 'Optional plain-text summary of the outreach touch for action "log_outreach_touch".',
+          },
+          discountPercent: {
+            type: 'string',
+            description: 'For action "create_discount_quote": the discount percentage to apply to the deal. REQUIRED for "create_discount_quote".',
+          },
+          currency: {
+            type: 'string',
+            description: 'Optional currency code for action "create_discount_quote" (e.g. "USD").',
           },
           leadData: {
             type: 'string',
@@ -4901,11 +4945,18 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           await salesMgr.initialize();
 
           // Map the lowercase tool action to the manager's action union.
-          // execute_close is the executor path → uppercase EXECUTE_CLOSE with
-          // the deal-close params threaded through.
+          // The executor paths (execute_close + the four CRM-mutating actions)
+          // map to their UPPERCASE manager action with params threaded through.
           const rawAction = (args.action as string | undefined) ?? 'EVALUATE_TRANSITION';
+          const MUTATING_ACTION_MAP: Record<string, string> = {
+            execute_close: 'EXECUTE_CLOSE',
+            record_qualification: 'RECORD_QUALIFICATION',
+            log_objection: 'LOG_OBJECTION',
+            log_outreach_touch: 'LOG_OUTREACH_TOUCH',
+            create_discount_quote: 'CREATE_DISCOUNT_QUOTE',
+          };
           const salesPayload: Record<string, unknown> = {
-            action: rawAction === 'execute_close' ? 'EXECUTE_CLOSE' : rawAction,
+            action: MUTATING_ACTION_MAP[rawAction] ?? rawAction,
             leadData: args.leadData,
             objection: args.objection,
             options: args.options,
@@ -4922,6 +4973,43 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             // context.viaApprovedMissionStep). A direct Jasper chat call arrives
             // without the flag → the deal-closer refuses to mutate and asks
             // Jasper to propose it as a mission step for operator approval.
+            salesPayload.viaApprovedMissionStep = context?.viaApprovedMissionStep === true;
+          } else if (rawAction === 'record_qualification') {
+            salesPayload.leadId = args.leadId as string | undefined;
+            salesPayload.qualificationDecision = args.decisionOutcome as string | undefined;
+            salesPayload.qualificationScore =
+              args.score !== undefined && args.score !== null ? Number(args.score) : undefined;
+            salesPayload.callNotes = args.callNotes as string | undefined;
+            // APPROVAL GATE: record_qualification is an irreversible CRM write —
+            // same fail-closed gate as execute_close (only true on an
+            // operator-approved mission step).
+            salesPayload.viaApprovedMissionStep = context?.viaApprovedMissionStep === true;
+          } else if (rawAction === 'log_objection') {
+            salesPayload.objectionEntityType = args.entityType as string | undefined;
+            salesPayload.objectionEntityId = args.entityId as string | undefined;
+            salesPayload.rawObjection = args.rawObjection as string | undefined;
+            salesPayload.recommendedRebuttal = args.recommendedRebuttal as string | undefined;
+            salesPayload.callNotes = args.callNotes as string | undefined;
+            // APPROVAL GATE: log_objection is an irreversible CRM write —
+            // same fail-closed gate as execute_close.
+            salesPayload.viaApprovedMissionStep = context?.viaApprovedMissionStep === true;
+          } else if (rawAction === 'log_outreach_touch') {
+            salesPayload.leadId = args.leadId as string | undefined;
+            salesPayload.outreachChannel = args.channel as string | undefined;
+            salesPayload.touchSummary = args.touchSummary as string | undefined;
+            salesPayload.callNotes = args.callNotes as string | undefined;
+            // APPROVAL GATE: log_outreach_touch is an irreversible CRM write —
+            // same fail-closed gate as execute_close.
+            salesPayload.viaApprovedMissionStep = context?.viaApprovedMissionStep === true;
+          } else if (rawAction === 'create_discount_quote') {
+            salesPayload.dealId = args.dealId as string | undefined;
+            salesPayload.discountPercent =
+              args.discountPercent !== undefined && args.discountPercent !== null
+                ? Number(args.discountPercent)
+                : undefined;
+            salesPayload.currency = args.currency as string | undefined;
+            // APPROVAL GATE: create_discount_quote is an irreversible CRM write —
+            // same fail-closed gate as execute_close.
             salesPayload.viaApprovedMissionStep = context?.viaApprovedMissionStep === true;
           }
 

@@ -494,6 +494,10 @@ export interface PipelineQueryRequest {
     | 'SYNTHESIZE_REVENUE_BRIEF'
     | 'CLOSE_DEAL'
     | 'EXECUTE_CLOSE'
+    | 'RECORD_QUALIFICATION'
+    | 'LOG_OBJECTION'
+    | 'LOG_OUTREACH_TOUCH'
+    | 'CREATE_DISCOUNT_QUOTE'
     | 'HANDLE_OBJECTION'
     | 'TUNE_GOLDEN_MASTER'
     | 'GENERATE_BATTLECARD'
@@ -528,6 +532,20 @@ export interface PipelineQueryRequest {
   // refuses to mutate the CRM unless this is true (fail closed) — a direct chat
   // call leaves it undefined/false.
   viaApprovedMissionStep?: boolean;
+  // RECORD_QUALIFICATION — executor path: persist a qualification decision on a lead.
+  qualificationDecision?: 'qualified' | 'nurture' | 'disqualified';
+  qualificationScore?: number;
+  // LOG_OBJECTION — executor path: record an objection against a deal/lead.
+  objectionEntityType?: 'deal' | 'lead';
+  objectionEntityId?: string;
+  rawObjection?: string;
+  recommendedRebuttal?: string;
+  // LOG_OUTREACH_TOUCH — executor path: log an outreach touch on a lead.
+  outreachChannel?: 'email' | 'linkedin_dm' | 'call' | 'other';
+  touchSummary?: string;
+  // CREATE_DISCOUNT_QUOTE — executor path: create a discount quote on a deal.
+  discountPercent?: number;
+  currency?: string;
 }
 
 // ============================================================================
@@ -910,6 +928,70 @@ export class RevenueDirector extends BaseManager {
               decision: payload.decision,
               targetStage: payload.crmTargetStage,
               callNotes: payload.callNotes,
+              viaApprovedMissionStep: payload.viaApprovedMissionStep === true,
+            },
+            taskId,
+          );
+        }
+
+        case 'RECORD_QUALIFICATION': {
+          if (!payload.leadId || !payload.qualificationDecision) {
+            return this.createReport(taskId, 'FAILED', null, ['leadId and decision are required for RECORD_QUALIFICATION']);
+          }
+          return await this.orchestrateRecordQualification(
+            {
+              leadId: payload.leadId,
+              decision: payload.qualificationDecision,
+              score: payload.qualificationScore,
+              callNotes: payload.callNotes,
+              viaApprovedMissionStep: payload.viaApprovedMissionStep === true,
+            },
+            taskId,
+          );
+        }
+
+        case 'LOG_OBJECTION': {
+          if (!payload.objectionEntityType || !payload.objectionEntityId || !payload.rawObjection) {
+            return this.createReport(taskId, 'FAILED', null, ['entityType, entityId and rawObjection are required for LOG_OBJECTION']);
+          }
+          return await this.orchestrateLogObjection(
+            {
+              entityType: payload.objectionEntityType,
+              entityId: payload.objectionEntityId,
+              rawObjection: payload.rawObjection,
+              recommendedRebuttal: payload.recommendedRebuttal,
+              callNotes: payload.callNotes,
+              viaApprovedMissionStep: payload.viaApprovedMissionStep === true,
+            },
+            taskId,
+          );
+        }
+
+        case 'LOG_OUTREACH_TOUCH': {
+          if (!payload.leadId || !payload.outreachChannel) {
+            return this.createReport(taskId, 'FAILED', null, ['leadId and channel are required for LOG_OUTREACH_TOUCH']);
+          }
+          return await this.orchestrateLogOutreachTouch(
+            {
+              leadId: payload.leadId,
+              channel: payload.outreachChannel,
+              touchSummary: payload.touchSummary,
+              callNotes: payload.callNotes,
+              viaApprovedMissionStep: payload.viaApprovedMissionStep === true,
+            },
+            taskId,
+          );
+        }
+
+        case 'CREATE_DISCOUNT_QUOTE': {
+          if (!payload.dealId || payload.discountPercent === undefined) {
+            return this.createReport(taskId, 'FAILED', null, ['dealId and discountPercent are required for CREATE_DISCOUNT_QUOTE']);
+          }
+          return await this.orchestrateCreateDiscountQuote(
+            {
+              dealId: payload.dealId,
+              discountPercent: payload.discountPercent,
+              currency: payload.currency,
               viaApprovedMissionStep: payload.viaApprovedMissionStep === true,
             },
             taskId,
@@ -2236,6 +2318,158 @@ export class RevenueDirector extends BaseManager {
     };
 
     return this.delegateWithReview('DEAL_CLOSER', message);
+  }
+
+  /**
+   * Orchestrate RECORD_QUALIFICATION — executor path mirroring EXECUTE_CLOSE.
+   * Routes through `delegateWithReview` so the M2a accumulator records
+   * LEAD_QUALIFIER and a perf entry is written. The specialist persists the
+   * qualification decision; this manager only builds the message.
+   */
+  async orchestrateRecordQualification(
+    params: { leadId: string; decision: 'qualified' | 'nurture' | 'disqualified'; score?: number; callNotes?: string; viaApprovedMissionStep?: boolean },
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log('INFO', `Orchestrating record_qualification for lead: ${params.leadId} (decision=${params.decision})`);
+
+    if (!this.dealCloserInstance) {
+      await this.registerAllSpecialists();
+    }
+
+    const message: AgentMessage = {
+      id: taskId,
+      type: 'COMMAND',
+      from: this.identity.id,
+      to: 'LEAD_QUALIFIER',
+      payload: {
+        action: 'record_qualification',
+        leadId: params.leadId,
+        decision: params.decision,
+        score: params.score,
+        callNotes: params.callNotes,
+        viaApprovedMissionStep: params.viaApprovedMissionStep === true,
+      },
+      timestamp: new Date(),
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    return this.delegateWithReview('LEAD_QUALIFIER', message);
+  }
+
+  /**
+   * Orchestrate LOG_OBJECTION — executor path mirroring EXECUTE_CLOSE.
+   * Routes through `delegateWithReview` so the M2a accumulator records
+   * OBJ_HANDLER and a perf entry is written. The specialist records the
+   * objection; this manager only builds the message.
+   */
+  async orchestrateLogObjection(
+    params: { entityType: 'deal' | 'lead'; entityId: string; rawObjection: string; recommendedRebuttal?: string; callNotes?: string; viaApprovedMissionStep?: boolean },
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log('INFO', `Orchestrating log_objection for ${params.entityType}: ${params.entityId}`);
+
+    if (!this.dealCloserInstance) {
+      await this.registerAllSpecialists();
+    }
+
+    const message: AgentMessage = {
+      id: taskId,
+      type: 'COMMAND',
+      from: this.identity.id,
+      to: 'OBJ_HANDLER',
+      payload: {
+        action: 'log_objection',
+        entityType: params.entityType,
+        entityId: params.entityId,
+        rawObjection: params.rawObjection,
+        recommendedRebuttal: params.recommendedRebuttal,
+        callNotes: params.callNotes,
+        viaApprovedMissionStep: params.viaApprovedMissionStep === true,
+      },
+      timestamp: new Date(),
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    return this.delegateWithReview('OBJ_HANDLER', message);
+  }
+
+  /**
+   * Orchestrate LOG_OUTREACH_TOUCH — executor path mirroring EXECUTE_CLOSE.
+   * Routes through `delegateWithReview` so the M2a accumulator records
+   * OUTREACH_SPECIALIST and a perf entry is written. The specialist logs the
+   * touch; this manager only builds the message.
+   */
+  async orchestrateLogOutreachTouch(
+    params: { leadId: string; channel: 'email' | 'linkedin_dm' | 'call' | 'other'; touchSummary?: string; callNotes?: string; viaApprovedMissionStep?: boolean },
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log('INFO', `Orchestrating log_outreach_touch for lead: ${params.leadId} (channel=${params.channel})`);
+
+    if (!this.dealCloserInstance) {
+      await this.registerAllSpecialists();
+    }
+
+    const message: AgentMessage = {
+      id: taskId,
+      type: 'COMMAND',
+      from: this.identity.id,
+      to: 'OUTREACH_SPECIALIST',
+      payload: {
+        action: 'log_outreach_touch',
+        leadId: params.leadId,
+        channel: params.channel,
+        touchSummary: params.touchSummary,
+        callNotes: params.callNotes,
+        viaApprovedMissionStep: params.viaApprovedMissionStep === true,
+      },
+      timestamp: new Date(),
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    return this.delegateWithReview('OUTREACH_SPECIALIST', message);
+  }
+
+  /**
+   * Orchestrate CREATE_DISCOUNT_QUOTE — executor path mirroring EXECUTE_CLOSE.
+   * Routes through `delegateWithReview` so the M2a accumulator records
+   * MERCHANDISER and a perf entry is written. The specialist creates the
+   * discount quote; this manager only builds the message.
+   */
+  async orchestrateCreateDiscountQuote(
+    params: { dealId: string; discountPercent: number; currency?: string; viaApprovedMissionStep?: boolean },
+    taskId: string,
+  ): Promise<AgentReport> {
+    this.log('INFO', `Orchestrating create_discount_quote for deal: ${params.dealId} (discountPercent=${params.discountPercent})`);
+
+    if (!this.dealCloserInstance) {
+      await this.registerAllSpecialists();
+    }
+
+    const message: AgentMessage = {
+      id: taskId,
+      type: 'COMMAND',
+      from: this.identity.id,
+      to: 'MERCHANDISER',
+      payload: {
+        action: 'create_discount_quote',
+        dealId: params.dealId,
+        discountPercent: params.discountPercent,
+        currency: params.currency,
+        viaApprovedMissionStep: params.viaApprovedMissionStep === true,
+      },
+      timestamp: new Date(),
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    return this.delegateWithReview('MERCHANDISER', message);
   }
 
   /**

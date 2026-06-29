@@ -30,11 +30,15 @@
  */
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getLead, updateLead } from '@/lib/crm/lead-service';
+import { createActivity } from '@/lib/crm/activity-service';
+import type { Lead } from '@/types/crm-entities';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -45,7 +49,23 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'sales/qualifier/specialist.ts';
 const SPECIALIST_ID = 'LEAD_QUALIFIER';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['qualify_lead'] as const;
+const SUPPORTED_ACTIONS = ['qualify_lead', 'record_qualification'] as const;
+
+/**
+ * DETERMINISTIC qualification decision → Lead.status mapping. The LLM never
+ * reaches this code path; the concrete CRM status is chosen purely in code from
+ * the operator's semantic decision. The real Lead.status union is ONLY
+ * 'new' | 'contacted' | 'qualified' | 'converted' | 'lost' — there is no
+ * 'disqualified' or 'nurture' status, so we map:
+ *   qualified    → 'qualified'
+ *   nurture      → 'contacted'  (keep the relationship warm with a monthly touch)
+ *   disqualified → 'lost'       (drop)
+ */
+const DECISION_TO_STATUS = {
+  qualified: 'qualified',
+  nurture: 'contacted',
+  disqualified: 'lost',
+} as const satisfies Record<string, Lead['status']>;
 
 /**
  * Realistic max_tokens floor for the worst-case Lead Qualifier response.
@@ -346,6 +366,72 @@ const QualifyLeadResultSchema = z.object({
 export type QualifyLeadResult = z.infer<typeof QualifyLeadResultSchema>;
 export type QualificationResult = QualifyLeadResult;
 export type QualificationRequest = QualifyLeadPayload;
+
+// ============================================================================
+// INPUT CONTRACT — record_qualification (EXECUTOR action)
+// ============================================================================
+
+/**
+ * Operator/Jasper → Revenue Director → Lead Qualifier record_qualification payload.
+ *
+ * `decision` is the SEMANTIC intent (qualified / nurture / disqualified). The
+ * specialist maps it to a concrete Lead.status DETERMINISTICALLY IN CODE (see
+ * DECISION_TO_STATUS) — the LLM never picks the raw status string.
+ */
+const RecordQualificationPayloadSchema = z.object({
+  action: z.literal('record_qualification'),
+  leadId: z.string().min(1).max(300),
+  decision: z.enum(['qualified', 'nurture', 'disqualified']),
+  score: z.number().min(0).max(100).optional(),
+  callNotes: z.string().max(4000).optional(),
+  /**
+   * APPROVAL GATE. record_qualification performs an irreversible CRM write (it
+   * changes a real lead's status + logs an activity). It must NEVER fire
+   * autonomously from a direct Jasper chat call. This flag is set true ONLY
+   * when the mission StepRunner dispatched this as an operator-approved mission
+   * step (context.viaApprovedMissionStep, threaded down through Jasper's tool
+   * layer → Revenue Director). Absent/false → the specialist FAILS CLOSED and
+   * does not mutate; it returns guidance telling Jasper to propose the action as
+   * a mission step for operator approval.
+   *
+   * Defaults to `false` so any caller that omits it gets the safe (no-mutation)
+   * behavior.
+   */
+  viaApprovedMissionStep: z.boolean().optional().default(false),
+});
+
+export type RecordQualificationRequest = z.infer<typeof RecordQualificationPayloadSchema>;
+
+/**
+ * LLM JSON contract for record_qualification. The model AUTHORS the activity
+ * note and explains its reasoning — it does NOT emit a Lead status string.
+ */
+const ActivityNoteSchema = z.object({
+  rationale: z.string().min(10).max(2000),
+  activity: z.object({
+    subject: z.string().min(3).max(200),
+    body: z.string().min(10).max(3000),
+    outcome: z.enum(['positive', 'neutral', 'negative']),
+  }),
+});
+
+export type ActivityNote = z.infer<typeof ActivityNoteSchema>;
+
+/**
+ * Result of a record_qualification run. `leadUpdated` is true once the status
+ * write succeeded. `activityId` is null when the status changed but the activity
+ * write failed (partial success — we never discard a completed status change).
+ */
+export interface RecordQualificationResult {
+  rationale: string;
+  executed: {
+    leadId: string;
+    previousStatus: Lead['status'];
+    newStatus: Lead['status'];
+    activityId: string | null;
+    leadUpdated: boolean;
+  };
+}
 
 // ============================================================================
 // LLM INVOCATION CORE
@@ -655,6 +741,83 @@ async function executeQualifyLead(
 }
 
 // ============================================================================
+// ACTION: record_qualification — EXECUTOR (deterministic CRM write + LLM note)
+// ============================================================================
+
+function leadDisplayName(lead: Lead): string {
+  const full = `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim();
+  return lead.name ?? (full.length > 0 ? full : lead.email);
+}
+
+function buildRecordQualificationPrompt(req: RecordQualificationRequest, lead: Lead): string {
+  const decisionLabel =
+    req.decision === 'qualified' ? 'QUALIFY the lead (sales-ready, move forward)' :
+    req.decision === 'disqualified' ? 'DISQUALIFY the lead (drop it)' :
+    'NURTURE the lead (keep warm with periodic touch, not yet sales-ready)';
+
+  return [
+    'ACTION: record_qualification',
+    '',
+    `Decision to record: ${decisionLabel}`,
+    '',
+    '## Lead',
+    `Lead ID: ${lead.id}`,
+    `Name: ${leadDisplayName(lead)}`,
+    lead.company ? `Company: ${lead.company}` : '',
+    lead.title ? `Title: ${lead.title}` : '',
+    `Current status: ${lead.status}`,
+    req.score !== undefined ? `Operator score (0-100): ${req.score}` : '',
+    '',
+    '## Call / qualification notes from the rep',
+    req.callNotes && req.callNotes.trim().length > 0 ? req.callNotes.trim() : '(no call notes provided)',
+    '',
+    '---',
+    '',
+    'Author the timeline note + rationale for this qualification decision. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "rationale": "<1-3 sentences, plain English, why this qualification decision is correct given the notes and lead context>",',
+    '  "activity": {',
+    '    "subject": "<short timeline title for this qualification event>",',
+    '    "body": "<2-5 sentence note for the lead timeline, plain text>",',
+    '    "outcome": "<positive | neutral | negative>"',
+    '  }',
+    '}',
+    '',
+    'Hard rules:',
+    '- Do NOT name any raw CRM status string (the system sets the status in code).',
+    '- Plain text only. No markdown, no placeholders.',
+    `- outcome must match the decision: ${req.decision === 'qualified' ? 'positive' : req.decision === 'disqualified' ? 'negative' : 'neutral'}.`,
+    '- Output ONLY the JSON object. No markdown fences. No prose outside it.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+async function authorActivityNote(
+  req: RecordQualificationRequest,
+  lead: Lead,
+  ctx: LlmCallContext,
+): Promise<ActivityNote> {
+  const userPrompt = buildRecordQualificationPrompt(req, lead);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Lead Qualifier record_qualification output was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = ActivityNoteSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Lead Qualifier record_qualification output did not match expected schema: ${issueSummary}`);
+  }
+  return result.data;
+}
+
+// ============================================================================
 // LEAD QUALIFIER CLASS
 // ============================================================================
 
@@ -678,6 +841,12 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
         return this.createReport(taskId, 'FAILED', null, [
           'Lead Qualifier: payload must be an object',
         ]);
+      }
+
+      // EXECUTOR path: record a qualification decision on a real lead (status
+      // change + activity log). Gated behind operator approval (fails closed).
+      if (rawPayload.action === 'record_qualification') {
+        return await this.recordQualification(taskId, rawPayload);
       }
 
       // Normalize legacy shape: the pre-rebuild input was
@@ -744,6 +913,128 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     return { ...raw, action: raw.action ?? 'qualify_lead' };
   }
 
+  /**
+   * EXECUTOR: record a qualification decision on a real lead (qualified /
+   * nurture / disqualified) and log the call.
+   *
+   * The DECISION + the call note are LLM work (governed by the Golden Master).
+   * The Lead.status chosen and the database writes are plain deterministic
+   * TypeScript — the LLM never picks the raw status string.
+   */
+  private async recordQualification(taskId: string, rawPayload: Record<string, unknown>): Promise<AgentReport> {
+    const inputValidation = RecordQualificationPayloadSchema.safeParse(rawPayload);
+    if (!inputValidation.success) {
+      const issueSummary = inputValidation.error.issues
+        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+        .join('; ');
+      return this.createReport(taskId, 'FAILED', null, [
+        `Lead Qualifier: invalid record_qualification payload: ${issueSummary}`,
+      ]);
+    }
+    const req = inputValidation.data;
+
+    // (0) APPROVAL GATE — FAIL CLOSED. record_qualification is an irreversible
+    //     CRM mutation and must never run autonomously from a direct Jasper chat
+    //     call. It mutates ONLY when this run is an operator-approved mission
+    //     step (the StepRunner sets viaApprovedMissionStep; a direct chat call
+    //     does not). Without the approval signal we DO NOT touch the CRM —
+    //     instead we return COMPLETED guidance that routes Jasper through the
+    //     Mission Control approval flow (propose_mission_plan → operator approves
+    //     the step → runner re-invokes this with the flag set).
+    if (req.viaApprovedMissionStep !== true) {
+      logger.warn(
+        `[LeadQualifier] record_qualification BLOCKED (no operator approval) taskId=${taskId} leadId=${req.leadId} decision=${req.decision}`,
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'COMPLETED', {
+        approvalRequired: true,
+        mutated: false,
+        leadId: req.leadId,
+        decision: req.decision,
+        message:
+          'record_qualification changes a real CRM lead and cannot run directly from chat. ' +
+          'It requires explicit operator approval. Propose it as a mission step via ' +
+          'propose_mission_plan (toolName "delegate_to_sales", action "record_qualification", ' +
+          `with leadId "${req.leadId}" and decision "${req.decision}"). The operator ` +
+          'approves the step in Mission Control, then the lead is updated.',
+      });
+    }
+
+    logger.info(
+      `[LeadQualifier] Executing record_qualification taskId=${taskId} leadId=${req.leadId} decision=${req.decision}`,
+      { file: FILE },
+    );
+
+    // (a) Existence / terminal guard (Admin SDK — server/system context).
+    const lead = await getLead(req.leadId, { useAdminSdk: true });
+    if (!lead) {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Lead Qualifier: lead '${req.leadId}' not found — cannot record qualification.`,
+      ]);
+    }
+    if (lead.status === 'converted' || lead.status === 'lost') {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Lead Qualifier: lead '${req.leadId}' is already ${lead.status} (terminal) — nothing to record.`,
+      ]);
+    }
+
+    // (b) DETERMINISTIC decision → Lead.status mapping (in code, not the LLM).
+    const previousStatus = lead.status;
+    const newStatus: Lead['status'] = DECISION_TO_STATUS[req.decision];
+
+    // (c) LLM authors the activity note + rationale (GM prompt, verbatim).
+    const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+    const note = await authorActivityNote(req, lead, ctx);
+
+    // (d) Update the lead status (deterministic CRM write, Admin SDK).
+    await updateLead(
+      req.leadId,
+      { status: newStatus, ...(req.score !== undefined && { score: req.score }) },
+      { useAdminSdk: true },
+    );
+
+    // (e) Log the qualification activity. If THIS fails, report partial success —
+    //     the status change already landed and must not be thrown away.
+    let activityId: string | null = null;
+    try {
+      const activity = await createActivity({
+        type: 'lead_status_changed',
+        subject: note.activity.subject,
+        body: note.activity.body,
+        relatedTo: [{ entityType: 'lead', entityId: req.leadId, entityName: leadDisplayName(lead) }],
+        createdBy: SPECIALIST_ID,
+        occurredAt: Timestamp.fromDate(new Date()),
+        metadata: {
+          previousValue: previousStatus,
+          newValue: newStatus,
+          fieldChanged: 'status',
+          sentiment: note.activity.outcome,
+          callNotes: req.callNotes,
+        },
+      });
+      activityId = activity.id;
+    } catch (activityError) {
+      logger.error(
+        `[LeadQualifier] Status change succeeded but activity log failed for lead ${req.leadId}`,
+        activityError instanceof Error ? activityError : new Error(String(activityError)),
+        { file: FILE },
+      );
+    }
+
+    const result: RecordQualificationResult = {
+      rationale: note.rationale,
+      executed: {
+        leadId: req.leadId,
+        previousStatus,
+        newStatus,
+        activityId,
+        leadUpdated: true,
+      },
+    };
+
+    return this.createReport(taskId, 'COMPLETED', result);
+  }
+
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const message: AgentMessage = {
       id: signal.id,
@@ -804,4 +1095,8 @@ export const __internal = {
   QualifyLeadPayloadSchema,
   QualifyLeadResultSchema,
   BANTScoreSchema,
+  DECISION_TO_STATUS,
+  RecordQualificationPayloadSchema,
+  ActivityNoteSchema,
+  buildRecordQualificationPrompt,
 };

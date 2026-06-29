@@ -29,11 +29,17 @@
  */
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getDeal } from '@/lib/crm/deal-service';
+import type { Deal } from '@/lib/crm/deal-service-types';
+import { createActivity } from '@/lib/crm/activity-service';
+import { createQuote } from '@/lib/crm/quote-service';
+import type { Quote } from '@/types/quote';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -44,7 +50,7 @@ import { logger } from '@/lib/logger/logger';
 const FILE = 'sales/merchandiser/specialist.ts';
 const SPECIALIST_ID = 'MERCHANDISER';
 const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
-const SUPPORTED_ACTIONS = ['evaluate_nudge'] as const;
+const SUPPORTED_ACTIONS = ['evaluate_nudge', 'create_discount_quote'] as const;
 
 /**
  * Realistic max_tokens floor for the worst-case Merchandiser response.
@@ -241,6 +247,64 @@ export type EvaluateNudgePayload = z.infer<typeof EvaluateNudgePayloadSchema>;
 export type InteractionHistory = z.infer<typeof InteractionHistorySchema>;
 export type NudgeStrategyId = z.infer<typeof NudgeStrategyIdEnum>;
 export type Segment = z.infer<typeof SegmentEnum>;
+
+// ============================================================================
+// INPUT CONTRACT — create_discount_quote (EXECUTOR action)
+// ============================================================================
+
+/**
+ * Operator/Jasper → Revenue Director → Merchandiser create_discount_quote
+ * payload.
+ *
+ * `discountPercent` is OPERATOR-SUPPLIED and operator-approved. The LLM never
+ * picks it and never computes any money. The deterministic quote-service
+ * (`createQuote`) owns ALL pricing math: it computes the line-item subtotal
+ * and the quote totals from `unitPrice` (= the deal value) and this discount.
+ * The LLM authors only the human-readable copy (title, product name,
+ * descriptions, the timeline note).
+ */
+const CreateDiscountQuotePayloadSchema = z.object({
+  action: z.literal('create_discount_quote'),
+  dealId: z.string().min(1).max(300),
+  discountPercent: z.number().min(0).max(50),
+  currency: z.string().min(1).max(10).optional(),
+  /**
+   * APPROVAL GATE. create_discount_quote performs a real CRM write (it creates
+   * a draft Quote tied to a deal and logs an activity). It must NEVER fire
+   * autonomously from a direct Jasper chat call. This flag is set true ONLY
+   * when the mission StepRunner dispatched this as an operator-approved mission
+   * step. Absent/false → the specialist FAILS CLOSED and does not mutate;
+   * it returns guidance telling Jasper to propose the action as a mission step
+   * for operator approval.
+   *
+   * Defaults to `false` so any caller that omits it gets the safe (no-mutation)
+   * behavior.
+   */
+  viaApprovedMissionStep: z.boolean().optional().default(false),
+});
+
+export type CreateDiscountQuoteRequest = z.infer<typeof CreateDiscountQuotePayloadSchema>;
+
+/**
+ * LLM JSON contract for create_discount_quote. The model AUTHORS ONLY COPY —
+ * no numbers, no prices, no totals, no discount percent. The deterministic
+ * code owns every figure.
+ */
+const QuoteNoteSchema = z.object({
+  rationale: z.string().min(10).max(2000),
+  quoteTitle: z.string().min(3).max(200),
+  lineItem: z.object({
+    productName: z.string().min(2).max(200),
+    description: z.string().min(5).max(500),
+  }),
+  activity: z.object({
+    subject: z.string().min(3).max(200),
+    body: z.string().min(10).max(3000),
+    outcome: z.enum(['positive', 'neutral']),
+  }),
+});
+
+export type QuoteNote = z.infer<typeof QuoteNoteSchema>;
 
 // ============================================================================
 // OUTPUT CONTRACT
@@ -519,6 +583,91 @@ async function executeEvaluateNudge(
 }
 
 // ============================================================================
+// ACTION: create_discount_quote — EXECUTOR (deterministic quote write + LLM copy)
+// ============================================================================
+
+/**
+ * Result of a create_discount_quote run. `quoteCreated` is true once the draft
+ * quote write succeeded. `activityId` is null when the quote was created but
+ * the activity write failed (partial success — we never discard a quote that
+ * already landed).
+ *
+ * `total` is the figure the DETERMINISTIC quote-service computed — proof the
+ * LLM never touched the money.
+ */
+export interface CreateDiscountQuoteResult {
+  rationale: string;
+  executed: {
+    dealId: string;
+    quoteId: string;
+    total: number;
+    activityId: string | null;
+    quoteCreated: boolean;
+  };
+}
+
+function buildCreateDiscountQuotePrompt(req: CreateDiscountQuoteRequest, deal: Deal): string {
+  return [
+    'ACTION: create_discount_quote',
+    '',
+    'You are drafting the COPY for a discounted draft quote on a deal. You author',
+    'wording ONLY. You do NOT compute, restate, or mention any price, unit price,',
+    'subtotal, total, or discount percentage — the system computes every figure',
+    'deterministically in code. Do not put any number in your output.',
+    '',
+    '## Deal',
+    `Deal ID: ${deal.id}`,
+    `Name: ${deal.name}`,
+    (deal.companyName ?? deal.company) ? `Company: ${deal.companyName ?? deal.company}` : '',
+    `Current pipeline stage: ${deal.stage}`,
+    '',
+    '---',
+    '',
+    'Author the quote copy + the timeline note. Respond with ONLY a valid JSON object:',
+    '',
+    '{',
+    '  "rationale": "<1-3 sentences, plain English, why offering this discounted quote is a sound move for this deal>",',
+    '  "quoteTitle": "<short proposal title for this quote, e.g. \'Q3 Platform Proposal — Acme Co\'>",',
+    '  "lineItem": {',
+    '    "productName": "<the product/package name being quoted>",',
+    '    "description": "<1-2 sentence plain-text description of what is included>"',
+    '  },',
+    '  "activity": {',
+    '    "subject": "<short timeline title for this event, e.g. \'Discounted quote sent\'>",',
+    '    "body": "<2-5 sentence note for the deal timeline describing that a discounted draft quote was prepared. Plain text.>",',
+    '    "outcome": "<positive | neutral>"',
+    '  }',
+    '}',
+    '',
+    'Hard rules:',
+    '- Do NOT include any price, total, unit price, currency amount, or discount percent in ANY field. The code owns all money.',
+    '- Plain text only. No markdown, no placeholders.',
+    '- Output ONLY the JSON object. No markdown fences. No prose outside it.',
+  ].filter((line) => line !== '').join('\n');
+}
+
+async function authorQuoteNote(req: CreateDiscountQuoteRequest, deal: Deal, ctx: LlmCallContext): Promise<QuoteNote> {
+  const userPrompt = buildCreateDiscountQuotePrompt(req, deal);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Merchandiser create_discount_quote output was not valid JSON: ${rawContent.slice(0, 300)}`);
+  }
+
+  const result = QuoteNoteSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Merchandiser create_discount_quote output did not match expected schema: ${issueSummary}`);
+  }
+  return result.data;
+}
+
+// ============================================================================
 // MERCHANDISER CLASS
 // ============================================================================
 
@@ -540,6 +689,11 @@ export class MerchandiserSpecialist extends BaseSpecialist {
       const rawPayload = message.payload as Record<string, unknown> | null;
       if (rawPayload === null || typeof rawPayload !== 'object') {
         return this.createReport(taskId, 'FAILED', null, ['Merchandiser: payload must be an object']);
+      }
+
+      // EXECUTOR path: create a real draft discount quote on a deal.
+      if (rawPayload.action === 'create_discount_quote') {
+        return await this.createDiscountQuote(taskId, rawPayload);
       }
 
       const normalized = {
@@ -576,6 +730,144 @@ export class MerchandiserSpecialist extends BaseSpecialist {
       );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
+  }
+
+  /**
+   * EXECUTOR: create a real draft discount quote on a deal and log the event.
+   *
+   * The COPY (quote title, line-item naming, the timeline note) is LLM work
+   * (governed by the Golden Master). EVERY figure — the line-item subtotal and
+   * the quote totals — is computed deterministically by `createQuote` in the
+   * quote-service from the deal value and the operator-supplied discount. The
+   * LLM never touches money.
+   */
+  private async createDiscountQuote(taskId: string, rawPayload: Record<string, unknown>): Promise<AgentReport> {
+    const inputValidation = CreateDiscountQuotePayloadSchema.safeParse(rawPayload);
+    if (!inputValidation.success) {
+      const issueSummary = inputValidation.error.issues
+        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+        .join('; ');
+      return this.createReport(taskId, 'FAILED', null, [
+        `Merchandiser: invalid create_discount_quote payload: ${issueSummary}`,
+      ]);
+    }
+    const req = inputValidation.data;
+
+    // (0) APPROVAL GATE — FAIL CLOSED. create_discount_quote writes a real
+    //     Quote to a deal and must never run autonomously from a direct Jasper
+    //     chat call. It mutates ONLY when this run is an operator-approved
+    //     mission step (the StepRunner sets viaApprovedMissionStep; a direct
+    //     chat call does not). Without the approval signal we DO NOT write —
+    //     instead we return COMPLETED guidance that routes Jasper through the
+    //     Mission Control approval flow.
+    if (req.viaApprovedMissionStep !== true) {
+      logger.warn(
+        `[Merchandiser] create_discount_quote BLOCKED (no operator approval) taskId=${taskId} dealId=${req.dealId} discountPercent=${req.discountPercent}`,
+        { file: FILE },
+      );
+      return this.createReport(taskId, 'COMPLETED', {
+        approvalRequired: true,
+        mutated: false,
+        dealId: req.dealId,
+        discountPercent: req.discountPercent,
+        message:
+          'create_discount_quote creates a real draft quote on a CRM deal and cannot run directly from chat. ' +
+          'It requires explicit operator approval. Propose it as a mission step via ' +
+          'propose_mission_plan (toolName "delegate_to_sales", action "create_discount_quote", ' +
+          `with dealId "${req.dealId}" and discountPercent ${req.discountPercent}). The operator ` +
+          'approves the step in Mission Control, then the quote is created.',
+      });
+    }
+
+    logger.info(
+      `[Merchandiser] Executing create_discount_quote taskId=${taskId} dealId=${req.dealId} discountPercent=${req.discountPercent}`,
+      { file: FILE },
+    );
+
+    // (a) Existence / state guard.
+    const deal = await getDeal(req.dealId);
+    if (!deal) {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Merchandiser: deal '${req.dealId}' not found — cannot create a discount quote.`,
+      ]);
+    }
+    if (deal.stage === 'closed_lost') {
+      return this.createReport(taskId, 'FAILED', null, [
+        `Merchandiser: deal '${req.dealId}' is closed_lost — will not create a discount quote.`,
+      ]);
+    }
+
+    // (b) LLM authors the quote copy + timeline note (GM prompt, verbatim).
+    //     It emits NO numbers.
+    const ctx = await loadGMConfig(DEFAULT_INDUSTRY_KEY);
+    const note = await authorQuoteNote(req, deal, ctx);
+
+    // (c) DETERMINISTIC quote write. createQuote computes the line-item subtotal
+    //     and the quote totals from unitPrice (= the deal value) and the
+    //     operator-supplied discount. The LLM never reaches this math.
+    const quote: Quote = await createQuote({
+      dealId: req.dealId,
+      contactId: deal.contactId,
+      companyId: deal.companyId,
+      companyName: deal.companyName ?? deal.company,
+      title: note.quoteTitle,
+      status: 'draft',
+      currency: req.currency ?? deal.currency ?? 'USD',
+      lineItems: [
+        {
+          id: `li-1-${Math.random().toString(36).slice(2, 8)}`,
+          productName: note.lineItem.productName,
+          description: note.lineItem.description,
+          quantity: 1,
+          unitPrice: deal.value ?? 0,
+          discount: req.discountPercent,
+          subtotal: 0,
+        },
+      ],
+      subtotal: 0,
+      taxAmount: 0,
+      discountAmount: 0,
+      total: 0,
+    });
+
+    // (d) Log the event. If THIS fails, report partial success — the quote
+    //     already landed and must not be thrown away.
+    let activityId: string | null = null;
+    try {
+      const activity = await createActivity({
+        type: 'note_added',
+        subject: note.activity.subject,
+        body: note.activity.body,
+        relatedTo: [{ entityType: 'deal', entityId: req.dealId, entityName: deal.name }],
+        createdBy: SPECIALIST_ID,
+        occurredAt: Timestamp.fromDate(new Date()),
+        metadata: {
+          newValue: quote.id,
+          fieldChanged: 'quote',
+          sentiment: note.activity.outcome,
+        },
+      });
+      activityId = activity.id;
+    } catch (activityError) {
+      logger.error(
+        `[Merchandiser] Quote created but activity log failed for deal ${req.dealId}`,
+        activityError instanceof Error ? activityError : new Error(String(activityError)),
+        { file: FILE },
+      );
+    }
+
+    const result: CreateDiscountQuoteResult = {
+      rationale: note.rationale,
+      executed: {
+        dealId: req.dealId,
+        quoteId: quote.id,
+        total: quote.total,
+        activityId,
+        quoteCreated: true,
+      },
+    };
+
+    return this.createReport(taskId, 'COMPLETED', result);
   }
 
   async handleSignal(signal: Signal): Promise<AgentReport> {
@@ -637,4 +929,7 @@ export const __internal = {
   executeEvaluateNudge,
   EvaluateNudgePayloadSchema,
   EvaluateNudgeResultSchema,
+  CreateDiscountQuotePayloadSchema,
+  QuoteNoteSchema,
+  buildCreateDiscountQuotePrompt,
 };
