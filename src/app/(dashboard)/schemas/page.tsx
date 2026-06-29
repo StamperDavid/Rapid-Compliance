@@ -303,10 +303,6 @@ export default function SchemaBuilderPage() {
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Link href={`/settings`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
-                ← Back to Settings
-              </Link>
-              <div style={{ height: '1.5rem', width: '1px', backgroundColor: 'var(--color-border-main)' }}></div>
               <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>Schema Editor</h1>
             </div>
             <button

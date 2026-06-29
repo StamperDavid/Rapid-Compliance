@@ -6,7 +6,6 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { ROLE_PERMISSIONS, type RolePermissions, type UserRole } from '@/types/permissions';
@@ -394,9 +393,6 @@ export default function TeamMembersPage() {
             {/* Header */}
             <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
-                <Link href="/settings" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
-                  ← Back to Settings
-                </Link>
                 <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Team Members</h1>
                 <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Invite users and manage roles and permissions

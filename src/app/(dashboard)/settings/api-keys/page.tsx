@@ -3,7 +3,6 @@
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -752,13 +751,6 @@ export default function APIKeysPage() {
       <div>
         {/* Header */}
         <div className="mb-8">
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-2 text-sm font-medium no-underline mb-6"
-            style={{ color: primaryColor }}
-          >
-            ← Back to Settings
-          </Link>
           <PageTitle>API Keys Setup</PageTitle>
           <SectionDescription className="mt-1">
             Connect external services to enable features. Add keys here instead of messing with .env files.

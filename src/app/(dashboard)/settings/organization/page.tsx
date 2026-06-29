@@ -9,7 +9,6 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
@@ -175,8 +174,6 @@ export default function OrganizationProfilePage() {
       {/* Header */}
       <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--color-bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <Link href="/settings" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontSize: '0.875rem' }}>Settings</Link>
-          <span style={{ color: 'var(--color-text-muted)' }}>/</span>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Organization Profile</h1>
         </div>
         {dirty && (

@@ -50,13 +50,6 @@ export default function AIAgentsPage() {
     <div className="p-8 space-y-6 overflow-y-auto">
       <div className="max-w-6xl">
         <div className="mb-8">
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-2 text-sm font-medium no-underline mb-6"
-            style={{ color: primaryColor }}
-          >
-            ← Back to Settings
-          </Link>
           <PageTitle className="mt-4">AI Agent</PageTitle>
           <SectionDescription className="mt-1">Manage your Sales &amp; Customer Service AI Agent</SectionDescription>
         </div>

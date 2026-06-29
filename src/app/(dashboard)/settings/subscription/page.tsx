@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
@@ -255,10 +254,6 @@ export default function BillingPage() {
   return (
     <div className="p-8 space-y-6 text-foreground">
       <div className="flex items-center gap-4">
-        <Link href="/settings" className="text-muted-foreground no-underline text-sm">
-          Settings
-        </Link>
-        <span className="text-muted-foreground">/</span>
         <PageTitle as="h1" className="text-xl font-semibold m-0">Subscription</PageTitle>
       </div>
 

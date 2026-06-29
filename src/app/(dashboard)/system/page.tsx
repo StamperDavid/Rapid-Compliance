@@ -222,13 +222,13 @@ export default function SystemPage(): React.ReactElement {
             icon={<Settings className="w-6 h-6" />}
             title="Platform Settings"
             description="Configure platform preferences"
-            href="/settings"
+            href="/settings/organization"
           />
           <SystemToolCard
             icon={<Users className="w-6 h-6" />}
             title="Team Management"
             description="Manage users and roles"
-            href="/settings/team"
+            href="/settings/users"
           />
           <SystemToolCard
             icon={<Zap className="w-6 h-6" />}

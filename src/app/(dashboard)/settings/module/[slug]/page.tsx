@@ -259,8 +259,8 @@ export default function ModuleSettingsPage({
         <h1 style={{ color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
           Module not found
         </h1>
-        <Link href="/settings" style={{ color: 'var(--color-primary)' }}>
-          ← Back to Settings
+        <Link href="/dashboard" style={{ color: 'var(--color-primary)' }}>
+          ← Back to Dashboard
         </Link>
       </div>
     );
@@ -286,19 +286,6 @@ export default function ModuleSettingsPage({
         <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '1rem 2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <Link
-                href="/settings"
-                style={{
-                  color: 'var(--color-primary)',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  textDecoration: 'none',
-                  display: 'inline-block',
-                  marginBottom: '0.5rem',
-                }}
-              >
-                ← Back to Settings
-              </Link>
               <h1
                 style={{
                   fontSize: '1.75rem',

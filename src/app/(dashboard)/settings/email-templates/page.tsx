@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import FilterBuilder from '@/components/FilterBuilder';
 import { useAuth } from '@/hooks/useAuth';
@@ -272,9 +271,6 @@ Best regards,
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
-              <Link href={`/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
-                ← Back to Settings
-              </Link>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div>
                   <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Email Marketing</h1>

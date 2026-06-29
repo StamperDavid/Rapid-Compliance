@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
@@ -169,9 +168,6 @@ export default function AccountingPage() {
       {/* Header */}
       <div style={{ backgroundColor: 'var(--color-bg-main)', borderBottom: '1px solid var(--color-border-light)', padding: '2rem' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
-          <Link href={`/settings`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
-            ← Back to Settings
-          </Link>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0, marginBottom: '0.5rem' }}>Accounting Software Integration</h1>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
             Sync invoices, payments, and customers from CRM to your accounting platform

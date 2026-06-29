@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
@@ -246,12 +245,6 @@ export default function WebhooksPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-1 text-primary text-sm font-medium mb-4 hover:underline"
-          >
-            &larr; Back to Settings
-          </Link>
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-1">Webhooks</h1>

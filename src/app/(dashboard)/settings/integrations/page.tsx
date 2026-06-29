@@ -3,7 +3,6 @@
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import QuickBooksIntegration from '@/components/integrations/QuickBooksIntegration';
@@ -453,13 +452,6 @@ export default function IntegrationsPage() {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div>
-        <Link
-          href="/settings"
-          className="inline-flex items-center gap-2 text-sm font-medium no-underline mb-6"
-          style={{ color: primaryColor }}
-        >
-          ← Back to Settings
-        </Link>
         <PageTitle>Integrations</PageTitle>
         <SectionDescription className="mt-1">
           Connect your favorite apps and services

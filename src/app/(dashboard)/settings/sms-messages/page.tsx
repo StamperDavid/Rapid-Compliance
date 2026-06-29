@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSMS } from '@/lib/sms/sms-service';
@@ -79,25 +78,6 @@ export default function SmsMessagesPage() {
           flexDirection: 'column'
         }}>
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
-            <Link
-              href={`/settings`}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                backgroundColor: 'transparent',
-                color: 'var(--color-text-secondary)',
-                borderLeft: '3px solid transparent',
-                fontSize: '0.875rem',
-                fontWeight: '400',
-                textDecoration: 'none'
-              }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>←</span>
-              {sidebarOpen && <span>Back to Settings</span>}
-            </Link>
           </nav>
 
           <div style={{ padding: '1rem', borderTop: '1px solid var(--color-border-light)' }}>

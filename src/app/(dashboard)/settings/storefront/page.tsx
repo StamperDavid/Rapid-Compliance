@@ -214,9 +214,6 @@ export default function StorefrontSettingsPage() {
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <Link href={`/settings`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
-                ← Back to Settings
-              </Link>
               <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>Online Storefront</h1>
               <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
                 Configure your embeddable e-commerce store

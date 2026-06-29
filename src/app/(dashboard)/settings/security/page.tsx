@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
@@ -109,10 +108,6 @@ export default function SecuritySettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/settings" className="text-muted-foreground no-underline text-sm">
-            Settings
-          </Link>
-          <span className="text-muted-foreground">/</span>
           <PageTitle as="h1" className="text-xl font-semibold m-0">Security Settings</PageTitle>
         </div>
         {hasChanges && (
