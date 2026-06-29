@@ -400,13 +400,15 @@ interface TaskCardProps {
   busy: boolean;
   onToggleComplete: (task: TeamTask) => void;
   onReassign: (task: TeamTask, newOwnerId: string) => void;
+  onDelete: (task: TeamTask) => void;
 }
 
-function TaskCard({ task, busy, onToggleComplete, onReassign }: TaskCardProps) {
+function TaskCard({ task, busy, onToggleComplete, onReassign, onDelete }: TaskCardProps) {
   const isCompleted = task.status === 'completed';
   const due = toDateOrNull(task.dueDate);
   const [reassigning, setReassigning] = useState(false);
   const [ownerInput, setOwnerInput] = useState(task.assignedTo);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const overdue = !isCompleted && due !== null && due < startOfToday();
 
@@ -503,6 +505,20 @@ function TaskCard({ task, busy, onToggleComplete, onReassign }: TaskCardProps) {
                 Complete
               </Button>
             )}
+            {confirmDelete ? (
+              <>
+                <Button type="button" size="sm" variant="ghost" disabled={busy} className="text-red-500" onClick={() => { onDelete(task); setConfirmDelete(false); }}>
+                  Confirm delete
+                </Button>
+                <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmDelete(false)}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button type="button" size="sm" variant="ghost" disabled={busy} className="text-red-500" onClick={() => setConfirmDelete(true)}>
+                Delete
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -520,9 +536,10 @@ interface QueueSectionProps {
   busyId: string | null;
   onToggleComplete: (task: TeamTask) => void;
   onReassign: (task: TeamTask, newOwnerId: string) => void;
+  onDelete: (task: TeamTask) => void;
 }
 
-function QueueSection({ def, tasks, busyId, onToggleComplete, onReassign }: QueueSectionProps) {
+function QueueSection({ def, tasks, busyId, onToggleComplete, onReassign, onDelete }: QueueSectionProps) {
   if (tasks.length === 0) { return null; }
   const accent = def.key === 'overdue' ? 'text-red-500' : 'text-foreground';
   return (
@@ -540,6 +557,7 @@ function QueueSection({ def, tasks, busyId, onToggleComplete, onReassign }: Queu
             busy={busyId === task.id}
             onToggleComplete={onToggleComplete}
             onReassign={onReassign}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -637,6 +655,27 @@ export default function TasksPage() {
     [authFetch, loadTasks, toast]
   );
 
+  const handleDelete = useCallback(
+    async (task: TeamTask) => {
+      setBusyId(task.id);
+      try {
+        const res = await authFetch(`/api/team/tasks/${task.id}`, { method: 'DELETE' });
+        const data = (await res.json()) as TaskMutationResponse;
+        if (data.success) {
+          toast.success('Task deleted');
+          await loadTasks();
+        } else {
+          toast.error(data.error ?? 'Could not delete the task.');
+        }
+      } catch {
+        toast.error('Network error while deleting the task.');
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [authFetch, loadTasks, toast]
+  );
+
   const buckets = useMemo(() => bucketTasks(tasks), [tasks]);
   const openCount = buckets.overdue.length + buckets.today.length + buckets.upcoming.length + buckets.no_due_date.length;
   const hasAny = tasks.length > 0;
@@ -712,6 +751,7 @@ export default function TasksPage() {
               busyId={busyId}
               onToggleComplete={(t) => void handleToggleComplete(t)}
               onReassign={(t, owner) => void handleReassign(t, owner)}
+              onDelete={(t) => void handleDelete(t)}
             />
           ))}
         </>
@@ -725,6 +765,7 @@ export default function TasksPage() {
               busyId={busyId}
               onToggleComplete={(t) => void handleToggleComplete(t)}
               onReassign={(t, owner) => void handleReassign(t, owner)}
+              onDelete={(t) => void handleDelete(t)}
             />
           ))}
         </div>

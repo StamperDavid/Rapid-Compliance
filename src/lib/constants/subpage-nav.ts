@@ -117,7 +117,7 @@ export const COACHING_TABS: SubpageNavItem[] = [
 // ── Team (expanded hub: leaderboard, tasks, performance, coaching, playbook) ─
 export const TEAM_TABS: SubpageNavItem[] = [
   { label: 'Leaderboard', href: '/team/leaderboard' },
-  { label: 'Tasks', href: '/team/tasks' },
+  { label: 'Tasks', href: '/tasks' },
   { label: 'Performance', href: '/performance' },
   { label: 'Coaching', href: '/coaching' },
   { label: 'Team Coaching', href: '/coaching/team' },

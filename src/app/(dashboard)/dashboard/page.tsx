@@ -514,7 +514,7 @@ export default function WorkspaceDashboardPage() {
               ))}
             </div>
           )}
-          <Link href="/team/tasks" className="block mt-3 text-center text-xs text-muted-foreground no-underline hover:text-foreground transition-colors">
+          <Link href="/tasks" className="block mt-3 text-center text-xs text-muted-foreground no-underline hover:text-foreground transition-colors">
             View all tasks <ArrowRight size={10} className="inline align-middle" />
           </Link>
         </SectionCard>
