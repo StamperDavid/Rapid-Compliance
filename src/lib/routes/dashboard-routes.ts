@@ -49,8 +49,8 @@ export const dashboardRoutes = {
   // Sequence Management
   sequence: () => '/outbound/sequences',
 
-  // Settings
-  settings: () => '/settings',
+  // Settings (the old landing page was retired; its sub-pages live in the nav now)
+  settings: () => '/dashboard',
 
   // System (Platform Admin Only)
   system: () => '/system',

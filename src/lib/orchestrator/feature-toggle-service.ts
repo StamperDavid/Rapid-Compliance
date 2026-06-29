@@ -173,7 +173,6 @@ export function buildNavigationStructure(): NavSection[] {
       id: 'settings',
       title: 'Settings',
       items: [
-        { id: 'settings', href: '/settings', icon: '⚙️', label: 'Settings', featureId: 'settings' },
         { id: 'integrations', href: '/settings/integrations', icon: '🔌', label: 'Integrations', featureId: 'integrations' },
         { id: 'api_keys', href: '/settings/api-keys', icon: '🔑', label: 'API Keys', featureId: 'api_keys' },
       ],
