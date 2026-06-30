@@ -16,6 +16,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Page, PageSection, Widget, WidgetType } from '@/types/website';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
+import { SiteHeaderPreview, SiteFooterPreview } from '@/components/website-builder/SiteChromePreview';
+import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
 
 interface SelectedElement {
@@ -95,6 +97,12 @@ export default function EditableCanvas({
   onAddWidget,
   onDeleteWidget,
 }: EditableCanvasProps) {
+  // The canvas page area is painted on the SITE'S real published theme (dark base)
+  // so the editor matches what publishes instead of a hardcoded white sheet that
+  // hides the site's light text. The faithful render itself (ResponsiveRenderer)
+  // also applies this theme; the wrapper bg keeps the empty state / footer chrome
+  // consistent with it.
+  const { theme } = useWebsiteTheme();
   const innerRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<HoverTarget | null>(null);
   const [boxes, setBoxes] = useState<{ selected: Box | null; hover: Box | null }>({
@@ -314,13 +322,20 @@ export default function EditableCanvas({
         style={{
           width: CANVAS_WIDTHS[breakpoint],
           minHeight: '600px',
-          background: '#ffffff',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
+          background: theme.backgroundColor,
+          color: theme.textColor,
+          fontFamily: theme.fontFamily,
           boxShadow: breakpoint !== 'desktop' ? '0 0 30px rgba(99, 102, 241, 0.15)' : 'none',
-          border: breakpoint !== 'desktop' ? '1px solid rgba(0,0,0,0.08)' : 'none',
+          border: breakpoint !== 'desktop' ? '1px solid rgba(255,255,255,0.1)' : 'none',
           borderRadius: breakpoint !== 'desktop' ? '8px' : '0',
         }}
       >
+        {/* Faithful, non-interactive preview of the published site frame so the
+            canvas shows the COMPLETE page (banner + header + body + footer),
+            not a chopped-off body. The chrome is inert — the body below stays
+            the only editable / selectable area. */}
+        <SiteHeaderPreview theme={theme} breakpoint={breakpoint} />
+
         {isEmpty ? (
           <EmptyState onAddSection={() => onAddSection()} />
         ) : (
@@ -381,7 +396,7 @@ export default function EditableCanvas({
 
             <div
               className="text-center"
-              style={{ padding: '1rem', borderTop: '2px dashed rgba(0,0,0,0.08)' }}
+              style={{ padding: '1rem', borderTop: '2px dashed rgba(255,255,255,0.1)' }}
             >
               <button
                 type="button"
@@ -400,6 +415,8 @@ export default function EditableCanvas({
             </div>
           </>
         )}
+
+        <SiteFooterPreview theme={theme} breakpoint={breakpoint} />
       </div>
     </div>
   );
@@ -519,9 +536,9 @@ function controlButtonStyle(background: string): React.CSSProperties {
 
 function EmptyState({ onAddSection }: { onAddSection: () => void }) {
   return (
-    <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'rgba(0,0,0,0.5)' }}>
+    <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'rgba(255,255,255,0.55)' }}>
       <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.4 }}>+</div>
-      <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'rgba(0,0,0,0.7)' }}>Empty Page</h3>
+      <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.8)' }}>Empty Page</h3>
       <p style={{ margin: '0 0 1.5rem', fontSize: '0.875rem' }}>
         Add a section to get started, then drag widgets from the left panel.
       </p>

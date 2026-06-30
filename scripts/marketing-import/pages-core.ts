@@ -9,53 +9,223 @@
  *   - Pricing   → src/app/(public)/pricing/page.tsx   (FallbackContent)
  *
  * Copy is reproduced verbatim from the JSX. Widget `type` strings + `data`
- * shapes mirror what `ResponsiveRenderer` + `widget-normalizer` consume, so the
- * captured pages render faithfully. Every page is status: 'draft' — these must
- * NOT affect the live site.
+ * shapes mirror what `ResponsiveRenderer` + `widget-normalizer` consume, AND
+ * each section/widget now carries the real STYLING translated from the source
+ * Tailwind classes into the canonical `Page` style fields:
+ *   - `PageSection.backgroundColor` (+ `fullWidth` so the band reaches the
+ *     canvas edges) reproduces the dark alternating section bands.
+ *   - `Widget.style` reproduces text colors (white headings, gray sub-text,
+ *     indigo accents), alignment, and font size/weight. `hero`/`cta` widgets
+ *     also carry the indigo→purple gradient backgrounds.
+ *
+ * The renderer (`ResponsiveRenderer`) spreads `widget.style` onto heading /
+ * text / button / hero / cta / testimonial widgets, and reads
+ * `section.backgroundColor` / `fullWidth` on the section element — so these
+ * fields take real visual effect. (The `features` / `pricing` widgets render
+ * their own fixed card look and ignore widget style; see "honest gaps".)
+ *
+ * Every page is status: 'draft' — these must NOT affect the live site.
  */
 
-import type { Page, PageSection, PageColumn, Widget } from '@/types/website';
+import type { Page, PageSection, PageColumn, Widget, WidgetStyle, Spacing } from '@/types/website';
 import type { FeatureItem, PricingPlan } from '@/types/widget-content';
 
 // Stable timestamp for these seeded capture records.
 const CAPTURED_AT = '2026-06-30T00:00:00.000Z';
 
 // ---------------------------------------------------------------------------
+// Palette translated from the source Tailwind classes.
+// ---------------------------------------------------------------------------
+const COLOR = {
+  white: '#ffffff',
+  gray200: '#e5e7eb', // text-gray-200
+  gray300: '#d1d5db', // text-gray-300 (primary body copy)
+  gray400: '#9ca3af', // text-gray-400 (muted)
+  gray500: '#6b7280', // text-gray-500 (faint)
+  indigo300: '#a5b4fc', // text-indigo-300 (accent / new-way values)
+  indigo400: '#818cf8', // text-indigo-400 (accent / gradient text approx)
+  sectionGray900: '#111827', // bg-gray-900
+  sectionBlack: '#000000', // bg-black
+  sectionSlate: '#0f172a', // approximates the to-gray-900/50 fade
+} as const;
+
+// Reusable widget-style presets.
+const STYLE = {
+  // Section heading (h2) — white, centered, bold.
+  h2Center: {
+    color: COLOR.white,
+    textAlign: 'center',
+    fontSize: '36px',
+    fontWeight: 'bold',
+  } as WidgetStyle,
+  // Large section heading (the bigger md:text-5xl headings).
+  h2CenterLarge: {
+    color: COLOR.white,
+    textAlign: 'center',
+    fontSize: '44px',
+    fontWeight: 'bold',
+  } as WidgetStyle,
+  // Page hero h1 fallback (features/pricing use heading level 1).
+  h1Center: {
+    color: COLOR.white,
+    textAlign: 'center',
+    fontSize: '56px',
+    fontWeight: 'bold',
+  } as WidgetStyle,
+  // Section sub-heading paragraph (gray-300, centered, larger).
+  subCenter: {
+    color: COLOR.gray300,
+    textAlign: 'center',
+    fontSize: '20px',
+  } as WidgetStyle,
+  // Faint centered helper line (gray-400).
+  subCenterMuted: {
+    color: COLOR.gray400,
+    textAlign: 'center',
+    fontSize: '16px',
+  } as WidgetStyle,
+  // Smallest centered trust line (gray-500).
+  trustCenter: {
+    color: COLOR.gray500,
+    textAlign: 'center',
+    fontSize: '14px',
+  } as WidgetStyle,
+  // Pill / badge line — indigo, centered, uppercase-ish semibold.
+  badge: {
+    color: COLOR.indigo300,
+    textAlign: 'center',
+    fontSize: '14px',
+    fontWeight: '600',
+    letterSpacing: '0.04em',
+  } as WidgetStyle,
+  // Comparison card column heading (h3, left, white, bold).
+  cardH3: {
+    color: COLOR.white,
+    fontSize: '24px',
+    fontWeight: 'bold',
+  } as WidgetStyle,
+  // Comparison card sub-label (gray-400).
+  cardSub: {
+    color: COLOR.gray400,
+    fontSize: '14px',
+  } as WidgetStyle,
+  // Comparison card sub-label, "new way" accent (indigo-300).
+  cardSubAccent: {
+    color: COLOR.indigo300,
+    fontSize: '14px',
+  } as WidgetStyle,
+  // Comparison row — old way (gray-300 line item).
+  rowOld: {
+    color: COLOR.gray300,
+    fontSize: '14px',
+  } as WidgetStyle,
+  // Comparison row — new way (indigo-300 / included).
+  rowNew: {
+    color: COLOR.indigo300,
+    fontSize: '14px',
+  } as WidgetStyle,
+  // Comparison total line (white, bold, bigger).
+  rowTotal: {
+    color: COLOR.white,
+    fontSize: '18px',
+    fontWeight: 'bold',
+  } as WidgetStyle,
+  // Footnote under a comparison card (faint).
+  rowNote: {
+    color: COLOR.gray400,
+    fontSize: '12px',
+  } as WidgetStyle,
+  // Savings callout heading (indigo, centered, bold).
+  savingsHead: {
+    color: COLOR.indigo300,
+    textAlign: 'center',
+    fontSize: '26px',
+    fontWeight: 'bold',
+  } as WidgetStyle,
+  // Savings callout sub (white, centered).
+  savingsSub: {
+    color: COLOR.white,
+    textAlign: 'center',
+    fontSize: '14px',
+  } as WidgetStyle,
+  // Fair-use list heading (h4, gray-300, centered-left uppercase tracking).
+  fairUseH4: {
+    color: COLOR.gray300,
+    fontSize: '16px',
+    fontWeight: '600',
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+  } as WidgetStyle,
+  // Fair-use list item (gray-400).
+  fairUseItem: {
+    color: COLOR.gray400,
+    fontSize: '14px',
+  } as WidgetStyle,
+  // BYOK callout body (white/90).
+  byokBody: {
+    color: COLOR.gray200,
+    textAlign: 'center',
+    fontSize: '18px',
+  } as WidgetStyle,
+  // BYOK recommend line (indigo, centered).
+  byokRec: {
+    color: COLOR.indigo300,
+    textAlign: 'center',
+    fontSize: '16px',
+    fontWeight: '600',
+  } as WidgetStyle,
+  // Secondary hero button ("Ask Alex") — translucent white look.
+  secondaryButton: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    color: COLOR.white,
+    border: '1px solid rgba(255,255,255,0.20)',
+    borderRadius: '8px',
+    fontWeight: '600',
+  } as WidgetStyle,
+  // Hero block — subtle indigo→purple gradient glow + white text.
+  hero: {
+    backgroundImage:
+      'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(168,85,247,0.14) 100%)',
+    border: '1px solid rgba(99,102,241,0.25)',
+    borderRadius: '20px',
+    color: COLOR.white,
+    padding: '72px 40px',
+  } as WidgetStyle,
+  // CTA band — bold indigo→purple gradient (the "purple CTA band").
+  cta: {
+    backgroundImage: 'linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%)',
+    backgroundColor: '#4f46e5',
+    color: COLOR.white,
+    borderRadius: '20px',
+  } as WidgetStyle,
+} as const;
+
+// ---------------------------------------------------------------------------
 // Typed widget + section builders (keep the literals narrow, zero `any`).
 // ---------------------------------------------------------------------------
 
-function heading(id: string, text: string, level: number): Widget {
-  return { id, type: 'heading', data: { text, level } };
+function heading(id: string, text: string, level: number, style?: WidgetStyle): Widget {
+  return style ? { id, type: 'heading', data: { text, level }, style } : { id, type: 'heading', data: { text, level } };
 }
 
-function paragraph(id: string, content: string): Widget {
-  return { id, type: 'text', data: { content } };
+function paragraph(id: string, content: string, style?: WidgetStyle): Widget {
+  return style ? { id, type: 'text', data: { content }, style } : { id, type: 'text', data: { content } };
 }
 
-function button(id: string, text: string, url: string): Widget {
-  return { id, type: 'button', data: { text, url } };
-}
-
-function heroWidget(
-  id: string,
-  data: { heading: string; subheading: string; buttonText?: string; buttonUrl?: string },
-): Widget {
-  return { id, type: 'hero', data };
+function button(id: string, text: string, url: string, style?: WidgetStyle): Widget {
+  return style ? { id, type: 'button', data: { text, url }, style } : { id, type: 'button', data: { text, url } };
 }
 
 function featuresWidget(id: string, items: FeatureItem[]): Widget {
   return { id, type: 'features', data: { features: items } };
 }
 
-function statsWidget(id: string, items: Array<{ number: string; label: string }>): Widget {
-  return { id, type: 'stats', data: { stats: items } };
-}
-
 function testimonialWidget(
   id: string,
   data: { quote: string; author: string; role: string },
+  style?: WidgetStyle,
 ): Widget {
-  return { id, type: 'testimonial', data };
+  return style ? { id, type: 'testimonial', data, style } : { id, type: 'testimonial', data };
 }
 
 function pricingWidget(id: string, plans: PricingPlan[]): Widget {
@@ -65,27 +235,61 @@ function pricingWidget(id: string, plans: PricingPlan[]): Widget {
 function ctaWidget(
   id: string,
   data: { heading: string; text: string; buttonText: string; buttonUrl: string },
+  style?: WidgetStyle,
 ): Widget {
-  return { id, type: 'cta', data };
+  return style ? { id, type: 'cta', data, style } : { id, type: 'cta', data };
+}
+
+interface SectionOpts {
+  backgroundColor?: string;
+  fullWidth?: boolean;
+  padding?: Spacing;
+}
+
+function applyOpts(base: PageSection, opts: SectionOpts): PageSection {
+  const next: PageSection = { ...base };
+  if (opts.backgroundColor !== undefined) {
+    next.backgroundColor = opts.backgroundColor;
+  }
+  if (opts.fullWidth) {
+    next.fullWidth = true;
+  }
+  if (opts.padding) {
+    next.padding = opts.padding;
+  }
+  return next;
 }
 
 /** Single full-width column section. */
-function section(id: string, widgets: Widget[]): PageSection {
-  return {
-    id,
-    type: 'section',
-    columns: [{ id: `${id}-col`, width: 1, widgets }],
-  };
+function section(id: string, widgets: Widget[], opts: SectionOpts = {}): PageSection {
+  return applyOpts(
+    {
+      id,
+      type: 'section',
+      columns: [{ id: `${id}-col`, width: 1, widgets }],
+    },
+    opts,
+  );
 }
 
 /** Two-column section (equal flex width). */
-function twoColSection(id: string, left: Widget[], right: Widget[]): PageSection {
+function twoColSection(
+  id: string,
+  left: Widget[],
+  right: Widget[],
+  opts: SectionOpts = {},
+): PageSection {
   const columns: PageColumn[] = [
     { id: `${id}-col-1`, width: 1, widgets: left },
     { id: `${id}-col-2`, width: 1, widgets: right },
   ];
-  return { id, type: 'section', columns };
+  return applyOpts({ id, type: 'section', columns }, opts);
 }
+
+// Shorthands for the recurring dark bands.
+const GRAY900: SectionOpts = { backgroundColor: COLOR.sectionGray900, fullWidth: true };
+const BLACK: SectionOpts = { backgroundColor: COLOR.sectionBlack, fullWidth: true };
+const SLATE: SectionOpts = { backgroundColor: COLOR.sectionSlate, fullWidth: true };
 
 // ===========================================================================
 // HOME
@@ -173,19 +377,24 @@ const homePage: Page = {
   createdBy: 'system',
   lastEditedBy: 'system',
   content: [
-    // Hero
+    // Hero (page base gradient → hero block carries an indigo→purple glow)
     section('home-hero', [
-      paragraph('home-hero-badge', 'AI-Native Workforce Platform'),
-      heroWidget('home-hero-main', {
-        heading: 'Your AI-Native Sales Workforce',
-        subheading:
-          'CRM + Voice AI Closers + Social Media AI + SEO + Content Factory. Humans and AI working together.',
-        buttonText: 'Reserve my spot →',
-        buttonUrl: '/early-access',
+      paragraph('home-hero-badge', 'AI-Native Workforce Platform', STYLE.badge),
+      heading('home-hero-h1a', 'Your AI-Native', 1, { ...STYLE.h1Center, fontSize: '64px' }),
+      heading('home-hero-h1b', 'Sales Workforce', 1, {
+        ...STYLE.h1Center,
+        fontSize: '64px',
+        textGradient: { from: '#818cf8', to: '#c084fc', angle: 90 },
       }),
+      paragraph(
+        'home-hero-subhead',
+        'CRM + Voice AI Closers + Social Media AI + SEO + Content Factory. Humans and AI working together.',
+        STYLE.subCenter,
+      ),
       paragraph(
         'home-hero-sub',
         'One platform. Raw market rates. No wrapper markup. Your AI workforce scales infinitely.',
+        STYLE.subCenterMuted,
       ),
       featuresWidget('home-hero-diff', [
         {
@@ -198,180 +407,238 @@ const homePage: Page = {
           description: 'Flat Pricing — No tiers, no record limits.',
         },
       ]),
-      button('home-hero-cta2', 'Ask Alex', '/demo'),
+      button('home-hero-cta1', 'Reserve my spot →', '/early-access', {
+        backgroundColor: '#6366f1',
+        color: COLOR.white,
+        borderRadius: '8px',
+        fontWeight: '600',
+      } as WidgetStyle),
+      button('home-hero-cta2', 'Ask Alex', '/demo', STYLE.secondaryButton),
       paragraph(
         'home-hero-trust',
         'No charge until trial ends • 14-day free trial • Cancel anytime',
+        STYLE.subCenterMuted,
       ),
     ]),
 
-    // What's Included
-    section('home-included', [
-      heading('home-included-h2', "What's Included in Every Plan", 2),
-      paragraph(
-        'home-included-sub',
-        'Every customer gets every feature. No tiers, no upsells, no record limits.',
-      ),
-      featuresWidget('home-included-grid', homeWhatsIncluded),
-    ]),
+    // What's Included (bg-gray-900)
+    section(
+      'home-included',
+      [
+        heading('home-included-h2', "What's Included in Every Plan", 2, STYLE.h2Center),
+        paragraph(
+          'home-included-sub',
+          'Every customer gets every feature. No tiers, no upsells, no record limits.',
+          STYLE.subCenter,
+        ),
+        featuresWidget('home-included-grid', homeWhatsIncluded),
+      ],
+      GRAY900,
+    ),
 
-    // The AI-Native Advantage (Old Way vs New Way)
-    section('home-advantage-head', [
-      heading('home-advantage-h2', 'The AI-Native Advantage', 2),
-      paragraph(
-        'home-advantage-sub',
-        'Your workforce that never sleeps. Raw APIs. Zero markup. Infinite scale.',
-      ),
-    ]),
+    // The AI-Native Advantage (Old Way vs New Way) — bg-black
+    section(
+      'home-advantage-head',
+      [
+        heading('home-advantage-h2', 'The AI-Native Advantage', 2, STYLE.h2CenterLarge),
+        paragraph(
+          'home-advantage-sub',
+          'Your workforce that never sleeps. Raw APIs. Zero markup. Infinite scale.',
+          STYLE.subCenter,
+        ),
+      ],
+      BLACK,
+    ),
     twoColSection(
       'home-advantage-compare',
       [
-        heading('home-adv-old-h3', 'The Old Way', 3),
-        paragraph('home-adv-old-sub', 'Fragmented & Expensive'),
-        paragraph('home-adv-old-1', 'Apollo/ZoomInfo — $99-399/mo'),
-        paragraph('home-adv-old-2', 'Air AI/11x — $500-2,000/mo'),
-        paragraph('home-adv-old-3', 'Outreach Tool (Email/LinkedIn) — $49-199/mo'),
-        paragraph('home-adv-old-4', 'Zapier — $29-599/mo'),
-        paragraph('home-adv-old-5', 'HubSpot CRM — $45-1,200/mo'),
-        paragraph('home-adv-old-total', 'TOTAL — $722-4,397/mo'),
+        heading('home-adv-old-h3', 'The Old Way', 3, STYLE.cardH3),
+        paragraph('home-adv-old-sub', 'Fragmented & Expensive', STYLE.cardSub),
+        paragraph('home-adv-old-1', 'Apollo/ZoomInfo — $99-399/mo', STYLE.rowOld),
+        paragraph('home-adv-old-2', 'Air AI/11x — $500-2,000/mo', STYLE.rowOld),
+        paragraph('home-adv-old-3', 'Outreach Tool (Email/LinkedIn) — $49-199/mo', STYLE.rowOld),
+        paragraph('home-adv-old-4', 'Zapier — $29-599/mo', STYLE.rowOld),
+        paragraph('home-adv-old-5', 'HubSpot CRM — $45-1,200/mo', STYLE.rowOld),
+        paragraph('home-adv-old-total', 'TOTAL — $722-4,397/mo', STYLE.rowTotal),
         paragraph(
           'home-adv-old-note',
           'Plus: Integration hell, 5 support teams, data syncing nightmares',
+          STYLE.rowNote,
         ),
       ],
       [
-        heading('home-adv-new-h3', 'The New Way', 3),
-        paragraph('home-adv-new-sub', 'All-In-One & Affordable'),
-        paragraph('home-adv-new-1', '✓ Lead Scraper & Enrichment — Included'),
-        paragraph('home-adv-new-2', '✓ AI Sales Agents (Unlimited) — Included'),
-        paragraph('home-adv-new-3', '✓ Multi-Channel Outreach — Included'),
-        paragraph('home-adv-new-4', '✓ Workflow Automation — Included'),
-        paragraph('home-adv-new-5', '✓ Full CRM + E-commerce — Included'),
-        paragraph('home-adv-new-total', 'TOTAL — $299/mo flat'),
+        heading('home-adv-new-h3', 'The New Way', 3, STYLE.cardH3),
+        paragraph('home-adv-new-sub', 'All-In-One & Affordable', STYLE.cardSubAccent),
+        paragraph('home-adv-new-1', '✓ Lead Scraper & Enrichment — Included', STYLE.rowNew),
+        paragraph('home-adv-new-2', '✓ AI Sales Agents (Unlimited) — Included', STYLE.rowNew),
+        paragraph('home-adv-new-3', '✓ Multi-Channel Outreach — Included', STYLE.rowNew),
+        paragraph('home-adv-new-4', '✓ Workflow Automation — Included', STYLE.rowNew),
+        paragraph('home-adv-new-5', '✓ Full CRM + E-commerce — Included', STYLE.rowNew),
+        paragraph('home-adv-new-total', 'TOTAL — $299/mo flat', STYLE.rowTotal),
         paragraph(
           'home-adv-new-note',
           'Plus: Everything synced, one dashboard, one support team, BYOK on AI',
+          STYLE.rowNote,
         ),
       ],
+      BLACK,
     ),
-    section('home-advantage-savings', [
-      heading('home-adv-savings-h3', 'Save $423-4,098 per month', 3),
-      paragraph('home-adv-savings-sub', "That's $5,076-49,176 saved per year"),
-    ]),
+    section(
+      'home-advantage-savings',
+      [
+        heading('home-adv-savings-h3', 'Save $423-4,098 per month', 3, STYLE.savingsHead),
+        paragraph('home-adv-savings-sub', "That's $5,076-49,176 saved per year", STYLE.savingsSub),
+      ],
+      BLACK,
+    ),
 
-    // BYOK: Zero AI Markup
-    section('home-byok-head', [
-      heading('home-byok-h2', "BYOK: We Don't Markup Your AI Costs", 2),
-      paragraph(
-        'home-byok-sub',
-        "Most AI platforms mark up tokens by 300-500%. We don't. You connect your own API key and pay the AI provider directly at cost.",
-      ),
-      paragraph(
-        'home-byok-rec',
-        'We recommend OpenRouter - one key gives you access to GPT-4, Claude, Gemini, and 200+ models',
-      ),
-    ]),
+    // BYOK: Zero AI Markup (bg-gray-900)
+    section(
+      'home-byok-head',
+      [
+        heading('home-byok-h2', "BYOK: We Don't Markup Your AI Costs", 2, STYLE.h2CenterLarge),
+        paragraph(
+          'home-byok-sub',
+          "Most AI platforms mark up tokens by 300-500%. We don't. You connect your own API key and pay the AI provider directly at cost.",
+          STYLE.subCenter,
+        ),
+        paragraph(
+          'home-byok-rec',
+          'We recommend OpenRouter - one key gives you access to GPT-4, Claude, Gemini, and 200+ models',
+          STYLE.byokRec,
+        ),
+      ],
+      GRAY900,
+    ),
     twoColSection(
       'home-byok-compare',
       [
-        heading('home-byok-typ-h3', 'Typical AI Platform', 3),
-        paragraph('home-byok-typ-sub', 'Hidden Token Markup'),
-        paragraph('home-byok-typ-1', 'Platform Fee — $1,500/mo'),
-        paragraph('home-byok-typ-2', 'AI Usage (400% markup) — $400/mo'),
-        paragraph('home-byok-typ-3', '(Real cost: $100, but you pay $400)'),
-        paragraph('home-byok-typ-total', 'TOTAL YOU PAY — $1,900/mo'),
+        heading('home-byok-typ-h3', 'Typical AI Platform', 3, STYLE.cardH3),
+        paragraph('home-byok-typ-sub', 'Hidden Token Markup', STYLE.cardSub),
+        paragraph('home-byok-typ-1', 'Platform Fee — $1,500/mo', STYLE.rowOld),
+        paragraph('home-byok-typ-2', 'AI Usage (400% markup) — $400/mo', STYLE.rowOld),
+        paragraph('home-byok-typ-3', '(Real cost: $100, but you pay $400)', STYLE.rowNote),
+        paragraph('home-byok-typ-total', 'TOTAL YOU PAY — $1,900/mo', STYLE.rowTotal),
       ],
       [
-        heading('home-byok-our-h3', 'Our Platform (BYOK)', 3),
-        paragraph('home-byok-our-sub', '100% Transparent'),
-        paragraph('home-byok-our-1', 'Platform Fee (flat, from us) — $299/mo'),
-        paragraph('home-byok-our-2', 'AI Usage (0% markup) — $100/mo'),
-        paragraph('home-byok-our-3', '(You pay OpenRouter/OpenAI directly at cost)'),
-        paragraph('home-byok-our-total', 'TOTAL YOU PAY — $399/mo'),
+        heading('home-byok-our-h3', 'Our Platform (BYOK)', 3, STYLE.cardH3),
+        paragraph('home-byok-our-sub', '100% Transparent', STYLE.cardSubAccent),
+        paragraph('home-byok-our-1', 'Platform Fee (flat, from us) — $299/mo', STYLE.rowNew),
+        paragraph('home-byok-our-2', 'AI Usage (0% markup) — $100/mo', STYLE.rowNew),
+        paragraph('home-byok-our-3', '(You pay OpenRouter/OpenAI directly at cost)', STYLE.rowNote),
+        paragraph('home-byok-our-total', 'TOTAL YOU PAY — $399/mo', STYLE.rowTotal),
       ],
+      GRAY900,
     ),
-    section('home-byok-savings', [
-      heading('home-byok-savings-h3', 'You Save: $1,501/month', 3),
-      paragraph(
-        'home-byok-savings-sub',
-        "That's $18,012 saved per year with complete transparency",
-      ),
-    ]),
-
-    // How It Works
-    section('home-how', [
-      heading('home-how-h2', 'Three Steps to Your AI Sales Team', 2),
-      paragraph('home-how-sub', 'Get up and running in less than an hour'),
-      featuresWidget('home-how-grid', homeHowItWorks),
-    ]),
-
-    // AI-Native Workforce Capabilities
-    section('home-workforce', [
-      heading('home-workforce-h2', 'Your Complete AI-Native Workforce', 2),
-      paragraph('home-workforce-sub', 'Humans + AI. One platform. Raw market rates.'),
-      featuresWidget('home-workforce-grid', homeWorkforce),
-    ]),
-
-    // Social Proof
-    section('home-proof-head', [
-      heading('home-proof-h2', 'Trusted by Growing Businesses', 2),
-    ]),
-    {
-      id: 'home-proof-grid',
-      type: 'section',
-      columns: [
-        {
-          id: 'home-proof-col-1',
-          width: 1,
-          widgets: [
-            testimonialWidget('home-proof-1', {
-              quote:
-                "This AI agent increased our lead conversion by 300%. It's like having a top sales rep working 24/7.",
-              author: 'Sarah Johnson',
-              role: 'CEO, TechStart Inc',
-            }),
-          ],
-        },
-        {
-          id: 'home-proof-col-2',
-          width: 1,
-          widgets: [
-            testimonialWidget('home-proof-2', {
-              quote:
-                'We went from manually qualifying every lead to having AI do it for us. Saved us 20 hours a week.',
-              author: 'Michael Chen',
-              role: 'Founder, GrowthLabs',
-            }),
-          ],
-        },
-        {
-          id: 'home-proof-col-3',
-          width: 1,
-          widgets: [
-            testimonialWidget('home-proof-3', {
-              quote:
-                'The training is so easy. We had our AI agent up and running in under an hour.',
-              author: 'Emily Rodriguez',
-              role: 'Sales Director, CloudCorp',
-            }),
-          ],
-        },
+    section(
+      'home-byok-savings',
+      [
+        heading('home-byok-savings-h3', 'You Save: $1,501/month', 3, STYLE.savingsHead),
+        paragraph(
+          'home-byok-savings-sub',
+          "That's $18,012 saved per year with complete transparency",
+          STYLE.savingsSub,
+        ),
       ],
-    },
+      GRAY900,
+    ),
 
-    // Final CTA
-    section('home-cta', [
-      ctaWidget('home-cta-main', {
-        heading: 'Ready to 10x Your Sales?',
-        text: 'Join hundreds of businesses using AI to close more deals',
-        buttonText: 'Reserve my spot →',
-        buttonUrl: '/early-access',
-      }),
-      paragraph(
-        'home-cta-trust',
-        '14-day free trial • No credit card required • $299/month flat after trial',
-      ),
-    ]),
+    // How It Works (bg-black)
+    section(
+      'home-how',
+      [
+        heading('home-how-h2', 'Three Steps to Your AI Sales Team', 2, STYLE.h2CenterLarge),
+        paragraph('home-how-sub', 'Get up and running in less than an hour', STYLE.subCenter),
+        featuresWidget('home-how-grid', homeHowItWorks),
+      ],
+      BLACK,
+    ),
+
+    // AI-Native Workforce Capabilities (bg-black)
+    section(
+      'home-workforce',
+      [
+        heading('home-workforce-h2', 'Your Complete AI-Native Workforce', 2, STYLE.h2CenterLarge),
+        paragraph('home-workforce-sub', 'Humans + AI. One platform. Raw market rates.', STYLE.subCenter),
+        featuresWidget('home-workforce-grid', homeWorkforce),
+      ],
+      BLACK,
+    ),
+
+    // Social Proof (bg-gray-900)
+    section(
+      'home-proof-head',
+      [heading('home-proof-h2', 'Trusted by Growing Businesses', 2, STYLE.h2CenterLarge)],
+      GRAY900,
+    ),
+    applyOpts(
+      {
+        id: 'home-proof-grid',
+        type: 'section',
+        columns: [
+          {
+            id: 'home-proof-col-1',
+            width: 1,
+            widgets: [
+              testimonialWidget('home-proof-1', {
+                quote:
+                  "This AI agent increased our lead conversion by 300%. It's like having a top sales rep working 24/7.",
+                author: 'Sarah Johnson',
+                role: 'CEO, TechStart Inc',
+              }),
+            ],
+          },
+          {
+            id: 'home-proof-col-2',
+            width: 1,
+            widgets: [
+              testimonialWidget('home-proof-2', {
+                quote:
+                  'We went from manually qualifying every lead to having AI do it for us. Saved us 20 hours a week.',
+                author: 'Michael Chen',
+                role: 'Founder, GrowthLabs',
+              }),
+            ],
+          },
+          {
+            id: 'home-proof-col-3',
+            width: 1,
+            widgets: [
+              testimonialWidget('home-proof-3', {
+                quote:
+                  'The training is so easy. We had our AI agent up and running in under an hour.',
+                author: 'Emily Rodriguez',
+                role: 'Sales Director, CloudCorp',
+              }),
+            ],
+          },
+        ],
+      },
+      GRAY900,
+    ),
+
+    // Final CTA (bg-black + indigo→purple CTA band)
+    section(
+      'home-cta',
+      [
+        ctaWidget(
+          'home-cta-main',
+          {
+            heading: 'Ready to 10x Your Sales?',
+            text: 'Join hundreds of businesses using AI to close more deals',
+            buttonText: 'Reserve my spot →',
+            buttonUrl: '/early-access',
+          },
+          STYLE.cta,
+        ),
+        paragraph(
+          'home-cta-trust',
+          '14-day free trial • No credit card required • $299/month flat after trial',
+          STYLE.trustCenter,
+        ),
+      ],
+      BLACK,
+    ),
   ],
 };
 
@@ -603,73 +870,92 @@ const featuresPage: Page = {
   createdBy: 'system',
   lastEditedBy: 'system',
   content: [
-    // Hero
+    // Hero (transparent over dark base)
     section('features-hero', [
-      heading('features-hero-h1', 'Everything You Need to Sell More, Faster', 1),
+      heading('features-hero-h1', 'Everything You Need to Sell More, Faster', 1, STYLE.h1Center),
       paragraph(
         'features-hero-sub',
         'A complete AI-powered sales platform with CRM, automation, and e-commerce built in',
+        STYLE.subCenter,
       ),
     ]),
 
     // AI Workforce
     section('features-workforce', [
-      heading('features-workforce-h2', 'A 69-Agent AI Workforce, Not a Chatbot', 2),
+      heading('features-workforce-h2', 'A 69-Agent AI Workforce, Not a Chatbot', 2, STYLE.h2Center),
       paragraph(
         'features-workforce-sub',
         '57 specialists, 11 department managers, and one Master Orchestrator — all trained on your brand voice and reviewed in your Mission Control dashboard.',
+        STYLE.subCenterMuted,
       ),
       featuresWidget('features-workforce-grid', featuresAiWorkforce),
     ]),
 
-    // Sales
-    section('features-sales', [
-      heading('features-sales-h2', 'Sales', 2),
-      featuresWidget('features-sales-grid', featuresSales),
-    ]),
+    // Sales (bg-gray-900 band to alternate)
+    section(
+      'features-sales',
+      [
+        heading('features-sales-h2', 'Sales', 2, STYLE.h2Center),
+        featuresWidget('features-sales-grid', featuresSales),
+      ],
+      GRAY900,
+    ),
 
     // Marketing & Outreach
     section('features-marketing', [
-      heading('features-marketing-h2', 'Marketing & Outreach', 2),
+      heading('features-marketing-h2', 'Marketing & Outreach', 2, STYLE.h2Center),
       featuresWidget('features-marketing-grid', featuresMarketing),
     ]),
 
-    // Voice AI
-    section('features-voice', [
-      heading('features-voice-h2', 'Voice AI', 2),
-      featuresWidget('features-voice-grid', featuresVoice),
-    ]),
+    // Voice AI (bg-gray-900 band)
+    section(
+      'features-voice',
+      [
+        heading('features-voice-h2', 'Voice AI', 2, STYLE.h2Center),
+        featuresWidget('features-voice-grid', featuresVoice),
+      ],
+      GRAY900,
+    ),
 
     // Content Engine
     section('features-content', [
-      heading('features-content-h2', 'Content Engine', 2),
+      heading('features-content-h2', 'Content Engine', 2, STYLE.h2Center),
       paragraph(
         'features-content-sub',
         'The Magic Studio gives you a unified canvas for image, video, music, and copy — every output trained on your Brand DNA.',
+        STYLE.subCenterMuted,
       ),
       featuresWidget('features-content-grid', featuresContent),
     ]),
 
-    // Website & SEO
-    section('features-website', [
-      heading('features-website-h2', 'Website & SEO', 2),
-      featuresWidget('features-website-grid', featuresWebsite),
-    ]),
+    // Website & SEO (bg-gray-900 band)
+    section(
+      'features-website',
+      [
+        heading('features-website-h2', 'Website & SEO', 2, STYLE.h2Center),
+        featuresWidget('features-website-grid', featuresWebsite),
+      ],
+      GRAY900,
+    ),
 
     // Commerce & Operations
     section('features-commerce', [
-      heading('features-commerce-h2', 'Commerce & Operations', 2),
+      heading('features-commerce-h2', 'Commerce & Operations', 2, STYLE.h2Center),
       featuresWidget('features-commerce-grid', featuresCommerce),
     ]),
 
-    // CTA
+    // CTA (indigo→purple band)
     section('features-cta', [
-      ctaWidget('features-cta-main', {
-        heading: 'Start Your 14-Day Free Trial',
-        text: 'No credit card required. Full access to all features.',
-        buttonText: 'Get early access →',
-        buttonUrl: '/early-access',
-      }),
+      ctaWidget(
+        'features-cta-main',
+        {
+          heading: 'Start Your 14-Day Free Trial',
+          text: 'No credit card required. Full access to all features.',
+          buttonText: 'Get early access →',
+          buttonUrl: '/early-access',
+        },
+        STYLE.cta,
+      ),
     ]),
   ],
 };
@@ -736,38 +1022,52 @@ const pricingPage: Page = {
   createdBy: 'system',
   lastEditedBy: 'system',
   content: [
-    // Hero
+    // Hero (transparent over dark base)
     section('pricing-hero', [
-      paragraph('pricing-hero-badge', 'Flat Pricing — One Price'),
-      heading('pricing-hero-h1', 'One price. All features. Forever.', 1),
+      paragraph('pricing-hero-badge', 'Flat Pricing — One Price', STYLE.badge),
+      heading('pricing-hero-h1', 'One price. All features. Forever.', 1, STYLE.h1Center),
       paragraph(
         'pricing-hero-sub',
         '$299 per month, flat. BYOK on AI so you pay raw market rates direct to your provider. No tiers, no upsells, no surprises.',
+        STYLE.subCenter,
       ),
       paragraph(
         'pricing-hero-sub2',
         'No feature gating. No record limits. No tier juggling. Just one price that works.',
+        STYLE.subCenterMuted,
       ),
     ]),
 
-    // BYOK callout
-    section('pricing-byok', [
-      heading('pricing-byok-h3', 'Bring Your Own Keys (BYOK)', 3),
-      paragraph('pricing-byok-tagline', 'Zero AI Token Markup. 100% Transparent.'),
-      paragraph(
-        'pricing-byok-body',
-        "Connect your own API key and pay the AI provider directly at raw market rates. We don't touch your AI costs—that's your direct relationship with the provider. No hidden fees. No markup. Just honest pricing.",
-      ),
-      paragraph(
-        'pricing-byok-rec',
-        'We recommend OpenRouter - One key gives you access to GPT-4, Claude, Gemini, Llama, and 200+ models. Simpler than managing multiple provider keys.',
-      ),
-      featuresWidget('pricing-byok-providers', [
-        { icon: '⭐', title: 'OpenRouter (Recommended)', description: '' },
-        { icon: '✓', title: 'OpenAI Direct (Optional)', description: '' },
-        { icon: '✓', title: 'Anthropic Direct (Optional)', description: '' },
-      ]),
-    ]),
+    // BYOK callout (indigo→purple gradient band)
+    section(
+      'pricing-byok',
+      [
+        heading('pricing-byok-h3', 'Bring Your Own Keys (BYOK)', 3, {
+          ...STYLE.cardH3,
+          textAlign: 'center',
+        }),
+        paragraph('pricing-byok-tagline', 'Zero AI Token Markup. 100% Transparent.', STYLE.byokRec),
+        paragraph(
+          'pricing-byok-body',
+          "Connect your own API key and pay the AI provider directly at raw market rates. We don't touch your AI costs—that's your direct relationship with the provider. No hidden fees. No markup. Just honest pricing.",
+          STYLE.byokBody,
+        ),
+        paragraph(
+          'pricing-byok-rec',
+          'We recommend OpenRouter - One key gives you access to GPT-4, Claude, Gemini, Llama, and 200+ models. Simpler than managing multiple provider keys.',
+          STYLE.subCenterMuted,
+        ),
+        featuresWidget('pricing-byok-providers', [
+          { icon: '⭐', title: 'OpenRouter (Recommended)', description: '' },
+          { icon: '✓', title: 'OpenAI Direct (Optional)', description: '' },
+          { icon: '✓', title: 'Anthropic Direct (Optional)', description: '' },
+        ]),
+      ],
+      {
+        backgroundColor: '#1e1b4b', // indigo-950 — evokes the gradient callout band
+        fullWidth: true,
+      },
+    ),
 
     // Key benefits
     section('pricing-benefits', [
@@ -790,83 +1090,111 @@ const pricingPage: Page = {
       ]),
     ]),
 
-    // Single pricing card
-    section('pricing-card', [
-      pricingWidget('pricing-card-plan', [pricingPlan]),
-      heading('pricing-card-fairuse-h4', 'Fair Use Limits', 4),
-      paragraph('pricing-card-fairuse-1', '50,000 CRM records'),
-      paragraph('pricing-card-fairuse-2', '100 AI agents per account'),
-      paragraph('pricing-card-fairuse-3', '10,000 scheduled social posts / month'),
-      paragraph('pricing-card-fairuse-4', '5,000 outbound emails / day'),
-      paragraph(
-        'pricing-card-fairuse-note',
-        'Reasonable use applies for everything else — contact us if you have an enterprise-scale need.',
-      ),
-      paragraph(
-        'pricing-card-trust',
-        '14-day free trial • No credit card required • Cancel anytime',
-      ),
-    ]),
+    // Single pricing card (bg-gray-950 frame in source)
+    section(
+      'pricing-card',
+      [
+        pricingWidget('pricing-card-plan', [pricingPlan]),
+        heading('pricing-card-fairuse-h4', 'Fair Use Limits', 4, STYLE.fairUseH4),
+        paragraph('pricing-card-fairuse-1', '50,000 CRM records', STYLE.fairUseItem),
+        paragraph('pricing-card-fairuse-2', '100 AI agents per account', STYLE.fairUseItem),
+        paragraph('pricing-card-fairuse-3', '10,000 scheduled social posts / month', STYLE.fairUseItem),
+        paragraph('pricing-card-fairuse-4', '5,000 outbound emails / day', STYLE.fairUseItem),
+        paragraph(
+          'pricing-card-fairuse-note',
+          'Reasonable use applies for everything else — contact us if you have an enterprise-scale need.',
+          STYLE.trustCenter,
+        ),
+        paragraph(
+          'pricing-card-trust',
+          '14-day free trial • No credit card required • Cancel anytime',
+          STYLE.trustCenter,
+        ),
+      ],
+      { backgroundColor: '#030712', fullWidth: true },
+    ),
 
-    // AI-Native Workforce Value
-    section('pricing-value-head', [
-      heading('pricing-value-h2', 'One Workforce. Raw Market Rates.', 2),
-      paragraph(
-        'pricing-value-sub',
-        'Your AI-Native workforce runs on direct APIs with zero wrapper markup.',
-      ),
-    ]),
+    // AI-Native Workforce Value (fade to gray-900/50)
+    section(
+      'pricing-value-head',
+      [
+        heading('pricing-value-h2', 'One Workforce. Raw Market Rates.', 2, STYLE.h2CenterLarge),
+        paragraph(
+          'pricing-value-sub',
+          'Your AI-Native workforce runs on direct APIs with zero wrapper markup.',
+          STYLE.subCenter,
+        ),
+      ],
+      SLATE,
+    ),
     twoColSection(
       'pricing-value-compare',
       [
-        heading('pricing-val-old-h3', 'The Old Way', 3),
-        paragraph('pricing-val-old-sub', 'Fragmented & Expensive'),
-        paragraph('pricing-val-old-1', 'Apollo/ZoomInfo (Lead Data) — $99-399/mo'),
-        paragraph('pricing-val-old-2', 'Air AI/11x (AI Sales Agents) — $500-2000/mo'),
-        paragraph('pricing-val-old-3', 'Outreach Tool (Email/LinkedIn) — $49-199/mo'),
-        paragraph('pricing-val-old-4', 'Zapier (Automation) — $29-599/mo'),
-        paragraph('pricing-val-old-total', 'TOTAL PER MONTH: $677-3,197'),
+        heading('pricing-val-old-h3', 'The Old Way', 3, STYLE.cardH3),
+        paragraph('pricing-val-old-sub', 'Fragmented & Expensive', STYLE.cardSub),
+        paragraph('pricing-val-old-1', 'Apollo/ZoomInfo (Lead Data) — $99-399/mo', STYLE.rowOld),
+        paragraph('pricing-val-old-2', 'Air AI/11x (AI Sales Agents) — $500-2000/mo', STYLE.rowOld),
+        paragraph('pricing-val-old-3', 'Outreach Tool (Email/LinkedIn) — $49-199/mo', STYLE.rowOld),
+        paragraph('pricing-val-old-4', 'Zapier (Automation) — $29-599/mo', STYLE.rowOld),
+        paragraph('pricing-val-old-total', 'TOTAL PER MONTH: $677-3,197', STYLE.rowTotal),
         paragraph(
           'pricing-val-old-note',
           'Plus: Integration hell, 5 support teams, data syncing nightmares',
+          STYLE.rowNote,
         ),
       ],
       [
-        heading('pricing-val-new-h3', 'The New Way', 3),
-        paragraph('pricing-val-new-sub', 'All-In-One & Affordable'),
-        paragraph('pricing-val-new-1', '✓ Lead Scraper & Enrichment — Included'),
-        paragraph('pricing-val-new-2', '✓ AI Sales Agents (Unlimited) — Included'),
-        paragraph('pricing-val-new-3', '✓ Multi-Channel Outreach — Included'),
-        paragraph('pricing-val-new-4', '✓ Workflow Automation — Included'),
-        paragraph('pricing-val-new-total', 'TOTAL PER MONTH: $299 flat'),
+        heading('pricing-val-new-h3', 'The New Way', 3, STYLE.cardH3),
+        paragraph('pricing-val-new-sub', 'All-In-One & Affordable', STYLE.cardSubAccent),
+        paragraph('pricing-val-new-1', '✓ Lead Scraper & Enrichment — Included', STYLE.rowNew),
+        paragraph('pricing-val-new-2', '✓ AI Sales Agents (Unlimited) — Included', STYLE.rowNew),
+        paragraph('pricing-val-new-3', '✓ Multi-Channel Outreach — Included', STYLE.rowNew),
+        paragraph('pricing-val-new-4', '✓ Workflow Automation — Included', STYLE.rowNew),
+        paragraph('pricing-val-new-total', 'TOTAL PER MONTH: $299 flat', STYLE.rowTotal),
         paragraph(
           'pricing-val-new-note',
           'Plus: Everything synced, one dashboard, one support team, BYOK on AI',
+          STYLE.rowNote,
         ),
       ],
+      SLATE,
     ),
-    section('pricing-value-savings', [
-      heading('pricing-val-savings-h3', 'Save $378 - $2,898 per month', 3),
-      paragraph('pricing-val-savings-sub', "That's $4,536 - $34,776 saved per year"),
-      paragraph(
-        'pricing-val-savings-note',
-        'While spending less, you get more: a unified platform built for small businesses, not enterprise giants. Your success is our success.',
-      ),
-    ]),
+    section(
+      'pricing-value-savings',
+      [
+        heading('pricing-val-savings-h3', 'Save $378 - $2,898 per month', 3, STYLE.savingsHead),
+        paragraph('pricing-val-savings-sub', "That's $4,536 - $34,776 saved per year", STYLE.savingsSub),
+        paragraph(
+          'pricing-val-savings-note',
+          'While spending less, you get more: a unified platform built for small businesses, not enterprise giants. Your success is our success.',
+          STYLE.subCenterMuted,
+        ),
+      ],
+      SLATE,
+    ),
 
-    // CTA
+    // CTA (indigo→purple band)
     section('pricing-cta', [
-      ctaWidget('pricing-cta-main', {
-        heading: 'Ready to Get Started?',
-        text: "One price. Every feature. Sign up once and you're done.",
-        buttonText: 'Get early access →',
-        buttonUrl: '/early-access',
-      }),
+      ctaWidget(
+        'pricing-cta-main',
+        {
+          heading: 'Ready to Get Started?',
+          text: "One price. Every feature. Sign up once and you're done.",
+          buttonText: 'Get early access →',
+          buttonUrl: '/early-access',
+        },
+        STYLE.cta,
+      ),
       paragraph(
         'pricing-cta-trust',
         '14-day free trial • No credit card required • Cancel anytime',
+        STYLE.subCenterMuted,
       ),
-      paragraph('pricing-cta-note', '$299/month flat. BYOK on AI. Fair-use caps apply.'),
+      paragraph(
+        'pricing-cta-note',
+        '$299/month flat. BYOK on AI. Fair-use caps apply.',
+        STYLE.trustCenter,
+      ),
     ]),
   ],
 };

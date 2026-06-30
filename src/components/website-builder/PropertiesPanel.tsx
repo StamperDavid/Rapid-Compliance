@@ -1,6 +1,16 @@
 /**
  * Properties Panel
- * Right sidebar for editing selected element's properties (dark theme)
+ * Right sidebar for editing a selected element. The Style tab is a real,
+ * Elementor-class styling panel: grouped controls (typography, background,
+ * border, spacing, size, layout, effects) with proper inputs (colour pickers,
+ * gradient builder, number+unit, selects) and genuine per-breakpoint editing.
+ *
+ * Per-breakpoint model — matches what ResponsiveRenderer reads:
+ *  - desktop  → writes the widget's base `style`
+ *  - tablet   → writes `widget.responsive.tablet` (overrides desktop)
+ *  - mobile   → writes `widget.responsive.mobile`  (overrides desktop)
+ * The renderer shallow-merges `responsive[bp]` over `style` before applying, so
+ * every field below renders exactly as edited, per device.
  */
 
 'use client';
@@ -9,6 +19,29 @@ import { useState } from 'react';
 import type { Page, PageSection, Widget, WidgetStyle, Spacing } from '@/types/website';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
 import { ImageField, ImageArrayField, detectItemImageKey } from './ImageField';
+import {
+  Group,
+  FieldRow,
+  SegmentedControl,
+  SelectField,
+  TextField,
+  ColorField,
+  UnitField,
+  NumberField,
+  SpacingField,
+  GradientField,
+  DEFAULT_GRADIENT,
+  labelStyle,
+  inputStyle,
+} from './StyleControls';
+
+type Breakpoint = 'desktop' | 'tablet' | 'mobile';
+
+const BREAKPOINT_LABEL: Record<Breakpoint, string> = {
+  desktop: 'Desktop',
+  tablet: 'Tablet',
+  mobile: 'Mobile',
+};
 
 /** Widget data keys that hold a single image URL (image/hero/logo/testimonial). */
 const IMAGE_STRING_KEYS = new Set([
@@ -28,7 +61,7 @@ interface PropertiesPanelProps {
     widgetId?: string;
   } | null;
   page: Page;
-  breakpoint: 'desktop' | 'tablet' | 'mobile';
+  breakpoint: Breakpoint;
   onUpdatePage: (updates: Partial<Page>) => void;
   onUpdateSection: (sectionId: string, updates: Partial<PageSection>) => void;
   onUpdateWidget: (sectionId: string, widgetId: string, updates: Partial<Widget>) => void;
@@ -37,7 +70,7 @@ interface PropertiesPanelProps {
 export default function PropertiesPanel({
   selectedElement,
   page,
-  breakpoint: _breakpoint,
+  breakpoint,
   onUpdatePage: _onUpdatePage,
   onUpdateSection,
   onUpdateWidget,
@@ -117,31 +150,13 @@ export default function PropertiesPanel({
       }}>
         <button
           onClick={() => setActiveTab('content')}
-          style={{
-            flex: 1,
-            padding: '0.65rem',
-            background: activeTab === 'content' ? '#6366f1' : 'transparent',
-            color: activeTab === 'content' ? '#ffffff' : 'rgba(255,255,255,0.5)',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            fontWeight: '500',
-          }}
+          style={tabButtonStyle(activeTab === 'content')}
         >
           Content
         </button>
         <button
           onClick={() => setActiveTab('style')}
-          style={{
-            flex: 1,
-            padding: '0.65rem',
-            background: activeTab === 'style' ? '#6366f1' : 'transparent',
-            color: activeTab === 'style' ? '#ffffff' : 'rgba(255,255,255,0.5)',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            fontWeight: '500',
-          }}
+          style={tabButtonStyle(activeTab === 'style')}
         >
           Style
         </button>
@@ -168,12 +183,14 @@ export default function PropertiesPanel({
         ) : (
           selectedElement.type === 'widget' && widget ? (
             <StyleEditor
-              style={widget.style ?? {}}
-              onUpdate={(style) => onUpdateWidget(section.id, widget.id, { style })}
+              widget={widget}
+              breakpoint={breakpoint}
+              onUpdate={(updates) => onUpdateWidget(section.id, widget.id, updates)}
             />
           ) : (
             <SectionStyleEditor
               section={section}
+              breakpoint={breakpoint}
               onUpdate={(updates) => onUpdateSection(section.id, updates)}
             />
           )
@@ -183,7 +200,23 @@ export default function PropertiesPanel({
   );
 }
 
-// Widget Content Editor
+function tabButtonStyle(active: boolean): React.CSSProperties {
+  return {
+    flex: 1,
+    padding: '0.65rem',
+    background: active ? '#6366f1' : 'transparent',
+    color: active ? '#ffffff' : 'rgba(255,255,255,0.5)',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '0.8rem',
+    fontWeight: 500,
+  };
+}
+
+// ===========================================================================
+// Widget Content Editor (unchanged behaviour — content fields per widget type)
+// ===========================================================================
+
 interface WidgetContentEditorProps {
   widget: Widget;
   onUpdate: (updates: Partial<Widget>) => void;
@@ -201,7 +234,6 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
 
   const renderField = (key: string, value: unknown) => {
     if (typeof value === 'string') {
-      // Image URL fields → upload / pick / manual control.
       if (IMAGE_STRING_KEYS.has(key)) {
         return (
           <ImageField
@@ -263,8 +295,6 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
         </div>
       );
     } else if (Array.isArray(value)) {
-      // Image arrays (gallery images, logo grid, slider slides) → per-image
-      // upload / pick controls.
       const imageKey = detectItemImageKey(value[0]);
       if (imageKey) {
         return (
@@ -301,7 +331,10 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
   );
 }
 
-// Section Content Editor
+// ===========================================================================
+// Section Content Editor (unchanged)
+// ===========================================================================
+
 interface SectionContentEditorProps {
   section: PageSection;
   onUpdate: (updates: Partial<PageSection>) => void;
@@ -355,609 +388,625 @@ function SectionContentEditor({ section, onUpdate }: SectionContentEditorProps) 
   );
 }
 
-// Style Editor
+// ===========================================================================
+// Widget Style Editor — per-breakpoint, grouped, Elementor-class
+// ===========================================================================
+
 interface StyleEditorProps {
-  style: WidgetStyle;
-  onUpdate: (style: WidgetStyle) => void;
+  widget: Widget;
+  breakpoint: Breakpoint;
+  onUpdate: (updates: Partial<Widget>) => void;
 }
 
-function StyleEditor({ style, onUpdate }: StyleEditorProps) {
-  const updateStyle = (key: keyof WidgetStyle, value: unknown) => {
-    onUpdate({ ...style, [key]: value });
+function StyleEditor({ widget, breakpoint, onUpdate }: StyleEditorProps) {
+  const base: WidgetStyle = widget.style ?? {};
+
+  // --- Active-breakpoint layer ------------------------------------------------
+  const get = <K extends keyof WidgetStyle>(key: K): WidgetStyle[K] | undefined => {
+    if (breakpoint === 'tablet' || breakpoint === 'mobile') {
+      const override = widget.responsive?.[breakpoint];
+      if (override?.[key] !== undefined) {
+        return override[key];
+      }
+    }
+    return base[key];
   };
 
-  const updateSpacing = (type: 'padding' | 'margin', side: keyof Spacing, value: string) => {
-    const current = style[type] ?? {};
-    onUpdate({
-      ...style,
-      [type]: { ...current, [side]: value },
-    });
+  const isOverridden = (key: keyof WidgetStyle): boolean => {
+    if (breakpoint === 'tablet' || breakpoint === 'mobile') {
+      return widget.responsive?.[breakpoint]?.[key] !== undefined;
+    }
+    return false;
+  };
+
+  const patch = (partial: Partial<WidgetStyle>) => {
+    if (breakpoint === 'desktop') {
+      onUpdate({ style: { ...base, ...partial } });
+      return;
+    }
+    const resp = { ...(widget.responsive ?? {}) };
+    if (breakpoint === 'tablet') {
+      resp.tablet = { ...(resp.tablet ?? {}), ...partial };
+    } else {
+      resp.mobile = { ...(resp.mobile ?? {}), ...partial };
+    }
+    onUpdate({ responsive: resp });
+  };
+
+  const unset = (keys: Array<keyof WidgetStyle>) => {
+    if (breakpoint === 'desktop') {
+      const next = { ...base };
+      keys.forEach((k) => { delete next[k]; });
+      onUpdate({ style: next });
+      return;
+    }
+    const resp = { ...(widget.responsive ?? {}) };
+    if (breakpoint === 'tablet') {
+      const cur = { ...(resp.tablet ?? {}) };
+      keys.forEach((k) => { delete cur[k]; });
+      resp.tablet = cur;
+    } else {
+      const cur = { ...(resp.mobile ?? {}) };
+      keys.forEach((k) => { delete cur[k]; });
+      resp.mobile = cur;
+    }
+    onUpdate({ responsive: resp });
+  };
+
+  /** FieldRow props (override dot + reset) — only meaningful off desktop. */
+  const row = (...keys: Array<keyof WidgetStyle>) => {
+    if (breakpoint === 'desktop') {
+      return {};
+    }
+    return {
+      overridden: keys.some((k) => isOverridden(k)),
+      onReset: () => unset(keys),
+    };
+  };
+
+  const setSpacing = (type: 'padding' | 'margin', value: Spacing) => {
+    if (type === 'padding') {
+      patch({ padding: value });
+    } else {
+      patch({ margin: value });
+    }
+  };
+
+  const str = (v: unknown): string => (v === undefined || v === null ? '' : String(v));
+
+  // --- Text colour: solid vs gradient ----------------------------------------
+  const textIsGradient = get('textGradient') !== undefined;
+
+  // --- Background type --------------------------------------------------------
+  const bgImageRaw = get('backgroundImage');
+  const bgType: 'none' | 'color' | 'gradient' | 'image' =
+    bgImageRaw !== undefined && bgImageRaw !== '' ? 'image'
+      : get('backgroundGradient') !== undefined ? 'gradient'
+        : (get('backgroundColor') !== undefined && get('backgroundColor') !== '') ? 'color'
+          : 'none';
+
+  const setBgType = (type: 'none' | 'color' | 'gradient' | 'image') => {
+    switch (type) {
+      case 'none':
+        unset(['backgroundColor', 'backgroundGradient', 'backgroundImage', 'backgroundSize', 'backgroundPosition']);
+        break;
+      case 'color':
+        unset(['backgroundGradient', 'backgroundImage', 'backgroundSize', 'backgroundPosition']);
+        if (get('backgroundColor') === undefined) {
+          patch({ backgroundColor: '#111827' });
+        }
+        break;
+      case 'gradient':
+        unset(['backgroundImage', 'backgroundSize', 'backgroundPosition']);
+        if (get('backgroundGradient') === undefined) {
+          patch({ backgroundGradient: DEFAULT_GRADIENT });
+        }
+        break;
+      case 'image':
+        unset(['backgroundGradient']);
+        break;
+    }
   };
 
   return (
     <div>
-      {/* Spacing */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Spacing</h4>
+      <BreakpointBanner breakpoint={breakpoint} />
 
-        <label style={labelStyle}>Padding</label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
-          <input
-            type="text"
-            placeholder="Top"
-            value={style.padding?.top ?? ''}
-            onChange={(e) => updateSpacing('padding', 'top', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Right"
-            value={style.padding?.right ?? ''}
-            onChange={(e) => updateSpacing('padding', 'right', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Bottom"
-            value={style.padding?.bottom ?? ''}
-            onChange={(e) => updateSpacing('padding', 'bottom', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Left"
-            value={style.padding?.left ?? ''}
-            onChange={(e) => updateSpacing('padding', 'left', e.target.value)}
-            style={smallInputStyle}
-          />
-        </div>
-
-        <label style={labelStyle}>Margin</label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <input
-            type="text"
-            placeholder="Top"
-            value={style.margin?.top ?? ''}
-            onChange={(e) => updateSpacing('margin', 'top', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Right"
-            value={style.margin?.right ?? ''}
-            onChange={(e) => updateSpacing('margin', 'right', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Bottom"
-            value={style.margin?.bottom ?? ''}
-            onChange={(e) => updateSpacing('margin', 'bottom', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Left"
-            value={style.margin?.left ?? ''}
-            onChange={(e) => updateSpacing('margin', 'left', e.target.value)}
-            style={smallInputStyle}
-          />
-        </div>
-      </div>
-
-      {/* Size */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Size</h4>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <div>
-            <label style={labelStyle}>Width</label>
-            <input
-              type="text"
-              value={style.width ?? ''}
-              onChange={(e) => updateStyle('width', e.target.value)}
-              placeholder="auto"
-              style={smallInputStyle}
+      {/* TYPOGRAPHY */}
+      <Group title="Typography" defaultOpen>
+        <FieldRow label="Text Colour" {...row('color', 'textGradient')}>
+          <div style={{ marginBottom: '0.5rem' }}>
+            <SegmentedControl
+              value={textIsGradient ? 'gradient' : 'solid'}
+              options={[
+                { value: 'solid', label: 'Solid' },
+                { value: 'gradient', label: 'Gradient' },
+              ]}
+              onChange={(mode) => {
+                if (mode === 'solid') {
+                  unset(['textGradient']);
+                } else if (get('textGradient') === undefined) {
+                  patch({ textGradient: DEFAULT_GRADIENT });
+                }
+              }}
             />
           </div>
-          <div>
-            <label style={labelStyle}>Height</label>
-            <input
-              type="text"
-              value={style.height ?? ''}
-              onChange={(e) => updateStyle('height', e.target.value)}
-              placeholder="auto"
-              style={smallInputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Max Width</label>
-            <input
-              type="text"
-              value={style.maxWidth ?? ''}
-              onChange={(e) => updateStyle('maxWidth', e.target.value)}
-              placeholder="none"
-              style={smallInputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Min Height</label>
-            <input
-              type="text"
-              value={style.minHeight ?? ''}
-              onChange={(e) => updateStyle('minHeight', e.target.value)}
-              placeholder="auto"
-              style={smallInputStyle}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Typography */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Typography</h4>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={labelStyle}>Font Family</label>
-          <select
-            value={style.fontFamily ?? ''}
-            onChange={(e) => updateStyle('fontFamily', e.target.value)}
-            style={inputStyle}
-          >
-            <option value="">Default</option>
-            <option value="Inter, system-ui, sans-serif">Inter</option>
-            <option value="system-ui, sans-serif">System UI</option>
-            <option value="Georgia, serif">Georgia</option>
-            <option value="monospace">Monospace</option>
-          </select>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <div>
-            <label style={labelStyle}>Font Size</label>
-            <input
-              type="text"
-              value={style.fontSize ?? ''}
-              onChange={(e) => updateStyle('fontSize', e.target.value)}
-              placeholder="1rem"
-              style={smallInputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Font Weight</label>
-            <select
-              value={style.fontWeight ?? ''}
-              onChange={(e) => updateStyle('fontWeight', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">Default</option>
-              <option value="300">Light</option>
-              <option value="400">Normal</option>
-              <option value="500">Medium</option>
-              <option value="600">Semi-bold</option>
-              <option value="700">Bold</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <div>
-            <label style={labelStyle}>Line Height</label>
-            <input
-              type="text"
-              value={style.lineHeight ?? ''}
-              onChange={(e) => updateStyle('lineHeight', e.target.value)}
-              placeholder="1.6"
-              style={smallInputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Letter Spacing</label>
-            <input
-              type="text"
-              value={style.letterSpacing ?? ''}
-              onChange={(e) => updateStyle('letterSpacing', e.target.value)}
-              placeholder="normal"
-              style={smallInputStyle}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <div>
-            <label style={labelStyle}>Text Align</label>
-            <select
-              value={style.textAlign ?? ''}
-              onChange={(e) => updateStyle('textAlign', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">Default</option>
-              <option value="left">Left</option>
-              <option value="center">Center</option>
-              <option value="right">Right</option>
-              <option value="justify">Justify</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Transform</label>
-            <select
-              value={style.textTransform ?? ''}
-              onChange={(e) => updateStyle('textTransform', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">None</option>
-              <option value="uppercase">Uppercase</option>
-              <option value="lowercase">Lowercase</option>
-              <option value="capitalize">Capitalize</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Colors */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Colors</h4>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={labelStyle}>Text Color</label>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="color"
-              value={(style.color !== '' && style.color != null) ? style.color : '#ffffff'}
-              onChange={(e) => updateStyle('color', e.target.value)}
-              style={colorPickerStyle}
-            />
-            <input
-              type="text"
-              value={style.color ?? ''}
-              onChange={(e) => updateStyle('color', e.target.value)}
+          {textIsGradient ? (
+            <GradientField value={get('textGradient')} onChange={(g) => patch({ textGradient: g })} />
+          ) : (
+            <ColorField
+              value={get('color')}
+              fallback="#ffffff"
               placeholder="#ffffff"
-              style={{ ...smallInputStyle, flex: 1, fontFamily: 'monospace' }}
+              onChange={(v) => patch({ color: v })}
             />
-          </div>
-        </div>
+          )}
+        </FieldRow>
 
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={labelStyle}>Background</label>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="color"
-              value={(style.backgroundColor !== '' && style.backgroundColor != null) ? style.backgroundColor : '#000000'}
-              onChange={(e) => updateStyle('backgroundColor', e.target.value)}
-              style={colorPickerStyle}
-            />
-            <input
-              type="text"
-              value={style.backgroundColor ?? ''}
-              onChange={(e) => updateStyle('backgroundColor', e.target.value)}
-              placeholder="transparent"
-              style={{ ...smallInputStyle, flex: 1, fontFamily: 'monospace' }}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <ImageField
-            label="Background Image"
-            value={style.backgroundImage ?? ''}
-            onChange={(url) => updateStyle('backgroundImage', url)}
+        <FieldRow label="Font" {...row('fontFamily')}>
+          <SelectField
+            value={str(get('fontFamily'))}
+            onChange={(v) => patch({ fontFamily: v === '' ? undefined : v })}
+            options={[
+              { value: '', label: 'Default' },
+              { value: 'Inter, system-ui, sans-serif', label: 'Inter' },
+              { value: 'system-ui, sans-serif', label: 'System UI' },
+              { value: 'Georgia, serif', label: 'Georgia' },
+              { value: '"Times New Roman", serif', label: 'Times' },
+              { value: 'monospace', label: 'Monospace' },
+            ]}
           />
-        </div>
+        </FieldRow>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <div>
-            <label style={labelStyle}>BG Size</label>
-            <select
-              value={style.backgroundSize ?? ''}
-              onChange={(e) => updateStyle('backgroundSize', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">Default</option>
-              <option value="cover">Cover</option>
-              <option value="contain">Contain</option>
-              <option value="auto">Auto</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>BG Position</label>
-            <input
-              type="text"
-              value={style.backgroundPosition ?? ''}
-              onChange={(e) => updateStyle('backgroundPosition', e.target.value)}
-              placeholder="center"
-              style={smallInputStyle}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <FieldRow label="Size" {...row('fontSize')}>
+            <UnitField
+              value={get('fontSize')}
+              units={['px', 'rem', 'em', '%']}
+              placeholder="16"
+              onChange={(v) => patch({ fontSize: v })}
             />
-          </div>
+          </FieldRow>
+          <FieldRow label="Weight" {...row('fontWeight')}>
+            <SelectField
+              value={str(get('fontWeight'))}
+              onChange={(v) => patch({ fontWeight: v === '' ? undefined : v })}
+              options={[
+                { value: '', label: 'Default' },
+                { value: '300', label: 'Light' },
+                { value: '400', label: 'Normal' },
+                { value: '500', label: 'Medium' },
+                { value: '600', label: 'Semi-bold' },
+                { value: '700', label: 'Bold' },
+                { value: '800', label: 'Extra-bold' },
+              ]}
+            />
+          </FieldRow>
         </div>
-      </div>
 
-      {/* Border */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Border</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <FieldRow label="Line Height" {...row('lineHeight')}>
+            <UnitField
+              value={get('lineHeight')}
+              units={['', 'px', 'em', '%']}
+              placeholder="1.6"
+              onChange={(v) => patch({ lineHeight: v })}
+            />
+          </FieldRow>
+          <FieldRow label="Letter Spacing" {...row('letterSpacing')}>
+            <UnitField
+              value={get('letterSpacing')}
+              units={['px', 'em', 'normal']}
+              placeholder="0"
+              onChange={(v) => patch({ letterSpacing: v })}
+            />
+          </FieldRow>
+        </div>
 
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={labelStyle}>Border</label>
-          <input
-            type="text"
-            value={style.border ?? ''}
-            onChange={(e) => updateStyle('border', e.target.value)}
-            placeholder="1px solid rgba(255,255,255,0.1)"
-            style={inputStyle}
+        <FieldRow label="Alignment" {...row('textAlign')}>
+          <SegmentedControl
+            value={str(get('textAlign')) === '' ? 'left' : str(get('textAlign'))}
+            options={[
+              { value: 'left', label: 'Left' },
+              { value: 'center', label: 'Center' },
+              { value: 'right', label: 'Right' },
+              { value: 'justify', label: 'Justify' },
+            ]}
+            onChange={(v) => patch({ textAlign: v as WidgetStyle['textAlign'] })}
           />
-        </div>
+        </FieldRow>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <div>
-            <label style={labelStyle}>Border Radius</label>
-            <input
-              type="text"
-              value={style.borderRadius ?? ''}
-              onChange={(e) => updateStyle('borderRadius', e.target.value)}
-              placeholder="8px"
-              style={smallInputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Border Width</label>
-            <input
-              type="text"
-              value={style.borderWidth ?? ''}
-              onChange={(e) => updateStyle('borderWidth', e.target.value)}
-              placeholder="1px"
-              style={smallInputStyle}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <div>
-            <label style={labelStyle}>Border Color</label>
-            <input
-              type="text"
-              value={style.borderColor ?? ''}
-              onChange={(e) => updateStyle('borderColor', e.target.value)}
-              placeholder="#333"
-              style={smallInputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Border Style</label>
-            <select
-              value={style.borderStyle ?? ''}
-              onChange={(e) => updateStyle('borderStyle', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">None</option>
-              <option value="solid">Solid</option>
-              <option value="dashed">Dashed</option>
-              <option value="dotted">Dotted</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Layout */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Layout</h4>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <div>
-            <label style={labelStyle}>Display</label>
-            <select
-              value={style.display ?? ''}
-              onChange={(e) => updateStyle('display', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">Default</option>
-              <option value="block">Block</option>
-              <option value="inline-block">Inline Block</option>
-              <option value="flex">Flex</option>
-              <option value="grid">Grid</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Direction</label>
-            <select
-              value={style.flexDirection ?? ''}
-              onChange={(e) => updateStyle('flexDirection', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">Default</option>
-              <option value="row">Row</option>
-              <option value="column">Column</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Justify</label>
-            <select
-              value={style.justifyContent ?? ''}
-              onChange={(e) => updateStyle('justifyContent', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">Default</option>
-              <option value="flex-start">Start</option>
-              <option value="center">Center</option>
-              <option value="flex-end">End</option>
-              <option value="space-between">Between</option>
-              <option value="space-around">Around</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Align</label>
-            <select
-              value={style.alignItems ?? ''}
-              onChange={(e) => updateStyle('alignItems', e.target.value)}
-              style={smallInputStyle}
-            >
-              <option value="">Default</option>
-              <option value="flex-start">Start</option>
-              <option value="center">Center</option>
-              <option value="flex-end">End</option>
-              <option value="stretch">Stretch</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Effects */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Effects</h4>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={labelStyle}>Box Shadow</label>
-          <input
-            type="text"
-            value={style.boxShadow ?? ''}
-            onChange={(e) => updateStyle('boxShadow', e.target.value)}
-            placeholder="0 2px 4px rgba(0,0,0,0.3)"
-            style={inputStyle}
+        <FieldRow label="Capitalisation" {...row('textTransform')}>
+          <SelectField
+            value={str(get('textTransform'))}
+            onChange={(v) => patch({ textTransform: v === '' ? undefined : (v as WidgetStyle['textTransform']) })}
+            options={[
+              { value: '', label: 'None' },
+              { value: 'uppercase', label: 'UPPERCASE' },
+              { value: 'lowercase', label: 'lowercase' },
+              { value: 'capitalize', label: 'Capitalize' },
+            ]}
           />
-        </div>
+        </FieldRow>
+      </Group>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <div>
-            <label style={labelStyle}>Opacity</label>
-            <input
-              type="number"
-              min="0"
-              max="1"
-              step="0.1"
-              value={style.opacity ?? 1}
-              onChange={(e) => updateStyle('opacity', parseFloat(e.target.value))}
-              style={smallInputStyle}
+      {/* BACKGROUND */}
+      <Group title="Background" defaultOpen>
+        <FieldRow
+          label="Type"
+          {...row('backgroundColor', 'backgroundGradient', 'backgroundImage')}
+        >
+          <SegmentedControl
+            value={bgType}
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'color', label: 'Colour' },
+              { value: 'gradient', label: 'Gradient' },
+              { value: 'image', label: 'Image' },
+            ]}
+            onChange={setBgType}
+          />
+        </FieldRow>
+
+        {bgType === 'color' && (
+          <FieldRow label="Background Colour" {...row('backgroundColor')}>
+            <ColorField
+              value={get('backgroundColor')}
+              fallback="#111827"
+              onChange={(v) => patch({ backgroundColor: v })}
             />
-          </div>
-          <div>
-            <label style={labelStyle}>Transform</label>
-            <input
-              type="text"
-              value={style.transform ?? ''}
-              onChange={(e) => updateStyle('transform', e.target.value)}
+          </FieldRow>
+        )}
+
+        {bgType === 'gradient' && (
+          <FieldRow label="Background Gradient" {...row('backgroundGradient')}>
+            <GradientField
+              value={get('backgroundGradient')}
+              onChange={(g) => patch({ backgroundGradient: g })}
+            />
+          </FieldRow>
+        )}
+
+        {bgType === 'image' && (
+          <>
+            <ImageField
+              label="Background Image"
+              value={unwrapCssUrl(get('backgroundImage'))}
+              onChange={(url) => patch({ backgroundImage: url === '' ? undefined : wrapCssUrl(url) })}
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginTop: '0.5rem' }}>
+              <FieldRow label="Fit" {...row('backgroundSize')}>
+                <SelectField
+                  value={str(get('backgroundSize'))}
+                  onChange={(v) => patch({ backgroundSize: v === '' ? undefined : (v as WidgetStyle['backgroundSize']) })}
+                  options={[
+                    { value: '', label: 'Default' },
+                    { value: 'cover', label: 'Cover' },
+                    { value: 'contain', label: 'Contain' },
+                    { value: 'auto', label: 'Auto' },
+                  ]}
+                />
+              </FieldRow>
+              <FieldRow label="Position" {...row('backgroundPosition')}>
+                <SelectField
+                  value={str(get('backgroundPosition')) === '' ? 'center' : str(get('backgroundPosition'))}
+                  onChange={(v) => patch({ backgroundPosition: v })}
+                  options={[
+                    { value: 'center', label: 'Center' },
+                    { value: 'top', label: 'Top' },
+                    { value: 'bottom', label: 'Bottom' },
+                    { value: 'left', label: 'Left' },
+                    { value: 'right', label: 'Right' },
+                  ]}
+                />
+              </FieldRow>
+            </div>
+          </>
+        )}
+      </Group>
+
+      {/* BORDER */}
+      <Group title="Border" defaultOpen={false}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <FieldRow label="Style" {...row('borderStyle')}>
+            <SelectField
+              value={str(get('borderStyle'))}
+              onChange={(v) => patch({ borderStyle: v === '' ? undefined : (v as WidgetStyle['borderStyle']) })}
+              options={[
+                { value: '', label: 'None' },
+                { value: 'solid', label: 'Solid' },
+                { value: 'dashed', label: 'Dashed' },
+                { value: 'dotted', label: 'Dotted' },
+              ]}
+            />
+          </FieldRow>
+          <FieldRow label="Width" {...row('borderWidth')}>
+            <UnitField
+              value={get('borderWidth')}
+              units={['px', 'rem']}
+              placeholder="1"
+              onChange={(v) => patch({ borderWidth: v })}
+            />
+          </FieldRow>
+        </div>
+        <FieldRow label="Border Colour" {...row('borderColor')}>
+          <ColorField
+            value={get('borderColor')}
+            fallback="#333333"
+            onChange={(v) => patch({ borderColor: v })}
+          />
+        </FieldRow>
+        <FieldRow label="Corner Radius" {...row('borderRadius')}>
+          <UnitField
+            value={get('borderRadius')}
+            units={['px', 'rem', '%']}
+            placeholder="8"
+            onChange={(v) => patch({ borderRadius: v })}
+          />
+        </FieldRow>
+      </Group>
+
+      {/* SPACING */}
+      <Group title="Spacing" defaultOpen>
+        <FieldRow label="Padding" {...row('padding')}>
+          <SpacingField
+            value={get('padding')}
+            units={['px', 'rem', 'em', '%']}
+            onChange={(v) => setSpacing('padding', v)}
+          />
+        </FieldRow>
+        <FieldRow label="Margin" {...row('margin')}>
+          <SpacingField
+            value={get('margin')}
+            units={['px', 'rem', 'em', '%', 'auto']}
+            onChange={(v) => setSpacing('margin', v)}
+          />
+        </FieldRow>
+      </Group>
+
+      {/* SIZE */}
+      <Group title="Size" defaultOpen={false}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <FieldRow label="Width" {...row('width')}>
+            <UnitField
+              value={get('width')}
+              units={['auto', 'px', '%', 'rem', 'vw']}
+              placeholder="auto"
+              onChange={(v) => patch({ width: v })}
+            />
+          </FieldRow>
+          <FieldRow label="Max Width" {...row('maxWidth')}>
+            <UnitField
+              value={get('maxWidth')}
+              units={['none', 'px', '%', 'rem', 'vw']}
               placeholder="none"
-              style={smallInputStyle}
+              onChange={(v) => patch({ maxWidth: v })}
             />
-          </div>
+          </FieldRow>
+          <FieldRow label="Height" {...row('height')}>
+            <UnitField
+              value={get('height')}
+              units={['auto', 'px', '%', 'rem', 'vh']}
+              placeholder="auto"
+              onChange={(v) => patch({ height: v })}
+            />
+          </FieldRow>
+          <FieldRow label="Min Height" {...row('minHeight')}>
+            <UnitField
+              value={get('minHeight')}
+              units={['auto', 'px', '%', 'rem', 'vh']}
+              placeholder="auto"
+              onChange={(v) => patch({ minHeight: v })}
+            />
+          </FieldRow>
         </div>
-      </div>
+      </Group>
+
+      {/* LAYOUT */}
+      <Group title="Layout" defaultOpen={false}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <FieldRow label="Display" {...row('display')}>
+            <SelectField
+              value={str(get('display'))}
+              onChange={(v) => patch({ display: v === '' ? undefined : (v as WidgetStyle['display']) })}
+              options={[
+                { value: '', label: 'Default' },
+                { value: 'block', label: 'Block' },
+                { value: 'inline-block', label: 'Inline' },
+                { value: 'flex', label: 'Flex' },
+                { value: 'grid', label: 'Grid' },
+              ]}
+            />
+          </FieldRow>
+          <FieldRow label="Direction" {...row('flexDirection')}>
+            <SelectField
+              value={str(get('flexDirection'))}
+              onChange={(v) => patch({ flexDirection: v === '' ? undefined : (v as WidgetStyle['flexDirection']) })}
+              options={[
+                { value: '', label: 'Default' },
+                { value: 'row', label: 'Row' },
+                { value: 'column', label: 'Column' },
+              ]}
+            />
+          </FieldRow>
+          <FieldRow label="Justify" {...row('justifyContent')}>
+            <SelectField
+              value={str(get('justifyContent'))}
+              onChange={(v) => patch({ justifyContent: v === '' ? undefined : (v as WidgetStyle['justifyContent']) })}
+              options={[
+                { value: '', label: 'Default' },
+                { value: 'flex-start', label: 'Start' },
+                { value: 'center', label: 'Center' },
+                { value: 'flex-end', label: 'End' },
+                { value: 'space-between', label: 'Between' },
+                { value: 'space-around', label: 'Around' },
+              ]}
+            />
+          </FieldRow>
+          <FieldRow label="Align" {...row('alignItems')}>
+            <SelectField
+              value={str(get('alignItems'))}
+              onChange={(v) => patch({ alignItems: v === '' ? undefined : (v as WidgetStyle['alignItems']) })}
+              options={[
+                { value: '', label: 'Default' },
+                { value: 'flex-start', label: 'Start' },
+                { value: 'center', label: 'Center' },
+                { value: 'flex-end', label: 'End' },
+                { value: 'stretch', label: 'Stretch' },
+              ]}
+            />
+          </FieldRow>
+        </div>
+      </Group>
+
+      {/* EFFECTS */}
+      <Group title="Effects" defaultOpen={false}>
+        <FieldRow label="Shadow" {...row('boxShadow')}>
+          <TextField
+            value={str(get('boxShadow'))}
+            placeholder="0 4px 12px rgba(0,0,0,0.3)"
+            mono
+            onChange={(v) => patch({ boxShadow: v })}
+          />
+        </FieldRow>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <FieldRow label="Opacity" {...row('opacity')}>
+            <NumberField
+              value={get('opacity')}
+              min={0}
+              max={1}
+              step={0.1}
+              onChange={(v) => patch({ opacity: v })}
+            />
+          </FieldRow>
+          <FieldRow label="Transform" {...row('transform')}>
+            <TextField
+              value={str(get('transform'))}
+              placeholder="none"
+              mono
+              onChange={(v) => patch({ transform: v })}
+            />
+          </FieldRow>
+        </div>
+      </Group>
     </div>
   );
 }
 
+// ===========================================================================
 // Section Style Editor
+// ===========================================================================
+
 interface SectionStyleEditorProps {
   section: PageSection;
+  breakpoint: Breakpoint;
   onUpdate: (updates: Partial<PageSection>) => void;
 }
 
-function SectionStyleEditor({ section, onUpdate }: SectionStyleEditorProps) {
-  const updateSpacing = (type: 'padding' | 'margin', side: keyof Spacing, value: string) => {
-    const current = section[type] ?? {};
-    onUpdate({
-      [type]: { ...current, [side]: value },
-    });
+function SectionStyleEditor({ section, breakpoint, onUpdate }: SectionStyleEditorProps) {
+  const updateSpacing = (type: 'padding' | 'margin', value: Spacing) => {
+    if (type === 'padding') {
+      onUpdate({ padding: value });
+    } else {
+      onUpdate({ margin: value });
+    }
   };
 
   return (
     <div>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={labelStyle}>Background Color</label>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <input
-            type="color"
-            value={(section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : '#000000'}
-            onChange={(e) => onUpdate({ backgroundColor: e.target.value })}
-            style={colorPickerStyle}
-          />
-          <input
-            type="text"
-            value={section.backgroundColor ?? ''}
-            onChange={(e) => onUpdate({ backgroundColor: e.target.value })}
-            placeholder="#000000"
-            style={{ ...smallInputStyle, flex: 1, fontFamily: 'monospace' }}
-          />
+      {breakpoint !== 'desktop' && (
+        <div
+          style={{
+            fontSize: '0.7rem',
+            color: 'rgba(255,255,255,0.55)',
+            background: 'rgba(99,102,241,0.12)',
+            border: '1px solid rgba(99,102,241,0.3)',
+            borderRadius: '6px',
+            padding: '0.5rem 0.6rem',
+            marginBottom: '1rem',
+            lineHeight: 1.4,
+          }}
+        >
+          Section styles apply to all devices. Use a widget&apos;s Style tab for
+          per-device overrides.
         </div>
-      </div>
+      )}
 
-      <div style={{ marginBottom: '1.5rem' }}>
+      <Group title="Background" defaultOpen>
+        <FieldRow label="Background Colour">
+          <ColorField
+            value={section.backgroundColor}
+            fallback="#000000"
+            onChange={(v) => onUpdate({ backgroundColor: v ?? '' })}
+          />
+        </FieldRow>
         <ImageField
           label="Background Image"
           value={section.backgroundImage ?? ''}
           onChange={(url) => onUpdate({ backgroundImage: url })}
         />
-      </div>
+      </Group>
 
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Padding</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <input
-            type="text"
-            placeholder="Top"
-            value={section.padding?.top ?? ''}
-            onChange={(e) => updateSpacing('padding', 'top', e.target.value)}
-            style={smallInputStyle}
+      <Group title="Spacing" defaultOpen>
+        <FieldRow label="Padding">
+          <SpacingField
+            value={section.padding}
+            units={['px', 'rem', 'em', '%']}
+            onChange={(v) => updateSpacing('padding', v)}
           />
-          <input
-            type="text"
-            placeholder="Right"
-            value={section.padding?.right ?? ''}
-            onChange={(e) => updateSpacing('padding', 'right', e.target.value)}
-            style={smallInputStyle}
+        </FieldRow>
+        <FieldRow label="Margin">
+          <SpacingField
+            value={section.margin}
+            units={['px', 'rem', 'em', '%', 'auto']}
+            onChange={(v) => updateSpacing('margin', v)}
           />
-          <input
-            type="text"
-            placeholder="Bottom"
-            value={section.padding?.bottom ?? ''}
-            onChange={(e) => updateSpacing('padding', 'bottom', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Left"
-            value={section.padding?.left ?? ''}
-            onChange={(e) => updateSpacing('padding', 'left', e.target.value)}
-            style={smallInputStyle}
-          />
+        </FieldRow>
+      </Group>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Breakpoint banner
+// ===========================================================================
+
+function BreakpointBanner({ breakpoint }: { breakpoint: Breakpoint }) {
+  const isBase = breakpoint === 'desktop';
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        background: isBase ? 'rgba(255,255,255,0.05)' : 'rgba(99,102,241,0.14)',
+        border: `1px solid ${isBase ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.4)'}`,
+        borderRadius: '8px',
+        padding: '0.55rem 0.7rem',
+        marginBottom: '1rem',
+      }}
+    >
+      <span style={{ fontSize: '1rem', lineHeight: 1 }}>
+        {breakpoint === 'desktop' ? '🖥️' : breakpoint === 'tablet' ? '📱' : '📱'}
+      </span>
+      <div style={{ lineHeight: 1.3 }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ffffff' }}>
+          Editing {BREAKPOINT_LABEL[breakpoint]}
         </div>
-      </div>
-
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={sectionHeadingStyle}>Margin</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <input
-            type="text"
-            placeholder="Top"
-            value={section.margin?.top ?? ''}
-            onChange={(e) => updateSpacing('margin', 'top', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Right"
-            value={section.margin?.right ?? ''}
-            onChange={(e) => updateSpacing('margin', 'right', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Bottom"
-            value={section.margin?.bottom ?? ''}
-            onChange={(e) => updateSpacing('margin', 'bottom', e.target.value)}
-            style={smallInputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Left"
-            value={section.margin?.left ?? ''}
-            onChange={(e) => updateSpacing('margin', 'left', e.target.value)}
-            style={smallInputStyle}
-          />
+        <div style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.55)' }}>
+          {isBase
+            ? 'Base styles — apply to every device'
+            : `Overrides the desktop base on ${BREAKPOINT_LABEL[breakpoint].toLowerCase()}`}
         </div>
       </div>
     </div>
   );
 }
 
-// Helper functions
+// ===========================================================================
+// Helpers
+// ===========================================================================
+
 function formatLabel(key: string): string {
   return key
     .replace(/([A-Z])/g, ' $1')
@@ -965,48 +1014,19 @@ function formatLabel(key: string): string {
     .trim();
 }
 
-// Dark theme styles
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.7rem',
-  fontWeight: '600',
-  color: 'rgba(255,255,255,0.5)',
-  marginBottom: '0.25rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-};
+/** Wrap a bare image URL into a CSS `url("…")` value (widget renderer applies it raw). */
+function wrapCssUrl(url: string): string {
+  return `url("${url}")`;
+}
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '0.45rem 0.5rem',
-  border: '1px solid rgba(255,255,255,0.15)',
-  borderRadius: '4px',
-  fontSize: '0.8rem',
-  background: 'rgba(255,255,255,0.05)',
-  color: '#ffffff',
-};
-
-const smallInputStyle: React.CSSProperties = {
-  ...inputStyle,
-  padding: '0.35rem 0.5rem',
-  fontSize: '0.75rem',
-};
-
-const colorPickerStyle: React.CSSProperties = {
-  width: '28px',
-  height: '28px',
-  border: '1px solid rgba(255,255,255,0.15)',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  padding: '0',
-  background: 'transparent',
-};
-
-const sectionHeadingStyle: React.CSSProperties = {
-  fontSize: '0.7rem',
-  fontWeight: '600',
-  color: 'rgba(255,255,255,0.4)',
-  marginBottom: '0.75rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-};
+/** Extract the bare URL from a CSS `url("…")` value for editing. */
+function unwrapCssUrl(value: string | undefined): string {
+  if (value === undefined || value === '') {
+    return '';
+  }
+  const match = value.match(/^url\(["']?(.*?)["']?\)$/);
+  if (match) {
+    return match[1] ?? '';
+  }
+  return value.startsWith('linear-gradient') ? '' : value;
+}

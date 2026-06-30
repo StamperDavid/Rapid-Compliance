@@ -225,7 +225,25 @@ export interface WidgetStyle {
   // Colors
   color?: string;
   backgroundColor?: string;
-  
+
+  // Gradient fills (real Elementor-Pro-class output)
+  /**
+   * Gradient-colored TEXT. When set on a text-bearing widget
+   * (`heading` / `text` / `hero` / `cta`), the element's text is painted with a
+   * CSS `linear-gradient` via `background-clip: text` (matching the real site's
+   * `bg-gradient-to-r ... bg-clip-text text-transparent` headings, e.g. the
+   * purple-gradient "Sales Workforce" words). `color` is ignored when this is
+   * present. Example:
+   *   textGradient: { from: '#a855f7', to: '#6366f1', angle: 90 }
+   */
+  textGradient?: GradientStops;
+  /**
+   * Gradient BACKGROUND fill for the widget box (cards, CTA bands, featured
+   * pricing). Expands to a `linear-gradient` `background-image`. A solid
+   * `backgroundColor` still paints behind it as a base.
+   */
+  backgroundGradient?: GradientStops;
+
   // Borders
   border?: string;
   borderRadius?: string;
@@ -251,6 +269,21 @@ export interface Spacing {
   right?: string;
   bottom?: string;
   left?: string;
+}
+
+/**
+ * Colour stops for a `linear-gradient`, used by `WidgetStyle.textGradient`
+ * (gradient text) and `WidgetStyle.backgroundGradient` (gradient fills).
+ */
+export interface GradientStops {
+  /** Starting colour (any CSS colour: hex, rgb, var(), etc.). */
+  from: string;
+  /** Optional middle colour stop for a three-stop gradient. */
+  via?: string;
+  /** Ending colour. */
+  to: string;
+  /** Gradient angle in degrees. Defaults to 90 (left → right). */
+  angle?: number;
 }
 
 export interface AnimationConfig {

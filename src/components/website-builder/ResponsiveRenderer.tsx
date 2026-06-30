@@ -8,10 +8,11 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import type { PageSection, Widget } from '@/types/website';
+import type { GradientStops, PageSection, Widget, WidgetStyle } from '@/types/website';
 import type {
   LogoItem,
   GalleryImage,
+  PricingPlan,
   SocialIcon,
   TabItem,
   AccordionItem
@@ -26,6 +27,7 @@ import {
   formatPlanPeriod,
 } from '@/lib/website-builder/widget-normalizer';
 import SafeHtml from '@/components/SafeHtml';
+import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 import { OptimizedImage } from './OptimizedImage';
 import { AccessibleWidget, SkipToMain } from './AccessibleWidget';
 import { WebsiteFormWidget } from './WebsiteFormWidget';
@@ -35,14 +37,61 @@ interface ConvertedStyle extends Omit<React.CSSProperties, 'padding' | 'margin'>
   margin?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Gradient helpers (real Elementor-Pro-class gradient text + fills)
+// ---------------------------------------------------------------------------
+
+/** Build a `linear-gradient(...)` string from structured colour stops. */
+function buildLinearGradient(g: GradientStops): string {
+  const angle = typeof g.angle === 'number' ? g.angle : 90;
+  const stops = g.via ? `${g.from}, ${g.via}, ${g.to}` : `${g.from}, ${g.to}`;
+  return `linear-gradient(${angle}deg, ${stops})`;
+}
+
+/**
+ * CSS that paints an element's TEXT with a gradient (background-clip:text).
+ * Applied to the text element itself — never a multi-child wrapper — so the
+ * gradient maps onto the glyphs, matching `bg-clip-text text-transparent`.
+ */
+function gradientTextStyle(g: GradientStops): React.CSSProperties {
+  return {
+    backgroundImage: buildLinearGradient(g),
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    color: 'transparent',
+  };
+}
+
+/** Translucent variant of any CSS colour, theme-aware (no hex parsing). */
+function withAlpha(color: string, percent: number): string {
+  return `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+}
+
 interface ResponsiveRendererProps {
   content: PageSection[];
   breakpoint?: 'desktop' | 'tablet' | 'mobile';
 }
 
 export function ResponsiveRenderer({ content, breakpoint = 'desktop' }: ResponsiveRendererProps) {
+  // The page renders on the SITE'S real published theme (dark base + light text +
+  // site font), so a page with no per-section background still looks like the live
+  // site instead of white-on-white. Per-section backgrounds/gradients win because
+  // sections default to `transparent`, letting this base show through. This is the
+  // SAME render path used by the editor canvas and the public /sites route, so what
+  // the operator sees is what publishes.
+  const { theme } = useWebsiteTheme();
   return (
-    <div className="responsive-page" role="main" id="main-content">
+    <div
+      className="responsive-page"
+      role="main"
+      id="main-content"
+      style={{
+        background: theme.backgroundColor,
+        color: theme.textColor,
+        fontFamily: theme.fontFamily,
+      }}
+    >
       <SkipToMain />
       {content.map((section, idx) => (
         <Section key={section.id || idx} section={section} breakpoint={breakpoint} />
@@ -63,9 +112,9 @@ export function ResponsiveRenderer({ content, breakpoint = 'desktop' }: Responsi
           p { font-size: 16px; line-height: 1.6; }
         }
 
-        /* Responsive spacing */
+        /* Responsive spacing — padding now lives on the inner band container */
         @media (max-width: 767px) {
-          .section { padding: 40px 20px !important; }
+          .section-inner { padding: 40px 20px !important; }
           .widget { margin-bottom: 20px !important; }
         }
 
@@ -173,37 +222,55 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
       : '80px 40px';
   };
 
+  // The <section> is a full-bleed BAND: its background reaches the page edges.
+  // Vertical/horizontal padding and the max-width cap live on the inner
+  // container so content stays centred at a sane reading width (≈1280px) even
+  // on ultra-wide screens, while the colour band still spans edge to edge.
   const sectionStyle: React.CSSProperties = {
     backgroundColor: section.backgroundColor ?? 'transparent',
     backgroundImage: section.backgroundImage ? `url(${section.backgroundImage})` : undefined,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
-    padding: getResponsivePadding(),
-    maxWidth: section.fullWidth ? '100%' : section.maxWidth ?? '1200px',
+    width: '100%',
+  };
+
+  // Full-width sections still cap their inner content at 1280px; constrained
+  // sections honour their explicit maxWidth (defaulting to 1200px).
+  const innerMaxWidth = section.fullWidth
+    ? '1280px'
+    : section.maxWidth !== undefined
+      ? `${section.maxWidth}px`
+      : '1200px';
+
+  const innerStyle: React.CSSProperties = {
+    maxWidth: innerMaxWidth,
     margin: '0 auto',
+    padding: getResponsivePadding(),
     width: '100%',
   };
 
   return (
     <section className="section" style={sectionStyle}>
-      <div className={section.columns.length > 1 ? 'flex-container' : ''}>
-        {section.columns.map((column, idx) => (
-          <div
-            key={column.id || idx}
-            style={{
-              flex: section.columns.length > 1 ? `${column.width}` : undefined,
-              width: section.columns.length === 1 ? '100%' : undefined,
-            }}
-          >
-            {column.widgets.map((widget, widgetIdx) => (
-              <AccessibleWidget key={widget.id || widgetIdx} widget={widget}>
-                <div className="widget">
-                  <WidgetRenderer widget={widget} breakpoint={breakpoint} />
-                </div>
-              </AccessibleWidget>
-            ))}
-          </div>
-        ))}
+      <div className="section-inner" style={innerStyle}>
+        <div className={section.columns.length > 1 ? 'flex-container' : ''}>
+          {section.columns.map((column, idx) => (
+            <div
+              key={column.id || idx}
+              style={{
+                flex: section.columns.length > 1 ? `${column.width}` : undefined,
+                width: section.columns.length === 1 ? '100%' : undefined,
+              }}
+            >
+              {column.widgets.map((widget, widgetIdx) => (
+                <AccessibleWidget key={widget.id || widgetIdx} widget={widget}>
+                  <div className="widget">
+                    <WidgetRenderer widget={widget} breakpoint={breakpoint} />
+                  </div>
+                </AccessibleWidget>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -214,15 +281,13 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     return `${spacing.top ?? '0'} ${spacing.right ?? '0'} ${spacing.bottom ?? '0'} ${spacing.left ?? '0'}`;
   };
 
-  const convertStyleToCSS = (style: Partial<typeof widget.style>): ConvertedStyle => {
+  const convertStyleToCSS = (style: Partial<WidgetStyle>): ConvertedStyle => {
     const result: ConvertedStyle = {};
 
-    if (!style) {
-      return result;
-    }
-
-    // Copy all properties except padding and margin
-    const { padding, margin, ...otherProps } = style;
+    // Strip the structured fields that are NOT raw CSS properties; they are
+    // expanded into real CSS below (gradients) or handled per-widget (text
+    // gradient). Everything else maps 1:1 onto React.CSSProperties.
+    const { padding, margin, textGradient: _textGradient, backgroundGradient, ...otherProps } = style;
     Object.assign(result, otherProps);
 
     // Convert padding if it exists and is an object
@@ -243,26 +308,40 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       }
     }
 
+    // Expand a structured background gradient into a real CSS background-image.
+    if (backgroundGradient) {
+      result.backgroundImage = buildLinearGradient(backgroundGradient);
+    }
+
     return result;
   };
 
-  const getResponsiveStyle = (): React.CSSProperties => {
-    const baseStyle = convertStyleToCSS(widget.style ?? {});
+  // Merge the raw style with any responsive override FIRST, then convert once,
+  // so structured fields (textGradient) from a breakpoint override are honoured.
+  let mergedRaw: Partial<WidgetStyle> = { ...(widget.style ?? {}) };
+  if (breakpoint === 'mobile' && widget.responsive?.mobile) {
+    mergedRaw = { ...mergedRaw, ...widget.responsive.mobile };
+  } else if (breakpoint === 'tablet' && widget.responsive?.tablet) {
+    mergedRaw = { ...mergedRaw, ...widget.responsive.tablet };
+  }
 
-    // Apply responsive overrides
-    if (breakpoint === 'mobile' && widget.responsive?.mobile) {
-      const mobileStyle = convertStyleToCSS(widget.responsive.mobile);
-      return { ...baseStyle, ...mobileStyle };
-    }
-    if (breakpoint === 'tablet' && widget.responsive?.tablet) {
-      const tabletStyle = convertStyleToCSS(widget.responsive.tablet);
-      return { ...baseStyle, ...tabletStyle };
-    }
+  const style = convertStyleToCSS(mergedRaw);
+  const textGradient = mergedRaw.textGradient;
 
-    return baseStyle;
+  // Style for a standalone text element: applies the widget style, paints a
+  // gradient onto the glyphs when requested, and auto-centres a constrained
+  // (max-width) block so hero/intro copy constrains and centres faithfully.
+  const textBlockStyle = (): React.CSSProperties => {
+    const out: React.CSSProperties = { ...style };
+    if (textGradient) {
+      Object.assign(out, gradientTextStyle(textGradient));
+    }
+    if (style.maxWidth !== undefined && style.margin === undefined && style.marginLeft === undefined) {
+      out.marginLeft = 'auto';
+      out.marginRight = 'auto';
+    }
+    return out;
   };
-
-  const style = getResponsiveStyle();
 
   // Route legacy widget type names (feature-grid, pricing-table) to their
   // canonical cases so seed/template content renders identically to native
@@ -273,7 +352,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
       const textVal = widget.data.text as string | null | undefined;
       return (
-        <HeadingTag style={style}>
+        <HeadingTag style={textBlockStyle()}>
           {String(textVal !== '' && textVal != null ? textVal : 'Heading')}
         </HeadingTag>
       );
@@ -282,7 +361,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     case 'text': {
       const contentVal = widget.data.content as string | null | undefined;
       return (
-        <p style={style}>
+        <p style={textBlockStyle()}>
           {String(contentVal !== '' && contentVal != null ? contentVal : 'Text content')}
         </p>
       );
@@ -351,6 +430,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
             color: 'white',
             borderRadius: '8px',
             ...style,
+            // A constrained hero centres itself on the page (max-width band).
+            ...(style.maxWidth !== undefined && style.margin === undefined
+              ? { marginLeft: 'auto', marginRight: 'auto' }
+              : {}),
           }}
         >
           <h1
@@ -358,6 +441,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               fontSize: breakpoint === 'mobile' ? '32px' : '48px',
               fontWeight: 'bold',
               marginBottom: '16px',
+              ...(textGradient ? gradientTextStyle(textGradient) : {}),
             }}
           >
             {String(heroHeadingVal !== '' && heroHeadingVal != null ? heroHeadingVal : 'Hero Heading')}
@@ -400,7 +484,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     case 'features': {
       const features = readFeatures(widget.data);
       return (
-        <div className="feature-grid">
+        <div className="feature-grid" style={style}>
           {features.map((feature, idx: number) => (
             <div
               key={idx}
@@ -430,70 +514,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
 
     case 'pricing': {
       const plans = readPlans(widget.data);
-      return (
-        <div className="pricing-grid">
-          {plans.map((plan, idx: number) => {
-            const period = formatPlanPeriod(plan.period ?? '');
-            return (
-              <div
-                key={idx}
-                style={{
-                  padding: '32px',
-                  backgroundColor: 'white',
-                  border: plan.featured ? '2px solid var(--color-info)' : '2px solid var(--color-border-light)',
-                  borderRadius: '8px',
-                  textAlign: 'center',
-                }}
-              >
-                <h3 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px' }}>
-                  {plan.name}
-                </h3>
-                <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '24px' }}>
-                  {formatPlanPrice(plan.price)}
-                  {period !== '' && (
-                    <span style={{ fontSize: '16px', fontWeight: 'normal', color: 'var(--color-text-disabled)' }}>
-                      {period}
-                    </span>
-                  )}
-                </div>
-                {plan.features.length > 0 && (
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', textAlign: 'left' }}>
-                    {plan.features.map((feature, fIdx) => (
-                      <li
-                        key={fIdx}
-                        style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '12px', fontSize: '14px' }}
-                      >
-                        <span style={{ color: 'var(--color-info)' }}>&#10003;</span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <button
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    backgroundColor: plan.featured ? 'var(--color-info)' : 'white',
-                    color: plan.featured ? 'white' : 'var(--color-border-strong)',
-                    border: plan.featured ? 'none' : '1px solid var(--color-border-light)',
-                    borderRadius: '6px',
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => {
-                    if (plan.buttonUrl) {
-                      window.location.href = plan.buttonUrl;
-                    }
-                  }}
-                >
-                  {plan.buttonText !== undefined && plan.buttonText !== '' ? plan.buttonText : 'Choose Plan'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      );
+      return <PricingWidget plans={plans} data={widget.data} style={style} />;
     }
 
     case 'testimonial': {
@@ -553,6 +574,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               fontSize: breakpoint === 'mobile' ? '24px' : '32px',
               fontWeight: 'bold',
               marginBottom: '16px',
+              ...(textGradient ? gradientTextStyle(textGradient) : {}),
             }}
           >
             {String(ctaHeadingVal !== '' && ctaHeadingVal != null ? ctaHeadingVal : 'Ready to get started?')}
@@ -924,6 +946,139 @@ function getSocialIcon(platform: string): string {
     github: 'GH',
   };
   return icons[platform] || platform[0]?.toUpperCase() || '?';
+}
+
+function optionalColor(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
+}
+
+/**
+ * Theme-aware pricing table. Renders on the site's DARK theme by default
+ * (dark glass cards, light text, the featured plan highlighted with the brand
+ * accent and a gradient price number), matching the real site instead of the
+ * old hardcoded white card. Per-plan and per-widget overrides are honoured:
+ *   - `style.backgroundColor`      → non-featured card background
+ *   - `data.cardBackground`        → non-featured card background (alias)
+ *   - `data.borderColor`           → card border colour
+ *   - `data.featuredColor`         → accent for the featured plan + price gradient
+ *   - `data.priceGradient`         → explicit { from, to, angle } for the price number
+ */
+function PricingWidget({
+  plans,
+  data,
+  style,
+}: {
+  plans: PricingPlan[];
+  data: Record<string, unknown>;
+  style: ConvertedStyle;
+}) {
+  const { theme } = useWebsiteTheme();
+
+  const featuredColor = optionalColor(data.featuredColor) ?? theme.primaryColor;
+  const cardBackground =
+    optionalColor(data.cardBackground) ?? optionalColor(style.backgroundColor) ?? withAlpha(theme.textColor, 4);
+  const cardBorderColor = optionalColor(data.borderColor) ?? withAlpha(theme.textColor, 12);
+  const mutedColor = withAlpha(theme.textColor, 65);
+
+  const rawPriceGradient = data.priceGradient;
+  const priceGradient: GradientStops =
+    typeof rawPriceGradient === 'object' && rawPriceGradient !== null
+      ? (rawPriceGradient as GradientStops)
+      : { from: theme.primaryColor, to: theme.secondaryColor, angle: 90 };
+
+  return (
+    <div className="pricing-grid" style={style}>
+      {plans.map((plan, idx: number) => {
+        const period = formatPlanPeriod(plan.period ?? '');
+        const featured = Boolean(plan.featured);
+        return (
+          <div
+            key={idx}
+            style={{
+              position: 'relative',
+              padding: '32px',
+              background: featured
+                ? `linear-gradient(160deg, ${withAlpha(featuredColor, 16)}, ${withAlpha(featuredColor, 4)})`
+                : cardBackground,
+              border: `1px solid ${featured ? featuredColor : cardBorderColor}`,
+              borderRadius: '16px',
+              textAlign: 'center',
+              color: theme.textColor,
+              boxShadow: featured
+                ? `0 0 0 1px ${featuredColor}, 0 24px 48px -24px ${withAlpha(featuredColor, 55)}`
+                : undefined,
+            }}
+          >
+            {featured && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-12px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: featuredColor,
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  padding: '4px 14px',
+                  borderRadius: '999px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Most Popular
+              </div>
+            )}
+            <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px', color: theme.textColor }}>
+              {plan.name}
+            </h3>
+            <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '48px', fontWeight: 800, lineHeight: 1.05, ...gradientTextStyle(priceGradient) }}>
+                {formatPlanPrice(plan.price)}
+              </span>
+              {period !== '' && (
+                <span style={{ fontSize: '16px', fontWeight: 'normal', color: mutedColor }}>{period}</span>
+              )}
+            </div>
+            {plan.features.length > 0 && (
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', textAlign: 'left' }}>
+                {plan.features.map((feature, fIdx) => (
+                  <li
+                    key={fIdx}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '12px', fontSize: '14px', color: theme.textColor }}
+                  >
+                    <span style={{ color: featuredColor, flexShrink: 0 }}>&#10003;</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: featured ? featuredColor : 'transparent',
+                color: featured ? '#ffffff' : theme.textColor,
+                border: `1px solid ${featuredColor}`,
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              onClick={() => {
+                if (plan.buttonUrl) {
+                  window.location.href = plan.buttonUrl;
+                }
+              }}
+            >
+              {plan.buttonText !== undefined && plan.buttonText !== '' ? plan.buttonText : 'Choose Plan'}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function TabsWidget({ tabs, style }: { tabs: TabItem[]; style: React.CSSProperties }) {
