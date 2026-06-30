@@ -7,8 +7,11 @@
 **Shipped + reviewed this session (tsc/lint clean, all on `dev` + primary fast-forwarded):**
 - **CRM vertical:** all 5 remaining parity gaps built (saved views, multiple pipelines + a `/pipelines`
   mgmt screen, CSV import, editable owner, in-CRM reports). See the CRM STATUS block below.
-- **SMS:** diagnosed — invalid Twilio credentials (401/20003), NOT trial/verified-number. ⏳ **OPERATOR
-  ACTION PENDING:** refresh the Twilio Auth Token, then re-run `scripts/diagnose-twilio-sms.ts`.
+- **SMS:** ✅ FIXED + VERIFIED LIVE END-TO-END. Root cause was a stale Twilio Auth Token; refreshed it in
+  Firestore (SID + from-number untouched). Twilio now authenticates, recipient `+12088718552` is a verified
+  caller ID, and `verify-outreach-sms-send.ts` passed every assertion incl. a REAL send (smsId returned,
+  `sms_sent` activity logged) with the approval + TCPA gates proven fail-closed. Outreach senders live:
+  email ✅ + SMS ✅. ⏳ **Voice** still needs a daytime (8am–9pm Mountain) live-call test.
 - **Video Tier-1:** ③ cross-clip normalization + ④ no fake-4K — Tier-1 fully closed.
 - **Social vertical:** 4 audit bugs fixed (approvals→Admin SDK, queue drip [opt-in+rate-limited],
   dispatcher honesty, WhatsApp) + 4 features (Strategy Co-Pilot `/social/copilot`, inline composer AI,
