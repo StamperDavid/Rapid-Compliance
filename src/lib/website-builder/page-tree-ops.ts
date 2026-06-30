@@ -223,7 +223,7 @@ export function setWidgetHidden(page: Page, widgetId: string, hidden: boolean): 
 // ---------------------------------------------------------------------------
 
 /** Build a fresh, empty single-column section (optionally seeded from a partial). */
-function buildSection(ids: Set<string>, partial?: Partial<PageSection>): PageSection {
+function buildEmptySection(ids: Set<string>, partial?: Partial<PageSection>): PageSection {
   const base: PageSection = {
     id: makeUniqueId(ids, 'section'),
     type: 'section',
@@ -244,12 +244,79 @@ function buildSection(ids: Set<string>, partial?: Partial<PageSection>): PageSec
   };
 }
 
+/**
+ * Build a fresh, fully-formed section with `columnCount` (clamped 1..6) empty
+ * columns and collision-safe ids (unique *within the returned section*). Widths
+ * come from `widths` when its length matches the count, otherwise an even split.
+ * An optional `section` partial seeds styling/metadata (its `columns` override is
+ * honoured when non-empty). Pair with {@link insertSection}, which re-ids the
+ * whole subtree against the destination page so a build → insert can never
+ * collide with existing ids.
+ */
+export function buildSection(
+  columnCount: number,
+  widths?: number[],
+  section?: Partial<PageSection>,
+): PageSection {
+  const count = Math.max(1, Math.min(6, Math.round(columnCount)));
+  const resolvedWidths = widths?.length === count ? widths : defaultWidths(count);
+  const ids = new Set<string>();
+  const columns: PageColumn[] = Array.from({ length: count }, (_, i) => ({
+    id: makeUniqueId(ids, 'col'),
+    width: resolvedWidths[i] ?? Math.round((100 / count) * 100) / 100,
+    widgets: [],
+  }));
+  const base: PageSection = {
+    id: makeUniqueId(ids, 'section'),
+    type: 'section',
+    columns,
+    padding: { top: '2rem', bottom: '2rem' },
+  };
+  if (!section) {
+    return base;
+  }
+  return {
+    ...base,
+    ...section,
+    id: base.id,
+    type: 'section',
+    columns: section.columns && section.columns.length > 0 ? section.columns : base.columns,
+  };
+}
+
 export function addSection(page: Page, atIndex?: number, section?: Partial<PageSection>): Page {
   const ids = collectIds(page);
-  const newSection = buildSection(ids, section);
+  const newSection = buildEmptySection(ids, section);
   const content = [...page.content];
   const idx = atIndex === undefined ? content.length : Math.max(0, Math.min(atIndex, content.length));
   content.splice(idx, 0, newSection);
+  return { ...page, content };
+}
+
+/**
+ * Insert a fully-formed `section` into the page at `atIndex` (default: end).
+ * The section is deep-cloned and given fresh, collision-safe ids for itself, all
+ * its columns, and every nested widget — so re-inserting the SAME block object
+ * repeatedly (e.g. from the block library) can never produce duplicate ids.
+ * Pure/immutable: returns a brand-new Page. This is the primitive the block
+ * library reuses to drop a saved section onto the canvas.
+ */
+export function insertSection(page: Page, section: PageSection, atIndex?: number): Page {
+  const ids = collectIds(page);
+  const clone = deepClone(section);
+  clone.id = makeUniqueId(ids, 'section');
+  clone.type = 'section';
+  clone.columns = (clone.columns ?? []).map((column) => ({
+    ...column,
+    id: makeUniqueId(ids, 'col'),
+    widgets: (column.widgets ?? []).map((widget) => ({
+      ...widget,
+      id: makeUniqueId(ids, widget.type),
+    })),
+  }));
+  const content = [...page.content];
+  const idx = atIndex === undefined ? content.length : Math.max(0, Math.min(atIndex, content.length));
+  content.splice(idx, 0, clone);
   return { ...page, content };
 }
 
@@ -300,7 +367,7 @@ export function deleteSection(page: Page, sectionId: string): Page {
 // ---------------------------------------------------------------------------
 
 /**
- * Set the number of columns in a section (clamped 1..4), redistributing
+ * Set the number of columns in a section (clamped 1..6), redistributing
  * existing widgets so none are ever lost:
  *  - reducing: the removed columns' widgets are appended to the last surviving
  *    column (in order);
@@ -313,7 +380,7 @@ export function setColumnLayout(
   count: number,
   widths?: number[],
 ): Page {
-  const target = Math.max(1, Math.min(4, Math.round(count)));
+  const target = Math.max(1, Math.min(6, Math.round(count)));
   const ids = collectIds(page);
   const resolvedWidths =
     widths?.length === target ? widths : defaultWidths(target);

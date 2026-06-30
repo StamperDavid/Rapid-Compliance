@@ -51,6 +51,8 @@ const WIDTH_PRESETS: Record<number, Array<{ label: string; widths: number[] }>> 
     { label: '25 / 50 / 25', widths: [25, 50, 25] },
   ],
   4: [{ label: '25 × 4', widths: [25, 25, 25, 25] }],
+  5: [{ label: '20 × 5', widths: [20, 20, 20, 20, 20] }],
+  6: [{ label: '16.67 × 6', widths: [16.67, 16.67, 16.67, 16.67, 16.67, 16.67] }],
 };
 
 type Breakpoint = 'desktop' | 'tablet' | 'mobile';
@@ -88,6 +90,8 @@ interface PropertiesPanelProps {
   onSetColumnWidths?: (sectionId: string, widths: number[]) => void;
   onDuplicateSection?: (sectionId: string) => void;
   onDeleteSection?: (sectionId: string) => void;
+  // Save the selected section to the block library (optional; gated when unset).
+  onSaveSectionAsBlock?: (sectionId: string) => void;
   onDuplicateWidget?: (widgetId: string) => void;
   onDeleteWidget?: (widgetId: string) => void;
 }
@@ -103,6 +107,7 @@ export default function PropertiesPanel({
   onSetColumnWidths,
   onDuplicateSection,
   onDeleteSection,
+  onSaveSectionAsBlock,
   onDuplicateWidget,
   onDeleteWidget,
 }: PropertiesPanelProps) {
@@ -193,6 +198,11 @@ export default function PropertiesPanel({
               {onDuplicateSection && (
                 <button type="button" onClick={() => onDuplicateSection(section.id)} style={headerActionStyle('#0ea5e9')}>
                   Duplicate
+                </button>
+              )}
+              {onSaveSectionAsBlock && (
+                <button type="button" onClick={() => onSaveSectionAsBlock(section.id)} style={headerActionStyle('#8b5cf6')}>
+                  Save as block
                 </button>
               )}
               {onDeleteSection && (
@@ -488,7 +498,7 @@ function SectionLayoutControls({
   onSetColumnLayout,
   onSetColumnWidths,
 }: SectionLayoutControlsProps) {
-  const count = Math.max(1, Math.min(4, section.columns.length));
+  const count = Math.max(1, Math.min(6, section.columns.length));
   const presets = WIDTH_PRESETS[count] ?? [];
   const currentWidths = section.columns.map((c) => Math.round(c.width));
 
@@ -505,6 +515,8 @@ function SectionLayoutControls({
             { value: '2', label: '2' },
             { value: '3', label: '3' },
             { value: '4', label: '4' },
+            { value: '5', label: '5' },
+            { value: '6', label: '6' },
           ]}
           onChange={(v) => onSetColumnLayout(section.id, parseInt(v, 10))}
         />

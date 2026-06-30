@@ -28,8 +28,12 @@ interface EditorCanvasProps {
   selectedElement: SelectedElement | null;
   onSelectElement: (element: SelectedElement) => void;
   onAddSection: (sectionData?: Partial<PageSection>) => void;
+  // Open the structure picker → build + insert a section with N columns (1..6).
+  onAddSectionWithStructure?: (columnCount: number, widths?: number[], atIndex?: number) => void;
   onUpdateSection: (sectionId: string, updates: Partial<PageSection>) => void;
   onDeleteSection: (sectionId: string) => void;
+  // Save the selected section to the block library (wired during integration).
+  onSaveSectionAsBlock?: (sectionId: string) => void;
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
   onUpdateWidget: (sectionId: string, widgetId: string, updates: Partial<Widget>) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
@@ -52,8 +56,10 @@ export default function EditorCanvas({
   selectedElement,
   onSelectElement,
   onAddSection,
+  onAddSectionWithStructure,
   onUpdateSection: _onUpdateSection,
   onDeleteSection,
+  onSaveSectionAsBlock,
   onAddWidget,
   onUpdateWidget: _onUpdateWidget,
   onDeleteWidget,
@@ -76,7 +82,9 @@ export default function EditorCanvas({
       selectedElement={selectedElement}
       onSelectElement={onSelectElement}
       onAddSection={onAddSection}
+      onAddSectionWithStructure={onAddSectionWithStructure}
       onDeleteSection={onDeleteSection}
+      onSaveSectionAsBlock={onSaveSectionAsBlock}
       onAddWidget={onAddWidget}
       onDeleteWidget={onDeleteWidget}
       onMoveWidget={onMoveWidget}

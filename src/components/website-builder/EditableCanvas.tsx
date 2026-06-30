@@ -44,6 +44,7 @@ import {
 import type { Page, PageSection, Widget, WidgetType } from '@/types/website';
 import type { SiteChrome, ChromeRegion } from '@/lib/website-builder/site-chrome-types';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
+import SectionStructurePicker from '@/components/website-builder/SectionStructurePicker';
 import { SiteHeaderPreview, SiteFooterPreview } from '@/components/website-builder/SiteChromePreview';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
@@ -60,7 +61,12 @@ interface EditableCanvasProps {
   selectedElement: SelectedElement | null;
   onSelectElement: (element: SelectedElement) => void;
   onAddSection: (sectionData?: Partial<PageSection>) => void;
+  // Picker-driven add: build + insert a section with 1..6 columns (optional
+  // asymmetric widths) at `atIndex`. Falls back to `onAddSection` when absent.
+  onAddSectionWithStructure?: (columnCount: number, widths?: number[], atIndex?: number) => void;
   onDeleteSection: (sectionId: string) => void;
+  // Save the selected section to the block library (optional; gated when unset).
+  onSaveSectionAsBlock?: (sectionId: string) => void;
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
   // --- Layout engine (drag-to-reorder + duplicate / hide) -------------------
@@ -161,7 +167,9 @@ export default function EditableCanvas({
   selectedElement,
   onSelectElement,
   onAddSection,
+  onAddSectionWithStructure,
   onDeleteSection,
+  onSaveSectionAsBlock,
   onAddWidget,
   onDeleteWidget,
   onMoveWidget,
@@ -184,6 +192,9 @@ export default function EditableCanvas({
   const [columnBoxes, setColumnBoxes] = useState<ColumnBox[]>([]);
   const [sectionBoxes, setSectionBoxes] = useState<SectionBox[]>([]);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+  // Structure picker ("Select your structure"). Holds the insert index for the
+  // pending add; `atIndex: undefined` appends to the end of the page.
+  const [structurePicker, setStructurePicker] = useState<{ atIndex?: number } | null>(null);
   // Bumped whenever layout may have shifted (resize, image load, reflow) so the
   // overlay rectangles stay glued to the real rendered elements.
   const [layoutTick, setLayoutTick] = useState(0);
@@ -518,6 +529,34 @@ export default function EditableCanvas({
     [onMoveWidget, onMoveSection, computeDropIndex]
   );
 
+  // --- Structure picker ("Add Section" → Select your structure) --------------
+
+  // Open the picker for an insert at `atIndex` (undefined = append). When no
+  // picker handler is wired, fall back to the plain single-column add.
+  const openStructurePicker = useCallback(
+    (atIndex?: number) => {
+      if (onAddSectionWithStructure) {
+        setStructurePicker({ atIndex });
+      } else {
+        onAddSection();
+      }
+    },
+    [onAddSectionWithStructure, onAddSection],
+  );
+
+  const handlePickStructure = useCallback(
+    (columnCount: number, widths?: number[]) => {
+      const atIndex = structurePicker?.atIndex;
+      setStructurePicker(null);
+      if (onAddSectionWithStructure) {
+        onAddSectionWithStructure(columnCount, widths, atIndex);
+      } else {
+        onAddSection();
+      }
+    },
+    [structurePicker, onAddSectionWithStructure, onAddSection],
+  );
+
   // --- Render ----------------------------------------------------------------
 
   const isEmpty = page.content.length === 0;
@@ -530,7 +569,7 @@ export default function EditableCanvas({
   const draggingSection = activeDrag?.type === 'section';
 
   const bodyContent = isEmpty ? (
-    <EmptyState onAddSection={() => onAddSection()} />
+    <EmptyState onAddSection={() => openStructurePicker()} />
   ) : (
     <>
       <div
@@ -607,6 +646,7 @@ export default function EditableCanvas({
               <SectionControls
                 onAddWidget={() => onAddWidget(selectedSectionId, createWidget('text'), 0)}
                 onDuplicate={onDuplicateSection ? () => onDuplicateSection(selectedSectionId) : undefined}
+                onSaveAsBlock={onSaveSectionAsBlock ? () => onSaveSectionAsBlock(selectedSectionId) : undefined}
                 onDelete={() => onDeleteSection(selectedSectionId)}
               />
             </OutlineBox>
@@ -634,7 +674,7 @@ export default function EditableCanvas({
       <div className="text-center" style={{ padding: '1rem', borderTop: '2px dashed rgba(255,255,255,0.1)' }}>
         <button
           type="button"
-          onClick={() => onAddSection()}
+          onClick={() => openStructurePicker()}
           className="cursor-pointer rounded border"
           style={{
             padding: '0.5rem 1rem',
@@ -698,6 +738,32 @@ export default function EditableCanvas({
           )}
         </div>
       </div>
+
+      {/* "Select your structure" — column-layout chooser for a new section. */}
+      {structurePicker && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select your structure"
+          onClick={() => setStructurePicker(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)',
+          }}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <SectionStructurePicker
+              onPick={handlePickStructure}
+              onClose={() => setStructurePicker(null)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Floating chip that follows the cursor while dragging. */}
       <DragOverlay dropAnimation={null}>
@@ -923,10 +989,12 @@ function OutlineBox({
 function SectionControls({
   onAddWidget,
   onDuplicate,
+  onSaveAsBlock,
   onDelete,
 }: {
   onAddWidget: () => void;
   onDuplicate?: () => void;
+  onSaveAsBlock?: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -947,6 +1015,11 @@ function SectionControls({
       {onDuplicate && (
         <button type="button" onClick={onDuplicate} style={controlButtonStyle('#0ea5e9')}>
           Duplicate
+        </button>
+      )}
+      {onSaveAsBlock && (
+        <button type="button" onClick={onSaveAsBlock} style={controlButtonStyle('#8b5cf6')}>
+          Save as block
         </button>
       )}
       <button type="button" onClick={onDelete} style={controlButtonStyle('#ef4444')}>

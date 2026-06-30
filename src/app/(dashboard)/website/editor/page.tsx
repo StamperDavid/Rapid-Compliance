@@ -30,6 +30,8 @@ import {
   setWidgetHidden,
   setColumnLayout,
   setColumnWidths,
+  buildSection,
+  insertSection,
   addWidget as addWidgetOp,
   deleteWidget as deleteWidgetOp,
   deleteSection as deleteSectionOp,
@@ -40,6 +42,9 @@ import type { WebsiteConfig, EditorPage, EditorPageSection, WidgetElement } from
 import { DEFAULT_CONFIG } from '@/lib/website-builder/default-config';
 import { useEditorHistory } from '@/hooks/useEditorHistory';
 import { logger } from '@/lib/logger/logger';
+import { BlockLibrary } from '@/components/website-builder/BlockLibrary';
+import { loadBlocks, saveBlock } from '@/lib/website-builder/block-library-service';
+import { BLOCK_CATEGORY_LABELS, type SectionBlock, type BlockCategory } from '@/lib/website-builder/section-blocks';
 
 // ============================================================================
 // Conversion helpers: EditorPage <-> Page (existing widget system)
@@ -274,6 +279,12 @@ function PageEditorInner() {
   } | null>(null);
   const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showNavigator, setShowNavigator] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [blocks, setBlocks] = useState<{ premade: SectionBlock[]; saved: SectionBlock[] }>({ premade: [], saved: [] });
+  const [blocksLoading, setBlocksLoading] = useState(true);
+  const [saveBlockFor, setSaveBlockFor] = useState<string | null>(null);
+  const [saveBlockName, setSaveBlockName] = useState('');
+  const [saveBlockCategory, setSaveBlockCategory] = useState<BlockCategory>('content');
 
   // Site chrome (banner / header / footer) + which region is selected for editing.
   // Chrome edits are mutually exclusive with body widget/section selection.
@@ -892,6 +903,62 @@ function PageEditorInner() {
     commitPage(setColumnWidths(page, sectionId, widths));
   }
 
+  // Insert a fully-formed section (e.g. a saved block) with fresh collision-safe
+  // ids, then select it. The primitive the block library reuses.
+  function onInsertSection(section: PageSection, atIndex?: number): void {
+    if (!page) {return;}
+    const next = insertSection(page, section, atIndex);
+    commitPage(next);
+    const insertAt =
+      atIndex === undefined ? page.content.length : Math.max(0, Math.min(atIndex, page.content.length));
+    const inserted = next.content[insertAt];
+    if (inserted) {setSelectedElement({ type: 'section', sectionId: inserted.id });}
+  }
+
+  // Build a fresh section with the chosen structure (1..6 columns, optional
+  // asymmetric widths) and insert + select it via onInsertSection.
+  function onAddSectionWithStructure(columnCount: number, widths?: number[], atIndex?: number): void {
+    onInsertSection(buildSection(columnCount, widths), atIndex);
+  }
+
+  // ============================================================================
+  // Block library — insert premade/saved sections + save a section as a block
+  // ============================================================================
+
+  // Open the "save as block" dialog for a section (name + category prompt).
+  function onSaveSectionAsBlock(sectionId: string): void {
+    setSaveBlockName('');
+    setSaveBlockCategory('content');
+    setSaveBlockFor(sectionId);
+  }
+
+  async function confirmSaveBlock(): Promise<void> {
+    if (!page || saveBlockFor === null) { return; }
+    const sec = page.content.find((s) => s.id === saveBlockFor);
+    if (!sec) { setSaveBlockFor(null); return; }
+    const trimmedName = saveBlockName.trim();
+    const name = trimmedName !== '' ? trimmedName : (sec.name ?? 'Saved section');
+    const saved = await saveBlock({ name, category: saveBlockCategory, section: sec }, authFetch);
+    if (saved) {
+      setBlocks((b) => ({ ...b, saved: [saved, ...b.saved] }));
+      setNotification({ message: `Saved "${name}" to your blocks`, type: 'success' });
+    } else {
+      setNotification({ message: 'Could not save block. Please try again.', type: 'error' });
+    }
+    setSaveBlockFor(null);
+  }
+
+  // Load the block catalog (premade + the org's saved blocks) once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    setBlocksLoading(true);
+    loadBlocks(authFetch)
+      .then((b) => { if (!cancelled) { setBlocks(b); } })
+      .catch((e) => { logger.error('Failed to load blocks', e instanceof Error ? e : new Error(String(e)), { file: 'editor/page.tsx' }); })
+      .finally(() => { if (!cancelled) { setBlocksLoading(false); } });
+    return () => { cancelled = true; };
+  }, [authFetch]);
+
   // ============================================================================
   // Navigator (Layers) panel — maps the tree's events onto the existing handlers
   // ============================================================================
@@ -1071,6 +1138,7 @@ function PageEditorInner() {
           selectedElement={selectedElement}
           onSelectElement={selectElement}
           onAddSection={addSection}
+          onAddSectionWithStructure={onAddSectionWithStructure}
           onUpdateSection={updateSection}
           onDeleteSection={deleteSection}
           onAddWidget={addWidget}
@@ -1081,6 +1149,7 @@ function PageEditorInner() {
           onDuplicateWidget={onDuplicateWidget}
           onDuplicateSection={onDuplicateSection}
           onToggleWidgetHidden={onToggleWidgetHidden}
+          onSaveSectionAsBlock={onSaveSectionAsBlock}
           chrome={chrome}
           editable
           selectedRegion={selectedRegion}
@@ -1107,6 +1176,7 @@ function PageEditorInner() {
             onSetColumnLayout={onSetColumnLayout}
             onSetColumnWidths={onSetColumnWidths}
             onDuplicateSection={onDuplicateSection}
+            onSaveSectionAsBlock={onSaveSectionAsBlock}
             onDeleteSection={deleteSection}
             onDuplicateWidget={onDuplicateWidget}
             onDeleteWidget={(widgetId) => {
@@ -1117,15 +1187,25 @@ function PageEditorInner() {
         )}
       </div>
 
-      {/* Navigator (Layers) — Elementor-style toggleable floating dock */}
-      <button
-        type="button"
-        onClick={() => setShowNavigator((v) => !v)}
-        className="fixed bottom-4 left-4 z-[60] flex items-center gap-2 rounded-lg bg-[#1a1a2e] text-white/80 hover:text-white border border-white/10 px-3 py-2 text-sm shadow-lg cursor-pointer"
-        title="Toggle the page structure navigator"
-      >
-        <span aria-hidden>▤</span> {showNavigator ? 'Hide Navigator' : 'Navigator'}
-      </button>
+      {/* Editor docks — Navigator (page structure) + Block library (insert premade/saved sections) */}
+      <div className="fixed bottom-4 left-4 z-[60] flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => { setShowNavigator((v) => !v); setShowLibrary(false); }}
+          className="flex items-center gap-2 rounded-lg bg-[#1a1a2e] text-white/80 hover:text-white border border-white/10 px-3 py-2 text-sm shadow-lg cursor-pointer"
+          title="Toggle the page structure navigator"
+        >
+          <span aria-hidden>▤</span> {showNavigator ? 'Hide Navigator' : 'Navigator'}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setShowLibrary((v) => !v); setShowNavigator(false); }}
+          className="flex items-center gap-2 rounded-lg bg-[#1a1a2e] text-white/80 hover:text-white border border-white/10 px-3 py-2 text-sm shadow-lg cursor-pointer"
+          title="Insert a premade or saved section block"
+        >
+          <span aria-hidden>▦</span> {showLibrary ? 'Hide Library' : 'Block Library'}
+        </button>
+      </div>
       {showNavigator && page && (
         <div className="fixed bottom-16 left-4 z-[60] w-72 max-h-[70vh] overflow-auto rounded-xl border border-white/10 bg-[#16162a] shadow-2xl">
           <LayersPanel
@@ -1138,6 +1218,47 @@ function PageEditorInner() {
             onReorder={handleLayerReorder}
             onClose={() => setShowNavigator(false)}
           />
+        </div>
+      )}
+      {showLibrary && (
+        <div className="fixed bottom-16 left-4 z-[60] w-[26rem] max-h-[72vh] overflow-auto rounded-xl border border-white/10 bg-[#16162a] shadow-2xl">
+          <BlockLibrary
+            premade={blocks.premade}
+            saved={blocks.saved}
+            loading={blocksLoading}
+            onInsert={(section) => { onInsertSection(section); setNotification({ message: 'Section added from the library', type: 'success' }); }}
+            onClose={() => setShowLibrary(false)}
+          />
+        </div>
+      )}
+      {/* Save-as-block dialog (name + category) */}
+      {saveBlockFor !== null && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70">
+          <div className="bg-[#1a1a2e] rounded-xl p-6 w-full max-w-sm mx-4 shadow-2xl border border-white/10">
+            <p className="text-white mb-3 text-base font-medium">Save section as a block</p>
+            <label className="block text-white/60 text-xs mb-1">Name</label>
+            <input
+              autoFocus
+              value={saveBlockName}
+              onChange={(e) => setSaveBlockName(e.target.value)}
+              placeholder="e.g. Hero with gradient headline"
+              className="w-full mb-3 px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 text-sm outline-none focus:border-white/30"
+            />
+            <label className="block text-white/60 text-xs mb-1">Category</label>
+            <select
+              value={saveBlockCategory}
+              onChange={(e) => setSaveBlockCategory(e.target.value as BlockCategory)}
+              className="w-full mb-4 px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 text-sm outline-none"
+            >
+              {Object.entries(BLOCK_CATEGORY_LABELS).map(([value, label]) => (
+                <option key={value} value={value} className="bg-[#1a1a2e]">{label}</option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setSaveBlockFor(null)} className="px-4 py-2 rounded-lg text-white/60 bg-white/10 border-none cursor-pointer">Cancel</button>
+              <button type="button" onClick={() => void confirmSaveBlock()} className="px-4 py-2 rounded-lg bg-violet-500 text-white border-none cursor-pointer">Save block</button>
+            </div>
+          </div>
         </div>
       )}
 
