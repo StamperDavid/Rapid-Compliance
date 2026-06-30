@@ -13,6 +13,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
+import { AgentConfigService } from '@/lib/social/agent-config-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -29,6 +32,35 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const agent = await createPostingAgent();
     const batch = await agent.processScheduledPosts();
 
+    // Evergreen queue drip. The position-ordered `social_queue` previously never
+    // published — no worker drained it. It now drips here, SAFELY: opt-in
+    // (config.autoQueueEnabled, default false, so it never auto-posts to real
+    // audiences unannounced) and rate-limited to `maxDailyPosts`/day via a
+    // marker, so this 5-minute cron publishes at most one queued post per
+    // (24h / maxDailyPosts). A failure here never affects scheduled posts.
+    let queueDrained = 0;
+    try {
+      const config = await AgentConfigService.getConfig();
+      if (config.autoQueueEnabled === true) {
+        const MARKER_ID = 'social_queue_marker';
+        const markerPath = getSubCollection('settings');
+        const marker = await AdminFirestoreService.get<{ lastQueueDrainAt?: string }>(markerPath, MARKER_ID);
+        const lastAt = marker?.lastQueueDrainAt ? Date.parse(marker.lastQueueDrainAt) : 0;
+        const perDay = Math.max(1, config.maxDailyPosts);
+        const intervalMs = Math.floor(86_400_000 / perDay);
+        const now = Date.now();
+        if (now - lastAt >= intervalMs) {
+          const queueBatch = await agent.processQueue(1);
+          queueDrained = queueBatch.successCount;
+          await AdminFirestoreService.set(markerPath, MARKER_ID, { lastQueueDrainAt: new Date(now).toISOString() }, true);
+          logger.info('Evergreen queue drip published', { route, queueDrained, intervalMs });
+        }
+      }
+    } catch (queueErr) {
+      logger.error('Evergreen queue drip failed (scheduled posts unaffected)',
+        queueErr instanceof Error ? queueErr : new Error(String(queueErr)), { route });
+    }
+
     const errors = batch.results
       .filter((r) => !r.success && r.error)
       .map((r) => r.error as string);
@@ -38,6 +70,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       successCount: batch.successCount,
       failureCount: batch.failureCount,
       errorCount: errors.length,
+      queueDrained,
     });
 
     return NextResponse.json({
@@ -45,6 +78,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       processed: batch.successCount + batch.failureCount,
       successCount: batch.successCount,
       failureCount: batch.failureCount,
+      queueDrained,
       errors,
       timestamp: new Date().toISOString(),
     });

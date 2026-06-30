@@ -33,7 +33,6 @@ import { createBlueskyService } from '@/lib/integrations/bluesky-service';
 import { createThreadsService } from '@/lib/integrations/threads-service';
 import { createMastodonService } from '@/lib/integrations/mastodon-service';
 import { createPinterestService } from '@/lib/integrations/pinterest-service';
-import { createWhatsAppBusinessService } from '@/lib/integrations/whatsapp-business-service';
 import { createGoogleBusinessService } from '@/lib/integrations/google-business-service';
 import type { QueryConstraint } from 'firebase/firestore';
 import type {
@@ -1141,18 +1140,18 @@ export class AutonomousPostingAgent {
           return { success: pinterestResult.success, platform, postId, platformPostId: pinterestResult.pinId, error: pinterestResult.error };
         }
 
-        case 'whatsapp_business': {
-          const whatsappService = await createWhatsAppBusinessService();
-          if (!whatsappService) {
-            return { success: false, platform, postId, error: 'WhatsApp Business service not configured — add credentials in Settings > API Keys' };
-          }
-          // WhatsApp is not broadcast — needs a recipient. Use default from config if available.
-          const whatsappResult = await whatsappService.sendTextMessage({ to: '', text: content });
-          if (!whatsappResult.success && whatsappResult.error?.includes('recipient')) {
-            return { success: false, platform, postId, error: 'WhatsApp requires a recipient phone number — configure default in Settings > API Keys' };
-          }
-          return { success: whatsappResult.success, platform, postId, platformPostId: whatsappResult.messageId, error: whatsappResult.error };
-        }
+        case 'whatsapp_business':
+          // WhatsApp Business is a 1:1 messaging channel, NOT a broadcast/feed
+          // destination — there is no "post to your followers" surface, so it can
+          // never be a scheduled-post target. The old code called sendTextMessage
+          // with an empty recipient, which always failed with a confusing
+          // "configure a recipient" error. Surfaced honestly instead.
+          return {
+            success: false,
+            platform,
+            postId,
+            error: 'WhatsApp Business is a direct (1:1) messaging channel, not a feed-post destination — it cannot be used for scheduled social posts.',
+          };
 
         case 'google_business': {
           const gbpService = await createGoogleBusinessService();
@@ -1175,12 +1174,38 @@ export class AutonomousPostingAgent {
           return { success: gbpResult.success, platform, postId, platformPostId: gbpResult.postName, error: gbpResult.error };
         }
 
+        case 'discord':
+          // Discord posts to a specific SERVER CHANNEL (or via an incoming
+          // webhook), not a public feed. A real DiscordPostingService exists
+          // (channel message + webhook, no app-store approval needed), but it
+          // requires a target channel/webhook that the composer does not yet
+          // supply — so this is honestly gated rather than silently routed to the
+          // "Unsupported platform" default. Wiring a channel/webhook picker into
+          // the composer is a tracked follow-up.
+          return {
+            success: false,
+            platform,
+            postId,
+            error: 'Discord posts to a specific server channel — connect a Discord server and choose a channel/webhook first (channel posting is not yet wired into the composer).',
+          };
+
+        case 'twitch':
+          // Twitch has no feed-post surface: its outbound actions are chat
+          // announcements, clips, and schedule/title updates via the Twitch
+          // integration — not scheduled social posts.
+          return {
+            success: false,
+            platform,
+            postId,
+            error: 'Twitch is not a feed-post destination — it supports chat announcements and clips via the Twitch integration, not scheduled posts.',
+          };
+
         default:
           return {
             success: false,
             platform,
             postId,
-            error: `Unsupported platform: ${platform}. Supported: all 14 SOCIAL_PLATFORMS`,
+            error: `Posting is not available for this platform: ${platform}.`,
           };
       }
     } catch (error) {

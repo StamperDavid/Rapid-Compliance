@@ -7,7 +7,7 @@
  * Firestore path: organizations/{PLATFORM_ID}/social_approvals/{approvalId}
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type {
@@ -55,7 +55,7 @@ export class ApprovalService {
       scheduledFor: data.scheduledFor,
     };
 
-    await FirestoreService.set(approvalsPath(), approvalId, item, false);
+    await AdminFirestoreService.set(approvalsPath(), approvalId, item, false);
 
     logger.info('ApprovalService: Approval created', {
       approvalId,
@@ -86,7 +86,7 @@ export class ApprovalService {
 
       constraints.push(orderBy('flaggedAt', 'desc'));
 
-      return await FirestoreService.getAll<ApprovalItem>(approvalsPath(), constraints);
+      return await AdminFirestoreService.getAll<ApprovalItem>(approvalsPath(), constraints);
     } catch (error) {
       logger.error('ApprovalService: Failed to list approvals', error instanceof Error ? error : new Error(String(error)));
       return [];
@@ -97,7 +97,7 @@ export class ApprovalService {
    * Get a single approval item
    */
   static async getApproval(approvalId: string): Promise<ApprovalItem | null> {
-    return FirestoreService.get<ApprovalItem>(approvalsPath(), approvalId);
+    return AdminFirestoreService.get<ApprovalItem>(approvalsPath(), approvalId);
   }
 
   /**
@@ -130,7 +130,7 @@ export class ApprovalService {
       updates.comments = [...existing.comments, newComment];
     }
 
-    await FirestoreService.update(approvalsPath(), approvalId, updates);
+    await AdminFirestoreService.update(approvalsPath(), approvalId, updates);
 
     logger.info('ApprovalService: Status updated', { approvalId, status, reviewedBy });
 
@@ -158,7 +158,7 @@ export class ApprovalService {
     };
 
     const updatedComments = [...existing.comments, newComment];
-    await FirestoreService.update(approvalsPath(), approvalId, {
+    await AdminFirestoreService.update(approvalsPath(), approvalId, {
       comments: updatedComments,
     });
 
@@ -170,7 +170,7 @@ export class ApprovalService {
    */
   static async getCounts(): Promise<Record<ApprovalStatus | 'total', number>> {
     try {
-      const all = await FirestoreService.getAll<ApprovalItem>(approvalsPath());
+      const all = await AdminFirestoreService.getAll<ApprovalItem>(approvalsPath());
 
       const counts: Record<string, number> = {
         total: all.length,

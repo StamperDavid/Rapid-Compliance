@@ -45,6 +45,7 @@ export const DEFAULT_AGENT_SETTINGS: AutonomousAgentSettings = {
   preferredPostingTimes: [],
   pauseOnWeekends: true,
   autoApprovalEnabled: false,
+  autoQueueEnabled: false,
 };
 
 export class AgentConfigService {

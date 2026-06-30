@@ -30,6 +30,7 @@ const updateSettingsSchema = z.object({
   })).optional(),
   pauseOnWeekends: z.boolean().optional(),
   autoApprovalEnabled: z.boolean().optional(),
+  autoQueueEnabled: z.boolean().optional(),
 });
 
 export async function GET(request: NextRequest) {

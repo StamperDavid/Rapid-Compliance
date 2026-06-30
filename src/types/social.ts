@@ -577,6 +577,13 @@ export interface AutonomousAgentSettings {
   preferredPostingTimes: TimeSlot[];
   pauseOnWeekends: boolean;
   autoApprovalEnabled: boolean;
+  /**
+   * When true, the scheduled-social-publisher cron also drips the evergreen
+   * `social_queue` (one post per drain), rate-limited to `maxDailyPosts` per day.
+   * Default false so the queue never auto-posts to real audiences unless the
+   * operator explicitly opts in.
+   */
+  autoQueueEnabled?: boolean;
   updatedAt?: string;
   updatedBy?: string;
 }
