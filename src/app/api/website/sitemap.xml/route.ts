@@ -72,9 +72,11 @@ export async function GET(request: NextRequest) {
       return new NextResponse('Site not found', { status: 404 });
     }
 
-    // Get all published pages for this org
+    // Get all published pages for this org.
+    // Builder pages live in `website/pages/items` (the same store the pages API
+    // and live site read/write) — not the empty `website/config/pages` path.
     const pagesRef = adminDal.getNestedCollection(
-      `${getSubCollection('website')}/config/pages`
+      `${getSubCollection('website')}/pages/items`
     );
     const pagesSnapshot = await pagesRef.where('status', '==', 'published').get();
 

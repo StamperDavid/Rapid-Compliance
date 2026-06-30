@@ -68,9 +68,11 @@ export async function GET(request: NextRequest) {
     const siteDescription = settings?.seo?.description ?? '';
     const keywords = settings?.seo?.keywords ?? [];
 
-    // Fetch published pages
+    // Fetch published pages.
+    // Builder pages live in `website/pages/items` (the same store the pages API
+    // and live site read/write) — not the empty `website/config/pages` path.
     const pagesRef = adminDal.getNestedCollection(
-      `${getSubCollection('website')}/config/pages`
+      `${getSubCollection('website')}/pages/items`
     );
     const pagesSnapshot = await pagesRef.where('status', '==', 'published').get();
     const pages: Page[] = [];

@@ -66,28 +66,56 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = request.nextUrl;
     const status = searchParams.get('status'); // Filter by status
+    const slugParam = searchParams.get('slug'); // Resolve a single page by URL slug
 
     const pagesRef = adminDal.getNestedCollection(
       `${getSubCollection('website')}/pages/items`
     );
 
-    // Build query with optional status filter
-    let snapshot;
-    if (status) {
-      snapshot = await pagesRef
-        .where('status', '==', status)
-        .orderBy('updatedAt', 'desc')
-        .get();
-    } else {
-      snapshot = await pagesRef
-        .orderBy('updatedAt', 'desc')
-        .get();
-    }
+    let pages: Array<{ id: string } & Record<string, unknown>>;
 
-    const pages = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    if (slugParam !== null) {
+      // Slug-scoped lookup: return the single page that matches this URL.
+      // The live site requests `?slug=<path>` (and `home` for the root), so we
+      // must honor it instead of returning the most-recently-updated page.
+      const querySlug = async (
+        slugValue: string
+      ): Promise<Array<{ id: string } & Record<string, unknown>>> => {
+        let query: FirebaseFirestore.Query = pagesRef.where('slug', '==', slugValue);
+        if (status) {
+          query = query.where('status', '==', status);
+        }
+        const snap = await query.get();
+        return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      };
+
+      pages = await querySlug(slugParam);
+
+      // Home/default case: the root URL arrives as `home`, but a page may store
+      // its slug as an empty string. Fall back so the homepage still resolves.
+      if (pages.length === 0 && (slugParam === 'home' || slugParam === '')) {
+        const fallbackSlug = slugParam === 'home' ? '' : 'home';
+        pages = await querySlug(fallbackSlug);
+      }
+    } else {
+      // List behavior for callers that pass no slug (unchanged).
+      let snapshot;
+      if (status) {
+        snapshot = await pagesRef
+          .where('status', '==', status)
+          .orderBy('updatedAt', 'desc')
+          .get();
+      } else {
+        snapshot = await pagesRef
+          .orderBy('updatedAt', 'desc')
+          .get();
+      }
+
+      pages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    }
 
     if (pages.length === 0) {
       const collectionPath = `${getSubCollection('website')}/pages/items`;
