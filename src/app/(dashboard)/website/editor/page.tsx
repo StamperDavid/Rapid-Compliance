@@ -2,14 +2,16 @@
  * Visual Page Builder - Main Editor
  * Three-panel layout: Left Panel | Canvas | Properties
  *
- * Saves to FirestoreService('platform', 'website-editor-config') — the same path
- * that usePageContent() reads from on public pages.
+ * Loads and saves the REAL page via /api/website/pages (canonical store
+ * `website/pages/items`) — the same store the live `/sites/<slug>` site reads.
+ * Branding/theme is loaded/saved separately to the `website-config` doc.
  */
 
 'use client';
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
@@ -122,97 +124,93 @@ function editorPageToPage(editorPage: EditorPage): Page {
   };
 }
 
-/** Convert the current Page back to EditorPage format for saving */
-function pageToEditorPage(page: Page, original: EditorPage): EditorPage {
+// ============================================================================
+// Canonical Page <- API response coercion
+// ============================================================================
+
+interface RawApiPage {
+  id?: unknown;
+  slug?: unknown;
+  title?: unknown;
+  content?: unknown;
+  seo?: unknown;
+  status?: unknown;
+  version?: unknown;
+}
+
+function normalizeStatus(value: unknown): Page['status'] {
+  if (value === 'published') {return 'published';}
+  if (value === 'scheduled') {return 'scheduled';}
+  return 'draft';
+}
+
+/** Coerce a raw `/api/website/pages` page object into the canonical Page type. */
+function apiPageToPage(raw: unknown): Page | null {
+  if (raw === null || typeof raw !== 'object') {return null;}
+  const r = raw as RawApiPage;
+  if (typeof r.id !== 'string') {return null;}
+  const now = new Date().toISOString();
   return {
-    ...original,
-    name: page.title,
-    slug: page.slug,
-    isPublished: page.status === 'published',
-    metaTitle: page.seo.metaTitle,
-    metaDescription: page.seo.metaDescription,
-    sections: page.content.map(section => pageSectionToEditorSection(section)),
+    id: r.id,
+    slug: typeof r.slug === 'string' ? r.slug : '',
+    title: typeof r.title === 'string' ? r.title : 'Untitled',
+    content: Array.isArray(r.content) ? (r.content as PageSection[]) : [],
+    seo: r.seo !== null && typeof r.seo === 'object' ? (r.seo as Page['seo']) : {},
+    status: normalizeStatus(r.status),
+    version: typeof r.version === 'number' ? r.version : 1,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: '',
+    lastEditedBy: '',
   };
 }
 
-function pageSectionToEditorSection(section: PageSection): EditorPageSection {
-  const allWidgets = section.columns.flatMap(col => col.widgets);
-  const paddingStr = section.padding
-    ? `${section.padding.top ?? '0'} ${section.padding.right ?? '0'} ${section.padding.bottom ?? '0'} ${section.padding.left ?? '0'}`
-    : undefined;
+/** Build a lightweight EditorPage list entry (for the Pages panel) from a raw page. */
+function apiPageToListEntry(raw: unknown): EditorPage | null {
+  if (raw === null || typeof raw !== 'object') {return null;}
+  const r = raw as RawApiPage;
+  if (typeof r.id !== 'string') {return null;}
   return {
-    id: section.id,
-    type: 'section',
-    name: section.name ?? 'Section',
-    visible: true,
-    styles: {
-      desktop: {
-        backgroundColor: section.backgroundColor,
-        padding: paddingStr,
-      },
-    },
-    children: allWidgets.map(w => widgetToEditorWidget(w)),
+    id: r.id,
+    name: typeof r.title === 'string' ? r.title : 'Untitled',
+    slug: typeof r.slug === 'string' ? r.slug : '',
+    sections: [],
+    isPublished: r.status === 'published',
+    isInNav: false,
+    navOrder: 0,
   };
 }
 
-function widgetToEditorWidget(widget: Widget): WidgetElement {
-  const style = widget.style ?? {};
-  const desktop: Record<string, string | undefined> = {};
-
-  // Map all style properties
-  if (style.fontSize) {desktop.fontSize = style.fontSize;}
-  if (style.fontWeight) {desktop.fontWeight = String(style.fontWeight);}
-  if (style.fontFamily) {desktop.fontFamily = style.fontFamily;}
-  if (style.lineHeight) {desktop.lineHeight = style.lineHeight;}
-  if (style.letterSpacing) {desktop.letterSpacing = style.letterSpacing;}
-  if (style.textAlign) {desktop.textAlign = style.textAlign;}
-  if (style.textTransform) {desktop.textTransform = style.textTransform;}
-  if (style.color) {desktop.color = style.color;}
-  if (style.backgroundColor) {desktop.backgroundColor = style.backgroundColor;}
-  if (style.border) {desktop.border = style.border;}
-  if (style.borderRadius) {desktop.borderRadius = style.borderRadius;}
-  if (style.borderWidth) {desktop.borderWidth = style.borderWidth;}
-  if (style.borderColor) {desktop.borderColor = style.borderColor;}
-  if (style.borderStyle) {desktop.borderStyle = style.borderStyle;}
-  if (style.boxShadow) {desktop.boxShadow = style.boxShadow;}
-  if (style.opacity !== undefined) {desktop.opacity = String(style.opacity);}
-  if (style.transform) {desktop.transform = style.transform;}
-  if (style.transition) {desktop.transition = style.transition;}
-  if (style.backgroundImage) {desktop.backgroundImage = style.backgroundImage;}
-  if (style.backgroundSize) {desktop.backgroundSize = style.backgroundSize;}
-  if (style.backgroundPosition) {desktop.backgroundPosition = style.backgroundPosition;}
-  if (style.width) {desktop.width = style.width;}
-  if (style.height) {desktop.height = style.height;}
-  if (style.maxWidth) {desktop.maxWidth = style.maxWidth;}
-  if (style.minHeight) {desktop.minHeight = style.minHeight;}
-  if (style.display) {desktop.display = style.display;}
-  if (style.flexDirection) {desktop.flexDirection = style.flexDirection;}
-  if (style.alignItems) {desktop.alignItems = style.alignItems;}
-  if (style.justifyContent) {desktop.justifyContent = style.justifyContent;}
-  if (style.margin) {
-    const m = style.margin;
-    if (m.bottom) {desktop.marginBottom = m.bottom;}
-    if (m.top) {desktop.marginTop = m.top;}
+function extractPage(json: unknown): unknown {
+  if (json !== null && typeof json === 'object' && 'page' in json) {
+    return (json as { page: unknown }).page;
   }
-  if (style.padding) {
-    const p = style.padding;
-    desktop.padding = `${p.top ?? '0'} ${p.right ?? '0'} ${p.bottom ?? '0'} ${p.left ?? '0'}`;
-  }
+  return null;
+}
 
-  // Determine content: if widget.data has text/content fields, use those as string
-  let content: unknown = widget.data;
-  if (widget.data.text && typeof widget.data.text === 'string' && Object.keys(widget.data).length <= 3) {
-    content = widget.data.text;
-  } else if (widget.data.content && typeof widget.data.content === 'string' && Object.keys(widget.data).length <= 2) {
-    content = widget.data.content;
+function extractPages(json: unknown): unknown[] {
+  if (json !== null && typeof json === 'object' && 'pages' in json) {
+    const pages = (json as { pages: unknown }).pages;
+    return Array.isArray(pages) ? pages : [];
   }
+  return [];
+}
 
+/** A blank, never-saved page used when there is no home page yet. */
+function blankPage(): Page {
+  const now = new Date().toISOString();
   return {
-    id: widget.id,
-    type: widget.type,
-    content,
-    styles: { desktop: desktop as Record<string, string> },
-    settings: widget.data.tag ? { tag: widget.data.tag as string, ...((widget.data.href ? { href: widget.data.href as string } : {})) } : undefined,
+    id: `page_${Date.now()}`,
+    slug: 'home',
+    title: 'Home',
+    content: [],
+    seo: { metaTitle: '', metaDescription: '' },
+    status: 'draft',
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: '',
+    lastEditedBy: '',
   };
 }
 
@@ -220,14 +218,20 @@ function widgetToEditorWidget(widget: Widget): WidgetElement {
 // MAIN EDITOR COMPONENT
 // ============================================================================
 
-export default function PageEditorPage() {
+function PageEditorInner() {
   const { user: _user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
 
-  // Full website config from Firestore
+  // Branding/theme + page list for the left panel (NOT the page content store)
   const [config, setConfig] = useState<WebsiteConfig | null>(null);
   const [selectedPageId, setSelectedPageId] = useState<string>('home');
 
-  // Editor state (operates on a single page converted to Page type)
+  // Whether the current page already exists in the canonical store (PUT) or is
+  // a brand-new page that still needs to be created (POST).
+  const [pagePersisted, setPagePersisted] = useState(false);
+  const didLoadRef = useRef(false);
+
+  // Editor state (operates on the canonical Page shape directly)
   const [page, setPage] = useState<Page | null>(null);
   const [selectedElement, setSelectedElement] = useState<{
     type: 'section' | 'widget';
@@ -237,6 +241,7 @@ export default function PageEditorPage() {
   const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -258,119 +263,264 @@ export default function PageEditorPage() {
   const loadConfig = React.useCallback(async () => {
     try {
       setLoading(true);
+
+      // 1. Branding/theme + page list for the left panel (separate store).
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const data = await FirestoreService.get('platform', 'website-editor-config');
+      const brandingDoc = await FirestoreService.get('platform', 'website-config');
 
-      let websiteConfig: WebsiteConfig;
-
-      if (data && typeof data === 'object' && 'pages' in data) {
-        websiteConfig = data as unknown as WebsiteConfig;
-        // Merge with defaults to ensure all pages exist
-        if (!websiteConfig.branding) {websiteConfig.branding = DEFAULT_CONFIG.branding;}
-        if (!websiteConfig.navigation) {websiteConfig.navigation = DEFAULT_CONFIG.navigation;}
-        if (!websiteConfig.footer) {websiteConfig.footer = DEFAULT_CONFIG.footer;}
-      } else {
-        // No config in Firestore — use defaults
-        websiteConfig = { ...DEFAULT_CONFIG };
-        logger.info('[Editor] No config in Firestore, using defaults');
+      let branding = DEFAULT_CONFIG.branding;
+      let navigation = DEFAULT_CONFIG.navigation;
+      let footer = DEFAULT_CONFIG.footer;
+      if (brandingDoc && typeof brandingDoc === 'object') {
+        const bd = brandingDoc as Partial<WebsiteConfig>;
+        if (bd.branding) {branding = bd.branding;}
+        if (bd.navigation) {navigation = bd.navigation;}
+        if (bd.footer) {footer = bd.footer;}
       }
 
-      setConfig(websiteConfig);
-
-      // Load the selected page (default: home)
-      const targetPage = websiteConfig.pages.find(p => p.id === selectedPageId) ?? websiteConfig.pages[0];
-      if (targetPage) {
-        const converted = editorPageToPage(targetPage);
-        setPage(converted);
-        pushState(converted);
+      // 2. Canonical page list (for the Pages tab).
+      let listEntries: EditorPage[] = [];
+      try {
+        const listRes = await fetch('/api/website/pages');
+        if (listRes.ok) {
+          const listJson: unknown = await listRes.json();
+          listEntries = extractPages(listJson)
+            .map(apiPageToListEntry)
+            .filter((p): p is EditorPage => p !== null);
+        }
+      } catch (listError) {
+        logger.warn('[Editor] Could not load page list', { error: String(listError) });
       }
+
+      // 3. Resolve the page to edit: ?pageId → that page; else the `home` page; else blank.
+      const pageIdParam = searchParams.get('pageId');
+      let resolvedPage: Page | null = null;
+      let persisted = false;
+
+      if (pageIdParam) {
+        const res = await fetch(`/api/website/pages/${encodeURIComponent(pageIdParam)}`);
+        if (res.ok) {
+          const json: unknown = await res.json();
+          resolvedPage = apiPageToPage(extractPage(json));
+          persisted = resolvedPage !== null;
+        }
+      }
+
+      if (!resolvedPage) {
+        const res = await fetch('/api/website/pages?slug=home');
+        if (res.ok) {
+          const json: unknown = await res.json();
+          const first = extractPages(json)[0];
+          resolvedPage = apiPageToPage(first);
+          persisted = resolvedPage !== null;
+        }
+      }
+
+      if (!resolvedPage) {
+        resolvedPage = blankPage();
+        persisted = false;
+        logger.info('[Editor] No saved page found — starting a blank Home page');
+      }
+
+      setConfig({ branding, pages: listEntries, navigation, footer });
+      setPagePersisted(persisted);
+      setSelectedPageId(resolvedPage.id);
+      setPage(resolvedPage);
+      pushState(resolvedPage);
+      setHasUnsavedChanges(false);
     } catch (error) {
       logger.error('[Editor] Load error:', error instanceof Error ? error : new Error(String(error)));
-      // Fallback to defaults
-      const websiteConfig = { ...DEFAULT_CONFIG };
-      setConfig(websiteConfig);
-      const homePage = editorPageToPage(websiteConfig.pages[0]);
-      setPage(homePage);
-      pushState(homePage);
+      const fallback = blankPage();
+      setConfig({
+        branding: DEFAULT_CONFIG.branding,
+        pages: [],
+        navigation: DEFAULT_CONFIG.navigation,
+        footer: DEFAULT_CONFIG.footer,
+      });
+      setPagePersisted(false);
+      setSelectedPageId(fallback.id);
+      setPage(fallback);
+      pushState(fallback);
     } finally {
       setLoading(false);
     }
-  }, [selectedPageId, pushState]);
+  }, [searchParams, pushState]);
 
   useEffect(() => {
     if (authLoading) {return;}
+    if (didLoadRef.current) {return;}
+    didLoadRef.current = true;
     void loadConfig();
   }, [authLoading, loadConfig]);
 
   // ============================================================================
-  // Switch page
+  // Switch page (fetch the chosen page directly; update the URL without reload)
   // ============================================================================
 
-  const switchPage = React.useCallback((pageId: string) => {
-    if (!config) {return;}
-    const targetPage = config.pages.find(p => p.id === pageId);
-    if (!targetPage) {return;}
-
-    setSelectedPageId(pageId);
-    const converted = editorPageToPage(targetPage);
-    setPage(converted);
-    pushState(converted);
-    setSelectedElement(null);
-    setHasUnsavedChanges(false);
-  }, [config, pushState]);
+  const switchPage = React.useCallback(async (pageId: string) => {
+    try {
+      const res = await fetch(`/api/website/pages/${encodeURIComponent(pageId)}`);
+      if (!res.ok) {
+        setNotification({ message: 'Could not open that page', type: 'error' });
+        return;
+      }
+      const json: unknown = await res.json();
+      const loaded = apiPageToPage(extractPage(json));
+      if (!loaded) {
+        setNotification({ message: 'Could not open that page', type: 'error' });
+        return;
+      }
+      setSelectedPageId(loaded.id);
+      setPage(loaded);
+      setPagePersisted(true);
+      pushState(loaded);
+      setSelectedElement(null);
+      setHasUnsavedChanges(false);
+      window.history.replaceState(null, '', `/website/editor?pageId=${encodeURIComponent(loaded.id)}`);
+    } catch (error) {
+      logger.error('[Editor] Switch page error:', error instanceof Error ? error : new Error(String(error)));
+      setNotification({ message: 'Could not open that page', type: 'error' });
+    }
+  }, [pushState]);
 
   // ============================================================================
   // Save config to Firestore
   // ============================================================================
 
-  const saveConfig = React.useCallback(async (isAutoSave: boolean = false): Promise<void> => {
-    if (!page || !config) {return;}
+  /**
+   * Persist the current page to the canonical store (`website/pages/items`)
+   * via the pages API. Returns the saved page id, or null on failure.
+   * Also writes branding/nav/footer to the separate `website-config` doc.
+   */
+  const persistPage = React.useCallback(async (): Promise<string | null> => {
+    if (!page) {return null;}
 
+    const body = {
+      page: {
+        title: page.title,
+        slug: page.slug,
+        status: page.status ?? 'draft',
+        content: page.content,
+        seo: page.seo,
+      },
+    };
+
+    let savedId: string | null = null;
+
+    if (pagePersisted) {
+      // Existing page → update in place.
+      const res = await fetch(`/api/website/pages/${encodeURIComponent(page.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        throw new Error(`Save failed (${res.status})`);
+      }
+      savedId = page.id;
+    } else {
+      // New page → create it.
+      const res = await fetch('/api/website/pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const errJson: unknown = await res.json().catch(() => null);
+        const detail =
+          errJson !== null && typeof errJson === 'object' && 'error' in errJson
+            ? String((errJson as { error: unknown }).error)
+            : `Save failed (${res.status})`;
+        throw new Error(detail);
+      }
+      const json: unknown = await res.json();
+      const created = apiPageToPage(extractPage(json));
+      savedId = created?.id ?? null;
+
+      if (savedId) {
+        // Adopt the persisted id so subsequent saves update instead of recreating.
+        setPage(prev => (prev ? { ...prev, id: savedId as string } : prev));
+        setSelectedPageId(savedId);
+        setPagePersisted(true);
+        window.history.replaceState(null, '', `/website/editor?pageId=${encodeURIComponent(savedId)}`);
+      }
+    }
+
+    // Persist branding/nav/footer separately (used by the public site theme).
+    if (config) {
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set('platform', 'website-config', {
+        branding: config.branding,
+        navigation: config.navigation,
+        footer: config.footer,
+      } as Record<string, unknown>);
+    }
+
+    return savedId;
+  }, [page, config, pagePersisted]);
+
+  const saveConfig = React.useCallback(async (isAutoSave: boolean = false): Promise<string | null> => {
+    if (!page) {return null;}
     try {
       setSaving(true);
-
-      // Update the current page in config
-      const currentEditorPage = config.pages.find(p => p.id === selectedPageId);
-      if (!currentEditorPage) {return;}
-
-      const updatedEditorPage = pageToEditorPage(page, currentEditorPage);
-      const updatedPages = config.pages.map(p =>
-        p.id === selectedPageId ? updatedEditorPage : p
-      );
-
-      const updatedConfig: WebsiteConfig = {
-        ...config,
-        pages: updatedPages,
-        updatedAt: new Date().toISOString(),
-      };
-
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-
-      // Save to the same path usePageContent reads from
-      await FirestoreService.set('platform', 'website-editor-config', updatedConfig as unknown as Record<string, unknown>, false);
-
-      // Also save branding/nav/footer for useWebsiteTheme
-      await FirestoreService.set('platform', 'website-config', {
-        branding: updatedConfig.branding,
-        navigation: updatedConfig.navigation,
-        footer: updatedConfig.footer,
-      } as Record<string, unknown>);
-
-      setConfig(updatedConfig);
+      const savedId = await persistPage();
       setHasUnsavedChanges(false);
-
       if (!isAutoSave) {
         setNotification({ message: 'Saved successfully!', type: 'success' });
       }
+      return savedId;
     } catch (error) {
       logger.error('[Editor] Save error:', error instanceof Error ? error : new Error(String(error)));
       if (!isAutoSave) {
-        setNotification({ message: 'Failed to save', type: 'error' });
+        const message = error instanceof Error ? error.message : 'Failed to save';
+        setNotification({ message, type: 'error' });
       }
+      return null;
     } finally {
       setSaving(false);
     }
-  }, [page, config, selectedPageId]);
+  }, [page, persistPage]);
+
+  // ============================================================================
+  // Publish — save the latest content, then flip the page live
+  // ============================================================================
+
+  const publishPage = React.useCallback(async (): Promise<void> => {
+    if (!page) {return;}
+    try {
+      setPublishing(true);
+
+      // Save current edits first so the live page matches the editor.
+      const savedId = await persistPage();
+      if (!savedId) {
+        setNotification({ message: 'Could not save the page before publishing', type: 'error' });
+        return;
+      }
+
+      const res = await fetch(`/api/website/pages/${encodeURIComponent(savedId)}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        throw new Error(`Publish failed (${res.status})`);
+      }
+
+      setPage(prev => (prev ? { ...prev, status: 'published' } : prev));
+      setConfig(prev =>
+        prev
+          ? { ...prev, pages: prev.pages.map(p => (p.id === savedId ? { ...p, isPublished: true } : p)) }
+          : prev
+      );
+      setHasUnsavedChanges(false);
+      setNotification({ message: 'Your page is now live!', type: 'success' });
+    } catch (error) {
+      logger.error('[Editor] Publish error:', error instanceof Error ? error : new Error(String(error)));
+      setNotification({ message: 'Failed to publish', type: 'error' });
+    } finally {
+      setPublishing(false);
+    }
+  }, [page, persistPage]);
 
   // Auto-save every 30 seconds
   useEffect(() => {
@@ -388,27 +538,29 @@ export default function PageEditorPage() {
   // ============================================================================
 
   const resetPage = React.useCallback(() => {
-    const defaultPage = DEFAULT_CONFIG.pages.find(p => p.id === selectedPageId);
-    if (!defaultPage || !config) {return;}
+    if (!page) {return;}
+    const defaultPage =
+      DEFAULT_CONFIG.pages.find(p => p.id === selectedPageId) ??
+      DEFAULT_CONFIG.pages.find(p => p.slug === page.slug);
+    if (!defaultPage) {
+      setNotification({ message: 'No default content exists for this page', type: 'error' });
+      return;
+    }
 
     setConfirmDialog({
       message: `Reset "${defaultPage.name}" to its default content? This cannot be undone.`,
       onConfirm: () => {
         const converted = editorPageToPage(defaultPage);
-        setPage(converted);
-        pushState(converted);
+        // Keep this page's identity/slug so the reset still saves to the same record.
+        const reset: Page = { ...converted, id: page.id, slug: page.slug, status: page.status };
+        setPage(reset);
+        pushState(reset);
         setHasUnsavedChanges(true);
-
-        // Also update in config
-        const updatedPages = config.pages.map(p =>
-          p.id === selectedPageId ? defaultPage : p
-        );
-        setConfig({ ...config, pages: updatedPages });
         setConfirmDialog(null);
         setNotification({ message: 'Page reset to default. Don\'t forget to save!', type: 'success' });
       },
     });
-  }, [selectedPageId, config, pushState]);
+  }, [selectedPageId, page, pushState]);
 
   // ============================================================================
   // Keyboard shortcuts
@@ -592,8 +744,9 @@ export default function PageEditorPage() {
         }}
         onSave={() => void saveConfig(false)}
         onReset={resetPage}
+        onPublish={() => void publishPage()}
         saving={saving}
-        publishing={false}
+        publishing={publishing}
         autoSaveEnabled={autoSaveEnabled}
         onToggleAutoSave={() => setAutoSaveEnabled(!autoSaveEnabled)}
         hasUnsavedChanges={hasUnsavedChanges}
@@ -618,7 +771,7 @@ export default function PageEditorPage() {
           }}
           config={config ?? undefined}
           selectedPageId={selectedPageId}
-          onSwitchPage={switchPage}
+          onSwitchPage={(id) => void switchPage(id)}
           onUpdateBranding={updateBranding}
         />
 
@@ -670,5 +823,23 @@ export default function PageEditorPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ============================================================================
+// Suspense wrapper (required because PageEditorInner uses useSearchParams)
+// ============================================================================
+
+export default function PageEditorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 bg-black text-white h-screen flex items-center justify-center">
+          <div>Loading editor...</div>
+        </div>
+      }
+    >
+      <PageEditorInner />
+    </Suspense>
   );
 }

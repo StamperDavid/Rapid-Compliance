@@ -10,15 +10,21 @@ import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import type { PageSection, Widget } from '@/types/website';
 import type {
-  FeatureItem,
-  PricingPlan,
   LogoItem,
-  StatItem,
   GalleryImage,
   SocialIcon,
   TabItem,
   AccordionItem
 } from '@/types/widget-content';
+import {
+  canonicalWidgetType,
+  readFeatures,
+  readStats,
+  readFaqs,
+  readPlans,
+  formatPlanPrice,
+  formatPlanPeriod,
+} from '@/lib/website-builder/widget-normalizer';
 import SafeHtml from '@/components/SafeHtml';
 import { OptimizedImage } from './OptimizedImage';
 import { AccessibleWidget, SkipToMain } from './AccessibleWidget';
@@ -258,7 +264,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
 
   const style = getResponsiveStyle();
 
-  switch (widget.type) {
+  // Route legacy widget type names (feature-grid, pricing-table) to their
+  // canonical cases so seed/template content renders identically to native
+  // canonical content.
+  switch (canonicalWidgetType(widget.type)) {
     case 'heading': {
       const level = widget.data.level ?? 1;
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
@@ -389,7 +398,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     }
 
     case 'features': {
-      const features = (widget.data.features as FeatureItem[]) || [];
+      const features = readFeatures(widget.data);
       return (
         <div className="feature-grid">
           {features.map((feature, idx: number) => (
@@ -420,46 +429,69 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     }
 
     case 'pricing': {
-      const plans = (widget.data.plans as PricingPlan[]) || [];
+      const plans = readPlans(widget.data);
       return (
         <div className="pricing-grid">
-          {plans.map((plan, idx: number) => (
-            <div
-              key={idx}
-              style={{
-                padding: '32px',
-                backgroundColor: 'white',
-                border: '2px solid var(--color-border-light)',
-                borderRadius: '8px',
-                textAlign: 'center',
-              }}
-            >
-              <h3 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px' }}>
-                {plan.name}
-              </h3>
-              <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '24px' }}>
-                ${plan.price}
-                <span style={{ fontSize: '16px', fontWeight: 'normal', color: 'var(--color-text-disabled)' }}>
-                  /month
-                </span>
-              </div>
-              <button
+          {plans.map((plan, idx: number) => {
+            const period = formatPlanPeriod(plan.period ?? '');
+            return (
+              <div
+                key={idx}
                 style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: plan.featured ? 'var(--color-info)' : 'white',
-                  color: plan.featured ? 'white' : 'var(--color-border-strong)',
-                  border: plan.featured ? 'none' : '1px solid var(--color-border-light)',
-                  borderRadius: '6px',
-                  fontSize: '16px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
+                  padding: '32px',
+                  backgroundColor: 'white',
+                  border: plan.featured ? '2px solid var(--color-info)' : '2px solid var(--color-border-light)',
+                  borderRadius: '8px',
+                  textAlign: 'center',
                 }}
               >
-                Choose Plan
-              </button>
-            </div>
-          ))}
+                <h3 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px' }}>
+                  {plan.name}
+                </h3>
+                <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '24px' }}>
+                  {formatPlanPrice(plan.price)}
+                  {period !== '' && (
+                    <span style={{ fontSize: '16px', fontWeight: 'normal', color: 'var(--color-text-disabled)' }}>
+                      {period}
+                    </span>
+                  )}
+                </div>
+                {plan.features.length > 0 && (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', textAlign: 'left' }}>
+                    {plan.features.map((feature, fIdx) => (
+                      <li
+                        key={fIdx}
+                        style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '12px', fontSize: '14px' }}
+                      >
+                        <span style={{ color: 'var(--color-info)' }}>&#10003;</span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: plan.featured ? 'var(--color-info)' : 'white',
+                    color: plan.featured ? 'white' : 'var(--color-border-strong)',
+                    border: plan.featured ? 'none' : '1px solid var(--color-border-light)',
+                    borderRadius: '6px',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    if (plan.buttonUrl) {
+                      window.location.href = plan.buttonUrl;
+                    }
+                  }}
+                >
+                  {plan.buttonText !== undefined && plan.buttonText !== '' ? plan.buttonText : 'Choose Plan'}
+                </button>
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -500,7 +532,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
 
     case 'cta': {
       const ctaHeadingVal = widget.data.heading as string | null | undefined;
-      const ctaTextVal = widget.data.text as string | null | undefined;
+      const ctaTextRaw = widget.data.text as string | null | undefined;
+      const ctaTextVal = ctaTextRaw !== '' && ctaTextRaw != null
+        ? ctaTextRaw
+        : (widget.data.subheading as string | null | undefined);
       const ctaButtonTextVal = widget.data.buttonText as string | null | undefined;
       return (
         <div
@@ -638,7 +673,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       return <div style={style} />;
 
     case 'stats': {
-      const stats = (widget.data.stats as StatItem[]) || [];
+      const stats = readStats(widget.data);
       return (
         <div className="feature-grid" style={style}>
           {stats.map((stat, idx: number) => (
@@ -794,7 +829,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     }
 
     case 'faq': {
-      const faqs = (widget.data.faqs as Array<{ question: string; answer: string }>) ?? [];
+      const faqs = readFaqs(widget.data);
       return <AccordionWidget items={faqs.map((f) => ({ title: f.question, content: f.answer }))} style={style} />;
     }
 

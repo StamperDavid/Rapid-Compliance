@@ -1,13 +1,19 @@
 /**
  * Editor Canvas
- * Center panel showing page preview with drag-drop (dark theme)
+ *
+ * Thin wrapper that preserves the editor's existing prop contract while
+ * delegating all drawing to {@link EditableCanvas}, which renders through the
+ * SAME engine the live site uses (`ResponsiveRenderer`). This makes the canvas
+ * a true WYSIWYG: what you see in the editor is exactly what publishes, with no
+ * gray "<type> widget" placeholder boxes.
+ *
+ * The external props are unchanged so `editor/page.tsx` needs no edits.
  */
 
 'use client';
 
 import type { Page, PageSection, Widget } from '@/types/website';
-import WidgetRenderer from '@/components/website-builder/WidgetRenderer';
-import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
+import EditableCanvas from '@/components/website-builder/EditableCanvas';
 
 interface SelectedElement {
   type: 'section' | 'widget';
@@ -34,325 +40,24 @@ export default function EditorCanvas({
   selectedElement,
   onSelectElement,
   onAddSection,
-  onUpdateSection,
+  onUpdateSection: _onUpdateSection,
   onDeleteSection,
   onAddWidget,
   onUpdateWidget: _onUpdateWidget,
   onDeleteWidget,
 }: EditorCanvasProps) {
-  // Canvas width based on breakpoint
-  const canvasWidth = {
-    desktop: '100%',
-    tablet: '768px',
-    mobile: '375px',
-  }[breakpoint];
-
-  const canvasStyles: React.CSSProperties = {
-    width: canvasWidth,
-    margin: '0 auto',
-    minHeight: '600px',
-    background: '#000000',
-    color: '#ffffff',
-    fontFamily: 'Inter, system-ui, sans-serif',
-    boxShadow: breakpoint !== 'desktop' ? '0 0 30px rgba(99, 102, 241, 0.15)' : 'none',
-    border: breakpoint !== 'desktop' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-    borderRadius: breakpoint !== 'desktop' ? '8px' : '0',
-  };
-
+  // Property edits flow through PropertiesPanel (onUpdateSection / onUpdateWidget),
+  // so the canvas itself only needs select / add / delete handlers.
   return (
-    <div style={{
-      flex: 1,
-      background: '#111111',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      padding: breakpoint !== 'desktop' ? '2rem' : '0',
-    }}>
-      {/* Canvas */}
-      <div style={canvasStyles}>
-        {page.content.length === 0 ? (
-          // Empty state
-          <div style={{
-            padding: '4rem 2rem',
-            textAlign: 'center',
-            color: 'rgba(255,255,255,0.5)',
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>+</div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.7)' }}>
-              Empty Page
-            </h3>
-            <p style={{ margin: '0 0 1.5rem', fontSize: '0.875rem' }}>
-              Add a section to get started, or drag widgets from the left panel
-            </p>
-            <button
-              onClick={() => onAddSection()}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: '#6366f1',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-              }}
-            >
-              + Add Section
-            </button>
-          </div>
-        ) : (
-          // Render sections
-          <>
-            {page.content.map((section) => (
-              <SectionRenderer
-                key={section.id}
-                section={section}
-                isSelected={selectedElement?.type === 'section' && selectedElement.sectionId === section.id}
-                selectedWidgetId={selectedElement?.type === 'widget' && selectedElement.sectionId === section.id ? selectedElement.widgetId : undefined}
-                onSelectSection={() => onSelectElement({ type: 'section', sectionId: section.id })}
-                onSelectWidget={(widgetId) => onSelectElement({ type: 'widget', sectionId: section.id, widgetId })}
-                onUpdateSection={(updates) => onUpdateSection(section.id, updates)}
-                onDeleteSection={() => onDeleteSection(section.id)}
-                onAddWidget={(widget, colIndex) => onAddWidget(section.id, widget, colIndex)}
-                onDeleteWidget={(widgetId) => onDeleteWidget(section.id, widgetId)}
-              />
-            ))}
-
-            {/* Add Section Button */}
-            <div style={{
-              padding: '1rem',
-              textAlign: 'center',
-              borderTop: '2px dashed rgba(255,255,255,0.1)',
-            }}>
-              <button
-                onClick={() => onAddSection()}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  color: 'rgba(255,255,255,0.6)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                }}
-              >
-                + Add Section
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface SectionRendererProps {
-  section: PageSection;
-  isSelected: boolean;
-  selectedWidgetId?: string;
-  onSelectSection: () => void;
-  onSelectWidget: (widgetId: string) => void;
-  onUpdateSection: (updates: Partial<PageSection>) => void;
-  onDeleteSection: () => void;
-  onAddWidget: (widget: Widget, columnIndex: number) => void;
-  onDeleteWidget: (widgetId: string) => void;
-}
-
-function SectionRenderer({
-  section,
-  isSelected,
-  selectedWidgetId,
-  onSelectSection,
-  onSelectWidget,
-  onUpdateSection: _onUpdateSection,
-  onDeleteSection,
-  onAddWidget,
-  onDeleteWidget,
-}: SectionRendererProps) {
-  const paddingTop = section.padding?.top;
-  const paddingRight = section.padding?.right;
-  const paddingBottom = section.padding?.bottom;
-  const paddingLeft = section.padding?.left;
-  const marginTop = section.margin?.top;
-  const marginRight = section.margin?.right;
-  const marginBottom = section.margin?.bottom;
-  const marginLeft = section.margin?.left;
-  const sectionStyles: React.CSSProperties = {
-    position: 'relative',
-    backgroundColor: (section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'transparent',
-    backgroundImage: section.backgroundImage ? `url(${section.backgroundImage})` : undefined,
-    padding: `${(paddingTop !== '' && paddingTop != null) ? paddingTop : '0'} ${(paddingRight !== '' && paddingRight != null) ? paddingRight : '0'} ${(paddingBottom !== '' && paddingBottom != null) ? paddingBottom : '0'} ${(paddingLeft !== '' && paddingLeft != null) ? paddingLeft : '0'}`,
-    margin: `${(marginTop !== '' && marginTop != null) ? marginTop : '0'} ${(marginRight !== '' && marginRight != null) ? marginRight : '0'} ${(marginBottom !== '' && marginBottom != null) ? marginBottom : '0'} ${(marginLeft !== '' && marginLeft != null) ? marginLeft : '0'}`,
-    maxWidth: section.fullWidth ? '100%' : (section.maxWidth ? `${section.maxWidth}px` : '1200px'),
-    marginLeft: section.fullWidth ? '0' : 'auto',
-    marginRight: section.fullWidth ? '0' : 'auto',
-    outline: isSelected ? '2px solid #6366f1' : 'none',
-    cursor: 'pointer',
-  };
-
-  return (
-    <div
-      style={sectionStyles}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelectSection();
-      }}
-      onMouseEnter={(e) => {
-        if (!isSelected) {
-          e.currentTarget.style.outline = '2px dashed #6366f1';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isSelected) {
-          e.currentTarget.style.outline = 'none';
-        }
-      }}
-    >
-      {/* Section Controls */}
-      {isSelected && (
-        <div style={{
-          position: 'absolute',
-          top: '0.5rem',
-          right: '0.5rem',
-          display: 'flex',
-          gap: '0.5rem',
-          zIndex: 10,
-        }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteSection();
-            }}
-            style={{
-              padding: '0.25rem 0.5rem',
-              background: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.75rem',
-            }}
-          >
-            Delete Section
-          </button>
-        </div>
-      )}
-
-      {/* Columns */}
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-      }}>
-        {(section.columns ?? []).map((column, colIndex) => (
-          <div
-            key={column.id}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-            }}
-            onDragLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.currentTarget.style.backgroundColor = 'transparent';
-
-              const widgetType = e.dataTransfer.getData('widgetType');
-              if (widgetType) {
-                const definition = widgetDefinitions[widgetType as keyof typeof widgetDefinitions];
-                if (definition) {
-                  const newWidget: Widget = {
-                    id: `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    type: widgetType as keyof typeof widgetDefinitions,
-                    data: definition.defaultData || {},
-                    style: definition.defaultStyle ?? {},
-                  };
-                  onAddWidget(newWidget, colIndex);
-                }
-              }
-            }}
-            style={{
-              flex: column.width || 1,
-              minHeight: column.widgets.length === 0 ? '100px' : 'auto',
-              border: column.widgets.length === 0 ? '2px dashed rgba(255,255,255,0.15)' : 'none',
-              borderRadius: '4px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-              transition: 'background-color 0.2s',
-            }}
-          >
-            {column.widgets.length === 0 ? (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                color: 'rgba(255,255,255,0.3)',
-                fontSize: '0.875rem',
-              }}>
-                Drop widgets here
-              </div>
-            ) : (
-              column.widgets.map((widget) => (
-                <div
-                  key={widget.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectWidget(widget.id);
-                  }}
-                  style={{
-                    position: 'relative',
-                    outline: selectedWidgetId === widget.id ? '2px solid #10b981' : 'none',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedWidgetId !== widget.id) {
-                      e.currentTarget.style.outline = '2px dashed #10b981';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedWidgetId !== widget.id) {
-                      e.currentTarget.style.outline = 'none';
-                    }
-                  }}
-                >
-                  {/* Widget Controls */}
-                  {selectedWidgetId === widget.id && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '0.25rem',
-                      right: '0.25rem',
-                      zIndex: 10,
-                    }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteWidget(widget.id);
-                        }}
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          background: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  )}
-
-                  <WidgetRenderer widget={widget} />
-                </div>
-              ))
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+    <EditableCanvas
+      page={page}
+      breakpoint={breakpoint}
+      selectedElement={selectedElement}
+      onSelectElement={onSelectElement}
+      onAddSection={onAddSection}
+      onDeleteSection={onDeleteSection}
+      onAddWidget={onAddWidget}
+      onDeleteWidget={onDeleteWidget}
+    />
   );
 }

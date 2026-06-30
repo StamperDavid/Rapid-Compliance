@@ -216,7 +216,7 @@ export const businessLandingTemplate: PageTemplate = {
               type: 'cta',
               data: {
                 heading: 'Ready to Get Started?',
-                subheading: 'Join thousands of successful businesses today',
+                text: 'Join thousands of successful businesses today',
                 buttonText: 'Start Free Trial',
                 buttonUrl: '#signup',
               },
@@ -490,7 +490,7 @@ export const saasHomepageTemplate: PageTemplate = {
               type: 'cta',
               data: {
                 heading: 'Start Your Free Trial Today',
-                subheading: 'No credit card required. Cancel anytime.',
+                text: 'No credit card required. Cancel anytime.',
                 buttonText: 'Get Started Free',
                 buttonUrl: '#signup',
               },
@@ -908,7 +908,7 @@ export const portfolioTemplate: PageTemplate = {
               type: 'cta',
               data: {
                 heading: 'Let\'s Work Together',
-                subheading: 'Have a project in mind? Get in touch!',
+                text: 'Have a project in mind? Get in touch!',
                 buttonText: 'Contact Me',
                 buttonUrl: '#contact',
               },
@@ -1145,7 +1145,7 @@ export const agencyTemplate: PageTemplate = {
               type: 'cta',
               data: {
                 heading: 'Ready to Start Your Project?',
-                subheading: 'Let\'s create something amazing together',
+                text: 'Let\'s create something amazing together',
                 buttonText: 'Get in Touch',
                 buttonUrl: '#contact',
               },

@@ -17,6 +17,7 @@ interface EditorToolbarProps {
   onRedo: () => void;
   onSave: () => void;
   onReset?: () => void;
+  onPublish?: () => void;
   saving: boolean;
   publishing?: boolean;
   autoSaveEnabled: boolean;
@@ -34,11 +35,14 @@ export default function EditorToolbar({
   onRedo,
   onSave,
   onReset,
+  onPublish,
   saving,
+  publishing = false,
   autoSaveEnabled,
   onToggleAutoSave,
   hasUnsavedChanges = false,
 }: EditorToolbarProps) {
+  const isPublished = page.status === 'published';
   return (
     <div style={{
       height: '56px',
@@ -62,17 +66,20 @@ export default function EditorToolbar({
           </div>
         </div>
 
-        <div style={{
-          padding: '0.2rem 0.5rem',
-          background: page.status === 'published' ? '#10b981' : '#f59e0b',
-          borderRadius: '4px',
-          fontSize: '0.65rem',
-          fontWeight: '600',
-          textTransform: 'uppercase',
-          color: 'white',
-          letterSpacing: '0.5px',
-        }}>
-          {page.status}
+        <div
+          title={isPublished ? 'This page is live on your site' : 'This page is a draft and is not live yet'}
+          style={{
+            padding: '0.2rem 0.5rem',
+            background: isPublished ? '#10b981' : '#f59e0b',
+            borderRadius: '4px',
+            fontSize: '0.65rem',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            color: 'white',
+            letterSpacing: '0.5px',
+          }}
+        >
+          {isPublished ? 'Live' : 'Draft'}
         </div>
 
         {hasUnsavedChanges && (
@@ -189,20 +196,40 @@ export default function EditorToolbar({
 
         <button
           onClick={onSave}
-          disabled={saving}
+          disabled={saving || publishing}
           style={{
             padding: '0.4rem 1.25rem',
             background: saving ? 'rgba(255,255,255,0.2)' : '#6366f1',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
-            cursor: saving ? 'not-allowed' : 'pointer',
+            cursor: saving || publishing ? 'not-allowed' : 'pointer',
             fontSize: '0.85rem',
             fontWeight: '600',
           }}
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
+
+        {onPublish && (
+          <button
+            onClick={onPublish}
+            disabled={publishing || saving}
+            title={isPublished ? 'Re-publish this page with your latest changes' : 'Make this page live on your site'}
+            style={{
+              padding: '0.4rem 1.25rem',
+              background: publishing ? 'rgba(255,255,255,0.2)' : '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: publishing || saving ? 'not-allowed' : 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+            }}
+          >
+            {publishing ? 'Publishing...' : isPublished ? 'Update & Publish' : 'Publish'}
+          </button>
+        )}
       </div>
     </div>
   );

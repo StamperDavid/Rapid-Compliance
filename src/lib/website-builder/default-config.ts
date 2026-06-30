@@ -75,7 +75,7 @@ const HOME_PAGE: EditorPage = {
       visible: true,
       styles: { desktop: { padding: '60px 20px', backgroundColor: '#0a0a0a' } },
       children: [
-        { id: 'stats-grid', type: 'stats', content: { items: [{ value: '10x', label: 'More Qualified Leads' }, { value: '24/7', label: 'Always Available' }, { value: '5min', label: 'Setup Time' }, { value: '90%', label: 'Customer Satisfaction' }] }, styles: { desktop: {} } },
+        { id: 'stats-grid', type: 'stats', content: { stats: [{ number: '10x', label: 'More Qualified Leads' }, { number: '24/7', label: 'Always Available' }, { number: '5min', label: 'Setup Time' }, { number: '90%', label: 'Customer Satisfaction' }] }, styles: { desktop: {} } },
       ],
     },
     {
@@ -86,13 +86,13 @@ const HOME_PAGE: EditorPage = {
       styles: { desktop: { padding: '80px 20px', backgroundColor: '#000000' } },
       children: [
         { id: 'feat-h2', type: 'heading', content: 'Everything You Need to Sell More', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '3rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
-        { id: 'feat-grid', type: 'feature-grid', content: { items: [
-          { icon: 'robot', title: 'Trainable AI Agent', desc: 'Custom-trained on YOUR business, products, and sales process' },
-          { icon: 'brain', title: 'Customer Memory', desc: 'Remembers every conversation, preference, and interaction' },
-          { icon: 'message-circle', title: 'Lead Qualification', desc: 'Automatically scores and qualifies leads using AI' },
-          { icon: 'bar-chart', title: 'Built-in CRM', desc: 'Manage contacts, deals, and pipeline in one place' },
-          { icon: 'zap', title: 'Workflow Automation', desc: 'Auto-follow-ups, email sequences, task creation' },
-          { icon: 'shopping-cart', title: 'E-Commerce Ready', desc: 'Take payments, manage inventory, process orders' },
+        { id: 'feat-grid', type: 'features', content: { features: [
+          { icon: 'robot', title: 'Trainable AI Agent', description: 'Custom-trained on YOUR business, products, and sales process' },
+          { icon: 'brain', title: 'Customer Memory', description: 'Remembers every conversation, preference, and interaction' },
+          { icon: 'message-circle', title: 'Lead Qualification', description: 'Automatically scores and qualifies leads using AI' },
+          { icon: 'bar-chart', title: 'Built-in CRM', description: 'Manage contacts, deals, and pipeline in one place' },
+          { icon: 'zap', title: 'Workflow Automation', description: 'Auto-follow-ups, email sequences, task creation' },
+          { icon: 'shopping-cart', title: 'E-Commerce Ready', description: 'Take payments, manage inventory, process orders' },
         ] }, styles: { desktop: {} } },
       ],
     },
@@ -142,10 +142,10 @@ const FEATURES_PAGE: EditorPage = {
         { id: 'f1-badge', type: 'text', content: 'Flagship Feature', styles: { desktop: { fontSize: '0.875rem', color: '#6366f1', marginBottom: '1rem' } } },
         { id: 'f1-h2', type: 'heading', content: 'Train Your Own AI Sales Agent', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
         { id: 'f1-p', type: 'text', content: 'Not a generic chatbot. A custom AI agent trained specifically on YOUR business, products, and sales process. It learns your brand voice, handles objections your way, and gets smarter with every conversation.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem', maxWidth: '600px' } } },
-        { id: 'f1-list', type: 'feature-grid', content: { items: [
-          { icon: 'file-text', title: 'Upload Knowledge', desc: 'Product docs, pricing sheets, FAQs' },
-          { icon: 'target', title: 'Train in Sandbox', desc: 'Practice real scenarios before going live' },
-          { icon: 'trending-up', title: 'Continuous Learning', desc: 'Gets smarter from real conversations' },
+        { id: 'f1-list', type: 'features', content: { features: [
+          { icon: 'file-text', title: 'Upload Knowledge', description: 'Product docs, pricing sheets, FAQs' },
+          { icon: 'target', title: 'Train in Sandbox', description: 'Practice real scenarios before going live' },
+          { icon: 'trending-up', title: 'Continuous Learning', description: 'Gets smarter from real conversations' },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' } } },
       ],
     },
@@ -159,12 +159,12 @@ const FEATURES_PAGE: EditorPage = {
         { id: 'f2-badge', type: 'text', content: 'Powerful CRM', styles: { desktop: { fontSize: '0.875rem', color: '#6366f1', marginBottom: '1rem' } } },
         { id: 'f2-h2', type: 'heading', content: 'CRM That Actually Fits Your Business', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
         { id: 'f2-p', type: 'text', content: 'Create custom objects for anything - not just leads and deals. Track shipments, appointments, inventory, or whatever your business needs. Fully customizable with 20+ field types.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem', maxWidth: '600px' } } },
-        { id: 'f2-list', type: 'feature-grid', content: { items: [
-          { icon: 'palette', title: 'Custom Objects', desc: 'For your industry' },
-          { icon: 'link', title: 'Relationships', desc: 'Link data together' },
-          { icon: 'calculator', title: 'Formula Fields', desc: 'Like Excel, but smarter' },
-          { icon: 'layout', title: 'Multiple Views', desc: 'Kanban, Calendar, Table' },
-          { icon: 'zap', title: 'Workflows', desc: 'Automation built-in' },
+        { id: 'f2-list', type: 'features', content: { features: [
+          { icon: 'palette', title: 'Custom Objects', description: 'For your industry' },
+          { icon: 'link', title: 'Relationships', description: 'Link data together' },
+          { icon: 'calculator', title: 'Formula Fields', description: 'Like Excel, but smarter' },
+          { icon: 'layout', title: 'Multiple Views', description: 'Kanban, Calendar, Table' },
+          { icon: 'zap', title: 'Workflows', description: 'Automation built-in' },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' } } },
       ],
     },
@@ -178,11 +178,11 @@ const FEATURES_PAGE: EditorPage = {
         { id: 'f3-badge', type: 'text', content: 'E-Commerce', styles: { desktop: { fontSize: '0.875rem', color: '#6366f1', marginBottom: '1rem' } } },
         { id: 'f3-h2', type: 'heading', content: 'Sell Products Directly', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
         { id: 'f3-p', type: 'text', content: 'Turn on e-commerce with one click. Your AI agent can show products, answer questions, and complete purchases - all in the same conversation.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem', maxWidth: '600px' } } },
-        { id: 'f3-list', type: 'feature-grid', content: { items: [
-          { icon: 'shopping-bag', title: 'In-Chat Cart', desc: 'Shopping in conversation' },
-          { icon: 'credit-card', title: 'Payments', desc: 'Stripe, PayPal built-in' },
-          { icon: 'package', title: 'Inventory', desc: 'Track stock levels' },
-          { icon: 'truck', title: 'Orders', desc: 'Fulfillment tracking' },
+        { id: 'f3-list', type: 'features', content: { features: [
+          { icon: 'shopping-bag', title: 'In-Chat Cart', description: 'Shopping in conversation' },
+          { icon: 'credit-card', title: 'Payments', description: 'Stripe, PayPal built-in' },
+          { icon: 'package', title: 'Inventory', description: 'Track stock levels' },
+          { icon: 'truck', title: 'Orders', description: 'Fulfillment tracking' },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' } } },
       ],
     },
@@ -194,16 +194,16 @@ const FEATURES_PAGE: EditorPage = {
       styles: { desktop: { padding: '80px 20px', backgroundColor: 'rgba(0,0,0,0.3)' } },
       children: [
         { id: 'fg-h2', type: 'heading', content: 'Plus Everything Else You\'d Expect', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '3rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
-        { id: 'fg-grid', type: 'feature-grid', content: { items: [
-          { icon: 'palette', title: 'White-Labeling', desc: 'Your brand, your colors, your domain' },
-          { icon: 'link', title: 'Integrations', desc: 'Slack, Stripe, Gmail, Calendar, and more' },
-          { icon: 'mail', title: 'Email Campaigns', desc: 'Drip campaigns and nurture sequences' },
-          { icon: 'smartphone', title: 'Mobile Ready', desc: 'Works perfectly on all devices' },
-          { icon: 'shield', title: 'Enterprise Security', desc: 'SOC 2, GDPR, CCPA compliant' },
-          { icon: 'globe', title: 'Multi-Language', desc: 'Serve customers in any language' },
-          { icon: 'phone', title: 'SMS Support', desc: 'Send SMS messages automatically' },
-          { icon: 'target', title: 'Lead Scoring', desc: 'AI-powered lead qualification' },
-          { icon: 'clock', title: '99.9% Uptime', desc: 'Always available when you need it' },
+        { id: 'fg-grid', type: 'features', content: { features: [
+          { icon: 'palette', title: 'White-Labeling', description: 'Your brand, your colors, your domain' },
+          { icon: 'link', title: 'Integrations', description: 'Slack, Stripe, Gmail, Calendar, and more' },
+          { icon: 'mail', title: 'Email Campaigns', description: 'Drip campaigns and nurture sequences' },
+          { icon: 'smartphone', title: 'Mobile Ready', description: 'Works perfectly on all devices' },
+          { icon: 'shield', title: 'Enterprise Security', description: 'SOC 2, GDPR, CCPA compliant' },
+          { icon: 'globe', title: 'Multi-Language', description: 'Serve customers in any language' },
+          { icon: 'phone', title: 'SMS Support', description: 'Send SMS messages automatically' },
+          { icon: 'target', title: 'Lead Scoring', description: 'AI-powered lead qualification' },
+          { icon: 'clock', title: '99.9% Uptime', description: 'Always available when you need it' },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', maxWidth: '1000px', margin: '0 auto' } } },
       ],
     },
@@ -250,11 +250,11 @@ const PRICING_PAGE: EditorPage = {
       visible: true,
       styles: { desktop: { padding: '60px 20px 80px', backgroundColor: '#000000' } },
       children: [
-        { id: 'pr-plans', type: 'pricing-table', content: { plans: [
-          { name: 'Agent Only', price: '$29', period: '/month', features: ['1 trainable AI sales agent', 'Unlimited conversations', 'Website widget embed', '3 free integrations', 'Lead capture & export', 'Email support'], highlighted: false },
-          { name: 'Starter', price: '$49', period: '/month', features: ['Everything in Agent Only, plus:', 'Built-in CRM (1,000 records)', 'Lead management', 'Deal pipeline', 'Basic workflow automation', 'Unlimited integrations'], highlighted: false },
-          { name: 'Professional', price: '$149', period: '/month', features: ['Everything in Starter, plus:', '3 AI sales agents', 'Advanced CRM (10,000 records)', 'E-commerce platform', 'Payment processing', 'Custom domain & white-label', 'API access'], highlighted: true },
-          { name: 'Enterprise', price: 'Custom', period: '', features: ['Unlimited AI agents', 'Unlimited CRM records', 'Dedicated support', 'Custom training', 'White-label options', 'Custom integrations', 'SLA guarantee'], highlighted: false },
+        { id: 'pr-plans', type: 'pricing', content: { plans: [
+          { name: 'Agent Only', price: '$29', period: '/month', features: ['1 trainable AI sales agent', 'Unlimited conversations', 'Website widget embed', '3 free integrations', 'Lead capture & export', 'Email support'], featured: false },
+          { name: 'Starter', price: '$49', period: '/month', features: ['Everything in Agent Only, plus:', 'Built-in CRM (1,000 records)', 'Lead management', 'Deal pipeline', 'Basic workflow automation', 'Unlimited integrations'], featured: false },
+          { name: 'Professional', price: '$149', period: '/month', features: ['Everything in Starter, plus:', '3 AI sales agents', 'Advanced CRM (10,000 records)', 'E-commerce platform', 'Payment processing', 'Custom domain & white-label', 'API access'], featured: true },
+          { name: 'Enterprise', price: 'Custom', period: '', features: ['Unlimited AI agents', 'Unlimited CRM records', 'Dedicated support', 'Custom training', 'White-label options', 'Custom integrations', 'SLA guarantee'], featured: false },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' } } },
       ],
     },
@@ -266,13 +266,13 @@ const PRICING_PAGE: EditorPage = {
       styles: { desktop: { padding: '80px 20px', backgroundColor: 'rgba(0,0,0,0.2)' } },
       children: [
         { id: 'faq-h2', type: 'heading', content: 'Frequently Asked Questions', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '3rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
-        { id: 'pr-faq', type: 'faq', content: { items: [
-          { q: 'How does the 14-day free trial work?', a: 'Sign up with your email, no credit card required. You\'ll get full access to all Professional plan features for 14 days.' },
-          { q: 'What counts as a "conversation"?', a: 'A conversation is a complete interaction between your AI agent and a visitor. Multiple messages within one chat session = 1 conversation.' },
-          { q: 'Can I change plans later?', a: 'Absolutely! Upgrade or downgrade anytime. We prorate the difference on upgrades.' },
-          { q: 'What if I exceed my conversation limit?', a: 'Your agent keeps working! We\'ll notify you at 80% and bill $0.05 per additional conversation, or you can upgrade.' },
-          { q: 'Do you offer discounts for nonprofits?', a: 'Yes! We offer 50% off for registered nonprofits and early-stage startups. Contact us with proof.' },
-          { q: 'What payment methods do you accept?', a: 'All major credit cards via Stripe. Enterprise customers can arrange invoicing.' },
+        { id: 'pr-faq', type: 'faq', content: { faqs: [
+          { question: 'How does the 14-day free trial work?', answer: 'Sign up with your email, no credit card required. You\'ll get full access to all Professional plan features for 14 days.' },
+          { question: 'What counts as a "conversation"?', answer: 'A conversation is a complete interaction between your AI agent and a visitor. Multiple messages within one chat session = 1 conversation.' },
+          { question: 'Can I change plans later?', answer: 'Absolutely! Upgrade or downgrade anytime. We prorate the difference on upgrades.' },
+          { question: 'What if I exceed my conversation limit?', answer: 'Your agent keeps working! We\'ll notify you at 80% and bill $0.05 per additional conversation, or you can upgrade.' },
+          { question: 'Do you offer discounts for nonprofits?', answer: 'Yes! We offer 50% off for registered nonprofits and early-stage startups. Contact us with proof.' },
+          { question: 'What payment methods do you accept?', answer: 'All major credit cards via Stripe. Enterprise customers can arrange invoicing.' },
         ] }, styles: { desktop: { maxWidth: '800px', margin: '0 auto' } } },
       ],
     },
@@ -319,13 +319,13 @@ const FAQ_PAGE: EditorPage = {
       visible: true,
       styles: { desktop: { padding: '60px 20px 80px', backgroundColor: '#000000' } },
       children: [
-        { id: 'fq-list', type: 'faq', content: { items: [
-          { q: 'What is SalesVelocity.ai?', a: 'SalesVelocity.ai is an AI-powered sales platform that combines a trainable AI sales agent, CRM, workflow automation, and e-commerce tools in one place.' },
-          { q: 'How do I train my AI agent?', a: 'Upload your product docs, pricing, FAQs, and sales scripts. The AI learns your business context and can start qualifying leads immediately.' },
-          { q: 'Is there a free trial?', a: 'Yes! 14-day free trial with full Professional plan access. No credit card required.' },
-          { q: 'Can I use it on my website?', a: 'Absolutely. Your AI agent deploys as a chat widget on any website with a single line of code.' },
-          { q: 'What integrations are available?', a: 'We integrate with Stripe, Gmail, Google Calendar, Slack, and many more. API access is available on Professional plans and above.' },
-          { q: 'Is my data secure?', a: 'Yes. We use enterprise-grade encryption, are SOC 2 compliant, and never sell your data.' },
+        { id: 'fq-list', type: 'faq', content: { faqs: [
+          { question: 'What is SalesVelocity.ai?', answer: 'SalesVelocity.ai is an AI-powered sales platform that combines a trainable AI sales agent, CRM, workflow automation, and e-commerce tools in one place.' },
+          { question: 'How do I train my AI agent?', answer: 'Upload your product docs, pricing, FAQs, and sales scripts. The AI learns your business context and can start qualifying leads immediately.' },
+          { question: 'Is there a free trial?', answer: 'Yes! 14-day free trial with full Professional plan access. No credit card required.' },
+          { question: 'Can I use it on my website?', answer: 'Absolutely. Your AI agent deploys as a chat widget on any website with a single line of code.' },
+          { question: 'What integrations are available?', answer: 'We integrate with Stripe, Gmail, Google Calendar, Slack, and many more. API access is available on Professional plans and above.' },
+          { question: 'Is my data secure?', answer: 'Yes. We use enterprise-grade encryption, are SOC 2 compliant, and never sell your data.' },
         ] }, styles: { desktop: { maxWidth: '800px', margin: '0 auto' } } },
       ],
     },
@@ -385,11 +385,11 @@ const ABOUT_PAGE: EditorPage = {
       styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000' } },
       children: [
         { id: 'ab-h4', type: 'heading', content: 'Our Values', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
-        { id: 'ab-values', type: 'feature-grid', content: { items: [
-          { icon: 'rocket', title: 'Innovation First', desc: 'We push boundaries with AI technology while keeping the user experience simple.' },
-          { icon: 'handshake', title: 'Customer Success', desc: 'Your growth is our success. We\'re invested in helping you close more deals.' },
-          { icon: 'shield', title: 'Privacy & Security', desc: 'Your data is yours. Enterprise-grade security, never sell your information.' },
-          { icon: 'lightbulb', title: 'Transparency', desc: 'No hidden fees, no dark patterns. What you see is what you get.' },
+        { id: 'ab-values', type: 'features', content: { features: [
+          { icon: 'rocket', title: 'Innovation First', description: 'We push boundaries with AI technology while keeping the user experience simple.' },
+          { icon: 'handshake', title: 'Customer Success', description: 'Your growth is our success. We\'re invested in helping you close more deals.' },
+          { icon: 'shield', title: 'Privacy & Security', description: 'Your data is yours. Enterprise-grade security, never sell your information.' },
+          { icon: 'lightbulb', title: 'Transparency', description: 'No hidden fees, no dark patterns. What you see is what you get.' },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', maxWidth: '800px' } } },
       ],
     },
@@ -436,11 +436,11 @@ const CONTACT_PAGE: EditorPage = {
       visible: true,
       styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000' } },
       children: [
-        { id: 'ct-grid', type: 'feature-grid', content: { items: [
-          { icon: 'mail', title: 'Email Us', desc: 'support@salesvelocity.ai - We respond within 24 hours' },
-          { icon: 'message-circle', title: 'Live Chat', desc: 'Available 9am-6pm EST - Click the chat widget' },
-          { icon: 'book-open', title: 'Documentation', desc: 'Check our comprehensive guides at /docs' },
-          { icon: 'target', title: 'Sales Inquiries', desc: 'sales@salesvelocity.ai - Questions and custom needs' },
+        { id: 'ct-grid', type: 'features', content: { features: [
+          { icon: 'mail', title: 'Email Us', description: 'support@salesvelocity.ai - We respond within 24 hours' },
+          { icon: 'message-circle', title: 'Live Chat', description: 'Available 9am-6pm EST - Click the chat widget' },
+          { icon: 'book-open', title: 'Documentation', description: 'Check our comprehensive guides at /docs' },
+          { icon: 'target', title: 'Sales Inquiries', description: 'sales@salesvelocity.ai - Questions and custom needs' },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', maxWidth: '800px', margin: '0 auto' } } },
       ],
     },
@@ -565,13 +565,13 @@ const SECURITY_PAGE: EditorPage = {
       visible: true,
       styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000' } },
       children: [
-        { id: 'sc-grid', type: 'feature-grid', content: { items: [
-          { icon: 'lock', title: 'Data Encryption', desc: 'All data encrypted in transit (TLS 1.3) and at rest (AES-256)' },
-          { icon: 'building', title: 'SOC 2 Compliant', desc: 'Infrastructure meets SOC 2 Type II compliance standards' },
-          { icon: 'shield', title: 'GDPR Ready', desc: 'Fully compliant with GDPR, CCPA, and other privacy regulations' },
-          { icon: 'key', title: 'Access Controls', desc: 'MFA, role-based permissions, and IP whitelisting' },
-          { icon: 'search', title: 'Regular Audits', desc: 'Quarterly security audits by certified third-party firms' },
-          { icon: 'database', title: 'Automated Backups', desc: 'Daily backups with 30-day retention and point-in-time recovery' },
+        { id: 'sc-grid', type: 'features', content: { features: [
+          { icon: 'lock', title: 'Data Encryption', description: 'All data encrypted in transit (TLS 1.3) and at rest (AES-256)' },
+          { icon: 'building', title: 'SOC 2 Compliant', description: 'Infrastructure meets SOC 2 Type II compliance standards' },
+          { icon: 'shield', title: 'GDPR Ready', description: 'Fully compliant with GDPR, CCPA, and other privacy regulations' },
+          { icon: 'key', title: 'Access Controls', description: 'MFA, role-based permissions, and IP whitelisting' },
+          { icon: 'search', title: 'Regular Audits', description: 'Quarterly security audits by certified third-party firms' },
+          { icon: 'database', title: 'Automated Backups', description: 'Daily backups with 30-day retention and point-in-time recovery' },
         ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', maxWidth: '900px', margin: '0 auto' } } },
       ],
     },

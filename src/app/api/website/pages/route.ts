@@ -14,19 +14,13 @@ import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-interface PageSEO {
-  title?: string;
-  description?: string;
-  keywords?: string[];
-}
-
 interface PageData {
   id: string;
   title: string;
   slug: string;
   status: string;
   content: unknown[];
-  seo: PageSEO;
+  seo: Record<string, unknown>;
   version: number;
   createdAt: FieldValue;
   updatedAt: FieldValue;
@@ -34,11 +28,29 @@ interface PageData {
   lastEditedBy: string;
 }
 
-const PageSEOSchema = z.object({
-  title: z.string().optional(),
-  description: z.string().optional(),
-  keywords: z.array(z.string()).optional(),
-});
+/**
+ * SEO survives a save. The editor uses the canonical `PageSEO` shape
+ * (`metaTitle`/`metaDescription`/...), so we accept those fields explicitly and
+ * `.passthrough()` any additional SEO keys instead of silently stripping them.
+ * The legacy `title`/`description`/`keywords` fields are kept for back-compat.
+ */
+const PageSEOSchema = z
+  .object({
+    metaTitle: z.string().optional(),
+    metaDescription: z.string().optional(),
+    metaKeywords: z.array(z.string()).optional(),
+    ogTitle: z.string().optional(),
+    ogDescription: z.string().optional(),
+    ogImage: z.string().optional(),
+    canonicalUrl: z.string().optional(),
+    noIndex: z.boolean().optional(),
+    noFollow: z.boolean().optional(),
+    // Legacy fields (back-compat with older saves)
+    title: z.string().optional(),
+    description: z.string().optional(),
+    keywords: z.array(z.string()).optional(),
+  })
+  .passthrough();
 
 const PostPagesSchema = z.object({
   page: z.object({

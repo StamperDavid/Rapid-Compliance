@@ -5,6 +5,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { PageContent } from '@/hooks/usePageContent';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
+import {
+  canonicalWidgetType,
+  readFeatures,
+  readStats,
+  readFaqs,
+  readPlans,
+  formatPlanPrice,
+  formatPlanPeriod,
+} from '@/lib/website-builder/widget-normalizer';
 
 interface StatsItem {
   value?: string;
@@ -99,8 +108,12 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
 
   // Helper to get content as WidgetContent object
   const contentObj = typeof element.content === 'object' ? element.content : null;
+  // Collection-style widgets (features / stats / faq / pricing) carry their
+  // data on the content object regardless of which vocabulary authored it.
+  const contentData = (contentObj ?? {}) as Record<string, unknown>;
 
-  switch (element.type) {
+  // Resolve legacy widget type names (feature-grid, pricing-table) to canonical.
+  switch (canonicalWidgetType(element.type)) {
     case 'heading': {
       const settingsTag = element.settings?.tag;
       const Tag = ((settingsTag !== '' && settingsTag != null) ? settingsTag : 'h2') as keyof React.JSX.IntrinsicElements;
@@ -147,14 +160,14 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
     case 'divider':
       return <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '2rem 0', ...styles }} />;
 
-    case 'stats':
-      if (contentObj?.items) {
-        const statsItems = contentObj.items as StatsItem[];
+    case 'stats': {
+      const statsItems = readStats(contentData);
+      if (statsItems.length > 0) {
         return (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '4rem', flexWrap: 'wrap', ...styles }}>
             {statsItems.map((item, idx) => (
               <div key={idx} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: theme.primaryColor }}>{item.value}</div>
+                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: theme.primaryColor }}>{item.number}</div>
                 <div style={{ fontSize: '1rem', color: 'var(--color-text-secondary)' }}>{item.label}</div>
               </div>
             ))}
@@ -162,10 +175,11 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
         );
       }
       return null;
+    }
 
-    case 'feature-grid':
-      if (contentObj?.items) {
-        const featureItems = contentObj.items as FeatureItem[];
+    case 'features': {
+      const featureItems = readFeatures(contentData);
+      if (featureItems.length > 0) {
         return (
           <div style={{
             display: 'grid',
@@ -185,17 +199,18 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
               >
                 <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{item.icon}</div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '8px' }}>{item.title}</h3>
-                <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>{item.desc}</p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>{item.description}</p>
               </div>
             ))}
           </div>
         );
       }
       return null;
+    }
 
-    case 'faq':
-      if (contentObj?.items) {
-        const faqItems = contentObj.items as FaqItem[];
+    case 'faq': {
+      const faqItems = readFaqs(contentData);
+      if (faqItems.length > 0) {
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', ...styles }}>
             {faqItems.map((item, idx) => (
@@ -208,17 +223,19 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                   border: '1px solid var(--color-border-light)',
                 }}
               >
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '12px' }}>{item.q}</h3>
-                <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>{item.a}</p>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '12px' }}>{item.question}</h3>
+                <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>{item.answer}</p>
               </div>
             ))}
           </div>
         );
       }
       return null;
+    }
 
-    case 'pricing-table':
-      if (contentObj?.plans) {
+    case 'pricing': {
+      const plans = readPlans(contentData);
+      if (plans.length > 0) {
         return (
           <div style={{
             display: 'grid',
@@ -226,19 +243,19 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
             gap: '24px',
             ...styles
           }}>
-            {contentObj.plans.map((plan, idx) => (
+            {plans.map((plan, idx) => (
               <div
                 key={idx}
                 style={{
                   padding: '32px',
-                  backgroundColor: plan.highlighted ? theme.primaryColor : 'var(--color-bg-elevated)',
+                  backgroundColor: plan.featured ? theme.primaryColor : 'var(--color-bg-elevated)',
                   borderRadius: '16px',
-                  border: plan.highlighted ? 'none' : '1px solid var(--color-border-light)',
+                  border: plan.featured ? 'none' : '1px solid var(--color-border-light)',
                   position: 'relative',
-                  transform: plan.highlighted ? 'scale(1.05)' : 'none',
+                  transform: plan.featured ? 'scale(1.05)' : 'none',
                 }}
               >
-                {plan.highlighted && (
+                {plan.featured && (
                   <div style={{
                     position: 'absolute',
                     top: '-12px',
@@ -256,30 +273,30 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                 )}
                 <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '8px' }}>{plan.name}</h3>
                 <div style={{ marginBottom: '24px' }}>
-                  <span style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{plan.price}</span>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>{plan.period}</span>
+                  <span style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{formatPlanPrice(plan.price)}</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{formatPlanPeriod(plan.period ?? '')}</span>
                 </div>
                 <Link
-                  href="/early-access"
+                  href={plan.buttonUrl ?? '/early-access'}
                   style={{
                     display: 'block',
                     width: '100%',
                     padding: '12px',
                     textAlign: 'center',
-                    backgroundColor: plan.highlighted ? 'var(--color-text-primary)' : theme.primaryColor,
-                    color: plan.highlighted ? theme.primaryColor : 'var(--color-text-primary)',
+                    backgroundColor: plan.featured ? 'var(--color-text-primary)' : theme.primaryColor,
+                    color: plan.featured ? theme.primaryColor : 'var(--color-text-primary)',
                     borderRadius: '8px',
                     fontWeight: '600',
                     textDecoration: 'none',
                     marginBottom: '24px',
                   }}
                 >
-                  Get Started
+                  {plan.buttonText !== undefined && plan.buttonText !== '' ? plan.buttonText : 'Get Started'}
                 </Link>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {plan.features.map((feature, fIdx) => (
                     <li key={fIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '12px', color: 'var(--color-text-primary)' }}>
-                      <span style={{ color: plan.highlighted ? 'var(--color-text-primary)' : theme.primaryColor }}>✓</span>
+                      <span style={{ color: plan.featured ? 'var(--color-text-primary)' : theme.primaryColor }}>✓</span>
                       {feature}
                     </li>
                   ))}
@@ -290,6 +307,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
         );
       }
       return null;
+    }
 
     case 'testimonial':
       if (contentObj) {
