@@ -94,10 +94,26 @@ interface GMConfigShape {
   maxTokens?: number;
 }
 
+/**
+ * Optional free-text framing supplied by the operator (e.g. from the
+ * Strategy Wizard). The specialist's Brand DNA still governs voice and
+ * audience — this only sharpens *this run's* focus. Purely additive: when
+ * omitted, behaviour is identical to the original insights call.
+ */
+export interface InsightsBriefContext {
+  /** Operator's plain-English description of the business / campaign. */
+  businessDescription?: string;
+  /** Operator's selected goals (e.g. "Grow followers", "Drive signups"). */
+  goals?: string[];
+  /** How many post drafts the operator wants for this platform (clamped 1-5). */
+  postsWanted?: number;
+}
+
 interface GeneratePlatformInsightsInput {
   specialistId: string;
   platform: SocialPlatform;
   industryKey?: string;
+  briefContext?: InsightsBriefContext;
 }
 
 function stripJsonFences(raw: string): string {
@@ -159,13 +175,37 @@ function buildDiscoverySeoInstructions(platform: SocialPlatform): string {
   return lines.join('\n');
 }
 
-function buildInsightsUserPrompt(platform: SocialPlatform): string {
+function buildBriefContextBlock(context: InsightsBriefContext | undefined): string[] {
+  if (!context) { return []; }
+  const lines: string[] = [];
+  const description = context.businessDescription?.trim();
+  const goals = (context.goals ?? []).map((g) => g.trim()).filter((g) => g.length > 0);
+  if (!description && goals.length === 0) { return []; }
+
+  lines.push(`OPERATOR BRIEF (this run's focus — keep grounding everything in your Brand DNA above):`);
+  if (description) {
+    lines.push(`  - Business / campaign in their words: ${description}`);
+  }
+  if (goals.length > 0) {
+    lines.push(`  - Goals to steer toward: ${goals.join('; ')}`);
+  }
+  lines.push(``);
+  return lines;
+}
+
+function buildInsightsUserPrompt(
+  platform: SocialPlatform,
+  briefContext?: InsightsBriefContext,
+): string {
   const platformLabel = PLATFORM_META[platform].label;
+  // Clamp to the schema's suggestedContent bounds (min 1, max 5).
+  const postsWanted = Math.min(Math.max(briefContext?.postsWanted ?? 4, 1), 5);
   return [
     `ACTION: get_platform_insights`,
     ``,
     `Platform: ${platformLabel}`,
     ``,
+    ...buildBriefContextBlock(briefContext),
     `You are this brand's specialist for ${platformLabel}. Your Brand DNA, voice, audience, and niche are already established in your system prompt — ground every recommendation in them. Do not invent generic best-practice advice; tailor everything to the specific brand and audience above.`,
     ``,
     `Produce a JSON object with the following keys:`,
@@ -180,7 +220,7 @@ function buildInsightsUserPrompt(platform: SocialPlatform): string {
     `    - whyItMatters: relevance to the brand's audience right now`,
     `    - angleForBrand: how THIS brand specifically should weigh in (its differentiated voice/POV)`,
     ``,
-    `  suggestedContent: 3-5 entries. Each is a concrete post idea ready to queue:`,
+    `  suggestedContent: exactly ${postsWanted} ${postsWanted === 1 ? 'entry' : 'entries'}. Each is a concrete post idea ready to queue:`,
     `    - hook: opening line / scroll-stopper, in the brand's exact voice`,
     `    - body: the post copy or scaffold (respect ${platformLabel}'s norms — char limit, format, tone)`,
     `    - format: e.g. "single-image post", "thread", "short-form video", "carousel"`,
@@ -228,7 +268,7 @@ export async function generatePlatformInsights(
   const model: ModelName = config.model ?? 'claude-sonnet-4.6';
   const temperature = config.temperature ?? 0.6;
   const maxTokens = Math.max(config.maxTokens ?? INSIGHTS_MAX_TOKENS, INSIGHTS_MAX_TOKENS);
-  const userPrompt = buildInsightsUserPrompt(input.platform);
+  const userPrompt = buildInsightsUserPrompt(input.platform, input.briefContext);
 
   const provider = new OpenRouterProvider(PLATFORM_ID);
   const response = await provider.chat({

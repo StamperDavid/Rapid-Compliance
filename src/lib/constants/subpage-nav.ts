@@ -28,6 +28,7 @@ export const CATALOG_TABS: SubpageNavItem[] = [
 // ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
 export const SOCIAL_TABS: SubpageNavItem[] = [
   { label: 'Platforms', href: '/social' },
+  { label: 'Strategy Co-Pilot', href: '/social/copilot' },
   { label: 'Social Media Campaigns', href: '/social/campaigns' },
   { label: 'Calendar', href: '/social/calendar' },
   { label: 'Analytics', href: '/social/analytics' },
