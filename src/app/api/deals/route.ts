@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createDeal, deleteDeal } from '@/lib/crm/deal-service';
+import { resolveRequestFilters } from '@/lib/crm/saved-views-service';
+import { applyViewFilters, FILTER_FETCH_CAP } from '@/lib/crm/apply-view-filters';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getDealsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
@@ -8,11 +10,13 @@ import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'] as const;
-
 const querySchema = z.object({
   stage: z.string().optional(),
   pageSize: z.coerce.number().int().positive().optional().default(100),
+  // Saved-view / inline filtering (Saved Views feature).
+  viewId: z.string().optional(),
+  filters: z.string().optional(),
+  match: z.enum(['all', 'any']).optional(),
 });
 
 const createDealSchema = z.object({
@@ -22,7 +26,10 @@ const createDealSchema = z.object({
   companyName: z.string().optional(),
   contactId: z.string().optional(),
   currency: z.string().optional().default('USD'),
-  stage: z.enum(DEAL_STAGES).optional().default('prospecting'),
+  // Stage keys are pipeline-defined; when omitted the service uses the
+  // pipeline's first stage. pipelineId defaults to the default pipeline.
+  stage: z.string().min(1).optional(),
+  pipelineId: z.string().min(1).optional(),
   probability: z.number().min(0).max(100).optional().default(10),
   expectedCloseDate: z.string().optional(),
   ownerId: z.string().optional(),
@@ -48,6 +55,9 @@ export async function GET(
     const queryResult = querySchema.safeParse({
       stage: searchParams.get('stage') ?? undefined,
       pageSize: searchParams.get('pageSize') ?? undefined,
+      viewId: searchParams.get('viewId') ?? undefined,
+      filters: searchParams.get('filters') ?? undefined,
+      match: searchParams.get('match') ?? undefined,
     });
 
     if (!queryResult.success) {
@@ -57,13 +67,31 @@ export async function GET(
       );
     }
 
-    const { stage, pageSize } = queryResult.data;
+    const { stage, pageSize, viewId, filters: filtersJson, match } = queryResult.data;
 
     // Use the Admin SDK directly so this server-side route has Firestore auth
     // context. deal-service.ts must remain on the client SDK because it sits in
     // the module graph of 'use client' components (living-ledger, risk pages)
     // and importing firebase-admin there would break the client webpack bundle.
     const collectionPath = getDealsCollection();
+
+    // Saved-view / inline filtering: fetch a broad set and filter in-process so
+    // the returned rows reflect the view, not just the first page.
+    const resolved = (viewId || filtersJson)
+      ? await resolveRequestFilters({ viewId, filtersJson, match })
+      : null;
+
+    if (resolved && resolved.filters.length > 0) {
+      let filteredQuery = AdminFirestoreService.collection(collectionPath).orderBy('createdAt', 'desc');
+      if (stage && stage !== 'all') {
+        filteredQuery = filteredQuery.where('stage', '==', stage);
+      }
+      const broadSnapshot = await filteredQuery.limit(FILTER_FETCH_CAP).get();
+      const broadDocs = broadSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const filtered = applyViewFilters(broadDocs, resolved.filters, resolved.match);
+      return NextResponse.json({ data: filtered, hasMore: false, lastDoc: null, total: filtered.length });
+    }
+
     let query = AdminFirestoreService.collection(collectionPath).orderBy('createdAt', 'desc');
     if (stage && stage !== 'all') {
       query = query.where('stage', '==', stage);

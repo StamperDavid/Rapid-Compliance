@@ -25,11 +25,30 @@ import {
   Trash2,
 } from 'lucide-react';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PipelineBoard, { type Deal } from './PipelineBoard';
+import ImportCsvModal from '@/components/crm/ImportCsvModal';
+import SavedViewsBar from '@/components/crm/SavedViewsBar';
+import type { FilterFieldDef } from '@/types/saved-view';
+import {
+  type Pipeline,
+  type PipelineStage,
+  DEFAULT_PIPELINE_ID,
+  DEFAULT_PIPELINE_STAGES,
+} from '@/lib/crm/pipeline-types';
 
-const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
+const DEAL_FILTER_FIELDS: FilterFieldDef[] = [
+  { value: 'name', label: 'Deal name' },
+  { value: 'value', label: 'Value', type: 'number' },
+  { value: 'stage', label: 'Stage' },
+  { value: 'probability', label: 'Probability', type: 'number' },
+  { value: 'company', label: 'Company' },
+  { value: 'source', label: 'Source' },
+];
 
-const STAGE_COLORS: Record<string, { bgStyle: React.CSSProperties; borderStyle: React.CSSProperties; textStyle: React.CSSProperties; icon: string }> = {
+type StageColor = { bgStyle: React.CSSProperties; borderStyle: React.CSSProperties; textStyle: React.CSSProperties; icon: string };
+
+const STAGE_COLORS: Record<string, StageColor> = {
   prospecting: {
     bgStyle: { background: 'linear-gradient(to right, rgba(var(--color-info-rgb), 0.2), rgba(var(--color-info-rgb), 0.15))' },
     borderStyle: { borderColor: 'rgba(var(--color-info-rgb), 0.3)' },
@@ -68,15 +87,48 @@ const STAGE_COLORS: Record<string, { bgStyle: React.CSSProperties; borderStyle: 
   },
 };
 
+/** Default look for any stage we don't have a bespoke color for. */
+const DEFAULT_STAGE_COLOR: StageColor = STAGE_COLORS.prospecting;
+
+/** Palette cycled through for custom "open" stages that aren't one of the six defaults. */
+const OPEN_STAGE_PALETTE: StageColor[] = [
+  STAGE_COLORS.prospecting,
+  STAGE_COLORS.qualification,
+  STAGE_COLORS.proposal,
+  STAGE_COLORS.negotiation,
+];
+
+/**
+ * Build a color map keyed by stage key for the given pipeline stages. The six
+ * default stages keep their original colors; custom stages get a color by
+ * type (won/lost) or a cycled palette entry so every column renders.
+ */
+function buildStageColors(stages: PipelineStage[]): Record<string, StageColor> {
+  const map: Record<string, StageColor> = {};
+  let openIdx = 0;
+  for (const stage of stages) {
+    if (STAGE_COLORS[stage.key]) {
+      map[stage.key] = STAGE_COLORS[stage.key];
+    } else if (stage.type === 'won') {
+      map[stage.key] = STAGE_COLORS.closed_won;
+    } else if (stage.type === 'lost') {
+      map[stage.key] = STAGE_COLORS.closed_lost;
+    } else {
+      map[stage.key] = OPEN_STAGE_PALETTE[openIdx % OPEN_STAGE_PALETTE.length];
+      openIdx += 1;
+    }
+  }
+  return map;
+}
+
 const getCompanyName = (deal: Deal) => {
   return deal.company ?? deal.companyName ?? '-';
 };
 
-const getStageBadge = (stage: string) => {
-  const colors = STAGE_COLORS[stage] || STAGE_COLORS.prospecting;
+const getStageBadge = (label: string, colors: StageColor) => {
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border capitalize" style={{ ...colors.bgStyle, ...colors.borderStyle, ...colors.textStyle }}>
-      {stage.replace('_', ' ')}
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border" style={{ ...colors.bgStyle, ...colors.borderStyle, ...colors.textStyle }}>
+      {label}
     </span>
   );
 };
@@ -86,6 +138,29 @@ export default function DealsPage() {
   const { loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
   const [view, setView] = useState<'pipeline' | 'list'>('pipeline');
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>(DEFAULT_PIPELINE_ID);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+
+  const fetchPipelines = useCallback(async () => {
+    try {
+      const response = await authFetch('/api/crm/pipelines');
+      if (!response.ok) { return; }
+      const json = (await response.json()) as { success?: boolean; pipelines?: Pipeline[] };
+      if (json.success && json.pipelines && json.pipelines.length > 0) {
+        const loaded = json.pipelines;
+        setPipelines(loaded);
+        // Keep the current selection if it still exists, else pick the default.
+        setSelectedPipelineId((prev) =>
+          loaded.some((p) => p.id === prev)
+            ? prev
+            : (loaded.find((p) => p.isDefault)?.id ?? loaded[0].id)
+        );
+      }
+    } catch {
+      // Leave the default-pipeline fallback in place so the board still renders.
+    }
+  }, [authFetch]);
 
   const fetchDeals = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
@@ -96,6 +171,10 @@ export default function DealsPage() {
       searchParams.set('lastDoc', String(lastDoc));
     }
 
+    if (activeViewId) {
+      searchParams.set('viewId', activeViewId);
+    }
+
     const response = await authFetch(`/api/deals?${searchParams}`);
 
     if (!response.ok) {
@@ -103,7 +182,7 @@ export default function DealsPage() {
     }
 
     return response.json() as Promise<{ data: Deal[]; lastDoc: unknown; hasMore: boolean }>;
-  }, [authFetch]);
+  }, [authFetch, activeViewId]);
 
   const {
     data: deals,
@@ -133,9 +212,41 @@ export default function DealsPage() {
     // Wait for Firebase auth to restore session before making API calls
     if (authLoading) { return; }
     void refresh();
-  }, [refresh, authLoading]);
+    void fetchPipelines();
+  }, [refresh, fetchPipelines, authLoading]);
 
-  const totalPipelineValue = deals.reduce((sum, d) => sum + (d.value ?? 0), 0);
+  const selectedPipeline = useMemo(
+    () => pipelines.find((p) => p.id === selectedPipelineId) ?? null,
+    [pipelines, selectedPipelineId]
+  );
+
+  // Stages for the selected pipeline, sorted left-to-right. Falls back to the
+  // six default stages before the pipelines list has loaded.
+  const boardStages: PipelineStage[] = useMemo(() => {
+    const stages = selectedPipeline?.stages ?? DEFAULT_PIPELINE_STAGES;
+    return [...stages].sort((a, b) => a.order - b.order);
+  }, [selectedPipeline]);
+
+  const stageColorMap = useMemo(() => buildStageColors(boardStages), [boardStages]);
+  const stageLabelMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const stage of boardStages) { map[stage.key] = stage.label; }
+    return map;
+  }, [boardStages]);
+
+  // Deals belonging to the selected pipeline. Deals with no pipelineId belong
+  // to the default pipeline, so they show up when the default is selected.
+  const visibleDeals = useMemo(
+    () => deals.filter((d) => (d.pipelineId ?? DEFAULT_PIPELINE_ID) === selectedPipelineId),
+    [deals, selectedPipelineId]
+  );
+
+  const boardStagesForBoard = useMemo(
+    () => boardStages.map((s) => ({ key: s.key, label: s.label })),
+    [boardStages]
+  );
+
+  const totalPipelineValue = visibleDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
 
   const moveDealToStage = useCallback(async (dealId: string, stage: string): Promise<boolean> => {
     try {
@@ -177,8 +288,12 @@ export default function DealsPage() {
     {
       key: 'stage',
       header: 'Stage',
-      accessor: (deal) => deal.stage ?? 'prospecting',
-      render: (deal) => getStageBadge(deal.stage ?? 'prospecting'),
+      accessor: (deal) => stageLabelMap[deal.stage ?? ''] ?? deal.stage ?? 'prospecting',
+      render: (deal) => {
+        const key = deal.stage ?? 'prospecting';
+        const label = stageLabelMap[key] ?? key.replace('_', ' ');
+        return getStageBadge(label, stageColorMap[key] ?? DEFAULT_STAGE_COLOR);
+      },
     },
     {
       key: 'probability',
@@ -224,7 +339,7 @@ export default function DealsPage() {
         </button>
       ),
     },
-  ], [router]);
+  ], [router, stageLabelMap, stageColorMap]);
 
   const bulkActions: BulkAction<Deal>[] = useMemo(() => [
     {
@@ -262,11 +377,29 @@ export default function DealsPage() {
           </div>
           <div>
             <PageTitle>Deals Pipeline</PageTitle>
-            <SectionDescription>{deals.length} deals &bull; ${totalPipelineValue.toLocaleString()} total value</SectionDescription>
+            <SectionDescription>{visibleDeals.length} deals &bull; ${totalPipelineValue.toLocaleString()} total value</SectionDescription>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Pipeline Selector — switch which pipeline's stages the board shows */}
+          {pipelines.length > 0 && (
+            <Select value={selectedPipelineId} onValueChange={setSelectedPipelineId}>
+              <SelectTrigger className="w-56" aria-label="Choose a pipeline">
+                <SelectValue placeholder="Select a pipeline">
+                  {selectedPipeline?.name ?? 'Select a pipeline'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {pipelines.map((pipeline) => (
+                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                    {pipeline.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {/* View Toggle */}
           <div className="flex gap-1 p-1 bg-surface-elevated border border-border-light rounded-xl">
             <button
@@ -293,6 +426,8 @@ export default function DealsPage() {
             </button>
           </div>
 
+          <ImportCsvModal object="deal" onImported={() => void refresh()} />
+
           <button
             onClick={() => router.push(`/deals/new`)}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/25"
@@ -316,13 +451,20 @@ export default function DealsPage() {
         </motion.div>
       )}
 
+      <SavedViewsBar
+        object="deal"
+        fields={DEAL_FILTER_FIELDS}
+        activeViewId={activeViewId}
+        onSelect={setActiveViewId}
+      />
+
       {view === 'pipeline' ? (
         <>
           {/* Pipeline View — drag a deal card between stage columns to change its stage */}
           <PipelineBoard
-            stages={DEAL_STAGES}
-            stageColors={STAGE_COLORS}
-            deals={deals}
+            stages={boardStagesForBoard}
+            stageColors={stageColorMap}
+            deals={visibleDeals}
             getCompanyName={getCompanyName}
             setDeals={setDeals}
             onMoveDeal={moveDealToStage}
@@ -363,7 +505,7 @@ export default function DealsPage() {
         >
           <DataTable
             columns={columns}
-            data={deals}
+            data={visibleDeals}
             loading={loading}
             searchPlaceholder="Search deals..."
             searchFilter={(deal, query) => {

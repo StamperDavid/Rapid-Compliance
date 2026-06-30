@@ -6,6 +6,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { showErrorToast } from '@/components/ErrorToast';
 import type { Contact } from '@/types/contact';
+import { OwnerSelect } from '@/components/crm/OwnerSelect';
 import { CustomFieldInputs, type CustomFieldDef, type CustomFieldRecord } from '@/lib/forms/custom-field-renderer';
 import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
 import type { CustomFieldValue } from '@/types/crm-entities';
@@ -90,6 +91,7 @@ export default function EditContactPage() {
                 <div><label className="block text-sm font-medium mb-2">Company</label><input type="text" value={contact.company ?? ''} onChange={(e) => setContact({ ...contact, company: e.target.value })} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
                 <div><label className="block text-sm font-medium mb-2">Title</label><input type="text" value={contact.title ?? ''} onChange={(e) => setContact({ ...contact, title: e.target.value })} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
               </div>
+              <OwnerSelect value={contact.ownerId} onChange={(ownerId) => setContact({ ...contact, ownerId })} id="contact-owner" />
             </div>
           </div>
           {customFieldDefs.length > 0 && (

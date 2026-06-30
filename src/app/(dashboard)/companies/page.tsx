@@ -23,6 +23,19 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import type { Company, CompanyStatus } from '@/types/company';
+import ImportCsvModal from '@/components/crm/ImportCsvModal';
+import SavedViewsBar from '@/components/crm/SavedViewsBar';
+import type { FilterFieldDef } from '@/types/saved-view';
+
+const COMPANY_FILTER_FIELDS: FilterFieldDef[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'industry', label: 'Industry' },
+  { value: 'status', label: 'Status', type: 'select', options: ['prospect', 'active', 'inactive', 'churned'].map((s) => ({ value: s, label: s })) },
+  { value: 'size', label: 'Size', type: 'select', options: ['startup', 'small', 'medium', 'enterprise', 'unknown'].map((s) => ({ value: s, label: s })) },
+  { value: 'employeeCount', label: 'Employees', type: 'number' },
+  { value: 'annualRevenue', label: 'Annual revenue', type: 'number' },
+  { value: 'website', label: 'Website' },
+];
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   prospect: { label: 'Prospect', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
@@ -52,6 +65,7 @@ export default function CompaniesPage() {
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
   // Create form state
   const [formName, setFormName] = useState('');
@@ -64,7 +78,9 @@ export default function CompaniesPage() {
   const fetchCompanies = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await authFetch(`/api/crm/companies?pageSize=${limit}`);
+      const params = new URLSearchParams({ pageSize: String(limit) });
+      if (activeViewId) { params.set('viewId', activeViewId); }
+      const response = await authFetch(`/api/crm/companies?${params.toString()}`);
       if (!response.ok) { throw new Error('Failed to fetch companies'); }
       const result = await response.json() as { data: CompanyWithRollup[]; total?: number };
       setCompanies(Array.isArray(result.data) ? result.data : []);
@@ -74,7 +90,7 @@ export default function CompaniesPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, limit]);
+  }, [authFetch, limit, activeViewId]);
 
   useEffect(() => {
     if (authLoading) { return; }
@@ -256,10 +272,13 @@ export default function CompaniesPage() {
           </div>
         </div>
 
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-5 h-5 mr-2" />
-          New Company
-        </Button>
+        <div className="flex items-center gap-3">
+          <ImportCsvModal object="company" onImported={() => void fetchCompanies()} />
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="w-5 h-5 mr-2" />
+            New Company
+          </Button>
+        </div>
       </motion.div>
 
       {/* Error State */}
@@ -274,6 +293,13 @@ export default function CompaniesPage() {
           <span className="text-error-light">{error}</span>
         </motion.div>
       )}
+
+      <SavedViewsBar
+        object="company"
+        fields={COMPANY_FILTER_FIELDS}
+        activeViewId={activeViewId}
+        onSelect={setActiveViewId}
+      />
 
       {/* Data Table */}
       <motion.div

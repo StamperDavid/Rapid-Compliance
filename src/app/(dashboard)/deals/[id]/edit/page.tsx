@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger/logger';
 import { CustomFieldInputs, type CustomFieldDef, type CustomFieldRecord } from '@/lib/forms/custom-field-renderer';
 import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
 import type { CustomFieldValue } from '@/types/crm-entities';
+import { type Pipeline, DEFAULT_PIPELINE_ID } from '@/lib/crm/pipeline-types';
 
 interface Deal {
   id: string;
@@ -16,9 +17,17 @@ interface Deal {
   value?: number;
   probability?: number;
   stage?: string;
+  pipelineId?: string;
+  ownerId?: string;
   expectedCloseDate?: string;
   notes?: string;
   customFields?: CustomFieldRecord;
+}
+
+interface TeamMember {
+  uid: string;
+  name: string;
+  email: string;
 }
 
 export default function EditDealPage() {
@@ -32,6 +41,8 @@ export default function EditDealPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([]);
   const [customValues, setCustomValues] = useState<CustomFieldRecord>({});
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   const loadDeal = useCallback(async () => {
     try {
@@ -48,10 +59,41 @@ export default function EditDealPage() {
     }
   }, [authFetch, dealId]);
 
+  const loadPipelines = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/crm/pipelines');
+      if (!res.ok) { return; }
+      const json = (await res.json()) as { success?: boolean; pipelines?: Pipeline[] };
+      if (json.success && json.pipelines) { setPipelines(json.pipelines); }
+    } catch (error: unknown) {
+      logger.error('Error loading pipelines:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+    }
+  }, [authFetch]);
+
+  const loadTeamMembers = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/team/members');
+      if (!res.ok) { return; }
+      const json = (await res.json()) as { success?: boolean; members?: TeamMember[] };
+      if (json.success && json.members) { setTeamMembers(json.members); }
+    } catch (error: unknown) {
+      logger.error('Error loading team members:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+    }
+  }, [authFetch]);
+
   useEffect(() => {
     void loadDeal();
+    void loadPipelines();
+    void loadTeamMembers();
     void loadCustomFields('deals', authFetch).then(setCustomFieldDefs).catch(() => setCustomFieldDefs([]));
-  }, [loadDeal, authFetch]);
+  }, [loadDeal, loadPipelines, loadTeamMembers, authFetch]);
+
+  // The pipeline currently chosen for this deal (deals with no pipelineId use the default).
+  const currentPipelineId = (deal?.pipelineId ?? '') !== '' ? deal?.pipelineId ?? DEFAULT_PIPELINE_ID : DEFAULT_PIPELINE_ID;
+  const selectedPipeline = pipelines.find((p) => p.id === currentPipelineId) ?? null;
+  const stageOptions = selectedPipeline
+    ? [...selectedPipeline.stages].sort((a, b) => a.order - b.order)
+    : [];
 
   const handleCustomFieldChange = (key: string, value: CustomFieldValue): void => {
     setCustomValues((prev) => ({ ...prev, [key]: value }));
@@ -74,6 +116,8 @@ export default function EditDealPage() {
         notes: deal.notes,
         customFields: customValues,
       };
+      if (deal.pipelineId) { payload.pipelineId = deal.pipelineId; }
+      if (deal.ownerId) { payload.ownerId = deal.ownerId; }
       if (deal.expectedCloseDate) { payload.expectedCloseDate = deal.expectedCloseDate; }
       const res = await authFetch(`/api/deals/${dealId}`, {
         method: 'PATCH',
@@ -114,7 +158,63 @@ export default function EditDealPage() {
                 <div><label className="block text-sm font-medium mb-2">Probability (%)</label><input type="number" min="0" max="100" value={deal.probability ?? 50} onChange={(e) => setDeal({...deal, probability: parseInt(e.target.value)})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-2">Stage</label><select value={(deal.stage !== '' && deal.stage != null) ? deal.stage : 'prospecting'} onChange={(e) => setDeal({...deal, stage: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg"><option value="prospecting">Prospecting</option><option value="qualification">Qualification</option><option value="proposal">Proposal</option><option value="negotiation">Negotiation</option><option value="closed_won">Closed Won</option><option value="closed_lost">Closed Lost</option></select></div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Pipeline</label>
+                  <select
+                    value={currentPipelineId}
+                    onChange={(e) => {
+                      const newPipelineId = e.target.value;
+                      const newPipeline = pipelines.find((p) => p.id === newPipelineId);
+                      const firstStage = newPipeline
+                        ? [...newPipeline.stages].sort((a, b) => a.order - b.order)[0]
+                        : undefined;
+                      // Moving to another pipeline: if the current stage isn't in
+                      // the new pipeline, drop the deal onto its first stage.
+                      const stageStillValid = newPipeline?.stages.some((s) => s.key === deal.stage) ?? false;
+                      setDeal({
+                        ...deal,
+                        pipelineId: newPipelineId,
+                        stage: stageStillValid ? deal.stage : firstStage?.key ?? deal.stage,
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg"
+                  >
+                    {pipelines.length === 0 && <option value={currentPipelineId}>Loading...</option>}
+                    {pipelines.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Stage</label>
+                  <select
+                    value={(deal.stage !== '' && deal.stage != null) ? deal.stage : (stageOptions[0]?.key ?? 'prospecting')}
+                    onChange={(e) => setDeal({...deal, stage: e.target.value})}
+                    className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg"
+                  >
+                    {stageOptions.length === 0 && deal.stage != null && (
+                      <option value={deal.stage}>{deal.stage}</option>
+                    )}
+                    {stageOptions.map((s) => (
+                      <option key={s.key} value={s.key}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Owner</label>
+                  <select
+                    value={deal.ownerId ?? ''}
+                    onChange={(e) => setDeal({...deal, ownerId: e.target.value})}
+                    className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg"
+                  >
+                    <option value="">Unassigned</option>
+                    {teamMembers.map((m) => (
+                      <option key={m.uid} value={m.uid}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <div><label className="block text-sm font-medium mb-2">Expected Close Date</label><input type="date" value={deal.expectedCloseDate ?? ''} onChange={(e) => setDeal({...deal, expectedCloseDate: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
               </div>
               <div><label className="block text-sm font-medium mb-2">Notes</label><textarea value={deal.notes ?? ''} onChange={(e) => setDeal({...deal, notes: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" rows={4} /></div>

@@ -7,6 +7,25 @@
  * dragging that whole chain into the browser bundle.
  */
 
+/**
+ * The six original/default deal stages. These keys are also the default
+ * pipeline's stage keys, so they keep type-safety everywhere they're used.
+ */
+export type DefaultDealStage =
+  | 'prospecting'
+  | 'qualification'
+  | 'proposal'
+  | 'negotiation'
+  | 'closed_won'
+  | 'closed_lost';
+
+/**
+ * Stage stored on a deal. The six defaults keep literal autocomplete and
+ * type-safety; custom pipelines may define their own stage keys, so any string
+ * is accepted at runtime. (`string & {}` preserves the literal suggestions.)
+ */
+export type DealStage = DefaultDealStage | (string & {});
+
 export interface Deal {
   id: string;
   name: string;
@@ -16,9 +35,11 @@ export interface Deal {
   companyId?: string;
   contactId?: string;
   leadId?: string;
+  /** Pipeline this deal lives in. When absent the deal belongs to the default pipeline. */
+  pipelineId?: string;
   value: number;
   currency?: string;
-  stage: 'prospecting' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+  stage: DealStage;
   probability: number;
   expectedCloseDate?: Date | { toDate: () => Date };
   actualCloseDate?: Date | { toDate: () => Date };

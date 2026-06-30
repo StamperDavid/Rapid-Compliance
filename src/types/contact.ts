@@ -22,6 +22,8 @@ export interface Contact {
   companyId?: string;
   title?: string;
   linkedIn?: string;
+  /** UID of the team member who owns this contact. Empty/undefined = unassigned. */
+  ownerId?: string;
   lastActivity?: Timestamp | { toDate: () => Date };
   createdAt?: Timestamp;
   updatedAt?: Timestamp;

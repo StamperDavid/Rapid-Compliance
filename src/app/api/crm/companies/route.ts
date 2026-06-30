@@ -7,6 +7,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCompanies, createCompany } from '@/lib/crm/company-service';
+import { resolveRequestFilters } from '@/lib/crm/saved-views-service';
+import { applyViewFilters, FILTER_FETCH_CAP } from '@/lib/crm/apply-view-filters';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import type { CompanyFilters, CompanySize, CompanyStatus } from '@/types/company';
@@ -70,6 +72,27 @@ export async function GET(request: NextRequest) {
 
     const pageSizeParam = searchParams.get('pageSize');
     const pageSize = parseInt(pageSizeParam ?? '50');
+
+    // Saved-view / inline filtering: fetch a broad set and filter in-process so
+    // the returned rows reflect the view, not just the first page.
+    const viewId = searchParams.get('viewId') ?? undefined;
+    const filtersJson = searchParams.get('filters') ?? undefined;
+    const match = searchParams.get('match') ?? undefined;
+    const resolved = (viewId || filtersJson)
+      ? await resolveRequestFilters({ viewId, filtersJson, match })
+      : null;
+
+    if (resolved && resolved.filters.length > 0) {
+      const broad = await getCompanies(filters, { pageSize: FILTER_FETCH_CAP });
+      const filtered = applyViewFilters(broad.data, resolved.filters, resolved.match);
+      return NextResponse.json({
+        success: true,
+        data: filtered,
+        hasMore: false,
+        count: filtered.length,
+        total: filtered.length,
+      });
+    }
 
     const result = await getCompanies(filters, { pageSize });
 

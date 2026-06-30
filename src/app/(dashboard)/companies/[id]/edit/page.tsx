@@ -6,6 +6,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import type { Company, CompanyStatus } from '@/types/company';
+import { OwnerSelect } from '@/components/crm/OwnerSelect';
 import { CustomFieldInputs, type CustomFieldDef, type CustomFieldRecord } from '@/lib/forms/custom-field-renderer';
 import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
 import type { CustomFieldValue } from '@/types/crm-entities';
@@ -70,6 +71,7 @@ export default function EditCompanyPage(): React.JSX.Element {
           industry: company.industry,
           description: company.description,
           status: company.status,
+          ownerId: company.ownerId ?? '',
           customFields: customValues,
         }),
       });
@@ -133,6 +135,7 @@ export default function EditCompanyPage(): React.JSX.Element {
                 <label className="block text-sm font-medium mb-2">Description</label>
                 <textarea value={company.description ?? ''} onChange={(e) => setCompany({ ...company, description: e.target.value })} className={`${INPUT_CLASS} resize-y`} rows={4} />
               </div>
+              <OwnerSelect value={company.ownerId} onChange={(ownerId) => setCompany({ ...company, ownerId })} id="company-owner" />
             </div>
           </div>
 

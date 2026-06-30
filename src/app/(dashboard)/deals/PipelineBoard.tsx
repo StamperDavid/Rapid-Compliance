@@ -27,6 +27,13 @@ export interface Deal {
   probability?: number;
   source?: string;
   leadId?: string;
+  pipelineId?: string;
+}
+
+/** A renderable stage column: the persisted `key` plus its display `label`. */
+export interface BoardStage {
+  key: string;
+  label: string;
 }
 
 interface StageColor {
@@ -37,7 +44,7 @@ interface StageColor {
 }
 
 interface PipelineBoardProps {
-  stages: string[];
+  stages: BoardStage[];
   stageColors: Record<string, StageColor>;
   deals: Deal[];
   getCompanyName: (deal: Deal) => string;
@@ -105,7 +112,8 @@ function DealCard({ deal, getCompanyName, onOpenDeal }: DealCardProps) {
 }
 
 interface StageColumnProps {
-  stage: string;
+  stageKey: string;
+  stageLabel: string;
   colors: StageColor;
   deals: Deal[];
   getCompanyName: (deal: Deal) => string;
@@ -113,8 +121,8 @@ interface StageColumnProps {
   stageIdx: number;
 }
 
-function StageColumn({ stage, colors, deals, getCompanyName, onOpenDeal, stageIdx }: StageColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: stage });
+function StageColumn({ stageKey, stageLabel, colors, deals, getCompanyName, onOpenDeal, stageIdx }: StageColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: stageKey });
   const stageValue = deals.reduce((sum, d) => sum + (d.value ?? 0), 0);
 
   return (
@@ -130,7 +138,7 @@ function StageColumn({ stage, colors, deals, getCompanyName, onOpenDeal, stageId
       <div className="p-4 border-b border-border-light" style={colors.bgStyle}>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">{colors.icon}</span>
-          <h3 className="font-semibold text-foreground text-sm capitalize">{stage.replace('_', ' ')}</h3>
+          <h3 className="font-semibold text-foreground text-sm">{stageLabel}</h3>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{deals.length} deals</span>
@@ -177,7 +185,7 @@ export default function PipelineBoard({
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
-  const getDealsByStage = (stage: string) => deals.filter((d) => d.stage === stage);
+  const getDealsByStage = (stageKey: string) => deals.filter((d) => d.stage === stageKey);
 
   const handleDragStart = (event: DragStartEvent) => {
     const deal = deals.find((d) => d.id === event.active.id);
@@ -197,7 +205,7 @@ export default function PipelineBoard({
     if (!deal) { return; }
     const previousStage = deal.stage;
     if (previousStage === targetStage) { return; }
-    if (!stages.includes(targetStage)) { return; }
+    if (!stages.some((s) => s.key === targetStage)) { return; }
 
     setMoveError(null);
 
@@ -235,10 +243,11 @@ export default function PipelineBoard({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stages.map((stage, stageIdx) => (
           <StageColumn
-            key={stage}
-            stage={stage}
-            colors={stageColors[stage]}
-            deals={getDealsByStage(stage)}
+            key={stage.key}
+            stageKey={stage.key}
+            stageLabel={stage.label}
+            colors={stageColors[stage.key]}
+            deals={getDealsByStage(stage.key)}
             getCompanyName={getCompanyName}
             onOpenDeal={onOpenDeal}
             stageIdx={stageIdx}

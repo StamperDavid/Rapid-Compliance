@@ -10,9 +10,10 @@ import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { getOrCreateDefaultPipeline, getPipeline, getPipelineForDeal } from './pipeline-service';
 
 export type { Deal } from './deal-service-types';
-import type { Deal } from './deal-service-types';
+import type { Deal, DealStage } from './deal-service-types';
 
 export interface DealFilters {
   stage?: string;
@@ -105,18 +106,31 @@ export async function getDeal(
  * Create a new deal
  */
 export async function createDeal(
-  data: Omit<Deal, 'id' | 'createdAt'>
+  data: Omit<Deal, 'id' | 'createdAt' | 'stage'> & { stage?: DealStage }
 ): Promise<Deal> {
   try {
     const dealId = `deal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
 
+    // Resolve the pipeline this deal belongs to. New deals with no pipelineId
+    // fall into the default pipeline so they render on the default board.
+    const pipeline = data.pipelineId
+      ? (await getPipeline(data.pipelineId)) ?? (await getOrCreateDefaultPipeline())
+      : await getOrCreateDefaultPipeline();
+    const firstStage = [...pipeline.stages].sort((a, b) => a.order - b.order)[0];
+    const stage: DealStage = (data.stage !== undefined && data.stage !== '')
+      ? data.stage
+      : (firstStage?.key ?? 'prospecting');
+    const stageDef = pipeline.stages.find((s) => s.key === stage);
+    const probability = data.probability ?? stageDef?.probability ?? 10;
+
     const deal: Deal = {
       ...data,
       id: dealId,
+      pipelineId: pipeline.id,
       currency: data.currency ?? 'USD',
-      stage: data.stage || 'prospecting',
-      probability: data.probability || 10,
+      stage,
+      probability,
       createdAt: now,
       updatedAt: now,
     };
@@ -236,7 +250,7 @@ export async function createDealFromLead(
  */
 export async function moveDealToStage(
   dealId: string,
-  newStage: Deal['stage']
+  newStage: DealStage
 ): Promise<Deal> {
   try {
     // Get current deal for event firing
@@ -245,16 +259,27 @@ export async function moveDealToStage(
       throw new Error('Deal not found');
     }
 
+    // Resolve the deal's pipeline (falls back to the default for legacy deals)
+    // so the target stage is validated against real stage keys and win/loss is
+    // detected via the stage's `type`, not just the two default keys.
+    const pipeline = await getPipelineForDeal(currentDeal.pipelineId);
+    const stageDef = pipeline.stages.find((s) => s.key === newStage);
+    if (!stageDef) {
+      throw new Error(`"${newStage}" isn’t a stage in this deal’s pipeline.`);
+    }
+
     const oldStage = currentDeal.stage;
+    const isWon = stageDef.type === 'won' || newStage === 'closed_won';
+    const isLost = stageDef.type === 'lost' || newStage === 'closed_lost';
 
     const updates: Partial<Deal> = {
       stage: newStage,
     };
 
     // Auto-set close date if won/lost
-    if (newStage === 'closed_won' || newStage === 'closed_lost') {
+    if (isWon || isLost) {
       updates.actualCloseDate = new Date();
-      updates.probability = newStage === 'closed_won' ? 100 : 0;
+      updates.probability = isWon ? 100 : 0;
     }
 
     const deal = await updateDeal(dealId, updates);
@@ -282,13 +307,13 @@ export async function moveDealToStage(
     });
 
     // Emit specific win/loss signals
-    if (newStage === 'closed_won') {
+    if (isWon) {
       await emitDealSignal({
         type: 'deal.won',
         deal,
         metadata: { oldStage },
       });
-    } else if (newStage === 'closed_lost') {
+    } else if (isLost) {
       await emitDealSignal({
         type: 'deal.lost',
         deal,

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getContacts, createContact, deleteContact } from '@/lib/crm/contact-service';
+import { resolveRequestFilters } from '@/lib/crm/saved-views-service';
+import { applyViewFilters, FILTER_FETCH_CAP } from '@/lib/crm/apply-view-filters';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 
@@ -9,6 +11,10 @@ export const dynamic = 'force-dynamic';
 const querySchema = z.object({
   company: z.string().optional(),
   pageSize: z.coerce.number().int().positive().optional().default(50),
+  // Saved-view / inline filtering (Saved Views feature).
+  viewId: z.string().optional(),
+  filters: z.string().optional(),
+  match: z.enum(['all', 'any']).optional(),
 });
 
 const createContactSchema = z.object({
@@ -54,6 +60,9 @@ export async function GET(
     const queryResult = querySchema.safeParse({
       company: searchParams.get('company') ?? undefined,
       pageSize: searchParams.get('pageSize') ?? undefined,
+      viewId: searchParams.get('viewId') ?? undefined,
+      filters: searchParams.get('filters') ?? undefined,
+      match: searchParams.get('match') ?? undefined,
     });
 
     if (!queryResult.success) {
@@ -63,11 +72,22 @@ export async function GET(
       );
     }
 
-    const { company, pageSize } = queryResult.data;
-    const filters = company ? { company } : undefined;
-    const pagination = { pageSize };
+    const { company, pageSize, viewId, filters: filtersJson, match } = queryResult.data;
+    const baseFilters = company ? { company } : undefined;
 
-    const result = await getContacts(filters, pagination);
+    // Saved-view / inline filtering: fetch a broad set and filter in-process so
+    // the rows returned actually reflect the view, not just the first page.
+    const resolved = (viewId || filtersJson)
+      ? await resolveRequestFilters({ viewId, filtersJson, match })
+      : null;
+
+    if (resolved && resolved.filters.length > 0) {
+      const broad = await getContacts(baseFilters, { pageSize: FILTER_FETCH_CAP });
+      const filtered = applyViewFilters(broad.data, resolved.filters, resolved.match);
+      return NextResponse.json({ data: filtered, total: filtered.length, hasMore: false, lastDoc: null });
+    }
+
+    const result = await getContacts(baseFilters, { pageSize });
 
     return NextResponse.json(result);
   } catch (error: unknown) {

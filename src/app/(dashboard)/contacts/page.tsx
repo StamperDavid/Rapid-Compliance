@@ -19,10 +19,26 @@ import { Button } from '@/components/ui/button';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { Users, Plus, Eye, Loader2, AlertCircle, Trash2, Mail, Phone, ChevronDown } from 'lucide-react';
 import { type Contact } from '@/types/contact';
+import ImportCsvModal from '@/components/crm/ImportCsvModal';
+import SavedViewsBar from '@/components/crm/SavedViewsBar';
+import type { FilterFieldDef } from '@/types/saved-view';
 
 function contactName(c: Contact): string {
   return (c.name ?? `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()) || 'Unknown';
 }
+
+const CONTACT_FILTER_FIELDS: FilterFieldDef[] = [
+  { value: 'firstName', label: 'First name' },
+  { value: 'lastName', label: 'Last name' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'company', label: 'Company' },
+  { value: 'title', label: 'Job title' },
+  { value: 'isVIP', label: 'VIP', type: 'boolean' },
+  { value: 'tags', label: 'Tags' },
+  { value: 'address.state', label: 'State' },
+  { value: 'address.city', label: 'City' },
+];
 
 export default function ContactsPage() {
   const router = useRouter();
@@ -36,11 +52,14 @@ export default function ContactsPage() {
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
   const fetchContacts = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await authFetch(`/api/contacts?pageSize=${limit}`);
+      const params = new URLSearchParams({ pageSize: String(limit) });
+      if (activeViewId) { params.set('viewId', activeViewId); }
+      const response = await authFetch(`/api/contacts?${params.toString()}`);
       if (!response.ok) { throw new Error('Failed to fetch contacts'); }
       const result = await response.json() as { data: Contact[]; total?: number };
       setContacts(Array.isArray(result.data) ? result.data : []);
@@ -50,7 +69,7 @@ export default function ContactsPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, limit]);
+  }, [authFetch, limit, activeViewId]);
 
   useEffect(() => {
     if (authLoading) { return; }
@@ -175,10 +194,13 @@ export default function ContactsPage() {
           </div>
         </div>
 
-        <Button onClick={() => router.push('/contacts/new')}>
-          <Plus className="w-5 h-5 mr-2" />
-          New Contact
-        </Button>
+        <div className="flex items-center gap-3">
+          <ImportCsvModal object="contact" onImported={() => void fetchContacts()} />
+          <Button onClick={() => router.push('/contacts/new')}>
+            <Plus className="w-5 h-5 mr-2" />
+            New Contact
+          </Button>
+        </div>
       </motion.div>
 
       {error && (
@@ -187,6 +209,13 @@ export default function ContactsPage() {
           <span className="text-error-light">{error}</span>
         </div>
       )}
+
+      <SavedViewsBar
+        object="contact"
+        fields={CONTACT_FILTER_FIELDS}
+        activeViewId={activeViewId}
+        onSelect={setActiveViewId}
+      />
 
       <DataTable
         columns={columns}

@@ -19,10 +19,23 @@ import { Button } from '@/components/ui/button';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { Target, Plus, Eye, Loader2, AlertCircle, Trash2, Mail, Building2, Gauge, ChevronDown } from 'lucide-react';
 import { type Lead, type LeadStatus } from '@/types/crm-entities';
+import SavedViewsBar from '@/components/crm/SavedViewsBar';
+import type { FilterFieldDef } from '@/types/saved-view';
 
 function leadName(l: Lead): string {
   return (l.name ?? `${l.firstName ?? ''} ${l.lastName ?? ''}`.trim()) || 'Unknown';
 }
+
+const LEAD_FILTER_FIELDS: FilterFieldDef[] = [
+  { value: 'firstName', label: 'First name' },
+  { value: 'lastName', label: 'Last name' },
+  { value: 'email', label: 'Email' },
+  { value: 'company', label: 'Company' },
+  { value: 'status', label: 'Status' },
+  { value: 'score', label: 'Score', type: 'number' },
+  { value: 'source', label: 'Source' },
+  { value: 'tags', label: 'Tags' },
+];
 
 const STATUS_BADGES: Record<LeadStatus, { label: string; className: string }> = {
   new: { label: 'New', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
@@ -44,11 +57,14 @@ export default function LeadsPage() {
   const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await authFetch(`/api/leads?pageSize=${limit}`);
+      const params = new URLSearchParams({ pageSize: String(limit) });
+      if (activeViewId) { params.set('viewId', activeViewId); }
+      const response = await authFetch(`/api/leads?${params.toString()}`);
       if (!response.ok) { throw new Error('Failed to fetch leads'); }
       const result = await response.json() as { data: Lead[]; total?: number };
       setLeads(Array.isArray(result.data) ? result.data : []);
@@ -58,7 +74,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, limit]);
+  }, [authFetch, limit, activeViewId]);
 
   useEffect(() => {
     if (authLoading) { return; }
@@ -219,6 +235,13 @@ export default function LeadsPage() {
           <span className="text-error-light">{error}</span>
         </div>
       )}
+
+      <SavedViewsBar
+        object="lead"
+        fields={LEAD_FILTER_FIELDS}
+        activeViewId={activeViewId}
+        onSelect={setActiveViewId}
+      />
 
       <DataTable
         columns={columns}

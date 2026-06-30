@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+import { OwnerSelect } from '@/components/crm/OwnerSelect';
 import { CustomFieldInputs, type CustomFieldDef, type CustomFieldRecord } from '@/lib/forms/custom-field-renderer';
 import { loadCustomFields } from '@/lib/forms/custom-fields-schema';
 import type { CustomFieldValue } from '@/types/crm-entities';
@@ -19,6 +20,7 @@ interface Lead {
   companyName?: string;
   title?: string;
   status?: string;
+  ownerId?: string;
   customFields?: CustomFieldRecord;
 }
 
@@ -74,6 +76,7 @@ export default function EditLeadPage() {
           company: lead.company,
           title: lead.title,
           status: lead.status,
+          ownerId: lead.ownerId ?? '',
           customFields: customValues,
         }),
       });
@@ -110,6 +113,7 @@ export default function EditLeadPage() {
                 <div><label className="block text-sm font-medium mb-2">Title</label><input type="text" value={lead.title ?? ''} onChange={(e) => setLead({...lead, title: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
               </div>
               <div><label className="block text-sm font-medium mb-2">Status</label><select value={(lead.status !== '' && lead.status != null) ? lead.status : 'new'} onChange={(e) => setLead({...lead, status: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg"><option value="new">New</option><option value="contacted">Contacted</option><option value="qualified">Qualified</option><option value="converted">Converted</option></select></div>
+              <OwnerSelect value={lead.ownerId} onChange={(ownerId) => setLead({...lead, ownerId})} id="lead-owner" />
             </div>
           </div>
           {customFieldDefs.length > 0 && (

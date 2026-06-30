@@ -6,8 +6,6 @@ import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'] as const;
-
 const updateDealSchema = z.object({
   name: z.string().min(1).optional(),
   value: z.number().min(0).optional(),
@@ -16,7 +14,9 @@ const updateDealSchema = z.object({
   companyId: z.string().optional(),
   contactId: z.string().optional(),
   currency: z.string().optional(),
-  stage: z.enum(DEAL_STAGES).optional(),
+  // Stage keys are pipeline-defined, so any non-empty key is accepted here.
+  stage: z.string().min(1).optional(),
+  pipelineId: z.string().min(1).optional(),
   probability: z.number().min(0).max(100).optional(),
   expectedCloseDate: z.string().optional(),
   ownerId: z.string().optional(),

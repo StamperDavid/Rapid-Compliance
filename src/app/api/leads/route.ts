@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getLeads, createLead, deleteLead, type Lead } from '@/lib/crm/lead-service';
+import { resolveRequestFilters } from '@/lib/crm/saved-views-service';
+import { applyViewFilters, FILTER_FETCH_CAP } from '@/lib/crm/apply-view-filters';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
@@ -9,6 +11,10 @@ export const dynamic = 'force-dynamic';
 const getQuerySchema = z.object({
   status: z.string().optional(),
   pageSize: z.coerce.number().int().positive().optional().default(50),
+  // Saved-view / inline filtering (Saved Views feature).
+  viewId: z.string().optional(),
+  filters: z.string().optional(),
+  match: z.enum(['all', 'any']).optional(),
 });
 
 const leadDataSchema = z.object({
@@ -55,6 +61,9 @@ export async function GET(
     const queryResult = getQuerySchema.safeParse({
       status: searchParams.get('status') ?? undefined,
       pageSize: searchParams.get('pageSize') ?? undefined,
+      viewId: searchParams.get('viewId') ?? undefined,
+      filters: searchParams.get('filters') ?? undefined,
+      match: searchParams.get('match') ?? undefined,
     });
 
     if (!queryResult.success) {
@@ -64,11 +73,21 @@ export async function GET(
       );
     }
 
-    const { status, pageSize } = queryResult.data;
-    const filters = status && status !== 'all' ? { status: status as Lead['status'] } : undefined;
-    const pagination = { pageSize };
+    const { status, pageSize, viewId, filters: filtersJson, match } = queryResult.data;
+    const baseFilters = status && status !== 'all' ? { status: status as Lead['status'] } : undefined;
 
-    const result = await getLeads(filters, pagination);
+    // Saved-view / inline filtering: fetch a broad set and filter in-process.
+    const resolved = (viewId || filtersJson)
+      ? await resolveRequestFilters({ viewId, filtersJson, match })
+      : null;
+
+    if (resolved && resolved.filters.length > 0) {
+      const broad = await getLeads(baseFilters, { pageSize: FILTER_FETCH_CAP });
+      const filtered = applyViewFilters(broad.data, resolved.filters, resolved.match);
+      return NextResponse.json({ data: filtered, total: filtered.length, hasMore: false, lastDoc: null });
+    }
+
+    const result = await getLeads(baseFilters, { pageSize });
 
     return NextResponse.json(result);
   } catch (error: unknown) {

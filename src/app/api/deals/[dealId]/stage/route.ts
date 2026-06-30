@@ -6,10 +6,10 @@ import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'] as const;
-
 const moveStageSchema = z.object({
-  stage: z.enum(DEAL_STAGES),
+  // Stage keys are pipeline-defined; the service validates the key against the
+  // deal's actual pipeline before moving it.
+  stage: z.string().min(1),
 });
 
 /**

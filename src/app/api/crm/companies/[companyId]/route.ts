@@ -37,6 +37,7 @@ const updateCompanySchema = z.object({
   facebookUrl: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  ownerId: z.string().optional(),
   customFields: z.record(z.unknown()).optional(),
 }).strict();
 
