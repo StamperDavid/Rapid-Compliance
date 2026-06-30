@@ -255,20 +255,33 @@ wave CLOSED several gaps. **Now DONE (certify each with an operator walkthrough)
 - ✅ Activity timeline + Log Activity on all 4 · drag-drop deal pipeline · CSV EXPORT on all 4 lists ·
   per-record AI (deal health, lead scoring, contact next-best-action).
 
-**STILL MISSING — the real to-do list (build each ONLY after explaining it + the operator picks it):**
-1. 🔴 **Saved/filtered views + segmentation** — lists have only a client-side search box (filters in-memory
-   over the loaded page; server gets only `pageSize`). No named views, multi-condition filters, or segments.
-   Higher effort: needs a persisted "views" model + server-side filtering.
-2. 🔴 **Multiple pipelines** — `DEAL_STAGES` is one hardcoded 6-stage array (`deals/page.tsx:30` +
-   `deal-service.ts:346` + deals edit). No pipeline selector / pipeline entity.
-3. 🟠 **CSV IMPORT UI** — export works; the only import API is `/api/leads/import`; no import route for
-   contacts/companies/deals and no Import button on any list. Mechanical: reuse the leads import route as a
-   template + add an Import modal to the 4 lists.
-4. 🔴 **Editable record owner** — owner is read-only on deal detail; no owner field on any edit page, no
-   reassignment UI. Smallest: add an owner `<select>` (from `/api/team/members`) to the edit pages + include
-   `ownerId` in the PATCH; confirm `ownerId` is whitelisted in each `[id]/route.ts`.
-5. 🔴 **Reporting/forecasting surfaced INSIDE the CRM** — engines exist (`/analytics/*`,
-   `revenue-forecasting-engine`) but nothing is mounted on the CRM list/detail pages.
+**✅ ALL FIVE GAPS BUILT (Jun 30 2026) — `a7a3275b` + pipeline-mgmt follow-up; certify each via an
+operator walkthrough.** Built in parallel (5 subagents, disjoint file ownership), integrated in one
+serial list-page wiring pass, tsc + eslint clean, pushed to `dev`, primary fast-forwarded.
+1. ✅ **Saved/filtered views + segmentation** — `SavedView` model + `savedViews` collection +
+   `/api/crm/views` CRUD; REAL server-side filtering (`apply-view-filters.ts` util broad-fetches up to
+   `FILTER_FETCH_CAP=1000` then filters; Admin SDK, not the silent-`[]` trap) wired into the
+   contacts/companies/deals/leads GET routes; `SavedViewsBar` + `FilterBuilderDialog` on all four lists.
+   ⚠️ Ceiling: >1000-row collections will later need indexed Firestore queries.
+2. ✅ **Multiple pipelines** — `Pipeline` model/service + `/api/crm/pipelines` CRUD; lazy default-pipeline
+   seed matching the original 6 stages; deals carry `pipelineId` with a default fallback so existing deals
+   keep rendering; pipeline selector + dynamic stage columns on the board. **Management screen at
+   `/pipelines`** (create/rename/edit stages/delete; default un-deletable; existing stage KEYS never
+   renamed) — reachable via the `Pipelines` tab in `DEALS_TABS`.
+3. ✅ **CSV IMPORT UI** — `ImportCsvModal` (one component reused on contacts/companies/deals lists) + three
+   import routes (`/api/contacts/import`, `/api/crm/companies/import`, `/api/deals/import`) mirroring the
+   leads importer; shared `csv-import-helpers.ts`; per-row error reporting. (Leads still uses its own
+   importer; no Import button added to the leads list yet — minor follow-up.)
+4. ✅ **Editable record owner** — `OwnerSelect` (from `/api/team/members`) on the contacts/companies/leads
+   edit pages; `ownerId` whitelisted in their PATCH routes; deal owner editable on the deal edit page.
+   ("Unassigned" writes `ownerId: ""`.)
+5. ✅ **Reporting/forecasting surfaced INSIDE the CRM** — `/crm-reports` page + `CrmReports` component
+   reusing the REAL `/api/analytics/pipeline|forecast|win-loss` engines, honest empty states. `Reports`
+   tab added to `DEALS_TABS`.
+
+**NEXT for CRM:** operator walkthrough to certify each of the five against Pipedrive/HubSpot (the parity
+bar — "done" = certified, not "code shipped"). Minor follow-ups noted above (leads import button; very-large
+collection indexed filtering).
 
 **🚫 DECISION — NO duplicate-MERGE feature, ever.** A merge UI was built Jun 29 then REVERTED at the
 operator's call: merge destroys a record (an employee could wipe a client by accident) AND it fights the
