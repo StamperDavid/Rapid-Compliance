@@ -19,13 +19,14 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Loader2, Sparkles, Calendar as CalendarIcon, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Sparkles, Calendar as CalendarIcon, X, Wand2, Undo2, ChevronDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { CardTitle } from '@/components/ui/typography';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { PLATFORM_META } from '@/lib/social/platform-config';
+import { getPlatformConfig } from '@/components/social/_platform-state';
 import { MediaUploader } from '@/components/social/MediaUploader';
 import type { SocialPlatform } from '@/types/social';
 import { normalizeFormat } from '@/lib/social/format-normalizer';
@@ -82,6 +83,24 @@ interface GeneratePostResponse {
 interface AccountListResponse {
   accounts?: Array<{ status: string }>;
 }
+
+// ─── Inline AI assist (rephrase / shorten / expand / change tone) ──────────────
+
+type AssistAction = 'rephrase' | 'shorten' | 'expand' | 'tone';
+type AssistTone = 'professional' | 'casual' | 'bold' | 'friendly';
+
+interface ComposerAssistResponse {
+  success: boolean;
+  text?: string;
+  error?: string;
+}
+
+const ASSIST_TONES: ReadonlyArray<{ value: AssistTone; label: string }> = [
+  { value: 'professional', label: 'Professional' },
+  { value: 'casual', label: 'Casual' },
+  { value: 'bold', label: 'Bold' },
+  { value: 'friendly', label: 'Friendly' },
+];
 
 // ─── Per-platform composer pickup ────────────────────────────────────────────
 
@@ -157,6 +176,18 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
   const [generateBrief, setGenerateBrief] = useState('');
   const [generating, setGenerating] = useState(false);
   const briefTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Inline AI assist state. `assistBusy` holds the action currently running so
+  // we can show a per-control spinner; `prevContent` keeps the pre-transform
+  // draft so the operator can revert in one click; `showToneMenu` toggles the
+  // small tone picker.
+  const [assistBusy, setAssistBusy] = useState<AssistAction | null>(null);
+  const [prevContent, setPrevContent] = useState<string | null>(null);
+  const [showToneMenu, setShowToneMenu] = useState(false);
+
+  // AI assist is only offered where a real platform specialist exists (mirrors
+  // the AI Generate gate and the composer-assist endpoint).
+  const assistAvailable = getPlatformConfig(platform).specialistId !== null;
 
   const checkConnection = useCallback(async (): Promise<'connected' | 'not_connected' | 'auth_not_ready'> => {
     try {
@@ -375,6 +406,52 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
     toast,
   ]);
 
+  const runAssist = useCallback(
+    async (action: AssistAction, tone?: AssistTone) => {
+      const draft = formState.content.trim();
+      if (!draft) {
+        toast.error('Write a draft first, then let the AI refine it.');
+        return;
+      }
+      setShowToneMenu(false);
+      setAssistBusy(action);
+      const before = formState.content;
+      try {
+        const res = await authFetch('/api/social/composer-assist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            platform,
+            text: draft,
+            action,
+            ...(tone ? { tone } : {}),
+          }),
+        });
+        const data = (await res.json()) as ComposerAssistResponse;
+        if (!res.ok || !data.success || !data.text) {
+          toast.error(data.error ?? `HTTP ${res.status} — AI assist could not run`);
+          return;
+        }
+        // Keep the pre-transform draft so the operator can undo in one click.
+        setPrevContent(before);
+        setFormState((prev) => ({ ...prev, content: data.text ?? prev.content }));
+        toast.success('Draft updated — use Revert if you preferred the original.');
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'AI assist failed. Check your connection.');
+      } finally {
+        setAssistBusy(null);
+      }
+    },
+    [authFetch, formState.content, platform, toast],
+  );
+
+  const revertAssist = useCallback(() => {
+    if (prevContent === null) { return; }
+    setFormState((prev) => ({ ...prev, content: prevContent }));
+    setPrevContent(null);
+    toast.success('Reverted to your previous draft.');
+  }, [prevContent, toast]);
+
   const handleSchedule = useCallback(() => {
     router.push('/social/calendar');
   }, [router]);
@@ -418,6 +495,102 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
         onChange={setFormState}
         disabled={inputsDisabled}
       />
+
+      {/* ── Inline AI assist ────────────────────────────────────────────── */}
+      {assistAvailable && (
+        <div className="rounded-xl border border-border-light bg-surface-elevated p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Wand2 className="h-3.5 w-3.5 text-primary" aria-hidden />
+            <span className="text-xs font-semibold text-foreground">AI assist</span>
+            <span className="text-[11px] text-muted-foreground">
+              Refine your draft with the {meta.label} specialist
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void runAssist('rephrase')}
+              disabled={inputsDisabled || assistBusy !== null || !hasContent}
+            >
+              {assistBusy === 'rephrase'
+                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                : <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />}
+              Rephrase
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void runAssist('shorten')}
+              disabled={inputsDisabled || assistBusy !== null || !hasContent}
+            >
+              {assistBusy === 'shorten'
+                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                : null}
+              Shorten
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void runAssist('expand')}
+              disabled={inputsDisabled || assistBusy !== null || !hasContent}
+            >
+              {assistBusy === 'expand'
+                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                : null}
+              Expand
+            </Button>
+
+            {/* Change tone — small inline tone picker */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowToneMenu((v) => !v)}
+                disabled={inputsDisabled || assistBusy !== null || !hasContent}
+                aria-haspopup="menu"
+                aria-expanded={showToneMenu}
+              >
+                {assistBusy === 'tone'
+                  ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                  : null}
+                Change tone
+                <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" aria-hidden />
+              </Button>
+              {showToneMenu && (
+                <div
+                  role="menu"
+                  className="absolute z-50 mt-1 w-44 rounded-lg border border-border-strong bg-popover text-popover-foreground shadow-md p-1"
+                >
+                  {ASSIST_TONES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => void runAssist('tone', t.value)}
+                      className="flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {prevContent !== null && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={revertAssist}
+                disabled={assistBusy !== null}
+              >
+                <Undo2 className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                Revert
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Discovery & SEO ─────────────────────────────────────────────── */}
       <TagsAndSeoSection
