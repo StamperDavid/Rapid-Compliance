@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Page, PageSection, Widget, WidgetType } from '@/types/website';
+import type { SiteChrome, ChromeRegion } from '@/lib/website-builder/site-chrome-types';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
 import { SiteHeaderPreview, SiteFooterPreview } from '@/components/website-builder/SiteChromePreview';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
@@ -35,6 +36,15 @@ interface EditableCanvasProps {
   onDeleteSection: (sectionId: string) => void;
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
+  // --- Site chrome (banner / header / footer) -------------------------------
+  // When `chrome` is provided, the faithful site frame is drawn AROUND the
+  // editable body. With `editable`, clicking a region selects it (reported via
+  // `onSelectRegion`) so the ChromeEditor panel can edit it. Editing the chrome
+  // is editor-side only — it never changes the live public site.
+  chrome?: SiteChrome | null;
+  editable?: boolean;
+  selectedRegion?: ChromeRegion | null;
+  onSelectRegion?: (region: ChromeRegion) => void;
 }
 
 interface Box {
@@ -96,6 +106,10 @@ export default function EditableCanvas({
   onDeleteSection,
   onAddWidget,
   onDeleteWidget,
+  chrome = null,
+  editable = true,
+  selectedRegion = null,
+  onSelectRegion,
 }: EditableCanvasProps) {
   // The canvas page area is painted on the SITE'S real published theme (dark base)
   // so the editor matches what publishes instead of a hardcoded white sheet that
@@ -312,6 +326,89 @@ export default function EditableCanvas({
     selectedElement?.type === 'section' || selectedElement?.type === 'widget' ? selectedElement.sectionId : null;
   const selectedWidgetId = selectedElement?.type === 'widget' ? selectedElement.widgetId : undefined;
 
+  // The editable page body — drawn through the SAME engine the live site uses.
+  // Rendered on its own when there is no chrome yet, or slotted BETWEEN the
+  // banner/header and footer when the site frame is present.
+  const bodyContent = isEmpty ? (
+    <EmptyState onAddSection={() => onAddSection()} />
+  ) : (
+    <>
+      <div
+        ref={innerRef}
+        style={{ position: 'relative' }}
+        onClickCapture={handleClickCapture}
+        onSubmitCapture={handleSubmitCapture}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {/* The SAME engine the live site renders through. */}
+        <ResponsiveRenderer content={page.content} breakpoint={breakpoint} />
+
+        {/* Editing overlay — pixel-aligned to the rendered output. */}
+        <div
+          data-editor-overlay
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 5,
+          }}
+        >
+          {/* Hover outline (skip if it is the selected element). */}
+          {boxes.hover &&
+            hover &&
+            !(hover.kind === 'widget' ? hover.widgetId === selectedWidgetId : selectedElement?.type === 'section' && hover.sectionId === selectedSectionId) && (
+              <OutlineBox
+                box={boxes.hover}
+                color={hover.kind === 'widget' ? WIDGET_COLOR : SECTION_COLOR}
+                dashed
+                label={hover.label}
+              />
+            )}
+
+          {/* Selected section outline + controls. */}
+          {selectedElement?.type === 'section' && boxes.selected && selectedSectionId && (
+            <OutlineBox box={boxes.selected} color={SECTION_COLOR} label="Section">
+              <SectionControls
+                onAddWidget={() => onAddWidget(selectedSectionId, createWidget('text'), 0)}
+                onDelete={() => onDeleteSection(selectedSectionId)}
+              />
+            </OutlineBox>
+          )}
+
+          {/* Selected widget outline + controls. */}
+          {selectedElement?.type === 'widget' && boxes.selected && selectedSectionId && selectedWidgetId && (
+            <OutlineBox box={boxes.selected} color={WIDGET_COLOR} label={hover?.label ?? 'Widget'}>
+              <WidgetControls onDelete={() => onDeleteWidget(selectedSectionId, selectedWidgetId)} />
+            </OutlineBox>
+          )}
+        </div>
+      </div>
+
+      <div
+        className="text-center"
+        style={{ padding: '1rem', borderTop: '2px dashed rgba(255,255,255,0.1)' }}
+      >
+        <button
+          type="button"
+          onClick={() => onAddSection()}
+          className="cursor-pointer rounded border"
+          style={{
+            padding: '0.5rem 1rem',
+            background: 'rgba(99,102,241,0.08)',
+            color: SECTION_COLOR,
+            borderColor: 'rgba(99,102,241,0.3)',
+            fontSize: '0.875rem',
+          }}
+        >
+          + Add Section
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div
       className="flex-1 overflow-y-auto overflow-x-hidden bg-[#111111]"
@@ -330,93 +427,33 @@ export default function EditableCanvas({
           borderRadius: breakpoint !== 'desktop' ? '8px' : '0',
         }}
       >
-        {/* Faithful, non-interactive preview of the published site frame so the
-            canvas shows the COMPLETE page (banner + header + body + footer),
-            not a chopped-off body. The chrome is inert — the body below stays
-            the only editable / selectable area. */}
-        <SiteHeaderPreview theme={theme} breakpoint={breakpoint} />
-
-        {isEmpty ? (
-          <EmptyState onAddSection={() => onAddSection()} />
-        ) : (
-          <>
-            <div
-              ref={innerRef}
-              style={{ position: 'relative' }}
-              onClickCapture={handleClickCapture}
-              onSubmitCapture={handleSubmitCapture}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            >
-              {/* The SAME engine the live site renders through. */}
-              <ResponsiveRenderer content={page.content} breakpoint={breakpoint} />
-
-              {/* Editing overlay — pixel-aligned to the rendered output. */}
-              <div
-                data-editor-overlay
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  pointerEvents: 'none',
-                  zIndex: 5,
-                }}
-              >
-                {/* Hover outline (skip if it is the selected element). */}
-                {boxes.hover &&
-                  hover &&
-                  !(hover.kind === 'widget' ? hover.widgetId === selectedWidgetId : selectedElement?.type === 'section' && hover.sectionId === selectedSectionId) && (
-                    <OutlineBox
-                      box={boxes.hover}
-                      color={hover.kind === 'widget' ? WIDGET_COLOR : SECTION_COLOR}
-                      dashed
-                      label={hover.label}
-                    />
-                  )}
-
-                {/* Selected section outline + controls. */}
-                {selectedElement?.type === 'section' && boxes.selected && selectedSectionId && (
-                  <OutlineBox box={boxes.selected} color={SECTION_COLOR} label="Section">
-                    <SectionControls
-                      onAddWidget={() => onAddWidget(selectedSectionId, createWidget('text'), 0)}
-                      onDelete={() => onDeleteSection(selectedSectionId)}
-                    />
-                  </OutlineBox>
-                )}
-
-                {/* Selected widget outline + controls. */}
-                {selectedElement?.type === 'widget' && boxes.selected && selectedSectionId && selectedWidgetId && (
-                  <OutlineBox box={boxes.selected} color={WIDGET_COLOR} label={hover?.label ?? 'Widget'}>
-                    <WidgetControls onDelete={() => onDeleteWidget(selectedSectionId, selectedWidgetId)} />
-                  </OutlineBox>
-                )}
-              </div>
-            </div>
-
-            <div
-              className="text-center"
-              style={{ padding: '1rem', borderTop: '2px dashed rgba(255,255,255,0.1)' }}
-            >
-              <button
-                type="button"
-                onClick={() => onAddSection()}
-                className="cursor-pointer rounded border"
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: 'rgba(99,102,241,0.08)',
-                  color: SECTION_COLOR,
-                  borderColor: 'rgba(99,102,241,0.3)',
-                  fontSize: '0.875rem',
-                }}
-              >
-                + Add Section
-              </button>
-            </div>
-          </>
+        {/* Faithful preview of the published site frame so the canvas shows the
+            COMPLETE page (banner + header + body + footer). With `editable`, the
+            banner/header/footer are clickable regions that select for editing
+            (handled inside SiteHeaderPreview / SiteFooterPreview → onSelectRegion).
+            The body is slotted BETWEEN the header and footer. Editing the chrome
+            here is editor-side only and never changes the live public site. */}
+        {chrome && (
+          <SiteHeaderPreview
+            chrome={chrome}
+            breakpoint={breakpoint}
+            editable={editable}
+            selectedRegion={selectedRegion}
+            onSelectRegion={onSelectRegion}
+          />
         )}
 
-        <SiteFooterPreview theme={theme} breakpoint={breakpoint} />
+        {bodyContent}
+
+        {chrome && (
+          <SiteFooterPreview
+            chrome={chrome}
+            breakpoint={breakpoint}
+            editable={editable}
+            selectedRegion={selectedRegion}
+            onSelectRegion={onSelectRegion}
+          />
+        )}
       </div>
     </div>
   );

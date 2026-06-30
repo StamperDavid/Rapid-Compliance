@@ -13,6 +13,7 @@
 'use client';
 
 import type { Page, PageSection, Widget } from '@/types/website';
+import type { SiteChrome, ChromeRegion } from '@/lib/website-builder/site-chrome-types';
 import EditableCanvas from '@/components/website-builder/EditableCanvas';
 
 interface SelectedElement {
@@ -32,6 +33,11 @@ interface EditorCanvasProps {
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
   onUpdateWidget: (sectionId: string, widgetId: string, updates: Partial<Widget>) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
+  // Site chrome (banner / header / footer) — forwarded straight to EditableCanvas.
+  chrome?: SiteChrome | null;
+  editable?: boolean;
+  selectedRegion?: ChromeRegion | null;
+  onSelectRegion?: (region: ChromeRegion) => void;
 }
 
 export default function EditorCanvas({
@@ -45,6 +51,10 @@ export default function EditorCanvas({
   onAddWidget,
   onUpdateWidget: _onUpdateWidget,
   onDeleteWidget,
+  chrome = null,
+  editable = true,
+  selectedRegion = null,
+  onSelectRegion,
 }: EditorCanvasProps) {
   // Property edits flow through PropertiesPanel (onUpdateSection / onUpdateWidget),
   // so the canvas itself only needs select / add / delete handlers.
@@ -58,6 +68,10 @@ export default function EditorCanvas({
       onDeleteSection={onDeleteSection}
       onAddWidget={onAddWidget}
       onDeleteWidget={onDeleteWidget}
+      chrome={chrome}
+      editable={editable}
+      selectedRegion={selectedRegion}
+      onSelectRegion={onSelectRegion}
     />
   );
 }

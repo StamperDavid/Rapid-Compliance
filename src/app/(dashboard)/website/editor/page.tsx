@@ -17,8 +17,11 @@ import { useAuth } from '@/hooks/useAuth';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
+import ChromeEditor from '@/components/website-builder/ChromeEditor';
 import EditorToolbar from '@/components/website-builder/EditorToolbar';
 import type { Page, PageSection, Widget } from '@/types/website';
+import { DEFAULT_SITE_CHROME, type SiteChrome, type ChromeRegion } from '@/lib/website-builder/site-chrome-types';
+import { loadSiteChrome, SITE_CHROME_API_PATH } from '@/lib/website-builder/site-chrome-service';
 import type { WebsiteConfig, EditorPage, EditorPageSection, WidgetElement } from '@/types/website-editor';
 import { DEFAULT_CONFIG } from '@/lib/website-builder/default-config';
 import { useEditorHistory } from '@/hooks/useEditorHistory';
@@ -218,6 +221,17 @@ function blankPage(): Page {
 // ============================================================================
 // MAIN EDITOR COMPONENT
 // ============================================================================
+//
+// Site-chrome persistence (banner / header / footer):
+//   - `loadSiteChrome()` reads the saved DRAFT from `SITE_CHROME_API_PATH`
+//     (`/api/website-builder/chrome`); it falls back to DEFAULT_SITE_CHROME when
+//     nothing is saved, so the editor looks identical to the live site at first.
+//   - Edits are saved back to that SAME draft store via a debounced PUT
+//     (`persistChrome` below).
+//   - This is EDITOR-SIDE ONLY: `PublicLayout` / `EarlyAccessBanner` render the
+//     live chrome and do NOT read this draft doc, so editing here can never
+//     change the public site. Applying a draft to the live site is a separate
+//     deliberate step (not built here).
 
 function PageEditorInner() {
   const { user: _user, loading: authLoading } = useAuth();
@@ -232,6 +246,8 @@ function PageEditorInner() {
   // a brand-new page that still needs to be created (POST).
   const [pagePersisted, setPagePersisted] = useState(false);
   const didLoadRef = useRef(false);
+  // Debounce timer for saving chrome edits to the draft store.
+  const chromeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Editor state (operates on the canonical Page shape directly)
   const [page, setPage] = useState<Page | null>(null);
@@ -241,6 +257,12 @@ function PageEditorInner() {
     widgetId?: string;
   } | null>(null);
   const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+
+  // Site chrome (banner / header / footer) + which region is selected for editing.
+  // Chrome edits are mutually exclusive with body widget/section selection.
+  const [chrome, setChrome] = useState<SiteChrome | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<ChromeRegion | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -330,6 +352,15 @@ function PageEditorInner() {
       setPage(resolvedPage);
       pushState(resolvedPage);
       setHasUnsavedChanges(false);
+
+      // Site chrome: load the saved draft (or defaults) from the draft store the
+      // service reads. Never touches the live site (PublicLayout reads its own).
+      try {
+        setChrome(await loadSiteChrome());
+      } catch (chromeError) {
+        logger.warn('[Editor] Could not load site chrome — using defaults', { error: String(chromeError) });
+        setChrome(DEFAULT_SITE_CHROME);
+      }
     } catch (error) {
       logger.error('[Editor] Load error:', error instanceof Error ? error : new Error(String(error)));
       const fallback = blankPage();
@@ -343,6 +374,7 @@ function PageEditorInner() {
       setSelectedPageId(fallback.id);
       setPage(fallback);
       pushState(fallback);
+      setChrome(DEFAULT_SITE_CHROME);
     } finally {
       setLoading(false);
     }
@@ -354,6 +386,15 @@ function PageEditorInner() {
     didLoadRef.current = true;
     void loadConfig();
   }, [authLoading, loadConfig]);
+
+  // Clear any pending chrome-save debounce on unmount.
+  useEffect(() => {
+    return () => {
+      if (chromeSaveTimer.current) {
+        clearTimeout(chromeSaveTimer.current);
+      }
+    };
+  }, []);
 
   // ============================================================================
   // Switch page (fetch the chosen page directly; update the URL without reload)
@@ -695,6 +736,51 @@ function PageEditorInner() {
   }
 
   // ============================================================================
+  // Site chrome (banner / header / footer) — editor-side draft only
+  // ============================================================================
+
+  // Selecting a chrome region and a body widget/section are mutually exclusive.
+  function selectRegion(region: ChromeRegion): void {
+    setSelectedRegion(region);
+    setSelectedElement(null);
+  }
+
+  function selectElement(element: { type: 'section' | 'widget'; sectionId: string; widgetId?: string }): void {
+    setSelectedElement(element);
+    setSelectedRegion(null);
+  }
+
+  // Save the chrome draft to the store the service reads. Debounced so typing in
+  // the ChromeEditor doesn't fire a request per keystroke. EDITOR-SIDE ONLY.
+  const persistChrome = React.useCallback(async (next: SiteChrome): Promise<void> => {
+    try {
+      const res = await authFetch(SITE_CHROME_API_PATH, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chrome: next }),
+      });
+      if (!res.ok) {
+        throw new Error(`Chrome save failed (${res.status})`);
+      }
+    } catch (error) {
+      logger.error('[Editor] Chrome save error:', error instanceof Error ? error : new Error(String(error)));
+      setNotification({ message: 'Could not save banner/header/footer changes', type: 'error' });
+    }
+  }, [authFetch]);
+
+  // Apply a chrome edit to in-memory state immediately, then persist (debounced)
+  // to the draft store. This never writes to the live public site.
+  function handleChromeChange(next: SiteChrome): void {
+    setChrome(next);
+    if (chromeSaveTimer.current) {
+      clearTimeout(chromeSaveTimer.current);
+    }
+    chromeSaveTimer.current = setTimeout(() => {
+      void persistChrome(next);
+    }, 700);
+  }
+
+  // ============================================================================
   // Update branding
   // ============================================================================
 
@@ -782,24 +868,38 @@ function PageEditorInner() {
           page={page}
           breakpoint={breakpoint}
           selectedElement={selectedElement}
-          onSelectElement={setSelectedElement}
+          onSelectElement={selectElement}
           onAddSection={addSection}
           onUpdateSection={updateSection}
           onDeleteSection={deleteSection}
           onAddWidget={addWidget}
           onUpdateWidget={updateWidget}
           onDeleteWidget={deleteWidget}
+          chrome={chrome}
+          editable
+          selectedRegion={selectedRegion}
+          onSelectRegion={selectRegion}
         />
 
-        {/* Right Panel: Properties */}
-        <PropertiesPanel
-          selectedElement={selectedElement}
-          page={page}
-          breakpoint={breakpoint}
-          onUpdatePage={updatePage}
-          onUpdateSection={updateSection}
-          onUpdateWidget={updateWidget}
-        />
+        {/* Right Panel: Chrome editor when a banner/header/footer region is
+            selected; otherwise the normal widget/section Properties panel. */}
+        {selectedRegion !== null && chrome !== null ? (
+          <ChromeEditor
+            chrome={chrome}
+            region={selectedRegion}
+            onChange={handleChromeChange}
+            onClose={() => setSelectedRegion(null)}
+          />
+        ) : (
+          <PropertiesPanel
+            selectedElement={selectedElement}
+            page={page}
+            breakpoint={breakpoint}
+            onUpdatePage={updatePage}
+            onUpdateSection={updateSection}
+            onUpdateWidget={updateWidget}
+          />
+        )}
       </div>
 
       {/* Notification */}
