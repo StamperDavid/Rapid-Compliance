@@ -111,7 +111,14 @@ export interface PageSection {
   
   // Responsive
   mobileLayout?: 'stack' | 'hide' | 'custom';
-  
+
+  // Multi-column layout (editor "Layout" controls). The renderer already flexes
+  // columns side-by-side (`flex: column.width`); these refine that band:
+  //  - `columnGap`     → horizontal gap between columns, in px.
+  //  - `verticalAlign` → cross-axis alignment of the columns (CSS `align-items`).
+  columnGap?: number;
+  verticalAlign?: 'flex-start' | 'center' | 'flex-end';
+
   // Settings
   fullWidth?: boolean;
   maxWidth?: number;

@@ -252,7 +252,21 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
   return (
     <section className="section" style={sectionStyle}>
       <div className="section-inner" style={innerStyle}>
-        <div className={section.columns.length > 1 ? 'flex-container' : ''}>
+        <div
+          className={section.columns.length > 1 ? 'flex-container' : ''}
+          // Multi-column sections honor optional per-section layout fields when
+          // set; when unset, `undefined` leaves the existing `.flex-container`
+          // CSS (gap:24px, default align) untouched — byte-identical for pages
+          // that never set them.
+          style={
+            section.columns.length > 1
+              ? {
+                  gap: section.columnGap !== undefined ? `${section.columnGap}px` : undefined,
+                  alignItems: section.verticalAlign,
+                }
+              : undefined
+          }
+        >
           {section.columns.map((column, idx) => (
             <div
               key={column.id || idx}

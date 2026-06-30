@@ -19,7 +19,21 @@ import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
 import ChromeEditor from '@/components/website-builder/ChromeEditor';
 import EditorToolbar from '@/components/website-builder/EditorToolbar';
+import { LayersPanel, type LayerTarget, type LayerReorder } from '@/components/website-builder/LayersPanel';
 import type { Page, PageSection, Widget } from '@/types/website';
+import {
+  findWidget,
+  moveWidget,
+  moveSection,
+  duplicateWidget,
+  duplicateSection,
+  setWidgetHidden,
+  setColumnLayout,
+  setColumnWidths,
+  addWidget as addWidgetOp,
+  deleteWidget as deleteWidgetOp,
+  deleteSection as deleteSectionOp,
+} from '@/lib/website-builder/page-tree-ops';
 import { DEFAULT_SITE_CHROME, type SiteChrome, type ChromeRegion } from '@/lib/website-builder/site-chrome-types';
 import { loadSiteChrome, SITE_CHROME_API_PATH } from '@/lib/website-builder/site-chrome-service';
 import type { WebsiteConfig, EditorPage, EditorPageSection, WidgetElement } from '@/types/website-editor';
@@ -248,6 +262,8 @@ function PageEditorInner() {
   const didLoadRef = useRef(false);
   // Debounce timer for saving chrome edits to the draft store.
   const chromeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // In-memory clipboard for Ctrl/Cmd+C / +V of a widget.
+  const widgetClipboard = useRef<Widget | null>(null);
 
   // Editor state (operates on the canonical Page shape directly)
   const [page, setPage] = useState<Page | null>(null);
@@ -257,6 +273,7 @@ function PageEditorInner() {
     widgetId?: string;
   } | null>(null);
   const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [showNavigator, setShowNavigator] = useState(false);
 
   // Site chrome (banner / header / footer) + which region is selected for editing.
   // Chrome edits are mutually exclusive with body widget/section selection.
@@ -636,6 +653,93 @@ function PageEditorInner() {
   }, [canUndo, canRedo, undo, redo, saveConfig]);
 
   // ============================================================================
+  // Element shortcuts — copy / paste / duplicate / delete for the selected
+  // widget or section. Guarded so they never fire while typing in a field.
+  // ============================================================================
+
+  useEffect(() => {
+    const isTyping = (): boolean => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el) {return false;}
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    };
+
+    const apply = (next: Page): void => {
+      setPage(next);
+      pushState(next);
+      setHasUnsavedChanges(true);
+    };
+
+    const freshId = (type: string): string =>
+      `${type}-paste-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    const handler = (e: KeyboardEvent): void => {
+      if (!page || !selectedElement || isTyping()) {return;}
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+
+      // Copy the selected widget to the in-memory clipboard.
+      if (mod && key === 'c') {
+        if (selectedElement.type === 'widget' && selectedElement.widgetId) {
+          const loc = findWidget(page, selectedElement.widgetId);
+          if (loc) {widgetClipboard.current = JSON.parse(JSON.stringify(loc.widget)) as Widget;}
+        }
+        return;
+      }
+
+      // Paste the clipboard widget after the selection (as a fresh duplicate).
+      if (mod && key === 'v') {
+        const clip = widgetClipboard.current;
+        if (!clip) {return;}
+        e.preventDefault();
+        const cloned: Widget = { ...(JSON.parse(JSON.stringify(clip)) as Widget), id: freshId(clip.type) };
+        if (selectedElement.type === 'widget' && selectedElement.widgetId) {
+          const loc = findWidget(page, selectedElement.widgetId);
+          if (loc) {
+            apply(addWidgetOp(page, loc.sectionId, loc.columnIndex, cloned, loc.widgetIndex + 1));
+            setSelectedElement({ type: 'widget', sectionId: loc.sectionId, widgetId: cloned.id });
+          }
+          return;
+        }
+        apply(addWidgetOp(page, selectedElement.sectionId, 0, cloned));
+        setSelectedElement({ type: 'widget', sectionId: selectedElement.sectionId, widgetId: cloned.id });
+        return;
+      }
+
+      // Duplicate the selected widget or section in place.
+      if (mod && key === 'd') {
+        e.preventDefault();
+        if (selectedElement.type === 'widget' && selectedElement.widgetId) {
+          const { page: next, newWidgetId } = duplicateWidget(page, selectedElement.widgetId);
+          apply(next);
+          const loc = findWidget(next, newWidgetId);
+          if (loc) {setSelectedElement({ type: 'widget', sectionId: loc.sectionId, widgetId: newWidgetId });}
+        } else {
+          const { page: next, newSectionId } = duplicateSection(page, selectedElement.sectionId);
+          apply(next);
+          if (newSectionId) {setSelectedElement({ type: 'section', sectionId: newSectionId });}
+        }
+        return;
+      }
+
+      // Delete the selected element (undoable).
+      if (key === 'delete' || key === 'backspace') {
+        e.preventDefault();
+        if (selectedElement.type === 'widget' && selectedElement.widgetId) {
+          apply(deleteWidgetOp(page, selectedElement.widgetId));
+        } else {
+          apply(deleteSectionOp(page, selectedElement.sectionId));
+        }
+        setSelectedElement(null);
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [page, selectedElement, pushState]);
+
+  // ============================================================================
   // Page mutation helpers
   // ============================================================================
 
@@ -733,6 +837,103 @@ function PageEditorInner() {
     });
     updatePage({ content: updatedContent });
     if (selectedElement?.widgetId === widgetId) {setSelectedElement(null);}
+  }
+
+  // ============================================================================
+  // Layout engine — structural ops via pure page-tree-ops (drag, duplicate,
+  // hide, column structure). Each applies a NEW Page, records undo history,
+  // marks dirty (the existing auto-save then persists, editor-side only).
+  // ============================================================================
+
+  function commitPage(next: Page): void {
+    setPage(next);
+    pushState(next);
+    setHasUnsavedChanges(true);
+  }
+
+  function onMoveWidget(widgetId: string, dest: { sectionId: string; columnIndex: number; index: number }): void {
+    if (!page) {return;}
+    commitPage(moveWidget(page, widgetId, dest));
+  }
+
+  function onMoveSection(sectionId: string, toIndex: number): void {
+    if (!page) {return;}
+    commitPage(moveSection(page, sectionId, toIndex));
+  }
+
+  function onDuplicateWidget(widgetId: string): void {
+    if (!page) {return;}
+    const { page: next, newWidgetId } = duplicateWidget(page, widgetId);
+    commitPage(next);
+    const loc = findWidget(next, newWidgetId);
+    if (loc) {setSelectedElement({ type: 'widget', sectionId: loc.sectionId, widgetId: newWidgetId });}
+  }
+
+  function onDuplicateSection(sectionId: string): void {
+    if (!page) {return;}
+    const { page: next, newSectionId } = duplicateSection(page, sectionId);
+    commitPage(next);
+    if (newSectionId) {setSelectedElement({ type: 'section', sectionId: newSectionId });}
+  }
+
+  function onToggleWidgetHidden(widgetId: string): void {
+    if (!page) {return;}
+    const loc = findWidget(page, widgetId);
+    commitPage(setWidgetHidden(page, widgetId, !(loc?.widget.hidden ?? false)));
+  }
+
+  function onSetColumnLayout(sectionId: string, count: number, widths?: number[]): void {
+    if (!page) {return;}
+    commitPage(setColumnLayout(page, sectionId, count, widths));
+  }
+
+  function onSetColumnWidths(sectionId: string, widths: number[]): void {
+    if (!page) {return;}
+    commitPage(setColumnWidths(page, sectionId, widths));
+  }
+
+  // ============================================================================
+  // Navigator (Layers) panel — maps the tree's events onto the existing handlers
+  // ============================================================================
+
+  // Highlight the row matching the live selection (widget id wins, else section).
+  const selectedLayerId = selectedElement?.widgetId ?? selectedElement?.sectionId ?? null;
+
+  function handleLayerSelect(target: LayerTarget): void {
+    if (target.kind === 'widget') {
+      selectElement({ type: 'widget', sectionId: target.sectionId, widgetId: target.widgetId });
+    } else {
+      // section or column → select the owning section (columns aren't a
+      // separately-selectable element in the current model).
+      selectElement({ type: 'section', sectionId: target.sectionId });
+    }
+  }
+
+  function handleLayerToggleHidden(target: LayerTarget): void {
+    if (target.kind === 'widget') { onToggleWidgetHidden(target.widgetId); }
+  }
+
+  function handleLayerDuplicate(target: LayerTarget): void {
+    if (target.kind === 'widget') { onDuplicateWidget(target.widgetId); }
+    else if (target.kind === 'section') { onDuplicateSection(target.sectionId); }
+  }
+
+  function handleLayerDelete(target: LayerTarget): void {
+    if (target.kind === 'widget') {
+      deleteWidget(target.sectionId, target.widgetId);
+    } else if (target.kind === 'section') {
+      deleteSection(target.sectionId);
+    } else if (target.kind === 'column' && page) {
+      // Deleting a column folds its widgets into the previous column by
+      // reducing the section's column count (never drops widgets).
+      const sec = page.content.find((s) => s.id === target.sectionId);
+      if (sec && sec.columns.length > 1) { onSetColumnLayout(target.sectionId, sec.columns.length - 1); }
+    }
+  }
+
+  function handleLayerReorder(move: LayerReorder): void {
+    if (move.kind === 'section') { onMoveSection(move.sectionId, move.toIndex); }
+    else { onMoveWidget(move.widgetId, move.to); }
   }
 
   // ============================================================================
@@ -875,6 +1076,11 @@ function PageEditorInner() {
           onAddWidget={addWidget}
           onUpdateWidget={updateWidget}
           onDeleteWidget={deleteWidget}
+          onMoveWidget={onMoveWidget}
+          onMoveSection={onMoveSection}
+          onDuplicateWidget={onDuplicateWidget}
+          onDuplicateSection={onDuplicateSection}
+          onToggleWidgetHidden={onToggleWidgetHidden}
           chrome={chrome}
           editable
           selectedRegion={selectedRegion}
@@ -898,9 +1104,42 @@ function PageEditorInner() {
             onUpdatePage={updatePage}
             onUpdateSection={updateSection}
             onUpdateWidget={updateWidget}
+            onSetColumnLayout={onSetColumnLayout}
+            onSetColumnWidths={onSetColumnWidths}
+            onDuplicateSection={onDuplicateSection}
+            onDeleteSection={deleteSection}
+            onDuplicateWidget={onDuplicateWidget}
+            onDeleteWidget={(widgetId) => {
+              const loc = findWidget(page, widgetId);
+              if (loc) {deleteWidget(loc.sectionId, widgetId);}
+            }}
           />
         )}
       </div>
+
+      {/* Navigator (Layers) — Elementor-style toggleable floating dock */}
+      <button
+        type="button"
+        onClick={() => setShowNavigator((v) => !v)}
+        className="fixed bottom-4 left-4 z-[60] flex items-center gap-2 rounded-lg bg-[#1a1a2e] text-white/80 hover:text-white border border-white/10 px-3 py-2 text-sm shadow-lg cursor-pointer"
+        title="Toggle the page structure navigator"
+      >
+        <span aria-hidden>▤</span> {showNavigator ? 'Hide Navigator' : 'Navigator'}
+      </button>
+      {showNavigator && page && (
+        <div className="fixed bottom-16 left-4 z-[60] w-72 max-h-[70vh] overflow-auto rounded-xl border border-white/10 bg-[#16162a] shadow-2xl">
+          <LayersPanel
+            page={page}
+            selectedId={selectedLayerId}
+            onSelect={handleLayerSelect}
+            onToggleHidden={handleLayerToggleHidden}
+            onDuplicate={handleLayerDuplicate}
+            onDelete={handleLayerDelete}
+            onReorder={handleLayerReorder}
+            onClose={() => setShowNavigator(false)}
+          />
+        </div>
+      )}
 
       {/* Notification */}
       {notification && (

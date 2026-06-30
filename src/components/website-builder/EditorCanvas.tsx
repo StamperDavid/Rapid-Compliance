@@ -33,6 +33,12 @@ interface EditorCanvasProps {
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
   onUpdateWidget: (sectionId: string, widgetId: string, updates: Partial<Widget>) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
+  // Layout engine (drag-to-reorder + duplicate / hide) — forwarded to EditableCanvas.
+  onMoveWidget?: (widgetId: string, dest: { sectionId: string; columnIndex: number; index: number }) => void;
+  onMoveSection?: (sectionId: string, toIndex: number) => void;
+  onDuplicateWidget?: (widgetId: string) => void;
+  onDuplicateSection?: (sectionId: string) => void;
+  onToggleWidgetHidden?: (widgetId: string) => void;
   // Site chrome (banner / header / footer) — forwarded straight to EditableCanvas.
   chrome?: SiteChrome | null;
   editable?: boolean;
@@ -51,6 +57,11 @@ export default function EditorCanvas({
   onAddWidget,
   onUpdateWidget: _onUpdateWidget,
   onDeleteWidget,
+  onMoveWidget,
+  onMoveSection,
+  onDuplicateWidget,
+  onDuplicateSection,
+  onToggleWidgetHidden,
   chrome = null,
   editable = true,
   selectedRegion = null,
@@ -68,6 +79,11 @@ export default function EditorCanvas({
       onDeleteSection={onDeleteSection}
       onAddWidget={onAddWidget}
       onDeleteWidget={onDeleteWidget}
+      onMoveWidget={onMoveWidget}
+      onMoveSection={onMoveSection}
+      onDuplicateWidget={onDuplicateWidget}
+      onDuplicateSection={onDuplicateSection}
+      onToggleWidgetHidden={onToggleWidgetHidden}
       chrome={chrome}
       editable={editable}
       selectedRegion={selectedRegion}

@@ -35,6 +35,24 @@ import {
   inputStyle,
 } from './StyleControls';
 
+// Width presets per column count (values sum to ~100). Drives the Layout group.
+const WIDTH_PRESETS: Record<number, Array<{ label: string; widths: number[] }>> = {
+  1: [{ label: '100', widths: [100] }],
+  2: [
+    { label: '50 / 50', widths: [50, 50] },
+    { label: '70 / 30', widths: [70, 30] },
+    { label: '30 / 70', widths: [30, 70] },
+    { label: '60 / 40', widths: [60, 40] },
+    { label: '40 / 60', widths: [40, 60] },
+  ],
+  3: [
+    { label: '33 / 33 / 33', widths: [33.34, 33.33, 33.33] },
+    { label: '50 / 25 / 25', widths: [50, 25, 25] },
+    { label: '25 / 50 / 25', widths: [25, 50, 25] },
+  ],
+  4: [{ label: '25 × 4', widths: [25, 25, 25, 25] }],
+};
+
 type Breakpoint = 'desktop' | 'tablet' | 'mobile';
 
 const BREAKPOINT_LABEL: Record<Breakpoint, string> = {
@@ -65,6 +83,13 @@ interface PropertiesPanelProps {
   onUpdatePage: (updates: Partial<Page>) => void;
   onUpdateSection: (sectionId: string, updates: Partial<PageSection>) => void;
   onUpdateWidget: (sectionId: string, widgetId: string, updates: Partial<Widget>) => void;
+  // Layout engine actions (optional — present in the editor, absent elsewhere).
+  onSetColumnLayout?: (sectionId: string, count: number, widths?: number[]) => void;
+  onSetColumnWidths?: (sectionId: string, widths: number[]) => void;
+  onDuplicateSection?: (sectionId: string) => void;
+  onDeleteSection?: (sectionId: string) => void;
+  onDuplicateWidget?: (widgetId: string) => void;
+  onDeleteWidget?: (widgetId: string) => void;
 }
 
 export default function PropertiesPanel({
@@ -74,6 +99,12 @@ export default function PropertiesPanel({
   onUpdatePage: _onUpdatePage,
   onUpdateSection,
   onUpdateWidget,
+  onSetColumnLayout,
+  onSetColumnWidths,
+  onDuplicateSection,
+  onDeleteSection,
+  onDuplicateWidget,
+  onDeleteWidget,
 }: PropertiesPanelProps) {
   const [activeTab, setActiveTab] = useState<'content' | 'style'>('content');
 
@@ -141,6 +172,37 @@ export default function PropertiesPanel({
           {selectedElement.type === 'section' ? 'Section' :
            widget ? widgetDefinitions[widget.type]?.label : 'Widget'}
         </div>
+
+        {/* Element actions — duplicate / delete the selected widget or section. */}
+        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem' }}>
+          {selectedElement.type === 'widget' && widget ? (
+            <>
+              {onDuplicateWidget && (
+                <button type="button" onClick={() => onDuplicateWidget(widget.id)} style={headerActionStyle('#0ea5e9')}>
+                  Duplicate
+                </button>
+              )}
+              {onDeleteWidget && (
+                <button type="button" onClick={() => onDeleteWidget(widget.id)} style={headerActionStyle('#ef4444')}>
+                  Delete
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              {onDuplicateSection && (
+                <button type="button" onClick={() => onDuplicateSection(section.id)} style={headerActionStyle('#0ea5e9')}>
+                  Duplicate
+                </button>
+              )}
+              {onDeleteSection && (
+                <button type="button" onClick={() => onDeleteSection(section.id)} style={headerActionStyle('#ef4444')}>
+                  Delete
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -178,6 +240,8 @@ export default function PropertiesPanel({
             <SectionContentEditor
               section={section}
               onUpdate={(updates) => onUpdateSection(section.id, updates)}
+              onSetColumnLayout={onSetColumnLayout}
+              onSetColumnWidths={onSetColumnWidths}
             />
           )
         ) : (
@@ -210,6 +274,21 @@ function tabButtonStyle(active: boolean): React.CSSProperties {
     cursor: 'pointer',
     fontSize: '0.8rem',
     fontWeight: 500,
+  };
+}
+
+function headerActionStyle(background: string): React.CSSProperties {
+  return {
+    flex: 1,
+    padding: '0.35rem 0.5rem',
+    background,
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    fontFamily: 'inherit',
   };
 }
 
@@ -338,9 +417,11 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
 interface SectionContentEditorProps {
   section: PageSection;
   onUpdate: (updates: Partial<PageSection>) => void;
+  onSetColumnLayout?: (sectionId: string, count: number, widths?: number[]) => void;
+  onSetColumnWidths?: (sectionId: string, widths: number[]) => void;
 }
 
-function SectionContentEditor({ section, onUpdate }: SectionContentEditorProps) {
+function SectionContentEditor({ section, onUpdate, onSetColumnLayout, onSetColumnWidths }: SectionContentEditorProps) {
   return (
     <div>
       <div style={{ marginBottom: '1rem' }}>
@@ -378,13 +459,112 @@ function SectionContentEditor({ section, onUpdate }: SectionContentEditorProps) 
         </div>
       )}
 
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={labelStyle}>Columns</label>
-        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-          {section.columns.length} column(s)
-        </div>
-      </div>
+      {onSetColumnLayout && (
+        <SectionLayoutControls
+          section={section}
+          onUpdate={onUpdate}
+          onSetColumnLayout={onSetColumnLayout}
+          onSetColumnWidths={onSetColumnWidths}
+        />
+      )}
     </div>
+  );
+}
+
+// ===========================================================================
+// Section Layout Controls — column count, width presets, gap, vertical align
+// ===========================================================================
+
+interface SectionLayoutControlsProps {
+  section: PageSection;
+  onUpdate: (updates: Partial<PageSection>) => void;
+  onSetColumnLayout: (sectionId: string, count: number, widths?: number[]) => void;
+  onSetColumnWidths?: (sectionId: string, widths: number[]) => void;
+}
+
+function SectionLayoutControls({
+  section,
+  onUpdate,
+  onSetColumnLayout,
+  onSetColumnWidths,
+}: SectionLayoutControlsProps) {
+  const count = Math.max(1, Math.min(4, section.columns.length));
+  const presets = WIDTH_PRESETS[count] ?? [];
+  const currentWidths = section.columns.map((c) => Math.round(c.width));
+
+  const widthsMatch = (widths: number[]): boolean =>
+    widths.length === currentWidths.length && widths.every((w, i) => Math.round(w) === currentWidths[i]);
+
+  return (
+    <Group title="Layout" defaultOpen>
+      <FieldRow label="Columns">
+        <SegmentedControl
+          value={String(count)}
+          options={[
+            { value: '1', label: '1' },
+            { value: '2', label: '2' },
+            { value: '3', label: '3' },
+            { value: '4', label: '4' },
+          ]}
+          onChange={(v) => onSetColumnLayout(section.id, parseInt(v, 10))}
+        />
+      </FieldRow>
+
+      {presets.length > 1 && (
+        <FieldRow label="Column Widths">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+            {presets.map((preset) => {
+              const active = widthsMatch(preset.widths);
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() =>
+                    onSetColumnWidths
+                      ? onSetColumnWidths(section.id, preset.widths)
+                      : onSetColumnLayout(section.id, count, preset.widths)
+                  }
+                  style={{
+                    padding: '0.3rem 0.55rem',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    border: `1px solid ${active ? '#6366f1' : 'rgba(255,255,255,0.15)'}`,
+                    background: active ? '#6366f1' : 'rgba(255,255,255,0.05)',
+                    color: active ? '#ffffff' : 'rgba(255,255,255,0.65)',
+                  }}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+        </FieldRow>
+      )}
+
+      <FieldRow label="Column Gap">
+        <NumberField
+          value={section.columnGap}
+          min={0}
+          max={120}
+          step={2}
+          onChange={(v) => onUpdate({ columnGap: v })}
+        />
+      </FieldRow>
+
+      <FieldRow label="Vertical Align">
+        <SegmentedControl
+          value={section.verticalAlign ?? 'flex-start'}
+          options={[
+            { value: 'flex-start', label: 'Top' },
+            { value: 'center', label: 'Center' },
+            { value: 'flex-end', label: 'Bottom' },
+          ]}
+          onChange={(v) => onUpdate({ verticalAlign: v as PageSection['verticalAlign'] })}
+        />
+      </FieldRow>
+    </Group>
   );
 }
 

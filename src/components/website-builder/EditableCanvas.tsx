@@ -1,19 +1,46 @@
 /**
  * Editable Canvas
  *
- * TRUE WYSIWYG editor surface. The page is drawn by the SAME engine the live
- * site uses (`ResponsiveRenderer`), so the canvas is pixel-identical to what
- * publishes — no separate editor renderer, no gray "<type> widget" placeholders.
+ * TRUE WYSIWYG editor surface. The page body is drawn by the SAME engine the
+ * live site uses (`ResponsiveRenderer`), so the canvas is pixel-identical to
+ * what publishes — no separate editor renderer, no gray "<type> widget"
+ * placeholders.
  *
- * Editing affordances (hover outline, click-to-select, delete, add-widget) are
- * drawn as an absolutely-positioned overlay layer ON TOP of the faithful render.
- * Selection and clicks are captured via event delegation so widget links /
- * buttons / forms never navigate or submit while you are editing.
+ * Editing affordances (hover outline, click-to-select, drag handles, drop
+ * zones, duplicate / delete / hide controls) are drawn as an absolutely-
+ * positioned overlay ON TOP of the faithful render and pixel-aligned to it.
+ *
+ * Drag-and-drop (layout engine):
+ *   Because the body is rendered as ONE faithful `ResponsiveRenderer` tree
+ *   (which we must not edit, and which injects a global `min-height:100vh`),
+ *   we cannot host `@dnd-kit` SortableContext nodes inside the real content.
+ *   Instead the overlay IS the drag surface: every widget/section gets a
+ *   `useDraggable` grip handle, and every column (and the section list) gets a
+ *   geometric `useDroppable` zone measured to the real DOM. `@dnd-kit`'s
+ *   `pointerWithin` collision runs on those measured rects; the destination
+ *   index is computed from the dragged grip's projected position against the
+ *   target column's real widget rects, so a drop maps exactly onto the
+ *   `page-tree-ops` `moveWidget` / `moveSection` contract. Result: widgets sort
+ *   within a column, move across columns and across sections, and sections
+ *   reorder — all on the faithful render.
  */
 
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import type { Page, PageSection, Widget, WidgetType } from '@/types/website';
 import type { SiteChrome, ChromeRegion } from '@/lib/website-builder/site-chrome-types';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
@@ -36,11 +63,14 @@ interface EditableCanvasProps {
   onDeleteSection: (sectionId: string) => void;
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
+  // --- Layout engine (drag-to-reorder + duplicate / hide) -------------------
+  // Optional so other (non-editor) callers of the canvas stay source-compatible.
+  onMoveWidget?: (widgetId: string, dest: { sectionId: string; columnIndex: number; index: number }) => void;
+  onMoveSection?: (sectionId: string, toIndex: number) => void;
+  onDuplicateWidget?: (widgetId: string) => void;
+  onDuplicateSection?: (sectionId: string) => void;
+  onToggleWidgetHidden?: (widgetId: string) => void;
   // --- Site chrome (banner / header / footer) -------------------------------
-  // When `chrome` is provided, the faithful site frame is drawn AROUND the
-  // editable body. With `editable`, clicking a region selects it (reported via
-  // `onSelectRegion`) so the ChromeEditor panel can edit it. Editing the chrome
-  // is editor-side only — it never changes the live public site.
   chrome?: SiteChrome | null;
   editable?: boolean;
   selectedRegion?: ChromeRegion | null;
@@ -58,6 +88,26 @@ interface HoverTarget {
   kind: 'section' | 'widget';
   sectionId: string;
   widgetId?: string;
+  label: string;
+}
+
+interface ColumnBox {
+  key: string;
+  sectionId: string;
+  columnIndex: number;
+  box: Box;
+  empty: boolean;
+}
+
+interface SectionBox {
+  sectionId: string;
+  index: number;
+  box: Box;
+}
+
+interface ActiveDrag {
+  type: 'section' | 'widget';
+  id: string;
   label: string;
 }
 
@@ -97,6 +147,14 @@ function widgetLabel(type: string): string {
   return def?.label ?? type;
 }
 
+function asString(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : undefined;
+}
+
+function asNumber(v: unknown): number | undefined {
+  return typeof v === 'number' ? v : undefined;
+}
+
 export default function EditableCanvas({
   page,
   breakpoint,
@@ -106,16 +164,16 @@ export default function EditableCanvas({
   onDeleteSection,
   onAddWidget,
   onDeleteWidget,
+  onMoveWidget,
+  onMoveSection,
+  onDuplicateWidget,
+  onDuplicateSection,
+  onToggleWidgetHidden,
   chrome = null,
   editable = true,
   selectedRegion = null,
   onSelectRegion,
 }: EditableCanvasProps) {
-  // The canvas page area is painted on the SITE'S real published theme (dark base)
-  // so the editor matches what publishes instead of a hardcoded white sheet that
-  // hides the site's light text. The faithful render itself (ResponsiveRenderer)
-  // also applies this theme; the wrapper bg keeps the empty state / footer chrome
-  // consistent with it.
   const { theme } = useWebsiteTheme();
   const innerRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<HoverTarget | null>(null);
@@ -123,9 +181,18 @@ export default function EditableCanvas({
     selected: null,
     hover: null,
   });
+  const [columnBoxes, setColumnBoxes] = useState<ColumnBox[]>([]);
+  const [sectionBoxes, setSectionBoxes] = useState<SectionBox[]>([]);
+  const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   // Bumped whenever layout may have shifted (resize, image load, reflow) so the
   // overlay rectangles stay glued to the real rendered elements.
   const [layoutTick, setLayoutTick] = useState(0);
+
+  const sensors = useSensors(
+    // A small activation distance keeps a plain click on a grip = "select",
+    // and only a real drag (>5px) starts moving the element.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   // --- DOM lookups (by data attribute / index against the live render) -------
 
@@ -151,7 +218,21 @@ export default function EditableCanvas({
     return nodes.find((n) => n.getAttribute('data-widget-id') === widgetId) ?? null;
   }, []);
 
-  // --- Recompute overlay rectangles -----------------------------------------
+  // The column <div>s a section renders (section-inner → wrapper → columns).
+  const columnNodesForSection = useCallback((sectionId: string): HTMLElement[] => {
+    const sec = sectionNode(sectionId);
+    if (!sec) {
+      return [];
+    }
+    const inner = sec.querySelector('.section-inner');
+    const wrapper = inner?.firstElementChild;
+    if (!wrapper) {
+      return [];
+    }
+    return Array.from(wrapper.children).filter((c): c is HTMLElement => c instanceof HTMLElement);
+  }, [sectionNode]);
+
+  // --- Recompute selection / hover overlay rectangles ------------------------
 
   useLayoutEffect(() => {
     const inner = innerRef.current;
@@ -161,12 +242,7 @@ export default function EditableCanvas({
     const innerRect = inner.getBoundingClientRect();
     const toBox = (el: HTMLElement): Box => {
       const r = el.getBoundingClientRect();
-      return {
-        top: r.top - innerRect.top,
-        left: r.left - innerRect.left,
-        width: r.width,
-        height: r.height,
-      };
+      return { top: r.top - innerRect.top, left: r.left - innerRect.left, width: r.width, height: r.height };
     };
 
     let selected: Box | null = null;
@@ -187,9 +263,48 @@ export default function EditableCanvas({
     setBoxes({ selected, hover: hoverBox });
   }, [page, breakpoint, selectedElement, hover, layoutTick, sectionNode, widgetNode]);
 
+  // --- Recompute column + section drop-zone rectangles -----------------------
+
+  useLayoutEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) {
+      return;
+    }
+    const innerRect = inner.getBoundingClientRect();
+    const toBox = (el: HTMLElement): Box => {
+      const r = el.getBoundingClientRect();
+      return { top: r.top - innerRect.top, left: r.left - innerRect.left, width: r.width, height: r.height };
+    };
+
+    const nextColumns: ColumnBox[] = [];
+    const nextSections: SectionBox[] = [];
+
+    page.content.forEach((section, sectionIndex) => {
+      const sec = sectionNode(section.id);
+      if (sec) {
+        nextSections.push({ sectionId: section.id, index: sectionIndex, box: toBox(sec) });
+      }
+      const colNodes = columnNodesForSection(section.id);
+      (section.columns ?? []).forEach((column, columnIndex) => {
+        const node = colNodes[columnIndex];
+        if (node) {
+          nextColumns.push({
+            key: `${section.id}:${columnIndex}`,
+            sectionId: section.id,
+            columnIndex,
+            box: toBox(node),
+            empty: column.widgets.length === 0,
+          });
+        }
+      });
+    });
+
+    setColumnBoxes(nextColumns);
+    setSectionBoxes(nextSections);
+  }, [page, breakpoint, layoutTick, sectionNode, columnNodesForSection]);
+
   // Track layout changes (image loads, font reflow, window resize) so overlay
-  // boxes follow the real content. Inner-relative coords mean scrolling needs
-  // no listener — the overlay scrolls with the content.
+  // boxes follow the real content.
   useEffect(() => {
     const inner = innerRef.current;
     if (!inner) {
@@ -213,7 +328,7 @@ export default function EditableCanvas({
     (e: React.MouseEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement;
       if (isOverlayTarget(target)) {
-        return; // let overlay controls (delete/add) handle their own clicks
+        return; // overlay controls handle their own clicks
       }
 
       const widgetEl = target.closest<HTMLElement>('[data-widget-id]');
@@ -247,7 +362,6 @@ export default function EditableCanvas({
     [page, onSelectElement]
   );
 
-  // Stop any in-canvas form from actually submitting while editing.
   const handleSubmitCapture = useCallback((e: React.FormEvent) => {
     e.preventDefault();
   }, []);
@@ -290,7 +404,7 @@ export default function EditableCanvas({
 
   const handleMouseLeave = useCallback(() => setHover(null), []);
 
-  // --- Drag-and-drop add (widgets dragged from the WidgetsPanel) -------------
+  // --- Native drag-and-drop add (widgets dragged from the WidgetsPanel) ------
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     if (Array.from(e.dataTransfer.types).includes('widgetType')) {
@@ -318,6 +432,92 @@ export default function EditableCanvas({
     [page.content, onAddWidget]
   );
 
+  // --- @dnd-kit: move widgets across columns/sections + reorder sections -----
+
+  // Only consider droppables that match the active drag type, so a widget drop
+  // resolves to a column (not the section it lives in) and vice-versa.
+  const collisionDetection: CollisionDetection = useCallback((args) => {
+    const accepts = asString(args.active.data.current?.type);
+    const containers = args.droppableContainers.filter(
+      (c) => asString(c.data.current?.accepts) === accepts,
+    );
+    return pointerWithin({ ...args, droppableContainers: containers });
+  }, []);
+
+  const handleDndStart = useCallback((event: DragStartEvent) => {
+    const data = event.active.data.current;
+    const type = asString(data?.type);
+    const id = asString(data?.id);
+    const label = asString(data?.label) ?? 'Element';
+    if ((type === 'widget' || type === 'section') && id) {
+      setActiveDrag({ type, id, label });
+    }
+  }, []);
+
+  // Insertion index inside the target column, computed from the dragged grip's
+  // final projected centre vs the column's real widget rects (excluding the
+  // widget being moved, so a same-column drop lands exactly where intended).
+  const computeDropIndex = useCallback(
+    (sectionId: string, columnIndex: number, draggedId: string, centerY: number | null): number => {
+      const section = page.content.find((s) => s.id === sectionId);
+      const column = section?.columns?.[columnIndex];
+      if (!column) {
+        return 0;
+      }
+      const others = column.widgets.filter((w) => w.id !== draggedId);
+      if (centerY === null) {
+        return others.length;
+      }
+      for (let i = 0; i < others.length; i += 1) {
+        const node = widgetNode(others[i].id);
+        if (!node) {
+          continue;
+        }
+        const r = node.getBoundingClientRect();
+        if (centerY < r.top + r.height / 2) {
+          return i;
+        }
+      }
+      return others.length;
+    },
+    [page.content, widgetNode]
+  );
+
+  const handleDndEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveDrag(null);
+      const aData = event.active.data.current;
+      const oData = event.over?.data.current;
+      if (!aData || !oData) {
+        return;
+      }
+      const aType = asString(aData.type);
+      const aId = asString(aData.id);
+      const accepts = asString(oData.accepts);
+
+      if (aType === 'widget' && aId && accepts === 'widget' && onMoveWidget) {
+        const sectionId = asString(oData.sectionId);
+        const columnIndex = asNumber(oData.columnIndex);
+        if (sectionId === undefined || columnIndex === undefined) {
+          return;
+        }
+        const translated = event.active.rect.current.translated;
+        const centerY = translated ? translated.top + translated.height / 2 : null;
+        const index = computeDropIndex(sectionId, columnIndex, aId, centerY);
+        onMoveWidget(aId, { sectionId, columnIndex, index });
+        return;
+      }
+
+      if (aType === 'section' && aId && accepts === 'section' && onMoveSection) {
+        const toIndex = asNumber(oData.index);
+        if (toIndex !== undefined) {
+          onMoveSection(aId, toIndex);
+        }
+      }
+    },
+    [onMoveWidget, onMoveSection, computeDropIndex]
+  );
+
   // --- Render ----------------------------------------------------------------
 
   const isEmpty = page.content.length === 0;
@@ -326,9 +526,9 @@ export default function EditableCanvas({
     selectedElement?.type === 'section' || selectedElement?.type === 'widget' ? selectedElement.sectionId : null;
   const selectedWidgetId = selectedElement?.type === 'widget' ? selectedElement.widgetId : undefined;
 
-  // The editable page body — drawn through the SAME engine the live site uses.
-  // Rendered on its own when there is no chrome yet, or slotted BETWEEN the
-  // banner/header and footer when the site frame is present.
+  const draggingWidget = activeDrag?.type === 'widget';
+  const draggingSection = activeDrag?.type === 'section';
+
   const bodyContent = isEmpty ? (
     <EmptyState onAddSection={() => onAddSection()} />
   ) : (
@@ -347,32 +547,66 @@ export default function EditableCanvas({
         <ResponsiveRenderer content={page.content} breakpoint={breakpoint} />
 
         {/* Editing overlay — pixel-aligned to the rendered output. */}
-        <div
-          data-editor-overlay
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            zIndex: 5,
-          }}
-        >
+        <div data-editor-overlay style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
+          {/* Column drop zones (geometric @dnd-kit droppables). Always mounted so
+              they're measurable at drag start; only painted while dragging. */}
+          {columnBoxes.map((cb) => (
+            <ColumnDropZone
+              key={cb.key}
+              cb={cb}
+              dragging={draggingWidget}
+              onAdd={() => onAddWidget(cb.sectionId, createWidget('text'), cb.columnIndex)}
+            />
+          ))}
+
+          {/* Section drop zones (only relevant while dragging a section). */}
+          {sectionBoxes.map((sb) => (
+            <SectionDropZone key={`drop-${sb.sectionId}`} sb={sb} dragging={draggingSection} />
+          ))}
+
           {/* Hover outline (skip if it is the selected element). */}
           {boxes.hover &&
             hover &&
-            !(hover.kind === 'widget' ? hover.widgetId === selectedWidgetId : selectedElement?.type === 'section' && hover.sectionId === selectedSectionId) && (
+            !(hover.kind === 'widget'
+              ? hover.widgetId === selectedWidgetId
+              : selectedElement?.type === 'section' && hover.sectionId === selectedSectionId) && (
               <OutlineBox
                 box={boxes.hover}
                 color={hover.kind === 'widget' ? WIDGET_COLOR : SECTION_COLOR}
                 dashed
                 label={hover.label}
-              />
+              >
+                {/* A grip on the hovered element so you can drag without selecting first. */}
+                {hover.kind === 'widget' && hover.widgetId ? (
+                  <DragGrip
+                    dragId={`w:${hover.widgetId}`}
+                    data={{ type: 'widget', id: hover.widgetId, label: hover.label }}
+                    color={WIDGET_COLOR}
+                    title="Drag to move widget"
+                  />
+                ) : (
+                  <DragGrip
+                    dragId={`s:${hover.sectionId}`}
+                    data={{ type: 'section', id: hover.sectionId, label: 'Section' }}
+                    color={SECTION_COLOR}
+                    title="Drag to reorder section"
+                  />
+                )}
+              </OutlineBox>
             )}
 
           {/* Selected section outline + controls. */}
           {selectedElement?.type === 'section' && boxes.selected && selectedSectionId && (
             <OutlineBox box={boxes.selected} color={SECTION_COLOR} label="Section">
+              <DragGrip
+                dragId={`s:${selectedSectionId}`}
+                data={{ type: 'section', id: selectedSectionId, label: 'Section' }}
+                color={SECTION_COLOR}
+                title="Drag to reorder section"
+              />
               <SectionControls
                 onAddWidget={() => onAddWidget(selectedSectionId, createWidget('text'), 0)}
+                onDuplicate={onDuplicateSection ? () => onDuplicateSection(selectedSectionId) : undefined}
                 onDelete={() => onDeleteSection(selectedSectionId)}
               />
             </OutlineBox>
@@ -381,16 +615,23 @@ export default function EditableCanvas({
           {/* Selected widget outline + controls. */}
           {selectedElement?.type === 'widget' && boxes.selected && selectedSectionId && selectedWidgetId && (
             <OutlineBox box={boxes.selected} color={WIDGET_COLOR} label={hover?.label ?? 'Widget'}>
-              <WidgetControls onDelete={() => onDeleteWidget(selectedSectionId, selectedWidgetId)} />
+              <DragGrip
+                dragId={`w:${selectedWidgetId}`}
+                data={{ type: 'widget', id: selectedWidgetId, label: hover?.label ?? 'Widget' }}
+                color={WIDGET_COLOR}
+                title="Drag to move widget"
+              />
+              <WidgetControls
+                onDuplicate={onDuplicateWidget ? () => onDuplicateWidget(selectedWidgetId) : undefined}
+                onToggleHidden={onToggleWidgetHidden ? () => onToggleWidgetHidden(selectedWidgetId) : undefined}
+                onDelete={() => onDeleteWidget(selectedSectionId, selectedWidgetId)}
+              />
             </OutlineBox>
           )}
         </div>
       </div>
 
-      <div
-        className="text-center"
-        style={{ padding: '1rem', borderTop: '2px dashed rgba(255,255,255,0.1)' }}
-      >
+      <div className="text-center" style={{ padding: '1rem', borderTop: '2px dashed rgba(255,255,255,0.1)' }}>
         <button
           type="button"
           onClick={() => onAddSection()}
@@ -410,52 +651,216 @@ export default function EditableCanvas({
   );
 
   return (
-    <div
-      className="flex-1 overflow-y-auto overflow-x-hidden bg-[#111111]"
-      style={{ padding: breakpoint !== 'desktop' ? '2rem' : '0' }}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragStart={handleDndStart}
+      onDragEnd={handleDndEnd}
+      onDragCancel={() => setActiveDrag(null)}
     >
       <div
-        className="mx-auto"
-        style={{
-          width: CANVAS_WIDTHS[breakpoint],
-          minHeight: '600px',
-          background: theme.backgroundColor,
-          color: theme.textColor,
-          fontFamily: theme.fontFamily,
-          boxShadow: breakpoint !== 'desktop' ? '0 0 30px rgba(99, 102, 241, 0.15)' : 'none',
-          border: breakpoint !== 'desktop' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-          borderRadius: breakpoint !== 'desktop' ? '8px' : '0',
-        }}
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-[#111111]"
+        style={{ padding: breakpoint !== 'desktop' ? '2rem' : '0' }}
       >
-        {/* Faithful preview of the published site frame so the canvas shows the
-            COMPLETE page (banner + header + body + footer). With `editable`, the
-            banner/header/footer are clickable regions that select for editing
-            (handled inside SiteHeaderPreview / SiteFooterPreview → onSelectRegion).
-            The body is slotted BETWEEN the header and footer. Editing the chrome
-            here is editor-side only and never changes the live public site. */}
-        {chrome && (
-          <SiteHeaderPreview
-            chrome={chrome}
-            breakpoint={breakpoint}
-            editable={editable}
-            selectedRegion={selectedRegion}
-            onSelectRegion={onSelectRegion}
-          />
-        )}
+        <div
+          className="mx-auto"
+          style={{
+            width: CANVAS_WIDTHS[breakpoint],
+            minHeight: '600px',
+            background: theme.backgroundColor,
+            color: theme.textColor,
+            fontFamily: theme.fontFamily,
+            boxShadow: breakpoint !== 'desktop' ? '0 0 30px rgba(99, 102, 241, 0.15)' : 'none',
+            border: breakpoint !== 'desktop' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+            borderRadius: breakpoint !== 'desktop' ? '8px' : '0',
+          }}
+        >
+          {chrome && (
+            <SiteHeaderPreview
+              chrome={chrome}
+              breakpoint={breakpoint}
+              editable={editable}
+              selectedRegion={selectedRegion}
+              onSelectRegion={onSelectRegion}
+            />
+          )}
 
-        {bodyContent}
+          {bodyContent}
 
-        {chrome && (
-          <SiteFooterPreview
-            chrome={chrome}
-            breakpoint={breakpoint}
-            editable={editable}
-            selectedRegion={selectedRegion}
-            onSelectRegion={onSelectRegion}
-          />
-        )}
+          {chrome && (
+            <SiteFooterPreview
+              chrome={chrome}
+              breakpoint={breakpoint}
+              editable={editable}
+              selectedRegion={selectedRegion}
+              onSelectRegion={onSelectRegion}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Floating chip that follows the cursor while dragging. */}
+      <DragOverlay dropAnimation={null}>
+        {activeDrag ? (
+          <div
+            style={{
+              background: activeDrag.type === 'widget' ? WIDGET_COLOR : SECTION_COLOR,
+              color: '#ffffff',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              padding: '0.3rem 0.6rem',
+              borderRadius: '6px',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ⠿ {activeDrag.label}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Drop zones
+// ---------------------------------------------------------------------------
+
+function ColumnDropZone({ cb, dragging, onAdd }: { cb: ColumnBox; dragging: boolean; onAdd: () => void }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `col:${cb.key}`,
+    data: { accepts: 'widget', sectionId: cb.sectionId, columnIndex: cb.columnIndex },
+  });
+  const active = dragging && isOver;
+  // Empty columns can collapse to ~0px; give them a usable hit/drop area.
+  const height = cb.empty ? Math.max(cb.box.height, 48) : cb.box.height;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        position: 'absolute',
+        top: cb.box.top,
+        left: cb.box.left,
+        width: cb.box.width,
+        height,
+        pointerEvents: 'none',
+        boxSizing: 'border-box',
+        borderRadius: '4px',
+        border: active
+          ? `2px solid ${WIDGET_COLOR}`
+          : dragging
+            ? '1px dashed rgba(16,185,129,0.4)'
+            : 'none',
+        background: active ? 'rgba(16,185,129,0.10)' : 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 4,
+      }}
+    >
+      {dragging && cb.empty && (
+        <span style={{ fontSize: '0.7rem', color: 'rgba(16,185,129,0.9)', fontWeight: 600 }}>Drop here</span>
+      )}
+      {/* Persistent "+ Add" affordance for an empty column (not during a drag). */}
+      {!dragging && cb.empty && (
+        <button
+          type="button"
+          onClick={onAdd}
+          style={{
+            pointerEvents: 'auto',
+            padding: '0.3rem 0.6rem',
+            background: 'rgba(16,185,129,0.10)',
+            border: '1px dashed rgba(16,185,129,0.45)',
+            borderRadius: '6px',
+            color: 'rgba(16,185,129,0.95)',
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'Inter, system-ui, sans-serif',
+          }}
+        >
+          + Add
+        </button>
+      )}
     </div>
+  );
+}
+
+function SectionDropZone({ sb, dragging }: { sb: SectionBox; dragging: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `sec:${sb.sectionId}`,
+    data: { accepts: 'section', index: sb.index, sectionId: sb.sectionId },
+  });
+  const active = dragging && isOver;
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        position: 'absolute',
+        top: sb.box.top,
+        left: sb.box.left,
+        width: sb.box.width,
+        height: sb.box.height,
+        pointerEvents: 'none',
+        boxSizing: 'border-box',
+        border: active ? `2px solid ${SECTION_COLOR}` : 'none',
+        background: active ? 'rgba(99,102,241,0.08)' : 'transparent',
+        zIndex: 3,
+      }}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Drag handle (grip)
+// ---------------------------------------------------------------------------
+
+function DragGrip({
+  dragId,
+  data,
+  color,
+  title,
+}: {
+  dragId: string;
+  data: { type: 'widget' | 'section'; id: string; label: string };
+  color: string;
+  title: string;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: dragId, data });
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      title={title}
+      {...listeners}
+      {...attributes}
+      style={{
+        position: 'absolute',
+        top: '0.25rem',
+        left: '0.25rem',
+        pointerEvents: 'auto',
+        zIndex: 11,
+        width: '22px',
+        height: '22px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: color,
+        color: '#ffffff',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'grab',
+        fontSize: '0.8rem',
+        lineHeight: 1,
+        opacity: isDragging ? 0.4 : 1,
+        touchAction: 'none',
+      }}
+      aria-label={title}
+    >
+      ⠿
+    </button>
   );
 }
 
@@ -515,7 +920,15 @@ function OutlineBox({
   );
 }
 
-function SectionControls({ onAddWidget, onDelete }: { onAddWidget: () => void; onDelete: () => void }) {
+function SectionControls({
+  onAddWidget,
+  onDuplicate,
+  onDelete,
+}: {
+  onAddWidget: () => void;
+  onDuplicate?: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div
       style={{
@@ -531,6 +944,11 @@ function SectionControls({ onAddWidget, onDelete }: { onAddWidget: () => void; o
       <button type="button" onClick={onAddWidget} style={controlButtonStyle('#6366f1')}>
         + Widget
       </button>
+      {onDuplicate && (
+        <button type="button" onClick={onDuplicate} style={controlButtonStyle('#0ea5e9')}>
+          Duplicate
+        </button>
+      )}
       <button type="button" onClick={onDelete} style={controlButtonStyle('#ef4444')}>
         Delete Section
       </button>
@@ -538,18 +956,38 @@ function SectionControls({ onAddWidget, onDelete }: { onAddWidget: () => void; o
   );
 }
 
-function WidgetControls({ onDelete }: { onDelete: () => void }) {
+function WidgetControls({
+  onDuplicate,
+  onToggleHidden,
+  onDelete,
+}: {
+  onDuplicate?: () => void;
+  onToggleHidden?: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div
       style={{
         position: 'absolute',
         top: '0.25rem',
         right: '0.25rem',
+        display: 'flex',
+        gap: '0.25rem',
         pointerEvents: 'auto',
         zIndex: 10,
       }}
     >
-      <button type="button" onClick={onDelete} style={controlButtonStyle('#ef4444')} aria-label="Delete widget">
+      {onDuplicate && (
+        <button type="button" onClick={onDuplicate} style={controlButtonStyle('#0ea5e9')} aria-label="Duplicate widget" title="Duplicate">
+          ⧉
+        </button>
+      )}
+      {onToggleHidden && (
+        <button type="button" onClick={onToggleHidden} style={controlButtonStyle('#64748b')} aria-label="Hide / show widget" title="Hide / show">
+          ◑
+        </button>
+      )}
+      <button type="button" onClick={onDelete} style={controlButtonStyle('#ef4444')} aria-label="Delete widget" title="Delete">
         &times;
       </button>
     </div>
