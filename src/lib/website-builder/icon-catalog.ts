@@ -15,10 +15,12 @@
  *  - `<Icon>` converts the stored PascalCase name back to the kebab key via the
  *    lossless `pascalToKebab()` map below before handing it to `DynamicIcon`.
  *
- * Brand icons: lucide still ships a handful of (deprecated) brand glyphs
- * (Facebook, Github, Linkedin, …) which we surface under "Social & Web". A
- * richer brand set (Font Awesome / simple-icons) is a future add — intentionally
- * NOT installed here to avoid new dependencies / bundle bloat.
+ * Brand icons: in addition to the handful of (deprecated) lucide brand glyphs
+ * surfaced under "Social & Web", the full simple-icons brand set (~3,400 logos)
+ * is available via the `si:<slug>` namespace (see `brand-icons.ts` for the light
+ * metadata list and `brand-icon-paths/` for the lazily-loaded svg path data).
+ * Brand values are stored as `si:<slug>` (e.g. `si:github`) so they never
+ * collide with bare PascalCase lucide names (e.g. `Github`).
  */
 
 import { iconNames as LUCIDE_KEBAB_NAMES } from 'lucide-react/dynamic';
@@ -78,6 +80,27 @@ export function iconExists(name: string): boolean {
  */
 export function pascalToKebab(name: string): string | undefined {
   return PASCAL_TO_KEBAB[name];
+}
+
+// --- Brand (simple-icons) helpers ------------------------------------------
+// Brand icons are namespaced `si:<slug>` so they are unambiguous from bare
+// PascalCase lucide names. The metadata list lives in `brand-icons.ts`; the svg
+// path data is sharded under `brand-icon-paths/` and loaded lazily by `<Icon>`.
+
+/** Prefix that marks a stored icon value as a simple-icons brand logo. */
+export const BRAND_ICON_PREFIX = 'si:';
+
+/** True when `name` is a brand icon value (`si:<slug>`). */
+export function isBrandIcon(name: string): boolean {
+  return name.startsWith(BRAND_ICON_PREFIX);
+}
+
+/**
+ * Extract the simple-icons slug from a brand icon value, or `undefined` when
+ * `name` is not a brand value. `si:github` → `github`.
+ */
+export function brandSlug(name: string): string | undefined {
+  return isBrandIcon(name) ? name.slice(BRAND_ICON_PREFIX.length) : undefined;
 }
 
 // --- Curated categories ----------------------------------------------------

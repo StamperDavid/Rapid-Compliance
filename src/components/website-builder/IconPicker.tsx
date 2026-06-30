@@ -5,10 +5,13 @@
  * Properties panel's content editor wherever a widget stores an icon by name
  * (`icon-box`, `social-icons` links, optional `button` leading icon).
  *
- * - Category chips (incl. "All" = every lucide icon) for browsing.
- * - Free-text search filters across the entire catalog by name.
- * - Results are capped with a "Show more" control so a 1,900-icon set stays snappy.
- * - Clicking an icon calls `onChange(name)` with the PascalCase lucide name.
+ * - Category chips (incl. "All" = every lucide icon, plus "Brands" = the full
+ *   ~3,400-logo simple-icons set) for browsing.
+ * - Free-text search filters the active tab (lucide names, or brand title/slug).
+ * - Results are capped with a "Show more" control so the large sets stay snappy;
+ *   brand svg paths load lazily per first-letter shard as tiles become visible.
+ * - Clicking a lucide icon calls `onChange(name)` (PascalCase); clicking a brand
+ *   calls `onChange('si:<slug>')`.
  *
  * Styled to match the builder's dark editor chrome (inline rgba tokens), the same
  * idiom as StyleControls / the surrounding Properties panel.
@@ -19,7 +22,8 @@
 import { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Icon } from './Icon';
-import { ICON_CATEGORIES, allIconNames } from '@/lib/website-builder/icon-catalog';
+import { ICON_CATEGORIES, allIconNames, BRAND_ICON_PREFIX } from '@/lib/website-builder/icon-catalog';
+import { BRAND_ICONS, type BrandIconMeta } from '@/lib/website-builder/brand-icons';
 
 export interface IconPickerProps {
   value?: string;
@@ -29,9 +33,13 @@ export interface IconPickerProps {
 
 const PAGE_SIZE = 120;
 
+/** Dedicated tab id for the simple-icons brand set. */
+const BRANDS_TAB = 'brands';
+
 const TABS: Array<{ id: string; label: string }> = [
   { id: 'all', label: 'All' },
   ...ICON_CATEGORIES.map((c) => ({ id: c.id, label: c.label })),
+  { id: BRANDS_TAB, label: 'Brands' },
 ];
 
 export function IconPicker({ value, onChange, onClose }: IconPickerProps): React.JSX.Element {
@@ -40,23 +48,44 @@ export function IconPicker({ value, onChange, onClose }: IconPickerProps): React
   const [limit, setLimit] = useState<number>(PAGE_SIZE);
 
   const trimmed = query.trim().toLowerCase();
+  const isBrands = activeTab === BRANDS_TAB;
 
-  // When searching, span the entire catalog; otherwise show the active category.
+  // --- Brand results (only computed on the Brands tab) ---------------------
+  const brandFiltered = useMemo<BrandIconMeta[]>(() => {
+    if (!isBrands) {
+      return [];
+    }
+    if (!trimmed) {
+      return BRAND_ICONS;
+    }
+    return BRAND_ICONS.filter(
+      (b) => b.title.toLowerCase().includes(trimmed) || b.slug.includes(trimmed),
+    );
+  }, [isBrands, trimmed]);
+
+  // --- Lucide results ------------------------------------------------------
+  // When searching a lucide tab, span the entire lucide catalog; otherwise show
+  // the active category.
   const baseList = useMemo<string[]>(() => {
+    if (isBrands) {
+      return [];
+    }
     if (trimmed || activeTab === 'all') {
       return allIconNames();
     }
     return ICON_CATEGORIES.find((c) => c.id === activeTab)?.icons ?? [];
-  }, [trimmed, activeTab]);
+  }, [isBrands, trimmed, activeTab]);
 
-  const filtered = useMemo<string[]>(() => {
+  const lucideFiltered = useMemo<string[]>(() => {
     if (!trimmed) {
       return baseList;
     }
     return baseList.filter((n) => n.toLowerCase().includes(trimmed));
   }, [baseList, trimmed]);
 
-  const visible = filtered.slice(0, limit);
+  const totalCount = isBrands ? brandFiltered.length : lucideFiltered.length;
+  const visibleBrands = isBrands ? brandFiltered.slice(0, limit) : [];
+  const visibleLucide = isBrands ? [] : lucideFiltered.slice(0, limit);
 
   const resetLimit = () => setLimit(PAGE_SIZE);
 
@@ -95,37 +124,37 @@ export function IconPicker({ value, onChange, onClose }: IconPickerProps): React
         )}
       </div>
 
-      {/* Category chips (hidden while searching across all) */}
-      {!trimmed && (
-        <div style={chipRowStyle}>
-          {TABS.map((tab) => {
-            const active = tab.id === activeTab;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  resetLimit();
-                }}
-                style={{
-                  ...chipStyle,
-                  background: active ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)',
-                  borderColor: active ? '#6366f1' : 'rgba(255,255,255,0.12)',
-                  color: active ? '#c7d2fe' : 'rgba(255,255,255,0.6)',
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* Category chips — always shown so the Brands tab stays reachable while
+          a search is active. */}
+      <div style={chipRowStyle}>
+        {TABS.map((tab) => {
+          const active = tab.id === activeTab;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab.id);
+                resetLimit();
+              }}
+              style={{
+                ...chipStyle,
+                background: active ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)',
+                borderColor: active ? '#6366f1' : 'rgba(255,255,255,0.12)',
+                color: active ? '#c7d2fe' : 'rgba(255,255,255,0.6)',
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Count / current selection */}
       <div style={metaRowStyle}>
         <span>
-          {filtered.length} icon{filtered.length === 1 ? '' : 's'}
+          {totalCount} {isBrands ? 'brand' : 'icon'}
+          {totalCount === 1 ? '' : 's'}
           {trimmed ? ' found' : ''}
         </span>
         {value && (
@@ -137,35 +166,59 @@ export function IconPicker({ value, onChange, onClose }: IconPickerProps): React
       </div>
 
       {/* Grid */}
-      {visible.length === 0 ? (
-        <div style={emptyStyle}>No icons match “{query}”.</div>
+      {totalCount === 0 ? (
+        <div style={emptyStyle}>No {isBrands ? 'brands' : 'icons'} match “{query}”.</div>
       ) : (
         <div style={gridStyle}>
-          {visible.map((name) => {
-            const selected = name === value;
-            return (
-              <button
-                key={name}
-                type="button"
-                title={name}
-                onClick={() => onChange(name)}
-                style={{
-                  ...cellStyle,
-                  background: selected ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.04)',
-                  borderColor: selected ? '#6366f1' : 'rgba(255,255,255,0.08)',
-                }}
-              >
-                <Icon name={name} size={20} color={selected ? '#c7d2fe' : 'rgba(255,255,255,0.85)'} />
-              </button>
-            );
-          })}
+          {isBrands
+            ? visibleBrands.map((brand) => {
+                const brandValue = `${BRAND_ICON_PREFIX}${brand.slug}`;
+                const selected = brandValue === value;
+                return (
+                  <button
+                    key={brand.slug}
+                    type="button"
+                    title={`${brand.title} (${brandValue})`}
+                    onClick={() => onChange(brandValue)}
+                    style={{
+                      ...cellStyle,
+                      background: selected ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.04)',
+                      borderColor: selected ? '#6366f1' : 'rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <Icon
+                      name={brandValue}
+                      size={20}
+                      color={selected ? '#c7d2fe' : 'rgba(255,255,255,0.85)'}
+                    />
+                  </button>
+                );
+              })
+            : visibleLucide.map((name) => {
+                const selected = name === value;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    title={name}
+                    onClick={() => onChange(name)}
+                    style={{
+                      ...cellStyle,
+                      background: selected ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.04)',
+                      borderColor: selected ? '#6366f1' : 'rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <Icon name={name} size={20} color={selected ? '#c7d2fe' : 'rgba(255,255,255,0.85)'} />
+                  </button>
+                );
+              })}
         </div>
       )}
 
       {/* Show more */}
-      {filtered.length > limit && (
+      {totalCount > limit && (
         <button type="button" onClick={() => setLimit((n) => n + PAGE_SIZE)} style={showMoreStyle}>
-          Show more ({filtered.length - limit} remaining)
+          Show more ({totalCount - limit} remaining)
         </button>
       )}
     </div>
