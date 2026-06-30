@@ -2,7 +2,35 @@
 
 ---
 
-# 🔴 TOMORROW — Jun 30 2026 — START HERE (two open items)
+# 🟢 END OF Jun 30 2026 SESSION — START HERE (all work pushed to dev + primary @ cc124100)
+
+**Shipped + reviewed this session (tsc/lint clean, all on `dev` + primary fast-forwarded):**
+- **CRM vertical:** all 5 remaining parity gaps built (saved views, multiple pipelines + a `/pipelines`
+  mgmt screen, CSV import, editable owner, in-CRM reports). See the CRM STATUS block below.
+- **SMS:** diagnosed — invalid Twilio credentials (401/20003), NOT trial/verified-number. ⏳ **OPERATOR
+  ACTION PENDING:** refresh the Twilio Auth Token, then re-run `scripts/diagnose-twilio-sms.ts`.
+- **Video Tier-1:** ③ cross-clip normalization + ④ no fake-4K — Tier-1 fully closed.
+- **Social vertical:** 4 audit bugs fixed (approvals→Admin SDK, queue drip [opt-in+rate-limited],
+  dispatcher honesty, WhatsApp) + 4 features (Strategy Co-Pilot `/social/copilot`, inline composer AI,
+  category queues, quick-wins: link→post/occasion/hashtags/variants). (Fixed an SSRF redirect bypass in
+  link→post during review.) ⏳ **STILL OPEN:** social cert walkthrough + the 9 platforms gated on external
+  OAuth approvals (non-code).
+- **Website vertical:** live renderer now does all 38 widgets (no gray boxes) + forms submit→CRM;
+  AI page-gen made Standing-Rule-#1 compliant (baked GM `sgm_website_page_generator_*`, seeded + in the
+  reseed runner); pages GET honors slug + sitemap/llms read the real store. (Audit's "no scheduled-publish
+  cron" was wrong — existing `scheduled-publisher.ts` already does it; no duplicate added.)
+
+**🔴 NEXT — the website KEYSTONE (store unification) — PLAN READY, needs 2 operator decisions before code:**
+The Editor and the live site use DIFFERENT page stores, so editor-built pages never go live. Full plan
+verified + written (store B = `website/pages/items` is canonical; field-by-field A↔B map; reversible,
+idempotent, dry-run migration script; 7-step low-risk sequence). **Two decisions to confirm first:**
+(1) the platform's OWN marketing pages (`/features`,`/pricing`…) — leave on store A (recommended) or unify
+into B; (2) migration slug-collision policy — skip (recommended) / suffix / overwrite. Also fix the latent
+SEO-strip bug (`PageSEOSchema` drops metaTitle/metaDescription on POST) before migrating.
+
+---
+
+# 🔴 (prior) Jun 30 2026 — SMS + Video items (now resolved above)
 
 ### 1. Diagnose the live SMS send failure (outreach "hands" program)
 The "give every specialist real hands" program advanced hard this session. **DONE + committed:**
