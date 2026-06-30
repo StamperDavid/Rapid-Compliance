@@ -10,6 +10,7 @@
 
 import { useState } from 'react';
 import type { GradientStops } from '@/types/website';
+import { FontPicker } from './FontPicker';
 
 // ---------------------------------------------------------------------------
 // Shared dark-theme style tokens (single source for the panel)
@@ -242,6 +243,25 @@ export function SelectField({ value, options, onChange }: SelectFieldProps) {
       ))}
     </select>
   );
+}
+
+// ---------------------------------------------------------------------------
+// FontField — Google-Fonts picker bound to a WidgetStyle.fontFamily value
+// ---------------------------------------------------------------------------
+
+interface FontFieldProps {
+  value?: string;
+  /** Emits the bare family name, or undefined when cleared to "Default". */
+  onChange: (value: string | undefined) => void;
+}
+
+/**
+ * The per-widget typography font control. Wraps {@link FontPicker} and adapts its
+ * `(family: string)` callback to the `string | undefined` patch contract the Style
+ * tab uses elsewhere (an empty selection clears the override back to the default).
+ */
+export function FontField({ value, onChange }: FontFieldProps) {
+  return <FontPicker value={value} onChange={(family) => onChange(family === '' ? undefined : family)} />;
 }
 
 // ---------------------------------------------------------------------------

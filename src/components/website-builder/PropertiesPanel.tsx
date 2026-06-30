@@ -16,9 +16,13 @@
 'use client';
 
 import { useState } from 'react';
-import type { Page, PageSection, Widget, WidgetStyle, Spacing } from '@/types/website';
+import { X, Plus } from 'lucide-react';
+import type { Page, PageSection, Widget, WidgetStyle, Spacing, ShapeDivider } from '@/types/website';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
 import { ImageField, ImageArrayField, detectItemImageKey } from './ImageField';
+import { Icon } from './Icon';
+import { IconPicker } from './IconPicker';
+import { ShapeDividerControl } from './ShapeDividerControl';
 import {
   Group,
   FieldRow,
@@ -30,6 +34,7 @@ import {
   NumberField,
   SpacingField,
   GradientField,
+  FontField,
   DEFAULT_GRADIENT,
   labelStyle,
   inputStyle,
@@ -303,6 +308,180 @@ function headerActionStyle(background: string): React.CSSProperties {
 }
 
 // ===========================================================================
+// Icon fields — reusable IconPicker wrappers for icon-bearing widgets
+// ===========================================================================
+
+const iconTriggerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  flex: 1,
+  padding: '0.4rem 0.5rem',
+  border: '1px solid rgba(255,255,255,0.15)',
+  borderRadius: '6px',
+  background: 'rgba(255,255,255,0.05)',
+  color: '#ffffff',
+  fontSize: '0.8rem',
+  cursor: 'pointer',
+  textAlign: 'left',
+};
+
+const clearIconButtonStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '30px',
+  height: '30px',
+  border: '1px solid rgba(255,255,255,0.15)',
+  borderRadius: '6px',
+  background: 'rgba(255,255,255,0.05)',
+  color: 'rgba(255,255,255,0.6)',
+  cursor: 'pointer',
+};
+
+/** A labelled IconPicker trigger that opens an inline picker popover. */
+function IconField({
+  label,
+  value,
+  onChange,
+  onClear,
+}: {
+  label: string;
+  value?: string;
+  onChange: (name: string) => void;
+  onClear?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasValue = typeof value === 'string' && value.length > 0;
+  return (
+    <div style={{ marginBottom: '1rem' }}>
+      <label style={labelStyle}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <button type="button" onClick={() => setOpen((o) => !o)} style={iconTriggerStyle}>
+          {hasValue ? (
+            <Icon name={value} size={18} />
+          ) : (
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>—</span>
+          )}
+          <span style={{ color: hasValue ? '#ffffff' : 'rgba(255,255,255,0.5)' }}>
+            {hasValue ? value : 'Choose icon'}
+          </span>
+        </button>
+        {hasValue && onClear && (
+          <button type="button" onClick={onClear} style={clearIconButtonStyle} aria-label="Clear icon">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {open && (
+        <div style={{ marginTop: '0.4rem' }}>
+          <IconPicker
+            value={hasValue ? value : undefined}
+            onChange={(name) => {
+              onChange(name);
+              setOpen(false);
+            }}
+            onClose={() => setOpen(false)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Per-link editor for the social-icons widget (platform, url, icon). */
+function SocialIconsField({
+  items,
+  onChange,
+}: {
+  items: Record<string, unknown>[];
+  onChange: (next: Record<string, unknown>[]) => void;
+}) {
+  const updateItem = (idx: number, key: string, val: string) => {
+    onChange(items.map((it, i) => (i === idx ? { ...it, [key]: val } : it)));
+  };
+  const removeItem = (idx: number) => onChange(items.filter((_, i) => i !== idx));
+  const addItem = () => onChange([...items, { platform: 'website', url: '#', icon: 'Globe' }]);
+
+  return (
+    <div style={{ marginBottom: '1rem' }}>
+      <label style={labelStyle}>Social Links</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        {items.map((item, idx) => {
+          const platform = typeof item.platform === 'string' ? item.platform : '';
+          const url = typeof item.url === 'string' ? item.url : '';
+          const icon = typeof item.icon === 'string' ? item.icon : '';
+          return (
+            <div
+              key={idx}
+              style={{
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
+                padding: '0.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.4rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>Link {idx + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => removeItem(idx)}
+                  style={clearIconButtonStyle}
+                  aria-label="Remove link"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <IconField label="Icon" value={icon} onChange={(name) => updateItem(idx, 'icon', name)} />
+              <div>
+                <label style={labelStyle}>Platform / Label</label>
+                <input
+                  type="text"
+                  value={platform}
+                  onChange={(e) => updateItem(idx, 'platform', e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>URL</label>
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => updateItem(idx, 'url', e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        type="button"
+        onClick={addItem}
+        style={{
+          marginTop: '0.5rem',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.3rem',
+          padding: '0.4rem 0.6rem',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '6px',
+          background: 'rgba(255,255,255,0.05)',
+          color: 'rgba(255,255,255,0.75)',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
+        <Plus size={14} /> Add link
+      </button>
+    </div>
+  );
+}
+
+// ===========================================================================
 // Widget Content Editor (unchanged behaviour — content fields per widget type)
 // ===========================================================================
 
@@ -323,6 +502,18 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
 
   const renderField = (key: string, value: unknown) => {
     if (typeof value === 'string') {
+      // Icon-bearing string fields (icon-box, button) → searchable IconPicker.
+      if (key === 'icon') {
+        return (
+          <IconField
+            key={key}
+            label={formatLabel(key)}
+            value={value}
+            onChange={(name) => updateData(key, name)}
+            onClear={widget.type === 'button' ? () => updateData(key, '') : undefined}
+          />
+        );
+      }
       if (IMAGE_STRING_KEYS.has(key)) {
         return (
           <ImageField
@@ -384,6 +575,15 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
         </div>
       );
     } else if (Array.isArray(value)) {
+      // Social-icons links → per-link platform / url / IconPicker editor.
+      if (key === 'icons') {
+        const linkItems = value.filter(
+          (v): v is Record<string, unknown> => typeof v === 'object' && v !== null,
+        );
+        return (
+          <SocialIconsField key={key} items={linkItems} onChange={(items) => updateData(key, items)} />
+        );
+      }
       const imageKey = detectItemImageKey(value[0]);
       if (imageKey) {
         return (
@@ -408,10 +608,21 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
     return null;
   };
 
+  // Button supports an optional leading icon; the field is offered even when the
+  // widget's data has no `icon` key yet (so the user can add one).
+  const showButtonIconField = widget.type === 'button' && !('icon' in widget.data);
+
   return (
     <div>
       {Object.entries(widget.data).map(([key, value]) => renderField(key, value))}
-      {Object.keys(widget.data).length === 0 && (
+      {showButtonIconField && (
+        <IconField
+          label="Leading Icon (optional)"
+          value=""
+          onChange={(name) => updateData('icon', name)}
+        />
+      )}
+      {Object.keys(widget.data).length === 0 && !showButtonIconField && (
         <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>
           No content options available
         </div>
@@ -736,17 +947,9 @@ function StyleEditor({ widget, breakpoint, onUpdate }: StyleEditorProps) {
         </FieldRow>
 
         <FieldRow label="Font" {...row('fontFamily')}>
-          <SelectField
+          <FontField
             value={str(get('fontFamily'))}
-            onChange={(v) => patch({ fontFamily: v === '' ? undefined : v })}
-            options={[
-              { value: '', label: 'Default' },
-              { value: 'Inter, system-ui, sans-serif', label: 'Inter' },
-              { value: 'system-ui, sans-serif', label: 'System UI' },
-              { value: 'Georgia, serif', label: 'Georgia' },
-              { value: '"Times New Roman", serif', label: 'Times' },
-              { value: 'monospace', label: 'Monospace' },
-            ]}
+            onChange={(v) => patch({ fontFamily: v })}
           />
         </FieldRow>
 
@@ -1154,6 +1357,21 @@ function SectionStyleEditor({ section, breakpoint, onUpdate }: SectionStyleEdito
             onChange={(v) => updateSpacing('margin', v)}
           />
         </FieldRow>
+      </Group>
+
+      <Group title="Shape Dividers">
+        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', margin: '0 0 0.4rem' }}>Top</div>
+        <ShapeDividerControl
+          position="top"
+          value={section.shapeDividerTop}
+          onChange={(next: ShapeDivider) => onUpdate({ shapeDividerTop: next })}
+        />
+        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', margin: '0.9rem 0 0.4rem' }}>Bottom</div>
+        <ShapeDividerControl
+          position="bottom"
+          value={section.shapeDividerBottom}
+          onChange={(next: ShapeDivider) => onUpdate({ shapeDividerBottom: next })}
+        />
       </Group>
     </div>
   );

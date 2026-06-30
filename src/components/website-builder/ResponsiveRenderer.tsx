@@ -8,7 +8,7 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import type { GradientStops, PageSection, Widget, WidgetStyle } from '@/types/website';
+import type { GradientStops, PageSection, ShapeDivider, Widget, WidgetStyle } from '@/types/website';
 import type {
   LogoItem,
   GalleryImage,
@@ -26,11 +26,13 @@ import {
   formatPlanPrice,
   formatPlanPeriod,
 } from '@/lib/website-builder/widget-normalizer';
+import { SHAPE_DIVIDERS } from '@/lib/website-builder/shape-divider-catalog';
 import SafeHtml from '@/components/SafeHtml';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 import { OptimizedImage } from './OptimizedImage';
 import { AccessibleWidget, SkipToMain } from './AccessibleWidget';
 import { WebsiteFormWidget } from './WebsiteFormWidget';
+import { Icon } from './Icon';
 
 interface ConvertedStyle extends Omit<React.CSSProperties, 'padding' | 'margin'> {
   padding?: string;
@@ -222,6 +224,20 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
       : '80px 40px';
   };
 
+  // Section shape dividers (Elementor-style). Only active when a section
+  // explicitly sets a divider with a real (non-`none`) shape. When neither is
+  // set, NOTHING below changes the section's style or markup — `hasDivider`
+  // stays false and the section renders byte-identically to before.
+  const topDivider =
+    section.shapeDividerTop && section.shapeDividerTop.type !== 'none'
+      ? section.shapeDividerTop
+      : undefined;
+  const bottomDivider =
+    section.shapeDividerBottom && section.shapeDividerBottom.type !== 'none'
+      ? section.shapeDividerBottom
+      : undefined;
+  const hasDivider = topDivider !== undefined || bottomDivider !== undefined;
+
   // The <section> is a full-bleed BAND: its background reaches the page edges.
   // Vertical/horizontal padding and the max-width cap live on the inner
   // container so content stays centred at a sane reading width (≈1280px) even
@@ -232,6 +248,9 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     width: '100%',
+    // Only when a divider is present: become the positioning context and clip
+    // the overlay SVGs to the band. Spread is empty (no added keys) otherwise.
+    ...(hasDivider ? { position: 'relative', overflow: 'hidden' } : {}),
   };
 
   // Full-width sections still cap their inner content at 1280px; constrained
@@ -247,10 +266,16 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
     margin: '0 auto',
     padding: getResponsivePadding(),
     width: '100%',
+    // Sit content above any edge-pinned divider (which defaults to z-index 1);
+    // a `front` divider opts to z-index 3 to overlap content. Only applied when
+    // a divider exists, so dividerless sections keep identical inner markup.
+    ...(hasDivider ? { position: 'relative', zIndex: 2 } : {}),
   };
 
   return (
     <section className="section" style={sectionStyle}>
+      {topDivider && <ShapeDividerLayer divider={topDivider} position="top" />}
+      {bottomDivider && <ShapeDividerLayer divider={bottomDivider} position="bottom" />}
       <div className="section-inner" style={innerStyle}>
         <div
           className={section.columns.length > 1 ? 'flex-container' : ''}
@@ -287,6 +312,81 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * One section shape divider, pinned to the top or bottom edge of its section.
+ *
+ * The catalog path is authored fill-against-top; a TOP divider renders as-is and
+ * a BOTTOM divider is rotated 180deg so the same path serves both edges. `flip`
+ * mirrors horizontally, `invert` flips the shape vertically (peak<->valley), and
+ * `front` lifts the divider above section content. The layer is decorative and
+ * never intercepts pointer events.
+ */
+function ShapeDividerLayer({
+  divider,
+  position,
+}: {
+  divider: ShapeDivider;
+  position: 'top' | 'bottom';
+}): React.JSX.Element | null {
+  const shape = SHAPE_DIVIDERS[divider.type as Exclude<typeof divider.type, 'none'>];
+  if (!shape) {
+    return null;
+  }
+
+  const height = typeof divider.height === 'number' && divider.height > 0 ? divider.height : 100;
+  const widthPct =
+    typeof divider.width === 'number' && divider.width >= 100 ? divider.width : 100;
+  const fill = divider.color && divider.color.trim() !== '' ? divider.color : 'var(--color-bg-elevated)';
+
+  // Combine the edge rotation with the optional flip/invert mirrors.
+  const transforms: string[] = [];
+  if (position === 'bottom') {
+    transforms.push('rotate(180deg)');
+  }
+  if (divider.flip) {
+    transforms.push('scaleX(-1)');
+  }
+  if (divider.invert) {
+    transforms.push('scaleY(-1)');
+  }
+
+  const containerStyle: React.CSSProperties = {
+    position: 'absolute',
+    [position]: 0,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: `${widthPct}%`,
+    minWidth: '100%',
+    lineHeight: 0,
+    zIndex: divider.front ? 3 : 1,
+    pointerEvents: 'none',
+  };
+
+  const svgStyle: React.CSSProperties = {
+    display: 'block',
+    width: '100%',
+    height: `${height}px`,
+    transform: transforms.length > 0 ? transforms.join(' ') : undefined,
+    transformOrigin: 'center',
+  };
+
+  return (
+    <div className={`shape-divider shape-divider-${position}`} style={containerStyle} aria-hidden="true">
+      <svg
+        viewBox={shape.viewBox}
+        preserveAspectRatio={shape.preserveAspectRatio ?? 'none'}
+        xmlns="http://www.w3.org/2000/svg"
+        style={svgStyle}
+      >
+        {(shape.paths ?? []).map((d, idx) => (
+          <path key={idx} d={d} fill={fill} fillOpacity={0.55} />
+        ))}
+        <path d={shape.path} fill={fill} />
+      </svg>
+    </div>
   );
 }
 
@@ -785,7 +885,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     case 'icon-box':
       return (
         <div style={style}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{String(widget.data.icon ?? '')}</div>
+          <div style={{ marginBottom: '1rem' }}><Icon name={String(widget.data.icon ?? '')} size={48} /></div>
           <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{String(widget.data.title ?? '')}</h3>
           <p style={{ color: 'var(--color-text-disabled)' }}>{String(widget.data.description ?? '')}</p>
         </div>
@@ -815,7 +915,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
                 fontSize: '1.25rem',
               }}
             >
-              {getSocialIcon(icon.platform)}
+              {icon.icon ? <Icon name={String(icon.icon)} size={20} /> : getSocialIcon(icon.platform)}
             </a>
           ))}
         </div>

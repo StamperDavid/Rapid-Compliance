@@ -45,6 +45,8 @@ import { logger } from '@/lib/logger/logger';
 import { BlockLibrary } from '@/components/website-builder/BlockLibrary';
 import { loadBlocks, saveBlock } from '@/lib/website-builder/block-library-service';
 import { BLOCK_CATEGORY_LABELS, type SectionBlock, type BlockCategory } from '@/lib/website-builder/section-blocks';
+import { FontLoader } from '@/components/website-builder/FontLoader';
+import { collectUsedFonts } from '@/lib/website-builder/font-catalog';
 
 // ============================================================================
 // Conversion helpers: EditorPage <-> Page (existing widget system)
@@ -1083,6 +1085,8 @@ function PageEditorInner() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden font-sans">
+      {/* On-demand Google Fonts: load only the families actually used on the page */}
+      {page && <FontLoader families={collectUsedFonts(page)} />}
       {/* Editor Toolbar */}
       <EditorToolbar
         page={page}

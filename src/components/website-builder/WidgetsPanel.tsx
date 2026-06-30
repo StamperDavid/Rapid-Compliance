@@ -9,6 +9,7 @@ import { useState } from 'react';
 import type { Widget, WidgetType } from '@/types/website';
 import type { WebsiteConfig, GlobalBranding } from '@/types/website-editor';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
+import { FontPicker } from './FontPicker';
 
 interface WidgetsPanelProps {
   onAddWidget: (widget: Widget) => void;
@@ -436,35 +437,19 @@ function BrandingTabContent({
 
       {/* Fonts */}
       <div style={{ marginBottom: '1.25rem' }}>
-        <label style={brandLabelStyle}>Heading Font</label>
-        <select
+        <FontPicker
+          label="Heading Font"
           value={branding.fonts.heading}
-          onChange={(e) => onUpdate({ fonts: { ...branding.fonts, heading: e.target.value } })}
-          style={brandInputStyle}
-        >
-          <option value="Inter">Inter</option>
-          <option value="system-ui">System UI</option>
-          <option value="Georgia">Georgia</option>
-          <option value="Helvetica">Helvetica</option>
-          <option value="Roboto">Roboto</option>
-          <option value="Poppins">Poppins</option>
-        </select>
+          onChange={(family) => onUpdate({ fonts: { ...branding.fonts, heading: family } })}
+        />
       </div>
 
       <div style={{ marginBottom: '1.25rem' }}>
-        <label style={brandLabelStyle}>Body Font</label>
-        <select
+        <FontPicker
+          label="Body Font"
           value={branding.fonts.body}
-          onChange={(e) => onUpdate({ fonts: { ...branding.fonts, body: e.target.value } })}
-          style={brandInputStyle}
-        >
-          <option value="Inter">Inter</option>
-          <option value="system-ui">System UI</option>
-          <option value="Georgia">Georgia</option>
-          <option value="Helvetica">Helvetica</option>
-          <option value="Roboto">Roboto</option>
-          <option value="Poppins">Poppins</option>
-        </select>
+          onChange={(family) => onUpdate({ fonts: { ...branding.fonts, body: family } })}
+        />
       </div>
 
       <div style={{ marginBottom: '1.25rem' }}>

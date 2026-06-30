@@ -150,6 +150,10 @@ export interface NewsletterContent extends BaseWidgetContent {
 export interface SocialIcon {
   platform: string;
   url: string;
+  /** Optional lucide icon name chosen in the editor; falls back to platform glyph. */
+  icon?: string;
+  /** Optional display label. */
+  label?: string;
 }
 
 export interface SocialIconsContent extends BaseWidgetContent {

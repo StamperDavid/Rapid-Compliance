@@ -119,12 +119,38 @@ export interface PageSection {
   columnGap?: number;
   verticalAlign?: 'flex-start' | 'center' | 'flex-end';
 
+  // Section shape dividers (Elementor-style). Optional + additive: when unset,
+  // the section renders byte-identically to before. Top/bottom independently
+  // configured. Rendered as absolutely-positioned SVG overlays pinned to the
+  // section's top/bottom edges by the ResponsiveRenderer.
+  shapeDividerTop?: ShapeDivider;
+  shapeDividerBottom?: ShapeDivider;
+
   // Settings
   fullWidth?: boolean;
   maxWidth?: number;
-  
+
   // Metadata
   name?: string; // For editor reference
+}
+
+/** The catalog of built-in section shape dividers (`'none'` = no divider). */
+export type ShapeDividerType =
+  | 'none' | 'wave' | 'waves' | 'tilt' | 'triangle' | 'curve' | 'arrow'
+  | 'mountains' | 'clouds' | 'zigzag' | 'split' | 'book' | 'drops' | 'pyramids';
+
+/**
+ * A single section shape divider (top or bottom edge). All visual knobs are
+ * optional and fall back to sensible defaults at render time.
+ */
+export interface ShapeDivider {
+  type: ShapeDividerType;
+  color?: string;      // fill; defaults to a sensible token if unset
+  height?: number;     // px (SVG height)
+  width?: number;      // % (>= 100), for stretched shapes
+  flip?: boolean;      // mirror horizontally
+  invert?: boolean;    // flip the shape vertically (peak<->valley)
+  front?: boolean;     // render above section content (z-index)
 }
 
 export interface PageColumn {
