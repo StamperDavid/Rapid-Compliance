@@ -105,6 +105,95 @@ const SOCIAL_POSTS_COLLECTION = 'social_posts';
 const SOCIAL_QUEUE_COLLECTION = 'social_queue';
 const SOCIAL_ANALYTICS_COLLECTION = 'social_analytics';
 
+// Round-robin drip: where the "last category posted" marker lives. Stored in the
+// same `settings` collection the cron rate-limit marker uses. Drives category
+// variety so consecutive drips rotate across themed categories instead of
+// strict FIFO. This NEVER changes how often or whether a post publishes — only
+// WHICH queued post is chosen next.
+const QUEUE_SETTINGS_COLLECTION = 'settings';
+const QUEUE_CATEGORY_MARKER_ID = 'social_queue_category_marker';
+// Sentinel rotation bucket for queued posts that have no category — they still
+// drain normally as their own bucket in the rotation.
+const UNCATEGORIZED_BUCKET = '__uncategorized__';
+
+/** Trim a category label, returning undefined when empty/blank. */
+function normalizeCategory(value?: string | null): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) { return undefined; }
+  return trimmed;
+}
+
+/** Map a (possibly empty) category to its rotation bucket key. */
+function bucketKey(value?: string | null): string {
+  return normalizeCategory(value) ?? UNCATEGORIZED_BUCKET;
+}
+
+/**
+ * Pick the next queued post for a category-aware round-robin drip.
+ *
+ * Buckets the queued posts by category (uncategorized → sentinel bucket), then
+ * advances to the bucket AFTER the last-posted category in the operator's
+ * configured order, wrapping around. Within the chosen bucket the oldest
+ * (lowest queuePosition) post wins, so FIFO is preserved inside each category.
+ * Returns null when there is nothing to publish.
+ *
+ * Pure/deterministic and exported for unit testing.
+ */
+export function selectNextQueuedPost(
+  posts: QueuedPost[],
+  categoryOrder: string[],
+  lastCategory: string | null
+): QueuedPost | null {
+  if (posts.length === 0) { return null; }
+
+  // Bucket posts by category. Uncategorized posts share the sentinel bucket.
+  const buckets = new Map<string, QueuedPost[]>();
+  for (const post of posts) {
+    const key = bucketKey(post.contentCategory);
+    const list = buckets.get(key) ?? [];
+    list.push(post);
+    buckets.set(key, list);
+  }
+
+  // Rotation order: configured categories that are present (in config order),
+  // then any present-but-unconfigured categories (alphabetical, stable), then
+  // the uncategorized bucket last so themed variety is preferred.
+  const present = new Set(buckets.keys());
+  const ordered: string[] = [];
+  for (const cat of categoryOrder) {
+    if (present.has(cat)) {
+      ordered.push(cat);
+      present.delete(cat);
+    }
+  }
+  const leftovers = [...present]
+    .filter((k) => k !== UNCATEGORIZED_BUCKET)
+    .sort((a, b) => a.localeCompare(b));
+  ordered.push(...leftovers);
+  if (buckets.has(UNCATEGORIZED_BUCKET)) {
+    ordered.push(UNCATEGORIZED_BUCKET);
+  }
+
+  if (ordered.length === 0) { return null; }
+
+  // Start at the bucket AFTER the last-posted category; wrap around.
+  const lastIdx = lastCategory ? ordered.indexOf(lastCategory) : -1;
+  const startIdx = lastIdx === -1 ? 0 : (lastIdx + 1) % ordered.length;
+
+  for (let step = 0; step < ordered.length; step++) {
+    const key = ordered[(startIdx + step) % ordered.length];
+    const bucket = buckets.get(key);
+    if (bucket && bucket.length > 0) {
+      // Oldest within the bucket (FIFO inside a category).
+      return bucket.reduce(
+        (min, p) => (p.queuePosition < min.queuePosition ? p : min),
+        bucket[0]
+      );
+    }
+  }
+  return null;
+}
+
 /**
  * Autonomous Posting Agent Class
  */
@@ -1513,6 +1602,7 @@ export class AutonomousPostingAgent {
       mediaUrls?: string[];
       hashtags?: string[];
       preferredTimeSlot?: string;
+      contentCategory?: string;
       createdBy?: string;
       accountId?: string;
     } = {}
@@ -1543,6 +1633,7 @@ export class AutonomousPostingAgent {
           status: 'queued',
           queuePosition,
           preferredTimeSlot: options.preferredTimeSlot,
+          contentCategory: normalizeCategory(options.contentCategory),
           createdBy: options.createdBy ?? 'autonomous-agent',
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -1664,20 +1755,29 @@ export class AutonomousPostingAgent {
   }
 
   /**
-   * Process queue and publish next posts
+   * Process queue and publish next posts.
+   *
+   * Selection is category-aware ROUND-ROBIN for variety: consecutive drips
+   * rotate across themed categories (Tips → Promotions → News → …) instead of
+   * strict FIFO, so the audience does not see three promos in a row. Within a
+   * category, the lowest queuePosition (oldest) post is chosen, so order is
+   * still respected inside each bucket. Posts with no category drain normally as
+   * their own "Uncategorized" bucket in the rotation.
+   *
+   * This ONLY changes which queued post is chosen next — it never changes how
+   * often or whether a post publishes. The cron's opt-in flag + per-day
+   * rate-limit (one drip per 24h/maxDailyPosts) are unchanged and still gate
+   * every call to this method.
    */
   async processQueue(maxPosts: number = 1): Promise<BatchPostingResult> {
     const results: PostingResult[] = [];
 
     try {
-      // Get queued posts ordered by position
-      const { orderBy, limit } = await import('firebase/firestore');
+      const { orderBy } = await import('firebase/firestore');
+      // Load the full queue (oldest-first) so we can rotate across categories.
       const queuedPosts = await AdminFirestoreService.getAll<QueuedPost>(
         getSubCollection(SOCIAL_QUEUE_COLLECTION),
-        [
-          orderBy('queuePosition', 'asc'),
-          limit(maxPosts),
-        ]
+        [orderBy('queuePosition', 'asc')]
       );
 
       logger.info('AutonomousPostingAgent: Processing queue', {
@@ -1685,7 +1785,25 @@ export class AutonomousPostingAgent {
         maxPosts,
       });
 
-      for (const post of queuedPosts) {
+      // The operator's configured category order drives the rotation sequence.
+      const categoryOrder = await AgentConfigService.getCategories();
+      let lastCategory = await this.getLastQueueCategory();
+
+      // Work on an in-memory copy so we can select-and-remove across iterations.
+      const remaining = [...queuedPosts];
+      const toPublish = Math.min(maxPosts, remaining.length);
+
+      for (let i = 0; i < toPublish; i++) {
+        const post = selectNextQueuedPost(remaining, categoryOrder, lastCategory);
+        if (!post) { break; }
+
+        // Remove the chosen post from the working set.
+        const idx = remaining.findIndex((p) => p.id === post.id);
+        if (idx !== -1) { remaining.splice(idx, 1); }
+
+        // Track the category we just posted so the next selection rotates onward.
+        lastCategory = bucketKey(post.contentCategory);
+
         // Post to platform
         const result = await this.postToPlatform(post.platform, post.content, post.mediaUrls);
         results.push(result);
@@ -1709,6 +1827,9 @@ export class AutonomousPostingAgent {
         });
       }
 
+      // Persist the last category so the rotation continues across drips.
+      await this.setLastQueueCategory(lastCategory);
+
       // Reorder remaining queue positions
       await this.reorderQueue();
 
@@ -1729,6 +1850,105 @@ export class AutonomousPostingAgent {
         failureCount: results.filter((r) => !r.success).length,
         timestamp: new Date(),
       };
+    }
+  }
+
+  /**
+   * Read the "last category posted" marker for the round-robin drip.
+   */
+  private async getLastQueueCategory(): Promise<string | null> {
+    try {
+      const marker = await AdminFirestoreService.get<{ lastCategory?: string }>(
+        getSubCollection(QUEUE_SETTINGS_COLLECTION),
+        QUEUE_CATEGORY_MARKER_ID
+      );
+      return marker?.lastCategory ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Persist the "last category posted" marker for the round-robin drip.
+   */
+  private async setLastQueueCategory(category: string | null): Promise<void> {
+    if (!category) { return; }
+    try {
+      await AdminFirestoreService.set(
+        getSubCollection(QUEUE_SETTINGS_COLLECTION),
+        QUEUE_CATEGORY_MARKER_ID,
+        { lastCategory: category, updatedAt: new Date().toISOString() },
+        true
+      );
+    } catch (error) {
+      logger.warn('AutonomousPostingAgent: Failed to persist queue category marker', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * Assign (or clear, with null) the themed category on a single queued post.
+   */
+  async setPostCategory(
+    postId: string,
+    category: string | null
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const queuedPost = await AdminFirestoreService.get<QueuedPost>(
+        getSubCollection(SOCIAL_QUEUE_COLLECTION),
+        postId
+      );
+      if (!queuedPost) {
+        return { success: false, error: 'Queued post not found' };
+      }
+      await AdminFirestoreService.update(
+        getSubCollection(SOCIAL_QUEUE_COLLECTION),
+        postId,
+        {
+          contentCategory: normalizeCategory(category) ?? null,
+          updatedAt: new Date(),
+        }
+      );
+      return { success: true };
+    } catch (error) {
+      logger.error('AutonomousPostingAgent: Failed to set post category', error as Error, { postId });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to set category',
+      };
+    }
+  }
+
+  /**
+   * Re-tag every queued post that used `oldLabel`. Pass a new label to rename,
+   * or null to clear the category (used when a category is deleted). Returns the
+   * number of queued posts updated.
+   */
+  async reassignQueueCategory(oldLabel: string, newLabel: string | null): Promise<number> {
+    try {
+      const { where } = await import('firebase/firestore');
+      const affected = await AdminFirestoreService.getAll<QueuedPost>(
+        getSubCollection(SOCIAL_QUEUE_COLLECTION),
+        [where('contentCategory', '==', oldLabel)]
+      );
+      for (const post of affected) {
+        await AdminFirestoreService.update(
+          getSubCollection(SOCIAL_QUEUE_COLLECTION),
+          post.id,
+          {
+            contentCategory: normalizeCategory(newLabel) ?? null,
+            updatedAt: new Date(),
+          }
+        );
+      }
+      return affected.length;
+    } catch (error) {
+      logger.error('AutonomousPostingAgent: Failed to reassign queue category', error as Error, {
+        oldLabel,
+        newLabel,
+      });
+      return 0;
     }
   }
 

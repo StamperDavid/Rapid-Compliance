@@ -25,11 +25,12 @@ export const CATALOG_TABS: SubpageNavItem[] = [
   { label: 'Payments', href: '/deals/payments' },
 ];
 
-// ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
+// ── Social Hub (Analytics absorbed from standalone sidebar item; Queue added) ─
 export const SOCIAL_TABS: SubpageNavItem[] = [
   { label: 'Platforms', href: '/social' },
   { label: 'Strategy Co-Pilot', href: '/social/copilot' },
   { label: 'Social Media Campaigns', href: '/social/campaigns' },
+  { label: 'Queue', href: '/social/queue' },
   { label: 'Calendar', href: '/social/calendar' },
   { label: 'Analytics', href: '/social/analytics' },
   { label: 'Listening', href: '/social/listening' },

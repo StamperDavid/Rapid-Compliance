@@ -277,7 +277,26 @@ export interface QueuedPost extends SocialMediaPost {
   status: 'queued';
   queuePosition: number;
   preferredTimeSlot?: string; // e.g., 'morning', 'afternoon', 'evening'
+  /**
+   * Optional themed category this queued post belongs to (e.g. "Tips",
+   * "Promotions"). Drives the round-robin variety in the evergreen drip so
+   * consecutive posts rotate across categories instead of strict FIFO.
+   * Posts without a category drain as a normal "Uncategorized" bucket.
+   */
+  contentCategory?: string;
 }
+
+/**
+ * Default themed content categories for the evergreen queue. Operators can
+ * add/rename/remove these in the queue UI; the list is stored on
+ * AutonomousAgentSettings.contentCategories.
+ */
+export const DEFAULT_CONTENT_CATEGORIES: readonly string[] = [
+  'Tips',
+  'Promotions',
+  'News',
+  'Engagement',
+];
 
 export interface PostQueue {
   id: string;
@@ -584,6 +603,12 @@ export interface AutonomousAgentSettings {
    * operator explicitly opts in.
    */
   autoQueueEnabled?: boolean;
+  /**
+   * Operator-managed list of themed content categories used to organize the
+   * evergreen queue and drive the round-robin drip. Additive/optional —
+   * defaults to DEFAULT_CONTENT_CATEGORIES when unset.
+   */
+  contentCategories?: string[];
   updatedAt?: string;
   updatedBy?: string;
 }

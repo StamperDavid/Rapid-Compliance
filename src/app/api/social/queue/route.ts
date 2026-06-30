@@ -25,7 +25,14 @@ const addToQueueSchema = z.object({
   mediaUrls: z.array(z.string().url()).optional(),
   hashtags: z.array(z.string()).optional(),
   preferredTimeSlot: z.enum(['morning', 'afternoon', 'evening']).optional(),
+  contentCategory: z.string().trim().max(60, 'Category name is too long').optional(),
   accountId: z.string().optional(),
+});
+
+const assignCategorySchema = z.object({
+  postId: z.string().min(1),
+  // null / empty string clears the category (post becomes uncategorized)
+  contentCategory: z.string().trim().max(60, 'Category name is too long').nullable().optional(),
 });
 
 const getQueueSchema = z.object({
@@ -121,6 +128,7 @@ export async function POST(request: NextRequest) {
         mediaUrls: data.mediaUrls,
         hashtags: data.hashtags,
         preferredTimeSlot: data.preferredTimeSlot,
+        contentCategory: data.contentCategory,
         createdBy: 'api',
         accountId: data.accountId,
       }
@@ -263,6 +271,7 @@ export async function GET(request: NextRequest) {
         content: post.content,
         queuePosition: post.queuePosition,
         preferredTimeSlot: post.preferredTimeSlot,
+        contentCategory: post.contentCategory ?? null,
         status: post.status,
         createdAt: post.createdAt,
       })),
@@ -387,6 +396,67 @@ export async function PUT(request: NextRequest) {
         success: false,
         error: 'Failed to post',
       },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/social/queue
+ * Assign (or clear) the themed content category on a queued post.
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/queue');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const body: unknown = await request.json();
+    const validation = assignCategorySchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
+
+    logger.info('Queue API: Assigning category to queued post', {
+      postId: data.postId,
+      contentCategory: data.contentCategory ?? null,
+    });
+
+    const agent = await createPostingAgent();
+    const result = await agent.setPostCategory(data.postId, data.contentCategory ?? null);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error ?? 'Failed to assign category' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      postId: data.postId,
+      contentCategory: data.contentCategory ?? null,
+    });
+  } catch (error: unknown) {
+    logger.error('Queue API: Assign category failed', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/queue' });
+    return NextResponse.json(
+      { success: false, error: 'Failed to assign category' },
       { status: 500 }
     );
   }

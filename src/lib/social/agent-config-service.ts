@@ -9,7 +9,11 @@
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
-import type { AutonomousAgentSettings, EngagementActionType } from '@/types/social';
+import {
+  DEFAULT_CONTENT_CATEGORIES,
+  type AutonomousAgentSettings,
+  type EngagementActionType,
+} from '@/types/social';
 
 const SETTINGS_COLLECTION = 'settings';
 const CONFIG_DOC_ID = 'social_agent_config';
@@ -46,6 +50,7 @@ export const DEFAULT_AGENT_SETTINGS: AutonomousAgentSettings = {
   pauseOnWeekends: true,
   autoApprovalEnabled: false,
   autoQueueEnabled: false,
+  contentCategories: [...DEFAULT_CONTENT_CATEGORIES],
 };
 
 export class AgentConfigService {
@@ -109,6 +114,79 @@ export class AgentConfigService {
     logger.info('AgentConfigService: Config saved', { updatedBy });
 
     return updated;
+  }
+
+  /**
+   * Get the operator-managed list of content categories, falling back to the
+   * defaults when none have been customized.
+   */
+  static async getCategories(): Promise<string[]> {
+    const config = await this.getConfig();
+    const list = config.contentCategories;
+    return list && list.length > 0 ? [...list] : [...DEFAULT_CONTENT_CATEGORIES];
+  }
+
+  /**
+   * Add a new content category. Case-insensitive de-duplication; trims
+   * whitespace. Returns the updated category list.
+   */
+  static async addCategory(label: string, updatedBy: string): Promise<string[]> {
+    const trimmed = label.trim();
+    if (!trimmed) {
+      throw new Error('Category name cannot be empty');
+    }
+    const categories = await this.getCategories();
+    if (categories.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+      throw new Error(`Category "${trimmed}" already exists`);
+    }
+    const next = [...categories, trimmed];
+    await this.saveConfig({ contentCategories: next }, updatedBy);
+    return next;
+  }
+
+  /**
+   * Rename a content category. Returns the updated list. The caller is
+   * responsible for re-tagging any queued posts that used the old label.
+   */
+  static async renameCategory(
+    oldLabel: string,
+    newLabel: string,
+    updatedBy: string
+  ): Promise<string[]> {
+    const trimmedNew = newLabel.trim();
+    if (!trimmedNew) {
+      throw new Error('Category name cannot be empty');
+    }
+    const categories = await this.getCategories();
+    const idx = categories.findIndex((c) => c.toLowerCase() === oldLabel.toLowerCase());
+    if (idx === -1) {
+      throw new Error(`Category "${oldLabel}" not found`);
+    }
+    if (
+      categories.some(
+        (c, i) => i !== idx && c.toLowerCase() === trimmedNew.toLowerCase()
+      )
+    ) {
+      throw new Error(`Category "${trimmedNew}" already exists`);
+    }
+    const next = [...categories];
+    next[idx] = trimmedNew;
+    await this.saveConfig({ contentCategories: next }, updatedBy);
+    return next;
+  }
+
+  /**
+   * Remove a content category. Returns the updated list. The caller is
+   * responsible for clearing the category from any queued posts that used it.
+   */
+  static async removeCategory(label: string, updatedBy: string): Promise<string[]> {
+    const categories = await this.getCategories();
+    const next = categories.filter((c) => c.toLowerCase() !== label.toLowerCase());
+    if (next.length === categories.length) {
+      throw new Error(`Category "${label}" not found`);
+    }
+    await this.saveConfig({ contentCategories: next }, updatedBy);
+    return next;
   }
 
   /**
