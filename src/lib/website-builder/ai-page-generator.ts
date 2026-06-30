@@ -4,6 +4,7 @@
  */
 
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
 import { logger } from '@/lib/logger/logger';
 import type { PageSection, PageSEO } from '@/types/website';
 
@@ -43,73 +44,57 @@ interface AIPageResponse {
 }
 
 // ============================================================================
-// System Prompt
+// Golden Master (Standing Rule #1)
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are a website page generator. Given a description, you produce a JSON structure for a website page.
+/**
+ * The page generator runs through a Golden Master whose `config.systemPrompt`
+ * has the tenant's Brand DNA BAKED IN AT SEED TIME (Standing Rule #1). At
+ * runtime we load that ONE doc and use its systemPrompt verbatim — there is NO
+ * `getBrandDNA()` call and NO runtime Brand DNA merge here. The base charter
+ * (page-builder craft) lives in `scripts/seed-website-page-generator-gm.js`;
+ * reseed that script after any Brand DNA edit so the new voice gets baked in.
+ */
+const SPECIALIST_ID = 'WEBSITE_PAGE_GENERATOR';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
 
-## Output Format
-Return ONLY valid JSON (no markdown, no code fences) matching this structure:
-{
-  "title": "Page Title",
-  "slug": "page-title",
-  "sections": [...],
-  "seo": { "metaTitle": "...", "metaDescription": "...", "metaKeywords": ["..."] }
+interface PageGeneratorGM {
+  systemPrompt: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
 }
 
-## Section Structure
-Each section in the "sections" array must have:
-{
-  "id": "section_<unique>",
-  "type": "section",
-  "columns": [
-    {
-      "id": "col_<unique>",
-      "width": 100,
-      "widgets": [...]
-    }
-  ],
-  "fullWidth": true
+/**
+ * Load the page generator's Golden Master and return its baked config.
+ * Throws (no hardcoded fallback) when the GM is missing — a generic prompt
+ * without Brand DNA is a Standing Rule #1 violation, so we fail loudly and
+ * point the operator at the seed script instead of silently going off-brand.
+ */
+async function loadGM(industryKey: string): Promise<PageGeneratorGM> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+  if (!gmRecord) {
+    throw new Error(
+      `Website Page Generator GM not found for industryKey=${industryKey}. ` +
+      `Run "node scripts/seed-website-page-generator-gm.js" to seed it (Brand DNA is baked in at seed time).`,
+    );
+  }
+
+  const config = gmRecord.config as Partial<PageGeneratorGM>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `Website Page Generator GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
+
+  return {
+    systemPrompt,
+    model: config.model ?? 'gpt-4-turbo',
+    temperature: config.temperature ?? 0.7,
+    maxTokens: config.maxTokens ?? 4000,
+  };
 }
-
-## Widget Structure
-Each widget in a column's "widgets" array:
-{
-  "id": "widget_<unique>",
-  "type": "<WidgetType>",
-  "data": { ... }
-}
-
-## Available WidgetTypes and their data shapes:
-
-### Content Widgets
-- "heading": { "text": "string", "level": 1-6, "tag": "h1"-"h6" }
-- "text": { "content": "HTML string with <p>, <strong>, <em> tags" }
-- "button": { "text": "string", "url": "#", "variant": "primary"|"secondary"|"outline" }
-- "image": { "src": "https://via.placeholder.com/800x400", "alt": "string", "caption": "string" }
-- "hero": { "heading": "string", "subheading": "string", "buttonText": "string", "buttonUrl": "#", "backgroundImage": "https://via.placeholder.com/1920x600" }
-- "features": { "features": [{ "icon": "emoji", "title": "string", "description": "string" }] }
-- "pricing": { "plans": [{ "name": "string", "price": "$XX/mo", "features": ["string"], "buttonText": "string", "highlighted": boolean }] }
-- "testimonial": { "quote": "string", "author": "string", "role": "string", "avatar": "https://via.placeholder.com/64" }
-- "cta": { "heading": "string", "description": "string", "buttonText": "string", "buttonUrl": "#" }
-- "stats": { "stats": [{ "value": "string", "label": "string" }] }
-- "faq": { "items": [{ "question": "string", "answer": "string" }] }
-
-### Form Widgets
-- "contact-form": { "fields": ["name", "email", "message"], "submitText": "Send Message", "successMessage": "Thank you!" }
-- "newsletter": { "heading": "string", "description": "string", "buttonText": "Subscribe" }
-
-### Media Widgets
-- "gallery": { "images": [{ "src": "url", "alt": "string" }] }
-- "social-icons": { "icons": [{ "platform": "string", "url": "#" }] }
-
-## Guidelines
-- Generate 3-7 sections per page depending on complexity
-- Use realistic placeholder content relevant to the description
-- Make content professional, engaging, and conversion-focused
-- Use placeholder images from https://via.placeholder.com/ with appropriate dimensions
-- Ensure all IDs are unique (use incrementing numbers like section_1, col_1, widget_1)
-- Match the page type: landing pages need heroes and CTAs, about pages need text and stats, etc.`;
 
 // ============================================================================
 // Generator
@@ -148,9 +133,14 @@ export async function generatePageFromPrompt(
 
   const userMessage = contextParts.join('\n');
 
+  // Load the Golden Master — its systemPrompt has Brand DNA baked in at seed
+  // time (Standing Rule #1). Used verbatim; no runtime Brand DNA merge here.
+  const gm = await loadGM(DEFAULT_INDUSTRY_KEY);
+
   logger.info('AI page generation starting', {
     promptLength: prompt.length,
     pageType,
+    model: gm.model,
     file: 'ai-page-generator.ts',
   });
 
@@ -160,11 +150,11 @@ export async function generatePageFromPrompt(
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await sendUnifiedChatMessage({
-        model: 'gpt-4-turbo',
+        model: gm.model,
         messages: [{ role: 'user', content: userMessage }],
-        systemInstruction: SYSTEM_PROMPT,
-        temperature: 0.7,
-        maxTokens: 4000,
+        systemInstruction: gm.systemPrompt,
+        temperature: gm.temperature,
+        maxTokens: gm.maxTokens,
       });
 
       // Parse AI response — strip any markdown code fences

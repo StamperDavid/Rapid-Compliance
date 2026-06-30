@@ -45,6 +45,7 @@ const SCRIPTS = [
   'seed-funnel-strategist-gm.js',
   'seed-growth-strategist-gm.js',
   'seed-intent-expander-gm.js',
+  'seed-website-page-generator-gm.js',
 ];
 
 // Marketing specialists whose seed scripts are TypeScript (.ts) and must be run
