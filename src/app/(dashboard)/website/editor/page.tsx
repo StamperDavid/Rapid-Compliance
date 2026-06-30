@@ -12,6 +12,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useAuth } from '@/hooks/useAuth';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
@@ -221,6 +222,7 @@ function blankPage(): Page {
 function PageEditorInner() {
   const { user: _user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
+  const authFetch = useAuthFetch();
 
   // Branding/theme + page list for the left panel (NOT the page content store)
   const [config, setConfig] = useState<WebsiteConfig | null>(null);
@@ -281,7 +283,7 @@ function PageEditorInner() {
       // 2. Canonical page list (for the Pages tab).
       let listEntries: EditorPage[] = [];
       try {
-        const listRes = await fetch('/api/website/pages');
+        const listRes = await authFetch('/api/website/pages');
         if (listRes.ok) {
           const listJson: unknown = await listRes.json();
           listEntries = extractPages(listJson)
@@ -298,7 +300,7 @@ function PageEditorInner() {
       let persisted = false;
 
       if (pageIdParam) {
-        const res = await fetch(`/api/website/pages/${encodeURIComponent(pageIdParam)}`);
+        const res = await authFetch(`/api/website/pages/${encodeURIComponent(pageIdParam)}`);
         if (res.ok) {
           const json: unknown = await res.json();
           resolvedPage = apiPageToPage(extractPage(json));
@@ -307,7 +309,7 @@ function PageEditorInner() {
       }
 
       if (!resolvedPage) {
-        const res = await fetch('/api/website/pages?slug=home');
+        const res = await authFetch('/api/website/pages?slug=home');
         if (res.ok) {
           const json: unknown = await res.json();
           const first = extractPages(json)[0];
@@ -344,7 +346,7 @@ function PageEditorInner() {
     } finally {
       setLoading(false);
     }
-  }, [searchParams, pushState]);
+  }, [searchParams, pushState, authFetch]);
 
   useEffect(() => {
     if (authLoading) {return;}
@@ -359,7 +361,7 @@ function PageEditorInner() {
 
   const switchPage = React.useCallback(async (pageId: string) => {
     try {
-      const res = await fetch(`/api/website/pages/${encodeURIComponent(pageId)}`);
+      const res = await authFetch(`/api/website/pages/${encodeURIComponent(pageId)}`);
       if (!res.ok) {
         setNotification({ message: 'Could not open that page', type: 'error' });
         return;
@@ -381,7 +383,7 @@ function PageEditorInner() {
       logger.error('[Editor] Switch page error:', error instanceof Error ? error : new Error(String(error)));
       setNotification({ message: 'Could not open that page', type: 'error' });
     }
-  }, [pushState]);
+  }, [pushState, authFetch]);
 
   // ============================================================================
   // Save config to Firestore
@@ -409,7 +411,7 @@ function PageEditorInner() {
 
     if (pagePersisted) {
       // Existing page → update in place.
-      const res = await fetch(`/api/website/pages/${encodeURIComponent(page.id)}`, {
+      const res = await authFetch(`/api/website/pages/${encodeURIComponent(page.id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -420,7 +422,7 @@ function PageEditorInner() {
       savedId = page.id;
     } else {
       // New page → create it.
-      const res = await fetch('/api/website/pages', {
+      const res = await authFetch('/api/website/pages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -457,7 +459,7 @@ function PageEditorInner() {
     }
 
     return savedId;
-  }, [page, config, pagePersisted]);
+  }, [page, config, pagePersisted, authFetch]);
 
   const saveConfig = React.useCallback(async (isAutoSave: boolean = false): Promise<string | null> => {
     if (!page) {return null;}
@@ -497,7 +499,7 @@ function PageEditorInner() {
         return;
       }
 
-      const res = await fetch(`/api/website/pages/${encodeURIComponent(savedId)}/publish`, {
+      const res = await authFetch(`/api/website/pages/${encodeURIComponent(savedId)}/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -520,7 +522,7 @@ function PageEditorInner() {
     } finally {
       setPublishing(false);
     }
-  }, [page, persistPage]);
+  }, [page, persistPage, authFetch]);
 
   // Auto-save every 30 seconds
   useEffect(() => {
