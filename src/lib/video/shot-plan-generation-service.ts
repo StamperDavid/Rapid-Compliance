@@ -89,8 +89,9 @@ const BUCKET = 'rapid-compliance-65f87.firebasestorage.app';
 
 /**
  * Resolution / aspect defaults applied when a shot does not specify them.
- * 1080p is Seedance's max — generating at full 1080p is the source the final
- * stitch then upscales to 4K (3840x2160) via Topaz (upscale_factor 2).
+ * 1080p is Seedance's max and is the honest deliverable resolution. (An optional
+ * Topaz 4K upscale exists behind the STITCH_4K_UPSCALE=1 flag but is OFF by
+ * default — see Tier-1 ④: never label re-encoded, degraded footage "4K".)
  */
 const DEFAULT_RESOLUTION: NonNullable<VideoGenerateRequest['resolution']> = '1080p';
 const DEFAULT_ASPECT_RATIO = '16:9';
@@ -1167,6 +1168,35 @@ const MUSIC_BED_VOLUME = 0.18;
 const MUSIC_BED_SECONDS = 30;
 
 /**
+ * Tier-1 ③ — cross-clip NORMALIZATION (each Seedance clip is generated
+ * independently, so exposure/contrast and dialogue volume jump shot-to-shot).
+ * Applied per clip during the stitch so the film reads as ONE continuous piece.
+ * This is an assembly normalization pass only — it does NOT touch the planner /
+ * cinematic-controls "look" (the creative grade is the brain's job, left alone).
+ *
+ * Video: `normalize` stretches each clip's black/white points to a common range.
+ * `independence=0` maps all RGB channels with the SAME curve (no colour cast
+ * introduced — hue relationships preserved); high `smoothing` averages the
+ * adjustment over many frames so it cannot pump/flicker within a clip. Net: gross
+ * exposure/contrast differences between clips are evened out. (Colour-temperature
+ * matching — warm vs cool — needs reference histogram matching and is out of scope.)
+ */
+const CLIP_NORMALIZE_SMOOTHING = 50;
+/** Per-clip dialogue loudness target so volume doesn't jump between shots (final mix re-normalizes to -14). */
+const CLIP_AUDIO_LUFS = -16;
+
+/**
+ * Tier-1 ④ — do NOT auto-upscale the stitched master to "4K" by default.
+ * The stitch is a multi-re-encode of already-degraded Seedance clips
+ * (generate → lip-sync → concat); enlarging that to 3840x2160 produces fake-4K
+ * mush labelled "4K". Only a CLEAN single-pass master should ever be upscaled,
+ * which this assembly path does not produce. The Topaz upscale capability is
+ * preserved (not deleted) behind an explicit opt-in env flag so it can be
+ * re-enabled the day a clean-master path exists. Default: deliver honest 1080p.
+ */
+const ENABLE_STITCH_4K_UPSCALE = process.env.STITCH_4K_UPSCALE === '1';
+
+/**
  * Compose the MusicGen brief for a film's background score from the plan's own
  * look bible (genre, mood keywords, art style, title). Instrumental + loopable,
  * so it can sit under dialogue and repeat to any length.
@@ -1198,9 +1228,12 @@ function buildMusicBedPrompt(plan: ShotPlan): { prompt: string; genre?: string; 
  *
  * Audio-preserving by design (the generic concat helper drops audio): each clip
  * is normalized to a uniform video frame (scale/pad/fps/sar) AND a uniform audio
- * stream (44.1 kHz stereo). A clip with no audio track (a silent shot with no
- * dialogue) gets a SILENT track synthesized at its exact duration, so the concat's
- * stream counts line up and dialogue clips keep their sound.
+ * stream (44.1 kHz stereo). Cross-clip normalization (Tier-1 ③) also runs here so
+ * the film reads as one piece: per-clip exposure/contrast `normalize` (colour-safe)
+ * and per-clip dialogue `loudnorm` so brightness and volume don't jump shot-to-shot.
+ * A clip with no audio track (a silent shot with no dialogue) gets a SILENT track
+ * synthesized at its exact duration, so the concat's stream counts line up and
+ * dialogue clips keep their sound.
  *
  * Ownership rule (NON-NEGOTIABLE): the stitched file is uploaded to OUR Firebase
  * Storage with a permanent download-token URL and registered in the media library;
@@ -1254,16 +1287,27 @@ export async function stitchShotPlan(plan: ShotPlan, ctx: TenantContext): Promis
     const concatLabels: string[] = [];
     let nextInputIndex = clips.length;
     for (let i = 0; i < clips.length; i += 1) {
-      // Video: letterbox/pad each clip to the exact target frame + uniform fps/sar.
+      // Video: scale → NORMALIZE exposure/contrast toward a common range (Tier-1 ③,
+      // colour-safe via independence=0, flicker-safe via high smoothing) → letterbox/pad
+      // to the exact target frame + uniform fps/sar. The normalize runs on the real
+      // picture (before the black pad) so the synthesized bars never skew the histogram.
       filterParts.push(
         `[${i}:v]scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,` +
+          `normalize=smoothing=${CLIP_NORMALIZE_SMOOTHING}:independence=0,` +
           `pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30[v${i}]`,
       );
-      // Audio: keep the real track when present; otherwise synthesize silence of the
-      // clip's duration (an extra lavfi input) so every concat segment has audio.
+      // Audio: keep the real track when present and loudness-match it to a common
+      // target (Tier-1 ③ — stops dialogue volume jumping shot-to-shot); otherwise
+      // synthesize silence of the clip's duration (an extra lavfi input) so every
+      // concat segment has audio.
       if (probes[i].hasAudio) {
+        // loudnorm resamples internally (→192k), so re-lock the rate AFTER it:
+        // every concat segment (incl. synthesized-silence clips at 44.1k) MUST
+        // share one sample rate or the concat filter rejects them.
         filterParts.push(
-          `[${i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a${i}]`,
+          `[${i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,` +
+            `loudnorm=I=${CLIP_AUDIO_LUFS}:TP=-1.5:LRA=11,` +
+            `aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a${i}]`,
         );
       } else {
         const dur = probes[i].duration > 0 ? probes[i].duration : 1;
@@ -1352,40 +1396,48 @@ export async function stitchShotPlan(plan: ShotPlan, ctx: TenantContext): Promis
     const storagePath = `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`;
     const stitched1080Url = await uploadPermanent(finalBuf, storagePath, 'video/mp4', 'shot-plan stitched 1080p video');
 
-    // 4. Topaz 4K upscale pass (best-effort). factor 2 on a 1080p source →
-    //    exactly 3840x2160. If it fails we deliver the 1080p stitch + log, never
-    //    losing the work. The 4K result is downloaded → persisted (ownership rule).
+    // 4. 4K upscale pass — DISABLED BY DEFAULT (Tier-1 ④). Upscaling the
+    //    multi-re-encoded stitch enlarges already-degraded footage into fake-4K
+    //    mush labelled "4K"; only a clean single-pass master should be upscaled,
+    //    which this path doesn't produce. The capability is preserved behind the
+    //    STITCH_4K_UPSCALE=1 opt-in env flag (not deleted). Default: honest 1080p.
     let finalUrl = stitched1080Url;
     let finalBytes = finalBuf.length;
     let upscaledTo4K = false;
-    try {
-      const falKey = await requireFalKey();
-      logger.info('[shot-plan-gen] upscaling stitched video to 4K (Topaz)', { file: FILE, clips: clips.length });
-      const upscaleOut = await falQueue(
-        FAL_UPSCALE_MODEL,
-        { video_url: stitched1080Url, upscale_factor: 2 },
-        falKey,
-        'shot-plan 4K upscale',
-      );
-      const upscaledFalUrl = falMediaUrl(upscaleOut, 'video');
-      const upscaledPath = join(workDir, 'final-4k.mp4');
-      const upscaledBuf = await downloadToFile(upscaledFalUrl, upscaledPath, 'shot-plan 4K video');
-      finalUrl = await uploadPermanent(
-        upscaledBuf,
-        `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`,
-        'video/mp4',
-        'shot-plan 4K final video',
-      );
-      finalBytes = upscaledBuf.length;
-      upscaledTo4K = true;
-      logger.info('[shot-plan-gen] 4K upscale completed + persisted', { file: FILE, finalUrl, bytes: finalBytes });
-    } catch (err) {
-      // Best-effort: fall back to the 1080p stitch; never lose the work.
-      logger.error(
-        '[shot-plan-gen] 4K upscale failed (delivering 1080p stitch)',
-        err instanceof Error ? err : new Error(String(err)),
-        { file: FILE },
-      );
+    if (ENABLE_STITCH_4K_UPSCALE) {
+      // Topaz factor-2 on a 1080p source → exactly 3840x2160. Best-effort: if it
+      // fails we deliver the 1080p stitch + log, never losing the work.
+      try {
+        const falKey = await requireFalKey();
+        logger.info('[shot-plan-gen] upscaling stitched video to 4K (Topaz, opt-in)', { file: FILE, clips: clips.length });
+        const upscaleOut = await falQueue(
+          FAL_UPSCALE_MODEL,
+          { video_url: stitched1080Url, upscale_factor: 2 },
+          falKey,
+          'shot-plan 4K upscale',
+        );
+        const upscaledFalUrl = falMediaUrl(upscaleOut, 'video');
+        const upscaledPath = join(workDir, 'final-4k.mp4');
+        const upscaledBuf = await downloadToFile(upscaledFalUrl, upscaledPath, 'shot-plan 4K video');
+        finalUrl = await uploadPermanent(
+          upscaledBuf,
+          `organizations/${PLATFORM_ID}/media/videos/${randomUUID()}.mp4`,
+          'video/mp4',
+          'shot-plan 4K final video',
+        );
+        finalBytes = upscaledBuf.length;
+        upscaledTo4K = true;
+        logger.info('[shot-plan-gen] 4K upscale completed + persisted', { file: FILE, finalUrl, bytes: finalBytes });
+      } catch (err) {
+        // Best-effort: fall back to the 1080p stitch; never lose the work.
+        logger.error(
+          '[shot-plan-gen] 4K upscale failed (delivering 1080p stitch)',
+          err instanceof Error ? err : new Error(String(err)),
+          { file: FILE },
+        );
+      }
+    } else {
+      logger.info('[shot-plan-gen] 4K upscale skipped — delivering honest 1080p master (Tier-1 ④)', { file: FILE, clips: clips.length });
     }
 
     // 5. Register the delivered video in the media library (ownership rule).
