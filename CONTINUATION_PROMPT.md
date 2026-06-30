@@ -11,7 +11,12 @@
   Firestore (SID + from-number untouched). Twilio now authenticates, recipient `+12088718552` is a verified
   caller ID, and `verify-outreach-sms-send.ts` passed every assertion incl. a REAL send (smsId returned,
   `sms_sent` activity logged) with the approval + TCPA gates proven fail-closed. Outreach senders live:
-  email ✅ + SMS ✅. ⏳ **Voice** still needs a daytime (8am–9pm Mountain) live-call test.
+  email ✅ + SMS ✅. ⏳ **Voice:** safety gates PROVEN (unapproved + no-consent both block), but the live call
+  CANNOT be tested from localhost — Twilio rejected the call because the voice webhook URL is
+  `NEXT_PUBLIC_APP_URL` = `http://localhost:3000` (a phone call needs Twilio to call BACK into a PUBLIC URL
+  for the TwiML/agent script; localhost is unreachable from Twilio). Not a code bug. To prove voice: run the
+  flow against the DEPLOYED (public) URL with `NEXT_PUBLIC_APP_URL` set to it, OR tunnel localhost (ngrok/
+  cloudflared) and point `NEXT_PUBLIC_APP_URL` at the tunnel. Script: `verify-outreach-voice-call.ts`.
 - **Video Tier-1:** ③ cross-clip normalization + ④ no fake-4K — Tier-1 fully closed.
 - **Social vertical:** 4 audit bugs fixed (approvals→Admin SDK, queue drip [opt-in+rate-limited],
   dispatcher honesty, WhatsApp) + 4 features (Strategy Co-Pilot `/social/copilot`, inline composer AI,

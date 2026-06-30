@@ -8,6 +8,18 @@
 import { useState } from 'react';
 import type { Page, PageSection, Widget, WidgetStyle, Spacing } from '@/types/website';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
+import { ImageField, ImageArrayField, detectItemImageKey } from './ImageField';
+
+/** Widget data keys that hold a single image URL (image/hero/logo/testimonial). */
+const IMAGE_STRING_KEYS = new Set([
+  'src',
+  'backgroundImage',
+  'avatar',
+  'image',
+  'imageUrl',
+  'logo',
+  'poster',
+]);
 
 interface PropertiesPanelProps {
   selectedElement: {
@@ -178,7 +190,10 @@ interface WidgetContentEditorProps {
 }
 
 function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
-  const updateData = (key: string, value: Record<string, unknown> | string | number | boolean) => {
+  const updateData = (
+    key: string,
+    value: Record<string, unknown> | string | number | boolean | unknown[],
+  ) => {
     onUpdate({
       data: { ...widget.data, [key]: value },
     });
@@ -186,6 +201,17 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
 
   const renderField = (key: string, value: unknown) => {
     if (typeof value === 'string') {
+      // Image URL fields → upload / pick / manual control.
+      if (IMAGE_STRING_KEYS.has(key)) {
+        return (
+          <ImageField
+            key={key}
+            label={formatLabel(key)}
+            value={value}
+            onChange={(url) => updateData(key, url)}
+          />
+        );
+      }
       if (value.length > 50 || key === 'content' || key === 'html') {
         return (
           <div key={key} style={{ marginBottom: '1rem' }}>
@@ -237,6 +263,20 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
         </div>
       );
     } else if (Array.isArray(value)) {
+      // Image arrays (gallery images, logo grid, slider slides) → per-image
+      // upload / pick controls.
+      const imageKey = detectItemImageKey(value[0]);
+      if (imageKey) {
+        return (
+          <ImageArrayField
+            key={key}
+            label={formatLabel(key)}
+            items={value as Record<string, unknown>[]}
+            imageKey={imageKey}
+            onChange={(items) => updateData(key, items)}
+          />
+        );
+      }
       return (
         <div key={key} style={{ marginBottom: '1rem' }}>
           <label style={labelStyle}>{formatLabel(key)}</label>
@@ -597,13 +637,10 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
         </div>
 
         <div style={{ marginBottom: '0.75rem' }}>
-          <label style={labelStyle}>Background Image URL</label>
-          <input
-            type="text"
+          <ImageField
+            label="Background Image"
             value={style.backgroundImage ?? ''}
-            onChange={(e) => updateStyle('backgroundImage', e.target.value)}
-            placeholder="https://..."
-            style={inputStyle}
+            onChange={(url) => updateStyle('backgroundImage', url)}
           />
         </div>
 
@@ -842,13 +879,10 @@ function SectionStyleEditor({ section, onUpdate }: SectionStyleEditorProps) {
       </div>
 
       <div style={{ marginBottom: '1.5rem' }}>
-        <label style={labelStyle}>Background Image URL</label>
-        <input
-          type="text"
+        <ImageField
+          label="Background Image"
           value={section.backgroundImage ?? ''}
-          onChange={(e) => onUpdate({ backgroundImage: e.target.value })}
-          placeholder="https://..."
-          style={inputStyle}
+          onChange={(url) => onUpdate({ backgroundImage: url })}
         />
       </div>
 

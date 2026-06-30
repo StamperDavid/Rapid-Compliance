@@ -8,9 +8,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import CompetitorAnalysisCard from '@/components/seo/CompetitorAnalysisCard';
-import KeywordGapAnalysis from '@/components/seo/KeywordGapAnalysis';
-import CostToCompete from '@/components/seo/CostToCompete';
-import StrategyGenerator from '@/components/seo/StrategyGenerator';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import type { CompetitorEntry, DomainAnalysisResult } from '@/types/seo-analysis';
@@ -52,9 +49,6 @@ export default function CompetitorSEOPage() {
   const [showBulk, setShowBulk] = useState(false);
   const [competitors, setCompetitors] = useState<CompetitorEntry[]>([]);
   const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(null);
-  const [yourKeywords, setYourKeywords] = useState<DomainAnalysisResult['topKeywords']>([]);
-  const [yourDomainLoading, setYourDomainLoading] = useState(false);
-  const [yourDomain, setYourDomain] = useState('');
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Load saved domain analyses on mount
@@ -203,26 +197,6 @@ export default function CompetitorSEOPage() {
     }
   };
 
-  const loadYourKeywords = async () => {
-    if (!yourDomain.trim()) { return; }
-    setYourDomainLoading(true);
-    try {
-      const response = await authFetch('/api/seo/domain-analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: yourDomain.trim() }),
-      });
-      const data = await response.json() as AnalysisResponse;
-      if (data.success && data.data) {
-        setYourKeywords(data.data.topKeywords);
-      }
-    } catch (err) {
-      logger.warn('Failed to load your keywords', { error: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setYourDomainLoading(false);
-    }
-  };
-
   const selectedEntry = competitors.find(c => c.id === selectedCompetitor);
   const completedCompetitors = competitors.filter(c => c.status === 'complete');
 
@@ -345,60 +319,11 @@ export default function CompetitorSEOPage() {
           <div className="space-y-6">
             <CompetitorAnalysisCard
               result={selectedEntry.result}
+              domain={selectedEntry.domain}
+              analyzedAt={selectedEntry.analyzedAt}
               onEnrich={() => handleEnrich(selectedEntry.id)}
               onRerun={() => handleRerun(selectedEntry.id)}
               isEnriching={competitors.some(c => c.id === selectedEntry.id && c.status === 'analyzing')}
-            />
-
-            {/* Your Domain for Gap Analysis */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6"
-            >
-              <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Your Domain (for Gap Analysis)</h4>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={yourDomain}
-                  onChange={(e) => setYourDomain(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { void loadYourKeywords(); } }}
-                  placeholder="yourdomain.com"
-                  className="flex-1 px-4 py-2.5 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                />
-                <button
-                  onClick={() => void loadYourKeywords()}
-                  disabled={!yourDomain.trim() || yourDomainLoading}
-                  className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all"
-                >
-                  {yourDomainLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Load Keywords'}
-                </button>
-              </div>
-            </motion.div>
-
-            {/* Keyword Gap Analysis */}
-            {yourKeywords.length > 0 && (
-              <>
-                <KeywordGapAnalysis
-                  yourKeywords={yourKeywords}
-                  competitorKeywords={selectedEntry.result.topKeywords}
-                  competitorDomain={selectedEntry.domain}
-                />
-
-                {/* Cost to Compete */}
-                <CostToCompete
-                  gapKeywords={selectedEntry.result.topKeywords.filter(
-                    k => !new Set(yourKeywords.map(yk => yk.keyword.toLowerCase())).has(k.keyword.toLowerCase())
-                  )}
-                  competitorDomain={selectedEntry.domain}
-                />
-              </>
-            )}
-
-            {/* Strategy Generator */}
-            <StrategyGenerator
-              competitorDomain={selectedEntry.domain}
-              competitorResult={selectedEntry.result}
             />
           </div>
         )}
@@ -432,7 +357,7 @@ export default function CompetitorSEOPage() {
             <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
             <p className="text-[var(--color-text-primary)] font-semibold">Analyzing {selectedEntry.domain}...</p>
             <p className="text-sm text-[var(--color-text-disabled)] mt-1">
-              Fetching domain metrics, keywords, backlinks, and competitors
+              Assessing technical health, content gaps, and competitive position
             </p>
           </motion.div>
         )}
@@ -448,8 +373,8 @@ export default function CompetitorSEOPage() {
             <Search className="w-12 h-12 text-[var(--color-text-disabled)] mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">No Competitors Analyzed Yet</h3>
             <p className="text-sm text-[var(--color-text-disabled)] max-w-md mx-auto">
-              Enter a competitor domain above to get a comprehensive SEO analysis including
-              keyword rankings, backlink profile, and organic traffic estimates.
+              Enter a competitor domain above to get an SEO assessment covering technical
+              health, content gaps, prioritized recommendations, and competitive position.
             </p>
           </motion.div>
         )}
@@ -470,33 +395,27 @@ export default function CompetitorSEOPage() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-[var(--color-text-primary)]">{comp.domain}</h3>
                   <span className="px-2 py-1 rounded-lg bg-surface-elevated text-xs font-semibold text-[var(--color-text-secondary)]">
-                    Rank {comp.result.metrics.domainRank}
+                    Health {comp.result.technicalHealth.score}/100
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
                     <div className="text-lg font-bold text-[var(--color-text-primary)]">
-                      {comp.result.metrics.organicTraffic >= 1000
-                        ? `${(comp.result.metrics.organicTraffic / 1000).toFixed(1)}K`
-                        : comp.result.metrics.organicTraffic}
+                      {comp.result.technicalHealth.issues.length}
                     </div>
-                    <div className="text-xs text-[var(--color-text-disabled)]">Traffic</div>
+                    <div className="text-xs text-[var(--color-text-disabled)]">Issues</div>
                   </div>
                   <div>
                     <div className="text-lg font-bold text-[var(--color-text-primary)]">
-                      {comp.result.metrics.organicKeywords >= 1000
-                        ? `${(comp.result.metrics.organicKeywords / 1000).toFixed(1)}K`
-                        : comp.result.metrics.organicKeywords}
+                      {comp.result.contentGaps.length}
                     </div>
-                    <div className="text-xs text-[var(--color-text-disabled)]">Keywords</div>
+                    <div className="text-xs text-[var(--color-text-disabled)]">Content Gaps</div>
                   </div>
                   <div>
                     <div className="text-lg font-bold text-[var(--color-text-primary)]">
-                      {comp.result.backlinkProfile.totalBacklinks >= 1000
-                        ? `${(comp.result.backlinkProfile.totalBacklinks / 1000).toFixed(1)}K`
-                        : comp.result.backlinkProfile.totalBacklinks}
+                      {comp.result.recommendations.length}
                     </div>
-                    <div className="text-xs text-[var(--color-text-disabled)]">Backlinks</div>
+                    <div className="text-xs text-[var(--color-text-disabled)]">Recommendations</div>
                   </div>
                 </div>
               </div>

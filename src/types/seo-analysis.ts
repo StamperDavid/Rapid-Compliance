@@ -1,58 +1,44 @@
 /**
  * Shared SEO Analysis Types
- * Used by API routes, components, and the SEO Expert agent
+ *
+ * Aligned to the SEO Expert specialist's REAL `domain_analysis` output
+ * (`src/lib/agents/marketing/seo/specialist.ts` → `DomainAnalysisResultSchema`).
+ *
+ * The specialist is explicitly instructed NOT to fabricate traffic numbers,
+ * backlink counts, DA/DR scores, keyword search volumes, CPC, or ranking
+ * positions. It returns a qualitative SEO assessment instead. These types
+ * therefore mirror that qualitative shape exactly — the UI renders what the
+ * agent really produces, never invented metrics.
  */
 
+export type SeoPriority = 'high' | 'medium' | 'low';
+export type SeoImpact = 'high' | 'medium' | 'low';
+export type SeoEffort = 'low' | 'medium' | 'high';
+
 export interface DomainAnalysisResult {
-  domain: string;
-  analysisDate: string;
-  metrics: {
-    organicTraffic: number;
-    organicKeywords: number;
-    domainRank: number;
-  };
-  backlinkProfile: {
-    totalBacklinks: number;
-    totalReferringDomains: number;
-    dofollow: number;
-    nofollow: number;
-    anchorLinks: number;
-    imageLinks: number;
-    redirectLinks: number;
-    brokenBacklinks: number;
-    referringIPs: number;
-    referringSubnets: number;
-  };
-  referringDomains: Array<{
-    domain: string;
-    rank: number;
-    backlinks: number;
-    dofollow: number;
-    nofollow: number;
-    firstSeen: string | null;
-  }>;
-  topKeywords: Array<{
-    keyword: string;
-    position: number;
-    url: string;
-    searchVolume: number;
-    estimatedTraffic: number;
-    cpc: number;
-  }>;
-  topPages: Array<{
-    url: string;
-    keywords: number;
-    traffic: number;
-  }>;
-  competitors: Array<{
-    domain: string;
-    avgPosition: number;
-    intersections: number;
-    relevance: number;
-    organicTraffic: number;
-    organicKeywords: number;
-  }>;
+  /** Overall assessment. May be prefixed with "[ACTION REQUIRED]" for critical issues. */
   summary: string;
+  technicalHealth: {
+    /** 0-100 technical SEO health score. */
+    score: number;
+    /** Concrete technical issues found (at least one). */
+    issues: string[];
+    /** Technical strengths found (can be empty). */
+    strengths: string[];
+  };
+  contentGaps: Array<{
+    topic: string;
+    opportunity: string;
+    priority: SeoPriority;
+  }>;
+  recommendations: Array<{
+    action: string;
+    impact: SeoImpact;
+    effort: SeoEffort;
+    timeframe: string;
+  }>;
+  /** Where the domain stands in its industry (challenger / leader / invisible). */
+  competitivePosition: string;
 }
 
 export interface CompetitorEntry {
@@ -63,33 +49,4 @@ export interface CompetitorEntry {
   error: string | null;
   addedAt: string;
   analyzedAt: string | null;
-}
-
-export interface ThirtyDayStrategy {
-  industry: string;
-  generatedDate: string;
-  weeks: Array<{
-    weekNumber: number;
-    theme: string;
-    tasks: Array<{
-      day: number;
-      taskType: 'technical' | 'content' | 'outreach' | 'analysis';
-      task: string;
-      targetKeywords?: string[];
-      expectedOutcome: string;
-      effort: 'low' | 'medium' | 'high';
-    }>;
-    keyMetrics: string[];
-  }>;
-  priorityKeywords: Array<{
-    keyword: string;
-    currentPosition: number | null;
-    targetPosition: number;
-    strategy: string;
-  }>;
-  expectedResults: {
-    trafficIncrease: string;
-    rankingImprovements: string;
-    technicalScore: string;
-  };
 }
