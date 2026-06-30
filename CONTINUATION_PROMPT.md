@@ -14,27 +14,39 @@ manager → specialist.
 
 **Live tests fired to +12088718552 / jamesstamper72@gmail.com:**
 - ✅ **Email — DELIVERED** end-to-end to jamesstamper72@gmail.com.
-- ❌ **SMS — FAILED to send (UNDIAGNOSED).** The gate passed, TCPA consent recorded, the LLM wrote the
-  note — but `sendSMS()` returned `success:false` with **no** messageId. Root cause not yet captured.
-  **Most likely** the Twilio **trial account can only text VERIFIED numbers** (error 21608), or a
-  from-number / messaging-service config issue. **First thing tomorrow:** re-run with FULL unfiltered
-  output to read the real `result.error`, then tell the operator the reason in plain English.
-  `cd D:\rapid-dev; $env:NODE_OPTIONS='--conditions=react-server'; $env:OUTREACH_LIVE_SEND='1'; $env:OUTREACH_TEST_PHONE='+12088718552'; npx tsx scripts/verify-outreach-sms-send.ts`
+- ✅ **SMS — DIAGNOSED (Jun 30): invalid Twilio credentials, NOT a trial/verified-number issue.** A new
+  read-only probe (`scripts/diagnose-twilio-sms.ts`, sends nothing — hits only Twilio GET endpoints)
+  found the stored Account SID (`ACbb…e3`), a 32-char Auth Token, and a from-number (`+18449553015`) are
+  all present, but Twilio's first authenticated call returns **HTTP 401 / error `20003` "Authenticate."**
+  So `sendViaTwilio`'s POST gets a 401 → `success:false, error:"Twilio error: …20003…"` (the error WAS
+  captured — the specialist surfaces `result.error` at specialist.ts:753-757; the verify script just never
+  printed it). **Root cause: the Auth Token the app holds no longer matches Twilio** (almost certainly
+  rotated in the Twilio Console, or SID/token are from different accounts).
+  **OPERATOR ACTION (no code, NOT A2P/consent):** copy the current Auth Token from Twilio Console →
+  Account → API keys & tokens, paste it into the app's `twilio` API key, then re-run
+  `cd D:\rapid-dev; $env:NODE_OPTIONS='--conditions=react-server'; npx tsx scripts/diagnose-twilio-sms.ts`
+  (it'll then show account type + numbers) before any live send.
   🚫 **Do NOT change any Twilio A2P / consent / opt-out wording or config** — approval status is at risk.
-  Only diagnose + surface what's needed (e.g. verify the number in Twilio, or confirm from-number).
 - ⏸️ **Voice — correctly BLOCKED** by the TCPA call-time window (was ~3am recipient; calls allowed
   8am–9pm). NOT a bug. **Retest the live call during daytime** (8am–9pm Mountain).
 
 After SMS is sorted: continue the program to the remaining departments (marketing/social posting,
 content, commerce, intelligence), then flip Jasper to delegate-only.
 
-### 2. Video cinematic-quality fixes — Tier-1 ①+② DONE (Jun 29); ③+④ remain
+### 2. Video cinematic-quality fixes — Tier-1 ①②③④ ALL DONE (Jun 29–30)
 A full pipeline review found the planning is strong but **assembly + sound were broken** (frozen-tail
 stutter, no music, no cross-clip grading). **DONE Jun 29:** ① frozen-tail stutter removed; ② sound turned
 on (mood-matched MusicGen bed ducked under dialogue, looped to length) — commits `fcefa504` + `0e66cebb`.
-**Still open Tier-1:** ③ cross-clip color/volume normalization · ④ stop the fake-4K upscale on degraded
-footage. Full ranked diagnosis is in the **🔴 CINEMATIC-QUALITY DIAGNOSIS (Jun 29)** block under the
-Video Vertical gap ledger.
+**DONE Jun 30:** ③ cross-clip normalization in the stitch (per-clip `normalize` for exposure/contrast,
+colour-safe via `independence=0` + flicker-safe `smoothing=50`; per-clip `loudnorm` to -16 LUFS so
+dialogue volume doesn't jump — with a sample-rate relock to 44.1k so dialogue+silent clips still concat) ·
+④ fake-4K upscale OFF by default (the Topaz upscale of the multi-re-encoded stitch produced "4K" mush;
+capability preserved behind `STITCH_4K_UPSCALE=1`, default now honest 1080p). Both in
+`src/lib/video/shot-plan-generation-service.ts`, tsc/lint clean, ffmpeg filtergraph proven on synthetic
+clips (incl. the mixed dialogue/silent case). **Tier-1 is now fully closed** — next is Tier-2 (⑤ fewer
+re-encodes · ⑥ real camera-motion controls to Seedance · ⑦ planner target-duration/pacing · ⑧ verify the
+prompt-rewrite keeps cinematic terms). Full ranked diagnosis in the **🔴 CINEMATIC-QUALITY DIAGNOSIS**
+block under the Video Vertical gap ledger.
 
 ---
 
@@ -550,8 +562,9 @@ wired into the prompt (project-wide + per-shot) — verified, not decorative.
 **Recommended order (start Tier 1 — biggest visible wins for least work, on rapid-dev, one change at a time):**
 - **Tier 1 (days):** ✅ ① trim/stop the frozen tail (DONE Jun 29, `fcefa504`) · ✅ ② turn sound on —
   mood-matched MusicGen bed ducked under dialogue via `mixAudioWithDucking`, looped with `-stream_loop -1`
-  (DONE Jun 29, `0e66cebb`) · ⬜ ③ cross-clip color + volume normalization pass · ⬜ ④ stop the fake-4K
-  upscale on degraded footage (only upscale a clean master).
+  (DONE Jun 29, `0e66cebb`) · ✅ ③ cross-clip color + volume normalization (per-clip `normalize` +
+  `loudnorm` in the stitch, DONE Jun 30) · ✅ ④ fake-4K upscale OFF by default — honest 1080p, Topaz kept
+  behind `STITCH_4K_UPSCALE=1` (DONE Jun 30). **Tier 1 fully closed.**
 - **Tier 2 (1–3 wks):** ⑤ fewer/higher-quality re-encode passes · ⑥ send real camera-motion controls to
   Seedance · ⑦ give the planner a target duration + let pacing vary · ⑧ verify the prompt-rewrite keeps
   the cinematic terms (or skip it).
