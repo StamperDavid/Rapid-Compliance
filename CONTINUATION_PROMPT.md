@@ -241,6 +241,44 @@ competitor ("generate all" produced loose clips, never a deliverable video) is f
 
 # 🟢 RESUME HERE — Jun 27 2026 — VERTICAL #2 (CRM) audit + MONETIZATION model
 
+## 🟢 CRM STATUS — VERIFIED ON THE BESPOKE PAGES (Jun 29 2026) — start here for the CRM vertical
+
+A fresh code-trace of the bespoke pages (contacts/companies/deals/leads + `/schemas`) shows the recent
+wave CLOSED several gaps. **Now DONE (certify each with an operator walkthrough):**
+- ✅ **Custom fields** — define in `/schemas` (13 field types incl. lookup/select); RENDER on all 4 detail
+  pages + EDIT on all 4 edit pages (`CustomFieldInputs` / `loadCustomFields`).
+- ✅ **Associations** — link + NAVIGATE: contact↔company (clickable + `EntitySearchSelect` to attach),
+  company→contacts/deals lists, deal↔company + deal↔contact attach. (Gaps: company can't add a contact/deal
+  inline; leads have no association UI.)
+- ✅ **Bespoke Leads list** (real `DataTable`, not a redirect). (Leftover: `LEADS_TABS` "All Leads" still
+  points at `/entities/leads` — a stale nav link only.)
+- ✅ Activity timeline + Log Activity on all 4 · drag-drop deal pipeline · CSV EXPORT on all 4 lists ·
+  per-record AI (deal health, lead scoring, contact next-best-action).
+
+**STILL MISSING — the real to-do list (build each ONLY after explaining it + the operator picks it):**
+1. 🔴 **Saved/filtered views + segmentation** — lists have only a client-side search box (filters in-memory
+   over the loaded page; server gets only `pageSize`). No named views, multi-condition filters, or segments.
+   Higher effort: needs a persisted "views" model + server-side filtering.
+2. 🔴 **Multiple pipelines** — `DEAL_STAGES` is one hardcoded 6-stage array (`deals/page.tsx:30` +
+   `deal-service.ts:346` + deals edit). No pipeline selector / pipeline entity.
+3. 🟠 **CSV IMPORT UI** — export works; the only import API is `/api/leads/import`; no import route for
+   contacts/companies/deals and no Import button on any list. Mechanical: reuse the leads import route as a
+   template + add an Import modal to the 4 lists.
+4. 🔴 **Editable record owner** — owner is read-only on deal detail; no owner field on any edit page, no
+   reassignment UI. Smallest: add an owner `<select>` (from `/api/team/members`) to the edit pages + include
+   `ownerId` in the PATCH; confirm `ownerId` is whitelisted in each `[id]/route.ts`.
+5. 🔴 **Reporting/forecasting surfaced INSIDE the CRM** — engines exist (`/analytics/*`,
+   `revenue-forecasting-engine`) but nothing is mounted on the CRM list/detail pages.
+
+**🚫 DECISION — NO duplicate-MERGE feature, ever.** A merge UI was built Jun 29 then REVERTED at the
+operator's call: merge destroys a record (an employee could wipe a client by accident) AND it fights the
+model we want — one contact linked to MULTIPLE accounts (search the contact, see every account they touch).
+That many-to-many model is the foundation for the **agency (reseller) account + white-label** direction
+(memory `project_agency_reseller_account_model` — parked for research, do NOT guess/build).
+
+**WORKING RULE (memory `feedback_explain_before_adding_features`):** explain any new feature — what + why +
+risk — and let the operator pick which to build; never build a destructive/risky feature unannounced.
+
 ## 🔴 CRM PARITY — HONEST RESET (Jun 28) — read this before trusting any "✅" below
 **We are NOT at parity-is-floor with HubSpot, Pipedrive, or Reevo. Prior "DEEP + real / much closer
 to parity" framing was over-claiming.** Two structural reasons the work felt like an endless drip of
