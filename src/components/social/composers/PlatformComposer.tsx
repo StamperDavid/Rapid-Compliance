@@ -19,7 +19,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Loader2, Sparkles, Calendar as CalendarIcon, X, Wand2, Undo2, ChevronDown } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Sparkles, Calendar as CalendarIcon, X, Wand2, Undo2, ChevronDown, Link2, CalendarDays, Hash, Layers, Plus, Check } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { CardTitle } from '@/components/ui/typography';
@@ -30,6 +30,7 @@ import { getPlatformConfig } from '@/components/social/_platform-state';
 import { MediaUploader } from '@/components/social/MediaUploader';
 import type { SocialPlatform } from '@/types/social';
 import { normalizeFormat } from '@/lib/social/format-normalizer';
+import type { UpcomingOccasion } from '@/lib/social/occasions';
 
 import { TagsAndSeoSection, type TagsAndSeoValue } from './TagsAndSeoSection';
 import { TwitterComposer } from './TwitterComposer';
@@ -101,6 +102,39 @@ const ASSIST_TONES: ReadonlyArray<{ value: AssistTone; label: string }> = [
   { value: 'bold', label: 'Bold' },
   { value: 'friendly', label: 'Friendly' },
 ];
+
+// ─── Quick-win composer controls (link / occasion / hashtags / variants) ───────
+
+interface FromLinkResponse {
+  success: boolean;
+  text?: string;
+  source?: 'url' | 'pasted';
+  error?: string;
+}
+
+interface OccasionsListResponse {
+  success: boolean;
+  occasions?: UpcomingOccasion[];
+  error?: string;
+}
+
+interface OccasionPostResponse {
+  success: boolean;
+  text?: string;
+  error?: string;
+}
+
+interface HashtagsResponse {
+  success: boolean;
+  hashtags?: string[];
+  error?: string;
+}
+
+interface VariantsResponse {
+  success: boolean;
+  variants?: string[];
+  error?: string;
+}
 
 // ─── Per-platform composer pickup ────────────────────────────────────────────
 
@@ -184,6 +218,25 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
   const [assistBusy, setAssistBusy] = useState<AssistAction | null>(null);
   const [prevContent, setPrevContent] = useState<string | null>(null);
   const [showToneMenu, setShowToneMenu] = useState(false);
+
+  // Quick-win control state.
+  // 1) Link / article → post.
+  const [showLinkPanel, setShowLinkPanel] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkText, setLinkText] = useState('');
+  const [linkAngle, setLinkAngle] = useState('');
+  const [linkBusy, setLinkBusy] = useState(false);
+  // 2) Occasion / holiday → post.
+  const [showOccasionPanel, setShowOccasionPanel] = useState(false);
+  const [occasions, setOccasions] = useState<UpcomingOccasion[] | null>(null);
+  const [occasionsLoading, setOccasionsLoading] = useState(false);
+  const [occasionBusyId, setOccasionBusyId] = useState<string | null>(null);
+  // 3) Hashtag generator.
+  const [hashtagBusy, setHashtagBusy] = useState(false);
+  const [suggestedHashtags, setSuggestedHashtags] = useState<string[]>([]);
+  // 4) Multi-variant generation.
+  const [variantsBusy, setVariantsBusy] = useState(false);
+  const [variants, setVariants] = useState<string[]>([]);
 
   // AI assist is only offered where a real platform specialist exists (mirrors
   // the AI Generate gate and the composer-assist endpoint).
@@ -452,6 +505,188 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
     toast.success('Reverted to your previous draft.');
   }, [prevContent, toast]);
 
+  // Drop newly generated copy into the composer, keeping the prior draft so the
+  // operator can Revert in one click. Shared by link / occasion / variants.
+  const applyGeneratedContent = useCallback((next: string) => {
+    setPrevContent(formState.content);
+    setFormState((prev) => ({ ...prev, content: next }));
+  }, [formState.content]);
+
+  // ── 1) Link / article → post ────────────────────────────────────────────
+  const handleFromLink = useCallback(async () => {
+    const url = linkUrl.trim();
+    const text = linkText.trim();
+    if (!url && !text) {
+      toast.error('Paste an article link or the article text first.');
+      return;
+    }
+    setLinkBusy(true);
+    try {
+      const res = await authFetch('/api/social/composer-from-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform,
+          contentType: formState.contentType,
+          ...(url ? { url } : {}),
+          ...(text ? { articleText: text } : {}),
+          ...(linkAngle.trim() ? { angle: linkAngle.trim() } : {}),
+        }),
+      });
+      const data = (await res.json()) as FromLinkResponse;
+      if (!res.ok || !data.success || !data.text) {
+        toast.error(data.error ?? `HTTP ${res.status} — could not draft from that link`);
+        return;
+      }
+      applyGeneratedContent(data.text);
+      setShowLinkPanel(false);
+      setLinkUrl('');
+      setLinkText('');
+      setLinkAngle('');
+      toast.success('Draft created from your article — use Revert if you preferred what you had.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to draft from link. Check your connection.');
+    } finally {
+      setLinkBusy(false);
+    }
+  }, [authFetch, applyGeneratedContent, formState.contentType, linkAngle, linkText, linkUrl, platform, toast]);
+
+  // ── 2) Occasion / holiday → post ────────────────────────────────────────
+  const openOccasionPanel = useCallback(async () => {
+    setShowOccasionPanel(true);
+    if (occasions !== null || occasionsLoading) { return; }
+    setOccasionsLoading(true);
+    try {
+      const res = await authFetch('/api/social/composer-occasion');
+      const data = (await res.json()) as OccasionsListResponse;
+      if (res.ok && data.success && data.occasions) {
+        setOccasions(data.occasions);
+      } else {
+        toast.error(data.error ?? 'Could not load upcoming occasions.');
+      }
+    } catch {
+      toast.error('Could not load upcoming occasions. Check your connection.');
+    } finally {
+      setOccasionsLoading(false);
+    }
+  }, [authFetch, occasions, occasionsLoading, toast]);
+
+  const handleOccasionPost = useCallback(async (occasion: UpcomingOccasion) => {
+    setOccasionBusyId(occasion.id);
+    try {
+      const res = await authFetch('/api/social/composer-occasion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform,
+          contentType: formState.contentType,
+          occasionName: occasion.name,
+          occasionDateIso: occasion.nextDateIso,
+        }),
+      });
+      const data = (await res.json()) as OccasionPostResponse;
+      if (!res.ok || !data.success || !data.text) {
+        toast.error(data.error ?? `HTTP ${res.status} — could not draft that post`);
+        return;
+      }
+      applyGeneratedContent(data.text);
+      setShowOccasionPanel(false);
+      toast.success(`Draft created for ${occasion.name} — use Revert if you preferred what you had.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to draft occasion post. Check your connection.');
+    } finally {
+      setOccasionBusyId(null);
+    }
+  }, [authFetch, applyGeneratedContent, formState.contentType, platform, toast]);
+
+  // ── 3) Hashtag generator ────────────────────────────────────────────────
+  const handleSuggestHashtags = useCallback(async () => {
+    const draft = formState.content.trim();
+    if (!draft) {
+      toast.error('Write a draft first, then I can suggest hashtags.');
+      return;
+    }
+    setHashtagBusy(true);
+    try {
+      const res = await authFetch('/api/social/composer-hashtags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform, contentType: formState.contentType, text: draft }),
+      });
+      const data = (await res.json()) as HashtagsResponse;
+      if (!res.ok || !data.success || !data.hashtags || data.hashtags.length === 0) {
+        toast.error(data.error ?? `HTTP ${res.status} — could not suggest hashtags`);
+        return;
+      }
+      setSuggestedHashtags(data.hashtags);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to suggest hashtags. Check your connection.');
+    } finally {
+      setHashtagBusy(false);
+    }
+  }, [authFetch, formState.content, formState.contentType, platform, toast]);
+
+  const appendHashtag = useCallback((tag: string) => {
+    setFormState((prev) => {
+      const base = prev.content.trimEnd();
+      // Don't double-append a tag that's already in the draft.
+      if (new RegExp(`(^|\\s)${tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`, 'i').test(prev.content)) {
+        return prev;
+      }
+      const joined = base.length > 0 ? `${base} ${tag}` : tag;
+      return { ...prev, content: joined };
+    });
+    setSuggestedHashtags((prev) => prev.filter((t) => t.toLowerCase() !== tag.toLowerCase()));
+  }, []);
+
+  const appendAllHashtags = useCallback(() => {
+    setFormState((prev) => {
+      const existing = prev.content;
+      const toAdd = suggestedHashtags.filter(
+        (tag) => !new RegExp(`(^|\\s)${tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`, 'i').test(existing),
+      );
+      if (toAdd.length === 0) { return prev; }
+      const base = existing.trimEnd();
+      const joined = base.length > 0 ? `${base} ${toAdd.join(' ')}` : toAdd.join(' ');
+      return { ...prev, content: joined };
+    });
+    setSuggestedHashtags([]);
+  }, [suggestedHashtags]);
+
+  // ── 4) Multi-variant generation ─────────────────────────────────────────
+  const handleVariants = useCallback(async () => {
+    const draft = formState.content.trim();
+    if (!draft) {
+      toast.error('Write a draft first, then I can give you variations.');
+      return;
+    }
+    setVariantsBusy(true);
+    setVariants([]);
+    try {
+      const res = await authFetch('/api/social/composer-variants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform, contentType: formState.contentType, text: draft, count: 3 }),
+      });
+      const data = (await res.json()) as VariantsResponse;
+      if (!res.ok || !data.success || !data.variants || data.variants.length === 0) {
+        toast.error(data.error ?? `HTTP ${res.status} — could not generate variations`);
+        return;
+      }
+      setVariants(data.variants);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to generate variations. Check your connection.');
+    } finally {
+      setVariantsBusy(false);
+    }
+  }, [authFetch, formState.content, formState.contentType, platform, toast]);
+
+  const pickVariant = useCallback((variant: string) => {
+    applyGeneratedContent(variant);
+    setVariants([]);
+    toast.success('Draft replaced with the variation you picked — use Revert to undo.');
+  }, [applyGeneratedContent, toast]);
+
   const handleSchedule = useCallback(() => {
     router.push('/social/calendar');
   }, [router]);
@@ -577,6 +812,29 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
               )}
             </div>
 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleSuggestHashtags()}
+              disabled={inputsDisabled || hashtagBusy || variantsBusy || !hasContent}
+            >
+              {hashtagBusy
+                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                : <Hash className="mr-1.5 h-3.5 w-3.5" aria-hidden />}
+              Suggest hashtags
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleVariants()}
+              disabled={inputsDisabled || variantsBusy || hashtagBusy || !hasContent}
+            >
+              {variantsBusy
+                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                : <Layers className="mr-1.5 h-3.5 w-3.5" aria-hidden />}
+              Variations
+            </Button>
+
             {prevContent !== null && (
               <Button
                 variant="ghost"
@@ -589,6 +847,169 @@ export function PlatformComposer({ platform }: PlatformComposerProps): React.Rea
               </Button>
             )}
           </div>
+
+          {/* Suggested hashtags */}
+          {suggestedHashtags.length > 0 && (
+            <div className="mt-3 rounded-lg border border-border-light bg-card p-3">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-semibold text-foreground">Suggested hashtags</span>
+                <Button variant="outline" size="sm" onClick={appendAllHashtags}>
+                  <Plus className="mr-1 h-3.5 w-3.5" aria-hidden />
+                  Add all
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestedHashtags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => appendHashtag(tag)}
+                    className="inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface-elevated px-2.5 py-1 text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    <Plus className="h-3 w-3 opacity-70" aria-hidden />
+                    {tag}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">Tap a tag to add it to your draft.</p>
+            </div>
+          )}
+
+          {/* Variations */}
+          {variants.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <span className="text-xs font-semibold text-foreground">Pick a variation to use</span>
+              {variants.map((variant, idx) => (
+                <div
+                  key={`${idx}-${variant.slice(0, 24)}`}
+                  className="rounded-lg border border-border-light bg-card p-3"
+                >
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{variant}</p>
+                  <div className="mt-2 flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => pickVariant(variant)}>
+                      <Check className="mr-1 h-3.5 w-3.5" aria-hidden />
+                      Use this one
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Quick create: from a link / for an occasion ─────────────────── */}
+      {assistAvailable && (
+        <div className="rounded-xl border border-border-light bg-surface-elevated p-3 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
+            <span className="text-xs font-semibold text-foreground">Quick create</span>
+            <span className="text-[11px] text-muted-foreground">
+              Start a draft from an article or an upcoming occasion
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setShowLinkPanel((v) => !v); setShowOccasionPanel(false); }}
+              disabled={inputsDisabled}
+              aria-expanded={showLinkPanel}
+            >
+              <Link2 className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              From a link or article
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setShowOccasionPanel((v) => !v); setShowLinkPanel(false); if (!showOccasionPanel) { void openOccasionPanel(); } }}
+              disabled={inputsDisabled}
+              aria-expanded={showOccasionPanel}
+            >
+              <CalendarDays className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              For an occasion
+            </Button>
+          </div>
+
+          {/* Link panel */}
+          {showLinkPanel && (
+            <div className="rounded-lg border border-border-strong bg-card p-3 space-y-2">
+              <label className="text-xs font-medium text-foreground" htmlFor="composer-link-url">
+                Article link
+              </label>
+              <input
+                id="composer-link-url"
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                disabled={linkBusy}
+                placeholder="https://example.com/article"
+                className="w-full rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+              />
+              <div className="text-[11px] text-muted-foreground">
+                Or paste the article text instead (more reliable if the link is behind a paywall):
+              </div>
+              <textarea
+                value={linkText}
+                onChange={(e) => setLinkText(e.target.value)}
+                disabled={linkBusy}
+                rows={3}
+                placeholder="Paste the article text here…"
+                className="w-full rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+              />
+              <input
+                type="text"
+                value={linkAngle}
+                onChange={(e) => setLinkAngle(e.target.value)}
+                disabled={linkBusy}
+                placeholder="Optional: angle to emphasize (e.g. the time-savings)"
+                className="w-full rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={() => void handleFromLink()}
+                  disabled={linkBusy || (!linkUrl.trim() && !linkText.trim())}
+                >
+                  {linkBusy
+                    ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />Drafting…</>
+                    : <><Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />Draft post</>}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Occasion panel */}
+          {showOccasionPanel && (
+            <div className="rounded-lg border border-border-strong bg-card p-3">
+              {occasionsLoading && occasions === null ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Loading upcoming occasions…
+                </div>
+              ) : occasions && occasions.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {occasions.map((occ) => (
+                    <button
+                      key={occ.id}
+                      type="button"
+                      onClick={() => void handleOccasionPost(occ)}
+                      disabled={occasionBusyId !== null}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-surface-elevated px-3 py-1.5 text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
+                    >
+                      {occasionBusyId === occ.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                        : <CalendarDays className="h-3 w-3 opacity-70" aria-hidden />}
+                      <span>{occ.name}</span>
+                      <span className="text-muted-foreground">· {occ.daysAway === 0 ? 'today' : `${occ.daysAway}d`}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No upcoming occasions to show.</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
