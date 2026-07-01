@@ -54,6 +54,7 @@ export const ANALYTICS_TABS: SubpageNavItem[] = [
 export const WEBSITE_TABS: SubpageNavItem[] = [
   { label: 'Editor', href: '/website/editor' },
   { label: 'Pages', href: '/website/pages' },
+  { label: 'Clone Site', href: '/website/clone-site' },
   { label: 'Blog', href: '/website/blog' },
   { label: 'Domain', href: '/website/domains' },
   { label: 'Analytics', href: '/website/analytics' },

@@ -31,21 +31,6 @@ interface CreatePageResponse {
   page: Page;
 }
 
-interface CloneWebsiteResponse {
-  success: boolean;
-  status: 'COMPLETED' | 'PARTIAL' | 'FAILED';
-  sourceUrl: string;
-  totalPages: number;
-  successCount: number;
-  failedCount: number;
-  pages: Array<{ url: string; status: string; slug?: string }>;
-  brand: { name?: string; colors?: string[]; fonts?: string[]; logo?: string };
-  editorLink: string;
-  message: string;
-}
-
-type CloneStatus = 'idle' | 'cloning' | 'success' | 'error';
-
 export default function PagesManagementPage() {
   const router = useRouter();
   const toast = useToast();
@@ -58,15 +43,6 @@ export default function PagesManagementPage() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiPageType, setAiPageType] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
-
-  // Clone Website state
-  const [showCloneModal, setShowCloneModal] = useState(false);
-  const [cloneSourceUrl, setCloneSourceUrl] = useState('');
-  const [cloneMaxPages, setCloneMaxPages] = useState(10);
-  const [cloneIncludeImages, setCloneIncludeImages] = useState(true);
-  const [cloneStatus, setCloneStatus] = useState<CloneStatus>('idle');
-  const [cloneResult, setCloneResult] = useState<CloneWebsiteResponse | null>(null);
-  const [cloneError, setCloneError] = useState('');
 
   // Use a ref for toast to avoid re-render loops in useCallback deps
   const toastRef = useRef(toast);
@@ -248,59 +224,6 @@ export default function PagesManagementPage() {
     router.push(`/website/editor?pageId=${pageId}`);
   }
 
-  async function cloneWebsite(): Promise<void> {
-    try {
-      new URL(cloneSourceUrl.trim());
-    } catch {
-      setCloneError('Please enter a valid URL (e.g. https://example.com)');
-      return;
-    }
-
-    try {
-      setCloneStatus('cloning');
-      setCloneError('');
-      setCloneResult(null);
-
-      const token = await auth?.currentUser?.getIdToken();
-      const response = await fetch('/api/website/migrate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          sourceUrl: cloneSourceUrl.trim(),
-          maxPages: cloneMaxPages,
-          includeImages: cloneIncludeImages,
-        }),
-      });
-
-      const data = await response.json() as CloneWebsiteResponse;
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message ?? 'Clone failed');
-      }
-
-      setCloneResult(data);
-      setCloneStatus('success');
-      void loadPages();
-    } catch (error: unknown) {
-      logger.error('[Pages] Clone error', error instanceof Error ? error : new Error(String(error)));
-      setCloneError(error instanceof Error ? error.message : 'Clone failed');
-      setCloneStatus('error');
-    }
-  }
-
-  function resetCloneModal(): void {
-    setShowCloneModal(false);
-    setCloneSourceUrl('');
-    setCloneMaxPages(10);
-    setCloneIncludeImages(true);
-    setCloneStatus('idle');
-    setCloneResult(null);
-    setCloneError('');
-  }
-
   if (loading) {
     return (
       <div className="p-8">
@@ -320,7 +243,7 @@ export default function PagesManagementPage() {
 
         <div className="flex gap-3">
           <button
-            onClick={() => setShowCloneModal(true)}
+            onClick={() => router.push('/website/clone-site')}
             className="px-6 py-3 bg-gradient-to-br from-sky-500 to-blue-600 text-white rounded font-semibold cursor-pointer border-none text-base"
           >
             Clone Website
@@ -489,102 +412,6 @@ export default function PagesManagementPage() {
         </div>
       )}
 
-      {/* Clone Website Modal */}
-      {showCloneModal && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]"
-          onClick={() => cloneStatus !== 'cloning' && resetCloneModal()}
-        >
-          <div
-            className="bg-card rounded-xl p-8 w-full max-w-lg shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <h2 className="text-2xl font-bold text-foreground mb-1">Clone Website</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Import pages from an existing website into your website builder.
-            </p>
-
-            {cloneStatus === 'cloning' && (
-              <div className="text-center py-8">
-                <div className="text-3xl mb-4 animate-spin inline-block">&#9881;</div>
-                <p className="text-muted-foreground m-0">Cloning in progress... This may take a minute.</p>
-              </div>
-            )}
-
-            {cloneStatus === 'success' && cloneResult && (
-              <div>
-                <div className="bg-surface-elevated rounded-lg p-5 mb-6 border border-border">
-                  <p className="font-semibold text-foreground mb-1">Clone complete</p>
-                  <p className="text-sm text-muted-foreground mb-0.5">
-                    Pages cloned: {cloneResult.successCount} / {cloneResult.totalPages}
-                  </p>
-                  {cloneResult.brand?.name && (
-                    <p className="text-sm text-muted-foreground mb-0.5">
-                      Brand extracted: {cloneResult.brand.name}
-                    </p>
-                  )}
-                  {cloneResult.failedCount > 0 && (
-                    <p className="text-sm text-warning mt-1">
-                      {cloneResult.failedCount} page(s) could not be cloned.
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <button onClick={resetCloneModal} className="px-6 py-3 bg-transparent text-muted-foreground border border-border rounded-md cursor-pointer text-sm font-medium">
-                    Close
-                  </button>
-                  <button onClick={() => { resetCloneModal(); void loadPages(); }} className="px-6 py-3 bg-gradient-to-br from-sky-500 to-blue-600 text-white border-none rounded-md cursor-pointer text-sm font-semibold">
-                    View Pages
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {(cloneStatus === 'idle' || cloneStatus === 'error') && (
-              <div>
-                <div className="mb-4">
-                  <label className="block mb-1.5 font-semibold text-sm text-foreground">
-                    Source URL
-                  </label>
-                  <input
-                    type="url" value={cloneSourceUrl} onChange={e => setCloneSourceUrl(e.target.value)}
-                    placeholder="https://example.com"
-                    className="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface-elevated text-foreground box-border"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block mb-1.5 font-semibold text-sm text-foreground">
-                    Max pages (1-20)
-                  </label>
-                  <input
-                    type="number" min={1} max={20} value={cloneMaxPages}
-                    onChange={e => setCloneMaxPages(Math.min(20, Math.max(1, Number(e.target.value))))}
-                    className="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface-elevated text-foreground box-border"
-                  />
-                </div>
-                <div className="mb-6 flex items-center gap-2">
-                  <input id="clone-include-images" type="checkbox" checked={cloneIncludeImages} onChange={e => setCloneIncludeImages(e.target.checked)} className="w-4 h-4 cursor-pointer" />
-                  <label htmlFor="clone-include-images" className="text-sm text-foreground cursor-pointer">Include images</label>
-                </div>
-                {cloneStatus === 'error' && cloneError && (
-                  <p className="text-sm text-destructive mb-4">{cloneError}</p>
-                )}
-                <div className="flex gap-3 justify-end">
-                  <button onClick={resetCloneModal} className="px-6 py-3 bg-transparent text-muted-foreground border border-border rounded-md cursor-pointer text-sm font-medium">
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => void cloneWebsite()} disabled={!cloneSourceUrl.trim()}
-                    className="px-6 py-3 bg-gradient-to-br from-sky-500 to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white border-none rounded-md cursor-pointer text-sm font-semibold"
-                  >
-                    Start Cloning
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

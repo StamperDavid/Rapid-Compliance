@@ -230,6 +230,10 @@ export type WidgetType =
   | 'logo-grid'
   // Advanced
   | 'html'
+  // Faithful website-clone reconstruction (Phase 2): a self-contained block of
+  // captured HTML with inlined computed styles. Only cloned/imported pages carry
+  // this type, so existing content renders unchanged.
+  | 'captured-html'
   | 'code'
   | 'map'
   | 'countdown'

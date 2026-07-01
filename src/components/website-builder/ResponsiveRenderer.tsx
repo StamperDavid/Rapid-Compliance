@@ -27,6 +27,7 @@ import {
   formatPlanPeriod,
 } from '@/lib/website-builder/widget-normalizer';
 import { SHAPE_DIVIDERS } from '@/lib/website-builder/shape-divider-catalog';
+import { sanitizeCapturedHtml } from '@/lib/website-builder/capture-to-html';
 import { themeToTokens, tokensToCssVars } from '@/lib/website-builder/global-styles';
 import SafeHtml from '@/components/SafeHtml';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
@@ -974,6 +975,26 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
             </a>
           ))}
         </div>
+      );
+    }
+
+    case 'captured-html': {
+      // Faithful website-clone block (Phase 2): self-contained HTML whose every
+      // element already carries its inlined captured computed styles, so it
+      // renders byte-identically to the source page. We must NOT use SafeHtml
+      // here — its rich-text preset strips inline styles, which would destroy
+      // that fidelity. Instead do a light, style-preserving sanitize (drops
+      // <script>/on* handlers, keeps structure + inline styles) and inject.
+      const rawHtml = widget.data.html;
+      if (typeof rawHtml !== 'string' || rawHtml.trim() === '') {
+        return null;
+      }
+      return (
+        <div
+          className="captured-html"
+          style={style}
+          dangerouslySetInnerHTML={{ __html: sanitizeCapturedHtml(rawHtml) }}
+        />
       );
     }
 

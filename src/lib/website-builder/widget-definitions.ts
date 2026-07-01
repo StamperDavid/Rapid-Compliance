@@ -587,6 +587,17 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     defaultStyle: {},
   },
 
+  'captured-html': {
+    label: 'Captured Block',
+    description: 'Faithful cloned section (self-contained inlined styles)',
+    icon: '⧉',
+    category: 'advanced',
+    defaultData: {
+      html: '',
+    },
+    defaultStyle: {},
+  },
+
   'code': {
     label: 'Code Block',
     description: 'Syntax-highlighted code',
