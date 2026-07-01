@@ -71,6 +71,12 @@ interface EditableCanvasProps {
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
   // Insert a widget INTO a container widget's children (true nesting).
   onAddWidgetToContainer?: (containerId: string, widget: Widget, index?: number) => void;
+  // In-place (inline) text editing write-back. Double-clicking a text-bearing
+  // widget on the canvas edits its text in situ and commits through this handler
+  // (which funnels into the editor's `updateWidget` + undo history). Optional so
+  // non-editor callers of the canvas stay source-compatible (no inline editing
+  // when unset — widgets are then selectable/panel-editable only).
+  onUpdateWidget?: (sectionId: string, widgetId: string, updates: Partial<Widget>) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
   // --- Layout engine (drag-to-reorder + duplicate / hide) -------------------
   // Optional so other (non-editor) callers of the canvas stay source-compatible.
@@ -181,6 +187,65 @@ function widgetLabel(type: string): string {
   return def?.label ?? type;
 }
 
+/**
+ * Inline (in-canvas) text editing config for a widget type. Only the
+ * SINGLE-text-node widgets are inline-editable — the one where the whole
+ * rendered text element maps to exactly one `data` key:
+ *   - `heading` → `data.text`     (single line, `<h1..h6>`)
+ *   - `text`    → `data.content`  (multi-line paragraph, `<p>`)
+ *   - `button`  → `data.text`     (single line, `<button>`)
+ *   - `link`    → `data.text`     (single line, `<a>`)
+ * These match the keys the renderer READS and the Content panel WRITES, so a
+ * canvas edit and a panel edit stay perfectly consistent.
+ *
+ * Multi-text widgets (hero heading+subheading, cta heading+text+buttonText,
+ * testimonial quote/author/role, icon-box, etc.) have several text nodes under
+ * one `data-widget-id`, so a single contentEditable can't be unambiguously
+ * mapped to one key — those stay panel-only (return `null`). Images / forms /
+ * complex widgets are likewise panel-only.
+ */
+interface EditableTextConfig {
+  dataKey: string;
+  multiline: boolean;
+}
+
+function editableTextConfig(type: string): EditableTextConfig | null {
+  switch (type) {
+    case 'heading':
+      return { dataKey: 'text', multiline: false };
+    case 'text':
+      return { dataKey: 'content', multiline: true };
+    case 'button':
+      return { dataKey: 'text', multiline: false };
+    case 'link':
+      return { dataKey: 'text', multiline: false };
+    default:
+      return null;
+  }
+}
+
+/**
+ * The concrete rendered text element for a widget host. The render tree is
+ * `AccessibleWidget (data-widget-id) → .widget → <text element>`, so the editable
+ * node is the `.widget`'s first element child. Returns null if the structure
+ * doesn't match (e.g. a widget with no direct text element).
+ */
+function editableElementForHost(host: HTMLElement): HTMLElement | null {
+  const widgetBox = host.querySelector(':scope > .widget');
+  const el = widgetBox?.firstElementChild ?? null;
+  return el instanceof HTMLElement ? el : null;
+}
+
+/** A live inline-editing session (kept in a ref — never triggers re-render). */
+interface EditingSession {
+  widgetId: string;
+  dataKey: string;
+  el: HTMLElement;
+  original: string;
+  done: boolean;
+  cleanup: () => void;
+}
+
 function asString(v: unknown): string | undefined {
   return typeof v === 'string' ? v : undefined;
 }
@@ -200,6 +265,7 @@ export default function EditableCanvas({
   onSaveSectionAsBlock,
   onAddWidget,
   onAddWidgetToContainer,
+  onUpdateWidget,
   onDeleteWidget,
   onMoveWidget,
   onMoveSection,
@@ -230,6 +296,20 @@ export default function EditableCanvas({
   // Bumped whenever layout may have shifted (resize, image load, reflow) so the
   // overlay rectangles stay glued to the real rendered elements.
   const [layoutTick, setLayoutTick] = useState(0);
+
+  // --- Inline (in-canvas) text editing --------------------------------------
+  // The live editing session lives in a REF so that keystrokes never trigger a
+  // React re-render of the canvas (which would reconcile the faithful render and
+  // risk clobbering the caret). `editingWidgetId` is the ONLY piece of editing
+  // state that lives in React — it exists purely to swap the selected-widget
+  // overlay for a non-interactive "editing" outline so the grip/controls don't
+  // sit on top of the text the user is typing into.
+  const editingRef = useRef<EditingSession | null>(null);
+  const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
+  // Always-current page snapshot for the commit path (so a commit merges onto the
+  // latest widget data without re-creating the commit callback per render).
+  const pageRef = useRef(page);
+  pageRef.current = page;
 
   const sensors = useSensors(
     // A small activation distance keeps a plain click on a grip = "select",
@@ -399,6 +479,16 @@ export default function EditableCanvas({
         return; // overlay controls handle their own clicks
       }
 
+      // While inline-editing, a click INSIDE the editable element must place the
+      // caret natively — don't re-select or run the widget's own behaviour. We
+      // still stop propagation so a live behaviour (e.g. a button/link's own
+      // click → navigation) can't fire mid-edit; the caret is already set on the
+      // preceding mousedown, so suppressing the click is caret-safe.
+      if (editingRef.current?.el.contains(target)) {
+        e.stopPropagation();
+        return;
+      }
+
       const widgetEl = target.closest<HTMLElement>('[data-widget-id]');
       if (widgetEl) {
         e.preventDefault();
@@ -434,8 +524,180 @@ export default function EditableCanvas({
     e.preventDefault();
   }, []);
 
+  // Commit (write the new plain text) or cancel (restore the original) the live
+  // inline-editing session. Idempotent — the `done` flag guards against the
+  // blur-after-Enter double fire. On commit we read `textContent` (NEVER
+  // innerHTML) so only sanitized plain text is stored, and we merge onto the
+  // LATEST widget data (pageRef) so the whole `data` object is preserved.
+  const finishEditing = useCallback(
+    (mode: 'commit' | 'cancel') => {
+      const session = editingRef.current;
+      if (!session || session.done) {
+        return;
+      }
+      session.done = true;
+      session.cleanup();
+
+      const { el } = session;
+      el.removeAttribute('contenteditable');
+      el.style.removeProperty('cursor');
+
+      if (mode === 'cancel') {
+        // Restore the original text so the DOM matches the (unchanged) model.
+        el.textContent = session.original;
+      } else {
+        const next = el.textContent ?? '';
+        if (next !== session.original && onUpdateWidget) {
+          const loc = findWidget(pageRef.current, session.widgetId);
+          if (loc) {
+            const sectionId = findSectionIdForWidget(pageRef.current, session.widgetId) ?? '';
+            onUpdateWidget(sectionId, session.widgetId, {
+              data: { ...loc.widget.data, [session.dataKey]: next },
+            });
+          }
+        }
+      }
+
+      editingRef.current = null;
+      setEditingWidgetId(null);
+    },
+    [onUpdateWidget]
+  );
+
+  // Keep a stable handle to the latest `finishEditing` so the unmount cleanup can
+  // commit an in-flight edit without re-subscribing every render.
+  const finishEditingRef = useRef(finishEditing);
+  finishEditingRef.current = finishEditing;
+  useEffect(() => () => finishEditingRef.current('commit'), []);
+
+  // Turn a text-bearing widget's rendered element into an in-place editor. The
+  // element is made contentEditable IMPERATIVELY (the shared renderer stays pure —
+  // it never learns about editing), and native keydown/blur listeners drive
+  // commit/cancel. Because the page model is untouched until commit, the faithful
+  // render keeps producing the SAME text for this node, so React never rewrites
+  // the text node mid-edit — the caret and typed characters survive re-renders.
+  const startEditing = useCallback(
+    (host: HTMLElement, widgetId: string, config: EditableTextConfig) => {
+      // Close any prior session first (commit it) so state can't leak between nodes.
+      finishEditing('commit');
+
+      const el = editableElementForHost(host);
+      if (!el) {
+        return;
+      }
+
+      const original = el.textContent ?? '';
+      // `plaintext-only` blocks rich markup during editing (degrades to a plain
+      // editable in engines without it); commit still reads textContent to be safe.
+      el.setAttribute('contenteditable', 'plaintext-only');
+      el.style.cursor = 'text';
+
+      const onKeyDown = (ev: KeyboardEvent) => {
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          finishEditing('cancel');
+          return;
+        }
+        if (ev.key === 'Enter') {
+          if (!config.multiline) {
+            // Single-line widgets commit on Enter (no newline inserted).
+            ev.preventDefault();
+            finishEditing('commit');
+          } else if (ev.ctrlKey || ev.metaKey) {
+            // Multi-line text: plain Enter inserts a newline; Ctrl/Cmd+Enter commits.
+            ev.preventDefault();
+            finishEditing('commit');
+          }
+        }
+        // Keep keystrokes local: the editor's window-level shortcuts (undo/redo,
+        // delete-element, duplicate) must not react to typing. They already guard
+        // on isContentEditable, but stopping propagation is belt-and-suspenders and
+        // lets the browser's native contentEditable undo own Ctrl+Z while editing.
+        ev.stopPropagation();
+      };
+      const onBlur = () => finishEditing('commit');
+
+      el.addEventListener('keydown', onKeyDown);
+      el.addEventListener('blur', onBlur);
+
+      editingRef.current = {
+        widgetId,
+        dataKey: config.dataKey,
+        el,
+        original,
+        done: false,
+        cleanup: () => {
+          el.removeEventListener('keydown', onKeyDown);
+          el.removeEventListener('blur', onBlur);
+        },
+      };
+      setEditingWidgetId(widgetId);
+      // Select the widget too, so the right panel + overlay reflect what's editing.
+      onSelectElement({
+        type: 'widget',
+        sectionId: findSectionIdForWidget(pageRef.current, widgetId) ?? '',
+        widgetId,
+      });
+
+      // Focus + place the caret after the current commit tick so contentEditable is
+      // active and any selection-driven re-render has settled. Single-line widgets
+      // select-all (easy overtype); multi-line drops the caret at the end.
+      window.requestAnimationFrame(() => {
+        if (editingRef.current?.el !== el) {
+          return;
+        }
+        el.focus();
+        const selection = window.getSelection();
+        if (selection) {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          if (config.multiline) {
+            range.collapse(false);
+          }
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      });
+    },
+    [finishEditing, onSelectElement]
+  );
+
+  // Double-click a text-bearing widget → edit it in place. Non-text (or
+  // multi-text) widgets fall through untouched: they keep single-click selection
+  // and panel editing. Gated on `onUpdateWidget` so the read-only canvas is inert.
+  const handleDoubleClickCapture = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!onUpdateWidget) {
+        return;
+      }
+      const target = e.target as HTMLElement;
+      if (isOverlayTarget(target)) {
+        return;
+      }
+      const host = target.closest<HTMLElement>('[data-widget-id]');
+      if (!host) {
+        return;
+      }
+      const widgetId = host.getAttribute('data-widget-id');
+      const type = host.getAttribute('data-widget-type') ?? '';
+      const config = editableTextConfig(type);
+      if (!widgetId || !config) {
+        return; // not inline-editable → leave selection / panel behaviour intact
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      startEditing(host, widgetId, config);
+    },
+    [onUpdateWidget, startEditing]
+  );
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      // Freeze hover tracking while inline-editing so pointer movement over the
+      // text can't churn overlay state (and thus the faithful render) mid-caret.
+      if (editingRef.current) {
+        return;
+      }
       const target = e.target as HTMLElement;
       if (isOverlayTarget(target)) {
         return;
@@ -635,6 +897,7 @@ export default function EditableCanvas({
         ref={innerRef}
         style={{ position: 'relative' }}
         onClickCapture={handleClickCapture}
+        onDoubleClickCapture={handleDoubleClickCapture}
         onSubmitCapture={handleSubmitCapture}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
@@ -722,26 +985,33 @@ export default function EditableCanvas({
             </OutlineBox>
           )}
 
-          {/* Selected widget outline + controls. */}
+          {/* Selected widget outline + controls. While THIS widget is being
+              edited inline, drop the grip/controls (which would sit on top of the
+              text) and show a passive "editing" outline instead, so the whole text
+              stays clickable for caret placement. */}
           {selectedElement?.type === 'widget' && boxes.selected && selectedSectionId && selectedWidgetId && (
-            <OutlineBox box={boxes.selected} color={WIDGET_COLOR} label={hover?.label ?? 'Widget'}>
-              <DragGrip
-                dragId={`w:${selectedWidgetId}`}
-                data={{ type: 'widget', id: selectedWidgetId, label: hover?.label ?? 'Widget' }}
-                color={WIDGET_COLOR}
-                title="Drag to move widget"
-              />
-              <WidgetControls
-                onAddInside={
-                  selectedIsContainer && onAddWidgetToContainer
-                    ? () => onAddWidgetToContainer(selectedWidgetId, createWidget('text'))
-                    : undefined
-                }
-                onDuplicate={onDuplicateWidget ? () => onDuplicateWidget(selectedWidgetId) : undefined}
-                onToggleHidden={onToggleWidgetHidden ? () => onToggleWidgetHidden(selectedWidgetId) : undefined}
-                onDelete={() => onDeleteWidget(selectedSectionId, selectedWidgetId)}
-              />
-            </OutlineBox>
+            editingWidgetId === selectedWidgetId ? (
+              <OutlineBox box={boxes.selected} color={WIDGET_COLOR} label="Editing text — Enter to save · Esc to cancel" dashed />
+            ) : (
+              <OutlineBox box={boxes.selected} color={WIDGET_COLOR} label={hover?.label ?? 'Widget'}>
+                <DragGrip
+                  dragId={`w:${selectedWidgetId}`}
+                  data={{ type: 'widget', id: selectedWidgetId, label: hover?.label ?? 'Widget' }}
+                  color={WIDGET_COLOR}
+                  title="Drag to move widget"
+                />
+                <WidgetControls
+                  onAddInside={
+                    selectedIsContainer && onAddWidgetToContainer
+                      ? () => onAddWidgetToContainer(selectedWidgetId, createWidget('text'))
+                      : undefined
+                  }
+                  onDuplicate={onDuplicateWidget ? () => onDuplicateWidget(selectedWidgetId) : undefined}
+                  onToggleHidden={onToggleWidgetHidden ? () => onToggleWidgetHidden(selectedWidgetId) : undefined}
+                  onDelete={() => onDeleteWidget(selectedSectionId, selectedWidgetId)}
+                />
+              </OutlineBox>
+            )
           )}
         </div>
       </div>

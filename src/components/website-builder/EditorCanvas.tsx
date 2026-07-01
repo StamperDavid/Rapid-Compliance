@@ -65,7 +65,7 @@ export default function EditorCanvas({
   onSaveSectionAsBlock,
   onAddWidget,
   onAddWidgetToContainer,
-  onUpdateWidget: _onUpdateWidget,
+  onUpdateWidget,
   onDeleteWidget,
   onMoveWidget,
   onMoveSection,
@@ -77,8 +77,10 @@ export default function EditorCanvas({
   selectedRegion = null,
   onSelectRegion,
 }: EditorCanvasProps) {
-  // Property edits flow through PropertiesPanel (onUpdateSection / onUpdateWidget),
-  // so the canvas itself only needs select / add / delete handlers.
+  // Section property edits flow through PropertiesPanel (onUpdateSection), so the
+  // canvas doesn't need that handler. Widget text edits, however, happen INLINE on
+  // the canvas (double-click a text widget), so `onUpdateWidget` is forwarded to
+  // EditableCanvas as the write-back path for in-place text editing.
   return (
     <EditableCanvas
       page={page}
@@ -91,6 +93,7 @@ export default function EditorCanvas({
       onSaveSectionAsBlock={onSaveSectionAsBlock}
       onAddWidget={onAddWidget}
       onAddWidgetToContainer={onAddWidgetToContainer}
+      onUpdateWidget={onUpdateWidget}
       onDeleteWidget={onDeleteWidget}
       onMoveWidget={onMoveWidget}
       onMoveSection={onMoveSection}
