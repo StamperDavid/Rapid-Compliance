@@ -176,7 +176,11 @@ export async function captureSite(
         const styles: Record<string, string> = {};
         for (const prop of STYLE_PROPS) {
           const raw = cs.getPropertyValue(prop).trim();
-          if (DEFAULT_NOISE.has(raw)) {continue;}
+          // `text-decoration` must survive even when it's `none`: the UA default
+          // for <a>/<u>/<ins> is UNDERLINE, so dropping a computed `none` lets the
+          // underline reappear on cloned links. Keep it unless it's truly empty.
+          const keepEvenIfDefault = prop === 'text-decoration';
+          if (raw === '' || (!keepEvenIfDefault && DEFAULT_NOISE.has(raw))) {continue;}
           styles[toCamel(prop)] = raw;
         }
         const ff = cs.getPropertyValue('font-family').trim();

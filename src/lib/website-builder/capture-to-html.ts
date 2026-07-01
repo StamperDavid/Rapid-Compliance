@@ -97,9 +97,16 @@ function buildInlineStyle(
   extraDecls: string[],
   omitKeys: Set<string>,
 ): string {
+  // A 0-width border is dropped from the capture (its computed width is `0px`,
+  // pruned as a no-op default). But if `border-<side>-style` was captured
+  // (computed `solid`), emitting it WITHOUT a width makes CSS fall back to the
+  // initial `medium` (~3px) width, painting a spurious line around the element.
+  // So suppress the style + colour of any border side that has no real width.
+  const borderSuppressed = borderSidesToSuppress(styles);
+
   const decls: string[] = [];
   for (const [key, value] of Object.entries(styles)) {
-    if (value === undefined || value === null || value === '' || omitKeys.has(key)) {
+    if (value === undefined || value === null || value === '' || omitKeys.has(key) || borderSuppressed.has(key)) {
       continue;
     }
     decls.push(`${camelToKebab(key)}:${value}`);
@@ -108,6 +115,32 @@ function buildInlineStyle(
     decls.push(raw);
   }
   return decls.join(';');
+}
+
+/**
+ * Returns the set of border style/color keys to DROP because their side has no
+ * real width. A side "has width" only if `border<Side>Width` is present and not
+ * zero (the capture prunes `0px`, so absent === zero). Also handles the shorthand
+ * `borderStyle`/`borderColor` vs `borderWidth`.
+ */
+function borderSidesToSuppress(styles: Record<string, string>): Set<string> {
+  const suppressed = new Set<string>();
+  const hasWidth = (widthKey: string): boolean => {
+    const w = styles[widthKey];
+    return w !== undefined && w !== '' && w !== '0px' && w !== '0';
+  };
+  for (const side of ['Top', 'Right', 'Bottom', 'Left']) {
+    if (!hasWidth(`border${side}Width`)) {
+      suppressed.add(`border${side}Style`);
+      suppressed.add(`border${side}Color`);
+    }
+  }
+  // Shorthand forms (rarely present after computed-style capture, but safe).
+  if (!hasWidth('borderWidth')) {
+    suppressed.add('borderStyle');
+    suppressed.add('borderColor');
+  }
+  return suppressed;
 }
 
 /** Render a captured ::before / ::after pseudo-element as a styled inline span. */
