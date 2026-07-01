@@ -11,6 +11,14 @@
 import { useState } from 'react';
 import type { GradientStops } from '@/types/website';
 import { FontPicker } from './FontPicker';
+import { useGlobalStyles } from './GlobalStylesContext';
+import {
+  globalColorRef,
+  globalFontRef,
+  isGlobalColorRef,
+  isGlobalFontRef,
+  refTokenId,
+} from '@/lib/website-builder/global-styles';
 
 // ---------------------------------------------------------------------------
 // Shared dark-theme style tokens (single source for the panel)
@@ -259,9 +267,87 @@ interface FontFieldProps {
  * The per-widget typography font control. Wraps {@link FontPicker} and adapts its
  * `(family: string)` callback to the `string | undefined` patch contract the Style
  * tab uses elsewhere (an empty selection clears the override back to the default).
+ *
+ * When a {@link useGlobalStyles} provider exposes brand fonts, a "Brand fonts" quick-pick
+ * row is rendered above the picker. Picking one stores a CSS-var reference
+ * (`var(--gf-<id>)`) so the widget tracks later brand edits automatically. Selecting a
+ * catalog font from the picker switches the field back to that raw family. Outside the
+ * editor (no provider) the control renders exactly as the plain Google-Fonts picker.
  */
 export function FontField({ value, onChange }: FontFieldProps) {
-  return <FontPicker value={value} onChange={(family) => onChange(family === '' ? undefined : family)} />;
+  const tokens = useGlobalStyles();
+  const brandFonts = tokens?.fonts ?? [];
+  const isBrand = isGlobalFontRef(value);
+  const activeTokenId = isBrand ? refTokenId(value) : null;
+  const activeToken =
+    activeTokenId !== null ? brandFonts.find((f) => f.id === activeTokenId) : undefined;
+
+  // No provider / no brand fonts → render exactly the plain picker (unchanged behaviour).
+  if (brandFonts.length === 0) {
+    return <FontPicker value={value} onChange={(family) => onChange(family === '' ? undefined : family)} />;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+      <div>
+        <span style={{ ...labelStyle, fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)' }}>
+          Brand fonts
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+          {brandFonts.map((token) => {
+            const active = activeTokenId === token.id;
+            return (
+              <button
+                key={token.id}
+                type="button"
+                title={token.name}
+                onClick={() => onChange(globalFontRef(token.id))}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.72rem',
+                  fontFamily: token.family,
+                  borderRadius: '5px',
+                  border: active ? `1px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.15)',
+                  background: active ? 'rgba(99,102,241,0.20)' : 'rgba(255,255,255,0.05)',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                }}
+              >
+                {token.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {isBrand && (
+        <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)' }}>
+          Using brand font:{' '}
+          <span style={{ color: '#ffffff', fontWeight: 600 }}>{activeToken?.name ?? 'Brand font'}</span>
+          {' · '}
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: ACCENT,
+              cursor: 'pointer',
+              fontSize: '0.68rem',
+              padding: 0,
+            }}
+          >
+            use a custom font
+          </button>
+        </div>
+      )}
+      {/* When a brand ref is active, show "Default" in the picker (not the raw var) and let
+          any catalog pick switch the field back to a raw family. */}
+      <FontPicker
+        value={isBrand ? '' : value}
+        onChange={(family) => onChange(family === '' ? undefined : family)}
+      />
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -300,12 +386,28 @@ interface ColorFieldProps {
 }
 
 export function ColorField({ value, placeholder, fallback = '#000000', onChange }: ColorFieldProps) {
-  const swatch = value !== undefined && value !== '' && value.startsWith('#') ? value : fallback;
-  return (
+  const tokens = useGlobalStyles();
+  const brandColors = tokens?.colors ?? [];
+  const isBrand = isGlobalColorRef(value);
+  const activeTokenId = isBrand ? refTokenId(value) : null;
+  const activeToken =
+    activeTokenId !== null ? brandColors.find((c) => c.id === activeTokenId) : undefined;
+
+  // Swatch preview: a brand ref resolves to its token's colour; a raw hex shows itself;
+  // anything else (keyword / gradient var) falls back. The native <input type="color">
+  // always needs a real hex, so a click there emits a hex → switches to a custom colour.
+  const swatch =
+    activeToken !== undefined
+      ? activeToken.value
+      : value !== undefined && value !== '' && value.startsWith('#')
+        ? value
+        : fallback;
+
+  const customRow = (
     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
       <input
         type="color"
-        value={swatch}
+        value={swatch.startsWith('#') ? swatch : fallback}
         onChange={(e) => onChange(e.target.value)}
         style={colorPickerStyle}
         aria-label="Pick colour"
@@ -317,6 +419,69 @@ export function ColorField({ value, placeholder, fallback = '#000000', onChange 
         onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
         style={{ ...smallInputStyle, flex: 1, fontFamily: 'monospace' }}
       />
+    </div>
+  );
+
+  // No provider / no brand colours → render exactly the original control (unchanged).
+  if (brandColors.length === 0) {
+    return customRow;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+      <div>
+        <span style={{ ...labelStyle, fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)' }}>
+          Brand colors
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+          {brandColors.map((token) => {
+            const active = activeTokenId === token.id;
+            return (
+              <button
+                key={token.id}
+                type="button"
+                title={token.name}
+                aria-label={token.name}
+                aria-pressed={active}
+                onClick={() => onChange(globalColorRef(token.id))}
+                style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  background: token.value,
+                  border: active ? `2px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.25)',
+                  boxShadow: active ? '0 0 0 2px rgba(99,102,241,0.35)' : 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      {isBrand && (
+        <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)' }}>
+          Using brand color:{' '}
+          <span style={{ color: '#ffffff', fontWeight: 600 }}>{activeToken?.name ?? 'Brand color'}</span>
+          {' · '}
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: ACCENT,
+              cursor: 'pointer',
+              fontSize: '0.68rem',
+              padding: 0,
+            }}
+          >
+            use a custom color
+          </button>
+        </div>
+      )}
+      {customRow}
     </div>
   );
 }

@@ -545,3 +545,44 @@ export interface DNSRecord {
   status: 'pending' | 'verified' | 'failed';
 }
 
+// ---------------------------------------------------------------------------
+// Global design tokens (Elementor "Global Colors/Fonts")
+// ---------------------------------------------------------------------------
+
+/**
+ * One global brand COLOR token. Derived from the site's WebsiteTheme/brand — it
+ * is NOT a second colour store. Emitted at the page root as a CSS custom
+ * property (`--gc-<id>`) so any widget can *reference* it via `var(--gc-<id>)`;
+ * editing the brand token then updates every referencing widget at once.
+ */
+export interface GlobalColorToken {
+  /** Stable slug used to build the CSS var name, e.g. `primary`, `accent`. */
+  id: string;
+  /** Human-readable label for the token picker, e.g. "Primary". */
+  name: string;
+  /** The resolved CSS colour value (hex / rgb / any CSS colour). */
+  value: string;
+}
+
+/**
+ * One global brand FONT token. Derived from the site's WebsiteTheme/brand.
+ * Emitted at the page root as `--gf-<id>` and referenced via `var(--gf-<id>)`.
+ */
+export interface GlobalFontToken {
+  /** Stable slug used to build the CSS var name, e.g. `heading`, `body`. */
+  id: string;
+  /** Human-readable label, e.g. "Heading". */
+  name: string;
+  /** The clean font-family value (no `, sans-serif` tail), e.g. "Poppins". */
+  family: string;
+}
+
+/**
+ * The full set of global design tokens for a site — the DEFAULT global palette
+ * seeded from the current brand/theme. Consumers reference tokens by id.
+ */
+export interface GlobalStyleTokens {
+  colors: GlobalColorToken[];
+  fonts: GlobalFontToken[];
+}
+

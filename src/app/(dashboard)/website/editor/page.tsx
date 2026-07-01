@@ -51,6 +51,33 @@ import { loadBlocks, saveBlock } from '@/lib/website-builder/block-library-servi
 import { BLOCK_CATEGORY_LABELS, type SectionBlock, type BlockCategory } from '@/lib/website-builder/section-blocks';
 import { FontLoader } from '@/components/website-builder/FontLoader';
 import { collectUsedFonts } from '@/lib/website-builder/font-catalog';
+import { GlobalStylesProvider } from '@/components/website-builder/GlobalStylesContext';
+import { themeToTokens, type GlobalStyleTokens } from '@/lib/website-builder/global-styles';
+import type { WebsiteTheme } from '@/hooks/useWebsiteTheme';
+
+/**
+ * Derive the global brand tokens from the editor's LIVE branding config, so
+ * editing a brand colour/font in the editor propagates immediately to every
+ * widget that references it (var(--gc-*)/var(--gf-*)). Unified with the single
+ * brand source (website-config.branding) — not a parallel store.
+ */
+function brandingToGlobalTokens(branding: WebsiteConfig['branding'] | undefined): GlobalStyleTokens {
+  const c = branding?.colors;
+  const f = branding?.fonts;
+  const theme: WebsiteTheme = {
+    logoUrl: '', logoHeight: 0, companyName: '', tagline: '',
+    primaryColor: c?.primary ?? '#6366f1',
+    secondaryColor: c?.secondary ?? '#8b5cf6',
+    accentColor: c?.accent ?? '#10b981',
+    backgroundColor: c?.background ?? '#000000',
+    textColor: c?.text ?? '#ffffff',
+    navBackground: '',
+    footerBackground: '',
+    fontFamily: f?.body ?? 'Inter, sans-serif',
+    headingFont: f?.heading ?? 'Inter, sans-serif',
+  };
+  return themeToTokens(theme);
+}
 
 // ============================================================================
 // Conversion helpers: EditorPage <-> Page (existing widget system)
@@ -1059,6 +1086,13 @@ function PageEditorInner() {
     setHasUnsavedChanges(true);
   }
 
+  // Global brand tokens (CSS vars) provided to the canvas + pickers; recompute
+  // when branding changes so editing a brand colour/font propagates live.
+  const globalTokens = React.useMemo(
+    () => brandingToGlobalTokens(config?.branding),
+    [config?.branding],
+  );
+
   // ============================================================================
   // Render
   // ============================================================================
@@ -1080,6 +1114,7 @@ function PageEditorInner() {
   }
 
   return (
+    <GlobalStylesProvider value={globalTokens}>
     <div className="h-screen flex flex-col overflow-hidden font-sans">
       {/* On-demand Google Fonts: load only the families actually used on the page */}
       {page && <FontLoader families={collectUsedFonts(page)} />}
@@ -1293,6 +1328,7 @@ function PageEditorInner() {
         </div>
       )}
     </div>
+    </GlobalStylesProvider>
   );
 }
 

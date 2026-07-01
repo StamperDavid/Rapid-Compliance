@@ -27,11 +27,13 @@ import {
   formatPlanPeriod,
 } from '@/lib/website-builder/widget-normalizer';
 import { SHAPE_DIVIDERS } from '@/lib/website-builder/shape-divider-catalog';
+import { themeToTokens, tokensToCssVars } from '@/lib/website-builder/global-styles';
 import SafeHtml from '@/components/SafeHtml';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 import { OptimizedImage } from './OptimizedImage';
 import { AccessibleWidget, SkipToMain } from './AccessibleWidget';
 import { WebsiteFormWidget } from './WebsiteFormWidget';
+import { useGlobalStyles } from './GlobalStylesContext';
 import { Icon } from './Icon';
 
 interface ConvertedStyle extends Omit<React.CSSProperties, 'padding' | 'margin'> {
@@ -83,12 +85,32 @@ export function ResponsiveRenderer({ content, breakpoint = 'desktop' }: Responsi
   // SAME render path used by the editor canvas and the public /sites route, so what
   // the operator sees is what publishes.
   const { theme } = useWebsiteTheme();
+
+  // Global design tokens (Elementor "Global Colors/Fonts"): emit the brand
+  // colours/fonts as CSS custom properties at the page root so any descendant
+  // widget referencing `var(--gc-*)` / `var(--gf-*)` resolves to the live brand.
+  //
+  // Source priority: the editor mounts a GlobalStylesProvider so token edits
+  // preview live (context wins); the public /sites route has NO provider, so we
+  // seed the same tokens straight from the brand/theme. Either way the emitted
+  // vars are IDENTICAL to the current brand.
+  //
+  // This is purely additive: existing widgets store raw hex/font strings (not
+  // these vars), so adding extra custom properties changes NO existing widget's
+  // computed style — live output stays byte-identical for all current content.
+  const contextTokens = useGlobalStyles();
+  const globalCssVars = useMemo(
+    () => tokensToCssVars(contextTokens ?? themeToTokens(theme)),
+    [contextTokens, theme],
+  );
+
   return (
     <div
       className="responsive-page"
       role="main"
       id="main-content"
       style={{
+        ...globalCssVars,
         background: theme.backgroundColor,
         color: theme.textColor,
         fontFamily: theme.fontFamily,
