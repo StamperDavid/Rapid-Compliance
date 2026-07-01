@@ -210,7 +210,7 @@ async function main() {
     industryKey: INDUSTRY_KEY,
     config: {
       systemPrompt: resolvedSystemPrompt,
-      model: 'claude-opus-4.6',
+      model: 'openrouter/anthropic/claude-opus-4.6',
       temperature: 0.2,
       maxTokens: 6500,
       supportedActions: ['propose_prompt_edit'],

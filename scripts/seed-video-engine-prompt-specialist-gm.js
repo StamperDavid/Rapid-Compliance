@@ -132,7 +132,7 @@ async function main() {
     config: {
       systemPrompt: resolvedSystemPrompt,
       // Opus tier — per-engine prompt craft + routing is a demanding reasoning task.
-      model: 'claude-opus-4.6',
+      model: 'openrouter/anthropic/claude-opus-4.6',
       temperature: 0.4,
       maxTokens: 4000,
       supportedActions: ['generate_engine_prompt'],

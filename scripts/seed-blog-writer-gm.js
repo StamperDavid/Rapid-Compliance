@@ -154,7 +154,7 @@ async function main() {
     industryKey: INDUSTRY_KEY,
     config: {
       systemPrompt: resolvedSystemPrompt,
-      model: 'claude-sonnet-4.6',
+      model: 'openrouter/anthropic/claude-sonnet-4.6',
       temperature: 0.7,
       maxTokens: 12000,
       supportedActions: ['write_blog_post', 'outline_blog_post'],

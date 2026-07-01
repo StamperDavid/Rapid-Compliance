@@ -266,7 +266,7 @@ async function main() {
     industryKey: INDUSTRY_KEY,
     config: {
       systemPrompt: resolvedSystemPrompt,
-      model: 'claude-haiku-4.5',
+      model: 'openrouter/anthropic/claude-haiku-4.5',
       temperature: 0,
       maxTokens: 500,
       supportedActions: ['expand_intent'],

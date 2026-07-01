@@ -208,7 +208,7 @@ async function main() {
       // Opus tier — the most demanding reasoning task in the app (matches the Shot Plan
       // Planner's "run on Opus" note). claude-opus-4.6 is the top-tier Opus the codebase
       // exposes via ModelName; the runtime reads this value verbatim.
-      model: 'claude-opus-4.6',
+      model: 'openrouter/anthropic/claude-opus-4.6',
       temperature: 0.6,
       maxTokens: 16000,
       supportedActions: ['generate_script'],

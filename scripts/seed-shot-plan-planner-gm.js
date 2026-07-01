@@ -515,7 +515,7 @@ async function main() {
     industryKey: INDUSTRY_KEY,
     config: {
       systemPrompt: resolvedSystemPrompt,
-      model: 'claude-opus-4.6',
+      model: 'openrouter/anthropic/claude-opus-4.6',
       temperature: 0.5,
       maxTokens: 8000,
       supportedActions: ['generate_shot_plan', 'edit_shot_plan_field'],
