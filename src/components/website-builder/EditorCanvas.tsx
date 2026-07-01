@@ -14,6 +14,7 @@
 
 import type { Page, PageSection, Widget } from '@/types/website';
 import type { SiteChrome, ChromeRegion } from '@/lib/website-builder/site-chrome-types';
+import type { WidgetDestination } from '@/lib/website-builder/page-tree-ops';
 import EditableCanvas from '@/components/website-builder/EditableCanvas';
 
 interface SelectedElement {
@@ -35,10 +36,12 @@ interface EditorCanvasProps {
   // Save the selected section to the block library (wired during integration).
   onSaveSectionAsBlock?: (sectionId: string) => void;
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
+  // Insert a widget INTO a container widget's children (true nesting).
+  onAddWidgetToContainer?: (containerId: string, widget: Widget, index?: number) => void;
   onUpdateWidget: (sectionId: string, widgetId: string, updates: Partial<Widget>) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
   // Layout engine (drag-to-reorder + duplicate / hide) — forwarded to EditableCanvas.
-  onMoveWidget?: (widgetId: string, dest: { sectionId: string; columnIndex: number; index: number }) => void;
+  onMoveWidget?: (widgetId: string, dest: WidgetDestination) => void;
   onMoveSection?: (sectionId: string, toIndex: number) => void;
   onDuplicateWidget?: (widgetId: string) => void;
   onDuplicateSection?: (sectionId: string) => void;
@@ -61,6 +64,7 @@ export default function EditorCanvas({
   onDeleteSection,
   onSaveSectionAsBlock,
   onAddWidget,
+  onAddWidgetToContainer,
   onUpdateWidget: _onUpdateWidget,
   onDeleteWidget,
   onMoveWidget,
@@ -86,6 +90,7 @@ export default function EditorCanvas({
       onDeleteSection={onDeleteSection}
       onSaveSectionAsBlock={onSaveSectionAsBlock}
       onAddWidget={onAddWidget}
+      onAddWidgetToContainer={onAddWidgetToContainer}
       onDeleteWidget={onDeleteWidget}
       onMoveWidget={onMoveWidget}
       onMoveSection={onMoveSection}

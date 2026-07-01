@@ -14,15 +14,33 @@ export interface WidgetDefinition {
   defaultStyle?: WidgetStyle;
 }
 
+/**
+ * The widget types that behave as true nestable flex/grid CONTAINERS — they can
+ * hold child widgets (`Widget.children`) and are rendered recursively by the
+ * ResponsiveRenderer. `row` defaults to a horizontal flex, `column` and
+ * `container` to a vertical flex. Everything else is a leaf widget.
+ */
+export const CONTAINER_TYPES = ['container', 'row', 'column'] as const;
+
+/** True when `type` is a nestable layout container (`container` / `row` / `column`). */
+export function isContainerType(type: WidgetType): boolean {
+  return (CONTAINER_TYPES as readonly string[]).includes(type);
+}
+
 export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   // LAYOUT WIDGETS
   'container': {
     label: 'Container',
-    description: 'Wrapper for content',
+    description: 'Nestable flex/grid box',
     icon: '[]',
     category: 'layout',
     defaultData: {},
     defaultStyle: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      alignItems: 'stretch',
+      justifyContent: 'flex-start',
       padding: { top: '1rem', right: '1rem', bottom: '1rem', left: '1rem' },
       backgroundColor: 'transparent',
     },
@@ -30,28 +48,31 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
 
   'row': {
     label: 'Row',
-    description: 'Horizontal layout',
+    description: 'Horizontal container',
     icon: '||',
     category: 'layout',
     defaultData: {},
     defaultStyle: {
       display: 'flex',
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      gap: '16px',
+      flexWrap: 'wrap',
+      alignItems: 'stretch',
       justifyContent: 'flex-start',
     },
   },
 
   'column': {
     label: 'Column',
-    description: 'Vertical layout',
+    description: 'Vertical container',
     icon: '=',
     category: 'layout',
     defaultData: {},
     defaultStyle: {
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'flex-start',
+      gap: '16px',
+      alignItems: 'stretch',
       justifyContent: 'flex-start',
     },
   },

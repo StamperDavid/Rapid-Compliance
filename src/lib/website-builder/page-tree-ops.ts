@@ -21,10 +21,25 @@
 
 import type { Page, PageSection, PageColumn, Widget } from '@/types/website';
 
+/**
+ * Addresses the PARENT that owns a widget. A widget lives EITHER directly inside
+ * a section's column, OR nested inside a container widget's `children`. Every
+ * structural op speaks this language so nesting works at arbitrary depth.
+ */
+export type WidgetParent =
+  | { kind: 'column'; sectionId: string; columnIndex: number }
+  | { kind: 'container'; containerId: string };
+
+/** A move / insert destination: which parent, and at what index within it. */
+export interface WidgetDestination {
+  parent: WidgetParent;
+  index: number;
+}
+
+/** Where a widget was found: its parent, its index in that parent, and the widget. */
 export interface WidgetLocation {
-  sectionId: string;
-  columnIndex: number;
-  widgetIndex: number;
+  parent: WidgetParent;
+  index: number;
   widget: Widget;
 }
 
@@ -32,7 +47,19 @@ export interface WidgetLocation {
 // Id helpers
 // ---------------------------------------------------------------------------
 
-/** Collect every id used anywhere in the page (sections, columns, widgets). */
+/** Add every id in a widget subtree (self + nested children) to `ids`. */
+function collectWidgetIds(widgets: Widget[], ids: Set<string>): void {
+  for (const widget of widgets) {
+    if (widget.id) {
+      ids.add(widget.id);
+    }
+    if (widget.children && widget.children.length > 0) {
+      collectWidgetIds(widget.children, ids);
+    }
+  }
+}
+
+/** Collect every id used anywhere in the page (sections, columns, nested widgets). */
 function collectIds(page: Page): Set<string> {
   const ids = new Set<string>();
   for (const section of page.content) {
@@ -43,14 +70,23 @@ function collectIds(page: Page): Set<string> {
       if (column.id) {
         ids.add(column.id);
       }
-      for (const widget of column.widgets ?? []) {
-        if (widget.id) {
-          ids.add(widget.id);
-        }
-      }
+      collectWidgetIds(column.widgets ?? [], ids);
     }
   }
   return ids;
+}
+
+/**
+ * Deep-clone a widget subtree, assigning a fresh collision-safe id to the widget
+ * AND to every nested child at every depth. Mutates + returns the passed clone
+ * (call on a `deepClone`d copy so the original is untouched).
+ */
+function reidWidgetTree(widget: Widget, existing: Set<string>): Widget {
+  widget.id = makeUniqueId(existing, widget.type);
+  if (widget.children && widget.children.length > 0) {
+    widget.children = widget.children.map((child) => reidWidgetTree(child, existing));
+  }
+  return widget;
 }
 
 /**
@@ -93,19 +129,139 @@ function defaultWidths(count: number): number[] {
 }
 
 // ---------------------------------------------------------------------------
+// Recursive tree walkers (shared by the widget ops)
+// ---------------------------------------------------------------------------
+
+/** Depth-first search within a widget array, tracking each level's parent. */
+function searchWidgets(
+  widgets: Widget[],
+  parent: WidgetParent,
+  widgetId: string,
+): WidgetLocation | null {
+  for (let index = 0; index < widgets.length; index += 1) {
+    const widget = widgets[index];
+    if (widget?.id === widgetId) {
+      return { parent, index, widget };
+    }
+    if (widget?.children && widget.children.length > 0) {
+      const found = searchWidgets(
+        widget.children,
+        { kind: 'container', containerId: widget.id },
+        widgetId,
+      );
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+}
+
+/** True when `widgetId` exists anywhere in `widgets` (self or nested). */
+function widgetsContain(widgets: Widget[], widgetId: string): boolean {
+  for (const widget of widgets) {
+    if (widget.id === widgetId) {
+      return true;
+    }
+    if (widget.children && widgetsContain(widget.children, widgetId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Immutably transform the one widget matching `widgetId`, anywhere in the tree. */
+function mapWidgetById(widgets: Widget[], widgetId: string, fn: (w: Widget) => Widget): Widget[] {
+  return widgets.map((widget) => {
+    if (widget.id === widgetId) {
+      return fn(widget);
+    }
+    if (widget.children && widget.children.length > 0) {
+      return { ...widget, children: mapWidgetById(widget.children, widgetId, fn) };
+    }
+    return widget;
+  });
+}
+
+/** Immutably remove the widget matching `widgetId`, anywhere in the tree. */
+function removeWidgetFrom(widgets: Widget[], widgetId: string): Widget[] {
+  const out: Widget[] = [];
+  for (const widget of widgets) {
+    if (widget.id === widgetId) {
+      continue;
+    }
+    if (widget.children && widget.children.length > 0) {
+      out.push({ ...widget, children: removeWidgetFrom(widget.children, widgetId) });
+    } else {
+      out.push(widget);
+    }
+  }
+  return out;
+}
+
+/** Insert `widget` into the container with `containerId`, at `index` (clamped/appended). */
+function insertIntoContainer(
+  widgets: Widget[],
+  containerId: string,
+  widget: Widget,
+  index?: number,
+): Widget[] {
+  return widgets.map((w) => {
+    if (w.id === containerId) {
+      const children = [...(w.children ?? [])];
+      const idx = index === undefined ? children.length : Math.max(0, Math.min(index, children.length));
+      children.splice(idx, 0, widget);
+      return { ...w, children };
+    }
+    if (w.children && w.children.length > 0) {
+      return { ...w, children: insertIntoContainer(w.children, containerId, widget, index) };
+    }
+    return w;
+  });
+}
+
+/** Apply `fn` to every column's widget array in the page (immutably). */
+function mapAllColumns(page: Page, fn: (widgets: Widget[]) => Widget[]): Page {
+  return {
+    ...page,
+    content: page.content.map((section) => ({
+      ...section,
+      columns: (section.columns ?? []).map((column) => ({
+        ...column,
+        widgets: fn(column.widgets ?? []),
+      })),
+    })),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Widget queries
 // ---------------------------------------------------------------------------
 
+/** Find a widget anywhere in the tree (column child OR nested container child). */
 export function findWidget(page: Page, widgetId: string): WidgetLocation | null {
   for (const section of page.content) {
     const columns = section.columns ?? [];
     for (let columnIndex = 0; columnIndex < columns.length; columnIndex += 1) {
-      const widgets = columns[columnIndex]?.widgets ?? [];
-      for (let widgetIndex = 0; widgetIndex < widgets.length; widgetIndex += 1) {
-        const widget = widgets[widgetIndex];
-        if (widget?.id === widgetId) {
-          return { sectionId: section.id, columnIndex, widgetIndex, widget };
-        }
+      const found = searchWidgets(
+        columns[columnIndex]?.widgets ?? [],
+        { kind: 'column', sectionId: section.id, columnIndex },
+        widgetId,
+      );
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+}
+
+/** The id of the SECTION a widget ultimately lives in (walking up through containers). */
+export function findWidgetSectionId(page: Page, widgetId: string): string | null {
+  for (const section of page.content) {
+    for (const column of section.columns ?? []) {
+      if (widgetsContain(column.widgets ?? [], widgetId)) {
+        return section.id;
       }
     }
   }
@@ -117,22 +273,28 @@ export function findWidget(page: Page, widgetId: string): WidgetLocation | null 
 // ---------------------------------------------------------------------------
 
 /**
- * Insert `widget` into `section`/`columnIndex` at `atIndex` (clamped; appended
- * when omitted). Column index is clamped to the section's real column range so
- * a stale index can never drop the widget. A section with no columns gets one.
+ * Insert `widget` under `parent` at `index` (clamped; appended when omitted).
+ * `parent` is either a section column or a container widget's children — the
+ * single primitive every add path funnels through, so nesting works uniformly.
+ * A section-column parent with no columns gets a fresh 100%-wide column.
  */
-export function addWidget(
+export function insertWidget(
   page: Page,
-  sectionId: string,
-  columnIndex: number,
+  parent: WidgetParent,
   widget: Widget,
-  atIndex?: number,
+  index?: number,
 ): Page {
+  if (parent.kind === 'container') {
+    return mapAllColumns(page, (widgets) =>
+      insertIntoContainer(widgets, parent.containerId, widget, index),
+    );
+  }
+
   const ids = collectIds(page);
   return {
     ...page,
     content: page.content.map((section) => {
-      if (section.id !== sectionId) {
+      if (section.id !== parent.sectionId) {
         return section;
       }
       const columns = section.columns ?? [];
@@ -142,14 +304,13 @@ export function addWidget(
           columns: [{ id: makeUniqueId(ids, 'col'), width: 100, widgets: [widget] }],
         };
       }
-      const ci = Math.max(0, Math.min(columnIndex, columns.length - 1));
+      const ci = Math.max(0, Math.min(parent.columnIndex, columns.length - 1));
       const newColumns = columns.map((column, i) => {
         if (i !== ci) {
           return column;
         }
         const widgets = [...column.widgets];
-        const idx =
-          atIndex === undefined ? widgets.length : Math.max(0, Math.min(atIndex, widgets.length));
+        const idx = index === undefined ? widgets.length : Math.max(0, Math.min(index, widgets.length));
         widgets.splice(idx, 0, widget);
         return { ...column, widgets };
       });
@@ -159,26 +320,48 @@ export function addWidget(
 }
 
 /**
- * Move a widget to a new section/column/index. Removes it from its current
- * location first, then inserts at the destination (so `index` is the desired
- * final position in the post-removal column — the standard sortable contract).
+ * Insert `widget` into `section`/`columnIndex` at `atIndex` (backward-compatible
+ * column-only convenience wrapper over {@link insertWidget}).
  */
-export function moveWidget(
+export function addWidget(
   page: Page,
-  widgetId: string,
-  dest: { sectionId: string; columnIndex: number; index: number },
+  sectionId: string,
+  columnIndex: number,
+  widget: Widget,
+  atIndex?: number,
 ): Page {
+  return insertWidget(page, { kind: 'column', sectionId, columnIndex }, widget, atIndex);
+}
+
+/**
+ * Move a widget to a new parent/index. Removes it from its current location
+ * first, then inserts at the destination (so `index` is the desired final
+ * position after removal — the standard sortable contract). Cycles are rejected:
+ * a container can never be moved INTO ITSELF or any of its own descendants
+ * (returns the page unchanged).
+ */
+export function moveWidget(page: Page, widgetId: string, dest: WidgetDestination): Page {
   const loc = findWidget(page, widgetId);
   if (!loc) {
     return page;
   }
+  // Cycle guard: never drop a container inside its own subtree.
+  if (dest.parent.kind === 'container') {
+    if (dest.parent.containerId === widgetId) {
+      return page;
+    }
+    if (loc.widget.children && widgetsContain(loc.widget.children, dest.parent.containerId)) {
+      return page;
+    }
+  }
   const removed = deleteWidget(page, widgetId);
-  return addWidget(removed, dest.sectionId, dest.columnIndex, loc.widget, dest.index);
+  return insertWidget(removed, dest.parent, loc.widget, dest.index);
 }
 
 /**
- * Deep-clone the widget (fresh id) and insert the copy directly after the
- * original in the same column. Returns the new page and the clone's id.
+ * Deep-clone the widget (fresh ids at every depth) and insert the copy directly
+ * after the original within the SAME parent. Returns the new page and the
+ * clone's (top-level) id.
  */
 export function duplicateWidget(page: Page, widgetId: string): { page: Page; newWidgetId: string } {
   const loc = findWidget(page, widgetId);
@@ -186,36 +369,28 @@ export function duplicateWidget(page: Page, widgetId: string): { page: Page; new
     return { page, newWidgetId: '' };
   }
   const ids = collectIds(page);
-  const clone = deepClone(loc.widget);
-  clone.id = makeUniqueId(ids, loc.widget.type);
-  const next = addWidget(page, loc.sectionId, loc.columnIndex, clone, loc.widgetIndex + 1);
+  const clone = reidWidgetTree(deepClone(loc.widget), ids);
+  const next = insertWidget(page, loc.parent, clone, loc.index + 1);
   return { page: next, newWidgetId: clone.id };
 }
 
+/** Remove a widget anywhere in the tree (column child or nested container child). */
 export function deleteWidget(page: Page, widgetId: string): Page {
-  return {
-    ...page,
-    content: page.content.map((section) => ({
-      ...section,
-      columns: (section.columns ?? []).map((column) => ({
-        ...column,
-        widgets: column.widgets.filter((w) => w.id !== widgetId),
-      })),
-    })),
-  };
+  return mapAllColumns(page, (widgets) => removeWidgetFrom(widgets, widgetId));
 }
 
+/** Shallow-merge `updates` into the one widget matching `widgetId`, anywhere in the tree. */
+export function updateWidget(page: Page, widgetId: string, updates: Partial<Widget>): Page {
+  return mapAllColumns(page, (widgets) =>
+    mapWidgetById(widgets, widgetId, (w) => ({ ...w, ...updates })),
+  );
+}
+
+/** Set a widget's hidden flag, anywhere in the tree. */
 export function setWidgetHidden(page: Page, widgetId: string, hidden: boolean): Page {
-  return {
-    ...page,
-    content: page.content.map((section) => ({
-      ...section,
-      columns: (section.columns ?? []).map((column) => ({
-        ...column,
-        widgets: column.widgets.map((w) => (w.id === widgetId ? { ...w, hidden } : w)),
-      })),
-    })),
-  };
+  return mapAllColumns(page, (widgets) =>
+    mapWidgetById(widgets, widgetId, (w) => ({ ...w, hidden })),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -309,10 +484,7 @@ export function insertSection(page: Page, section: PageSection, atIndex?: number
   clone.columns = (clone.columns ?? []).map((column) => ({
     ...column,
     id: makeUniqueId(ids, 'col'),
-    widgets: (column.widgets ?? []).map((widget) => ({
-      ...widget,
-      id: makeUniqueId(ids, widget.type),
-    })),
+    widgets: (column.widgets ?? []).map((widget) => reidWidgetTree(widget, ids)),
   }));
   const content = [...page.content];
   const idx = atIndex === undefined ? content.length : Math.max(0, Math.min(atIndex, content.length));
@@ -351,7 +523,7 @@ export function duplicateSection(page: Page, sectionId: string): { page: Page; n
   clone.columns = (clone.columns ?? []).map((column) => ({
     ...column,
     id: makeUniqueId(ids, 'col'),
-    widgets: column.widgets.map((widget) => ({ ...widget, id: makeUniqueId(ids, widget.type) })),
+    widgets: column.widgets.map((widget) => reidWidgetTree(widget, ids)),
   }));
   const content = [...page.content];
   content.splice(index + 1, 0, clone);

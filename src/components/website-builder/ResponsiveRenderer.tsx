@@ -803,10 +803,43 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
 
     case 'container':
     case 'row':
-    case 'column':
-      // Layout primitives carry only styling in this model (no nested widget
-      // tree). Render the styled box; never a placeholder.
-      return <div style={style} />;
+    case 'column': {
+      // BACKWARD COMPAT + LIVE SAFETY: a container authored before true nesting
+      // has no `children` array — render it byte-identically to before (a styled
+      // empty box). It only becomes a real recursive flex/grid box once
+      // `children` is an array (even `[]`), which only new-editor content has.
+      if (widget.children === undefined) {
+        return <div style={style} />;
+      }
+      const children = widget.children;
+      const isEmpty = children.length === 0;
+      // Sensible flex defaults when unset; `row` flows horizontally, everything
+      // else vertically. Any style the widget sets (display/gap/justify/align/…)
+      // wins over these defaults.
+      const containerStyle: React.CSSProperties = {
+        display: 'flex',
+        flexDirection: widget.type === 'row' ? 'row' : 'column',
+        gap: '16px',
+        alignItems: 'stretch',
+        ...style,
+      };
+      // An empty container gets a small min-height so it stays visible/selectable
+      // in the editor. On a live page an empty flex box is harmless.
+      if (isEmpty && containerStyle.minHeight === undefined) {
+        containerStyle.minHeight = '40px';
+      }
+      return (
+        <div style={containerStyle} data-container-empty={isEmpty ? 'true' : undefined}>
+          {children.map((child, childIdx) => (
+            <AccessibleWidget key={child.id || childIdx} widget={child}>
+              <div className="widget">
+                <WidgetRenderer widget={child} breakpoint={breakpoint} />
+              </div>
+            </AccessibleWidget>
+          ))}
+        </div>
+      );
+    }
 
     case 'stats': {
       const stats = readStats(widget.data);

@@ -23,6 +23,7 @@ import { LayersPanel, type LayerTarget, type LayerReorder } from '@/components/w
 import type { Page, PageSection, Widget } from '@/types/website';
 import {
   findWidget,
+  findWidgetSectionId,
   moveWidget,
   moveSection,
   duplicateWidget,
@@ -32,10 +33,13 @@ import {
   setColumnWidths,
   buildSection,
   insertSection,
-  addWidget as addWidgetOp,
+  insertWidget,
+  updateWidget as updateWidgetOp,
   deleteWidget as deleteWidgetOp,
   deleteSection as deleteSectionOp,
+  type WidgetDestination,
 } from '@/lib/website-builder/page-tree-ops';
+import { isContainerType } from '@/lib/website-builder/widget-definitions';
 import { DEFAULT_SITE_CHROME, type SiteChrome, type ChromeRegion } from '@/lib/website-builder/site-chrome-types';
 import { loadSiteChrome, SITE_CHROME_API_PATH } from '@/lib/website-builder/site-chrome-service';
 import type { WebsiteConfig, EditorPage, EditorPageSection, WidgetElement } from '@/types/website-editor';
@@ -710,12 +714,14 @@ function PageEditorInner() {
         if (selectedElement.type === 'widget' && selectedElement.widgetId) {
           const loc = findWidget(page, selectedElement.widgetId);
           if (loc) {
-            apply(addWidgetOp(page, loc.sectionId, loc.columnIndex, cloned, loc.widgetIndex + 1));
-            setSelectedElement({ type: 'widget', sectionId: loc.sectionId, widgetId: cloned.id });
+            // Paste into the SAME parent (column or container), right after the
+            // currently-selected widget.
+            apply(insertWidget(page, loc.parent, cloned, loc.index + 1));
+            setSelectedElement({ type: 'widget', sectionId: selectedElement.sectionId, widgetId: cloned.id });
           }
           return;
         }
-        apply(addWidgetOp(page, selectedElement.sectionId, 0, cloned));
+        apply(insertWidget(page, { kind: 'column', sectionId: selectedElement.sectionId, columnIndex: 0 }, cloned));
         setSelectedElement({ type: 'widget', sectionId: selectedElement.sectionId, widgetId: cloned.id });
         return;
       }
@@ -726,8 +732,8 @@ function PageEditorInner() {
         if (selectedElement.type === 'widget' && selectedElement.widgetId) {
           const { page: next, newWidgetId } = duplicateWidget(page, selectedElement.widgetId);
           apply(next);
-          const loc = findWidget(next, newWidgetId);
-          if (loc) {setSelectedElement({ type: 'widget', sectionId: loc.sectionId, widgetId: newWidgetId });}
+          const secId = findWidgetSectionId(next, newWidgetId);
+          if (secId) {setSelectedElement({ type: 'widget', sectionId: secId, widgetId: newWidgetId });}
         } else {
           const { page: next, newSectionId } = duplicateSection(page, selectedElement.sectionId);
           apply(next);
@@ -819,37 +825,27 @@ function PageEditorInner() {
     updatePage({ content: updatedContent });
   }
 
-  function updateWidget(sectionId: string, widgetId: string, updates: Partial<Widget>): void {
+  // Recursive: edits the widget wherever it lives (column child OR nested inside
+  // a container). `sectionId` is ignored — the widget id is globally unique.
+  function updateWidget(_sectionId: string, widgetId: string, updates: Partial<Widget>): void {
     if (!page) {return;}
-    const updatedContent = page.content.map(section => {
-      if (section.id === sectionId) {
-        const updatedColumns = section.columns.map(col => ({
-          ...col,
-          widgets: col.widgets.map(widget =>
-            widget.id === widgetId ? { ...widget, ...updates } : widget
-          ),
-        }));
-        return { ...section, columns: updatedColumns };
-      }
-      return section;
-    });
-    updatePage({ content: updatedContent });
+    updatePage({ content: updateWidgetOp(page, widgetId, updates).content });
   }
 
-  function deleteWidget(sectionId: string, widgetId: string): void {
+  // Recursive delete (column child OR nested container child).
+  function deleteWidget(_sectionId: string, widgetId: string): void {
     if (!page) {return;}
-    const updatedContent = page.content.map(section => {
-      if (section.id === sectionId) {
-        const updatedColumns = section.columns.map(col => ({
-          ...col,
-          widgets: col.widgets.filter(w => w.id !== widgetId),
-        }));
-        return { ...section, columns: updatedColumns };
-      }
-      return section;
-    });
-    updatePage({ content: updatedContent });
+    updatePage({ content: deleteWidgetOp(page, widgetId).content });
     if (selectedElement?.widgetId === widgetId) {setSelectedElement(null);}
+  }
+
+  // Insert a widget INTO a container widget's children (true nesting), then
+  // select the new child so its properties open immediately.
+  function addWidgetToContainer(containerId: string, widget: Widget, index?: number): void {
+    if (!page) {return;}
+    const sectionId = findWidgetSectionId(page, containerId) ?? '';
+    commitPage(insertWidget(page, { kind: 'container', containerId }, widget, index));
+    setSelectedElement({ type: 'widget', sectionId, widgetId: widget.id });
   }
 
   // ============================================================================
@@ -864,7 +860,7 @@ function PageEditorInner() {
     setHasUnsavedChanges(true);
   }
 
-  function onMoveWidget(widgetId: string, dest: { sectionId: string; columnIndex: number; index: number }): void {
+  function onMoveWidget(widgetId: string, dest: WidgetDestination): void {
     if (!page) {return;}
     commitPage(moveWidget(page, widgetId, dest));
   }
@@ -878,8 +874,8 @@ function PageEditorInner() {
     if (!page) {return;}
     const { page: next, newWidgetId } = duplicateWidget(page, widgetId);
     commitPage(next);
-    const loc = findWidget(next, newWidgetId);
-    if (loc) {setSelectedElement({ type: 'widget', sectionId: loc.sectionId, widgetId: newWidgetId });}
+    const secId = findWidgetSectionId(next, newWidgetId);
+    if (secId) {setSelectedElement({ type: 'widget', sectionId: secId, widgetId: newWidgetId });}
   }
 
   function onDuplicateSection(sectionId: string): void {
@@ -1117,6 +1113,14 @@ function PageEditorInner() {
         {/* Left Panel: Widgets / Pages / Branding */}
         <WidgetsPanel
           onAddWidget={(widget) => {
+            // If a container widget is selected, add the new widget INSIDE it.
+            if (selectedElement?.type === 'widget' && selectedElement.widgetId) {
+              const loc = findWidget(page, selectedElement.widgetId);
+              if (loc && isContainerType(loc.widget.type)) {
+                addWidgetToContainer(loc.widget.id, widget);
+                return;
+              }
+            }
             if (page.content.length === 0) {
               addSection({
                 columns: [{
@@ -1146,6 +1150,7 @@ function PageEditorInner() {
           onUpdateSection={updateSection}
           onDeleteSection={deleteSection}
           onAddWidget={addWidget}
+          onAddWidgetToContainer={addWidgetToContainer}
           onUpdateWidget={updateWidget}
           onDeleteWidget={deleteWidget}
           onMoveWidget={onMoveWidget}
@@ -1184,8 +1189,7 @@ function PageEditorInner() {
             onDeleteSection={deleteSection}
             onDuplicateWidget={onDuplicateWidget}
             onDeleteWidget={(widgetId) => {
-              const loc = findWidget(page, widgetId);
-              if (loc) {deleteWidget(loc.sectionId, widgetId);}
+              deleteWidget(findWidgetSectionId(page, widgetId) ?? '', widgetId);
             }}
           />
         )}

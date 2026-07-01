@@ -43,11 +43,12 @@ import {
 } from '@dnd-kit/core';
 import type { Page, PageSection, Widget, WidgetType } from '@/types/website';
 import type { SiteChrome, ChromeRegion } from '@/lib/website-builder/site-chrome-types';
+import { findWidget, type WidgetDestination } from '@/lib/website-builder/page-tree-ops';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
 import SectionStructurePicker from '@/components/website-builder/SectionStructurePicker';
 import { SiteHeaderPreview, SiteFooterPreview } from '@/components/website-builder/SiteChromePreview';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
-import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
+import { widgetDefinitions, isContainerType } from '@/lib/website-builder/widget-definitions';
 
 interface SelectedElement {
   type: 'section' | 'widget';
@@ -68,10 +69,12 @@ interface EditableCanvasProps {
   // Save the selected section to the block library (optional; gated when unset).
   onSaveSectionAsBlock?: (sectionId: string) => void;
   onAddWidget: (sectionId: string, widget: Widget, columnIndex?: number) => void;
+  // Insert a widget INTO a container widget's children (true nesting).
+  onAddWidgetToContainer?: (containerId: string, widget: Widget, index?: number) => void;
   onDeleteWidget: (sectionId: string, widgetId: string) => void;
   // --- Layout engine (drag-to-reorder + duplicate / hide) -------------------
   // Optional so other (non-editor) callers of the canvas stay source-compatible.
-  onMoveWidget?: (widgetId: string, dest: { sectionId: string; columnIndex: number; index: number }) => void;
+  onMoveWidget?: (widgetId: string, dest: WidgetDestination) => void;
   onMoveSection?: (sectionId: string, toIndex: number) => void;
   onDuplicateWidget?: (widgetId: string) => void;
   onDuplicateSection?: (sectionId: string) => void;
@@ -111,6 +114,11 @@ interface SectionBox {
   box: Box;
 }
 
+interface EmptyContainerBox {
+  widgetId: string;
+  box: Box;
+}
+
 interface ActiveDrag {
   type: 'section' | 'widget';
   id: string;
@@ -129,18 +137,38 @@ const CANVAS_WIDTHS: Record<EditableCanvasProps['breakpoint'], string> = {
 
 function createWidget(type: WidgetType): Widget {
   const definition = widgetDefinitions[type];
-  return {
+  const widget: Widget = {
     id: `widget_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     type,
     data: definition?.defaultData ?? {},
     style: definition?.defaultStyle ?? {},
   };
+  // Container widgets are true nestable boxes — seed an (empty) children array so
+  // the renderer treats them as a real flex/grid container, not a legacy box.
+  if (isContainerType(type)) {
+    widget.children = [];
+  }
+  return widget;
 }
 
+/** True when a widget subtree contains `widgetId` (self or nested). */
+function subtreeContains(widgets: Widget[], widgetId: string): boolean {
+  for (const w of widgets) {
+    if (w.id === widgetId) {
+      return true;
+    }
+    if (w.children && subtreeContains(w.children, widgetId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** The section a widget ultimately lives in — recurses through nested containers. */
 function findSectionIdForWidget(page: Page, widgetId: string): string | null {
   for (const section of page.content) {
     for (const column of section.columns ?? []) {
-      if (column.widgets.some((w) => w.id === widgetId)) {
+      if (subtreeContains(column.widgets, widgetId)) {
         return section.id;
       }
     }
@@ -171,6 +199,7 @@ export default function EditableCanvas({
   onDeleteSection,
   onSaveSectionAsBlock,
   onAddWidget,
+  onAddWidgetToContainer,
   onDeleteWidget,
   onMoveWidget,
   onMoveSection,
@@ -191,6 +220,9 @@ export default function EditableCanvas({
   });
   const [columnBoxes, setColumnBoxes] = useState<ColumnBox[]>([]);
   const [sectionBoxes, setSectionBoxes] = useState<SectionBox[]>([]);
+  // Empty container widgets get a persistent "+ Add" affordance so a user can
+  // drop the first child into a nested container.
+  const [emptyContainerBoxes, setEmptyContainerBoxes] = useState<EmptyContainerBox[]>([]);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   // Structure picker ("Select your structure"). Holds the insert index for the
   // pending add; `atIndex: undefined` appends to the end of the page.
@@ -313,6 +345,31 @@ export default function EditableCanvas({
     setColumnBoxes(nextColumns);
     setSectionBoxes(nextSections);
   }, [page, breakpoint, layoutTick, sectionNode, columnNodesForSection]);
+
+  // --- Recompute empty-container "+ Add" rectangles --------------------------
+
+  useLayoutEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) {
+      return;
+    }
+    const innerRect = inner.getBoundingClientRect();
+    const nodes = Array.from(inner.querySelectorAll<HTMLElement>('[data-container-empty="true"]'));
+    const next: EmptyContainerBox[] = [];
+    for (const node of nodes) {
+      const host = node.closest<HTMLElement>('[data-widget-id]');
+      const widgetId = host?.getAttribute('data-widget-id');
+      if (!widgetId) {
+        continue;
+      }
+      const r = node.getBoundingClientRect();
+      next.push({
+        widgetId,
+        box: { top: r.top - innerRect.top, left: r.left - innerRect.left, width: r.width, height: r.height },
+      });
+    }
+    setEmptyContainerBoxes(next);
+  }, [page, breakpoint, layoutTick]);
 
   // Track layout changes (image loads, font reflow, window resize) so overlay
   // boxes follow the real content.
@@ -515,7 +572,7 @@ export default function EditableCanvas({
         const translated = event.active.rect.current.translated;
         const centerY = translated ? translated.top + translated.height / 2 : null;
         const index = computeDropIndex(sectionId, columnIndex, aId, centerY);
-        onMoveWidget(aId, { sectionId, columnIndex, index });
+        onMoveWidget(aId, { parent: { kind: 'column', sectionId, columnIndex }, index });
         return;
       }
 
@@ -564,6 +621,8 @@ export default function EditableCanvas({
   const selectedSectionId =
     selectedElement?.type === 'section' || selectedElement?.type === 'widget' ? selectedElement.sectionId : null;
   const selectedWidgetId = selectedElement?.type === 'widget' ? selectedElement.widgetId : undefined;
+  const selectedWidget = selectedWidgetId ? (findWidget(page, selectedWidgetId)?.widget ?? null) : null;
+  const selectedIsContainer = selectedWidget !== null && isContainerType(selectedWidget.type);
 
   const draggingWidget = activeDrag?.type === 'widget';
   const draggingSection = activeDrag?.type === 'section';
@@ -602,6 +661,17 @@ export default function EditableCanvas({
           {sectionBoxes.map((sb) => (
             <SectionDropZone key={`drop-${sb.sectionId}`} sb={sb} dragging={draggingSection} />
           ))}
+
+          {/* Empty-container "+ Add" affordances (only when a container add path
+              is wired). Clicking drops a first child into that container. */}
+          {onAddWidgetToContainer &&
+            emptyContainerBoxes.map((ecb) => (
+              <EmptyContainerAdd
+                key={`empty-${ecb.widgetId}`}
+                box={ecb.box}
+                onAdd={() => onAddWidgetToContainer(ecb.widgetId, createWidget('text'))}
+              />
+            ))}
 
           {/* Hover outline (skip if it is the selected element). */}
           {boxes.hover &&
@@ -662,6 +732,11 @@ export default function EditableCanvas({
                 title="Drag to move widget"
               />
               <WidgetControls
+                onAddInside={
+                  selectedIsContainer && onAddWidgetToContainer
+                    ? () => onAddWidgetToContainer(selectedWidgetId, createWidget('text'))
+                    : undefined
+                }
                 onDuplicate={onDuplicateWidget ? () => onDuplicateWidget(selectedWidgetId) : undefined}
                 onToggleHidden={onToggleWidgetHidden ? () => onToggleWidgetHidden(selectedWidgetId) : undefined}
                 onDelete={() => onDeleteWidget(selectedSectionId, selectedWidgetId)}
@@ -1030,10 +1105,12 @@ function SectionControls({
 }
 
 function WidgetControls({
+  onAddInside,
   onDuplicate,
   onToggleHidden,
   onDelete,
 }: {
+  onAddInside?: () => void;
   onDuplicate?: () => void;
   onToggleHidden?: () => void;
   onDelete: () => void;
@@ -1050,6 +1127,11 @@ function WidgetControls({
         zIndex: 10,
       }}
     >
+      {onAddInside && (
+        <button type="button" onClick={onAddInside} style={controlButtonStyle('#10b981')} aria-label="Add widget inside container" title="Add inside">
+          + Add
+        </button>
+      )}
       {onDuplicate && (
         <button type="button" onClick={onDuplicate} style={controlButtonStyle('#0ea5e9')} aria-label="Duplicate widget" title="Duplicate">
           ⧉
@@ -1062,6 +1144,44 @@ function WidgetControls({
       )}
       <button type="button" onClick={onDelete} style={controlButtonStyle('#ef4444')} aria-label="Delete widget" title="Delete">
         &times;
+      </button>
+    </div>
+  );
+}
+
+function EmptyContainerAdd({ box, onAdd }: { box: Box; onAdd: () => void }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: box.top,
+        left: box.left,
+        width: box.width,
+        height: Math.max(box.height, 40),
+        pointerEvents: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 4,
+      }}
+    >
+      <button
+        type="button"
+        onClick={onAdd}
+        style={{
+          pointerEvents: 'auto',
+          padding: '0.3rem 0.6rem',
+          background: 'rgba(16,185,129,0.12)',
+          border: '1px dashed rgba(16,185,129,0.5)',
+          borderRadius: '6px',
+          color: 'rgba(16,185,129,0.95)',
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          cursor: 'pointer',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}
+      >
+        + Add widget
       </button>
     </div>
   );

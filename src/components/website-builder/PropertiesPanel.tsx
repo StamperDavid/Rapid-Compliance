@@ -18,7 +18,8 @@
 import { useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import type { Page, PageSection, Widget, WidgetStyle, Spacing, ShapeDivider } from '@/types/website';
-import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
+import { widgetDefinitions, isContainerType } from '@/lib/website-builder/widget-definitions';
+import { findWidget } from '@/lib/website-builder/page-tree-ops';
 import { ImageField, ImageArrayField, detectItemImageKey } from './ImageField';
 import { Icon } from './Icon';
 import { IconPicker } from './IconPicker';
@@ -141,16 +142,11 @@ export default function PropertiesPanel({
   const section = page.content.find(s => s.id === selectedElement.sectionId);
   if (!section) {return null;}
 
-  // Find selected widget if applicable
+  // Find the selected widget anywhere in the tree (column child OR nested inside
+  // a container widget) — the id is globally unique.
   let widget: Widget | null = null;
   if (selectedElement.type === 'widget' && selectedElement.widgetId) {
-    for (const column of section.columns) {
-      const found = column.widgets.find(w => w.id === selectedElement.widgetId);
-      if (found) {
-        widget = found;
-        break;
-      }
-    }
+    widget = findWidget(page, selectedElement.widgetId)?.widget ?? null;
   }
 
   return (
@@ -803,6 +799,9 @@ interface StyleEditorProps {
 
 function StyleEditor({ widget, breakpoint, onUpdate }: StyleEditorProps) {
   const base: WidgetStyle = widget.style ?? {};
+  // Container widgets (container / row / column) get the Layout group open by
+  // default plus flex/grid gap + wrap controls, since layout IS their purpose.
+  const isContainer = isContainerType(widget.type);
 
   // --- Active-breakpoint layer ------------------------------------------------
   const get = <K extends keyof WidgetStyle>(key: K): WidgetStyle[K] | undefined => {
@@ -1198,7 +1197,24 @@ function StyleEditor({ widget, breakpoint, onUpdate }: StyleEditorProps) {
       </Group>
 
       {/* LAYOUT */}
-      <Group title="Layout" defaultOpen={false}>
+      <Group title="Layout" defaultOpen={isContainer}>
+        {isContainer && (
+          <div
+            style={{
+              fontSize: '0.7rem',
+              color: 'rgba(255,255,255,0.55)',
+              background: 'rgba(16,185,129,0.12)',
+              border: '1px solid rgba(16,185,129,0.3)',
+              borderRadius: '6px',
+              padding: '0.5rem 0.6rem',
+              marginBottom: '0.75rem',
+              lineHeight: 1.4,
+            }}
+          >
+            This is a container. Its children lay out using the flex/grid controls
+            below (direction, gap, wrap, justify, align).
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
           <FieldRow label="Display" {...row('display')}>
             <SelectField
@@ -1221,6 +1237,25 @@ function StyleEditor({ widget, breakpoint, onUpdate }: StyleEditorProps) {
                 { value: '', label: 'Default' },
                 { value: 'row', label: 'Row' },
                 { value: 'column', label: 'Column' },
+              ]}
+            />
+          </FieldRow>
+          <FieldRow label="Gap" {...row('gap')}>
+            <UnitField
+              value={get('gap')}
+              units={['px', 'rem', 'em']}
+              placeholder="16"
+              onChange={(v) => patch({ gap: v })}
+            />
+          </FieldRow>
+          <FieldRow label="Wrap" {...row('flexWrap')}>
+            <SelectField
+              value={str(get('flexWrap'))}
+              onChange={(v) => patch({ flexWrap: v === '' ? undefined : (v as WidgetStyle['flexWrap']) })}
+              options={[
+                { value: '', label: 'Default' },
+                { value: 'nowrap', label: 'No wrap' },
+                { value: 'wrap', label: 'Wrap' },
               ]}
             />
           </FieldRow>

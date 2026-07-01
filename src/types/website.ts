@@ -162,19 +162,31 @@ export interface PageColumn {
 export interface Widget {
   id: string;
   type: WidgetType;
-  
+
   // Widget-specific data
   data: WidgetData;
-  
+
   // Styling
   style?: WidgetStyle;
-  
+
+  /**
+   * Nested child widgets. ONLY layout/container widgets (`container` / `row` /
+   * `column` — see `isContainerType`) use this; leaf widgets leave it undefined.
+   *
+   * Backward-compat + live safety: legacy container widgets that predate true
+   * nesting have `children === undefined` and render exactly as before (a styled
+   * empty box). A container becomes a real nestable flex/grid box only once
+   * `children` is an array (even an empty `[]`). This keeps the public marketing
+   * site byte-identical for any content authored before this feature.
+   */
+  children?: Widget[];
+
   // Responsive overrides
   responsive?: {
     mobile?: Partial<WidgetStyle>;
     tablet?: Partial<WidgetStyle>;
   };
-  
+
   // Settings
   hidden?: boolean;
   animation?: AnimationConfig;
@@ -243,6 +255,8 @@ export interface WidgetStyle {
   minHeight?: string;
   display?: 'block' | 'inline-block' | 'flex' | 'grid';
   flexDirection?: 'row' | 'column';
+  flexWrap?: 'nowrap' | 'wrap';
+  gap?: string;
   alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
   justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
   

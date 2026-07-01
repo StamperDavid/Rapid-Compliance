@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import type { Widget, WidgetType } from '@/types/website';
 import type { WebsiteConfig, GlobalBranding } from '@/types/website-editor';
-import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
+import { widgetDefinitions, isContainerType } from '@/lib/website-builder/widget-definitions';
 import { FontPicker } from './FontPicker';
 
 interface WidgetsPanelProps {
@@ -59,6 +59,11 @@ export default function WidgetsPanel({
       data: definition.defaultData || {},
       style: definition.defaultStyle ?? {},
     };
+    // Container widgets are true nestable boxes — seed an empty children array so
+    // the renderer treats them as a real flex/grid container (not a legacy box).
+    if (isContainerType(type)) {
+      newWidget.children = [];
+    }
 
     onAddWidget(newWidget);
   }

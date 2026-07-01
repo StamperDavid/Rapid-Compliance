@@ -48,7 +48,8 @@ import {
   X,
 } from 'lucide-react';
 import type { Page, PageColumn, Widget, WidgetType } from '@/types/website';
-import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
+import type { WidgetParent, WidgetDestination } from '@/lib/website-builder/page-tree-ops';
+import { widgetDefinitions, isContainerType } from '@/lib/website-builder/widget-definitions';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -63,7 +64,7 @@ export type LayerTarget =
 
 export type LayerReorder =
   | { kind: 'section'; sectionId: string; toIndex: number }
-  | { kind: 'widget'; widgetId: string; to: { sectionId: string; columnIndex: number; index: number } };
+  | { kind: 'widget'; widgetId: string; to: WidgetDestination };
 
 export interface LayersPanelProps {
   page: Page;
@@ -87,17 +88,29 @@ export interface LayersPanelProps {
 const SECTION_PREFIX = 'sec:';
 const WIDGET_PREFIX = 'wid:';
 const COLUMN_PREFIX = 'col:';
+const CONTAINER_PREFIX = 'cont:';
 
 const sectionDragId = (sectionId: string): string => `${SECTION_PREFIX}${sectionId}`;
 const widgetDragId = (widgetId: string): string => `${WIDGET_PREFIX}${widgetId}`;
 const columnDropId = (sectionId: string, columnIndex: number): string =>
   `${COLUMN_PREFIX}${sectionId}:${columnIndex}`;
+const containerDropId = (containerId: string): string => `${CONTAINER_PREFIX}${containerId}`;
 
-/** Where a widget currently lives, by widget id. */
-interface WidgetLocation {
-  sectionId: string;
-  columnIndex: number;
-  index: number;
+/** Where a widget currently lives: its parent (column or container) + index. */
+type WidgetLocation = WidgetDestination;
+
+/** Recursively record every widget's location (parent + index), keyed by id. */
+function collectWidgetLocations(
+  widgets: Widget[],
+  parent: WidgetParent,
+  map: Map<string, WidgetLocation>,
+): void {
+  widgets.forEach((widget, index) => {
+    map.set(widget.id, { parent, index });
+    if (widget.children && widget.children.length > 0) {
+      collectWidgetLocations(widget.children, { kind: 'container', containerId: widget.id }, map);
+    }
+  });
 }
 
 // ===========================================================================
@@ -160,11 +173,28 @@ export function LayersPanel(props: LayersPanelProps): React.JSX.Element {
     const map = new Map<string, WidgetLocation>();
     page.content.forEach((section) => {
       section.columns.forEach((column, columnIndex) => {
-        column.widgets.forEach((widget, index) => {
-          map.set(widget.id, { sectionId: section.id, columnIndex, index });
-        });
+        collectWidgetLocations(
+          column.widgets,
+          { kind: 'column', sectionId: section.id, columnIndex },
+          map,
+        );
       });
     });
+    return map;
+  }, [page.content]);
+
+  // Resolve a container widget by id (to append when dropping onto its zone).
+  const containersById = useMemo<Map<string, Widget>>(() => {
+    const map = new Map<string, Widget>();
+    const walk = (widgets: Widget[]): void => {
+      for (const widget of widgets) {
+        if (widget.children) {
+          map.set(widget.id, widget);
+          walk(widget.children);
+        }
+      }
+    };
+    page.content.forEach((section) => section.columns.forEach((c) => walk(c.widgets)));
     return map;
   }, [page.content]);
 
@@ -204,26 +234,22 @@ export function LayersPanel(props: LayersPanelProps): React.JSX.Element {
       return;
     }
 
-    // --- Widget → Widget / Column reorder (supports cross-column moves) ---
+    // --- Widget → Widget / Column / Container reorder (cross-parent moves) ---
     if (activeId.startsWith(WIDGET_PREFIX)) {
       const widgetId = activeId.slice(WIDGET_PREFIX.length);
 
-      // Dropped over another widget: insert at that widget's slot.
+      // Dropped over another widget: insert at that widget's slot (its parent).
       if (overId.startsWith(WIDGET_PREFIX)) {
         const overWidgetId = overId.slice(WIDGET_PREFIX.length);
         const dest = widgetLocations.get(overWidgetId);
         if (!dest) {
           return;
         }
-        onReorder({
-          kind: 'widget',
-          widgetId,
-          to: { sectionId: dest.sectionId, columnIndex: dest.columnIndex, index: dest.index },
-        });
+        onReorder({ kind: 'widget', widgetId, to: dest });
         return;
       }
 
-      // Dropped over a (possibly empty) column container: append to its end.
+      // Dropped over a (possibly empty) column: append to its end.
       if (overId.startsWith(COLUMN_PREFIX)) {
         const rest = overId.slice(COLUMN_PREFIX.length);
         const sepIndex = rest.lastIndexOf(':');
@@ -238,7 +264,27 @@ export function LayersPanel(props: LayersPanelProps): React.JSX.Element {
         const section = page.content.find((s) => s.id === sectionId);
         const column = section?.columns[columnIndex];
         const index = column ? column.widgets.length : 0;
-        onReorder({ kind: 'widget', widgetId, to: { sectionId, columnIndex, index } });
+        onReorder({
+          kind: 'widget',
+          widgetId,
+          to: { parent: { kind: 'column', sectionId, columnIndex }, index },
+        });
+        return;
+      }
+
+      // Dropped over a container's child zone: append into that container.
+      if (overId.startsWith(CONTAINER_PREFIX)) {
+        const containerId = overId.slice(CONTAINER_PREFIX.length);
+        if (containerId === widgetId) {
+          return;
+        }
+        const container = containersById.get(containerId);
+        const index = container?.children ? container.children.length : 0;
+        onReorder({
+          kind: 'widget',
+          widgetId,
+          to: { parent: { kind: 'container', containerId }, index },
+        });
       }
     }
   };
@@ -508,8 +554,11 @@ function ColumnRow({
                   key={widget.id}
                   sectionId={sectionId}
                   columnIndex={columnIndex}
+                  depth={2}
                   widget={widget}
                   selectedId={selectedId}
+                  collapsed={collapsed}
+                  onToggleCollapse={onToggleCollapse}
                   onSelect={onSelect}
                   onToggleHidden={onToggleHidden}
                   onDuplicate={onDuplicate}
@@ -531,8 +580,11 @@ function ColumnRow({
 interface WidgetRowProps {
   sectionId: string;
   columnIndex: number;
+  depth: number;
   widget: Widget;
   selectedId: string | null;
+  collapsed: Set<string>;
+  onToggleCollapse: (id: string) => void;
   onSelect: (target: LayerTarget) => void;
   onToggleHidden: (target: LayerTarget) => void;
   onDuplicate: (target: LayerTarget) => void;
@@ -542,8 +594,11 @@ interface WidgetRowProps {
 function WidgetRow({
   sectionId,
   columnIndex,
+  depth,
   widget,
   selectedId,
+  collapsed,
+  onToggleCollapse,
   onSelect,
   onToggleHidden,
   onDuplicate,
@@ -552,9 +607,12 @@ function WidgetRow({
   const sortable = useSortable({ id: widgetDragId(widget.id) });
   const isSelected = selectedId === widget.id;
   const isHidden = widget.hidden === true;
+  const isContainer = isContainerType(widget.type);
   const label = widgetLabel(widget.type);
   const snippet = widgetSnippet(widget);
   const target: LayerTarget = { kind: 'widget', sectionId, columnIndex, widgetId: widget.id };
+  const isCollapsed = collapsed.has(widget.id);
+  const children = widget.children ?? [];
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(sortable.transform),
@@ -564,13 +622,22 @@ function WidgetRow({
   return (
     <div ref={sortable.setNodeRef} style={style} className={cn('select-none', sortable.isDragging && 'opacity-50')}>
       <TreeRow
-        depth={2}
-        icon={<Square className="h-3 w-3 text-muted-foreground" aria-hidden />}
+        depth={depth}
+        icon={
+          isContainer ? (
+            <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+          ) : (
+            <Square className="h-3 w-3 text-muted-foreground" aria-hidden />
+          )
+        }
         label={label}
         meta={snippet}
         dimmed={isHidden}
         struck={isHidden}
         selected={isSelected}
+        expandable={isContainer}
+        collapsed={isCollapsed}
+        onToggleCollapse={() => onToggleCollapse(widget.id)}
         onSelect={() => onSelect(target)}
         dragHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
         actions={
@@ -585,6 +652,92 @@ function WidgetRow({
           />
         }
       />
+
+      {isContainer && !isCollapsed && (
+        <ContainerChildren
+          containerId={widget.id}
+          sectionId={sectionId}
+          columnIndex={columnIndex}
+          depth={depth + 1}
+          widgets={children}
+          selectedId={selectedId}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
+          onSelect={onSelect}
+          onToggleHidden={onToggleHidden}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+// ===========================================================================
+// Container children (droppable zone + sortable list of nested widget rows)
+// ===========================================================================
+
+interface ContainerChildrenProps {
+  containerId: string;
+  sectionId: string;
+  columnIndex: number;
+  depth: number;
+  widgets: Widget[];
+  selectedId: string | null;
+  collapsed: Set<string>;
+  onToggleCollapse: (id: string) => void;
+  onSelect: (target: LayerTarget) => void;
+  onToggleHidden: (target: LayerTarget) => void;
+  onDuplicate: (target: LayerTarget) => void;
+  onDelete: (target: LayerTarget) => void;
+}
+
+function ContainerChildren({
+  containerId,
+  sectionId,
+  columnIndex,
+  depth,
+  widgets,
+  selectedId,
+  collapsed,
+  onToggleCollapse,
+  onSelect,
+  onToggleHidden,
+  onDuplicate,
+  onDelete,
+}: ContainerChildrenProps): React.JSX.Element {
+  const { setNodeRef, isOver } = useDroppable({ id: containerDropId(containerId) });
+  const widgetIds = widgets.map((w) => widgetDragId(w.id));
+
+  return (
+    <div ref={setNodeRef} className={cn(isOver && 'bg-surface-elevated/60')}>
+      <SortableContext items={widgetIds} strategy={verticalListSortingStrategy}>
+        {widgets.length === 0 ? (
+          <div
+            className="py-1.5 pr-2 text-xs italic text-muted-foreground"
+            style={{ paddingLeft: depthPadding(depth) }}
+          >
+            (empty — drop widgets here)
+          </div>
+        ) : (
+          widgets.map((child) => (
+            <WidgetRow
+              key={child.id}
+              sectionId={sectionId}
+              columnIndex={columnIndex}
+              depth={depth}
+              widget={child}
+              selectedId={selectedId}
+              collapsed={collapsed}
+              onToggleCollapse={onToggleCollapse}
+              onSelect={onSelect}
+              onToggleHidden={onToggleHidden}
+              onDuplicate={onDuplicate}
+              onDelete={onDelete}
+            />
+          ))
+        )}
+      </SortableContext>
     </div>
   );
 }
