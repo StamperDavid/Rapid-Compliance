@@ -617,11 +617,15 @@ export async function mixAudioWithDucking(
   // 3. Sidechain compress music using voice as key signal (auto-ducking)
   // 4. Mix voice + ducked music
   // 5. Normalize to target LUFS
+  // The voice track feeds TWO filters — the sidechain KEY (to duck the music) and
+  // the final MIX. An ffmpeg pad can only be consumed once, so split it into two
+  // labels; reusing a single [voice] label makes the second reference resolve to
+  // no stream ("Invalid stream specifier") and the whole mix fails.
   const filterComplex = [
-    `[0:a]aformat=fltp:44100:stereo[voice]`,
+    `[0:a]aformat=fltp:44100:stereo,asplit=2[voice_key][voice_mix]`,
     `[1:a]aformat=fltp:44100:stereo,volume=${musicVol}[music]`,
-    `[music][voice]sidechaincompress=threshold=${threshold}dB:ratio=${ratio}:attack=50:release=300[ducked]`,
-    `[voice][ducked]amix=inputs=2:duration=first:dropout_transition=2[mixed]`,
+    `[music][voice_key]sidechaincompress=threshold=${threshold}dB:ratio=${ratio}:attack=50:release=300[ducked]`,
+    `[voice_mix][ducked]amix=inputs=2:duration=first:dropout_transition=2[mixed]`,
     `[mixed]loudnorm=I=${targetLUFS}:TP=-1.5:LRA=11[outa]`,
   ].join(';');
 
