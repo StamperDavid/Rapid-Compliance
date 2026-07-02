@@ -650,19 +650,65 @@ async function lipSyncShotClip(
     falKey: string;
     workDir: string;
     ctx: TenantContext;
+    /** The clip's real (probed) duration in seconds. The spoken line is padded
+     *  with trailing silence up to this length so lip-sync doesn't collapse the
+     *  shot to the length of the line. */
+    clipDurationSeconds?: number;
     /** When given, UPDATE this existing clip asset in place instead of creating a
      *  second (duplicate) library card for the lip-synced version. */
     mediaAssetId?: string;
   },
 ): Promise<LipSyncResult> {
-  const { shotId, clipUrl, dialogue, voice, falKey, workDir, ctx, mediaAssetId } = args;
+  const { shotId, clipUrl, dialogue, voice, falKey, workDir, ctx, clipDurationSeconds, mediaAssetId } = args;
 
   // 1. TTS the line in the character's voice.
   logger.info('[shot-plan-gen] lip-sync: synthesizing line', { file: FILE, shotId, voice });
   const ttsOut = await falQueue(FAL_TTS_MODEL, { text: dialogue, voice }, falKey, `shot ${shotId} tts`);
-  const audioUrl = falMediaUrl(ttsOut, 'audio');
+  let audioUrl = falMediaUrl(ttsOut, 'audio');
 
-  // 2. Lip-sync the persisted clip to that audio.
+  // 1b. Hold the shot to its planned length. sync-lipsync trims the output clip
+  //     down to the AUDIO length, so a ~2s spoken line collapses a 5s cinematic
+  //     shot to 2s (a whole dialogue film ends up a few seconds long). Pad the
+  //     line with trailing silence up to the clip's real duration → the character
+  //     delivers the line, then the shot breathes for the rest of its length.
+  if (typeof clipDurationSeconds === 'number' && clipDurationSeconds > 0) {
+    try {
+      const ttsPath = join(workDir, `tts-${shotId}.mp3`);
+      await downloadToFile(audioUrl, ttsPath, `shot ${shotId} tts audio`);
+      const ttsProbe = await probeVideo(ttsPath);
+      if (ttsProbe.duration > 0 && ttsProbe.duration < clipDurationSeconds - 0.15) {
+        const paddedPath = join(workDir, `tts-padded-${shotId}.mp3`);
+        await runFfmpeg([
+          '-i', ttsPath,
+          '-af', `apad=whole_dur=${clipDurationSeconds.toFixed(2)}`,
+          '-c:a', 'libmp3lame', '-q:a', '2',
+          '-y', paddedPath,
+        ]);
+        const paddedBuf = await readFile(paddedPath);
+        audioUrl = await uploadPermanent(
+          paddedBuf,
+          `organizations/${PLATFORM_ID}/media/audio/${randomUUID()}.mp3`,
+          'audio/mpeg',
+          `shot ${shotId} padded line`,
+        );
+        logger.info('[shot-plan-gen] lip-sync: padded line to shot length', {
+          file: FILE,
+          shotId,
+          lineSeconds: Number(ttsProbe.duration.toFixed(2)),
+          shotSeconds: Number(clipDurationSeconds.toFixed(2)),
+        });
+      }
+    } catch (padErr) {
+      // Best-effort: fall back to the raw line rather than failing the shot.
+      logger.warn('[shot-plan-gen] lip-sync: could not pad line to shot length; using raw line', {
+        file: FILE,
+        shotId,
+        error: padErr instanceof Error ? padErr.message : String(padErr),
+      });
+    }
+  }
+
+  // 2. Lip-sync the persisted clip to that (padded) audio.
   logger.info('[shot-plan-gen] lip-sync: re-syncing clip to voice', { file: FILE, shotId });
   const syncOut = await falQueue(
     FAL_LIPSYNC_MODEL,
@@ -929,6 +975,9 @@ export async function generateShot(
       if (voice) {
         try {
           const falKey = await requireFalKey();
+          // Real clip length (Seedance clamps to an integer 4–15s), so the spoken
+          // line is padded to THIS, keeping the shot from collapsing to the line.
+          const clipProbe = await probeVideo(clipPath);
           const synced = await lipSyncShotClip({
             shotId,
             clipUrl: permanentVideoUrl,
@@ -937,6 +986,7 @@ export async function generateShot(
             falKey,
             workDir,
             ctx,
+            clipDurationSeconds: clipProbe.duration,
             mediaAssetId: clipAsset.id,
           });
           finalVideoUrl = synced.videoUrl;
